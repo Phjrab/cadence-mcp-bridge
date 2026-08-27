@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+secrets/
+.ssh/
+
+# GitHub/Codex local state
+.codex/
+
+# Cadence runtime and proprietary artifacts
+CDS.log*
+*.raw/
+*.psf/
+psf/
+*.trn
+*.dsn
+*.ahdlSimDB/
+input.ahdlSimDB/
+spectre.out
+spectre_console.log
+*.simvision/
+*.vcd
+*.fsdb
+
+# MCP runtime jobs and logs
+jobs/
+.cadence_mcp_runtime/
+*.pid
+*.log
+*.tmp
+
+# Build/package
+build/
+dist/
+*.egg-info/
