@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.2.0
+RUNNER_VERSION=0.3.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
 SPECTRE_BIN=/home/buet/cadence/MMSIM121/tools/bin/spectre
@@ -78,6 +78,17 @@ runner_status() {
     [ "$#" -eq 1 ] || usage
     require_job "$1"
     [ -f "$job_dir/status.json" ] || cadence_mcp_fail "job status unavailable" 69
+    state=$($CADENCE_MCP_PYTHON "$CADENCE_MCP_JSON_HELPER" state "$job_dir/status.json")
+    case "$state" in
+        queued|running|cancelling)
+            if [ -f "$job_dir/result.json" ]; then
+                recovered_state=$($CADENCE_MCP_PYTHON "$CADENCE_MCP_JSON_HELPER" state "$job_dir/result.json")
+                cadence_mcp_atomic_status "$1" "$recovered_state" "job state recovered from result"
+            elif ! cadence_mcp_worker_matches "$job_dir"; then
+                cadence_mcp_atomic_status "$1" unknown "job worker is unavailable; operator review required"
+            fi
+            ;;
+    esac
     cat "$job_dir/status.json"
 }
 

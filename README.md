@@ -55,3 +55,9 @@ uv run python -m cadence_mcp_bridge serve
 The server exposes only `cadence_health`, `cadence_submit_smoke`, `cadence_job_status`,
 `cadence_job_log_tail`, `cadence_job_result`, and `cadence_cancel_job`. Codex Desktop
 registration is deferred to WP-06. See `docs/ARCHITECTURE.md` for the current boundaries.
+
+Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
+
+```powershell
+.\scripts\verify-e2e.ps1
+```

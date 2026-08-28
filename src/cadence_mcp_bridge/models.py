@@ -99,12 +99,18 @@ class JobSummary(ContractModel):
     notices: Annotated[int, Field(ge=-1)]
 
 
+class JobStorageMetadata(ContractModel):
+    contained: Literal[True]
+    directory_mode: Literal["0700"]
+
+
 class JobResult(ContractModel):
     job_id: UUID
     state: JobState
     exit_code: int | None = None
     summary: JobSummary
     artifacts: tuple[ArtifactMetadata, ...] = ()
+    storage: JobStorageMetadata | None = None
 
     @model_validator(mode="after")
     def validate_exit_code(self) -> Self:

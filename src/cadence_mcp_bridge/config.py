@@ -28,6 +28,9 @@ class BridgeConfig(BaseSettings):
     operation_timeout_seconds: Annotated[int, Field(ge=1, le=3_600)] = 120
     max_output_bytes: Annotated[int, Field(ge=1_024, le=1_048_576)] = 65_536
     default_concurrency: Literal[1] = 1
+    poll_interval_seconds: Annotated[float, Field(ge=0.1, le=10.0)] = 1.0
+    max_poll_seconds: Annotated[int, Field(ge=10, le=1_800)] = 300
+    submit_target_seconds: Annotated[float, Field(ge=1.0, le=60.0)] = 10.0
 
     @field_validator("remote_root", "runner_path")
     @classmethod
@@ -49,4 +52,6 @@ class BridgeConfig(BaseSettings):
             raise ValueError("runner_path must be contained in remote_root/bin")
         if self.operation_timeout_seconds < self.connect_timeout_seconds:
             raise ValueError("operation timeout must not be shorter than connect timeout")
+        if self.max_poll_seconds <= self.poll_interval_seconds:
+            raise ValueError("maximum poll time must exceed the polling interval")
         return self
