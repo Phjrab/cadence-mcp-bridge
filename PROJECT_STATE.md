@@ -11,8 +11,8 @@ next_wp: WP-09
 current_feature_branch: wp/WP-09-ade-testbench-profiles
 base_main_commit: 9a109c098c2efd505aaa42761a1acc3a85b1104a
 last_commit: 71ab3dfa37d5c7c5c503d17352052b3be5f45289
-last_push: 2026-08-28T13:09:35.8521991+09:00
-awaiting_user_merge: true
+last_push: 2026-08-28T13:42:03.2228406+09:00
+awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
@@ -41,3 +41,4 @@ user_action_required: Provide the actual ADE profile choices listed in docs/USER
 - 2026-08-28: WP-08 fixed OCEAN/SKILL headless checks, allowlisted metadata-only discovery, PDK denial, and design/lock fingerprint acceptance passed; awaiting review and merge authorization.
 - 2026-08-28: User explicitly authorized PR #9; WP-08 merged into main as 9a109c0.
 - 2026-08-28: WP-09 fixture profile registry, typed range/corner validation, manifest, runner 0.6.0, and real MCP lifecycle checks passed; actual ADE profile remains blocked on project-owned testbench, state, variable, corner, and output choices.
+- 2026-08-28: WP-09 resume approval received; the remote feature branch was synchronized and all local/security/real-integration checks passed again, but no ADE testbench, PDK, variable, corner, or output choices were supplied, so the actual profile remains blocked and is not ready for merge.
