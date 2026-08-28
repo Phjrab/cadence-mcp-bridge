@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cadence-mcp-bridge"
+version = "0.1.0"
+description = "Restricted Windows MCP bridge for a legacy Cadence environment"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { text = "Proprietary" }
+authors = [{ name = "Phjrab" }]
+dependencies = [
+    "mcp[cli]>=2,<3",
+    "pydantic>=2,<3",
+    "pydantic-settings>=2,<3",
+]
+
+[project.scripts]
+cadence-mcp-bridge = "cadence_mcp_bridge.__main__:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15,<2",
+    "pytest>=8.3,<10",
+    "pytest-asyncio>=0.25,<2",
+    "ruff>=0.11,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cadence_mcp_bridge"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "SIM", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
