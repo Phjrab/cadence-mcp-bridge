@@ -24,6 +24,8 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
+    NoProfileVariables,
+    ProfileVariables,
     RcTransientVariables,
     ToolAvailability,
 )
@@ -96,7 +98,7 @@ class FakeBackend:
         job_id: UUID,
         profile_id: str,
         corner: str,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> JobStatus:
         return job_status(job_id).model_copy(update={"profile": profile_id})
 
@@ -250,10 +252,23 @@ async def test_service_profile_registry_and_submission() -> None:
     submitted = await service.submit_profile(
         "fixture-rc-transient", "nominal", RcTransientVariables()
     )
+    actual = await service.get_profile("actual-differential-amplifier-tb2-transient")
+    actual_submitted = await service.submit_profile(
+        "actual-differential-amplifier-tb2-transient", "NN", NoProfileVariables()
+    )
 
     assert listing.registry_version == 1
+    assert [item.classification for item in listing.profiles] == ["fixture", "actual"]
     assert profile.classification == "fixture"
+    assert actual.classification == "actual"
+    assert actual.variables == ()
+    assert actual.outputs == ()
+    assert actual.allowed_warning_codes == ("CMI-2477",)
+    assert actual.maximum_warning_count == 2
+    assert actual.ade is not None
+    assert actual.ade.stop_time_s == 0.004
     assert submitted.profile == "fixture-rc-transient"
+    assert actual_submitted.profile == "actual-differential-amplifier-tb2-transient"
 
 
 @pytest.mark.asyncio
@@ -264,3 +279,11 @@ async def test_service_rejects_unknown_profile_and_corner() -> None:
         await service.get_profile("unknown")
     with pytest.raises(InvalidInputError, match="corner"):
         await service.submit_profile("fixture-rc-transient", "fast", RcTransientVariables())
+    with pytest.raises(InvalidInputError, match="does not allow"):
+        await service.submit_profile(
+            "actual-differential-amplifier-tb2-transient", "NN", RcTransientVariables()
+        )
+    with pytest.raises(InvalidInputError, match="requires"):
+        await service.submit_profile(
+            "fixture-rc-transient", "nominal", NoProfileVariables()
+        )

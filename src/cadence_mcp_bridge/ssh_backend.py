@@ -37,9 +37,12 @@ from cadence_mcp_bridge.models import (
     JobStorageMetadata,
     JobSummary,
     LibraryList,
+    NoProfileVariables,
+    ProfileVariables,
     RcTransientVariables,
     ResultLimitMetadata,
 )
+from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
 
 
@@ -242,18 +245,27 @@ class OpenSshBackend:
         job_id: UUID,
         profile_id: str,
         corner: str,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> JobStatus:
-        payload = await self._invoke_json(
-            _RunnerCommand.SUBMIT_PROFILE,
+        arguments = [
             self._job_id(job_id),
             self._safe_token(profile_id, "profile"),
             self._safe_token(corner, "corner"),
-            self._number(variables.resistance_ohm),
-            self._number(variables.capacitance_f),
-            self._number(variables.stop_time_s),
-            "mcp",
-        )
+        ]
+        if profile_id == FIXTURE_PROFILE_ID and isinstance(variables, RcTransientVariables):
+            arguments.extend(
+                (
+                    self._number(variables.resistance_ohm),
+                    self._number(variables.capacitance_f),
+                    self._number(variables.stop_time_s),
+                )
+            )
+        elif profile_id == ACTUAL_PROFILE_ID and isinstance(variables, NoProfileVariables):
+            pass
+        else:
+            raise InvalidInputError("profile variables do not match the reviewed profile")
+        arguments.append("mcp")
+        payload = await self._invoke_json(_RunnerCommand.SUBMIT_PROFILE, *arguments)
         return self._status(self._validate(_RunnerStatus, payload), submitted=True)
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
@@ -327,7 +339,10 @@ class OpenSshBackend:
 
     @staticmethod
     def _safe_token(value: str, label: str) -> str:
-        if not isinstance(value, str) or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", value) is None:
+        if (
+            not isinstance(value, str)
+            or re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", value) is None
+        ):
             raise InvalidInputError(f"{label} must be a reviewed identifier")
         return value
 

@@ -33,13 +33,14 @@ model/user
   -> OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
   -> Windows OpenSSH with BatchMode and strict host-key verification
   -> fixed cadence-runner
-  -> fixed spectre-smoke profile or metadata-only discovery helper
+  -> fixed fixture/actual profile or metadata-only discovery helper
   -> isolated .cadence_mcp runtime and metadata-only MCP response
 ```
 
 Untrusted data is limited to a lowercase RFC 4122 job UUID, the closed `stdout|stderr` stream
 enum, an integer from 1 through 200, identifiers that must exactly match reviewed allowlists, and
-the finite numeric fields of a typed profile variable object. Profile identity, analysis, corner,
+the finite numeric fields of the fixture variable object. The actual profile accepts only an empty
+variable object. Profile identity, analysis, corner,
 outputs, units, ranges, source template, timeout, remote root, runner path, and executable are
 compiled into reviewed source. The MCP caller cannot supply shell text, paths, environment
 values, script content, netlist content, arbitrary analyses, or arbitrary outputs.
@@ -65,8 +66,9 @@ fixed jobs root.
 | Dependency compromise | Python packages | `uv.lock`, hashes, strict `pip-audit`, minimal runtime dependencies | vulnerability databases may lag new disclosures |
 | Proprietary design disclosure | library/cell/view discovery | PDK exclusion, exact nested allowlist, real-path and symlink checks, names/existence only, helper never opens a cellview file | allowlisted names themselves are disclosed |
 | Design modification or lock creation | OCEAN/SKILL headless checks | fixed no-graph scripts, isolated working/log directory under `.cadence_mcp`, no design open/save calls, before/after metadata and lock fingerprints | Cadence installation behavior is trusted |
-| Profile parameter injection | profile, corner, numeric variables | closed schemas, local registry, finite range checks, safe token formatting, remote registry/range revalidation before job creation | each future actual profile requires separate review |
-| ADE state modification | actual testbench automation | no actual profile registered without project inputs; fixture uses a built-in netlist and writes only below `.cadence_mcp` | actual profile remains blocked until its state and outputs are confirmed |
+| Profile parameter injection | profile, corner, numeric variables | closed schemas, local registry, finite range checks, empty actual-variable schema, safe token formatting, remote registry/source revalidation before job creation | each future actual profile requires separate review |
+| ADE state modification | actual testbench automation | fixed read-only state/source paths, source copied into `.cadence_mcp`, reviewed wrapper, before/after metadata and lock fingerprints | correctness depends on the approved existing ADE-generated netlist |
+| Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 
 ## Origin and audit contract
 
@@ -104,8 +106,9 @@ remote paths, file names inside cellviews, file bytes, model data, and cellview 
 response fields.
 
 Profile results contain only the existing bounded summary and artifact metadata. The reproducible
-manifest remains in the mode-700 job directory and is not embedded in MCP output. Raw waveform,
-generated netlist, ADE state, and proprietary circuit content are never direct response fields.
+manifest, copied actual netlist, and generated wrapper remain in the mode-700 job directory and are
+not embedded in MCP output. Raw waveform, generated netlist, ADE state, and proprietary circuit
+content are never direct response fields.
 
 ## Process, concurrency, and recovery
 

@@ -31,7 +31,7 @@ async def test_real_mcp_to_spectre_smoke_lifecycle() -> None:
     report = await verify_lifecycle()
 
     assert report.health_ok is True
-    assert report.runner_version == "0.6.0"
+    assert report.runner_version == "0.7.0"
     assert report.exit_code == 0
     assert report.artifact_count >= 1
     assert report.storage_contained is True

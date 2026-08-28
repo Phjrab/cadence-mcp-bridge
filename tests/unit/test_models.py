@@ -12,6 +12,7 @@ from cadence_mcp_bridge.models import (
     JobState,
     JobStatus,
     JobSummary,
+    NoProfileVariables,
     RcTransientVariables,
 )
 
@@ -69,3 +70,9 @@ def test_valid_succeeded_result() -> None:
 def test_profile_variables_reject_ranges_and_unknown_names(payload: dict[str, float]) -> None:
     with pytest.raises(ValidationError):
         RcTransientVariables.model_validate(payload)
+
+
+def test_no_profile_variables_accepts_only_an_empty_object() -> None:
+    assert NoProfileVariables.model_validate({}).model_dump() == {}
+    with pytest.raises(ValidationError):
+        NoProfileVariables.model_validate({"gain": 1.0})

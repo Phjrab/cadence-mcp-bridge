@@ -26,7 +26,8 @@ $files = @(
     @{ Local = "remote/discovery/ocean-smoke.ocn"; Remote = "$remoteRoot/discovery/ocean-smoke.ocn"; Mode = "600" },
     @{ Local = "remote/discovery/skill-smoke.il"; Remote = "$remoteRoot/discovery/skill-smoke.il"; Mode = "600" },
     @{ Local = "remote/profiles/spectre-smoke/smoke.scs"; Remote = "$remoteRoot/profiles/spectre-smoke/smoke.scs"; Mode = "600" },
-    @{ Local = "remote/profiles/fixture-rc-transient/profile.json"; Remote = "$remoteRoot/profiles/fixture-rc-transient/profile.json"; Mode = "600" }
+    @{ Local = "remote/profiles/fixture-rc-transient/profile.json"; Remote = "$remoteRoot/profiles/fixture-rc-transient/profile.json"; Mode = "600" },
+    @{ Local = "remote/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Remote = "$remoteRoot/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Mode = "600" }
 )
 
 foreach ($command in @("ssh", "scp")) {
@@ -46,7 +47,7 @@ if (-not $PSCmdlet.ShouldProcess("${sshAlias}:$remoteRoot", "Deploy restricted C
     return
 }
 
-$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/jobs'"
+$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'"
 & ssh @sshOptions $sshAlias $setupCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Remote layout creation failed."

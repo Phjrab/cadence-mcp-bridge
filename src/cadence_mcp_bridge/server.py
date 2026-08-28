@@ -25,7 +25,7 @@ from cadence_mcp_bridge.models import (
     JobStatus,
     LibraryList,
     ProfileList,
-    RcTransientVariables,
+    ProfileVariables,
     SimulationProfile,
 )
 from cadence_mcp_bridge.service import CadenceService
@@ -82,7 +82,10 @@ ProfileIdInput = Annotated[
     WithJsonSchema(
         {
             "type": "string",
-            "enum": ["fixture-rc-transient"],
+            "enum": [
+                "fixture-rc-transient",
+                "actual-differential-amplifier-tb2-transient",
+            ],
             "description": "Exact profile identifier from cadence_list_profiles.",
         }
     ),
@@ -92,7 +95,7 @@ ProfileCornerInput = Annotated[
     WithJsonSchema(
         {
             "type": "string",
-            "enum": ["nominal"],
+            "enum": ["nominal", "NN"],
             "description": "Exact corner allowed by the selected profile.",
         }
     ),
@@ -284,7 +287,7 @@ def create_server(service: CadenceService) -> MCPServer:
     @server.tool(
         name="cadence_submit_profile",
         description=(
-            "Submit one reviewed simulation profile with allowlisted numeric variables; no raw "
+            "Submit one reviewed simulation profile with its exact variable contract; no raw "
             "netlist, OCEAN, SKILL, path, analysis, or output input is accepted."
         ),
         annotations=_SUBMIT,
@@ -293,7 +296,7 @@ def create_server(service: CadenceService) -> MCPServer:
     async def cadence_submit_profile(
         profile_id: ProfileIdInput,
         corner: ProfileCornerInput,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> Annotated[CallToolResult, JobStatus]:
         return await _stable_result(service.submit_profile(profile_id, corner, variables))
 

@@ -22,7 +22,7 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
-    RcTransientVariables,
+    ProfileVariables,
     ToolAvailability,
 )
 from cadence_mcp_bridge.server import create_server
@@ -91,7 +91,7 @@ class FakeBackend:
         job_id: UUID,
         profile_id: str,
         corner: str,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> JobStatus:
         return self._status(job_id).model_copy(update={"profile": profile_id})
 
@@ -134,6 +134,14 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
     assert tools["cadence_list_libraries"].input_schema["properties"] == {}
     assert tools["cadence_list_profiles"].input_schema["properties"] == {}
+    assert tools["cadence_get_profile"].input_schema["properties"]["profile_id"]["enum"] == [
+        "fixture-rc-transient",
+        "actual-differential-amplifier-tb2-transient",
+    ]
+    assert tools["cadence_submit_profile"].input_schema["properties"]["corner"]["enum"] == [
+        "nominal",
+        "NN",
+    ]
     for name in ("cadence_job_status", "cadence_job_result", "cadence_cancel_job"):
         assert set(tools[name].input_schema["properties"]) == {"job_id"}
     assert set(tools["cadence_job_log_tail"].input_schema["properties"]) == {
@@ -236,6 +244,18 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
                 },
             },
         )
+        actual_profile = await client.call_tool(
+            "cadence_get_profile",
+            {"profile_id": "actual-differential-amplifier-tb2-transient"},
+        )
+        actual_submit = await client.call_tool(
+            "cadence_submit_profile",
+            {
+                "profile_id": "actual-differential-amplifier-tb2-transient",
+                "corner": "NN",
+                "variables": {},
+            },
+        )
 
     assert cast(dict[str, Any], health.structured_content)["ssh"] == "ok"
     assert cast(dict[str, Any], status.structured_content)["state"] == "running"
@@ -248,6 +268,8 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
     assert cast(dict[str, Any], profiles.structured_content)["registry_version"] == 1
     assert cast(dict[str, Any], profile.structured_content)["classification"] == "fixture"
     assert cast(dict[str, Any], profile_submit.structured_content)["state"] == "queued"
+    assert cast(dict[str, Any], actual_profile.structured_content)["classification"] == "actual"
+    assert cast(dict[str, Any], actual_submit.structured_content)["state"] == "queued"
     assert all(
         not item.is_error
         for item in (
@@ -263,6 +285,8 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             profiles,
             profile,
             profile_submit,
+            actual_profile,
+            actual_submit,
         )
     )
 

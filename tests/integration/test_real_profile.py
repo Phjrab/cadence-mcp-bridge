@@ -64,3 +64,51 @@ async def test_real_allowlisted_profile_lifecycle_through_mcp() -> None:
     artifacts = {item["name"] for item in result["artifacts"]}
     assert "run-manifest.json" in artifacts
     assert "variables" not in result
+
+
+@pytest.mark.asyncio
+async def test_real_actual_ade_profile_lifecycle_through_mcp() -> None:
+    server = create_server(CadenceService(OpenSshBackend(BridgeConfig())))
+
+    async with Client(server) as client:
+        profile = content(
+            await client.call_tool(
+                "cadence_get_profile",
+                {"profile_id": "actual-differential-amplifier-tb2-transient"},
+            )
+        )
+        submitted = content(
+            await client.call_tool(
+                "cadence_submit_profile",
+                {
+                    "profile_id": "actual-differential-amplifier-tb2-transient",
+                    "corner": "NN",
+                    "variables": {},
+                },
+            )
+        )
+        job_id = cast(str, submitted["job_id"])
+        status: dict[str, Any] = submitted
+        for _ in range(300):
+            if status["state"] in {"succeeded", "failed", "cancelled", "unknown"}:
+                break
+            await asyncio.sleep(1)
+            status = content(await client.call_tool("cadence_job_status", {"job_id": job_id}))
+        result = content(await client.call_tool("cadence_job_result", {"job_id": job_id}))
+
+    assert profile["classification"] == "actual"
+    assert profile["variables"] == []
+    assert profile["outputs"] == []
+    assert profile["corners"] == ["NN"]
+    assert profile["ade"]["library"] == "MyDesignLib"
+    assert profile["ade"]["cell"] == "Differential_Amplifier_TB2"
+    assert profile["ade"]["state"] == "state1"
+    assert profile["ade"]["spectre_stop_time"] == "4m"
+    assert "/home/" not in str(profile)
+    assert status["state"] == "succeeded"
+    assert result["exit_code"] == 0
+    assert result["summary"]["errors"] == 0
+    assert result["summary"]["warnings"] == 2
+    artifacts = {item["name"] for item in result["artifacts"]}
+    assert "run-manifest.json" in artifacts
+    assert "variables" not in result

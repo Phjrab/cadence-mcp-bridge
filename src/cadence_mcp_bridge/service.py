@@ -23,10 +23,15 @@ from cadence_mcp_bridge.models import (
     JobStatus,
     LibraryList,
     ProfileList,
-    RcTransientVariables,
+    ProfileVariables,
     SimulationProfile,
 )
-from cadence_mcp_bridge.profiles import get_profile, list_profiles, validate_corner
+from cadence_mcp_bridge.profiles import (
+    get_profile,
+    list_profiles,
+    validate_corner,
+    validate_variables,
+)
 
 
 class CadenceBackend(Protocol):
@@ -58,7 +63,7 @@ class CadenceBackend(Protocol):
         job_id: UUID,
         profile_id: str,
         corner: str,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> JobStatus: ...
 
 
@@ -151,13 +156,16 @@ class CadenceService:
         return get_profile(profile_id)
 
     async def submit_profile(
-        self, profile_id: str, corner: str, variables: RcTransientVariables
+        self, profile_id: str, corner: str, variables: ProfileVariables
     ) -> JobStatus:
         profile = get_profile(profile_id)
         safe_corner = validate_corner(profile, corner)
+        safe_variables = validate_variables(profile, variables)
         job_id = uuid4()
         status = await self._call(
-            lambda: self._backend.submit_profile(job_id, profile.profile_id, safe_corner, variables)
+            lambda: self._backend.submit_profile(
+                job_id, profile.profile_id, safe_corner, safe_variables
+            )
         )
         if status.job_id != job_id or status.profile != profile.profile_id:
             raise RemoteFailureError("Remote runner returned mismatched profile job metadata")

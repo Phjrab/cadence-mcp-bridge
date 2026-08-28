@@ -18,7 +18,7 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
     RemoteFailureError,
 )
-from cadence_mcp_bridge.models import RcTransientVariables
+from cadence_mcp_bridge.models import NoProfileVariables, RcTransientVariables
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 SSH_EXE = r"C:\Windows\System32\OpenSSH\ssh.exe"
@@ -238,6 +238,38 @@ async def test_submit_profile_uses_fixed_safe_runner_arguments(
         "1000",
         "9.9999999999999998e-13",
         "1.0000000000000001e-09",
+        "mcp",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_submit_actual_profile_uses_no_path_or_variable_arguments(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job_id = uuid4()
+    payload = {
+        "job_id": str(job_id),
+        "state": "queued",
+        "profile": "actual-differential-amplifier-tb2-transient",
+        "updated_at": "2026-08-28T00:00:00Z",
+        "message": "profile job queued",
+    }
+    run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    status = await backend.submit_profile(
+        job_id,
+        "actual-differential-amplifier-tb2-transient",
+        "NN",
+        NoProfileVariables(),
+    )
+
+    assert status.profile == "actual-differential-amplifier-tb2-transient"
+    assert run.call_args.args[0][-5:] == [
+        "submit-profile",
+        str(job_id),
+        "actual-differential-amplifier-tb2-transient",
+        "NN",
         "mcp",
     ]
 

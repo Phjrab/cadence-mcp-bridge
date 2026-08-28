@@ -3,8 +3,8 @@
 ## Scope at WP-09
 
 WP-09 adds a versioned simulation profile registry, typed variable ranges, fixed corners and
-outputs, asynchronous submission, and per-run manifests. Only a non-proprietary RC fixture is
-registered because the actual project testbench/state and allowed variables are not yet confirmed.
+outputs, asynchronous submission, and per-run manifests. The registry separates a non-proprietary
+RC fixture from one reviewed actual ADE L profile for `MyDesignLib/Differential_Amplifier_TB2`.
 
 ## Layer boundaries
 
@@ -54,12 +54,19 @@ re-checks `cds.lib`, exact real paths, directory type, and symlink containment b
 only names, allowed counts, and existence. It never opens a cellview file and never returns a
 remote path, PDK entry, netlist, model, or cellview content.
 
-Profile submission accepts one closed profile identifier, one allowed corner, and one typed
-variable object. The Windows service validates these against the local registry; the remote
-runner repeats identifier, numeric syntax, range, and registry checks before creating a job.
-The fixed helper generates only the reviewed fixture netlist and records exact applied values,
-units, analysis, corner, outputs, timeout, and registry version in `run-manifest.json`. MCP result
-returns artifact metadata, not manifest or waveform content.
+Profile submission accepts one closed profile identifier, one allowed corner, and a profile-specific
+typed variable object. The fixture accepts three bounded numeric variables. The actual profile
+accepts only an empty object and fixes ADE L `state1`, gpdk090 v4.6 section `NN`, 27 degrees C,
+transient stop `4m` (0.004 seconds), no adjustable design variables, and no requested measurements.
+The Windows service validates the selected contract; the remote runner repeats registry and source
+checks before creating a job. For the actual profile, the helper copies only the fixed existing
+ADE-generated circuit netlist into the mode-700 job directory and builds a reviewed Spectre wrapper.
+It never opens or saves the OA cellview or ADE state. The manifest records the source hash and exact
+fixed configuration. MCP returns artifact metadata, not manifest, netlist, or waveform content.
+
+Profile completion is strict by default. The actual profile alone permits at most two occurrences
+of the observed non-fatal gpdk090 `CMI-2477` warning; any other warning, additional occurrence,
+nonzero exit, or Spectre error fails the job.
 
 The generated submit UUID is also the idempotency key. If SSH times out after remote creation,
 the service queries status for that same UUID exactly once; it adopts the job only when the

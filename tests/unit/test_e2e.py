@@ -23,7 +23,7 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
-    RcTransientVariables,
+    ProfileVariables,
     ToolAvailability,
 )
 from cadence_mcp_bridge.server import create_server
@@ -99,7 +99,7 @@ class LifecycleBackend:
         job_id: UUID,
         profile_id: str,
         corner: str,
-        variables: RcTransientVariables,
+        variables: ProfileVariables,
     ) -> JobStatus:
         return self._status(job_id, JobState.QUEUED).model_copy(update={"profile": profile_id})
 

@@ -285,13 +285,19 @@ Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
 - design-tree metadata and pre-existing lock-file fingerprints were identical immediately before
   and after a combined headless and discovery run; no save or new design lock occurred.
 
-## WP-09 profile automation scaffold
+## WP-09 profile automation
 
-Runner 0.6.0 adds the fixed `submit-profile` command. The only registered profile is
-`fixture-rc-transient`, classified as a fixture. It fixes transient analysis, the `nominal`
-corner, output `out`, a 60-second timeout, and reviewed ranges for resistance, capacitance, and
-stop time. The remote helper revalidates ranges before job creation and writes the generated
-fixture netlist and versioned run manifest only below the mode-700 job directory.
+Runner 0.7.0 exposes two separately classified profiles through the fixed `submit-profile` command.
+`fixture-rc-transient` remains the synthetic fixture with bounded resistance, capacitance, and stop
+time. `actual-differential-amplifier-tb2-transient` fixes `MyDesignLib/Differential_Amplifier_TB2`
+schematic, ADE L `state1`, gpdk090 v4.6 section `NN`, 27 degrees C, transient stop `4m` (0.004
+seconds), no caller-controlled variables, and no requested measurements.
+
+The actual profile validates the fixed state, model, and source netlist before creating a job. It
+copies the existing ADE-generated circuit netlist into the private job directory, creates a reviewed
+wrapper, and records the source SHA-256 and applied configuration in `run-manifest.json`. It never
+writes the original cellview, state, PDK, model, or simulation result directory. MCP exposes only
+bounded completion and artifact metadata.
 
 Validated on 2026-08-28 against `cadence-vm`:
 
@@ -301,10 +307,10 @@ Validated on 2026-08-28 against `cadence-vm`:
   contents;
 - a resistance below the minimum was denied with exit 64 before a job directory was created;
 - an unknown corner was denied with exit 64;
-- all seven real integration tests passed, including existing smoke and discovery regression;
+- all eight real integration tests passed, including actual profile, smoke, fixture, and discovery
+  regression;
 - design-tree and lock fingerprints were identical before and after profile execution.
-
-No actual ADE/testbench profile is registered. Read-only inspection found one current schematic
-candidate without a saved state and two legacy ADE XL candidates, but could not safely determine
-the intended test, variables, corners, or outputs. The minimal required choices are recorded in
-`docs/USER_INPUTS_REQUIRED.md`.
+- the actual profile completed with exit code 0, zero errors, two allowlisted `CMI-2477` warnings,
+  and one notice; any other warning or more than two occurrences fails closed;
+- the fixed bias parameters found in the ADE-generated input are recorded in the remote-only run
+  manifest but remain unavailable as caller-controlled design variables.
