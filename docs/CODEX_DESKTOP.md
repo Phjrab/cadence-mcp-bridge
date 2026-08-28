@@ -19,8 +19,8 @@ The registration starts the stdio server with the absolute Python executable and
 to 180 seconds, which covers the bridge's 120-second SSH operation limit. The full smoke workflow
 still uses the separate five-minute bounded polling deadline.
 
-`default_tools_approval_mode = "writes"` leaves health, status, log tail, result, and the three
-metadata-only discovery tools read-only. Submission and cancellation additionally have explicit
+`default_tools_approval_mode = "writes"` leaves health, status, log tail, result, discovery, and
+profile-list/profile-detail tools read-only. Submission and cancellation additionally have explicit
 `approval_mode = "prompt"`; approve them only when the displayed request matches the intended
 smoke job.
 
@@ -28,10 +28,11 @@ smoke job.
 
 1. Restart Codex Desktop after registration.
 2. In a new task, enter `/mcp` and confirm `cadence-mcp-bridge` is enabled and connected.
-3. Confirm exactly these nine tools are visible:
+3. Confirm exactly these twelve tools are visible:
    `cadence_health`, `cadence_submit_smoke`, `cadence_job_status`,
    `cadence_job_log_tail`, `cadence_job_result`, `cadence_cancel_job`,
    `cadence_list_libraries`, `cadence_list_cells`, and `cadence_inspect_cellview`.
+   Also confirm `cadence_list_profiles`, `cadence_get_profile`, and `cadence_submit_profile`.
 4. Confirm there is no raw shell, raw SSH, arbitrary file, SKILL eval, or OCEAN eval tool.
 
 The Codex Desktop app, Codex CLI, and IDE extension share the same host MCP configuration. The
@@ -66,6 +67,12 @@ Read-only project discovery; do not request PDK or file contents:
 
 ```text
 허용된 Cadence 프로젝트 라이브러리와 셀을 나열하고 NOT_gate schematic 뷰의 존재 여부만 확인해줘. 경로나 파일 내용은 출력하지 마.
+```
+
+Fixture profile lifecycle; approve only the fixed fixture submission:
+
+```text
+fixture-rc-transient 프로파일의 nominal corner를 기본 변수로 실행하고 완료 상태와 artifact metadata만 요약해줘. netlist나 raw waveform 내용은 출력하지 마.
 ```
 
 ## Recovery

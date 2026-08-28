@@ -22,7 +22,11 @@ from cadence_mcp_bridge.models import (
     JobResult,
     JobStatus,
     LibraryList,
+    ProfileList,
+    RcTransientVariables,
+    SimulationProfile,
 )
+from cadence_mcp_bridge.profiles import get_profile, list_profiles, validate_corner
 
 
 class CadenceBackend(Protocol):
@@ -48,6 +52,14 @@ class CadenceBackend(Protocol):
     async def list_cells(self, library: str) -> CellList: ...
 
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection: ...
+
+    async def submit_profile(
+        self,
+        job_id: UUID,
+        profile_id: str,
+        corner: str,
+        variables: RcTransientVariables,
+    ) -> JobStatus: ...
 
 
 _ResultT = TypeVar("_ResultT")
@@ -131,6 +143,26 @@ class CadenceService:
         ):
             raise RemoteFailureError("Remote runner returned mismatched cellview metadata")
         return result
+
+    async def list_profiles(self) -> ProfileList:
+        return list_profiles()
+
+    async def get_profile(self, profile_id: str) -> SimulationProfile:
+        return get_profile(profile_id)
+
+    async def submit_profile(
+        self, profile_id: str, corner: str, variables: RcTransientVariables
+    ) -> JobStatus:
+        profile = get_profile(profile_id)
+        safe_corner = validate_corner(profile, corner)
+        job_id = uuid4()
+        status = await self._call(
+            lambda: self._backend.submit_profile(job_id, profile.profile_id, safe_corner, variables)
+        )
+        if status.job_id != job_id or status.profile != profile.profile_id:
+            raise RemoteFailureError("Remote runner returned mismatched profile job metadata")
+        self._owned_job_ids.add(job_id)
+        return status
 
     @staticmethod
     def _parse_job_id(job_id: str) -> UUID:

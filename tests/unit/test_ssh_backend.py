@@ -18,6 +18,7 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
     RemoteFailureError,
 )
+from cadence_mcp_bridge.models import RcTransientVariables
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 SSH_EXE = r"C:\Windows\System32\OpenSSH\ssh.exe"
@@ -210,6 +211,52 @@ async def test_discovery_commands_use_fixed_runner_argv(
 
 
 @pytest.mark.asyncio
+async def test_submit_profile_uses_fixed_safe_runner_arguments(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job_id = uuid4()
+    payload = {
+        "job_id": str(job_id),
+        "state": "queued",
+        "profile": "fixture-rc-transient",
+        "updated_at": "2026-08-28T00:00:00Z",
+        "message": "profile job queued",
+    }
+    run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    status = await backend.submit_profile(
+        job_id, "fixture-rc-transient", "nominal", RcTransientVariables()
+    )
+
+    assert status.profile == "fixture-rc-transient"
+    assert run.call_args.args[0][-8:] == [
+        "submit-profile",
+        str(job_id),
+        "fixture-rc-transient",
+        "nominal",
+        "1000",
+        "9.9999999999999998e-13",
+        "1.0000000000000001e-09",
+        "mcp",
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("profile_id", ["../x", "x;id", "$(id)", "--help"])
+async def test_malicious_profile_ids_are_rejected_before_subprocess(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch, profile_id: str
+) -> None:
+    run = Mock()
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    with pytest.raises(InvalidInputError):
+        await backend.submit_profile(uuid4(), profile_id, "nominal", RcTransientVariables())
+
+    run.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_operation_timeout_is_distinct(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -289,6 +336,7 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
         "log_tail",
         "result",
         "status",
+        "submit_profile",
         "submit_smoke",
     }
     assert "profile" not in inspect.signature(backend.submit_smoke).parameters

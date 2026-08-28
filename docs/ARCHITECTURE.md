@@ -1,15 +1,15 @@
 # Architecture
 
-## Scope at WP-08
+## Scope at WP-09
 
-WP-08 adds three metadata-only discovery operations for a fixed set of project libraries, cells,
-and views. OCEAN and SKILL headless startup are verified with fixed scripts in an isolated runtime
-under `.cadence_mcp`; callers cannot provide script text. PDK and shared libraries remain excluded.
+WP-09 adds a versioned simulation profile registry, typed variable ranges, fixed corners and
+outputs, asynchronous submission, and per-run manifests. Only a non-proprietary RC fixture is
+registered because the actual project testbench/state and allowed variables are not yet confirmed.
 
 ## Layer boundaries
 
 ```text
-MCPServer v2 stdio adapter (nine allowlisted tools)
+MCPServer v2 stdio adapter (twelve allowlisted tools)
           |
           v
 CadenceService (transport-independent orchestration)
@@ -24,6 +24,7 @@ OpenSshBackend -> Windows ssh.exe -> fixed cadence-runner
 - `config.py` owns operator configuration and enforces fixed SSH and remote-root boundaries.
 - `models.py` defines immutable health, job, artifact, discovery, and error contracts.
 - `discovery.py` enforces the reviewed library/cell/view allowlist before SSH.
+- `profiles.py` owns the reviewed local profile contract and rejects unknown profiles/corners.
 - `errors.py` maps failures to stable, sanitized envelopes.
 - `sanitization.py` removes credential, license, and Windows-profile details and bounds output.
 - `service.py` separates application behavior from the SSH and MCP adapters.
@@ -52,6 +53,13 @@ Discovery uses a fixed JSON allowlist deployed under `.cadence_mcp/config`. The 
 re-checks `cds.lib`, exact real paths, directory type, and symlink containment before returning
 only names, allowed counts, and existence. It never opens a cellview file and never returns a
 remote path, PDK entry, netlist, model, or cellview content.
+
+Profile submission accepts one closed profile identifier, one allowed corner, and one typed
+variable object. The Windows service validates these against the local registry; the remote
+runner repeats identifier, numeric syntax, range, and registry checks before creating a job.
+The fixed helper generates only the reviewed fixture netlist and records exact applied values,
+units, analysis, corner, outputs, timeout, and registry version in `run-manifest.json`. MCP result
+returns artifact metadata, not manifest or waveform content.
 
 The generated submit UUID is also the idempotency key. If SSH times out after remote creation,
 the service queries status for that same UUID exactly once; it adopts the job only when the

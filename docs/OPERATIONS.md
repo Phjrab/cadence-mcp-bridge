@@ -147,9 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly nine tools: the six lifecycle tools plus allowlisted library listing, cell
-listing, and cellview inspection. No profile, remote path, netlist, command, or script text is
-accepted.
+server exposes exactly twelve tools: six lifecycle tools, three metadata discovery tools, and
+profile list/detail/submission. No remote path, netlist text, command, script text, arbitrary
+analysis, or arbitrary output is accepted.
 
 ## WP-04 acceptance evidence
 
@@ -217,7 +217,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact nine-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twelve-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -284,3 +284,27 @@ Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
 - responses contained no remote path, `cds.lib`, OA filename, model, or cellview content;
 - design-tree metadata and pre-existing lock-file fingerprints were identical immediately before
   and after a combined headless and discovery run; no save or new design lock occurred.
+
+## WP-09 profile automation scaffold
+
+Runner 0.6.0 adds the fixed `submit-profile` command. The only registered profile is
+`fixture-rc-transient`, classified as a fixture. It fixes transient analysis, the `nominal`
+corner, output `out`, a 60-second timeout, and reviewed ranges for resistance, capacitance, and
+stop time. The remote helper revalidates ranges before job creation and writes the generated
+fixture netlist and versioned run manifest only below the mode-700 job directory.
+
+Validated on 2026-08-28 against `cadence-vm`:
+
+- the fixture profile completed on the actual VM with exit code 0, zero errors, zero warnings,
+  and one notice;
+- result returned metadata for the manifest and bounded artifacts, never waveform or manifest
+  contents;
+- a resistance below the minimum was denied with exit 64 before a job directory was created;
+- an unknown corner was denied with exit 64;
+- all seven real integration tests passed, including existing smoke and discovery regression;
+- design-tree and lock fingerprints were identical before and after profile execution.
+
+No actual ADE/testbench profile is registered. Read-only inspection found one current schematic
+candidate without a saved state and two legacy ADE XL candidates, but could not safely determine
+the intended test, variables, corners, or outputs. The minimal required choices are recorded in
+`docs/USER_INPUTS_REQUIRED.md`.

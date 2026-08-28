@@ -24,6 +24,7 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
+    RcTransientVariables,
     ToolAvailability,
 )
 from cadence_mcp_bridge.service import CadenceService
@@ -89,6 +90,15 @@ class FakeBackend:
 
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         return CellViewInspection(library=library, cell=cell, view=view, exists=True)
+
+    async def submit_profile(
+        self,
+        job_id: UUID,
+        profile_id: str,
+        corner: str,
+        variables: RcTransientVariables,
+    ) -> JobStatus:
+        return job_status(job_id).model_copy(update={"profile": profile_id})
 
 
 class FailingBackend(FakeBackend):
@@ -229,3 +239,28 @@ async def test_service_rejects_discovery_outside_allowlist(
 
     with pytest.raises(InvalidInputError, match=message):
         await operation(service)
+
+
+@pytest.mark.asyncio
+async def test_service_profile_registry_and_submission() -> None:
+    service = CadenceService(FakeBackend())
+
+    listing = await service.list_profiles()
+    profile = await service.get_profile("fixture-rc-transient")
+    submitted = await service.submit_profile(
+        "fixture-rc-transient", "nominal", RcTransientVariables()
+    )
+
+    assert listing.registry_version == 1
+    assert profile.classification == "fixture"
+    assert submitted.profile == "fixture-rc-transient"
+
+
+@pytest.mark.asyncio
+async def test_service_rejects_unknown_profile_and_corner() -> None:
+    service = CadenceService(FakeBackend())
+
+    with pytest.raises(InvalidInputError, match="profile"):
+        await service.get_profile("unknown")
+    with pytest.raises(InvalidInputError, match="corner"):
+        await service.submit_profile("fixture-rc-transient", "fast", RcTransientVariables())

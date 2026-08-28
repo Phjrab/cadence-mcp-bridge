@@ -5,17 +5,20 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.5.0
+RUNNER_VERSION=0.6.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
+PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
 SPECTRE_BIN=/home/buet/cadence/MMSIM121/tools/bin/spectre
 OCEAN_BIN=/home/buet/cadence/IC615/tools/dfII/bin/ocean
 DISCOVERY_HELPER="$CADENCE_MCP_ROOT/py26/discovery_json.py"
 DISCOVERY_ALLOWLIST="$CADENCE_MCP_ROOT/config/discovery-allowlist.json"
 DISCOVERY_RUNTIME="$CADENCE_MCP_ROOT/discovery-runtime"
+PROFILE_HELPER="$CADENCE_MCP_ROOT/py26/profile_json.py"
+FIXTURE_PROFILE="$CADENCE_MCP_ROOT/profiles/fixture-rc-transient/profile.json"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -79,6 +82,57 @@ runner_submit_smoke() {
     cadence_mcp_atomic_status "$job_id" queued "job queued"
     queued_response=$(cat "$job_dir/status.json")
     nohup setsid "$WORKER" "$job_id" > /dev/null 2>&1 &
+    pid=$!
+    printf '%s\n' "$pid" > "$job_dir/pid"
+    printf '%s\n' "$pid" > "$job_dir/pgid"
+    start_marker=$(ps -o lstart= -p "$pid" | sed 's/^ *//;s/ *$//')
+    printf '%s\n' "$start_marker" > "$job_dir/start_marker"
+    chmod 600 "$job_dir/pid" "$job_dir/pgid" "$job_dir/start_marker"
+    printf '%s\n' "$queued_response"
+}
+
+runner_submit_profile() {
+    [ "$#" -eq 7 ] || usage
+    job_id=$1
+    profile_id=$2
+    corner=$3
+    resistance=$4
+    capacitance=$5
+    stop_time=$6
+    origin=$7
+    cadence_mcp_validate_job_id "$job_id" || cadence_mcp_fail "invalid job id" 64
+    [ "$profile_id" = fixture-rc-transient ] \
+        || cadence_mcp_fail "profile is outside the registry" 64
+    [ "$corner" = nominal ] || cadence_mcp_fail "corner is outside the profile" 64
+    number_pattern='^[0-9]+([.][0-9]*)?([eE][+-]?[0-9]+)?$'
+    [[ "$resistance" =~ $number_pattern ]] || cadence_mcp_fail "invalid resistance" 64
+    [[ "$capacitance" =~ $number_pattern ]] || cadence_mcp_fail "invalid capacitance" 64
+    [[ "$stop_time" =~ $number_pattern ]] || cadence_mcp_fail "invalid stop time" 64
+    "$CADENCE_MCP_PYTHON" "$PROFILE_HELPER" validate \
+        "$FIXTURE_PROFILE" "$profile_id" "$corner" "$resistance" "$capacitance" \
+        "$stop_time" || cadence_mcp_fail "profile validation failed" 64
+    case "$origin" in
+        mcp) submitted_by=cadence-mcp-bridge ;;
+        operator) submitted_by=$(id -un) ;;
+        *) cadence_mcp_fail "invalid job origin" 64 ;;
+    esac
+    cadence_mcp_ensure_layout
+    job_dir=$(cadence_mcp_job_dir "$job_id") || cadence_mcp_fail "invalid job id" 64
+    [ ! -e "$job_dir" ] || cadence_mcp_fail "job already exists" 65
+    mkdir -m 700 "$job_dir" || cadence_mcp_fail "cannot create job" 73
+    : > "$job_dir/stdout.log"
+    : > "$job_dir/stderr.log"
+    chmod 600 "$job_dir/stdout.log" "$job_dir/stderr.log"
+    submitted_at=$(cadence_mcp_utc_now)
+    "$CADENCE_MCP_PYTHON" "$PROFILE_HELPER" prepare \
+        "$FIXTURE_PROFILE" "$job_dir" "$job_id" "$profile_id" "$corner" \
+        "$resistance" "$capacitance" "$stop_time" "$submitted_at" "$origin" \
+        "$submitted_by" || cadence_mcp_fail "profile preparation failed" 64
+    cadence_mcp_audit job_submitted "$job_id" "$origin" "$submitted_by" \
+        || cadence_mcp_fail "audit write failed" 70
+    cadence_mcp_atomic_status "$job_id" queued "profile job queued"
+    queued_response=$(cat "$job_dir/status.json")
+    nohup setsid "$PROFILE_WORKER" "$job_id" > /dev/null 2>&1 &
     pid=$!
     printf '%s\n' "$pid" > "$job_dir/pid"
     printf '%s\n' "$pid" > "$job_dir/pgid"
@@ -236,6 +290,7 @@ case "$command_name" in
     version) runner_version "$@" ;;
     health) runner_health "$@" ;;
     submit-smoke) runner_submit_smoke "$@" ;;
+    submit-profile) runner_submit_profile "$@" ;;
     status) runner_status "$@" ;;
     log-tail) runner_log_tail "$@" ;;
     result) runner_result "$@" ;;

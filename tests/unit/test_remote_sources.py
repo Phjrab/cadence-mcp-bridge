@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from cadence_mcp_bridge.profiles import FIXTURE_PROFILE
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNNER = PROJECT_ROOT / "remote" / "bin" / "cadence-runner"
 COMMON = PROJECT_ROOT / "remote" / "lib" / "runner-common.sh"
@@ -19,6 +21,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "version",
         "health",
         "submit-smoke",
+        "submit-profile",
         "status",
         "log-tail",
         "result",
@@ -44,7 +47,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.5.0" in runner
+    assert "RUNNER_VERSION=0.6.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -75,3 +78,24 @@ def test_discovery_is_allowlisted_metadata_only() -> None:
     assert '"proprietary_content_included": False' in helper
     assert "os.path.realpath" in helper
     assert "discovery-runtime" in RUNNER.read_text(encoding="utf-8")
+
+
+def test_profile_runner_is_fixed_and_manifest_backed() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = (PROJECT_ROOT / "remote" / "py26" / "profile_json.py").read_text(encoding="utf-8")
+    registry = json.loads(
+        (PROJECT_ROOT / "remote" / "profiles" / "fixture-rc-transient" / "profile.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert "submit-profile)" in runner
+    assert "fixture-rc-transient" in runner
+    assert registry["classification"] == "fixture"
+    assert registry["corners"] == ["nominal"]
+    assert registry["profile_id"] == FIXTURE_PROFILE.profile_id
+    assert registry["analyses"] == list(FIXTURE_PROFILE.analyses)
+    assert registry["outputs"] == list(FIXTURE_PROFILE.outputs)
+    assert registry["timeout_seconds"] == FIXTURE_PROFILE.timeout_seconds
+    assert "run-manifest.json" in helper
+    assert "script_text" not in runner

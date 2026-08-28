@@ -89,6 +89,45 @@ class CellViewInspection(ContractModel):
     proprietary_content_included: Literal[False] = False
 
 
+class ProfileVariableSpec(ContractModel):
+    name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
+    unit: Annotated[str, Field(min_length=1, max_length=16)]
+    minimum: float
+    maximum: float
+    default: float
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if not self.minimum <= self.default <= self.maximum:
+            raise ValueError("profile variable default must be within its range")
+        return self
+
+
+class ProfileSummary(ContractModel):
+    profile_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+    classification: Literal["fixture", "actual"]
+    analyses: tuple[Annotated[str, Field(min_length=1, max_length=32)], ...]
+    corners: tuple[Annotated[str, Field(min_length=1, max_length=32)], ...]
+    outputs: tuple[Annotated[str, Field(min_length=1, max_length=64)], ...]
+
+
+class ProfileList(ContractModel):
+    registry_version: Literal[1] = 1
+    profiles: tuple[ProfileSummary, ...]
+
+
+class SimulationProfile(ProfileSummary):
+    netlist_source: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+    variables: tuple[ProfileVariableSpec, ...]
+    timeout_seconds: Annotated[int, Field(ge=1, le=300)]
+
+
+class RcTransientVariables(ContractModel):
+    resistance_ohm: Annotated[float, Field(ge=100.0, le=10_000.0)] = 1_000.0
+    capacitance_f: Annotated[float, Field(ge=1e-13, le=1e-10)] = 1e-12
+    stop_time_s: Annotated[float, Field(ge=1e-10, le=1e-7)] = 1e-9
+
+
 class ArtifactMetadata(ContractModel):
     name: Annotated[str, Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")]
     relative_path: Annotated[str, Field(min_length=1, max_length=512)]
