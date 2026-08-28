@@ -2,10 +2,11 @@
 
 ## Security objective
 
-The bridge provides a small, reviewable path from six MCP tools to one fixed Cadence smoke
-profile. It is not a general remote administration, file access, OCEAN, SKILL, netlist, or shell
-interface. Every boundary fails closed when identity, path containment, process ownership, payload
-shape, or output limits cannot be proved.
+The bridge provides a small, reviewable path from nine MCP tools to one fixed Cadence smoke
+profile and three metadata-only design discovery operations. It is not a general remote
+administration, file access, OCEAN, SKILL, netlist, or shell interface. Every boundary fails
+closed when identity, path containment, allowlist membership, process ownership, payload shape,
+or output limits cannot be proved.
 
 ## Assets and protected data
 
@@ -27,19 +28,21 @@ outside that root remain read-only and outside the runner contract.
 
 ```text
 model/user
-  -> six typed MCP tools
+  -> nine typed MCP tools
   -> CadenceService (UUID ownership and input validation)
   -> OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
   -> Windows OpenSSH with BatchMode and strict host-key verification
   -> fixed cadence-runner
-  -> fixed spectre-smoke profile and Cadence executable
-  -> isolated jobs/<uuid> directory and metadata-only MCP response
+  -> fixed spectre-smoke profile or metadata-only discovery helper
+  -> isolated .cadence_mcp runtime and metadata-only MCP response
 ```
 
 Untrusted data is limited to a lowercase RFC 4122 job UUID, the closed `stdout|stderr` stream
-enum, and an integer from 1 through 200. The profile name, remote root, runner path, executable,
-netlist, command names, retention period, and audit path are compiled into reviewed source. The
-MCP caller cannot supply shell text, paths, environment values, script content, or a profile.
+enum, an integer from 1 through 200, and identifiers that must exactly match the reviewed
+library/cell/view allowlist. The profile name, remote root, runner path, executable, netlist,
+command names, retention period, audit path, and headless scripts are compiled into reviewed
+source. The MCP caller cannot supply shell text, paths, environment values, script content, or a
+profile.
 
 Each SSH call uses an argument list and `shell=False`; there is no public raw-command method.
 The runner independently validates every argument before deriving a path. Derived job paths are
@@ -60,6 +63,8 @@ fixed jobs root.
 | Repudiation | job submission/cancellation | fsynced mode-600 JSON Lines events with timestamp, actor, origin, job ID, and profile | remote account compromise can alter user-owned audit files |
 | Destructive cleanup | retention operations | 30-day candidate policy, fixed jobs root, UUID-only directories, symlink rejection, dry-run-only command and script | deletion requires a future reviewed, explicitly approved mechanism |
 | Dependency compromise | Python packages | `uv.lock`, hashes, strict `pip-audit`, minimal runtime dependencies | vulnerability databases may lag new disclosures |
+| Proprietary design disclosure | library/cell/view discovery | PDK exclusion, exact nested allowlist, real-path and symlink checks, names/existence only, helper never opens a cellview file | allowlisted names themselves are disclosed |
+| Design modification or lock creation | OCEAN/SKILL headless checks | fixed no-graph scripts, isolated working/log directory under `.cadence_mcp`, no design open/save calls, before/after metadata and lock fingerprints | Cadence installation behavior is trusted |
 
 ## Origin and audit contract
 
@@ -90,6 +95,11 @@ Results contain only a 512-character completion summary, up to 16 allowlisted ar
 records, origin, storage containment, and explicit summary/artifact truncation metadata. Raw PSF,
 netlist content, and unrestricted Cadence logs are never result fields. Result summaries pass
 through the same local redactor before reaching MCP.
+
+Discovery responses contain only allowlisted library/cell/view names, an allowed-cell count, and
+cellview existence. They explicitly set `proprietary_content_included=false`. PDK libraries,
+remote paths, file names inside cellviews, file bytes, model data, and cellview content are never
+response fields.
 
 ## Process, concurrency, and recovery
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -7,6 +8,8 @@ RUNNER = PROJECT_ROOT / "remote" / "bin" / "cadence-runner"
 COMMON = PROJECT_ROOT / "remote" / "lib" / "runner-common.sh"
 DEPLOY = PROJECT_ROOT / "scripts" / "deploy-remote.ps1"
 RESULT_HELPER = PROJECT_ROOT / "remote" / "py26" / "result_json.py"
+DISCOVERY_HELPER = PROJECT_ROOT / "remote" / "py26" / "discovery_json.py"
+DISCOVERY_ALLOWLIST = PROJECT_ROOT / "remote" / "config" / "discovery-allowlist.json"
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -20,6 +23,10 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "log-tail",
         "result",
         "cancel",
+        "list-libraries",
+        "list-cells",
+        "inspect-cellview",
+        "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
     ):
@@ -37,7 +44,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.4.0" in runner
+    assert "RUNNER_VERSION=0.5.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -56,3 +63,15 @@ def test_result_storage_uses_fixed_jobs_root_for_containment() -> None:
 
     assert 'jobs_root = os.path.realpath("/home/buet/cds_work/.cadence_mcp/jobs")' in source
     assert "os.path.dirname(real_job_dir) == jobs_root" in source
+
+
+def test_discovery_is_allowlisted_metadata_only() -> None:
+    helper = DISCOVERY_HELPER.read_text(encoding="utf-8")
+    config = json.loads(DISCOVERY_ALLOWLIST.read_text(encoding="utf-8"))
+
+    assert set(config["libraries"]) == {"MyFirstDesign", "MyDesignLib"}
+    assert "gpdk090" not in config["libraries"]
+    assert "open(view_path" not in helper
+    assert '"proprietary_content_included": False' in helper
+    assert "os.path.realpath" in helper
+    assert "discovery-runtime" in RUNNER.read_text(encoding="utf-8")

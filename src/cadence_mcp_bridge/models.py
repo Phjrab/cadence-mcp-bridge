@@ -61,6 +61,34 @@ class HealthReport(ContractModel):
     runner_version: str
 
 
+class LibraryMetadata(ContractModel):
+    name: Annotated[str, Field(min_length=1, max_length=64)]
+    allowed_cell_count: Annotated[int, Field(ge=0)]
+
+
+class LibraryList(ContractModel):
+    libraries: tuple[LibraryMetadata, ...]
+    allowlist_enforced: Literal[True] = True
+    proprietary_content_included: Literal[False] = False
+
+
+class CellList(ContractModel):
+    library: Annotated[str, Field(min_length=1, max_length=64)]
+    cells: tuple[Annotated[str, Field(min_length=1, max_length=64)], ...]
+    allowlist_enforced: Literal[True] = True
+    proprietary_content_included: Literal[False] = False
+
+
+class CellViewInspection(ContractModel):
+    library: Annotated[str, Field(min_length=1, max_length=64)]
+    cell: Annotated[str, Field(min_length=1, max_length=64)]
+    view: Annotated[str, Field(min_length=1, max_length=64)]
+    exists: bool
+    kind: Literal["cellview"] = "cellview"
+    allowlist_enforced: Literal[True] = True
+    proprietary_content_included: Literal[False] = False
+
+
 class ArtifactMetadata(ContractModel):
     name: Annotated[str, Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")]
     relative_path: Annotated[str, Field(min_length=1, max_length=512)]

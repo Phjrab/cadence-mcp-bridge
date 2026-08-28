@@ -19,6 +19,10 @@ $files = @(
     @{ Local = "remote/lib/runner-common.sh"; Remote = "$remoteRoot/lib/runner-common.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-smoke-job.sh"; Remote = "$remoteRoot/lib/run-smoke-job.sh"; Mode = "700" },
     @{ Local = "remote/py26/result_json.py"; Remote = "$remoteRoot/py26/result_json.py"; Mode = "700" },
+    @{ Local = "remote/py26/discovery_json.py"; Remote = "$remoteRoot/py26/discovery_json.py"; Mode = "700" },
+    @{ Local = "remote/config/discovery-allowlist.json"; Remote = "$remoteRoot/config/discovery-allowlist.json"; Mode = "600" },
+    @{ Local = "remote/discovery/ocean-smoke.ocn"; Remote = "$remoteRoot/discovery/ocean-smoke.ocn"; Mode = "600" },
+    @{ Local = "remote/discovery/skill-smoke.il"; Remote = "$remoteRoot/discovery/skill-smoke.il"; Mode = "600" },
     @{ Local = "remote/profiles/spectre-smoke/smoke.scs"; Remote = "$remoteRoot/profiles/spectre-smoke/smoke.scs"; Mode = "600" }
 )
 
@@ -39,7 +43,7 @@ if (-not $PSCmdlet.ShouldProcess("${sshAlias}:$remoteRoot", "Deploy restricted C
     return
 }
 
-$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/jobs'"
+$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/jobs'"
 & ssh @sshOptions $sshAlias $setupCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Remote layout creation failed."
@@ -59,7 +63,7 @@ foreach ($file in $files) {
     }
 }
 
-$verifyCommand = "bash -n '$remoteRoot/bin/cadence-runner' '$remoteRoot/lib/runner-common.sh' '$remoteRoot/lib/run-smoke-job.sh'; /usr/bin/python -m py_compile '$remoteRoot/py26/result_json.py'; rm -f '$remoteRoot/py26/result_json.pyc'; '$remoteRoot/bin/cadence-runner' version"
+$verifyCommand = "bash -n '$remoteRoot/bin/cadence-runner' '$remoteRoot/lib/runner-common.sh' '$remoteRoot/lib/run-smoke-job.sh'; /usr/bin/python -m py_compile '$remoteRoot/py26/result_json.py' '$remoteRoot/py26/discovery_json.py'; rm -f '$remoteRoot/py26/result_json.pyc' '$remoteRoot/py26/discovery_json.pyc'; '$remoteRoot/bin/cadence-runner' version"
 & ssh @sshOptions $sshAlias $verifyCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Remote syntax or version verification failed."

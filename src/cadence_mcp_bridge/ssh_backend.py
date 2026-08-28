@@ -24,6 +24,8 @@ from cadence_mcp_bridge.errors import (
 )
 from cadence_mcp_bridge.models import (
     ArtifactMetadata,
+    CellList,
+    CellViewInspection,
     HealthReport,
     JobLogTail,
     JobOrigin,
@@ -32,6 +34,7 @@ from cadence_mcp_bridge.models import (
     JobStatus,
     JobStorageMetadata,
     JobSummary,
+    LibraryList,
     ResultLimitMetadata,
 )
 from cadence_mcp_bridge.sanitization import sanitize_text
@@ -44,6 +47,9 @@ class _RunnerCommand(StrEnum):
     LOG_TAIL = "log-tail"
     RESULT = "result"
     CANCEL = "cancel"
+    LIST_LIBRARIES = "list-libraries"
+    LIST_CELLS = "list-cells"
+    INSPECT_CELLVIEW = "inspect-cellview"
 
 
 class _RunnerModel(BaseModel):
@@ -151,9 +157,7 @@ class OpenSshBackend:
             raise InvalidInputError("log stream must be stdout or stderr")
         if isinstance(lines, bool) or not isinstance(lines, int) or not 1 <= lines <= 200:
             raise InvalidInputError("log line count must be between 1 and 200")
-        payload = await self._invoke_json(
-            _RunnerCommand.LOG_TAIL, safe_job_id, stream, str(lines)
-        )
+        payload = await self._invoke_json(_RunnerCommand.LOG_TAIL, safe_job_id, stream, str(lines))
         remote = self._validate(_RunnerLogTail, payload)
         if remote.job_id != job_id or remote.stream != stream or remote.lines_requested != lines:
             raise RemoteFailureError("Remote runner returned mismatched log metadata")
@@ -216,6 +220,18 @@ class OpenSshBackend:
     async def cancel(self, job_id: UUID) -> JobStatus:
         payload = await self._invoke_json(_RunnerCommand.CANCEL, self._job_id(job_id))
         return self._status(self._validate(_RunnerStatus, payload))
+
+    async def list_libraries(self) -> LibraryList:
+        payload = await self._invoke_json(_RunnerCommand.LIST_LIBRARIES)
+        return self._validate(LibraryList, payload)
+
+    async def list_cells(self, library: str) -> CellList:
+        payload = await self._invoke_json(_RunnerCommand.LIST_CELLS, library)
+        return self._validate(CellList, payload)
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
+        payload = await self._invoke_json(_RunnerCommand.INSPECT_CELLVIEW, library, cell, view)
+        return self._validate(CellViewInspection, payload)
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)

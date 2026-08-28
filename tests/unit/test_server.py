@@ -11,12 +11,16 @@ from mcp import Client
 
 from cadence_mcp_bridge.errors import AuthenticationError
 from cadence_mcp_bridge.models import (
+    CellList,
+    CellViewInspection,
     HealthReport,
     JobLogTail,
     JobResult,
     JobState,
     JobStatus,
     JobSummary,
+    LibraryList,
+    LibraryMetadata,
     LicenseEnvironment,
     ToolAvailability,
 )
@@ -72,6 +76,15 @@ class FakeBackend:
     async def cancel(self, job_id: UUID) -> JobStatus:
         return self._status(job_id, JobState.CANCELLING)
 
+    async def list_libraries(self) -> LibraryList:
+        return LibraryList(libraries=(LibraryMetadata(name="MyFirstDesign", allowed_cell_count=1),))
+
+    async def list_cells(self, library: str) -> CellList:
+        return CellList(library=library, cells=("NOT_gate",))
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
+        return CellViewInspection(library=library, cell=cell, view=view, exists=True)
+
     @staticmethod
     def _status(job_id: UUID, state: JobState = JobState.QUEUED) -> JobStatus:
         now = datetime.now(UTC)
@@ -99,10 +112,14 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_job_log_tail",
         "cadence_job_result",
         "cadence_cancel_job",
+        "cadence_list_libraries",
+        "cadence_list_cells",
+        "cadence_inspect_cellview",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
+    assert tools["cadence_list_libraries"].input_schema["properties"] == {}
     for name in ("cadence_job_status", "cadence_job_result", "cadence_cancel_job"):
         assert set(tools[name].input_schema["properties"]) == {"job_id"}
     assert set(tools["cadence_job_log_tail"].input_schema["properties"]) == {
@@ -115,6 +132,12 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     assert log_properties["lines"]["minimum"] == 1
     assert log_properties["lines"]["maximum"] == 200
     assert "pattern" in tools["cadence_job_status"].input_schema["properties"]["job_id"]
+    assert set(tools["cadence_list_cells"].input_schema["properties"]) == {"library"}
+    assert set(tools["cadence_inspect_cellview"].input_schema["properties"]) == {
+        "library",
+        "cell",
+        "view",
+    }
     read_only = {
         name
         for name, tool in tools.items()
@@ -125,6 +148,9 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_job_status",
         "cadence_job_log_tail",
         "cadence_job_result",
+        "cadence_list_libraries",
+        "cadence_list_cells",
+        "cadence_inspect_cellview",
     }
     destructive = {
         name
@@ -172,13 +198,47 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
         )
         result = await client.call_tool("cadence_job_result", {"job_id": job_id})
         cancel = await client.call_tool("cadence_cancel_job", {"job_id": job_id})
+        libraries = await client.call_tool("cadence_list_libraries")
+        cells = await client.call_tool("cadence_list_cells", {"library": "MyFirstDesign"})
+        cellview = await client.call_tool(
+            "cadence_inspect_cellview",
+            {"library": "MyFirstDesign", "cell": "NOT_gate", "view": "schematic"},
+        )
 
     assert cast(dict[str, Any], health.structured_content)["ssh"] == "ok"
     assert cast(dict[str, Any], status.structured_content)["state"] == "running"
     assert cast(dict[str, Any], log_tail.structured_content)["text"] == "bounded log"
     assert cast(dict[str, Any], result.structured_content)["exit_code"] == 0
     assert cast(dict[str, Any], cancel.structured_content)["state"] == "cancelling"
-    assert all(not item.is_error for item in (health, submit, status, log_tail, result, cancel))
+    assert cast(dict[str, Any], libraries.structured_content)["allowlist_enforced"] is True
+    assert cast(dict[str, Any], cells.structured_content)["cells"] == ["NOT_gate"]
+    assert cast(dict[str, Any], cellview.structured_content)["exists"] is True
+    assert all(
+        not item.is_error
+        for item in (
+            health,
+            submit,
+            status,
+            log_tail,
+            result,
+            cancel,
+            libraries,
+            cells,
+            cellview,
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_discovery_rejects_out_of_allowlist_before_backend() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        response = await client.call_tool("cadence_list_cells", {"library": "gpdk090"})
+
+    content = cast(dict[str, Any], response.structured_content)
+    assert response.is_error is True
+    assert content["error"]["code"] == "invalid_input"
 
 
 @pytest.mark.asyncio

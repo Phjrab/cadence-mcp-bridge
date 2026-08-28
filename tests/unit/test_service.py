@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
@@ -12,12 +13,16 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
 )
 from cadence_mcp_bridge.models import (
+    CellList,
+    CellViewInspection,
     HealthReport,
     JobLogTail,
     JobResult,
     JobState,
     JobStatus,
     JobSummary,
+    LibraryList,
+    LibraryMetadata,
     LicenseEnvironment,
     ToolAvailability,
 )
@@ -75,6 +80,15 @@ class FakeBackend:
     async def cancel(self, job_id: UUID) -> JobStatus:
         self.cancelled = job_id
         return job_status(job_id, state=JobState.CANCELLING)
+
+    async def list_libraries(self) -> LibraryList:
+        return LibraryList(libraries=(LibraryMetadata(name="MyFirstDesign", allowed_cell_count=1),))
+
+    async def list_cells(self, library: str) -> CellList:
+        return CellList(library=library, cells=("NOT_gate",))
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
+        return CellViewInspection(library=library, cell=cell, view=view, exists=True)
 
 
 class FailingBackend(FakeBackend):
@@ -184,3 +198,34 @@ async def test_service_validates_log_tail_inputs() -> None:
         await service.job_log_tail(job_id, "combined", 10)
     with pytest.raises(InvalidInputError, match="lines"):
         await service.job_log_tail(job_id, "stdout", 201)
+
+
+@pytest.mark.asyncio
+async def test_service_returns_only_allowlisted_discovery_metadata() -> None:
+    service = CadenceService(FakeBackend())
+
+    libraries = await service.list_libraries()
+    cells = await service.list_cells("MyFirstDesign")
+    cellview = await service.inspect_cellview("MyFirstDesign", "NOT_gate", "schematic")
+
+    assert libraries.proprietary_content_included is False
+    assert cells.cells == ("NOT_gate",)
+    assert cellview.exists is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "message"),
+    [
+        (lambda service: service.list_cells("gpdk090"), "library"),
+        (lambda service: service.inspect_cellview("MyFirstDesign", "Other", "schematic"), "cell"),
+        (lambda service: service.inspect_cellview("MyFirstDesign", "NOT_gate", "layout"), "view"),
+    ],
+)
+async def test_service_rejects_discovery_outside_allowlist(
+    operation: Callable[[CadenceService], Awaitable[object]], message: str
+) -> None:
+    service = CadenceService(FakeBackend())
+
+    with pytest.raises(InvalidInputError, match=message):
+        await operation(service)
