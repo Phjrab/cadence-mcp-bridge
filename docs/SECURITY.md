@@ -150,9 +150,10 @@ requires a separate reviewed change and explicit operator approval.
 `src/cadence_mcp_bridge/write_policy.py` is intentionally fail-closed. `gpdk090`, `analogLib`,
 `basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable. Only `MCP_WorkLib` and the exact
 `mcpMutationTest=validated-v1` contract are eligible. The runner accepts no caller path, library,
-cell, view, property, value, or script text. Its plan now reports `ready=false` because the first
-real attempt created the destination before failing on a legacy API mismatch. See
-`docs/DESIGN_WRITE_POLICY.md` for the required new target disposition.
+cell, view, property, value, or script text. The V2 contract fingerprints the preserved V1 target,
+rejects an existing V2 destination or backup, and refuses source/V2 OA lock, panic, or recovery
+artifacts. The V2 plan and read-only API preflight passed, but an active source lock owned by
+Virtuoso PID 25425 blocked copy before any V2 design write. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

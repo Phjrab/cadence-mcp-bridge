@@ -7,13 +7,19 @@ dedicated `MCP_WorkLib` library, the exact source and destination, and the sole 
 mutation. The bridge now exposes one read-only plan tool and one confirmation-gated validation
 tool, for a total of twenty-two public tools.
 
-The real run created the approved destination copy
+The first real run created the approved destination copy
 `MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic`, then stopped before dry-run completion
 because IC6.1.5 does not provide the attempted `dbFindPropByName` helper. No property apply,
-backup, rollback, tag, or release occurred. The implementation now performs the lookup by walking
-the cellview property list, but the approved contract says an existing destination must never be
-overwritten. Consequently the runner reports `ready=false` and no second execution is permitted
-without a new explicit disposition for the incomplete destination.
+backup, rollback, tag, or release occurred. That V1 target and its recovery artifacts remain
+untouched.
+
+The user subsequently approved a clean V2 target and backup. Runner 0.9.0 binds the canonical plan
+to `Differential_Amplifier_TB2_MCP_TEST_V2` and
+`Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP`, uses the IC6.1.5-compatible `dbFindProp`, restores
+the target from the actual backup, compares logical baseline fingerprints, and fingerprints the
+preserved V1 target. The V2 plan and read-only SKILL compatibility preflight passed, but the final
+pre-apply gate found an active OA lock on the read-only source owned by Virtuoso PID 25425. The
+user's lock policy therefore blocks the actual V2 copy; both V2 cell names remain absent.
 
 ## Permanent protections
 
@@ -26,15 +32,16 @@ without a new explicit disposition for the incomplete destination.
 `write_policy.py` classifies the known protected and source library names, designates only
 `MCP_WorkLib` as eligible, and lists only
 `set_cellview_property:mcpMutationTest=validated-v1`. The remote plan independently checks that
-the fixed source exists and the fixed target does not exist. The execution tool additionally
-requires the exact `APPROVE_MCP_WRITE_VALIDATED_V1` confirmation.
+the fixed source and preserved V1 target exist and both V2 target and backup do not exist. The
+execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` confirmation.
 
-## Required decision before resuming WP-11
+## Required action before resuming WP-11
 
-The approved destination now exists, so the current policy correctly blocks another run. A future
-run needs a new explicit user decision that names one safe disposition, such as authorizing removal
-of this incomplete copy before recreating it or approving a new destination cell name. The bridge
-must not infer that permission. PDK, source, and unrelated library writes remain prohibited.
+The operator must close or otherwise safely finish the Virtuoso session that owns source lock PID
+25425. Codex is not authorized to terminate that process or remove either lock file. After the
+operator confirms the session is closed, the next run must verify that Cadence removed the locks
+normally. A remaining stale lock still blocks execution and requires a separate explicit decision.
+PDK, source, V1, and unrelated library writes remain prohibited.
 
 ## Release gate
 

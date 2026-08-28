@@ -3,8 +3,8 @@ sourceCell = "Differential_Amplifier_TB2"
 sourceView = "schematic"
 workLib = "MCP_WorkLib"
 workPath = "/home/buet/cds_work/MCP_WorkLib"
-targetCell = "Differential_Amplifier_TB2_MCP_TEST"
-backupCell = "Differential_Amplifier_TB2_MCP_TEST_BACKUP_V1"
+targetCell = "Differential_Amplifier_TB2_MCP_TEST_V2"
+backupCell = "Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP"
 targetView = "schematic"
 propertyName = "mcpMutationTest"
 propertyValue = "validated-v1"
@@ -19,12 +19,20 @@ procedure(mcpTopology(cellView)
 )
 
 procedure(mcpFindPropertyByName(cellView name)
+  dbFindProp(cellView name)
+)
+
+procedure(mcpEmitFingerprint(stage cellView)
+  printf("MCP_FINGERPRINT|%s|topology|%d|%d|%d|%d\n"
+    stage
+    length(cellView~>instances)
+    length(cellView~>nets)
+    length(cellView~>terminals)
+    length(cellView~>prop))
   foreach(prop cellView~>prop
-    when(equal(prop~>name name)
-      return(prop)
-    )
+    printf("MCP_FINGERPRINT|%s|property|%s|%s\n"
+      stage prop~>name prop~>valueType)
   )
-  nil
 )
 
 procedure(mcpPropertiesEqual(leftCv rightCv)
@@ -33,7 +41,7 @@ procedure(mcpPropertiesEqual(leftCv rightCv)
   )
   foreach(leftProp leftCv~>prop
     rightProp = mcpFindPropertyByName(rightCv leftProp~>name)
-    unless(rightProp && equal(rightProp~>type leftProp~>type)
+    unless(rightProp && equal(rightProp~>valueType leftProp~>valueType)
       && equal(rightProp~>value leftProp~>value)
       return(nil)
     )
@@ -44,7 +52,7 @@ procedure(mcpPropertiesEqual(leftCv rightCv)
 procedure(mcpPropertiesContained(baselineCv candidateCv)
   foreach(baselineProp baselineCv~>prop
     candidateProp = mcpFindPropertyByName(candidateCv baselineProp~>name)
-    unless(candidateProp && equal(candidateProp~>type baselineProp~>type)
+    unless(candidateProp && equal(candidateProp~>valueType baselineProp~>valueType)
       && equal(candidateProp~>value baselineProp~>value)
       return(nil)
     )
@@ -70,6 +78,7 @@ unless(ddGetObj(workLib) mcpWriteFail("work library registration failed"))
 
 sourceCv = dbOpenCellViewByType(sourceLib sourceCell sourceView "schematic" "r")
 unless(sourceCv mcpWriteFail("source open failed"))
+printf("MCP_STAGE|source_verify|true\n")
 copyResult = errset(
   dbCopyCellView(sourceCv workLib targetCell targetView nil nil nil)
   t
@@ -94,6 +103,7 @@ when(mcpFindPropertyByName(targetCv propertyName)
 )
 printf("MCP_STAGE|copy|%d|%d|%d\n" car(sourceTopology) cadr(sourceTopology) caddr(sourceTopology))
 printf("MCP_STAGE|baseline|%d|%d|%d\n" car(baselineTopology) cadr(baselineTopology) caddr(baselineTopology))
+mcpEmitFingerprint("baseline" targetCv)
 printf("MCP_STAGE|dry_run|absent|validated-v1|1|0|false\n")
 dbClose(targetCv)
 dbClose(sourceCv)
@@ -106,6 +116,7 @@ when(mcpFindPropertyByName(targetCv propertyName)
 unless(equal(mcpTopology(targetCv) baselineTopology)
   mcpWriteFail("dry-run changed target topology")
 )
+mcpEmitFingerprint("dry_run" targetCv)
 dbClose(targetCv)
 printf("MCP_STAGE|dry_run_unchanged|true\n")
 
@@ -129,6 +140,7 @@ unless(mcpPropertiesEqual(backupCv targetCv)
 when(mcpFindPropertyByName(backupCv propertyName)
   mcpWriteFail("backup contains approved property")
 )
+mcpEmitFingerprint("backup" backupCv)
 dbClose(backupCv)
 dbClose(targetCv)
 printf("MCP_STAGE|backup|true\n")
@@ -149,6 +161,9 @@ unless(appliedProperty mcpWriteFail("applied property missing"))
 unless(equal(appliedProperty~>value propertyValue)
   mcpWriteFail("applied property value mismatch")
 )
+unless(equal(appliedProperty~>valueType "string")
+  mcpWriteFail("applied property type mismatch")
+)
 unless(equal(mcpTopology(targetCv) baselineTopology)
   mcpWriteFail("apply changed target topology")
 )
@@ -166,16 +181,26 @@ printf("MCP_STAGE|verify_apply|true|%d|%d|%d\n"
 dbClose(backupCv)
 dbClose(targetCv)
 
-targetCv = dbOpenCellViewByType(workLib targetCell targetView "schematic" "a")
-unless(targetCv mcpWriteFail("rollback open failed"))
-appliedProperty = mcpFindPropertyByName(targetCv propertyName)
-unless(appliedProperty mcpWriteFail("rollback property missing"))
-dbDeleteProp(appliedProperty)
-unless(dbSave(targetCv) mcpWriteFail("rollback save failed"))
-dbClose(targetCv)
+sourceCv = dbOpenCellViewByType(sourceLib sourceCell sourceView "schematic" "r")
+unless(sourceCv mcpWriteFail("source pre-rollback verification open failed"))
+unless(equal(mcpTopology(sourceCv) sourceTopology)
+  mcpWriteFail("source changed before rollback")
+)
+dbClose(sourceCv)
+printf("MCP_STAGE|source_unchanged_before_rollback|true\n")
+
+backupCv = dbOpenCellViewByType(workLib backupCell targetView "schematic" "r")
+unless(backupCv mcpWriteFail("rollback backup open failed"))
+rollbackResult = errset(
+  dbCopyCellView(backupCv workLib targetCell targetView nil nil t)
+  t
+)
+unless(rollbackResult mcpWriteFail("backup restore failed"))
+targetCv = car(rollbackResult)
+unless(targetCv mcpWriteFail("backup restore returned no target"))
+dbClose(backupCv)
 printf("MCP_STAGE|rollback|true|1\n")
 
-targetCv = dbOpenCellViewByType(workLib targetCell targetView "schematic" "r")
 backupCv = dbOpenCellViewByType(workLib backupCell targetView "schematic" "r")
 unless(targetCv mcpWriteFail("rollback verification open failed"))
 unless(backupCv mcpWriteFail("backup verification open failed"))
@@ -192,6 +217,7 @@ unless(mcpPropertiesEqual(targetCv backupCv)
   mcpWriteFail("rollback target properties differ from backup")
 )
 rollbackTopology = mcpTopology(targetCv)
+mcpEmitFingerprint("rollback" targetCv)
 printf("MCP_STAGE|verify_rollback|true|%d|%d|%d\n"
   car(rollbackTopology) cadr(rollbackTopology) caddr(rollbackTopology))
 dbClose(backupCv)

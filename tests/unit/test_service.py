@@ -39,11 +39,13 @@ from cadence_mcp_bridge.write_models import (
 
 def write_plan() -> DesignWritePlan:
     return DesignWritePlan(
-        policy_version=1,
-        plan_id="mcp-cellview-property-v1",
+        policy_version=2,
+        plan_id="mcp-cellview-property-v2",
         plan_sha256="a" * 64,
         source="MyDesignLib/Differential_Amplifier_TB2/schematic",
-        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        backup="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        preserved_target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
         operation="set_cellview_property",
         property_name="mcpMutationTest",
         old_value=None,
@@ -52,9 +54,12 @@ def write_plan() -> DesignWritePlan:
         original_library_mutations=0,
         destructive=False,
         source_exists=True,
+        source_artifact_present=False,
         target_exists=False,
+        backup_exists=False,
+        preserved_target_exists=True,
         ready=True,
-        confirmation="APPROVE_MCP_WRITE_VALIDATED_V1",
+        confirmation="APPROVE_MCP_WRITE_VALIDATED_V2",
     )
 
 
@@ -66,6 +71,8 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
         plan_sha256=plan.plan_sha256,
         source=plan.source,
         target=plan.target,
+        backup=plan.backup,
+        preserved_target=plan.preserved_target,
         operation=plan.operation,
         property_name=plan.property_name,
         old_value=None,
@@ -79,9 +86,13 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
         apply_verified=True,
         rollback_verified=True,
         source_unchanged=True,
+        preserved_target_unchanged=True,
         topology_unchanged=True,
+        baseline_fingerprint="a" * 64,
+        rollback_fingerprint="a" * 64,
         audit_recorded=True,
         sequence=(
+            "source_verify",
             "copy",
             "baseline",
             "dry_run",
@@ -89,6 +100,7 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
             "backup",
             "apply",
             "verify_apply",
+            "source_unchanged_before_rollback",
             "rollback",
             "verify_rollback",
             "source_unchanged",
@@ -173,7 +185,7 @@ class FakeBackend:
     async def execute_design_write_validation(
         self, validation_id: UUID, confirmation: WriteConfirmation
     ) -> DesignWriteValidationResult:
-        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V1"
+        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V2"
         return write_result(validation_id)
 
 
@@ -369,7 +381,7 @@ async def test_service_returns_fixed_write_plan_and_validates_with_generated_id(
 
     plan = await service.design_write_plan()
     result = await service.execute_design_write_validation(
-        "APPROVE_MCP_WRITE_VALIDATED_V1"
+        "APPROVE_MCP_WRITE_VALIDATED_V2"
     )
 
     assert plan.ready is True

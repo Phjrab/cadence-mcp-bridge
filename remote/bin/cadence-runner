@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.8.0
+RUNNER_VERSION=0.9.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -20,9 +20,10 @@ ACTUAL_PROFILE="$CADENCE_MCP_ROOT/profiles/actual-differential-amplifier-tb2-tra
 WRITE_POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
 WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
 WRITE_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-validation.sh"
+WRITE_PREFLIGHT="$CADENCE_MCP_ROOT/write/design-write-readonly-preflight.il"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -301,6 +302,27 @@ runner_design_write_plan() {
     "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" plan
 }
 
+runner_design_write_preflight() {
+    [ "$#" -eq 0 ] || usage
+    [ -x "$VIRTUOSO_BIN" ] || cadence_mcp_fail "Virtuoso is unavailable" 69
+    source_view=/home/buet/cds_work/MyDesignLib/Differential_Amplifier_TB2/schematic
+    source_artifact=$(find "$source_view" -maxdepth 1 \
+        \( -name '*.cdslck*' -o -name 'sch.oa-' -o -name '*panic*' \) -print -quit)
+    [ -z "$source_artifact" ] \
+        || cadence_mcp_fail "source cellview lock or recovery artifact is present" 65
+    runtime="$CADENCE_MCP_ROOT/write-validation/preflight"
+    mkdir -p "$runtime" || cadence_mcp_fail "preflight runtime creation failed" 73
+    chmod 700 "$runtime"
+    (
+        cd /home/buet/cds_work || exit 73
+        timeout 60 "$VIRTUOSO_BIN" -nograph -nocdsinit -restore "$WRITE_PREFLIGHT" \
+            -log "$runtime/skill.log" > "$runtime/skill.stdout" 2> "$runtime/skill.stderr"
+    ) || cadence_mcp_fail "fixed write preflight failed" 69
+    grep -q '^MCP_WRITE_PREFLIGHT|true|' "$runtime/skill.stdout" \
+        || cadence_mcp_fail "write preflight marker missing" 69
+    grep '^MCP_WRITE_PREFLIGHT|true|' "$runtime/skill.stdout" | tail -n 1
+}
+
 runner_design_write_validate() {
     [ "$#" -eq 3 ] || usage
     validation_id=$1
@@ -343,6 +365,7 @@ case "$command_name" in
     list-cells) runner_list_cells "$@" ;;
     inspect-cellview) runner_inspect_cellview "$@" ;;
     design-write-plan) runner_design_write_plan "$@" ;;
+    design-write-preflight) runner_design_write_preflight "$@" ;;
     design-write-validate) runner_design_write_validate "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;

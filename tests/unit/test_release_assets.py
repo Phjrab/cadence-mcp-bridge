@@ -33,7 +33,7 @@ def test_design_write_verifier_requires_the_exact_confirmation() -> None:
         PROJECT_ROOT / "src" / "cadence_mcp_bridge" / "write_validation_cli.py"
     ).read_text(encoding="utf-8")
 
-    assert 'ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V1")' in source
+    assert 'ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V2")' in source
     assert "cadence_design_write_plan" in cli
     assert "cadence_execute_design_write_validation" in cli
     assert "if not plan.get(\"ready\")" in cli

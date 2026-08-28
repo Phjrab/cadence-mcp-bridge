@@ -29,6 +29,7 @@ $files = @(
     @{ Local = "remote/discovery/ocean-smoke.ocn"; Remote = "$remoteRoot/discovery/ocean-smoke.ocn"; Mode = "600" },
     @{ Local = "remote/discovery/skill-smoke.il"; Remote = "$remoteRoot/discovery/skill-smoke.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-validation.il"; Remote = "$remoteRoot/write/design-write-validation.il"; Mode = "600" },
+    @{ Local = "remote/write/design-write-readonly-preflight.il"; Remote = "$remoteRoot/write/design-write-readonly-preflight.il"; Mode = "600" },
     @{ Local = "remote/profiles/spectre-smoke/smoke.scs"; Remote = "$remoteRoot/profiles/spectre-smoke/smoke.scs"; Mode = "600" },
     @{ Local = "remote/profiles/fixture-rc-transient/profile.json"; Remote = "$remoteRoot/profiles/fixture-rc-transient/profile.json"; Mode = "600" },
     @{ Local = "remote/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Remote = "$remoteRoot/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Mode = "600" }

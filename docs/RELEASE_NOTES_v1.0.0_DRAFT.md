@@ -25,5 +25,7 @@ eligible for a predefined mutation.
 The write contract and explicit approval were supplied, and the approved destination copy was
 created. The real sequence stopped before dry-run completion on a legacy IC6.1.5 property-query
 API mismatch, so apply, backup, rollback, and baseline-restoration evidence do not exist. The
-destination now exists and the policy forbids overwrite. Package version remains `0.1.0`, and
-`v1.0.0` has not been tagged or released.
+destination now exists and the policy forbids overwrite. A new V2 target and backup were approved
+and remain absent, but the actual V2 sequence was blocked before copy by an active source OA lock
+owned by Virtuoso PID 25425. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or
+released.

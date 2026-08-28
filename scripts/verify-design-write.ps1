@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V1")]
+    [ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V2")]
     [string]$Confirmation
 )
 

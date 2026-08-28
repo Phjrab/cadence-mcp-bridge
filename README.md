@@ -69,9 +69,10 @@ See `docs/ADC_MEASUREMENT_CONTRACTS.md` for the exact WP-10 units, formulas, FFT
 reproducibility manifest, and the inputs still required before any actual ADC circuit is measured.
 
 WP-11 includes a fixed read-only plan tool and one exact confirmation-gated write-validation tool.
-The first real run created the approved work-library copy but stopped before dry-run completion;
-the existing-target rule now blocks any retry. See `docs/DESIGN_WRITE_POLICY.md` for the exact
-checkpoint and `docs/RELEASE.md` for packaging and v1 release criteria.
+The first real run created the approved V1 work-library copy but stopped before dry-run completion.
+A separately approved V2 target remains uncreated because an active source OA lock blocked the
+pre-apply gate. See `docs/DESIGN_WRITE_POLICY.md` for the exact checkpoint and `docs/RELEASE.md`
+for packaging and v1 release criteria.
 
 Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
 

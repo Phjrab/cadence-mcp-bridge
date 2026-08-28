@@ -37,11 +37,13 @@ from cadence_mcp_bridge.write_models import (
 
 def write_plan() -> DesignWritePlan:
     return DesignWritePlan(
-        policy_version=1,
-        plan_id="mcp-cellview-property-v1",
+        policy_version=2,
+        plan_id="mcp-cellview-property-v2",
         plan_sha256="a" * 64,
         source="MyDesignLib/Differential_Amplifier_TB2/schematic",
-        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        backup="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        preserved_target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
         operation="set_cellview_property",
         property_name="mcpMutationTest",
         old_value=None,
@@ -50,19 +52,24 @@ def write_plan() -> DesignWritePlan:
         original_library_mutations=0,
         destructive=False,
         source_exists=True,
+        source_artifact_present=False,
         target_exists=False,
+        backup_exists=False,
+        preserved_target_exists=True,
         ready=True,
-        confirmation="APPROVE_MCP_WRITE_VALIDATED_V1",
+        confirmation="APPROVE_MCP_WRITE_VALIDATED_V2",
     )
 
 
 def write_result(validation_id: UUID) -> DesignWriteValidationResult:
     return DesignWriteValidationResult(
         validation_id=validation_id,
-        plan_id="mcp-cellview-property-v1",
+        plan_id="mcp-cellview-property-v2",
         plan_sha256="a" * 64,
         source="MyDesignLib/Differential_Amplifier_TB2/schematic",
-        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        backup="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        preserved_target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
         operation="set_cellview_property",
         property_name="mcpMutationTest",
         old_value=None,
@@ -76,9 +83,13 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
         apply_verified=True,
         rollback_verified=True,
         source_unchanged=True,
+        preserved_target_unchanged=True,
         topology_unchanged=True,
+        baseline_fingerprint="a" * 64,
+        rollback_fingerprint="a" * 64,
         audit_recorded=True,
         sequence=(
+            "source_verify",
             "copy",
             "baseline",
             "dry_run",
@@ -86,6 +97,7 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
             "backup",
             "apply",
             "verify_apply",
+            "source_unchanged_before_rollback",
             "rollback",
             "verify_rollback",
             "source_unchanged",
@@ -166,7 +178,7 @@ class FakeBackend:
     async def execute_design_write_validation(
         self, validation_id: UUID, confirmation: WriteConfirmation
     ) -> DesignWriteValidationResult:
-        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V1"
+        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V2"
         return write_result(validation_id)
 
     @staticmethod
@@ -222,7 +234,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     confirmation_schema = tools["cadence_execute_design_write_validation"].input_schema[
         "properties"
     ]["confirmation"]
-    assert "APPROVE_MCP_WRITE_VALIDATED_V1" in str(confirmation_schema)
+    assert "APPROVE_MCP_WRITE_VALIDATED_V2" in str(confirmation_schema)
     assert tools["cadence_get_profile"].input_schema["properties"]["profile_id"]["enum"] == [
         "fixture-rc-transient",
         "actual-differential-amplifier-tb2-transient",
@@ -508,7 +520,7 @@ async def test_in_memory_client_calls_fixed_design_write_tools() -> None:
         plan = await client.call_tool("cadence_design_write_plan")
         result = await client.call_tool(
             "cadence_execute_design_write_validation",
-            {"confirmation": "APPROVE_MCP_WRITE_VALIDATED_V1"},
+            {"confirmation": "APPROVE_MCP_WRITE_VALIDATED_V2"},
         )
 
     assert not plan.is_error

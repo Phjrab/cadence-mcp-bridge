@@ -21,6 +21,7 @@ EXPECTED_KEYS = set(
         "source",
         "target",
         "backup_cell",
+        "preserved_target",
         "operation",
         "property",
         "affected_objects",
@@ -30,6 +31,7 @@ EXPECTED_KEYS = set(
     ]
 )
 EXPECTED_SEQUENCE = [
+    "source_verify",
     "copy",
     "baseline",
     "dry_run",
@@ -37,6 +39,7 @@ EXPECTED_SEQUENCE = [
     "backup",
     "apply",
     "verify_apply",
+    "source_unchanged_before_rollback",
     "rollback",
     "verify_rollback",
     "source_unchanged",
@@ -58,7 +61,7 @@ def load_policy(path):
         policy = json.load(handle)
     if set(policy) != EXPECTED_KEYS:
         raise ValueError("invalid write policy keys")
-    if policy["policy_version"] != 1 or policy["plan_id"] != "mcp-cellview-property-v1":
+    if policy["policy_version"] != 2 or policy["plan_id"] != "mcp-cellview-property-v2":
         raise ValueError("invalid write policy version")
     if policy["source"] != {
         "library": "MyDesignLib",
@@ -70,10 +73,17 @@ def load_policy(path):
     if policy["target"] != {
         "library": "MCP_WorkLib",
         "library_path": "/home/buet/cds_work/MCP_WorkLib",
-        "cell": "Differential_Amplifier_TB2_MCP_TEST",
+        "cell": "Differential_Amplifier_TB2_MCP_TEST_V2",
         "view": "schematic",
     }:
         raise ValueError("invalid fixed target")
+    if policy["preserved_target"] != {
+        "library": "MCP_WorkLib",
+        "cell": "Differential_Amplifier_TB2_MCP_TEST",
+        "view": "schematic",
+        "path": "/home/buet/cds_work/MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+    }:
+        raise ValueError("invalid preserved target")
     if policy["property"] != {
         "name": "mcpMutationTest",
         "type": "string",
@@ -82,12 +92,12 @@ def load_policy(path):
     }:
         raise ValueError("invalid fixed property")
     if (
-        policy["backup_cell"] != "Differential_Amplifier_TB2_MCP_TEST_BACKUP_V1"
+        policy["backup_cell"] != "Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP"
         or policy["operation"] != "set_cellview_property"
         or policy["affected_objects"] != 1
         or policy["original_library_mutations"] != 0
         or policy["destructive"] is not False
-        or policy["confirmation"] != "APPROVE_MCP_WRITE_VALIDATED_V1"
+        or policy["confirmation"] != "APPROVE_MCP_WRITE_VALIDATED_V2"
     ):
         raise ValueError("invalid fixed write contract")
     return policy
@@ -103,17 +113,45 @@ def target_path(policy):
     return os.path.join(target["library_path"], target["cell"], target["view"])
 
 
+def backup_path(policy):
+    target = policy["target"]
+    return os.path.join(target["library_path"], policy["backup_cell"], target["view"])
+
+
+def has_lock_or_recovery_artifact(path):
+    try:
+        names = os.listdir(path)
+    except OSError:
+        return False
+    for name in names:
+        lowered = name.lower()
+        if ".cdslck" in lowered or name == "sch.oa-" or "panic" in lowered:
+            return True
+    return False
+
+
 def plan_payload(policy):
     source = policy["source"]
     target = policy["target"]
     target_exists = os.path.exists(target_path(policy))
+    backup_exists = os.path.exists(backup_path(policy))
     source_exists = os.path.isdir(source["path"]) and not os.path.islink(source["path"])
+    source_artifact_present = has_lock_or_recovery_artifact(source["path"])
+    preserved_exists = os.path.isdir(policy["preserved_target"]["path"])
     return {
         "policy_version": policy["policy_version"],
         "plan_id": policy["plan_id"],
         "plan_sha256": canonical_hash(policy),
         "source": "%s/%s/%s" % (source["library"], source["cell"], source["view"]),
         "target": "%s/%s/%s" % (target["library"], target["cell"], target["view"]),
+        "backup": "%s/%s/%s"
+        % (target["library"], policy["backup_cell"], target["view"]),
+        "preserved_target": "%s/%s/%s"
+        % (
+            policy["preserved_target"]["library"],
+            policy["preserved_target"]["cell"],
+            policy["preserved_target"]["view"],
+        ),
         "operation": policy["operation"],
         "property_name": policy["property"]["name"],
         "old_value": policy["property"]["old_value"],
@@ -122,8 +160,15 @@ def plan_payload(policy):
         "original_library_mutations": policy["original_library_mutations"],
         "destructive": policy["destructive"],
         "source_exists": source_exists,
+        "source_artifact_present": source_artifact_present,
         "target_exists": target_exists,
-        "ready": source_exists and not target_exists,
+        "backup_exists": backup_exists,
+        "preserved_target_exists": preserved_exists,
+        "ready": source_exists
+        and not source_artifact_present
+        and preserved_exists
+        and not target_exists
+        and not backup_exists,
         "confirmation": policy["confirmation"],
     }
 
@@ -131,11 +176,18 @@ def plan_payload(policy):
 def parse_stages(path):
     stages = []
     fields = {}
+    fingerprints = {}
     with open(path, "rb") as handle:
         for raw_line in handle:
             line = raw_line.decode("utf-8", "strict").strip()
             if line.startswith("MCP_WRITE_FAILURE|"):
                 raise ValueError("SKILL validation reported failure")
+            if line.startswith("MCP_FINGERPRINT|"):
+                parts = line.split("|")
+                if len(parts) < 4:
+                    raise ValueError("invalid logical fingerprint record")
+                fingerprints.setdefault(parts[1], []).append("|".join(parts[2:]))
+                continue
             if not line.startswith("MCP_STAGE|"):
                 continue
             parts = line.split("|")
@@ -144,7 +196,14 @@ def parse_stages(path):
             fields[stage] = parts[2:]
     if stages != EXPECTED_SEQUENCE:
         raise ValueError("write validation stage sequence mismatch")
-    return fields
+    logical_hashes = {}
+    for stage in ("baseline", "dry_run", "backup", "rollback"):
+        records = fingerprints.get(stage)
+        if not records:
+            raise ValueError("missing logical fingerprint stage")
+        encoded = ("\n".join(sorted(records)) + "\n").encode("utf-8")
+        logical_hashes[stage] = hashlib.sha256(encoded).hexdigest()
+    return fields, logical_hashes
 
 
 def append_audit(path, validation_id, plan_hash, origin, actor, stages):
@@ -177,6 +236,8 @@ def finalize(
     output_path,
     source_before,
     source_after,
+    preserved_before,
+    preserved_after,
     origin,
     actor,
     audit_path,
@@ -186,12 +247,23 @@ def finalize(
         raise ValueError("invalid validation id")
     if origin not in ("mcp", "operator"):
         raise ValueError("invalid origin")
-    fields = parse_stages(output_path)
+    fields, logical_hashes = parse_stages(output_path)
     if source_before != source_after:
         raise ValueError("source tree fingerprint changed")
+    if preserved_before != preserved_after:
+        raise ValueError("preserved incomplete target fingerprint changed")
+    if len(set(logical_hashes.values())) != 1:
+        raise ValueError("baseline logical fingerprint was not restored")
     if fields["dry_run"] != ["absent", "validated-v1", "1", "0", "false"]:
         raise ValueError("dry-run contract mismatch")
-    for stage in ("dry_run_unchanged", "backup", "source_unchanged", "complete"):
+    for stage in (
+        "source_verify",
+        "dry_run_unchanged",
+        "backup",
+        "source_unchanged_before_rollback",
+        "source_unchanged",
+        "complete",
+    ):
         if fields[stage] != ["true"]:
             raise ValueError("stage verification mismatch")
     if fields["apply"] != ["validated-v1", "1"]:
@@ -206,6 +278,10 @@ def finalize(
         "plan_sha256": plan_hash,
         "source_fingerprint_before": source_before,
         "source_fingerprint_after": source_after,
+        "preserved_target_fingerprint_before": preserved_before,
+        "preserved_target_fingerprint_after": preserved_after,
+        "baseline_logical_fingerprint": logical_hashes["baseline"],
+        "rollback_logical_fingerprint": logical_hashes["rollback"],
         "sequence": EXPECTED_SEQUENCE,
         "backup_cell": policy["backup_cell"],
         "rollback_verified": True,
@@ -225,6 +301,8 @@ def finalize(
             "plan_sha256": plan_hash,
             "source": plan["source"],
             "target": plan["target"],
+            "backup": plan["backup"],
+            "preserved_target": plan["preserved_target"],
             "operation": policy["operation"],
             "property_name": policy["property"]["name"],
             "old_value": None,
@@ -238,7 +316,10 @@ def finalize(
             "apply_verified": True,
             "rollback_verified": True,
             "source_unchanged": True,
+            "preserved_target_unchanged": True,
             "topology_unchanged": True,
+            "baseline_fingerprint": logical_hashes["baseline"],
+            "rollback_fingerprint": logical_hashes["rollback"],
             "audit_recorded": True,
             "sequence": EXPECTED_SEQUENCE,
         }
@@ -257,7 +338,7 @@ def main():
         elif command == "confirm" and len(arguments) == 1:
             if arguments[0] != policy["confirmation"]:
                 raise ValueError("confirmation does not match the fixed plan")
-        elif command == "finalize" and len(arguments) == 8:
+        elif command == "finalize" and len(arguments) == 10:
             finalize(policy, *arguments)
         else:
             return fail("invalid write validation request")

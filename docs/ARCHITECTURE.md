@@ -5,10 +5,11 @@
 WP-10 retains the versioned simulation profile registry and adds a separate local, versioned ADC
 measurement-contract registry. Only the non-proprietary `adc-synthetic-v1` contract exists; the
 actual ADE L profile is not treated as an ADC and no actual-circuit measurement is inferred.
-The controlled-write boundary fixes one approved source, destination, property mutation, and
-confirmation. A real run created the approved destination copy but failed before dry-run
-completion; the existing-target gate now blocks all further execution pending a new explicit user
-decision. No v1 release is permitted from this checkpoint.
+The controlled-write boundary fixes one approved source, preserved V1 target, clean V2 destination
+and backup, property mutation, and confirmation. The V2 implementation rejects existing targets
+and OA lock/recovery artifacts, restores from the real backup, and compares logical fingerprints.
+Actual V2 execution is currently blocked before copy by an active source lock. No v1 release is
+permitted from this checkpoint.
 
 ## Layer boundaries
 
@@ -108,9 +109,9 @@ before crossing the MCP boundary.
 
 The Windows process may write local runtime metadata only in bounded application locations.
 Remote application writes remain limited to `/home/buet/cds_work/.cadence_mcp`. The user separately
-approved creation of `/home/buet/cds_work/MCP_WorkLib` and the single destination copy. PDKs,
-source/shared libraries, and CentOS system files remain read-only. The incomplete destination now
-exists, so no further design write is allowed without a new explicit authorization.
+approved creation of `/home/buet/cds_work/MCP_WorkLib`, preservation of the incomplete V1 copy, and
+one clean V2 validation. PDKs, source/shared libraries, and CentOS system files remain read-only.
+The active source lock prevents V2 creation until the owning operator session closes normally.
 
 ## Data contracts
 

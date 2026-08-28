@@ -333,12 +333,15 @@ complete contract.
 ## WP-11 blocked write and release checkpoint
 
 The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
-`mcpMutationTest=validated-v1` mutation. Runner 0.8.0 and the MCP server expose a fixed plan and an
+`mcpMutationTest=validated-v1` mutation. Runner 0.9.0 and the MCP server expose a fixed plan and an
 exact confirmation-gated validation; callers cannot choose any path, design identifier, property,
 value, or SKILL text. The real run created the destination copy, then stopped before dry-run
 completion because the installed IC6.1.5 lacks the attempted property-query helper. The property
 was not applied and no backup or rollback stage ran. Since the destination now exists, the current
-contract blocks every rerun and requires a new explicit target-disposition authorization.
+contract blocks every rerun. A separately approved V2 plan leaves V1 untouched, checks both V2
+names before copy, restores from a real backup, and compares logical fingerprints. Its read-only
+compatibility preflight passed, but actual V2 execution stopped before copy because the source is
+actively locked by Virtuoso PID 25425. No lock, process, V1 artifact, or design was changed.
 
 Packaging lifecycle is independently verifiable with:
 

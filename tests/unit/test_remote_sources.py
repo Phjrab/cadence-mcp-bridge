@@ -34,6 +34,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "list-cells",
         "inspect-cellview",
         "design-write-plan",
+        "design-write-preflight",
         "design-write-validate",
         "discovery-health",
         "cleanup-dry-run",
@@ -53,7 +54,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.8.0" in runner
+    assert "RUNNER_VERSION=0.9.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -146,6 +147,9 @@ def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() 
     }
     assert policy["target"]["library"] == "MCP_WorkLib"
     assert policy["target"]["library_path"] == "/home/buet/cds_work/MCP_WorkLib"
+    assert policy["target"]["cell"] == "Differential_Amplifier_TB2_MCP_TEST_V2"
+    assert policy["backup_cell"] == "Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP"
+    assert policy["preserved_target"]["cell"] == "Differential_Amplifier_TB2_MCP_TEST"
     assert policy["property"] == {
         "name": "mcpMutationTest",
         "type": "string",
@@ -157,15 +161,23 @@ def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() 
     assert policy["destructive"] is False
     assert "dbCopyCellView" in skill
     assert "mcpFindPropertyByName" in skill
+    assert "dbFindProp(cellView name)" in skill
     assert "dbFindPropByName" not in skill
     assert 'dbReplaceProp(targetCv propertyName "string" propertyValue)' in skill
-    assert "dbDeleteProp(appliedProperty)" in skill
+    assert "dbCopyCellView(backupCv workLib targetCell targetView nil nil t)" in skill
+    assert "valueType" in skill
+    assert "MCP_FINGERPRINT" in skill
     assert "instances" in skill and "nets" in skill and "terminals" in skill
     for forbidden in ("dbCreateInst", "dbDeleteObject", "evalstring", "load("):
         assert forbidden not in skill
     assert "source_before" in worker and "source_after" in worker
+    assert "preserved_before" in worker and "preserved_after" in worker
+    assert "source cellview lock or recovery artifact is present" in worker
+    assert "V2 cellview lock or recovery artifact remains" in worker
     assert "target cellview already exists" in worker
     assert "EXPECTED_SEQUENCE" in helper
+    assert "baseline logical fingerprint was not restored" in helper
     assert "write-events.jsonl" in worker
     assert "design-write-policy.json" in deploy
     assert "design-write-validation.il" in deploy
+    assert "design-write-readonly-preflight.il" in deploy

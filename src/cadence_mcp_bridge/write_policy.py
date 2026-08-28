@@ -24,7 +24,7 @@ class LibraryWriteClassification(ContractModel):
 
 
 class DesignWriteReadiness(ContractModel):
-    policy_version: Literal[1] = 1
+    policy_version: Literal[2] = 2
     status: Literal["ready"] = "ready"
     protected_library_names: tuple[str, ...]
     source_library_names: tuple[str, ...]

@@ -14,7 +14,7 @@ from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
-CONFIRMATION = "APPROVE_MCP_WRITE_VALIDATED_V1"
+CONFIRMATION = "APPROVE_MCP_WRITE_VALIDATED_V2"
 
 
 async def verify() -> dict[str, Any]:

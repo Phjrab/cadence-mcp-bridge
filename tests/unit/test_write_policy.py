@@ -13,6 +13,7 @@ from cadence_mcp_bridge.write_policy import (
 def test_write_readiness_contains_only_the_approved_contract() -> None:
     readiness = get_write_readiness()
 
+    assert readiness.policy_version == 2
     assert readiness.status == "ready"
     assert readiness.work_library == "MCP_WorkLib"
     assert readiness.allowed_mutations == (
