@@ -337,10 +337,11 @@ cadence-mcp-bridge/
 - 모든 WP는 전용 feature branch에서만 작업한다.
 - branch 이름은 `wp/WP-XX-<short-slug>` 형식을 사용한다.
 - Codex는 `main`에 직접 commit하거나 push하지 않는다.
-- Codex는 branch를 merge하지 않는다.
+- Codex는 완료 보고 후 사용자가 특정 feature branch 또는 pull request의 병합을 명시적으로 승인한 경우에만 GitHub pull request를 merge할 수 있다.
+- 명시적 승인 여부와 관계없이 `main` 직접 push는 금지한다.
 - Codex는 force push하지 않는다.
 - 테스트가 실패하면 완료 처리하지 않는다.
-- 검증된 commit을 feature branch에 push한 뒤 반드시 STOP한다.
+- 검증된 commit을 feature branch에 push한 뒤, 해당 branch/PR에 대한 명시적 병합 승인이 없다면 반드시 STOP한다.
 - 다음 WP는 이전 WP branch가 사용자의 검토를 거쳐 최신 `origin/main`에 반영된 후에만 시작한다.
 
 ## 6.2 WP 시작 시
@@ -382,7 +383,7 @@ git push -u origin wp/WP-XX-short-slug
 
 9. remote branch와 commit SHA를 재검증한다.
 10. `git status --porcelain`이 비어 있는지 확인한다.
-11. merge, main push, 다음 WP 실행 없이 STOP한다.
+11. 명시적 PR 병합 승인이 없으면 merge, main push, 다음 WP 실행 없이 STOP한다. 승인이 있더라도 `main` 직접 push와 다음 WP 실행은 금지한다.
 
 권장 commit scope:
 
@@ -416,7 +417,7 @@ docs(ops): ...
 - 저장소가 이미 있으면 private 여부와 default branch를 확인하고 재사용한다.
 - latest `origin/main`에서 `wp/WP-00-bootstrap` branch를 생성한다.
 - 초기 프로젝트 파일을 해당 feature branch에 commit하고 push한다.
-- Codex는 WP-00 branch를 main에 merge하지 않는다.
+- Codex는 완료 보고 후 사용자가 WP-00 branch 또는 PR을 명시적으로 승인한 경우에만 GitHub PR로 merge할 수 있다.
 - `gh repo view Phjrab/cadence-mcp-bridge --json nameWithOwner,isPrivate,url,defaultBranchRef`로 private/default branch를 확인한다.
 
 GitHub 인증이 없으면 사용자를 대신해 credential을 만들거나 저장하지 않는다. 로컬 준비까지만 완료하고 `gh auth login`을 정확한 사용자 조치로 보고한다.
@@ -640,7 +641,7 @@ Windows와 CentOS의 시계/시간대가 다를 수 있다.
 8. secret과 대용량 Cadence 산출물을 차단하는 `.gitignore`를 작성한다.
 9. 초기 commit을 `wp/WP-00-bootstrap`에 만들고 해당 feature branch만 push한다.
 10. 저장소가 private인지 GitHub CLI로 재검증한다.
-11. merge하거나 main에 직접 push하지 않고 STOP한다.
+11. 명시적 PR 병합 승인이 없으면 merge하지 않고 STOP한다. `main` 직접 push는 항상 금지한다.
 
 ### 수락 기준
 
@@ -1432,7 +1433,7 @@ v1.0.0
 - Commit message: `...`
 - Feature branch push: PASS/FAIL
 - Main direct push performed: 반드시 no
-- Merge performed by Codex: 반드시 no
+- Merge performed by Codex: `yes (explicitly authorized)` 또는 `no`
 - Working tree clean: yes/no
 
 ## 남은 위험 또는 차단 요소
@@ -1457,8 +1458,9 @@ AGENTS.md, CODEX_MASTER_PROMPT.md, PROJECT_STATE.md를 전부 읽고 WP-YY만 �
 ## 보고서 규칙
 
 - 실제 commit/feature branch push를 하지 않았다면 했다고 쓰지 않는다.
-- Codex가 main에 직접 push하거나 merge해서는 안 된다.
-- feature branch push 후 반드시 STOP한다.
+- Codex가 `main`에 직접 commit하거나 push해서는 안 되며, merge는 사용자가 명시적으로 승인한 특정 GitHub PR에만 수행한다.
+- feature branch push 후 명시적 PR 병합 승인이 없다면 반드시 STOP한다.
+- 명시적으로 승인된 merge는 GitHub PR을 통해서만 수행하고 `main`에 직접 push하지 않는다.
 - 테스트하지 않은 것을 PASS라고 쓰지 않는다.
 - `BLOCKED`라면 다음 WP는 현재 WP를 유지한다.
 - 사용자 조치는 credential 입력, 앱 재시작, 회로 정의 제공처럼 Codex가 대신할 수 없는 것만 요청한다.

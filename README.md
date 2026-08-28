@@ -17,7 +17,7 @@ WP-00 may run `scripts/bootstrap-private-repo.ps1` to create the private reposit
 
 The master prompt requires each run to finish with the next work package, recommended GPT-5.6 tier, reasoning effort, and exact next prompt.
 
-Every WP uses a dedicated feature branch. Codex must push the branch and stop; it must not commit/push directly to `main`, force-push, or merge. The next WP starts only after the user reviews and integrates the preceding branch.
+Every WP uses a dedicated feature branch. Codex must not commit or push directly to `main`, and it must never force-push. After the completion report, Codex may merge a specific pull request only when the user explicitly authorizes that merge. The next WP starts only after the preceding branch is integrated into `main`.
 
 ## Verified target
 

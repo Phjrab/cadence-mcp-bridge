@@ -27,8 +27,9 @@ Before doing any work, read these files in full:
 - Create or continue only the current WP feature branch from the latest approved `origin/main`.
 - Commit with a conventional message and push that feature branch.
 - Never commit or push directly to `main`.
-- Never merge and never force push.
-- Stop immediately after verifying the feature branch push.
+- Never push directly to `main` and never force push.
+- Merge a feature branch only when the user explicitly authorizes that specific branch or pull request after its completion report.
+- Stop immediately after verifying the feature branch push unless that explicit merge authorization has been given.
 - Never claim a push succeeded without verifying it.
 
 ## Security
