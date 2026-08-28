@@ -22,13 +22,14 @@ def test_secure_defaults() -> None:
         ("ssh_alias", "attacker"),
         ("remote_root", "../tmp"),
         ("remote_root", "/tmp/x;id"),
+        ("remote_root", "/tmp/path with spaces"),
         ("runner_path", "/home/buet/cds_work/.cadence_mcp/../runner"),
         ("default_concurrency", 2),
     ],
 )
 def test_rejects_unsafe_configuration(field: str, value: object) -> None:
     with pytest.raises(ValidationError):
-        BridgeConfig(**{field: value})
+        BridgeConfig.model_validate({field: value})
 
 
 def test_runner_must_be_inside_remote_bin() -> None:

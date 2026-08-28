@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _FORBIDDEN_REMOTE_CHARACTERS = frozenset("\x00\r\n;`$*?<>|&")
+_REMOTE_PATH = re.compile(r"^/[A-Za-z0-9._/-]+$")
 
 
 class BridgeConfig(BaseSettings):
@@ -32,7 +34,11 @@ class BridgeConfig(BaseSettings):
     def validate_remote_path(cls, value: str) -> str:
         if not value.startswith("/"):
             raise ValueError("remote paths must be absolute")
-        if ".." in value.split("/") or any(char in value for char in _FORBIDDEN_REMOTE_CHARACTERS):
+        if (
+            ".." in value.split("/")
+            or any(char in value for char in _FORBIDDEN_REMOTE_CHARACTERS)
+            or _REMOTE_PATH.fullmatch(value) is None
+        ):
             raise ValueError("remote path contains a forbidden component")
         return value.rstrip("/")
 

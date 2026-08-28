@@ -78,3 +78,33 @@ Validated on 2026-08-28 against the verified CentOS 6.5 VM:
 - deployed directories and job directories were mode `700`; source, status, and result files
   were mode `600` or executable mode `700` as required;
 - no temporary `.new` deployment files remained.
+
+## Windows OpenSSH transport
+
+`OpenSshBackend` resolves Windows `ssh.exe` and invokes only the fixed alias, runner path, and
+allowlisted runner subcommands. SSH receives each local argument through an argv list with
+`shell=False`. Batch mode prevents password prompts, strict host-key checking remains enabled,
+and connect timeout is independent from the full operation timeout.
+
+Both stdout and stderr are byte-bounded before UTF-8 decoding. Transport failures map to
+stable timeout, host-key, authentication, unavailable-backend, invalid-input, or remote-failure
+errors. Error details pass through the project sanitizer before reaching a caller.
+
+Run the real health integration explicitly from Windows PowerShell:
+
+```powershell
+$env:CADENCE_MCP_RUN_INTEGRATION = "1"
+.\.venv\Scripts\python.exe -m pytest tests/integration/test_real_ssh_backend.py -v
+```
+
+## WP-03 acceptance evidence
+
+Validated on 2026-08-28 from the Windows D-drive worktree:
+
+- Ruff and strict mypy passed;
+- 43 default tests passed, with the opt-in integration test skipped by default;
+- the opt-in real `cadence-vm` health integration passed without a password prompt;
+- subprocess tests verified argv-list execution, `shell=False`, fixed alias and runner path,
+  separate connect/operation timeouts, bounded stdout/stderr, and stable error mapping;
+- all required malicious job-ID inputs were rejected before subprocess invocation;
+- fixed method signatures provide no profile, path, shell text, or raw-command input.

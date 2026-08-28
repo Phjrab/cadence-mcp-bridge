@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from cadence_mcp_bridge.models import ArtifactMetadata, JobResult, JobState, JobStatus
+from cadence_mcp_bridge.models import ArtifactMetadata, JobResult, JobState, JobStatus, JobSummary
 
 
 def test_job_status_requires_timezone() -> None:
@@ -36,7 +36,7 @@ def test_succeeded_result_requires_zero_exit_code() -> None:
             job_id=uuid4(),
             state=JobState.SUCCEEDED,
             exit_code=1,
-            summary="unexpected",
+            summary=JobSummary(text="unexpected", errors=1, warnings=0, notices=0),
         )
 
 
@@ -45,7 +45,7 @@ def test_valid_succeeded_result() -> None:
         job_id=uuid4(),
         state=JobState.SUCCEEDED,
         exit_code=0,
-        summary="0 errors, 0 warnings",
+        summary=JobSummary(text="smoke.raw", errors=0, warnings=0, notices=0),
     )
 
     assert result.state is JobState.SUCCEEDED

@@ -49,3 +49,4 @@ files = ["src", "tests"]
 addopts = "-ra"
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["integration: requires the configured cadence-vm SSH target"]
