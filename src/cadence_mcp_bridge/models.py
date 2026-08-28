@@ -78,23 +78,32 @@ class JobStatus(ContractModel):
     job_id: UUID
     state: JobState
     profile: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
-    submitted_at: datetime
+    submitted_at: datetime | None = None
     updated_at: datetime
     message: Annotated[str, Field(max_length=512)] | None = None
 
     @field_validator("submitted_at", "updated_at")
     @classmethod
-    def require_timezone(cls, value: datetime) -> datetime:
+    def require_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return value
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("timestamps must include a timezone")
         return value
+
+
+class JobSummary(ContractModel):
+    text: Annotated[str, Field(max_length=512)]
+    errors: Annotated[int, Field(ge=-1)]
+    warnings: Annotated[int, Field(ge=-1)]
+    notices: Annotated[int, Field(ge=-1)]
 
 
 class JobResult(ContractModel):
     job_id: UUID
     state: JobState
     exit_code: int | None = None
-    summary: Annotated[str, Field(max_length=2_048)]
+    summary: JobSummary
     artifacts: tuple[ArtifactMetadata, ...] = ()
 
     @model_validator(mode="after")
