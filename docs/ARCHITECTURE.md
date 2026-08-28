@@ -5,13 +5,15 @@
 WP-10 retains the versioned simulation profile registry and adds a separate local, versioned ADC
 measurement-contract registry. Only the non-proprietary `adc-synthetic-v1` contract exists; the
 actual ADE L profile is not treated as an ADC and no actual-circuit measurement is inferred.
-The controlled-write boundary is present only as a local fail-closed readiness policy: no work
-library or mutation is configured, so no write MCP tool or remote runner command exists.
+The controlled-write boundary fixes one approved source, destination, property mutation, and
+confirmation. A real run created the approved destination copy but failed before dry-run
+completion; the existing-target gate now blocks all further execution pending a new explicit user
+decision. No v1 release is permitted from this checkpoint.
 
 ## Layer boundaries
 
 ```text
-MCPServer v2 stdio adapter (twenty allowlisted tools)
+MCPServer v2 stdio adapter (twenty-two allowlisted tools)
           |
           v
 CadenceService (transport-independent orchestration)
@@ -29,8 +31,10 @@ measurement engine            |
 - `profiles.py` owns the reviewed local profile contract and rejects unknown profiles/corners.
 - `measurement_models.py` defines bounded measurement inputs, structured metrics, and manifests.
 - `measurements.py` owns the deterministic synthetic ADC calculations and closed contract registry.
-- `write_policy.py` permanently classifies PDK/shared/source libraries as non-writable and blocks
-  every other target until a dedicated work-library contract is reviewed.
+- `write_policy.py` permanently classifies PDK/shared/source libraries as non-writable and makes
+  only the fixed `MCP_WorkLib` contract eligible; the remote target-existence check remains the
+  final fail-closed gate.
+- `write_models.py` defines the immutable plan and validation-result contracts.
 - `errors.py` maps failures to stable, sanitized envelopes.
 - `sanitization.py` removes credential, license, and Windows-profile details and bounds output.
 - `service.py` separates application behavior from the SSH and MCP adapters.
@@ -103,9 +107,10 @@ result responses carry explicit bounds and truncation metadata, and known secret
 before crossing the MCP boundary.
 
 The Windows process may write local runtime metadata only in bounded application locations.
-Remote writes remain limited to `/home/buet/cds_work/.cadence_mcp`; design data, PDKs, shared
-libraries, and CentOS system files remain read-only while WP-11 is blocked. Release packaging uses
-only a validated unique system-temporary directory and does not deploy anything remotely.
+Remote application writes remain limited to `/home/buet/cds_work/.cadence_mcp`. The user separately
+approved creation of `/home/buet/cds_work/MCP_WorkLib` and the single destination copy. PDKs,
+source/shared libraries, and CentOS system files remain read-only. The incomplete destination now
+exists, so no further design write is allowed without a new explicit authorization.
 
 ## Data contracts
 

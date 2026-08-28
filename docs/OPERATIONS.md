@@ -147,8 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly twenty tools: six lifecycle tools, three metadata discovery tools,
-profile list/detail/submission, and eight read-only synthetic ADC measurement tools. No remote path,
+server exposes exactly twenty-two tools: six lifecycle tools, three metadata discovery tools,
+profile list/detail/submission, eight read-only synthetic ADC measurement tools, one fixed write
+plan, and one exact confirmation-gated write validation. No remote path,
 netlist text, command, script text, arbitrary
 analysis, or arbitrary output is accepted.
 
@@ -218,7 +219,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-two-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -331,10 +332,13 @@ complete contract.
 
 ## WP-11 blocked write and release checkpoint
 
-Read-only remote discovery returned only `MyDesignLib` and `MyFirstDesign`. Both remain source
-libraries; no dedicated writable work library was identified or approved. The implementation adds
-a local fail-closed readiness gate and exposes no new MCP or runner write command. No Cadence
-cellview was opened, copied, saved, or modified.
+The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
+`mcpMutationTest=validated-v1` mutation. Runner 0.8.0 and the MCP server expose a fixed plan and an
+exact confirmation-gated validation; callers cannot choose any path, design identifier, property,
+value, or SKILL text. The real run created the destination copy, then stopped before dry-run
+completion because the installed IC6.1.5 lacks the attempted property-query helper. The property
+was not applied and no backup or rollback stage ran. Since the destination now exists, the current
+contract blocks every rerun and requires a new explicit target-disposition authorization.
 
 Packaging lifecycle is independently verifiable with:
 
@@ -343,5 +347,5 @@ Packaging lifecycle is independently verifiable with:
 ```
 
 The script builds, installs, checks, and uninstalls the current `0.1.0` package entirely in a
-validated temporary directory. `v1.0.0` remains prohibited until an approved copy-only mutation,
+validated temporary directory. `v1.0.0` remains prohibited until a clean copy-only sequence,
 dry-run/apply equivalence, backup restore, and design immutability checks pass.

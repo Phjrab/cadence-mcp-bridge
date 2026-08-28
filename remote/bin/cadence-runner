@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.7.0
+RUNNER_VERSION=0.8.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -17,9 +17,12 @@ DISCOVERY_RUNTIME="$CADENCE_MCP_ROOT/discovery-runtime"
 PROFILE_HELPER="$CADENCE_MCP_ROOT/py26/profile_json.py"
 FIXTURE_PROFILE="$CADENCE_MCP_ROOT/profiles/fixture-rc-transient/profile.json"
 ACTUAL_PROFILE="$CADENCE_MCP_ROOT/profiles/actual-differential-amplifier-tb2-transient/profile.json"
+WRITE_POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
+WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
+WRITE_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-validation.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -293,6 +296,23 @@ runner_discovery_health() {
     printf '%s\n' '{"isolated_runtime":true,"ocean_headless":true,"skill_headless":true}'
 }
 
+runner_design_write_plan() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" plan
+}
+
+runner_design_write_validate() {
+    [ "$#" -eq 3 ] || usage
+    validation_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$validation_id" || cadence_mcp_fail "invalid validation id" 64
+    case "$origin" in mcp|operator) ;; *) cadence_mcp_fail "invalid validation origin" 64 ;; esac
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" confirm "$confirmation" \
+        || cadence_mcp_fail "write confirmation rejected" 64
+    "$WRITE_WORKER" "$validation_id" "$origin"
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -322,6 +342,8 @@ case "$command_name" in
     list-libraries) runner_list_libraries "$@" ;;
     list-cells) runner_list_cells "$@" ;;
     inspect-cellview) runner_inspect_cellview "$@" ;;
+    design-write-plan) runner_design_write_plan "$@" ;;
+    design-write-validate) runner_design_write_validate "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;

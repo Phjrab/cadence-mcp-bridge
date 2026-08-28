@@ -34,6 +34,7 @@ def test_installer_prompts_for_every_side_effect_tool() -> None:
     assert 'default_tools_approval_mode = "writes"' in source
     assert "[mcp_servers.$serverName.tools.cadence_submit_smoke]" in source
     assert "[mcp_servers.$serverName.tools.cadence_cancel_job]" in source
-    assert source.count('approval_mode = "prompt"') == 2
+    assert "[mcp_servers.$serverName.tools.cadence_execute_design_write_validation]" in source
+    assert source.count('approval_mode = "prompt"') == 3
     for forbidden in ("run_shell", "ssh_exec", "eval_skill", "execute_ocean"):
         assert forbidden not in source

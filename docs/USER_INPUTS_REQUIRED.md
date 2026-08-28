@@ -37,17 +37,19 @@ one can be added, the user must provide and approve:
 These inputs must form a new versioned, reviewed contract. None will be inferred from the synthetic
 fixture or from the existing differential-amplifier ADE profile.
 
-## WP-11 controlled design write — blocking inputs
+## WP-11 controlled design write — target disposition required
 
-Read-only discovery found `MyDesignLib` and `MyFirstDesign`, but neither is approved as a dedicated
-writable work library. To resume WP-11, provide one complete authorization containing:
+The user supplied the complete fixed write contract and actual-apply approval on 2026-08-28.
+`MCP_WorkLib` was created and registered, and the approved source copy was created at
+`MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic`. Validation then failed before dry-run
+completion because of a legacy IC6.1.5 property-query API mismatch. The approved property was not
+applied, and no backup or rollback stage ran.
 
-- dedicated work library name and approved project location;
-- exact source library/cell/view and destination copy cell/view;
-- one narrowly predefined mutation and its typed parameter values;
-- expected dry-run diff and post-save verification result;
-- backup location/retention and rollback success criterion;
-- explicit approval to apply that named mutation only to the destination copy.
+The contract explicitly requires BLOCKED when that target already exists and forbids unapproved
+deletion or overwrite. To resume, provide one new explicit authorization that either:
 
-Until all six items are supplied, no write tool, remote mutation command, v1 tag, or GitHub release
-will be created. PDK/shared/source libraries remain read-only.
+- permits removal of this exact incomplete target and recreation under the same name; or
+- provides and approves a new exact destination and backup cell name.
+
+No PDK, source, or unrelated library change is requested. Until a new target disposition is
+approved and a clean sequence passes, no `v1.0.0` tag or GitHub release may be created.

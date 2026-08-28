@@ -58,6 +58,11 @@ from cadence_mcp_bridge.profiles import (
     validate_corner,
     validate_variables,
 )
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
 
 
 class CadenceBackend(Protocol):
@@ -91,6 +96,12 @@ class CadenceBackend(Protocol):
         corner: str,
         variables: ProfileVariables,
     ) -> JobStatus: ...
+
+    async def design_write_plan(self) -> DesignWritePlan: ...
+
+    async def execute_design_write_validation(
+        self, validation_id: UUID, confirmation: WriteConfirmation
+    ) -> DesignWriteValidationResult: ...
 
 
 _ResultT = TypeVar("_ResultT")
@@ -225,6 +236,20 @@ class CadenceService:
             raise RemoteFailureError("Remote runner returned mismatched profile job metadata")
         self._owned_job_ids.add(job_id)
         return status
+
+    async def design_write_plan(self) -> DesignWritePlan:
+        return await self._call(self._backend.design_write_plan)
+
+    async def execute_design_write_validation(
+        self, confirmation: WriteConfirmation
+    ) -> DesignWriteValidationResult:
+        validation_id = uuid4()
+        result = await self._call(
+            lambda: self._backend.execute_design_write_validation(validation_id, confirmation)
+        )
+        if result.validation_id != validation_id:
+            raise RemoteFailureError("Remote runner returned a mismatched validation_id")
+        return result
 
     @staticmethod
     def _parse_job_id(job_id: str) -> UUID:

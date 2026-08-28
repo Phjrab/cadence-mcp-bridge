@@ -30,6 +30,71 @@ from cadence_mcp_bridge.models import (
     ToolAvailability,
 )
 from cadence_mcp_bridge.service import CadenceService
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
+
+
+def write_plan() -> DesignWritePlan:
+    return DesignWritePlan(
+        policy_version=1,
+        plan_id="mcp-cellview-property-v1",
+        plan_sha256="a" * 64,
+        source="MyDesignLib/Differential_Amplifier_TB2/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        operation="set_cellview_property",
+        property_name="mcpMutationTest",
+        old_value=None,
+        proposed_value="validated-v1",
+        affected_objects=1,
+        original_library_mutations=0,
+        destructive=False,
+        source_exists=True,
+        target_exists=False,
+        ready=True,
+        confirmation="APPROVE_MCP_WRITE_VALIDATED_V1",
+    )
+
+
+def write_result(validation_id: UUID) -> DesignWriteValidationResult:
+    plan = write_plan()
+    return DesignWriteValidationResult(
+        validation_id=validation_id,
+        plan_id=plan.plan_id,
+        plan_sha256=plan.plan_sha256,
+        source=plan.source,
+        target=plan.target,
+        operation=plan.operation,
+        property_name=plan.property_name,
+        old_value=None,
+        proposed_value=plan.proposed_value,
+        affected_objects=1,
+        original_library_mutations=0,
+        destructive=False,
+        copy_verified=True,
+        dry_run_unchanged=True,
+        backup_verified=True,
+        apply_verified=True,
+        rollback_verified=True,
+        source_unchanged=True,
+        topology_unchanged=True,
+        audit_recorded=True,
+        sequence=(
+            "copy",
+            "baseline",
+            "dry_run",
+            "dry_run_unchanged",
+            "backup",
+            "apply",
+            "verify_apply",
+            "rollback",
+            "verify_rollback",
+            "source_unchanged",
+            "complete",
+        ),
+    )
 
 
 def health_report() -> HealthReport:
@@ -101,6 +166,15 @@ class FakeBackend:
         variables: ProfileVariables,
     ) -> JobStatus:
         return job_status(job_id).model_copy(update={"profile": profile_id})
+
+    async def design_write_plan(self) -> DesignWritePlan:
+        return write_plan()
+
+    async def execute_design_write_validation(
+        self, validation_id: UUID, confirmation: WriteConfirmation
+    ) -> DesignWriteValidationResult:
+        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V1"
+        return write_result(validation_id)
 
 
 class FailingBackend(FakeBackend):
@@ -287,3 +361,17 @@ async def test_service_rejects_unknown_profile_and_corner() -> None:
         await service.submit_profile(
             "fixture-rc-transient", "nominal", NoProfileVariables()
         )
+
+
+@pytest.mark.asyncio
+async def test_service_returns_fixed_write_plan_and_validates_with_generated_id() -> None:
+    service = CadenceService(FakeBackend())
+
+    plan = await service.design_write_plan()
+    result = await service.execute_design_write_validation(
+        "APPROVE_MCP_WRITE_VALIDATED_V1"
+    )
+
+    assert plan.ready is True
+    assert result.plan_sha256 == plan.plan_sha256
+    assert result.rollback_verified is True

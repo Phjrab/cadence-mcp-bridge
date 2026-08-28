@@ -68,9 +68,10 @@ reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
 See `docs/ADC_MEASUREMENT_CONTRACTS.md` for the exact WP-10 units, formulas, FFT policy,
 reproducibility manifest, and the inputs still required before any actual ADC circuit is measured.
 
-WP-11 controlled design writes remain fail-closed until the user designates a dedicated work
-library and one exact copy-only mutation. See `docs/DESIGN_WRITE_POLICY.md` for the approval gate
-and `docs/RELEASE.md` for verified packaging, install, upgrade, uninstall, and v1 release criteria.
+WP-11 includes a fixed read-only plan tool and one exact confirmation-gated write-validation tool.
+The first real run created the approved work-library copy but stopped before dry-run completion;
+the existing-target rule now blocks any retry. See `docs/DESIGN_WRITE_POLICY.md` for the exact
+checkpoint and `docs/RELEASE.md` for packaging and v1 release criteria.
 
 Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
 

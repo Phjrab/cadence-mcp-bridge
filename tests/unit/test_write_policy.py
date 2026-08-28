@@ -10,15 +10,17 @@ from cadence_mcp_bridge.write_policy import (
 )
 
 
-def test_write_readiness_is_closed_and_blocked() -> None:
+def test_write_readiness_contains_only_the_approved_contract() -> None:
     readiness = get_write_readiness()
 
-    assert readiness.status == "blocked"
-    assert readiness.work_library is None
-    assert readiness.allowed_mutations == ()
-    assert readiness.dry_run_available is False
-    assert readiness.apply_available is False
-    assert readiness.rollback_available is False
+    assert readiness.status == "ready"
+    assert readiness.work_library == "MCP_WorkLib"
+    assert readiness.allowed_mutations == (
+        "set_cellview_property:mcpMutationTest=validated-v1",
+    )
+    assert readiness.dry_run_available is True
+    assert readiness.apply_available is True
+    assert readiness.rollback_available is True
     assert readiness.release_ready is False
 
 
@@ -42,10 +44,13 @@ def test_source_libraries_require_a_copy(library: str) -> None:
         require_write_ready(library)
 
 
-def test_unconfigured_work_library_fails_closed() -> None:
-    classification = classify_write_target("CadenceMCPWork")
+def test_only_configured_work_library_is_write_eligible() -> None:
+    classification = classify_write_target("MCP_WorkLib")
 
-    assert classification.classification == "unconfigured"
+    assert classification.classification == "work"
+    assert classification.writable is True
+    require_write_ready("MCP_WorkLib")
+
     with pytest.raises(ConfigurationError, match="blocked"):
         require_write_ready("CadenceMCPWork")
 

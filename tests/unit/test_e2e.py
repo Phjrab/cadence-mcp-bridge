@@ -28,6 +28,11 @@ from cadence_mcp_bridge.models import (
 )
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
 
 
 class LifecycleBackend:
@@ -102,6 +107,14 @@ class LifecycleBackend:
         variables: ProfileVariables,
     ) -> JobStatus:
         return self._status(job_id, JobState.QUEUED).model_copy(update={"profile": profile_id})
+
+    async def design_write_plan(self) -> DesignWritePlan:
+        raise AssertionError("write plan is outside lifecycle verification")
+
+    async def execute_design_write_validation(
+        self, validation_id: UUID, confirmation: WriteConfirmation
+    ) -> DesignWriteValidationResult:
+        raise AssertionError("design write is outside lifecycle verification")
 
     @staticmethod
     def _status(job_id: UUID, state: JobState) -> JobStatus:

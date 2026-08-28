@@ -25,3 +25,15 @@ def test_release_is_not_declared_while_write_acceptance_is_blocked() -> None:
 
     assert 'version = "0.1.0"' in project
     assert '__version__ = "0.1.0"' in package
+
+
+def test_design_write_verifier_requires_the_exact_confirmation() -> None:
+    source = (PROJECT_ROOT / "scripts" / "verify-design-write.ps1").read_text(encoding="utf-8")
+    cli = (
+        PROJECT_ROOT / "src" / "cadence_mcp_bridge" / "write_validation_cli.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V1")' in source
+    assert "cadence_design_write_plan" in cli
+    assert "cadence_execute_design_write_validation" in cli
+    assert "if not plan.get(\"ready\")" in cli

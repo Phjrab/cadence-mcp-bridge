@@ -22,7 +22,8 @@ eligible for a predefined mutation.
 
 ## Blocking release evidence
 
-The dedicated work library, exact copy target, allowed mutation, backup/rollback policy, and
-explicit mutation approval have not been supplied. Consequently no write tool is exposed, no
-design data was changed, package version remains `0.1.0`, and `v1.0.0` has not been tagged or
-released.
+The write contract and explicit approval were supplied, and the approved destination copy was
+created. The real sequence stopped before dry-run completion on a legacy IC6.1.5 property-query
+API mismatch, so apply, backup, rollback, and baseline-restoration evidence do not exist. The
+destination now exists and the policy forbids overwrite. Package version remains `0.1.0`, and
+`v1.0.0` has not been tagged or released.

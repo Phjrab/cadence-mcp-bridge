@@ -44,6 +44,11 @@ from cadence_mcp_bridge.models import (
 )
 from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
 
 
 class _RunnerCommand(StrEnum):
@@ -57,6 +62,8 @@ class _RunnerCommand(StrEnum):
     LIST_CELLS = "list-cells"
     INSPECT_CELLVIEW = "inspect-cellview"
     SUBMIT_PROFILE = "submit-profile"
+    DESIGN_WRITE_PLAN = "design-write-plan"
+    DESIGN_WRITE_VALIDATE = "design-write-validate"
 
 
 class _RunnerModel(BaseModel):
@@ -267,6 +274,26 @@ class OpenSshBackend:
         arguments.append("mcp")
         payload = await self._invoke_json(_RunnerCommand.SUBMIT_PROFILE, *arguments)
         return self._status(self._validate(_RunnerStatus, payload), submitted=True)
+
+    async def design_write_plan(self) -> DesignWritePlan:
+        payload = await self._invoke_json(_RunnerCommand.DESIGN_WRITE_PLAN)
+        return self._validate(DesignWritePlan, payload)
+
+    async def execute_design_write_validation(
+        self,
+        validation_id: UUID,
+        confirmation: WriteConfirmation,
+    ) -> DesignWriteValidationResult:
+        payload = await self._invoke_json(
+            _RunnerCommand.DESIGN_WRITE_VALIDATE,
+            self._job_id(validation_id),
+            confirmation,
+            "mcp",
+        )
+        result = self._validate(DesignWriteValidationResult, payload)
+        if result.validation_id != validation_id:
+            raise RemoteFailureError("Remote runner returned a mismatched validation_id")
+        return result
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)

@@ -13,25 +13,26 @@ from cadence_mcp_bridge.models import ContractModel
 _LIBRARY_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
 _PROTECTED_LIBRARY_NAMES = frozenset({"analoglib", "basic", "gpdk090"})
 _SOURCE_LIBRARY_NAMES = frozenset({"MyDesignLib", "MyFirstDesign"})
+_WORK_LIBRARY_NAME = "MCP_WorkLib"
 
 
 class LibraryWriteClassification(ContractModel):
     library: str
-    classification: Literal["pdk-or-shared", "source", "unconfigured"]
-    writable: Literal[False] = False
+    classification: Literal["pdk-or-shared", "source", "work", "unconfigured"]
+    writable: bool = False
     reason: str
 
 
 class DesignWriteReadiness(ContractModel):
     policy_version: Literal[1] = 1
-    status: Literal["blocked"] = "blocked"
+    status: Literal["ready"] = "ready"
     protected_library_names: tuple[str, ...]
     source_library_names: tuple[str, ...]
-    work_library: None = None
-    allowed_mutations: tuple[str, ...] = ()
-    dry_run_available: Literal[False] = False
-    apply_available: Literal[False] = False
-    rollback_available: Literal[False] = False
+    work_library: Literal["MCP_WorkLib"] = "MCP_WorkLib"
+    allowed_mutations: tuple[Literal["set_cellview_property:mcpMutationTest=validated-v1"], ...]
+    dry_run_available: Literal[True] = True
+    apply_available: Literal[True] = True
+    rollback_available: Literal[True] = True
     release_ready: Literal[False] = False
     required_inputs: tuple[str, ...] = Field(min_length=3)
 
@@ -39,12 +40,8 @@ class DesignWriteReadiness(ContractModel):
 WRITE_READINESS = DesignWriteReadiness(
     protected_library_names=("analogLib", "basic", "gpdk090"),
     source_library_names=("MyDesignLib", "MyFirstDesign"),
-    required_inputs=(
-        "dedicated work library name and its approved location",
-        "exact source library/cell/view and destination copy name",
-        "one predefined mutation with typed parameters and expected verification",
-        "explicit approval to perform the named mutation on the copy",
-    ),
+    allowed_mutations=("set_cellview_property:mcpMutationTest=validated-v1",),
+    required_inputs=("none", "user contract approved", "fixed confirmation still required"),
 )
 
 
@@ -72,6 +69,13 @@ def classify_write_target(library: str) -> LibraryWriteClassification:
             classification="source",
             reason="reviewed source libraries remain read-only; mutations require a copy",
         )
+    if library == _WORK_LIBRARY_NAME:
+        return LibraryWriteClassification(
+            library=library,
+            classification="work",
+            writable=True,
+            reason="only the reviewed copy-based mutation is eligible after confirmation",
+        )
     return LibraryWriteClassification(
         library=library,
         classification="unconfigured",
@@ -83,6 +87,8 @@ def require_write_ready(library: str) -> None:
     """Reject every write until a reviewed work-library contract replaces this gate."""
 
     classification = classify_write_target(library)
+    if classification.classification == "work":
+        return
     if classification.classification != "unconfigured":
         raise InvalidInputError(classification.reason)
     raise ConfigurationError(

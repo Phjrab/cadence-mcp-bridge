@@ -2,8 +2,9 @@
 
 ## Security objective
 
-The bridge provides a small, reviewable path from twenty MCP tools to fixed simulation profiles
-and three metadata-only design discovery operations. It is not a general remote
+The bridge provides a small, reviewable path from twenty-two MCP tools to fixed simulation profiles,
+three metadata-only design discovery operations, one fixed write plan, and one confirmation-gated
+validation operation. It is not a general remote
 administration, file access, OCEAN, SKILL, netlist, or shell interface. Every boundary fails
 closed when identity, path containment, allowlist membership, process ownership, payload shape,
 or output limits cannot be proved.
@@ -15,20 +16,21 @@ files, PDK models, proprietary netlists, full PSF/raw data, design libraries, un
 and the integrity and availability of the CentOS/Cadence installation. None may be committed,
 placed in audit records, or returned through MCP.
 
-The only remotely writable application area before WP-11 is:
+The remotely writable application area is:
 
 ```text
 /home/buet/cds_work/.cadence_mcp
 ```
 
-The Cadence installation, PDKs, shared libraries, design data, CentOS system files, and all paths
-outside that root remain read-only and outside the runner contract.
+The user separately approved `/home/buet/cds_work/MCP_WorkLib` for one exact copy-based validation.
+The Cadence installation, PDKs, shared libraries, source design data, CentOS system files, and all
+other paths remain read-only and outside the runner contract.
 
 ## Trust boundaries and data flow
 
 ```text
 model/user
-  -> twenty typed MCP tools
+  -> twenty-two typed MCP tools
   -> CadenceService (UUID ownership and input validation)
   -> local bounded ADC measurement engine, or
      OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
@@ -74,7 +76,7 @@ fixed jobs root.
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
-| Unauthorized design write | library or mutation request | no public write tool or runner command, permanent PDK/shared/source classification, unset work library, empty mutation registry | WP-11 remains blocked until a complete user-approved contract exists |
+| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | the incomplete approved target now exists, so all reruns fail closed pending a new authorization |
 | Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence, no v1 tag while blocked | final release requires a resumed WP-11 run |
 
 ## Origin and audit contract
@@ -146,10 +148,11 @@ requires a separate reviewed change and explicit operator approval.
 ## Controlled-write gate
 
 `src/cadence_mcp_bridge/write_policy.py` is intentionally fail-closed. `gpdk090`, `analogLib`,
-`basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable, no work library is configured, and
-the mutation registry is empty. The MCP tool count stays at twenty and the runner exposes no copy,
-backup, apply, save, or rollback command. See `docs/DESIGN_WRITE_POLICY.md` for the inputs required
-to replace this checkpoint with a reviewed copy-only contract.
+`basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable. Only `MCP_WorkLib` and the exact
+`mcpMutationTest=validated-v1` contract are eligible. The runner accepts no caller path, library,
+cell, view, property, value, or script text. Its plan now reports `ready=false` because the first
+real attempt created the destination before failing on a legacy API mismatch. See
+`docs/DESIGN_WRITE_POLICY.md` for the required new target disposition.
 
 ## Verification
 
