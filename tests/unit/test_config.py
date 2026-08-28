@@ -39,4 +39,3 @@ def test_runner_must_be_inside_remote_bin() -> None:
 def test_operation_timeout_covers_connect_timeout() -> None:
     with pytest.raises(ValidationError, match="shorter"):
         BridgeConfig(connect_timeout_seconds=30, operation_timeout_seconds=10)
-

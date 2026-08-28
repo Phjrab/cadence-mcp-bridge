@@ -44,4 +44,3 @@ class BridgeConfig(BaseSettings):
         if self.operation_timeout_seconds < self.connect_timeout_seconds:
             raise ValueError("operation timeout must not be shorter than connect timeout")
         return self
-

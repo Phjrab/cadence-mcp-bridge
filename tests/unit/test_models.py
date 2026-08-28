@@ -49,4 +49,3 @@ def test_valid_succeeded_result() -> None:
     )
 
     assert result.state is JobState.SUCCEEDED
-

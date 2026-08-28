@@ -41,4 +41,3 @@ def sanitize_details(details: Mapping[str, Any]) -> dict[str, Any]:
         key: sanitize_text(value) if isinstance(value, str) else value
         for key, value in details.items()
     }
-

@@ -47,4 +47,3 @@ async def test_service_uses_typed_fake_backend() -> None:
 async def test_service_maps_unexpected_backend_failure() -> None:
     with pytest.raises(BackendUnavailableError, match="unavailable"):
         await CadenceService(FailingBackend()).health()
-

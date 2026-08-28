@@ -46,4 +46,3 @@ files = ["src", "tests"]
 addopts = "-ra"
 asyncio_mode = "auto"
 testpaths = ["tests"]
-

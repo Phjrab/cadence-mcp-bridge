@@ -23,4 +23,3 @@ class CadenceService:
             raise
         except Exception as exc:
             raise BackendUnavailableError("Cadence backend is unavailable") from exc
-

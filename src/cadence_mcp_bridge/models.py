@@ -116,4 +116,3 @@ class ErrorEnvelope(ContractModel):
 class ErrorResponse(ContractModel):
     ok: Literal[False] = False
     error: ErrorEnvelope
-

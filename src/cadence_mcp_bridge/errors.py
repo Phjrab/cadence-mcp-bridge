@@ -60,4 +60,3 @@ class OperationTimeoutError(BridgeError):
 
 class RemoteFailureError(BridgeError):
     code = ErrorCode.REMOTE_FAILURE
-
