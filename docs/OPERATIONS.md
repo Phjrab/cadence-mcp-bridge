@@ -58,7 +58,9 @@ artifact metadata, never raw PSF data.
 
 The runner never writes outside its fixed root and never modifies CentOS, Cadence installation,
 PDK, shared library, or design data. Unexpected PID/PGID/start-marker mismatch makes cancellation
-fail closed. More complete stale-process recovery and retention are deferred to WP-05/WP-07.
+fail closed. Status repairs a stale active state from an existing result; when no result exists
+and the recorded worker identity is absent, changed, or a zombie, it records `unknown` with a
+bounded operator-review message. Automated retention remains deferred to WP-07.
 
 ## WP-02 acceptance evidence
 
@@ -137,3 +139,42 @@ Validated on 2026-08-28 from the Windows D-drive worktree:
 - real `cadence-vm` SSH health and MCP `cadence_health` integration tests both passed without a
   password prompt;
 - no Codex Desktop configuration or CentOS files were changed by WP-04.
+
+## WP-05 lifecycle verification
+
+Run the single real lifecycle command from Windows PowerShell:
+
+```powershell
+.\scripts\verify-e2e.ps1
+```
+
+It uses only the six public MCP tools. The verifier requires SSH and Spectre health, submission
+within the 10-second target, a terminal success before the five-minute deadline, exit code 0,
+zero Spectre errors, artifact metadata, a 50-line/65,536-byte bounded log response, and job
+storage contained under the fixed jobs root with mode `0700`. It prints metadata only; it never
+prints license values or raw PSF data.
+
+Submission uses its generated UUID as an idempotency key. If the submit SSH operation times out,
+the service performs one status lookup for the same UUID. A matching job is recovered and owned;
+otherwise the original timeout is returned. No second job is submitted.
+
+The polling defaults are one second and a maximum wait of 300 seconds. Remote Spectre concurrency
+is fixed at one. Failed, cancelled, and unknown terminal fixtures are rejected with bounded safe
+messages. The actual cancellation isolation test submits five jobs, cancels one queued job, and
+requires every independent job to succeed.
+
+## WP-05 acceptance evidence
+
+Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
+
+- runner 0.3.0 deployed atomically under `/home/buet/cds_work/.cadence_mcp` and passed remote Bash
+  and Python 2.6 syntax checks;
+- `verify-e2e.ps1` reported health success, submit in 0.453 seconds, states
+  `queued -> succeeded`, exit code 0, four artifact metadata entries, and job storage mode `0700`;
+- the actual MCP concurrency/cancellation integration passed repeatedly: one of five jobs was
+  cancelled and every independent job succeeded;
+- unit fixtures covered succeeded, failed, cancelled, and unknown outcomes, plus submit timeout
+  recovery with the same UUID;
+- Ruff, strict mypy, the default test suite, and opt-in real lifecycle tests passed;
+- no license value, raw PSF content, arbitrary command, arbitrary path, or proprietary design data
+  was written to evidence.

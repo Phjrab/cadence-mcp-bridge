@@ -14,6 +14,9 @@ def test_secure_defaults() -> None:
     assert config.runner_path == "/home/buet/cds_work/.cadence_mcp/bin/cadence-runner"
     assert config.default_concurrency == 1
     assert config.max_output_bytes == 65_536
+    assert config.poll_interval_seconds == 1.0
+    assert config.max_poll_seconds == 300
+    assert config.submit_target_seconds == 10.0
 
 
 @pytest.mark.parametrize(
@@ -40,3 +43,8 @@ def test_runner_must_be_inside_remote_bin() -> None:
 def test_operation_timeout_covers_connect_timeout() -> None:
     with pytest.raises(ValidationError, match="shorter"):
         BridgeConfig(connect_timeout_seconds=30, operation_timeout_seconds=10)
+
+
+def test_poll_deadline_exceeds_interval() -> None:
+    with pytest.raises(ValidationError, match="poll"):
+        BridgeConfig(poll_interval_seconds=10, max_poll_seconds=10)

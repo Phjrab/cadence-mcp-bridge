@@ -28,6 +28,7 @@ from cadence_mcp_bridge.models import (
     JobResult,
     JobState,
     JobStatus,
+    JobStorageMetadata,
     JobSummary,
 )
 from cadence_mcp_bridge.sanitization import sanitize_text
@@ -68,12 +69,18 @@ class _RunnerSummary(_RunnerModel):
     notices: int
 
 
+class _RunnerStorage(_RunnerModel):
+    contained: Literal[True]
+    directory_mode: Literal["0700"]
+
+
 class _RunnerResult(_RunnerModel):
     job_id: UUID
     state: JobState
     exit_code: int | None = None
     summary: _RunnerSummary
     artifacts: tuple[_RunnerArtifact, ...] = ()
+    storage: _RunnerStorage | None = None
 
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
@@ -146,6 +153,14 @@ class OpenSshBackend:
                     size_bytes=artifact.size_bytes,
                 )
                 for artifact in result.artifacts
+            ),
+            storage=(
+                JobStorageMetadata(
+                    contained=result.storage.contained,
+                    directory_mode=result.storage.directory_mode,
+                )
+                if result.storage is not None
+                else None
             ),
         )
 

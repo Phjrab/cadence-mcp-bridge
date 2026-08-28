@@ -10,6 +10,7 @@ from cadence_mcp_bridge.errors import (
     BackendUnavailableError,
     BridgeError,
     InvalidInputError,
+    OperationTimeoutError,
     RemoteFailureError,
 )
 from cadence_mcp_bridge.models import HealthReport, JobLogTail, JobResult, JobStatus
@@ -47,7 +48,15 @@ class CadenceService:
 
     async def submit_smoke(self) -> JobStatus:
         job_id = uuid4()
-        status = await self._call(lambda: self._backend.submit_smoke(job_id))
+        try:
+            status = await self._call(lambda: self._backend.submit_smoke(job_id))
+        except OperationTimeoutError as timeout:
+            # The remote create may have succeeded before SSH timed out. Reuse the
+            # original idempotency key and recover only that exact job.
+            try:
+                status = await self._call(lambda: self._backend.status(job_id))
+            except BridgeError as recovery_error:
+                raise timeout from recovery_error
         if status.job_id != job_id:
             raise RemoteFailureError("Remote runner returned a mismatched job_id")
         self._owned_job_ids.add(job_id)

@@ -61,3 +61,22 @@ cadence_mcp_atomic_result() {
     chmod 600 "$temporary"
     mv -f "$temporary" "$job_dir/result.json"
 }
+
+cadence_mcp_worker_matches() {
+    job_dir=$1
+    [ -f "$job_dir/pid" ] && [ -f "$job_dir/pgid" ] && [ -f "$job_dir/start_marker" ] \
+        || return 1
+    pid=$(cat "$job_dir/pid")
+    pgid=$(cat "$job_dir/pgid")
+    [[ "$pid" =~ ^[1-9][0-9]*$ ]] && [[ "$pgid" =~ ^[1-9][0-9]*$ ]] \
+        || return 1
+    [ "$pid" = "$pgid" ] || return 1
+    kill -0 "$pid" 2>/dev/null || return 1
+    current_pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
+    [ "$current_pgid" = "$pgid" ] || return 1
+    process_state=$(ps -o stat= -p "$pid" | tr -d ' ')
+    case "$process_state" in Z*|"") return 1 ;; esac
+    stored_marker=$(cat "$job_dir/start_marker")
+    current_marker=$(ps -o lstart= -p "$pid" | sed 's/^ *//;s/ *$//')
+    [ -n "$stored_marker" ] && [ "$stored_marker" = "$current_marker" ]
+}

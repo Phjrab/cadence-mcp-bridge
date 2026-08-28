@@ -136,6 +136,7 @@ async def test_result_maps_structured_summary_and_artifacts(
                 "size_bytes": 12,
             }
         ],
+        "storage": {"contained": True, "directory_mode": "0700"},
     }
     monkeypatch.setattr(
         "cadence_mcp_bridge.ssh_backend.subprocess.run",
@@ -146,6 +147,8 @@ async def test_result_maps_structured_summary_and_artifacts(
 
     assert result.summary.notices == 1
     assert result.artifacts[0].relative_path == "artifacts/smoke.log"
+    assert result.storage is not None
+    assert result.storage.directory_mode == "0700"
 
 
 @pytest.mark.asyncio

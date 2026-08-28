@@ -4,6 +4,7 @@ from __future__ import with_statement
 
 import json
 import os
+import stat
 import sys
 
 
@@ -82,6 +83,10 @@ def command_status(arguments):
 
 def command_result(arguments):
     job_dir = arguments[0]
+    jobs_root = os.path.realpath("/home/buet/cds_work/.cadence_mcp/jobs")
+    real_job_dir = os.path.realpath(job_dir)
+    contained = os.path.dirname(real_job_dir) == jobs_root
+    directory_mode = "{0:04o}".format(stat.S_IMODE(os.stat(real_job_dir).st_mode))
     artifacts = []
     candidates = (
         ("smoke.log", "artifacts/smoke.log", "text/plain"),
@@ -99,6 +104,10 @@ def command_result(arguments):
             "exit_code": int(arguments[3]),
             "job_id": arguments[1],
             "state": arguments[2],
+            "storage": {
+                "contained": contained,
+                "directory_mode": directory_mode,
+            },
             "summary": {
                 "errors": int(arguments[4]),
                 "notices": int(arguments[6]),

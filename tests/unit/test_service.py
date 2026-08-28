@@ -6,7 +6,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cadence_mcp_bridge.errors import BackendUnavailableError, InvalidInputError
+from cadence_mcp_bridge.errors import (
+    BackendUnavailableError,
+    InvalidInputError,
+    OperationTimeoutError,
+)
 from cadence_mcp_bridge.models import (
     HealthReport,
     JobResult,
@@ -69,6 +73,23 @@ class FailingBackend(FakeBackend):
         raise RuntimeError("sensitive backend details")
 
 
+class TimeoutAfterCreateBackend(FakeBackend):
+    def __init__(self, *, recoverable: bool) -> None:
+        super().__init__()
+        self.recoverable = recoverable
+        self.created: UUID | None = None
+
+    async def submit_smoke(self, job_id: UUID) -> JobStatus:
+        self.created = job_id
+        raise OperationTimeoutError("Remote operation timed out")
+
+    async def status(self, job_id: UUID) -> JobStatus:
+        if not self.recoverable:
+            raise BackendUnavailableError("status unavailable")
+        assert job_id == self.created
+        return job_status(job_id)
+
+
 def job_status(job_id: UUID, *, state: JobState = JobState.QUEUED) -> JobStatus:
     now = datetime.now(UTC)
     return JobStatus(
@@ -104,6 +125,24 @@ async def test_service_generates_and_owns_submitted_job_id() -> None:
 
     assert cancelled.state is JobState.CANCELLING
     assert backend.cancelled == submitted.job_id
+
+
+@pytest.mark.asyncio
+async def test_submit_timeout_recovers_with_same_idempotency_key() -> None:
+    backend = TimeoutAfterCreateBackend(recoverable=True)
+    service = CadenceService(backend)
+
+    submitted = await service.submit_smoke()
+    await service.cancel_job(str(submitted.job_id))
+
+    assert submitted.job_id == backend.created
+    assert backend.cancelled == backend.created
+
+
+@pytest.mark.asyncio
+async def test_submit_timeout_is_preserved_when_recovery_fails() -> None:
+    with pytest.raises(OperationTimeoutError, match="timed out"):
+        await CadenceService(TimeoutAfterCreateBackend(recoverable=False)).submit_smoke()
 
 
 @pytest.mark.asyncio

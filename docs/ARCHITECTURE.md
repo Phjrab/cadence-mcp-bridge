@@ -1,10 +1,11 @@
 # Architecture
 
-## Scope at WP-04
+## Scope at WP-05
 
-WP-04 adds the local MCP SDK v2 stdio server and the first six typed tools over the WP-03 SSH
-adapter. It does not register the server in Codex Desktop or accept arbitrary remote commands.
-Registration and full smoke lifecycle verification remain reserved for later work packages.
+WP-05 closes the first real MCP-to-Spectre lifecycle over the WP-04 stdio server. It adds bounded
+polling, submit timeout recovery using the original UUID idempotency key, remote worker-loss
+recovery, job storage evidence, and one operator E2E command. It does not register the server in
+Codex Desktop; registration remains reserved for WP-06.
 
 ## Layer boundaries
 
@@ -28,6 +29,8 @@ OpenSshBackend -> Windows ssh.exe -> fixed cadence-runner
 - `service.py` separates application behavior from the SSH and MCP adapters.
 - `ssh_backend.py` maps typed operations to the fixed runner and stable transport errors.
 - `server.py` defines tool schemas, annotations, stable error results, and the stdio runtime.
+- `e2e.py` verifies health, submission latency, bounded polling, logs, result, artifacts, and
+  remote job storage through the public MCP tools.
 - `__main__.py` starts stdio by default and keeps explicit help/version/configuration checks.
 
 ## Trust boundaries
@@ -44,6 +47,16 @@ same running MCP service instance. Health, status, log-tail, and result tools ar
 read-only; submit is non-destructive but state-changing; cancel alone is annotated destructive.
 Every tool is closed-world. Expected failures become stable structured error envelopes with
 `isError=true`, while exception details remain on stderr.
+
+The generated submit UUID is also the idempotency key. If SSH times out after remote creation,
+the service queries status for that same UUID exactly once; it adopts the job only when the
+runner returns the matching identifier. It never retries submission with a second UUID.
+
+Polling defaults to one second with a five-minute maximum. Spectre concurrency remains fixed at
+one by the remote `flock`. For queued, running, or cancelling jobs, status verifies the stored
+PID, process group, start marker, and non-zombie process state. A completed result repairs stale
+status; otherwise a missing or mismatched worker becomes the terminal `unknown` state for
+operator review.
 
 The Windows process may write local runtime metadata only in bounded application locations.
 Before WP-11, remote writes are limited to `/home/buet/cds_work/.cadence_mcp`; design data,
