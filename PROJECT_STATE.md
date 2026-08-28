@@ -4,19 +4,19 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-07
+current_wp: WP-08
 current_status: passed
-last_completed_wp: WP-07
-next_wp: WP-08
-current_feature_branch: wp/WP-07-reliability-security-audit
-base_main_commit: 714d4ca5da8542b0584cb321ddbef8cf794ea21e
-last_commit: 3d6943a7fabf368cf20ecaf0daaee2146884cdfe
-last_push: 2026-08-28T12:10:05.2697673+09:00
+last_completed_wp: WP-08
+next_wp: WP-09
+current_feature_branch: wp/WP-08-ocean-skill-read-only-discovery
+base_main_commit: 2786fbcdd1b1e9864dc3640f2564041a78494af1
+last_commit: b32e434c4dc0571f58d69a8546044dbe2ec5e1c2
+last_push: 2026-08-28T12:39:46.3595782+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review the WP-07 pull request and explicitly authorize its merge before WP-08.
+user_action_required: Review the WP-08 pull request and explicitly authorize its merge before WP-09.
 ```
 
 ## Progress log
@@ -37,3 +37,5 @@ user_action_required: Review the WP-07 pull request and explicitly authorize its
 - 2026-08-28: WP-06 idempotent Codex registration, approval policy, fresh-host health, and smoke lifecycle checks passed; Desktop restart/UI confirmation remains an operator action.
 - 2026-08-28: User explicitly authorized PR #7; WP-06 merged into main as 714d4ca.
 - 2026-08-28: WP-07 isolation, audit, bounded output, dry-run retention, recovery, concurrency, secret, dependency, and real cadence-vm acceptance checks passed; awaiting review and merge authorization.
+- 2026-08-28: User explicitly authorized PR #8; WP-07 merged into main as 2786fbc.
+- 2026-08-28: WP-08 fixed OCEAN/SKILL headless checks, allowlisted metadata-only discovery, PDK denial, and design/lock fingerprint acceptance passed; awaiting review and merge authorization.
