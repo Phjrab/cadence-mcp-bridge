@@ -138,6 +138,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_compare_corner_results",
         "cadence_summarize_monte_carlo",
     }
+    assert not any("write" in name or "copy" in name or "rollback" in name for name in tools)
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}

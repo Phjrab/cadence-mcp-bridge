@@ -74,6 +74,8 @@ fixed jobs root.
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
+| Unauthorized design write | library or mutation request | no public write tool or runner command, permanent PDK/shared/source classification, unset work library, empty mutation registry | WP-11 remains blocked until a complete user-approved contract exists |
+| Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence, no v1 tag while blocked | final release requires a resumed WP-11 run |
 
 ## Origin and audit contract
 
@@ -140,6 +142,14 @@ accepts no arguments and cannot delete. It examines only canonical UUID director
 parent is the fixed jobs root and skips symlinks and unrelated files. Automatic or destructive
 remote cleanup, force-push, and destructive remote repair are prohibited. Any future deletion
 requires a separate reviewed change and explicit operator approval.
+
+## Controlled-write gate
+
+`src/cadence_mcp_bridge/write_policy.py` is intentionally fail-closed. `gpdk090`, `analogLib`,
+`basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable, no work library is configured, and
+the mutation registry is empty. The MCP tool count stays at twenty and the runner exposes no copy,
+backup, apply, save, or rollback command. See `docs/DESIGN_WRITE_POLICY.md` for the inputs required
+to replace this checkpoint with a reviewed copy-only contract.
 
 ## Verification
 

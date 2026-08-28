@@ -328,3 +328,20 @@ vectors. Tests require expected metrics within `1e-9`, identical repeated output
 and units, rejection without a contract, and a stable input hash in the measurement manifest.
 Actual-circuit measurement remains unavailable until the user supplies and approves a separate
 complete contract.
+
+## WP-11 blocked write and release checkpoint
+
+Read-only remote discovery returned only `MyDesignLib` and `MyFirstDesign`. Both remain source
+libraries; no dedicated writable work library was identified or approved. The implementation adds
+a local fail-closed readiness gate and exposes no new MCP or runner write command. No Cadence
+cellview was opened, copied, saved, or modified.
+
+Packaging lifecycle is independently verifiable with:
+
+```powershell
+.\scripts\verify-package.ps1
+```
+
+The script builds, installs, checks, and uninstalls the current `0.1.0` package entirely in a
+validated temporary directory. `v1.0.0` remains prohibited until an approved copy-only mutation,
+dry-run/apply equivalence, backup restore, and design immutability checks pass.

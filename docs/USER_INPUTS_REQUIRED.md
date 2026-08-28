@@ -36,3 +36,18 @@ one can be added, the user must provide and approve:
 
 These inputs must form a new versioned, reviewed contract. None will be inferred from the synthetic
 fixture or from the existing differential-amplifier ADE profile.
+
+## WP-11 controlled design write — blocking inputs
+
+Read-only discovery found `MyDesignLib` and `MyFirstDesign`, but neither is approved as a dedicated
+writable work library. To resume WP-11, provide one complete authorization containing:
+
+- dedicated work library name and approved project location;
+- exact source library/cell/view and destination copy cell/view;
+- one narrowly predefined mutation and its typed parameter values;
+- expected dry-run diff and post-save verification result;
+- backup location/retention and rollback success criterion;
+- explicit approval to apply that named mutation only to the destination copy.
+
+Until all six items are supplied, no write tool, remote mutation command, v1 tag, or GitHub release
+will be created. PDK/shared/source libraries remain read-only.
