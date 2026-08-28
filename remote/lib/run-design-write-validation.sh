@@ -32,10 +32,8 @@ esac
     || cadence_mcp_fail "preserved incomplete target is unavailable" 69
 [ ! -e "$TARGET_VIEW" ] || cadence_mcp_fail "target cellview already exists" 65
 [ ! -e "$BACKUP_VIEW" ] || cadence_mcp_fail "backup cellview already exists" 65
-source_artifact=$(find "$SOURCE_VIEW" -maxdepth 1 \
-    \( -name '*.cdslck*' -o -name 'sch.oa-' -o -name '*panic*' \) -print -quit)
-[ -z "$source_artifact" ] \
-    || cadence_mcp_fail "source cellview lock or recovery artifact is present" 65
+"$CADENCE_MCP_PYTHON" "$HELPER" "$POLICY" source-check \
+    || cadence_mcp_fail "source master or artifact check failed" 65
 
 mkdir -p "$WRITE_ROOT" "$CADENCE_MCP_AUDIT_ROOT" || cadence_mcp_fail "write layout failed" 73
 chmod 700 "$WRITE_ROOT" "$CADENCE_MCP_AUDIT_ROOT"

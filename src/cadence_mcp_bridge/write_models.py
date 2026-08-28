@@ -28,6 +28,7 @@ class DesignWritePlan(ContractModel):
     original_library_mutations: Literal[0]
     destructive: Literal[False]
     source_exists: bool
+    source_master_authoritative: bool
     source_artifact_present: bool
     target_exists: bool
     backup_exists: bool

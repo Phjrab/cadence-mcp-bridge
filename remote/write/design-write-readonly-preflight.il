@@ -26,6 +26,13 @@ when(ddGetObj(workLib backupCell sourceView)
 
 sourceCv = dbOpenCellViewByType(sourceLib sourceCell sourceView "schematic" "r")
 unless(sourceCv mcpPreflightFail("source open failed"))
+unless(equal(list(
+    length(sourceCv~>instances)
+    length(sourceCv~>nets)
+    length(sourceCv~>terminals)
+  ) list(35 14 8))
+  mcpPreflightFail("source baseline topology mismatch")
+)
 when(dbFindProp(sourceCv propertyName)
   mcpPreflightFail("approved property already exists on source")
 )

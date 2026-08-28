@@ -118,6 +118,29 @@ def backup_path(policy):
     return os.path.join(target["library_path"], policy["backup_cell"], target["view"])
 
 
+def source_master_is_authoritative(path):
+    master_tag = os.path.join(path, "master.tag")
+    schematic_master = os.path.join(path, "sch.oa")
+    if (
+        not os.path.isfile(master_tag)
+        or os.path.islink(master_tag)
+        or not os.path.isfile(schematic_master)
+        or os.path.islink(schematic_master)
+    ):
+        return False
+    try:
+        with open(master_tag, "rb") as handle:
+            lines = handle.read().decode("ascii", "strict").splitlines()
+    except (IOError, OSError, UnicodeError):
+        return False
+    references = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("--"):
+            references.append(stripped)
+    return references == ["sch.oa"]
+
+
 def has_lock_or_recovery_artifact(path):
     try:
         names = os.listdir(path)
@@ -125,7 +148,7 @@ def has_lock_or_recovery_artifact(path):
         return False
     for name in names:
         lowered = name.lower()
-        if ".cdslck" in lowered or name == "sch.oa-" or "panic" in lowered:
+        if ".cdslck" in lowered or "panic" in lowered or "recover" in lowered:
             return True
     return False
 
@@ -136,6 +159,7 @@ def plan_payload(policy):
     target_exists = os.path.exists(target_path(policy))
     backup_exists = os.path.exists(backup_path(policy))
     source_exists = os.path.isdir(source["path"]) and not os.path.islink(source["path"])
+    source_master_authoritative = source_master_is_authoritative(source["path"])
     source_artifact_present = has_lock_or_recovery_artifact(source["path"])
     preserved_exists = os.path.isdir(policy["preserved_target"]["path"])
     return {
@@ -160,11 +184,13 @@ def plan_payload(policy):
         "original_library_mutations": policy["original_library_mutations"],
         "destructive": policy["destructive"],
         "source_exists": source_exists,
+        "source_master_authoritative": source_master_authoritative,
         "source_artifact_present": source_artifact_present,
         "target_exists": target_exists,
         "backup_exists": backup_exists,
         "preserved_target_exists": preserved_exists,
         "ready": source_exists
+        and source_master_authoritative
         and not source_artifact_present
         and preserved_exists
         and not target_exists
@@ -335,6 +361,12 @@ def main():
         arguments = sys.argv[3:]
         if command == "plan" and len(arguments) == 0:
             emit(plan_payload(policy))
+        elif command == "source-check" and len(arguments) == 0:
+            source_path = policy["source"]["path"]
+            if not source_master_is_authoritative(source_path):
+                raise ValueError("source master.tag does not authoritatively select sch.oa")
+            if has_lock_or_recovery_artifact(source_path):
+                raise ValueError("source cellview lock or blocking recovery artifact is present")
         elif command == "confirm" and len(arguments) == 1:
             if arguments[0] != policy["confirmation"]:
                 raise ValueError("confirmation does not match the fixed plan")

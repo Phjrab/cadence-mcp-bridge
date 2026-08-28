@@ -172,7 +172,11 @@ def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() 
         assert forbidden not in skill
     assert "source_before" in worker and "source_after" in worker
     assert "preserved_before" in worker and "preserved_after" in worker
-    assert "source cellview lock or recovery artifact is present" in worker
+    assert "source-check" in worker
+    assert "source_master_is_authoritative" in helper
+    assert 'references == ["sch.oa"]' in helper
+    assert "source baseline topology mismatch" in skill
+    assert "list(35 14 8)" in skill
     assert "V2 cellview lock or recovery artifact remains" in worker
     assert "target cellview already exists" in worker
     assert "EXPECTED_SEQUENCE" in helper

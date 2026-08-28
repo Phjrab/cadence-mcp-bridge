@@ -78,6 +78,10 @@ unless(ddGetObj(workLib) mcpWriteFail("work library registration failed"))
 
 sourceCv = dbOpenCellViewByType(sourceLib sourceCell sourceView "schematic" "r")
 unless(sourceCv mcpWriteFail("source open failed"))
+sourceTopology = mcpTopology(sourceCv)
+unless(equal(sourceTopology list(35 14 8))
+  mcpWriteFail("source baseline topology mismatch")
+)
 printf("MCP_STAGE|source_verify|true\n")
 copyResult = errset(
   dbCopyCellView(sourceCv workLib targetCell targetView nil nil nil)
@@ -89,7 +93,6 @@ unless(copyResult
 targetCv = car(copyResult)
 unless(targetCv mcpWriteFail("source copy returned no target"))
 
-sourceTopology = mcpTopology(sourceCv)
 baselineTopology = mcpTopology(targetCv)
 baselinePropertyCount = length(targetCv~>prop)
 unless(equal(sourceTopology baselineTopology)

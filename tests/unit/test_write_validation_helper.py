@@ -24,7 +24,9 @@ def _python26_fcntl_stub(tmp_path: Path) -> tuple[Path, dict[str, str]]:
     return stub_directory, environment
 
 
-def test_plan_lock_detector_rejects_oa_and_recovery_artifacts(tmp_path: Path) -> None:
+def test_source_gate_requires_authoritative_master_and_ignores_preserved_auxiliary(
+    tmp_path: Path,
+) -> None:
     stub_directory, _ = _python26_fcntl_stub(tmp_path)
     spec = importlib.util.spec_from_file_location("write_validation_json", HELPER)
     assert spec is not None and spec.loader is not None
@@ -35,9 +37,33 @@ def test_plan_lock_detector_rejects_oa_and_recovery_artifacts(tmp_path: Path) ->
     finally:
         sys.path.remove(str(stub_directory))
 
+    (tmp_path / "master.tag").write_text(
+        "-- Master.tag File, Rev:1.0\nsch.oa\n", encoding="ascii"
+    )
+    (tmp_path / "sch.oa").write_bytes(b"authoritative")
+    (tmp_path / "sch.oa-").write_bytes(b"preserved auxiliary")
+
+    assert module.source_master_is_authoritative(str(tmp_path)) is True
     assert module.has_lock_or_recovery_artifact(str(tmp_path)) is False
     (tmp_path / "sch.oa.cdslck.RHEL30.cadence.25425").write_text("lock", encoding="utf-8")
     assert module.has_lock_or_recovery_artifact(str(tmp_path)) is True
+
+
+def test_source_gate_rejects_non_authoritative_master(tmp_path: Path) -> None:
+    stub_directory, _ = _python26_fcntl_stub(tmp_path)
+    spec = importlib.util.spec_from_file_location("write_validation_json_bad_master", HELPER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(stub_directory))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(stub_directory))
+
+    (tmp_path / "master.tag").write_text("other.oa\n", encoding="ascii")
+    (tmp_path / "sch.oa").write_bytes(b"present but not authoritative")
+
+    assert module.source_master_is_authoritative(str(tmp_path)) is False
 
 
 def test_v2_helper_requires_matching_logical_fingerprints_and_records_audit(

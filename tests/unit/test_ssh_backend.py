@@ -294,6 +294,7 @@ async def test_design_write_plan_uses_no_caller_arguments(
         "original_library_mutations": 0,
         "destructive": False,
         "source_exists": True,
+        "source_master_authoritative": True,
         "source_artifact_present": False,
         "target_exists": False,
         "backup_exists": False,

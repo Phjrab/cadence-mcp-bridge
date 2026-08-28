@@ -305,11 +305,8 @@ runner_design_write_plan() {
 runner_design_write_preflight() {
     [ "$#" -eq 0 ] || usage
     [ -x "$VIRTUOSO_BIN" ] || cadence_mcp_fail "Virtuoso is unavailable" 69
-    source_view=/home/buet/cds_work/MyDesignLib/Differential_Amplifier_TB2/schematic
-    source_artifact=$(find "$source_view" -maxdepth 1 \
-        \( -name '*.cdslck*' -o -name 'sch.oa-' -o -name '*panic*' \) -print -quit)
-    [ -z "$source_artifact" ] \
-        || cadence_mcp_fail "source cellview lock or recovery artifact is present" 65
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" source-check \
+        || cadence_mcp_fail "source master or artifact check failed" 65
     runtime="$CADENCE_MCP_ROOT/write-validation/preflight"
     mkdir -p "$runtime" || cadence_mcp_fail "preflight runtime creation failed" 73
     chmod 700 "$runtime"
