@@ -31,7 +31,7 @@ async def test_real_mcp_to_spectre_smoke_lifecycle() -> None:
     report = await verify_lifecycle()
 
     assert report.health_ok is True
-    assert report.runner_version == "0.5.0"
+    assert report.runner_version == "0.7.0"
     assert report.exit_code == 0
     assert report.artifact_count >= 1
     assert report.storage_contained is True
@@ -106,9 +106,7 @@ async def test_simultaneous_submit_never_runs_more_than_one_job() -> None:
         final: set[str] = set()
         for _ in range(180):
             for job_id in job_ids:
-                status = _content(
-                    await client.call_tool("cadence_job_status", {"job_id": job_id})
-                )
+                status = _content(await client.call_tool("cadence_job_status", {"job_id": job_id}))
                 state = cast(str, status["state"])
                 if state in terminal:
                     final.add(job_id)

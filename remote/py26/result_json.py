@@ -114,6 +114,10 @@ def command_result(arguments):
         ("smoke.raw", "artifacts/smoke.raw", "application/x-cadence-psf"),
         ("stdout.log", "stdout.log", "text/plain"),
         ("stderr.log", "stderr.log", "text/plain"),
+        ("profile.log", "artifacts/profile.log", "text/plain"),
+        ("profile.raw", "artifacts/profile.raw", "application/x-cadence-psf"),
+        ("profile.scs", "artifacts/profile.scs", "text/plain"),
+        ("run-manifest.json", "artifacts/run-manifest.json", "application/json"),
     )
     for candidate in candidates:
         metadata = artifact(job_dir, candidate[0], candidate[1], candidate[2])
@@ -165,7 +169,7 @@ def command_field(arguments):
     with open(arguments[0], "rb") as handle:
         value = json.load(handle)
     field = arguments[1]
-    if field != "origin":
+    if field not in ("origin", "profile"):
         raise ValueError("unsupported field")
     sys.stdout.write(str(value.get(field, "mcp")) + "\n")
 

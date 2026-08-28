@@ -147,9 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly nine tools: the six lifecycle tools plus allowlisted library listing, cell
-listing, and cellview inspection. No profile, remote path, netlist, command, or script text is
-accepted.
+server exposes exactly twelve tools: six lifecycle tools, three metadata discovery tools, and
+profile list/detail/submission. No remote path, netlist text, command, script text, arbitrary
+analysis, or arbitrary output is accepted.
 
 ## WP-04 acceptance evidence
 
@@ -217,7 +217,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact nine-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twelve-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -284,3 +284,33 @@ Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
 - responses contained no remote path, `cds.lib`, OA filename, model, or cellview content;
 - design-tree metadata and pre-existing lock-file fingerprints were identical immediately before
   and after a combined headless and discovery run; no save or new design lock occurred.
+
+## WP-09 profile automation
+
+Runner 0.7.0 exposes two separately classified profiles through the fixed `submit-profile` command.
+`fixture-rc-transient` remains the synthetic fixture with bounded resistance, capacitance, and stop
+time. `actual-differential-amplifier-tb2-transient` fixes `MyDesignLib/Differential_Amplifier_TB2`
+schematic, ADE L `state1`, gpdk090 v4.6 section `NN`, 27 degrees C, transient stop `4m` (0.004
+seconds), no caller-controlled variables, and no requested measurements.
+
+The actual profile validates the fixed state, model, and source netlist before creating a job. It
+copies the existing ADE-generated circuit netlist into the private job directory, creates a reviewed
+wrapper, and records the source SHA-256 and applied configuration in `run-manifest.json`. It never
+writes the original cellview, state, PDK, model, or simulation result directory. MCP exposes only
+bounded completion and artifact metadata.
+
+Validated on 2026-08-28 against `cadence-vm`:
+
+- the fixture profile completed on the actual VM with exit code 0, zero errors, zero warnings,
+  and one notice;
+- result returned metadata for the manifest and bounded artifacts, never waveform or manifest
+  contents;
+- a resistance below the minimum was denied with exit 64 before a job directory was created;
+- an unknown corner was denied with exit 64;
+- all eight real integration tests passed, including actual profile, smoke, fixture, and discovery
+  regression;
+- design-tree and lock fingerprints were identical before and after profile execution.
+- the actual profile completed with exit code 0, zero errors, two allowlisted `CMI-2477` warnings,
+  and one notice; any other warning or more than two occurrences fails closed;
+- the fixed bias parameters found in the ADE-generated input are recorded in the remote-only run
+  manifest but remain unavailable as caller-controlled design variables.

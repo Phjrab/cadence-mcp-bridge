@@ -23,6 +23,7 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
+    ProfileVariables,
     ToolAvailability,
 )
 from cadence_mcp_bridge.server import create_server
@@ -92,6 +93,15 @@ class LifecycleBackend:
 
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         return CellViewInspection(library=library, cell=cell, view=view, exists=True)
+
+    async def submit_profile(
+        self,
+        job_id: UUID,
+        profile_id: str,
+        corner: str,
+        variables: ProfileVariables,
+    ) -> JobStatus:
+        return self._status(job_id, JobState.QUEUED).model_copy(update={"profile": profile_id})
 
     @staticmethod
     def _status(job_id: UUID, state: JobState) -> JobStatus:

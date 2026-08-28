@@ -24,6 +24,9 @@ from cadence_mcp_bridge.models import (
     JobResult,
     JobStatus,
     LibraryList,
+    ProfileList,
+    ProfileVariables,
+    SimulationProfile,
 )
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
@@ -71,6 +74,29 @@ DiscoveryIdentifierInput = Annotated[
             "maxLength": 64,
             "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
             "description": "Exact name from the reviewed read-only discovery allowlist.",
+        }
+    ),
+]
+ProfileIdInput = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": [
+                "fixture-rc-transient",
+                "actual-differential-amplifier-tb2-transient",
+            ],
+            "description": "Exact profile identifier from cadence_list_profiles.",
+        }
+    ),
+]
+ProfileCornerInput = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": ["nominal", "NN"],
+            "description": "Exact corner allowed by the selected profile.",
         }
     ),
 ]
@@ -235,6 +261,44 @@ def create_server(service: CadenceService) -> MCPServer:
         view: DiscoveryIdentifierInput,
     ) -> Annotated[CallToolResult, CellViewInspection]:
         return await _stable_result(service.inspect_cellview(library, cell, view))
+
+    @server.tool(
+        name="cadence_list_profiles",
+        description=(
+            "List reviewed simulation profiles and their fixed analyses, corners, and outputs."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_profiles() -> Annotated[CallToolResult, ProfileList]:
+        return await _stable_result(service.list_profiles())
+
+    @server.tool(
+        name="cadence_get_profile",
+        description="Read one reviewed profile schema, variable units/ranges, and timeout.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_get_profile(
+        profile_id: ProfileIdInput,
+    ) -> Annotated[CallToolResult, SimulationProfile]:
+        return await _stable_result(service.get_profile(profile_id))
+
+    @server.tool(
+        name="cadence_submit_profile",
+        description=(
+            "Submit one reviewed simulation profile with its exact variable contract; no raw "
+            "netlist, OCEAN, SKILL, path, analysis, or output input is accepted."
+        ),
+        annotations=_SUBMIT,
+        structured_output=True,
+    )
+    async def cadence_submit_profile(
+        profile_id: ProfileIdInput,
+        corner: ProfileCornerInput,
+        variables: ProfileVariables,
+    ) -> Annotated[CallToolResult, JobStatus]:
+        return await _stable_result(service.submit_profile(profile_id, corner, variables))
 
     return server
 

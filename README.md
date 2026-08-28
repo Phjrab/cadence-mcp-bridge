@@ -52,10 +52,14 @@ uv run python -m cadence_mcp_bridge
 uv run python -m cadence_mcp_bridge serve
 ```
 
-The server exposes the six lifecycle tools plus three metadata-only discovery tools:
+The server exposes the six lifecycle tools plus three metadata-only discovery tools,
 `cadence_list_libraries`, `cadence_list_cells`, and `cadence_inspect_cellview`. Discovery is
 restricted to a reviewed library/cell/view allowlist and never returns paths or proprietary file
-content. Register the reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
+content. It also exposes `cadence_list_profiles`, `cadence_get_profile`, and
+`cadence_submit_profile`. The registry keeps the synthetic `fixture-rc-transient` profile separate
+from the fixed `actual-differential-amplifier-tb2-transient` ADE L profile. The actual profile has
+no caller-controlled variables, paths, scripts, analyses, or outputs. Register the
+reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
 `docs/CODEX_DESKTOP.md` for restart, `/mcp`, approval, and acceptance prompts. See
 `docs/ARCHITECTURE.md` for the current boundaries.
 

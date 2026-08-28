@@ -22,6 +22,7 @@ from cadence_mcp_bridge.models import (
     LibraryList,
     LibraryMetadata,
     LicenseEnvironment,
+    ProfileVariables,
     ToolAvailability,
 )
 from cadence_mcp_bridge.server import create_server
@@ -85,6 +86,15 @@ class FakeBackend:
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         return CellViewInspection(library=library, cell=cell, view=view, exists=True)
 
+    async def submit_profile(
+        self,
+        job_id: UUID,
+        profile_id: str,
+        corner: str,
+        variables: ProfileVariables,
+    ) -> JobStatus:
+        return self._status(job_id).model_copy(update={"profile": profile_id})
+
     @staticmethod
     def _status(job_id: UUID, state: JobState = JobState.QUEUED) -> JobStatus:
         now = datetime.now(UTC)
@@ -115,11 +125,23 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_libraries",
         "cadence_list_cells",
         "cadence_inspect_cellview",
+        "cadence_list_profiles",
+        "cadence_get_profile",
+        "cadence_submit_profile",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
     assert tools["cadence_list_libraries"].input_schema["properties"] == {}
+    assert tools["cadence_list_profiles"].input_schema["properties"] == {}
+    assert tools["cadence_get_profile"].input_schema["properties"]["profile_id"]["enum"] == [
+        "fixture-rc-transient",
+        "actual-differential-amplifier-tb2-transient",
+    ]
+    assert tools["cadence_submit_profile"].input_schema["properties"]["corner"]["enum"] == [
+        "nominal",
+        "NN",
+    ]
     for name in ("cadence_job_status", "cadence_job_result", "cadence_cancel_job"):
         assert set(tools[name].input_schema["properties"]) == {"job_id"}
     assert set(tools["cadence_job_log_tail"].input_schema["properties"]) == {
@@ -151,6 +173,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_libraries",
         "cadence_list_cells",
         "cadence_inspect_cellview",
+        "cadence_list_profiles",
+        "cadence_get_profile",
     }
     destructive = {
         name
@@ -204,6 +228,34 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             "cadence_inspect_cellview",
             {"library": "MyFirstDesign", "cell": "NOT_gate", "view": "schematic"},
         )
+        profiles = await client.call_tool("cadence_list_profiles")
+        profile = await client.call_tool(
+            "cadence_get_profile", {"profile_id": "fixture-rc-transient"}
+        )
+        profile_submit = await client.call_tool(
+            "cadence_submit_profile",
+            {
+                "profile_id": "fixture-rc-transient",
+                "corner": "nominal",
+                "variables": {
+                    "resistance_ohm": 1000.0,
+                    "capacitance_f": 1e-12,
+                    "stop_time_s": 1e-9,
+                },
+            },
+        )
+        actual_profile = await client.call_tool(
+            "cadence_get_profile",
+            {"profile_id": "actual-differential-amplifier-tb2-transient"},
+        )
+        actual_submit = await client.call_tool(
+            "cadence_submit_profile",
+            {
+                "profile_id": "actual-differential-amplifier-tb2-transient",
+                "corner": "NN",
+                "variables": {},
+            },
+        )
 
     assert cast(dict[str, Any], health.structured_content)["ssh"] == "ok"
     assert cast(dict[str, Any], status.structured_content)["state"] == "running"
@@ -213,6 +265,11 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
     assert cast(dict[str, Any], libraries.structured_content)["allowlist_enforced"] is True
     assert cast(dict[str, Any], cells.structured_content)["cells"] == ["NOT_gate"]
     assert cast(dict[str, Any], cellview.structured_content)["exists"] is True
+    assert cast(dict[str, Any], profiles.structured_content)["registry_version"] == 1
+    assert cast(dict[str, Any], profile.structured_content)["classification"] == "fixture"
+    assert cast(dict[str, Any], profile_submit.structured_content)["state"] == "queued"
+    assert cast(dict[str, Any], actual_profile.structured_content)["classification"] == "actual"
+    assert cast(dict[str, Any], actual_submit.structured_content)["state"] == "queued"
     assert all(
         not item.is_error
         for item in (
@@ -225,6 +282,11 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             libraries,
             cells,
             cellview,
+            profiles,
+            profile,
+            profile_submit,
+            actual_profile,
+            actual_submit,
         )
     )
 

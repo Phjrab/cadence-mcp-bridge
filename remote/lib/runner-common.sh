@@ -40,6 +40,12 @@ cadence_mcp_job_origin() {
         "$job_dir/request.json" origin
 }
 
+cadence_mcp_job_profile() {
+    job_dir=$1
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" field \
+        "$job_dir/request.json" profile
+}
+
 cadence_mcp_job_actor() {
     job_dir=$1
     origin=$(cadence_mcp_job_origin "$job_dir") || return 1
@@ -55,9 +61,11 @@ cadence_mcp_audit() {
     job_id=$2
     origin=$3
     actor=$4
+    job_dir=$(cadence_mcp_job_dir "$job_id") || return 1
+    profile=$(cadence_mcp_job_profile "$job_dir") || return 1
     "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" audit \
         "$CADENCE_MCP_AUDIT_LOG" "$event_name" "$job_id" "$origin" "$actor" \
-        "$(cadence_mcp_utc_now)" "$CADENCE_MCP_PROFILE"
+        "$(cadence_mcp_utc_now)" "$profile"
 }
 
 cadence_mcp_atomic_status() {
@@ -68,8 +76,10 @@ cadence_mcp_atomic_status() {
     origin=$(cadence_mcp_job_origin "$job_dir") \
         || cadence_mcp_fail "job origin unavailable" 69
     temporary="$job_dir/.status.$$.tmp"
+    profile=$(cadence_mcp_job_profile "$job_dir") \
+        || cadence_mcp_fail "job profile unavailable" 69
     "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" status \
-        "$job_id" "$state" "$CADENCE_MCP_PROFILE" "$origin" \
+        "$job_id" "$state" "$profile" "$origin" \
         "$(cadence_mcp_utc_now)" "$message" \
         > "$temporary" || cadence_mcp_fail "status serialization failed" 70
     chmod 600 "$temporary"

@@ -89,6 +89,69 @@ class CellViewInspection(ContractModel):
     proprietary_content_included: Literal[False] = False
 
 
+class ProfileVariableSpec(ContractModel):
+    name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
+    unit: Annotated[str, Field(min_length=1, max_length=16)]
+    minimum: float
+    maximum: float
+    default: float
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if not self.minimum <= self.default <= self.maximum:
+            raise ValueError("profile variable default must be within its range")
+        return self
+
+
+class ProfileSummary(ContractModel):
+    profile_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+    classification: Literal["fixture", "actual"]
+    analyses: tuple[Annotated[str, Field(min_length=1, max_length=32)], ...]
+    corners: tuple[Annotated[str, Field(min_length=1, max_length=32)], ...]
+    outputs: tuple[Annotated[str, Field(min_length=1, max_length=64)], ...]
+
+
+class ProfileList(ContractModel):
+    registry_version: Literal[1] = 1
+    profiles: tuple[ProfileSummary, ...]
+
+
+class AdeProfileMetadata(ContractModel):
+    library: Annotated[str, Field(min_length=1, max_length=64)]
+    cell: Annotated[str, Field(min_length=1, max_length=64)]
+    view: Annotated[str, Field(min_length=1, max_length=64)]
+    ade_product: Literal["ADE L"]
+    state: Annotated[str, Field(min_length=1, max_length=64)]
+    pdk: Annotated[str, Field(min_length=1, max_length=64)]
+    pdk_version: Annotated[str, Field(min_length=1, max_length=32)]
+    model_section: Annotated[str, Field(min_length=1, max_length=32)]
+    temperature_c: float
+    spectre_stop_time: Annotated[str, Field(pattern=r"^[0-9]+(?:\.[0-9]+)?[munpf]$")]
+    stop_time_s: Annotated[float, Field(gt=0)]
+
+
+class SimulationProfile(ProfileSummary):
+    netlist_source: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+    variables: tuple[ProfileVariableSpec, ...]
+    timeout_seconds: Annotated[int, Field(ge=1, le=300)]
+    allowed_warning_codes: tuple[Annotated[str, Field(min_length=1, max_length=32)], ...] = ()
+    maximum_warning_count: Annotated[int, Field(ge=0, le=100)] = 0
+    ade: AdeProfileMetadata | None = None
+
+
+class RcTransientVariables(ContractModel):
+    resistance_ohm: Annotated[float, Field(ge=100.0, le=10_000.0)] = 1_000.0
+    capacitance_f: Annotated[float, Field(ge=1e-13, le=1e-10)] = 1e-12
+    stop_time_s: Annotated[float, Field(ge=1e-10, le=1e-7)] = 1e-9
+
+
+class NoProfileVariables(ContractModel):
+    """Explicitly empty variable object for reviewed profiles with no design variables."""
+
+
+type ProfileVariables = NoProfileVariables | RcTransientVariables
+
+
 class ArtifactMetadata(ContractModel):
     name: Annotated[str, Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")]
     relative_path: Annotated[str, Field(min_length=1, max_length=512)]

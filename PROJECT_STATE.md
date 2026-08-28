@@ -4,19 +4,19 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-08
+current_wp: WP-09
 current_status: passed
-last_completed_wp: WP-08
-next_wp: WP-09
-current_feature_branch: wp/WP-08-ocean-skill-read-only-discovery
-base_main_commit: 2786fbcdd1b1e9864dc3640f2564041a78494af1
-last_commit: b32e434c4dc0571f58d69a8546044dbe2ec5e1c2
-last_push: 2026-08-28T12:39:46.3595782+09:00
+last_completed_wp: WP-09
+next_wp: WP-10
+current_feature_branch: wp/WP-09-ade-testbench-profiles
+base_main_commit: 9a109c098c2efd505aaa42761a1acc3a85b1104a
+last_commit: 2f8513ed54cee9babfc2e291a47a658ea0c86be0
+last_push: 2026-08-28T14:35:40.9207051+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review the WP-08 pull request and explicitly authorize its merge before WP-09.
+user_action_required: Review wp/WP-09-ade-testbench-profiles and explicitly authorize its GitHub PR merge before starting WP-10.
 ```
 
 ## Progress log
@@ -39,3 +39,7 @@ user_action_required: Review the WP-08 pull request and explicitly authorize its
 - 2026-08-28: WP-07 isolation, audit, bounded output, dry-run retention, recovery, concurrency, secret, dependency, and real cadence-vm acceptance checks passed; awaiting review and merge authorization.
 - 2026-08-28: User explicitly authorized PR #8; WP-07 merged into main as 2786fbc.
 - 2026-08-28: WP-08 fixed OCEAN/SKILL headless checks, allowlisted metadata-only discovery, PDK denial, and design/lock fingerprint acceptance passed; awaiting review and merge authorization.
+- 2026-08-28: User explicitly authorized PR #9; WP-08 merged into main as 9a109c0.
+- 2026-08-28: WP-09 fixture profile registry, typed range/corner validation, manifest, runner 0.6.0, and real MCP lifecycle checks passed; actual ADE profile remains blocked on project-owned testbench, state, variable, corner, and output choices.
+- 2026-08-28: WP-09 resume approval received; the remote feature branch was synchronized and all local/security/real-integration checks passed again, but no ADE testbench, PDK, variable, corner, or output choices were supplied, so the actual profile remains blocked and is not ready for merge.
+- 2026-08-28: User supplied and approved the Differential_Amplifier_TB2 ADE L state1 profile; runner 0.7.0 executed its fixed gpdk090 v4.6 NN transient profile successfully with 0 errors, two specifically allowlisted CMI-2477 warnings, unchanged source/state/lock fingerprints, 106 local tests, 18 security tests, eight real integrations, and a clean dependency audit.

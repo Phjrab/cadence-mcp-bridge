@@ -6,7 +6,15 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from cadence_mcp_bridge.models import ArtifactMetadata, JobResult, JobState, JobStatus, JobSummary
+from cadence_mcp_bridge.models import (
+    ArtifactMetadata,
+    JobResult,
+    JobState,
+    JobStatus,
+    JobSummary,
+    NoProfileVariables,
+    RcTransientVariables,
+)
 
 
 def test_job_status_requires_timezone() -> None:
@@ -49,3 +57,22 @@ def test_valid_succeeded_result() -> None:
     )
 
     assert result.state is JobState.SUCCEEDED
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"resistance_ohm": 99},
+        {"capacitance_f": 1e-9},
+        {"stop_time_s": 1e-8, "unknown_variable": 1},
+    ],
+)
+def test_profile_variables_reject_ranges_and_unknown_names(payload: dict[str, float]) -> None:
+    with pytest.raises(ValidationError):
+        RcTransientVariables.model_validate(payload)
+
+
+def test_no_profile_variables_accepts_only_an_empty_object() -> None:
+    assert NoProfileVariables.model_validate({}).model_dump() == {}
+    with pytest.raises(ValidationError):
+        NoProfileVariables.model_validate({"gain": 1.0})
