@@ -14,6 +14,22 @@ from pydantic import WithJsonSchema
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.measurement_models import (
+    AdcMeasurementContract,
+    CornerComparison,
+    CornerComparisonRequest,
+    DcPowerRequest,
+    FftMeasurementRequest,
+    FftMetrics,
+    LinearityMetrics,
+    LinearityRequest,
+    MonteCarloRequest,
+    MonteCarloSummary,
+    OffsetRequest,
+    ScalarMetric,
+    SettlingMetric,
+    SettlingRequest,
+)
 from cadence_mcp_bridge.models import (
     CellList,
     CellViewInspection,
@@ -97,6 +113,16 @@ ProfileCornerInput = Annotated[
             "type": "string",
             "enum": ["nominal", "NN"],
             "description": "Exact corner allowed by the selected profile.",
+        }
+    ),
+]
+MeasurementContractIdInput = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": ["adc-synthetic-v1"],
+            "description": "Exact versioned measurement contract identifier.",
         }
     ),
 ]
@@ -299,6 +325,96 @@ def create_server(service: CadenceService) -> MCPServer:
         variables: ProfileVariables,
     ) -> Annotated[CallToolResult, JobStatus]:
         return await _stable_result(service.submit_profile(profile_id, corner, variables))
+
+    @server.tool(
+        name="cadence_get_measurement_contract",
+        description=(
+            "Read the complete versioned synthetic ADC measurement definitions and formulas."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_get_measurement_contract(
+        contract_id: MeasurementContractIdInput,
+    ) -> Annotated[CallToolResult, AdcMeasurementContract]:
+        return await _stable_result(service.get_measurement_contract(contract_id))
+
+    @server.tool(
+        name="cadence_measure_dc_power",
+        description="Calculate mean DC supply power under one explicit measurement contract.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_measure_dc_power(
+        request: DcPowerRequest,
+    ) -> Annotated[CallToolResult, ScalarMetric]:
+        return await _stable_result(service.measure_dc_power(request))
+
+    @server.tool(
+        name="cadence_measure_offset",
+        description="Calculate mean voltage offset against the contract's fixed reference.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_measure_offset(
+        request: OffsetRequest,
+    ) -> Annotated[CallToolResult, ScalarMetric]:
+        return await _stable_result(service.measure_offset(request))
+
+    @server.tool(
+        name="cadence_measure_settling",
+        description="Calculate strict stay-within-band settling time from bounded samples.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_measure_settling(
+        request: SettlingRequest,
+    ) -> Annotated[CallToolResult, SettlingMetric]:
+        return await _stable_result(service.measure_settling(request))
+
+    @server.tool(
+        name="cadence_measure_fft_metrics",
+        description="Calculate contract-fixed SNR, SNDR, THD, and ENOB from 1024 samples.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_measure_fft_metrics(
+        request: FftMeasurementRequest,
+    ) -> Annotated[CallToolResult, FftMetrics]:
+        return await _stable_result(service.measure_fft_metrics(request))
+
+    @server.tool(
+        name="cadence_measure_linearity",
+        description="Calculate endpoint DNL and INL for the fixed three-bit synthetic contract.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_measure_linearity(
+        request: LinearityRequest,
+    ) -> Annotated[CallToolResult, LinearityMetrics]:
+        return await _stable_result(service.measure_linearity(request))
+
+    @server.tool(
+        name="cadence_compare_corner_results",
+        description="Compare exact NN, FF, and SS metric values against the NN reference.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_compare_corner_results(
+        request: CornerComparisonRequest,
+    ) -> Annotated[CallToolResult, CornerComparison]:
+        return await _stable_result(service.compare_corner_results(request))
+
+    @server.tool(
+        name="cadence_summarize_monte_carlo",
+        description="Calculate bounded deterministic Monte Carlo summary statistics.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_summarize_monte_carlo(
+        request: MonteCarloRequest,
+    ) -> Annotated[CallToolResult, MonteCarloSummary]:
+        return await _stable_result(service.summarize_monte_carlo(request))
 
     return server
 

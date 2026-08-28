@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -128,6 +129,14 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_profiles",
         "cadence_get_profile",
         "cadence_submit_profile",
+        "cadence_get_measurement_contract",
+        "cadence_measure_dc_power",
+        "cadence_measure_offset",
+        "cadence_measure_settling",
+        "cadence_measure_fft_metrics",
+        "cadence_measure_linearity",
+        "cadence_compare_corner_results",
+        "cadence_summarize_monte_carlo",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
@@ -175,6 +184,14 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_inspect_cellview",
         "cadence_list_profiles",
         "cadence_get_profile",
+        "cadence_get_measurement_contract",
+        "cadence_measure_dc_power",
+        "cadence_measure_offset",
+        "cadence_measure_settling",
+        "cadence_measure_fft_metrics",
+        "cadence_measure_linearity",
+        "cadence_compare_corner_results",
+        "cadence_summarize_monte_carlo",
     }
     destructive = {
         name
@@ -289,6 +306,114 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             actual_submit,
         )
     )
+
+
+@pytest.mark.asyncio
+async def test_in_memory_client_calls_all_measurement_tools_successfully() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+    sample_count = 1024
+    samples = [
+        math.sin(2.0 * math.pi * 64 * index / sample_count)
+        + 0.01 * math.sin(2.0 * math.pi * 128 * index / sample_count)
+        + 0.001 * math.sin(2.0 * math.pi * 7 * index / sample_count)
+        + 0.001 * math.sin(2.0 * math.pi * 11 * index / sample_count)
+        for index in range(sample_count)
+    ]
+
+    async with Client(server) as client:
+        contract = await client.call_tool(
+            "cadence_get_measurement_contract", {"contract_id": "adc-synthetic-v1"}
+        )
+        power = await client.call_tool(
+            "cadence_measure_dc_power",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "supply_voltage_v": [1.8, 1.8],
+                    "supply_current_a": [0.001, 0.001],
+                }
+            },
+        )
+        offset = await client.call_tool(
+            "cadence_measure_offset",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "observed_voltage_v": [0.01, -0.01],
+                }
+            },
+        )
+        settling = await client.call_tool(
+            "cadence_measure_settling",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "time_s": [0.0, 1e-6, 2e-6],
+                    "output_voltage_v": [0.0, 0.995, 1.0],
+                }
+            },
+        )
+        fft = await client.call_tool(
+            "cadence_measure_fft_metrics",
+            {"request": {"contract_id": "adc-synthetic-v1", "samples_v": samples}},
+        )
+        linearity = await client.call_tool(
+            "cadence_measure_linearity",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "transition_voltage_v": [code / 8 for code in range(1, 8)],
+                }
+            },
+        )
+        corners = await client.call_tool(
+            "cadence_compare_corner_results",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "values": {"NN": 1.0, "FF": 1.1, "SS": 0.9},
+                    "unit": "V",
+                }
+            },
+        )
+        monte_carlo = await client.call_tool(
+            "cadence_summarize_monte_carlo",
+            {
+                "request": {
+                    "contract_id": "adc-synthetic-v1",
+                    "values": [1.0, 2.0, 3.0, 4.0, 5.0],
+                    "unit": "mV",
+                }
+            },
+        )
+
+    results = (contract, power, offset, settling, fft, linearity, corners, monte_carlo)
+    assert all(not result.is_error for result in results)
+    assert cast(dict[str, Any], contract.structured_content)["version"] == 1
+    assert cast(dict[str, Any], power.structured_content)["unit"] == "W"
+    assert cast(dict[str, Any], settling.structured_content)["settled"] is True
+    assert cast(dict[str, Any], fft.structured_content)["fundamental_bin"] == 64
+    assert cast(dict[str, Any], linearity.structured_content)["method"] == "endpoint"
+    assert cast(dict[str, Any], corners.structured_content)["reference_corner"] == "NN"
+    assert cast(dict[str, Any], monte_carlo.structured_content)["count"] == 5
+
+
+@pytest.mark.asyncio
+async def test_measurement_tool_rejects_request_without_contract() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "cadence_measure_dc_power",
+            {
+                "request": {
+                    "supply_voltage_v": [1.8, 1.8],
+                    "supply_current_a": [0.001, 0.001],
+                }
+            },
+        )
+
+    assert result.is_error
 
 
 @pytest.mark.asyncio
