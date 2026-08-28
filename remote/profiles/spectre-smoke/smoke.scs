@@ -1,0 +1,8 @@
+simulator lang=spectre
+
+V1 (in 0) vsource dc=1
+R1 (in out) resistor r=1k
+C1 (out 0) capacitor c=1p
+
+save out
+tran1 tran stop=1n

@@ -1,0 +1,151 @@
+#!/bin/bash
+
+set -u
+umask 077
+
+. /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
+
+RUNNER_VERSION=0.2.0
+WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
+VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
+SPECTRE_BIN=/home/buet/cadence/MMSIM121/tools/bin/spectre
+OCEAN_BIN=/home/buet/cadence/IC615/tools/dfII/bin/ocean
+
+usage() {
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|status|log-tail|result|cancel' >&2
+    exit 64
+}
+
+require_job() {
+    cadence_mcp_validate_job_id "$1" || cadence_mcp_fail "invalid job id" 64
+    job_dir=$(cadence_mcp_job_dir "$1") || cadence_mcp_fail "invalid job id" 64
+    [ -d "$job_dir" ] || cadence_mcp_fail "job not found" 66
+}
+
+runner_version() {
+    [ "$#" -eq 0 ] || usage
+    printf '%s\n' "$RUNNER_VERSION"
+}
+
+runner_health() {
+    [ "$#" -eq 0 ] || usage
+    cadence_mcp_ensure_layout
+    virtuoso_available=false
+    spectre_available=false
+    ocean_available=false
+    [ -x "$VIRTUOSO_BIN" ] && virtuoso_available=true
+    [ -x "$SPECTRE_BIN" ] && spectre_available=true
+    [ -x "$OCEAN_BIN" ] && ocean_available=true
+    virtuoso_version=$($VIRTUOSO_BIN -W 2>&1 | sed -n '/./{p;q;}' | cut -c1-200)
+    spectre_version=$($SPECTRE_BIN -W 2>&1 | sed -n '/./{p;q;}' | cut -c1-200)
+    license_state=UNSET
+    [ -n "${CDS_LIC_FILE:-}" ] && license_state=SET
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" health \
+        "$(hostname)" "$(id -un)" true \
+        "$virtuoso_available" "$virtuoso_version" \
+        "$spectre_available" "$spectre_version" \
+        "$ocean_available" "$license_state" "$RUNNER_VERSION"
+}
+
+runner_submit_smoke() {
+    [ "$#" -eq 1 ] || usage
+    job_id=$1
+    cadence_mcp_validate_job_id "$job_id" || cadence_mcp_fail "invalid job id" 64
+    cadence_mcp_ensure_layout
+    job_dir=$(cadence_mcp_job_dir "$job_id") || cadence_mcp_fail "invalid job id" 64
+    [ ! -e "$job_dir" ] || cadence_mcp_fail "job already exists" 65
+    mkdir -m 700 "$job_dir" || cadence_mcp_fail "cannot create job" 73
+    : > "$job_dir/stdout.log"
+    : > "$job_dir/stderr.log"
+    chmod 600 "$job_dir/stdout.log" "$job_dir/stderr.log"
+    submitted_at=$(cadence_mcp_utc_now)
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" request \
+        "$job_id" "$CADENCE_MCP_PROFILE" "$submitted_at" > "$job_dir/request.json"
+    chmod 600 "$job_dir/request.json"
+    cadence_mcp_atomic_status "$job_id" queued "job queued"
+    queued_response=$(cat "$job_dir/status.json")
+    nohup setsid "$WORKER" "$job_id" > /dev/null 2>&1 &
+    pid=$!
+    printf '%s\n' "$pid" > "$job_dir/pid"
+    printf '%s\n' "$pid" > "$job_dir/pgid"
+    start_marker=$(ps -o lstart= -p "$pid" | sed 's/^ *//;s/ *$//')
+    printf '%s\n' "$start_marker" > "$job_dir/start_marker"
+    chmod 600 "$job_dir/pid" "$job_dir/pgid" "$job_dir/start_marker"
+    printf '%s\n' "$queued_response"
+}
+
+runner_status() {
+    [ "$#" -eq 1 ] || usage
+    require_job "$1"
+    [ -f "$job_dir/status.json" ] || cadence_mcp_fail "job status unavailable" 69
+    cat "$job_dir/status.json"
+}
+
+runner_log_tail() {
+    [ "$#" -eq 3 ] || usage
+    job_id=$1
+    stream=$2
+    lines=$3
+    require_job "$job_id"
+    case "$stream" in
+        stdout|stderr) ;;
+        *) cadence_mcp_fail "invalid log stream" 64 ;;
+    esac
+    [[ "$lines" =~ ^[1-9][0-9]{0,2}$ ]] || cadence_mcp_fail "invalid line count" 64
+    [ "$lines" -le 200 ] || cadence_mcp_fail "line count exceeds 200" 64
+    tail -n "$lines" "$job_dir/$stream.log" | tail -c 65536
+}
+
+runner_result() {
+    [ "$#" -eq 1 ] || usage
+    require_job "$1"
+    [ -f "$job_dir/result.json" ] || cadence_mcp_fail "job result not ready" 69
+    cat "$job_dir/result.json"
+}
+
+runner_cancel() {
+    [ "$#" -eq 1 ] || usage
+    job_id=$1
+    require_job "$job_id"
+    state=$($CADENCE_MCP_PYTHON "$CADENCE_MCP_JSON_HELPER" state "$job_dir/status.json")
+    case "$state" in
+        succeeded|failed|cancelled)
+            cat "$job_dir/status.json"
+            return 0
+            ;;
+    esac
+    [ -f "$job_dir/pid" ] || cadence_mcp_fail "job pid unavailable" 69
+    [ -f "$job_dir/pgid" ] || cadence_mcp_fail "job process group unavailable" 69
+    [ -f "$job_dir/start_marker" ] || cadence_mcp_fail "job start marker unavailable" 69
+    pid=$(cat "$job_dir/pid")
+    pgid=$(cat "$job_dir/pgid")
+    [[ "$pid" =~ ^[1-9][0-9]*$ ]] || cadence_mcp_fail "invalid stored pid" 70
+    [[ "$pgid" =~ ^[1-9][0-9]*$ ]] || cadence_mcp_fail "invalid stored process group" 70
+    [ "$pid" = "$pgid" ] || cadence_mcp_fail "process group ownership mismatch" 70
+    kill -0 "$pid" 2>/dev/null || cadence_mcp_fail "job process is not running" 69
+    current_pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
+    [ "$current_pgid" = "$pgid" ] || cadence_mcp_fail "process group changed" 70
+    stored_marker=$(cat "$job_dir/start_marker")
+    current_marker=$(ps -o lstart= -p "$pid" | sed 's/^ *//;s/ *$//')
+    [ -n "$stored_marker" ] && [ "$stored_marker" = "$current_marker" ] \
+        || cadence_mcp_fail "process identity changed" 70
+    : > "$job_dir/cancel.request"
+    chmod 600 "$job_dir/cancel.request"
+    cadence_mcp_atomic_status "$job_id" cancelling "cancellation requested"
+    kill -TERM -- "-$pgid" || cadence_mcp_fail "cancellation signal failed" 70
+    cat "$job_dir/status.json"
+}
+
+[ "$#" -ge 1 ] || usage
+command_name=$1
+shift
+case "$command_name" in
+    version) runner_version "$@" ;;
+    health) runner_health "$@" ;;
+    submit-smoke) runner_submit_smoke "$@" ;;
+    status) runner_status "$@" ;;
+    log-tail) runner_log_tail "$@" ;;
+    result) runner_result "$@" ;;
+    cancel) runner_cancel "$@" ;;
+    *) usage ;;
+esac
