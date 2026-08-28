@@ -10,13 +10,13 @@ last_completed_wp: WP-10
 next_wp: WP-11
 current_feature_branch: wp/WP-11-controlled-design-writes-release
 base_main_commit: 28974d6557a8db8080cd7c0dee9017c9fd65fd60
-last_commit: e82cb97e62712e69612540f43584b501116ce8f3
-last_push: 2026-08-28T18:23:32.5710056+09:00
+last_commit: ea6025e354b93b02e341361dab5e5a8a77ea5d81
+last_push: 2026-08-28T18:50:11.6455223+09:00
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: fail
-user_action_required: Explicitly authorize removal of the incomplete MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic target before recreation, or approve a new exact destination and backup cell name; then resume WP-11 on the same branch. No v1 tag or release is permitted before a clean validation sequence passes.
+user_action_required: Close or safely finish the Virtuoso session running as buet PID 25425 that owns the source schematic OA lock, and allow Cadence to remove its lock files normally. Do not delete or force-release the lock. Then resume WP-11 on the same branch so lock absence can be verified before the approved V2 validation. No v1 tag or release is permitted before a clean sequence passes.
 ```
 
 ## Progress log
@@ -48,3 +48,4 @@ user_action_required: Explicitly authorize removal of the incomplete MCP_WorkLib
 - 2026-08-28: User explicitly authorized PR #11; WP-10 merged into main as 28974d6.
 - 2026-08-28: WP-11 read-only discovery found only MyDesignLib and MyFirstDesign, with no dedicated approved work library or mutation. A fail-closed local write readiness gate, package install/uninstall verifier, release checklist, and draft notes passed 131 local tests, 18 security tests, eight real integrations, and dependency audit. No write tool, remote mutation, design change, v1 tag, or release was created; WP-11 remains blocked on the required user-owned write contract and explicit mutation approval.
 - 2026-08-28: User supplied and approved MCP_WorkLib, the exact Differential_Amplifier_TB2 copy, and the sole mcpMutationTest=validated-v1 mutation with real apply/rollback. Runner 0.8.0 and twenty-two typed MCP tools were implemented. The real run created the approved destination copy but stopped before dry-run completion because IC6.1.5 lacks dbFindPropByName; the property was not applied and backup/rollback did not run. The corrected fixed script is deployed but the existing-target rule blocks retry. Local 137 tests, 18 security tests, eight non-write real integrations, Ruff, mypy, package lifecycle, and dependency audit pass; write acceptance failed, so no v1 tag or release exists.
+- 2026-08-28: User approved a clean V2 destination and backup while requiring the incomplete V1 target and recovery artifacts to remain untouched. Runner 0.9.0 adds the V2 canonical plan, backup-based restore, logical baseline fingerprints, preserved-V1 fingerprints, IC6.1.5-compatible property access, and source/V2 lock and recovery-artifact gates. The V2 names are absent and a fixed read-only SKILL API preflight passed, but the final gate found active source locks `/home/buet/cds_work/MyDesignLib/Differential_Amplifier_TB2/schematic/sch.oa.cdslck` and `.RHEL30.cadence.25425`, owned by running buet Virtuoso PID 25425. Per the user's policy, no V2 copy or mutation was attempted. Local 140 tests, 18 security tests, eight real integrations, Ruff, mypy, package lifecycle, and dependency audit pass; WP-11 remains blocked and no v1 tag or release exists.
