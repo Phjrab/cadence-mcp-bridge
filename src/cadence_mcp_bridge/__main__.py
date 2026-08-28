@@ -7,6 +7,7 @@ from collections.abc import Sequence
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig
+from cadence_mcp_bridge.server import run_stdio_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -20,6 +21,10 @@ def build_parser() -> argparse.ArgumentParser:
         "config-check",
         help="Validate configuration without connecting to Cadence.",
     )
+    subparsers.add_parser(
+        "serve",
+        help="Run the Cadence MCP server over stdio (the default).",
+    )
     return parser
 
 
@@ -31,7 +36,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("configuration: valid")
         return 0
 
-    parser.print_help()
+    run_stdio_server()
     return 0
 
 

@@ -1,0 +1,220 @@
+from __future__ import annotations
+
+import subprocess
+import sys
+from datetime import UTC, datetime
+from typing import Any, Literal, cast
+from uuid import UUID
+
+import pytest
+from mcp import Client
+
+from cadence_mcp_bridge.errors import AuthenticationError
+from cadence_mcp_bridge.models import (
+    HealthReport,
+    JobResult,
+    JobState,
+    JobStatus,
+    JobSummary,
+    LicenseEnvironment,
+    ToolAvailability,
+)
+from cadence_mcp_bridge.server import create_server
+from cadence_mcp_bridge.service import CadenceService
+
+
+class FakeBackend:
+    def __init__(self) -> None:
+        self.failure: Exception | None = None
+
+    async def health(self) -> HealthReport:
+        if self.failure is not None:
+            raise self.failure
+        return HealthReport(
+            ssh="ok",
+            remote_host="cadence",
+            remote_user="buet",
+            remote_root_accessible=True,
+            virtuoso=ToolAvailability(available=True, version="IC6.1.5.500.15"),
+            spectre=ToolAvailability(available=True, version="12.1.0.347.isr3"),
+            ocean=ToolAvailability(available=True),
+            license_env=LicenseEnvironment(CDS_LIC_FILE="SET"),
+            runner_version="test",
+        )
+
+    async def submit_smoke(self, job_id: UUID) -> JobStatus:
+        return self._status(job_id)
+
+    async def status(self, job_id: UUID) -> JobStatus:
+        return self._status(job_id, JobState.RUNNING)
+
+    async def log_tail(
+        self, job_id: UUID, stream: Literal["stdout", "stderr"], lines: int = 100
+    ) -> str:
+        return "bounded log"
+
+    async def result(self, job_id: UUID) -> JobResult:
+        return JobResult(
+            job_id=job_id,
+            state=JobState.SUCCEEDED,
+            exit_code=0,
+            summary=JobSummary(text="complete", errors=0, warnings=0, notices=1),
+        )
+
+    async def cancel(self, job_id: UUID) -> JobStatus:
+        return self._status(job_id, JobState.CANCELLING)
+
+    @staticmethod
+    def _status(job_id: UUID, state: JobState = JobState.QUEUED) -> JobStatus:
+        now = datetime.now(UTC)
+        return JobStatus(
+            job_id=job_id,
+            state=state,
+            profile="spectre-smoke",
+            submitted_at=now,
+            updated_at=now,
+        )
+
+
+@pytest.mark.asyncio
+async def test_in_memory_client_lists_exact_typed_tools() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        listing = await client.list_tools()
+
+    tools = {tool.name: tool for tool in listing.tools}
+    assert set(tools) == {
+        "cadence_health",
+        "cadence_submit_smoke",
+        "cadence_job_status",
+        "cadence_job_log_tail",
+        "cadence_job_result",
+        "cadence_cancel_job",
+    }
+    assert all(tool.output_schema is not None for tool in tools.values())
+    assert tools["cadence_health"].input_schema["properties"] == {}
+    assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
+    for name in ("cadence_job_status", "cadence_job_result", "cadence_cancel_job"):
+        assert set(tools[name].input_schema["properties"]) == {"job_id"}
+    assert set(tools["cadence_job_log_tail"].input_schema["properties"]) == {
+        "job_id",
+        "stream",
+        "lines",
+    }
+    log_properties = tools["cadence_job_log_tail"].input_schema["properties"]
+    assert log_properties["stream"]["enum"] == ["stdout", "stderr"]
+    assert log_properties["lines"]["minimum"] == 1
+    assert log_properties["lines"]["maximum"] == 200
+    assert "pattern" in tools["cadence_job_status"].input_schema["properties"]["job_id"]
+    read_only = {
+        name
+        for name, tool in tools.items()
+        if tool.annotations is not None and tool.annotations.read_only_hint
+    }
+    assert read_only == {
+        "cadence_health",
+        "cadence_job_status",
+        "cadence_job_log_tail",
+        "cadence_job_result",
+    }
+    destructive = {
+        name
+        for name, tool in tools.items()
+        if tool.annotations is not None and tool.annotations.destructive_hint
+    }
+    assert destructive == {"cadence_cancel_job"}
+    assert tools["cadence_health"].annotations is not None
+    assert tools["cadence_health"].annotations.read_only_hint is True
+    assert tools["cadence_submit_smoke"].annotations is not None
+    assert tools["cadence_submit_smoke"].annotations.read_only_hint is False
+    assert all(
+        tool.annotations is not None and tool.annotations.open_world_hint is False
+        for tool in tools.values()
+    )
+
+
+@pytest.mark.asyncio
+async def test_submit_returns_without_polling_for_completion() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        response = await client.call_tool(
+            "cadence_submit_smoke",
+            read_timeout_seconds=0.5,
+        )
+
+    assert response.is_error is False
+    assert cast(dict[str, Any], response.structured_content)["state"] == "queued"
+
+
+@pytest.mark.asyncio
+async def test_in_memory_client_calls_all_tools_successfully() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        health = await client.call_tool("cadence_health")
+        submit = await client.call_tool("cadence_submit_smoke")
+        submitted = cast(dict[str, Any], submit.structured_content)
+        job_id = cast(str, submitted["job_id"])
+        status = await client.call_tool("cadence_job_status", {"job_id": job_id})
+        log_tail = await client.call_tool(
+            "cadence_job_log_tail",
+            {"job_id": job_id, "stream": "stdout", "lines": 20},
+        )
+        result = await client.call_tool("cadence_job_result", {"job_id": job_id})
+        cancel = await client.call_tool("cadence_cancel_job", {"job_id": job_id})
+
+    assert cast(dict[str, Any], health.structured_content)["ssh"] == "ok"
+    assert cast(dict[str, Any], status.structured_content)["state"] == "running"
+    assert cast(dict[str, Any], log_tail.structured_content)["text"] == "bounded log"
+    assert cast(dict[str, Any], result.structured_content)["exit_code"] == 0
+    assert cast(dict[str, Any], cancel.structured_content)["state"] == "cancelling"
+    assert all(not item.is_error for item in (health, submit, status, log_tail, result, cancel))
+
+
+@pytest.mark.asyncio
+async def test_bridge_error_becomes_stable_error_envelope() -> None:
+    backend = FakeBackend()
+    backend.failure = AuthenticationError("SSH authentication failed")
+    server = create_server(CadenceService(backend))
+
+    async with Client(server) as client:
+        response = await client.call_tool("cadence_health")
+
+    content = cast(dict[str, Any], response.structured_content)
+    assert content == {
+        "ok": False,
+        "error": {
+            "code": "authentication_failed",
+            "message": "SSH authentication failed",
+            "retryable": False,
+            "details": {},
+        },
+    }
+    assert response.is_error is True
+
+
+@pytest.mark.asyncio
+async def test_invalid_job_id_becomes_stable_error_envelope() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        response = await client.call_tool("cadence_job_status", {"job_id": "../x"})
+
+    content = cast(dict[str, Any], response.structured_content)
+    assert content["ok"] is False
+    assert content["error"]["code"] == "invalid_input"
+
+
+def test_stdio_startup_has_no_banner_on_stdout() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "cadence_mcp_bridge"],
+        input=b"",
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == b""

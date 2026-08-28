@@ -108,3 +108,32 @@ Validated on 2026-08-28 from the Windows D-drive worktree:
   separate connect/operation timeouts, bounded stdout/stderr, and stable error mapping;
 - all required malicious job-ID inputs were rejected before subprocess invocation;
 - fixed method signatures provide no profile, path, shell text, or raw-command input.
+
+## MCP stdio server
+
+The installed MCP Python SDK is version 2.1.1. WP-04 uses its v2 `MCPServer` API and the
+official in-process `Client(MCPServer)` test path. Start the protocol server with:
+
+```powershell
+.\.venv\Scripts\python.exe -m cadence_mcp_bridge
+```
+
+No banner is written to stdout. Application and expected-error logging goes to stderr. The
+server exposes exactly six tools: health, smoke submission, job status, bounded log tail,
+structured result, and owned-job cancellation. No profile, remote path, netlist, command, or
+script text is accepted.
+
+## WP-04 acceptance evidence
+
+Validated on 2026-08-28 from the Windows D-drive worktree:
+
+- the MCP SDK v2 in-memory client listed exactly six tools with structured input/output schema;
+- tool annotations identified the four read-only tools, non-destructive submission, and only
+  cancellation as destructive;
+- mock success calls covered all six tools and mock failures returned stable error envelopes;
+- submission returned a queued status within the client timeout without status/result polling;
+- an EOF startup probe exited successfully with an empty stdout stream;
+- Ruff, strict mypy, and the default pytest suite passed;
+- real `cadence-vm` SSH health and MCP `cadence_health` integration tests both passed without a
+  password prompt;
+- no Codex Desktop configuration or CentOS files were changed by WP-04.

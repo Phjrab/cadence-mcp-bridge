@@ -1,15 +1,15 @@
 # Architecture
 
-## Scope at WP-03
+## Scope at WP-04
 
-WP-03 adds the Windows OpenSSH adapter for the restricted runner deployed in WP-02. It does
-not expose an MCP server, register Codex, or accept arbitrary remote commands. Those
-capabilities remain reserved for later work packages.
+WP-04 adds the local MCP SDK v2 stdio server and the first six typed tools over the WP-03 SSH
+adapter. It does not register the server in Codex Desktop or accept arbitrary remote commands.
+Registration and full smoke lifecycle verification remain reserved for later work packages.
 
 ## Layer boundaries
 
 ```text
-Future MCP stdio adapter
+MCPServer v2 stdio adapter (six allowlisted tools)
           |
           v
 CadenceService (transport-independent orchestration)
@@ -25,18 +25,25 @@ OpenSshBackend -> Windows ssh.exe -> fixed cadence-runner
 - `models.py` defines immutable health, job, artifact, and error contracts.
 - `errors.py` maps failures to stable, sanitized envelopes.
 - `sanitization.py` removes credential, license, and Windows-profile details and bounds output.
-- `service.py` separates application behavior from the SSH and future MCP adapters.
+- `service.py` separates application behavior from the SSH and MCP adapters.
 - `ssh_backend.py` maps typed operations to the fixed runner and stable transport errors.
-- `__main__.py` exposes only local help/version/configuration validation at this stage.
+- `server.py` defines tool schemas, annotations, stable error results, and the stdio runtime.
+- `__main__.py` starts stdio by default and keeps explicit help/version/configuration checks.
 
 ## Trust boundaries
 
 Model-provided values must never become arbitrary paths, shell fragments, SKILL, or OCEAN.
-The future MCP adapter may invoke only typed service methods. The Windows SSH backend invokes
+The MCP adapter invokes only typed service methods. The Windows SSH backend invokes
 the fixed runner at `/home/buet/cds_work/.cadence_mcp/bin/cadence-runner` through the fixed
 alias `cadence-vm`, with allowlisted subcommands and validated single-token arguments. It uses
 an argv list, `shell=False`, `BatchMode=yes`, and strict host-key checking. There is no public
 raw-command method.
+
+The service creates UUID job identifiers. Cancellation is limited to jobs submitted by the
+same running MCP service instance. Health, status, log-tail, and result tools are annotated
+read-only; submit is non-destructive but state-changing; cancel alone is annotated destructive.
+Every tool is closed-world. Expected failures become stable structured error envelopes with
+`isError=true`, while exception details remain on stderr.
 
 The Windows process may write local runtime metadata only in bounded application locations.
 Before WP-11, remote writes are limited to `/home/buet/cds_work/.cadence_mcp`; design data,
