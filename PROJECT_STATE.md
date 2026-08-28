@@ -4,19 +4,19 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-10
-current_status: passed
+current_wp: WP-11
+current_status: blocked
 last_completed_wp: WP-10
 next_wp: WP-11
-current_feature_branch: wp/WP-10-adc-measurement-contracts
-base_main_commit: 5b22da796f22b914aa98bd866217ef2ace522f86
-last_commit: 5af9d39eb0d3b8d96d364b45798fcd3c242df48e
-last_push: 2026-08-28T17:20:56.4378284+09:00
-awaiting_user_merge: true
+current_feature_branch: wp/WP-11-controlled-design-writes-release
+base_main_commit: 28974d6557a8db8080cd7c0dee9017c9fd65fd60
+last_commit: 03b87b69793c3de30de079abde007df486ff0cf1
+last_push: 2026-08-28T17:34:23.5656410+09:00
+awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review wp/WP-10-adc-measurement-contracts and explicitly authorize its GitHub PR merge before starting WP-11.
+user_action_required: Provide a dedicated work library, exact source and destination copy, one typed predefined mutation, verification and rollback criteria, and explicit approval to apply that mutation to the copy; then resume WP-11 on the same branch.
 ```
 
 ## Progress log
@@ -45,3 +45,5 @@ user_action_required: Review wp/WP-10-adc-measurement-contracts and explicitly a
 - 2026-08-28: User supplied and approved the Differential_Amplifier_TB2 ADE L state1 profile; runner 0.7.0 executed its fixed gpdk090 v4.6 NN transient profile successfully with 0 errors, two specifically allowlisted CMI-2477 warnings, unchanged source/state/lock fingerprints, 106 local tests, 18 security tests, eight real integrations, and a clean dependency audit.
 - 2026-08-28: User explicitly authorized PR #10; WP-09 merged into main as 5b22da7.
 - 2026-08-28: WP-10 added the closed adc-synthetic-v1 version 1 measurement contract, deterministic Windows-Python metrics and manifests, twenty-tool MCP schema, explicit actual-ADC input boundary, 117 local tests, 18 security tests, eight real integrations, and a clean dependency audit; awaiting review and merge authorization.
+- 2026-08-28: User explicitly authorized PR #11; WP-10 merged into main as 28974d6.
+- 2026-08-28: WP-11 read-only discovery found only MyDesignLib and MyFirstDesign, with no dedicated approved work library or mutation. A fail-closed local write readiness gate, package install/uninstall verifier, release checklist, and draft notes passed 131 local tests, 18 security tests, eight real integrations, and dependency audit. No write tool, remote mutation, design change, v1 tag, or release was created; WP-11 remains blocked on the required user-owned write contract and explicit mutation approval.
