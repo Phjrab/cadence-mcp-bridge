@@ -2,10 +2,9 @@
 
 ## Scope at WP-05
 
-WP-05 closes the first real MCP-to-Spectre lifecycle over the WP-04 stdio server. It adds bounded
-polling, submit timeout recovery using the original UUID idempotency key, remote worker-loss
-recovery, job storage evidence, and one operator E2E command. It does not register the server in
-Codex Desktop; registration remains reserved for WP-06.
+WP-06 adds idempotent Codex Desktop registration and the operator workflow over the verified WP-05
+lifecycle. The user-level MCP entry uses absolute Windows paths, starts only the reviewed Python
+module, and prompts for both state-changing tools. No new remote or Cadence capability is added.
 
 ## Layer boundaries
 

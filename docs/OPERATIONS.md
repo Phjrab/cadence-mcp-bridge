@@ -178,3 +178,41 @@ Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
 - Ruff, strict mypy, the default test suite, and opt-in real lifecycle tests passed;
 - no license value, raw PSF content, arbitrary command, arbitrary path, or proprietary design data
   was written to evidence.
+
+## Codex Desktop operator flow
+
+Install or update the user-level MCP entry with:
+
+```powershell
+.\scripts\install-codex-mcp.ps1 -WhatIf
+.\scripts\install-codex-mcp.ps1 -Confirm
+```
+
+The script backs up the existing Codex config before change and is idempotent. It registers the
+absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
+timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
+Restart Codex Desktop and use `/mcp` to confirm the server and exact six-tool allowlist. Detailed
+acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
+
+## WP-06 acceptance evidence
+
+Validated on 2026-08-28 from the Windows D-drive worktree:
+
+- installed Codex CLI `0.150.0-alpha.8` confirmed the supported MCP add/get/list interface;
+- the current official Codex MCP manual confirmed shared host configuration, absolute stdio
+  commands, startup/tool timeouts, and `writes`/per-tool prompt approval modes;
+- the existing user config was backed up before registration;
+- two consecutive installer runs left exactly one entry; the second run changed neither config
+  hash nor backup count;
+- `codex mcp get cadence-mcp-bridge --json` returned the absolute Python command, module args,
+  absolute cwd, 20-second startup timeout, and 180-second tool timeout;
+- a fresh ephemeral Codex host called `cadence_health` successfully and returned runner 0.3.0,
+  Spectre available, and only `CDS_LIC_FILE=SET`;
+- a fresh Codex host selected submit, status, and result tools for the smoke acceptance prompt and
+  observed `queued -> succeeded`, exit code 0, zero errors, zero warnings, and four artifact
+  metadata entries;
+- no raw shell, SSH, file, SKILL, or OCEAN execution capability was added.
+
+The running Codex Desktop process must be restarted before its `/mcp` UI can confirm the newly
+written configuration. That UI-only confirmation is intentionally left to the operator because
+restarting the app would terminate the current WP execution.
