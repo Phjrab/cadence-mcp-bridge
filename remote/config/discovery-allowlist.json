@@ -1,0 +1,19 @@
+{
+  "cds_lib": "/home/buet/cds_work/cds.lib",
+  "project_root": "/home/buet/cds_work",
+  "libraries": {
+    "MyFirstDesign": {
+      "path": "/home/buet/cds_work/MyFirstDesign",
+      "cells": {
+        "NOT_gate": ["schematic", "symbol"]
+      }
+    },
+    "MyDesignLib": {
+      "path": "/home/buet/cds_work/MyDesignLib",
+      "cells": {
+        "Inverter": ["schematic", "symbol"],
+        "Inverter_TB": ["schematic"]
+      }
+    }
+  }
+}

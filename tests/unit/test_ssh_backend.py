@@ -167,6 +167,49 @@ async def test_log_tail_validates_stream_and_line_limit_before_subprocess(
 
 
 @pytest.mark.asyncio
+async def test_discovery_commands_use_fixed_runner_argv(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payloads = [
+        {
+            "libraries": [{"name": "MyFirstDesign", "allowed_cell_count": 1}],
+            "allowlist_enforced": True,
+            "proprietary_content_included": False,
+        },
+        {
+            "library": "MyFirstDesign",
+            "cells": ["NOT_gate"],
+            "allowlist_enforced": True,
+            "proprietary_content_included": False,
+        },
+        {
+            "library": "MyFirstDesign",
+            "cell": "NOT_gate",
+            "view": "schematic",
+            "exists": True,
+            "kind": "cellview",
+            "allowlist_enforced": True,
+            "proprietary_content_included": False,
+        },
+    ]
+    run = Mock(side_effect=[completed(json.dumps(item).encode("ascii")) for item in payloads])
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    await backend.list_libraries()
+    await backend.list_cells("MyFirstDesign")
+    await backend.inspect_cellview("MyFirstDesign", "NOT_gate", "schematic")
+
+    assert run.call_args_list[0].args[0][-1:] == ["list-libraries"]
+    assert run.call_args_list[1].args[0][-2:] == ["list-cells", "MyFirstDesign"]
+    assert run.call_args_list[2].args[0][-4:] == [
+        "inspect-cellview",
+        "MyFirstDesign",
+        "NOT_gate",
+        "schematic",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_operation_timeout_is_distinct(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -237,7 +280,17 @@ async def test_output_byte_limit_is_enforced(
 def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> None:
     public_methods = {name for name in dir(backend) if not name.startswith("_")}
 
-    assert public_methods == {"cancel", "health", "log_tail", "result", "status", "submit_smoke"}
+    assert public_methods == {
+        "cancel",
+        "health",
+        "inspect_cellview",
+        "list_cells",
+        "list_libraries",
+        "log_tail",
+        "result",
+        "status",
+        "submit_smoke",
+    }
     assert "profile" not in inspect.signature(backend.submit_smoke).parameters
 
 

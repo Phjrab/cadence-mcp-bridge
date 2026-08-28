@@ -1,4 +1,4 @@
-"""MCP SDK v2 adapter exposing only the six reviewed Cadence tools."""
+"""MCP SDK v2 adapter exposing only reviewed Cadence tools."""
 
 from __future__ import annotations
 
@@ -15,12 +15,15 @@ from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.models import (
+    CellList,
+    CellViewInspection,
     ContractModel,
     ErrorResponse,
     HealthReport,
     JobLogTail,
     JobResult,
     JobStatus,
+    LibraryList,
 )
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
@@ -56,6 +59,18 @@ LogLinesInput = Annotated[
             "minimum": 1,
             "maximum": 200,
             "description": "Number of trailing lines to return.",
+        }
+    ),
+]
+DiscoveryIdentifierInput = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+            "description": "Exact name from the reviewed read-only discovery allowlist.",
         }
     ),
 ]
@@ -109,7 +124,10 @@ def create_server(service: CadenceService) -> MCPServer:
         name="cadence-mcp-bridge",
         title="Cadence MCP Bridge",
         description="Restricted stdio bridge to the fixed Cadence runner.",
-        instructions="Use only the six allowlisted tools. No raw command interface exists.",
+        instructions=(
+            "Use only the reviewed allowlisted tools. Discovery returns names and existence "
+            "metadata only; no raw command or proprietary file-content interface exists."
+        ),
         version=__version__,
         log_level="WARNING",
     )
@@ -175,6 +193,48 @@ def create_server(service: CadenceService) -> MCPServer:
     )
     async def cadence_cancel_job(job_id: JobIdInput) -> Annotated[CallToolResult, JobStatus]:
         return await _stable_result(service.cancel_job(job_id))
+
+    @server.tool(
+        name="cadence_list_libraries",
+        description=(
+            "List only reviewed project libraries and allowed-cell counts; exclude paths and "
+            "proprietary file content."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_libraries() -> Annotated[CallToolResult, LibraryList]:
+        return await _stable_result(service.list_libraries())
+
+    @server.tool(
+        name="cadence_list_cells",
+        description=(
+            "List only allowlisted cell names in one reviewed project library; exclude paths "
+            "and proprietary file content."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_cells(
+        library: DiscoveryIdentifierInput,
+    ) -> Annotated[CallToolResult, CellList]:
+        return await _stable_result(service.list_cells(library))
+
+    @server.tool(
+        name="cadence_inspect_cellview",
+        description=(
+            "Check existence of one allowlisted project cellview and return metadata only; "
+            "never return cellview content."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_inspect_cellview(
+        library: DiscoveryIdentifierInput,
+        cell: DiscoveryIdentifierInput,
+        view: DiscoveryIdentifierInput,
+    ) -> Annotated[CallToolResult, CellViewInspection]:
+        return await _stable_result(service.inspect_cellview(library, cell, view))
 
     return server
 

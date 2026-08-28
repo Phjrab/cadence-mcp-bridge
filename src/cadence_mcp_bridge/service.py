@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol, TypeVar, cast
 from uuid import RFC_4122, UUID, uuid4
 
+from cadence_mcp_bridge.discovery import validate_cell, validate_library, validate_view
 from cadence_mcp_bridge.errors import (
     BackendUnavailableError,
     BridgeError,
@@ -13,7 +14,15 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
     RemoteFailureError,
 )
-from cadence_mcp_bridge.models import HealthReport, JobLogTail, JobResult, JobStatus
+from cadence_mcp_bridge.models import (
+    CellList,
+    CellViewInspection,
+    HealthReport,
+    JobLogTail,
+    JobResult,
+    JobStatus,
+    LibraryList,
+)
 
 
 class CadenceBackend(Protocol):
@@ -33,6 +42,12 @@ class CadenceBackend(Protocol):
     async def result(self, job_id: UUID) -> JobResult: ...
 
     async def cancel(self, job_id: UUID) -> JobStatus: ...
+
+    async def list_libraries(self) -> LibraryList: ...
+
+    async def list_cells(self, library: str) -> CellList: ...
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection: ...
 
 
 _ResultT = TypeVar("_ResultT")
@@ -91,6 +106,31 @@ class CadenceService:
         if parsed not in self._owned_job_ids:
             raise InvalidInputError("job_id is not owned by this MCP server process")
         return await self._call(lambda: self._backend.cancel(parsed))
+
+    async def list_libraries(self) -> LibraryList:
+        return await self._call(self._backend.list_libraries)
+
+    async def list_cells(self, library: str) -> CellList:
+        safe_library = validate_library(library)
+        result = await self._call(lambda: self._backend.list_cells(safe_library))
+        if result.library != safe_library:
+            raise RemoteFailureError("Remote runner returned mismatched library metadata")
+        return result
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
+        safe_library = validate_library(library)
+        safe_cell = validate_cell(safe_library, cell)
+        safe_view = validate_view(safe_library, safe_cell, view)
+        result = await self._call(
+            lambda: self._backend.inspect_cellview(safe_library, safe_cell, safe_view)
+        )
+        if (result.library, result.cell, result.view) != (
+            safe_library,
+            safe_cell,
+            safe_view,
+        ):
+            raise RemoteFailureError("Remote runner returned mismatched cellview metadata")
+        return result
 
     @staticmethod
     def _parse_job_id(job_id: str) -> UUID:

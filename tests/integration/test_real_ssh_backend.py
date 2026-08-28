@@ -26,7 +26,7 @@ async def test_real_cadence_vm_health() -> None:
 
     assert report.ssh == "ok"
     assert report.remote_root_accessible is True
-    assert report.runner_version == "0.4.0"
+    assert report.runner_version == "0.5.0"
     assert report.virtuoso.available is True
     assert report.spectre.available is True
 
@@ -42,4 +42,4 @@ async def test_real_cadence_health_through_mcp() -> None:
     content = cast(dict[str, Any], response.structured_content)
     assert response.is_error is False
     assert content["ssh"] == "ok"
-    assert content["runner_version"] == "0.4.0"
+    assert content["runner_version"] == "0.5.0"

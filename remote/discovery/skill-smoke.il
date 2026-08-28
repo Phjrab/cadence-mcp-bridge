@@ -1,0 +1,2 @@
+printf("CADENCE_MCP_SKILL_HEADLESS_OK\n")
+exit()

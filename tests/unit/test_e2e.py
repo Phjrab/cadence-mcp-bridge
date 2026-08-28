@@ -11,6 +11,8 @@ from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.e2e import verify_lifecycle
 from cadence_mcp_bridge.models import (
     ArtifactMetadata,
+    CellList,
+    CellViewInspection,
     HealthReport,
     JobLogTail,
     JobResult,
@@ -18,6 +20,8 @@ from cadence_mcp_bridge.models import (
     JobStatus,
     JobStorageMetadata,
     JobSummary,
+    LibraryList,
+    LibraryMetadata,
     LicenseEnvironment,
     ToolAvailability,
 )
@@ -79,6 +83,15 @@ class LifecycleBackend:
 
     async def cancel(self, job_id: UUID) -> JobStatus:
         return self._status(job_id, JobState.CANCELLED)
+
+    async def list_libraries(self) -> LibraryList:
+        return LibraryList(libraries=(LibraryMetadata(name="MyFirstDesign", allowed_cell_count=1),))
+
+    async def list_cells(self, library: str) -> CellList:
+        return CellList(library=library, cells=("NOT_gate",))
+
+    async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
+        return CellViewInspection(library=library, cell=cell, view=view, exists=True)
 
     @staticmethod
     def _status(job_id: UUID, state: JobState) -> JobStatus:

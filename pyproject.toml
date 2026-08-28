@@ -39,7 +39,7 @@ line-length = 100
 select = ["B", "E", "F", "I", "SIM", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-"remote/py26/*.py" = ["UP010", "UP030", "UP031", "UP032"]
+"remote/py26/*.py" = ["UP010", "UP024", "UP030", "UP031", "UP032"]
 
 [tool.mypy]
 python_version = "3.12"

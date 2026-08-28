@@ -147,9 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly six tools: health, smoke submission, job status, bounded log tail,
-structured result, and owned-job cancellation. No profile, remote path, netlist, command, or
-script text is accepted.
+server exposes exactly nine tools: the six lifecycle tools plus allowlisted library listing, cell
+listing, and cellview inspection. No profile, remote path, netlist, command, or script text is
+accepted.
 
 ## WP-04 acceptance evidence
 
@@ -217,7 +217,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact six-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact nine-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -265,3 +265,22 @@ Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
   candidates; no deletion was performed;
 - actual audit JSONL records contained only actor, event, job UUID, origin, fixed profile, and
   timestamp, and traced MCP submission and execution without secrets or circuit data.
+
+## WP-08 read-only OCEAN/SKILL discovery
+
+The runner 0.5.0 adds fixed `discovery-health`, `list-libraries`, `list-cells`, and
+`inspect-cellview` commands. `discovery-health` uses reviewed scripts only and runs OCEAN and
+Virtuoso/SKILL with `-nograph` and `-nocdsinit` from an isolated directory under `.cadence_mcp`.
+The three metadata commands use the fixed `remote/config/discovery-allowlist.json`; callers cannot
+supply a path or script.
+
+Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
+
+- installed `ocean -help` and `virtuoso -help` confirmed the legacy `-nograph`, `-restore`,
+  `-log`, and `-nocdsinit` options;
+- fixed OCEAN and SKILL scripts both started and exited headlessly within 60 seconds;
+- actual runner and MCP calls returned only allowlisted names, counts, and existence metadata;
+- the PDK library request was denied with runner exit 64 and a stable MCP `invalid_input` error;
+- responses contained no remote path, `cds.lib`, OA filename, model, or cellview content;
+- design-tree metadata and pre-existing lock-file fingerprints were identical immediately before
+  and after a combined headless and discovery run; no save or new design lock occurred.

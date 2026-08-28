@@ -52,10 +52,12 @@ uv run python -m cadence_mcp_bridge
 uv run python -m cadence_mcp_bridge serve
 ```
 
-The server exposes only `cadence_health`, `cadence_submit_smoke`, `cadence_job_status`,
-`cadence_job_log_tail`, `cadence_job_result`, and `cadence_cancel_job`. Register the reviewed
-server with `.\scripts\install-codex-mcp.ps1`, then follow `docs/CODEX_DESKTOP.md` for restart,
-`/mcp`, approval, and acceptance prompts. See `docs/ARCHITECTURE.md` for the current boundaries.
+The server exposes the six lifecycle tools plus three metadata-only discovery tools:
+`cadence_list_libraries`, `cadence_list_cells`, and `cadence_inspect_cellview`. Discovery is
+restricted to a reviewed library/cell/view allowlist and never returns paths or proprietary file
+content. Register the reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
+`docs/CODEX_DESKTOP.md` for restart, `/mcp`, approval, and acceptance prompts. See
+`docs/ARCHITECTURE.md` for the current boundaries.
 
 Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
 
