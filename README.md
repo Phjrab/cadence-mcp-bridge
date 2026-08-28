@@ -33,7 +33,7 @@ Every WP uses a dedicated feature branch. Codex must not commit or push directly
 
 See `docs/VERIFIED_ENVIRONMENT.md` for the full evidence baseline.
 
-## Windows development
+## Windows development and stdio server
 
 WP-01 targets Python 3.12 and uses `uv` for reproducible environments:
 
@@ -45,5 +45,13 @@ uv run pytest
 uv run python -m cadence_mcp_bridge --help
 ```
 
-These commands are local-only at this stage. They do not connect to the VM, execute Cadence,
-or modify Codex Desktop configuration. See `docs/ARCHITECTURE.md` for the current boundaries.
+Run the MCP SDK v2 server over stdio with no command, or explicitly with `serve`:
+
+```powershell
+uv run python -m cadence_mcp_bridge
+uv run python -m cadence_mcp_bridge serve
+```
+
+The server exposes only `cadence_health`, `cadence_submit_smoke`, `cadence_job_status`,
+`cadence_job_log_tail`, `cadence_job_result`, and `cadence_cancel_job`. Codex Desktop
+registration is deferred to WP-06. See `docs/ARCHITECTURE.md` for the current boundaries.

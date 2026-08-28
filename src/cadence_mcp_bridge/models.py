@@ -115,6 +115,13 @@ class JobResult(ContractModel):
         return self
 
 
+class JobLogTail(ContractModel):
+    job_id: UUID
+    stream: Literal["stdout", "stderr"]
+    lines_requested: Annotated[int, Field(ge=1, le=200)]
+    text: Annotated[str, Field(max_length=65_536)]
+
+
 class ErrorEnvelope(ContractModel):
     code: ErrorCode
     message: Annotated[str, Field(min_length=1, max_length=1_024)]
