@@ -25,16 +25,20 @@ The only public subcommands are:
 ```text
 version
 health
-submit-smoke <job-id>
+submit-smoke <job-id> <mcp|operator>
 status <job-id>
 log-tail <job-id> <stdout|stderr> <lines>
 result <job-id>
 cancel <job-id>
+cleanup-dry-run
+audit-tail
 ```
 
 Job IDs are lowercase RFC 4122 UUID strings. Profile, executable, and remote paths are fixed in
 reviewed source; no command, script text, netlist text, or path is accepted from the caller.
-Log tail is restricted to 200 lines and 65,536 bytes.
+Log tail is restricted to 200 lines and 65,536 bytes. `cleanup-dry-run` and `audit-tail` are fixed
+operator maintenance commands and are not MCP tools. The cleanup command accepts no path, age,
+or deletion flag; `audit-tail` returns at most 100 JSONL records and 65,536 bytes.
 
 ## Process and concurrency strategy
 
@@ -60,7 +64,29 @@ The runner never writes outside its fixed root and never modifies CentOS, Cadenc
 PDK, shared library, or design data. Unexpected PID/PGID/start-marker mismatch makes cancellation
 fail closed. Status repairs a stale active state from an existing result; when no result exists
 and the recorded worker identity is absent, changed, or a zombie, it records `unknown` with a
-bounded operator-review message. Automated retention remains deferred to WP-07.
+bounded operator-review message. WP-07 retention remains dry-run-only; no automatic or
+destructive deletion exists.
+
+## WP-07 security operations
+
+Run the local security acceptance gate before commit or deployment:
+
+```powershell
+.\scripts\verify-security.ps1
+```
+
+It runs the repository-file secret preflight, dedicated security tests, and a strict vulnerability
+audit of all locked third-party dependencies. To inspect 30-day retention candidates without
+deleting anything, run:
+
+```powershell
+.\scripts\cleanup-remote-jobs.ps1
+```
+
+New jobs carry `origin=mcp|operator`. The remote mode-600 JSONL audit records submission and
+cancellation using only timestamp, event, actor, origin, job UUID, and fixed profile. Log responses
+include byte-limit, returned-size, truncation, and redaction metadata. Result responses include
+summary and artifact truncation metadata and never include raw PSF or netlist content.
 
 ## WP-02 acceptance evidence
 
@@ -216,3 +242,26 @@ Validated on 2026-08-28 from the Windows D-drive worktree:
 The running Codex Desktop process must be restarted before its `/mcp` UI can confirm the newly
 written configuration. That UI-only confirmation is intentionally left to the operator because
 restarting the app would terminate the current WP execution.
+
+## WP-07 acceptance evidence
+
+Validated on 2026-08-28 from the Windows D-drive worktree against `cadence-vm`:
+
+- runner 0.4.0 deployed atomically under `/home/buet/cds_work/.cadence_mcp` and passed remote Bash
+  and CentOS Python 2.6 syntax/version checks;
+- Ruff and strict mypy passed; the default suite passed 86 tests with five opt-in integration tests
+  skipped, and all five real integration tests passed when enabled;
+- the dedicated 18-test security suite passed path traversal, shell metacharacter, multiline,
+  NUL, option-like, full-width Unicode, emoji, redaction, truncation, audit, cleanup, stale PID,
+  PID reuse, partial-write, power-loss, and concurrency controls;
+- the tracked-and-untracked repository secret preflight passed, and strict `pip-audit` over every
+  locked third-party runtime and development dependency reported no known vulnerabilities;
+- real MCP-to-Spectre verification observed `queued -> running -> succeeded`, exit code 0, four
+  artifact metadata entries, runner 0.4.0, and job storage contained with mode `0700`;
+- simultaneous real submissions produced alternating `job_started`/`job_finished` audit pairs,
+  proving the fixed `flock` kept execution concurrency at one;
+- cancellation isolation passed: one queued job was cancelled and all independent jobs succeeded;
+- the actual retention command returned `dry_run=true`, the fixed jobs root, 30 days, and no
+  candidates; no deletion was performed;
+- actual audit JSONL records contained only actor, event, job UUID, origin, fixed profile, and
+  timestamp, and traced MCP submission and execution without secrets or circuit data.

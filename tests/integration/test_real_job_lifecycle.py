@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import shutil
+import subprocess
 from typing import Any, cast
 
 import pytest
@@ -28,7 +31,7 @@ async def test_real_mcp_to_spectre_smoke_lifecycle() -> None:
     report = await verify_lifecycle()
 
     assert report.health_ok is True
-    assert report.runner_version == "0.3.0"
+    assert report.runner_version == "0.4.0"
     assert report.exit_code == 0
     assert report.artifact_count >= 1
     assert report.storage_contained is True
@@ -84,3 +87,70 @@ async def test_cancelled_job_does_not_terminate_another_job() -> None:
     survivors = [state for job_id, state in final.items() if job_id != cancellable]
     assert survivors
     assert all(state == JobState.SUCCEEDED.value for state in survivors)
+
+
+@pytest.mark.asyncio
+async def test_simultaneous_submit_never_runs_more_than_one_job() -> None:
+    server = create_server(CadenceService(OpenSshBackend(BridgeConfig())))
+    terminal = {
+        JobState.SUCCEEDED.value,
+        JobState.FAILED.value,
+        JobState.CANCELLED.value,
+        JobState.UNKNOWN.value,
+    }
+    async with Client(server) as client:
+        submitted = await asyncio.gather(
+            *(client.call_tool("cadence_submit_smoke") for _ in range(4))
+        )
+        job_ids = [cast(str, _content(response)["job_id"]) for response in submitted]
+        final: set[str] = set()
+        for _ in range(180):
+            for job_id in job_ids:
+                status = _content(
+                    await client.call_tool("cadence_job_status", {"job_id": job_id})
+                )
+                state = cast(str, status["state"])
+                if state in terminal:
+                    final.add(job_id)
+            if len(final) == len(job_ids):
+                break
+            await asyncio.sleep(0.1)
+
+    assert len(set(job_ids)) == len(job_ids)
+    assert len(final) == len(job_ids)
+    ssh = shutil.which("ssh.exe")
+    assert ssh is not None
+    config = BridgeConfig()
+    completed = subprocess.run(
+        [
+            ssh,
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=yes",
+            "-o",
+            "ConnectTimeout=10",
+            config.ssh_alias,
+            config.runner_path,
+            "audit-tail",
+        ],
+        shell=False,
+        capture_output=True,
+        check=True,
+        timeout=config.operation_timeout_seconds,
+        text=True,
+        encoding="utf-8",
+    )
+    records = [json.loads(line) for line in completed.stdout.splitlines()]
+    execution_events = [
+        (record["event"], record["job_id"])
+        for record in records
+        if record.get("job_id") in job_ids
+        and record.get("event") in {"job_started", "job_finished"}
+    ]
+    assert len(execution_events) == len(job_ids) * 2
+    assert all(
+        execution_events[index] == ("job_started", execution_events[index][1])
+        and execution_events[index + 1] == ("job_finished", execution_events[index][1])
+        for index in range(0, len(execution_events), 2)
+    )

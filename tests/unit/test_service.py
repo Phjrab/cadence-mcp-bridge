@@ -13,6 +13,7 @@ from cadence_mcp_bridge.errors import (
 )
 from cadence_mcp_bridge.models import (
     HealthReport,
+    JobLogTail,
     JobResult,
     JobState,
     JobStatus,
@@ -52,8 +53,16 @@ class FakeBackend:
 
     async def log_tail(
         self, job_id: UUID, stream: Literal["stdout", "stderr"], lines: int = 100
-    ) -> str:
-        return f"{job_id}:{stream}:{lines}"
+    ) -> JobLogTail:
+        text = f"{job_id}:{stream}:{lines}"
+        return JobLogTail(
+            job_id=job_id,
+            stream=stream,
+            lines_requested=lines,
+            text=text,
+            original_bytes=len(text.encode("utf-8")),
+            returned_bytes=len(text.encode("utf-8")),
+        )
 
     async def result(self, job_id: UUID) -> JobResult:
         return JobResult(

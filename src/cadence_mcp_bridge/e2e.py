@@ -106,6 +106,11 @@ async def verify_lifecycle(
     log_bytes = len(log_text.encode("utf-8"))
     if log_bytes > settings.max_output_bytes:
         raise RuntimeError("log tail exceeded the configured byte limit")
+    if log.get("limit_bytes") != settings.max_output_bytes:
+        raise RuntimeError("log tail omitted its configured byte limit metadata")
+    limits = cast(dict[str, Any], result.get("limits"))
+    if not limits or limits.get("response_limit_bytes") != settings.max_output_bytes:
+        raise RuntimeError("result omitted its configured size limit metadata")
 
     return E2EReport(
         health_ok=True,

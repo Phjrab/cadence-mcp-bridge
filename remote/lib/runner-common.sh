@@ -5,6 +5,8 @@ CADENCE_MCP_JOBS_ROOT="$CADENCE_MCP_ROOT/jobs"
 CADENCE_MCP_PYTHON=/usr/bin/python
 CADENCE_MCP_JSON_HELPER="$CADENCE_MCP_ROOT/py26/result_json.py"
 CADENCE_MCP_PROFILE=spectre-smoke
+CADENCE_MCP_AUDIT_ROOT="$CADENCE_MCP_ROOT/audit"
+CADENCE_MCP_AUDIT_LOG="$CADENCE_MCP_AUDIT_ROOT/events.jsonl"
 CADENCE_MCP_JOB_ID_PATTERN='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
 
 cadence_mcp_fail() {
@@ -28,8 +30,34 @@ cadence_mcp_utc_now() {
 
 cadence_mcp_ensure_layout() {
     umask 077
-    mkdir -p "$CADENCE_MCP_ROOT" "$CADENCE_MCP_JOBS_ROOT"
-    chmod 700 "$CADENCE_MCP_ROOT" "$CADENCE_MCP_JOBS_ROOT"
+    mkdir -p "$CADENCE_MCP_ROOT" "$CADENCE_MCP_JOBS_ROOT" "$CADENCE_MCP_AUDIT_ROOT"
+    chmod 700 "$CADENCE_MCP_ROOT" "$CADENCE_MCP_JOBS_ROOT" "$CADENCE_MCP_AUDIT_ROOT"
+}
+
+cadence_mcp_job_origin() {
+    job_dir=$1
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" field \
+        "$job_dir/request.json" origin
+}
+
+cadence_mcp_job_actor() {
+    job_dir=$1
+    origin=$(cadence_mcp_job_origin "$job_dir") || return 1
+    case "$origin" in
+        mcp) printf '%s\n' cadence-mcp-bridge ;;
+        operator) id -un ;;
+        *) return 1 ;;
+    esac
+}
+
+cadence_mcp_audit() {
+    event_name=$1
+    job_id=$2
+    origin=$3
+    actor=$4
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" audit \
+        "$CADENCE_MCP_AUDIT_LOG" "$event_name" "$job_id" "$origin" "$actor" \
+        "$(cadence_mcp_utc_now)" "$CADENCE_MCP_PROFILE"
 }
 
 cadence_mcp_atomic_status() {
@@ -37,9 +65,12 @@ cadence_mcp_atomic_status() {
     state=$2
     message=$3
     job_dir=$(cadence_mcp_job_dir "$job_id") || cadence_mcp_fail "invalid job id" 64
+    origin=$(cadence_mcp_job_origin "$job_dir") \
+        || cadence_mcp_fail "job origin unavailable" 69
     temporary="$job_dir/.status.$$.tmp"
     "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" status \
-        "$job_id" "$state" "$CADENCE_MCP_PROFILE" "$(cadence_mcp_utc_now)" "$message" \
+        "$job_id" "$state" "$CADENCE_MCP_PROFILE" "$origin" \
+        "$(cadence_mcp_utc_now)" "$message" \
         > "$temporary" || cadence_mcp_fail "status serialization failed" 70
     chmod 600 "$temporary"
     mv -f "$temporary" "$job_dir/status.json"

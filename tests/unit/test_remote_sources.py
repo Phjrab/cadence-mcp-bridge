@@ -12,7 +12,17 @@ RESULT_HELPER = PROJECT_ROOT / "remote" / "py26" / "result_json.py"
 def test_runner_exposes_only_allowlisted_commands() -> None:
     source = RUNNER.read_text(encoding="utf-8")
 
-    for command in ("version", "health", "submit-smoke", "status", "log-tail", "result", "cancel"):
+    for command in (
+        "version",
+        "health",
+        "submit-smoke",
+        "status",
+        "log-tail",
+        "result",
+        "cancel",
+        "cleanup-dry-run",
+        "audit-tail",
+    ):
         assert f"{command})" in source
     for forbidden in ("eval ", "bash -c", "sh -c", "run-shell", "ssh-exec"):
         assert forbidden not in source
@@ -27,7 +37,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.3.0" in runner
+    assert "RUNNER_VERSION=0.4.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 

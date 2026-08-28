@@ -24,6 +24,11 @@ class JobState(StrEnum):
     UNKNOWN = "unknown"
 
 
+class JobOrigin(StrEnum):
+    MCP = "mcp"
+    OPERATOR = "operator"
+
+
 class ErrorCode(StrEnum):
     INVALID_CONFIGURATION = "invalid_configuration"
     INVALID_INPUT = "invalid_input"
@@ -78,6 +83,7 @@ class JobStatus(ContractModel):
     job_id: UUID
     state: JobState
     profile: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+    origin: JobOrigin = JobOrigin.MCP
     submitted_at: datetime | None = None
     updated_at: datetime
     message: Annotated[str, Field(max_length=512)] | None = None
@@ -104,6 +110,24 @@ class JobStorageMetadata(ContractModel):
     directory_mode: Literal["0700"]
 
 
+class ResultLimitMetadata(ContractModel):
+    response_limit_bytes: Literal[65_536] = 65_536
+    artifacts_total: Annotated[int, Field(ge=0)] = 0
+    artifacts_returned: Annotated[int, Field(ge=0, le=16)] = 0
+    artifacts_truncated: bool = False
+    summary_original_chars: Annotated[int, Field(ge=0)] = 0
+    summary_returned_chars: Annotated[int, Field(ge=0, le=512)] = 0
+    summary_truncated: bool = False
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> Self:
+        if self.artifacts_returned > self.artifacts_total:
+            raise ValueError("returned artifacts cannot exceed total artifacts")
+        if self.summary_returned_chars > self.summary_original_chars:
+            raise ValueError("returned summary cannot exceed original summary")
+        return self
+
+
 class JobResult(ContractModel):
     job_id: UUID
     state: JobState
@@ -111,6 +135,8 @@ class JobResult(ContractModel):
     summary: JobSummary
     artifacts: tuple[ArtifactMetadata, ...] = ()
     storage: JobStorageMetadata | None = None
+    origin: JobOrigin = JobOrigin.MCP
+    limits: ResultLimitMetadata = Field(default_factory=ResultLimitMetadata)
 
     @model_validator(mode="after")
     def validate_exit_code(self) -> Self:
@@ -126,6 +152,11 @@ class JobLogTail(ContractModel):
     stream: Literal["stdout", "stderr"]
     lines_requested: Annotated[int, Field(ge=1, le=200)]
     text: Annotated[str, Field(max_length=65_536)]
+    limit_bytes: Literal[65_536] = 65_536
+    original_bytes: Annotated[int, Field(ge=0)] | None = None
+    returned_bytes: Annotated[int, Field(ge=0, le=65_536)] = 0
+    truncated: bool = False
+    redacted: bool = False
 
 
 class ErrorEnvelope(ContractModel):

@@ -1,29 +1,138 @@
-# Security Baseline
+# Security and Reliability Baseline
 
-## Trust boundary
+## Security objective
 
-Codex may call only narrow MCP tools. The Windows MCP server may call only a fixed remote runner through SSH alias `cadence-vm`. The remote runner may execute only registered profiles and fixed Cadence binaries.
+The bridge provides a small, reviewable path from six MCP tools to one fixed Cadence smoke
+profile. It is not a general remote administration, file access, OCEAN, SKILL, netlist, or shell
+interface. Every boundary fails closed when identity, path containment, process ownership, payload
+shape, or output limits cannot be proved.
 
-## Forbidden capabilities
+## Assets and protected data
 
-- generic shell execution
-- arbitrary SSH command execution
-- arbitrary SKILL evaluation
-- arbitrary OCEAN script execution
-- unrestricted file read/write/delete
-- PDK or shared library writes
-- returning credential or license values
+Protected assets include SSH private keys, passwords, PATs, OAuth tokens, license values and
+files, PDK models, proprietary netlists, full PSF/raw data, design libraries, unrestricted logs,
+and the integrity and availability of the CentOS/Cadence installation. None may be committed,
+placed in audit records, or returned through MCP.
 
-## Protected data
-
-Never commit or return SSH keys, passwords, PATs, OAuth tokens, license values/files, PDK models, proprietary netlists, full PSF/raw data, or unrestricted Cadence logs.
-
-## Remote write scope
-
-Before WP-11, remote writes are limited to:
+The only remotely writable application area before WP-11 is:
 
 ```text
 /home/buet/cds_work/.cadence_mcp
 ```
 
-No root access or CentOS system modification is allowed.
+The Cadence installation, PDKs, shared libraries, design data, CentOS system files, and all paths
+outside that root remain read-only and outside the runner contract.
+
+## Trust boundaries and data flow
+
+```text
+model/user
+  -> six typed MCP tools
+  -> CadenceService (UUID ownership and input validation)
+  -> OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
+  -> Windows OpenSSH with BatchMode and strict host-key verification
+  -> fixed cadence-runner
+  -> fixed spectre-smoke profile and Cadence executable
+  -> isolated jobs/<uuid> directory and metadata-only MCP response
+```
+
+Untrusted data is limited to a lowercase RFC 4122 job UUID, the closed `stdout|stderr` stream
+enum, and an integer from 1 through 200. The profile name, remote root, runner path, executable,
+netlist, command names, retention period, and audit path are compiled into reviewed source. The
+MCP caller cannot supply shell text, paths, environment values, script content, or a profile.
+
+Each SSH call uses an argument list and `shell=False`; there is no public raw-command method.
+The runner independently validates every argument before deriving a path. Derived job paths are
+formed only after UUID validation and result metadata independently proves containment under the
+fixed jobs root.
+
+## Threat model
+
+| Threat | Attack surface | Control | Residual risk |
+| --- | --- | --- | --- |
+| Command injection | job ID, stream, line count | closed schemas, canonical UUIDs, fixed runner commands, argv execution without a local shell, runner-side validation | a vulnerability in OpenSSH or the fixed runner remains possible |
+| Path traversal or symlink escape | job/artifact/retention paths | no caller paths, fixed jobs root, relative artifact validation, real-path containment, cleanup skips symlinks | a privileged remote user could alter the trusted installation |
+| Secret disclosure | stderr, log tail, result summary, audit | local redaction, bounded safe error envelopes, metadata-only results, fixed audit fields, pre-commit secret scan | unknown secret formats require pattern updates |
+| Spoofed job ownership | cancel/status identifiers | server-generated UUID, per-process cancellation ownership, returned-ID match | read-only status remains available to a caller that knows a valid UUID |
+| PID reuse or stale process state | cancellation and recovery | PID=PGID, live check, current PGID, non-zombie state, exact process start marker | CentOS process inspection is trusted |
+| Partial write or power loss | request/status/result files | mode-600 temporary file plus atomic rename; result-based status recovery; otherwise terminal `unknown` | a failure before audit append can leave a job requiring operator review |
+| Resource exhaustion | output, logs, results, job queue | 65,536-byte transport limit, 200-line log limit, 1 MiB bounded tail scan, fixed result fields, concurrency one | submission volume can still consume job directories until reviewed retention action |
+| Repudiation | job submission/cancellation | fsynced mode-600 JSON Lines events with timestamp, actor, origin, job ID, and profile | remote account compromise can alter user-owned audit files |
+| Destructive cleanup | retention operations | 30-day candidate policy, fixed jobs root, UUID-only directories, symlink rejection, dry-run-only command and script | deletion requires a future reviewed, explicitly approved mechanism |
+| Dependency compromise | Python packages | `uv.lock`, hashes, strict `pip-audit`, minimal runtime dependencies | vulnerability databases may lag new disclosures |
+
+## Origin and audit contract
+
+Every new request records `origin` as `mcp` or `operator` and a bounded `submitted_by` identity.
+The MCP backend always passes the literal `mcp`; direct reviewed runner use may pass only the
+literal `operator`. Any other value is rejected before job creation.
+
+The runner appends one JSON object per line to:
+
+```text
+/home/buet/cds_work/.cadence_mcp/audit/events.jsonl
+```
+
+The audit schema contains exactly `timestamp`, `event`, `actor`, `origin`, `job_id`, and `profile`.
+It never contains a command, path, environment value, license, log, netlist, circuit parameter,
+or artifact payload. Appends are locked, flushed, and fsynced. The fixed `audit-tail` maintenance
+command returns at most 100 lines and 65,536 bytes; it is not exposed as an MCP tool.
+
+## Output and redaction policy
+
+SSH stdout and stderr are each rejected above 65,536 bytes. Log tail reads at most the requested
+200 trailing lines, scans at most 1 MiB, returns at most 65,536 UTF-8 bytes, and reports the limit,
+returned bytes, exact original bytes when known, and whether truncation occurred. Before MCP
+delivery, known tokens, private keys, license endpoints, and Windows user-profile names are
+redacted; the response reports whether redaction occurred.
+
+Results contain only a 512-character completion summary, up to 16 allowlisted artifact metadata
+records, origin, storage containment, and explicit summary/artifact truncation metadata. Raw PSF,
+netlist content, and unrestricted Cadence logs are never result fields. Result summaries pass
+through the same local redactor before reaching MCP.
+
+## Process, concurrency, and recovery
+
+A blocking `flock` on the fixed runner lock permits at most one Spectre worker to run. Concurrent
+submissions receive distinct UUIDs and wait as queued jobs. Cancellation verifies the stored PID,
+PGID, current PGID, non-zombie process state, and exact start marker before signaling only that
+process group. A mismatch fails closed.
+
+Request, status, and result JSON use a same-directory temporary file, mode `600`, followed by an
+atomic rename. After interruption or power loss, an existing result repairs a stale active status.
+Without a trustworthy live worker or complete result, status becomes `unknown` with an
+operator-review message; the runner never guesses success and never signals a reused PID.
+
+## Retention and cleanup
+
+Terminal job directories become retention candidates after 30 days. WP-07 supplies only a
+dry-run planner: `scripts/cleanup-remote-jobs.ps1` calls the fixed `cleanup-dry-run` command, which
+accepts no arguments and cannot delete. It examines only canonical UUID directories whose real
+parent is the fixed jobs root and skips symlinks and unrelated files. Automatic or destructive
+remote cleanup, force-push, and destructive remote repair are prohibited. Any future deletion
+requires a separate reviewed change and explicit operator approval.
+
+## Verification
+
+Run the repeatable local security gate:
+
+```powershell
+.\scripts\verify-security.ps1
+```
+
+It scans tracked and untracked repository files for credential-like filenames, private-key
+headers, GitHub token formats,
+and concrete license endpoints; runs the dedicated path, injection, Unicode, redaction, audit,
+truncation, cleanup, PID, partial-write, power-loss, and concurrency tests; exports all locked
+third-party dependencies; and runs strict `pip-audit`. On 2026-08-28 the audit reported no known
+vulnerabilities.
+
+## Forbidden capabilities
+
+- generic shell or arbitrary SSH execution
+- arbitrary SKILL or OCEAN evaluation
+- arbitrary path, profile, netlist, environment, or command input
+- unrestricted file read, write, or delete
+- PDK, shared library, Cadence installation, or CentOS system modification
+- credential, license value, circuit data, raw PSF, or unrestricted log return
+- automatic destructive remote cleanup, direct `main` push, or force-push

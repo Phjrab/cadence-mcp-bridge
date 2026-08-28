@@ -12,6 +12,7 @@ from cadence_mcp_bridge.e2e import verify_lifecycle
 from cadence_mcp_bridge.models import (
     ArtifactMetadata,
     HealthReport,
+    JobLogTail,
     JobResult,
     JobState,
     JobStatus,
@@ -38,7 +39,7 @@ class LifecycleBackend:
             spectre=ToolAvailability(available=True),
             ocean=ToolAvailability(available=True),
             license_env=LicenseEnvironment(CDS_LIC_FILE="SET"),
-            runner_version="0.3.0",
+            runner_version="0.4.0",
         )
 
     async def submit_smoke(self, job_id: UUID) -> JobStatus:
@@ -49,8 +50,15 @@ class LifecycleBackend:
 
     async def log_tail(
         self, job_id: UUID, stream: Literal["stdout", "stderr"], lines: int = 100
-    ) -> str:
-        return "bounded\n"
+    ) -> JobLogTail:
+        return JobLogTail(
+            job_id=job_id,
+            stream=stream,
+            lines_requested=lines,
+            text="bounded\n",
+            original_bytes=8,
+            returned_bytes=8,
+        )
 
     async def result(self, job_id: UUID) -> JobResult:
         return JobResult(
