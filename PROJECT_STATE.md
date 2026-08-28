@@ -4,19 +4,19 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-09
+current_wp: WP-10
 current_status: passed
-last_completed_wp: WP-09
-next_wp: WP-10
-current_feature_branch: wp/WP-09-ade-testbench-profiles
-base_main_commit: 9a109c098c2efd505aaa42761a1acc3a85b1104a
-last_commit: 2f8513ed54cee9babfc2e291a47a658ea0c86be0
-last_push: 2026-08-28T14:35:40.9207051+09:00
+last_completed_wp: WP-10
+next_wp: WP-11
+current_feature_branch: wp/WP-10-adc-measurement-contracts
+base_main_commit: 5b22da796f22b914aa98bd866217ef2ace522f86
+last_commit: 5af9d39eb0d3b8d96d364b45798fcd3c242df48e
+last_push: 2026-08-28T17:20:56.4378284+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review wp/WP-09-ade-testbench-profiles and explicitly authorize its GitHub PR merge before starting WP-10.
+user_action_required: Review wp/WP-10-adc-measurement-contracts and explicitly authorize its GitHub PR merge before starting WP-11.
 ```
 
 ## Progress log
@@ -43,3 +43,5 @@ user_action_required: Review wp/WP-09-ade-testbench-profiles and explicitly auth
 - 2026-08-28: WP-09 fixture profile registry, typed range/corner validation, manifest, runner 0.6.0, and real MCP lifecycle checks passed; actual ADE profile remains blocked on project-owned testbench, state, variable, corner, and output choices.
 - 2026-08-28: WP-09 resume approval received; the remote feature branch was synchronized and all local/security/real-integration checks passed again, but no ADE testbench, PDK, variable, corner, or output choices were supplied, so the actual profile remains blocked and is not ready for merge.
 - 2026-08-28: User supplied and approved the Differential_Amplifier_TB2 ADE L state1 profile; runner 0.7.0 executed its fixed gpdk090 v4.6 NN transient profile successfully with 0 errors, two specifically allowlisted CMI-2477 warnings, unchanged source/state/lock fingerprints, 106 local tests, 18 security tests, eight real integrations, and a clean dependency audit.
+- 2026-08-28: User explicitly authorized PR #10; WP-09 merged into main as 5b22da7.
+- 2026-08-28: WP-10 added the closed adc-synthetic-v1 version 1 measurement contract, deterministic Windows-Python metrics and manifests, twenty-tool MCP schema, explicit actual-ADC input boundary, 117 local tests, 18 security tests, eight real integrations, and a clean dependency audit; awaiting review and merge authorization.
