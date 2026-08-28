@@ -1,10 +1,11 @@
 # Architecture
 
-## Scope at WP-05
+## Scope at WP-07
 
-WP-06 adds idempotent Codex Desktop registration and the operator workflow over the verified WP-05
-lifecycle. The user-level MCP entry uses absolute Windows paths, starts only the reviewed Python
-module, and prompts for both state-changing tools. No new remote or Cadence capability is added.
+WP-07 hardens the registered WP-06 lifecycle with bounded and redacted log/result metadata,
+submission-origin attribution, JSONL audit events, dry-run-only retention planning, explicit
+recovery tests, deterministic concurrency-one verification, secret preflight, and locked
+dependency vulnerability scanning. No new MCP or Cadence execution capability is added.
 
 ## Layer boundaries
 
@@ -57,6 +58,16 @@ PID, process group, start marker, and non-zombie process state. A completed resu
 status; otherwise a missing or mismatched worker becomes the terminal `unknown` state for
 operator review.
 
+Each request records a closed `mcp|operator` origin. The MCP backend supplies only the literal
+`mcp`; direct reviewed operator use may supply only `operator`. Submission and cancellation append
+fixed-field JSONL audit records under the approved remote root. Audit records cannot contain
+commands, paths, environment values, logs, circuit data, or artifacts.
+
+Retention is a 30-day policy with a dry-run-only planner. It scans only canonical UUID directories
+whose real parent is the fixed jobs root, skips symlinks, and exposes no deletion switch. Log and
+result responses carry explicit bounds and truncation metadata, and known secrets are redacted
+before crossing the MCP boundary.
+
 The Windows process may write local runtime metadata only in bounded application locations.
 Before WP-11, remote writes are limited to `/home/buet/cds_work/.cadence_mcp`; design data,
 PDKs, shared libraries, and CentOS system files remain read-only.
@@ -74,7 +85,8 @@ PDKs, shared libraries, and CentOS system files remain read-only.
 
 ## Dependency and verification policy
 
-The project targets Python `>=3.12,<3.14` and locks dependencies with `uv`. Ruff, mypy, and
-pytest are mandatory acceptance checks. Unit tests mock subprocess and perform no SSH,
+The project targets Python `>=3.12,<3.14` and locks dependencies with `uv`. Ruff, mypy, pytest,
+the secret preflight, and strict locked-dependency `pip-audit` are mandatory acceptance checks.
+Unit tests mock subprocess and perform no SSH,
 Cadence, network, or remote filesystem operations. The separately marked integration test
 contacts `cadence-vm` only when `CADENCE_MCP_RUN_INTEGRATION=1` is explicitly set.

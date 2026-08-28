@@ -17,6 +17,10 @@ job_dir=$(cadence_mcp_job_dir "$job_id") || cadence_mcp_fail "invalid job id" 64
 cancel_job() {
     cadence_mcp_atomic_status "$job_id" cancelled "job cancelled"
     cadence_mcp_atomic_result "$job_id" cancelled 143 0 0 0 "job cancelled"
+    origin=$(cadence_mcp_job_origin "$job_dir")
+    actor=$(cadence_mcp_job_actor "$job_dir")
+    cadence_mcp_audit job_cancelled "$job_id" "$origin" "$actor" \
+        || cadence_mcp_fail "audit write failed" 70
     exit 0
 }
 
@@ -24,6 +28,13 @@ trap cancel_job TERM INT HUP
 
 exec 9> "$CADENCE_MCP_ROOT/run.lock"
 flock 9
+
+origin=$(cadence_mcp_job_origin "$job_dir") \
+    || cadence_mcp_fail "job origin unavailable" 69
+actor=$(cadence_mcp_job_actor "$job_dir") \
+    || cadence_mcp_fail "job actor unavailable" 69
+cadence_mcp_audit job_started "$job_id" "$origin" "$actor" \
+    || cadence_mcp_fail "audit write failed" 70
 
 if [ -f "$job_dir/cancel.request" ]; then
     cancel_job
@@ -58,3 +69,5 @@ fi
 cadence_mcp_atomic_result \
     "$job_id" "$final_state" "$exit_code" "$errors" "$warnings" "$notices" "$summary"
 cadence_mcp_atomic_status "$job_id" "$final_state" "$summary"
+cadence_mcp_audit job_finished "$job_id" "$origin" "$actor" \
+    || cadence_mcp_fail "audit write failed" 70

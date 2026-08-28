@@ -62,3 +62,12 @@ Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
 ```powershell
 .\scripts\verify-e2e.ps1
 ```
+
+Run the WP-07 security gate and the non-destructive 30-day retention preview with:
+
+```powershell
+.\scripts\verify-security.ps1
+.\scripts\cleanup-remote-jobs.ps1
+```
+
+The cleanup command is always a dry run. It has no delete mode and never accepts a path.

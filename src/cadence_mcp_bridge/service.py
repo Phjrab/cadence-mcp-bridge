@@ -28,7 +28,7 @@ class CadenceBackend(Protocol):
         job_id: UUID,
         stream: Literal["stdout", "stderr"],
         lines: int = 100,
-    ) -> str: ...
+    ) -> JobLogTail: ...
 
     async def result(self, job_id: UUID) -> JobResult: ...
 
@@ -73,13 +73,14 @@ class CadenceService:
         if isinstance(lines, bool) or not isinstance(lines, int) or not 1 <= lines <= 200:
             raise InvalidInputError("lines must be between 1 and 200")
         safe_stream = cast(Literal["stdout", "stderr"], stream)
-        text = await self._call(lambda: self._backend.log_tail(parsed, safe_stream, lines))
-        return JobLogTail(
-            job_id=parsed,
-            stream=safe_stream,
-            lines_requested=lines,
-            text=text,
-        )
+        result = await self._call(lambda: self._backend.log_tail(parsed, safe_stream, lines))
+        if (
+            result.job_id != parsed
+            or result.stream != safe_stream
+            or result.lines_requested != lines
+        ):
+            raise RemoteFailureError("Remote runner returned mismatched log metadata")
+        return result
 
     async def job_result(self, job_id: str) -> JobResult:
         parsed = self._parse_job_id(job_id)

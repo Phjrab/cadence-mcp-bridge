@@ -5,14 +5,14 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.3.0
+RUNNER_VERSION=0.4.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
 SPECTRE_BIN=/home/buet/cadence/MMSIM121/tools/bin/spectre
 OCEAN_BIN=/home/buet/cadence/IC615/tools/dfII/bin/ocean
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|status|log-tail|result|cancel' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|status|log-tail|result|cancel|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -48,9 +48,15 @@ runner_health() {
 }
 
 runner_submit_smoke() {
-    [ "$#" -eq 1 ] || usage
+    [ "$#" -eq 2 ] || usage
     job_id=$1
+    origin=$2
     cadence_mcp_validate_job_id "$job_id" || cadence_mcp_fail "invalid job id" 64
+    case "$origin" in
+        mcp) submitted_by=cadence-mcp-bridge ;;
+        operator) submitted_by=$(id -un) ;;
+        *) cadence_mcp_fail "invalid job origin" 64 ;;
+    esac
     cadence_mcp_ensure_layout
     job_dir=$(cadence_mcp_job_dir "$job_id") || cadence_mcp_fail "invalid job id" 64
     [ ! -e "$job_dir" ] || cadence_mcp_fail "job already exists" 65
@@ -59,9 +65,14 @@ runner_submit_smoke() {
     : > "$job_dir/stderr.log"
     chmod 600 "$job_dir/stdout.log" "$job_dir/stderr.log"
     submitted_at=$(cadence_mcp_utc_now)
+    request_temporary="$job_dir/.request.$$.tmp"
     "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" request \
-        "$job_id" "$CADENCE_MCP_PROFILE" "$submitted_at" > "$job_dir/request.json"
-    chmod 600 "$job_dir/request.json"
+        "$job_id" "$CADENCE_MCP_PROFILE" "$submitted_at" "$origin" "$submitted_by" \
+        > "$request_temporary" || cadence_mcp_fail "request serialization failed" 70
+    chmod 600 "$request_temporary"
+    mv -f "$request_temporary" "$job_dir/request.json"
+    cadence_mcp_audit job_submitted "$job_id" "$origin" "$submitted_by" \
+        || cadence_mcp_fail "audit write failed" 70
     cadence_mcp_atomic_status "$job_id" queued "job queued"
     queued_response=$(cat "$job_dir/status.json")
     nohup setsid "$WORKER" "$job_id" > /dev/null 2>&1 &
@@ -104,7 +115,8 @@ runner_log_tail() {
     esac
     [[ "$lines" =~ ^[1-9][0-9]{0,2}$ ]] || cadence_mcp_fail "invalid line count" 64
     [ "$lines" -le 200 ] || cadence_mcp_fail "line count exceeds 200" 64
-    tail -n "$lines" "$job_dir/$stream.log" | tail -c 65536
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" log-tail \
+        "$job_dir/$stream.log" "$job_id" "$stream" "$lines"
 }
 
 runner_result() {
@@ -143,8 +155,30 @@ runner_cancel() {
     : > "$job_dir/cancel.request"
     chmod 600 "$job_dir/cancel.request"
     cadence_mcp_atomic_status "$job_id" cancelling "cancellation requested"
+    origin=$(cadence_mcp_job_origin "$job_dir")
+    case "$origin" in
+        mcp) actor=cadence-mcp-bridge ;;
+        operator) actor=$(id -un) ;;
+        *) cadence_mcp_fail "invalid stored job origin" 70 ;;
+    esac
+    cadence_mcp_audit cancellation_requested "$job_id" "$origin" "$actor" \
+        || cadence_mcp_fail "audit write failed" 70
     kill -TERM -- "-$pgid" || cadence_mcp_fail "cancellation signal failed" 70
     cat "$job_dir/status.json"
+}
+
+runner_cleanup_dry_run() {
+    [ "$#" -eq 0 ] || usage
+    cadence_mcp_ensure_layout
+    "$CADENCE_MCP_PYTHON" "$CADENCE_MCP_JSON_HELPER" retention \
+        "$CADENCE_MCP_JOBS_ROOT" 30 "$(cadence_mcp_utc_now)"
+}
+
+runner_audit_tail() {
+    [ "$#" -eq 0 ] || usage
+    cadence_mcp_ensure_layout
+    [ -f "$CADENCE_MCP_AUDIT_LOG" ] || return 0
+    tail -n 100 "$CADENCE_MCP_AUDIT_LOG" | tail -c 65536
 }
 
 [ "$#" -ge 1 ] || usage
@@ -158,5 +192,7 @@ case "$command_name" in
     log-tail) runner_log_tail "$@" ;;
     result) runner_result "$@" ;;
     cancel) runner_cancel "$@" ;;
+    cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
+    audit-tail) runner_audit_tail "$@" ;;
     *) usage ;;
 esac

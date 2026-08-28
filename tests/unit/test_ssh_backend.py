@@ -115,7 +115,7 @@ async def test_submit_smoke_maps_runner_status(
 
     assert status.job_id == job_id
     assert status.submitted_at == status.updated_at
-    assert run.call_args.args[0][-2:] == ["submit-smoke", str(job_id)]
+    assert run.call_args.args[0][-3:] == ["submit-smoke", str(job_id), "mcp"]
 
 
 @pytest.mark.asyncio
@@ -206,7 +206,7 @@ async def test_nonzero_exit_maps_stable_error(
 async def test_error_details_are_sanitized(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    token = "ghp_abcdefghijklmnopqrstuvwxyz123456"
+    token = "ghp_" + "abcdefghijklmnopqrstuvwxyz123456"
     stderr = f"failure {token} C:\\Users\\private-user\\key".encode()
     monkeypatch.setattr(
         "cadence_mcp_bridge.ssh_backend.subprocess.run",

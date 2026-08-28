@@ -22,6 +22,7 @@ cadence-mcp-bridge = "cadence_mcp_bridge.__main__:main"
 [dependency-groups]
 dev = [
     "mypy>=1.15,<2",
+    "pip-audit>=2.9,<3",
     "pytest>=8.3,<10",
     "pytest-asyncio>=0.25,<2",
     "ruff>=0.11,<1",

@@ -25,11 +25,14 @@ from cadence_mcp_bridge.errors import (
 from cadence_mcp_bridge.models import (
     ArtifactMetadata,
     HealthReport,
+    JobLogTail,
+    JobOrigin,
     JobResult,
     JobState,
     JobStatus,
     JobStorageMetadata,
     JobSummary,
+    ResultLimitMetadata,
 )
 from cadence_mcp_bridge.sanitization import sanitize_text
 
@@ -51,6 +54,7 @@ class _RunnerStatus(_RunnerModel):
     job_id: UUID
     state: JobState
     profile: str
+    origin: JobOrigin = JobOrigin.MCP
     updated_at: datetime
     message: str | None = None
 
@@ -74,6 +78,16 @@ class _RunnerStorage(_RunnerModel):
     directory_mode: Literal["0700"]
 
 
+class _RunnerLimits(_RunnerModel):
+    response_limit_bytes: Literal[65_536]
+    artifacts_total: int
+    artifacts_returned: int
+    artifacts_truncated: bool
+    summary_original_chars: int
+    summary_returned_chars: int
+    summary_truncated: bool
+
+
 class _RunnerResult(_RunnerModel):
     job_id: UUID
     state: JobState
@@ -81,6 +95,19 @@ class _RunnerResult(_RunnerModel):
     summary: _RunnerSummary
     artifacts: tuple[_RunnerArtifact, ...] = ()
     storage: _RunnerStorage | None = None
+    origin: JobOrigin = JobOrigin.MCP
+    limits: _RunnerLimits | None = None
+
+
+class _RunnerLogTail(_RunnerModel):
+    job_id: UUID
+    stream: Literal["stdout", "stderr"]
+    lines_requested: int
+    text: str
+    limit_bytes: Literal[65_536]
+    original_bytes: int | None
+    returned_bytes: int
+    truncated: bool
 
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
@@ -105,7 +132,7 @@ class OpenSshBackend:
 
     async def submit_smoke(self, job_id: UUID) -> JobStatus:
         safe_job_id = self._job_id(job_id)
-        payload = await self._invoke_json(_RunnerCommand.SUBMIT_SMOKE, safe_job_id)
+        payload = await self._invoke_json(_RunnerCommand.SUBMIT_SMOKE, safe_job_id, "mcp")
         status = self._validate(_RunnerStatus, payload)
         return self._status(status, submitted=True)
 
@@ -118,18 +145,29 @@ class OpenSshBackend:
         job_id: UUID,
         stream: Literal["stdout", "stderr"],
         lines: Annotated[int, Field(ge=1, le=200)] = 100,
-    ) -> str:
+    ) -> JobLogTail:
         safe_job_id = self._job_id(job_id)
         if stream not in ("stdout", "stderr"):
             raise InvalidInputError("log stream must be stdout or stderr")
         if isinstance(lines, bool) or not isinstance(lines, int) or not 1 <= lines <= 200:
             raise InvalidInputError("log line count must be between 1 and 200")
-        return await asyncio.to_thread(
-            self._invoke,
-            _RunnerCommand.LOG_TAIL,
-            safe_job_id,
-            stream,
-            str(lines),
+        payload = await self._invoke_json(
+            _RunnerCommand.LOG_TAIL, safe_job_id, stream, str(lines)
+        )
+        remote = self._validate(_RunnerLogTail, payload)
+        if remote.job_id != job_id or remote.stream != stream or remote.lines_requested != lines:
+            raise RemoteFailureError("Remote runner returned mismatched log metadata")
+        safe_text = sanitize_text(remote.text, max_length=65_536)
+        return JobLogTail(
+            job_id=remote.job_id,
+            stream=remote.stream,
+            lines_requested=remote.lines_requested,
+            text=safe_text,
+            limit_bytes=remote.limit_bytes,
+            original_bytes=remote.original_bytes,
+            returned_bytes=len(safe_text.encode("utf-8")),
+            truncated=remote.truncated,
+            redacted=safe_text != remote.text,
         )
 
     async def result(self, job_id: UUID) -> JobResult:
@@ -140,7 +178,7 @@ class OpenSshBackend:
             state=result.state,
             exit_code=result.exit_code,
             summary=JobSummary(
-                text=result.summary.text,
+                text=sanitize_text(result.summary.text, max_length=512),
                 errors=result.summary.errors,
                 warnings=result.summary.warnings,
                 notices=result.summary.notices,
@@ -161,6 +199,17 @@ class OpenSshBackend:
                 )
                 if result.storage is not None
                 else None
+            ),
+            origin=result.origin,
+            limits=(
+                ResultLimitMetadata.model_validate(result.limits.model_dump())
+                if result.limits is not None
+                else ResultLimitMetadata(
+                    artifacts_total=len(result.artifacts),
+                    artifacts_returned=len(result.artifacts),
+                    summary_original_chars=len(result.summary.text),
+                    summary_returned_chars=len(result.summary.text),
+                )
             ),
         )
 
@@ -250,6 +299,7 @@ class OpenSshBackend:
             job_id=status.job_id,
             state=status.state,
             profile=status.profile,
+            origin=status.origin,
             submitted_at=status.updated_at if submitted else None,
             updated_at=status.updated_at,
             message=status.message,
