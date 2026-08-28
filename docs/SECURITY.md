@@ -2,7 +2,7 @@
 
 ## Security objective
 
-The bridge provides a small, reviewable path from twelve MCP tools to fixed simulation profiles
+The bridge provides a small, reviewable path from twenty MCP tools to fixed simulation profiles
 and three metadata-only design discovery operations. It is not a general remote
 administration, file access, OCEAN, SKILL, netlist, or shell interface. Every boundary fails
 closed when identity, path containment, allowlist membership, process ownership, payload shape,
@@ -28,9 +28,10 @@ outside that root remain read-only and outside the runner contract.
 
 ```text
 model/user
-  -> twelve typed MCP tools
+  -> twenty typed MCP tools
   -> CadenceService (UUID ownership and input validation)
-  -> OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
+  -> local bounded ADC measurement engine, or
+     OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
   -> Windows OpenSSH with BatchMode and strict host-key verification
   -> fixed cadence-runner
   -> fixed fixture/actual profile or metadata-only discovery helper
@@ -40,7 +41,9 @@ model/user
 Untrusted data is limited to a lowercase RFC 4122 job UUID, the closed `stdout|stderr` stream
 enum, an integer from 1 through 200, identifiers that must exactly match reviewed allowlists, and
 the finite numeric fields of the fixture variable object. The actual profile accepts only an empty
-variable object. Profile identity, analysis, corner,
+variable object. Measurement requests additionally accept only the closed synthetic contract ID,
+finite arrays bounded to 4,096 values (exactly 1,024 FFT samples), an exact NN/FF/SS mapping, and a
+short unit label. Profile identity, analysis, corner,
 outputs, units, ranges, source template, timeout, remote root, runner path, and executable are
 compiled into reviewed source. The MCP caller cannot supply shell text, paths, environment
 values, script content, netlist content, arbitrary analyses, or arbitrary outputs.
@@ -69,6 +72,8 @@ fixed jobs root.
 | Profile parameter injection | profile, corner, numeric variables | closed schemas, local registry, finite range checks, empty actual-variable schema, safe token formatting, remote registry/source revalidation before job creation | each future actual profile requires separate review |
 | ADE state modification | actual testbench automation | fixed read-only state/source paths, source copied into `.cadence_mcp`, reviewed wrapper, before/after metadata and lock fingerprints | correctness depends on the approved existing ADE-generated netlist |
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
+| Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
+| Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
 
 ## Origin and audit contract
 
@@ -109,6 +114,11 @@ Profile results contain only the existing bounded summary and artifact metadata.
 manifest, copied actual netlist, and generated wrapper remain in the mode-700 job directory and are
 not embedded in MCP output. Raw waveform, generated netlist, ADE state, and proprietary circuit
 content are never direct response fields.
+
+Synthetic measurement results contain only structured scalar/vector metrics, units, formulas, and
+a small manifest with contract ID/version, processor identity, and canonical input SHA-256. The
+input arrays are not echoed in results or written to remote storage. Measurement tools cannot read
+PSF, netlists, models, paths, or arbitrary signal expressions and never invoke SSH.
 
 ## Process, concurrency, and recovery
 

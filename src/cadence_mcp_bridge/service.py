@@ -14,6 +14,32 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
     RemoteFailureError,
 )
+from cadence_mcp_bridge.measurement_models import (
+    AdcMeasurementContract,
+    CornerComparison,
+    CornerComparisonRequest,
+    DcPowerRequest,
+    FftMeasurementRequest,
+    FftMetrics,
+    LinearityMetrics,
+    LinearityRequest,
+    MonteCarloRequest,
+    MonteCarloSummary,
+    OffsetRequest,
+    ScalarMetric,
+    SettlingMetric,
+    SettlingRequest,
+)
+from cadence_mcp_bridge.measurements import (
+    compare_corner_results,
+    get_measurement_contract,
+    measure_dc_power,
+    measure_fft_metrics,
+    measure_linearity,
+    measure_offset,
+    measure_settling,
+    summarize_monte_carlo,
+)
 from cadence_mcp_bridge.models import (
     CellList,
     CellViewInspection,
@@ -93,6 +119,34 @@ class CadenceService:
             raise RemoteFailureError("Remote runner returned a mismatched job_id")
         self._owned_job_ids.add(job_id)
         return status
+
+    async def get_measurement_contract(self, contract_id: str) -> AdcMeasurementContract:
+        return get_measurement_contract(contract_id)
+
+    async def measure_dc_power(self, request: DcPowerRequest) -> ScalarMetric:
+        return measure_dc_power(request)
+
+    async def measure_offset(self, request: OffsetRequest) -> ScalarMetric:
+        return measure_offset(request)
+
+    async def measure_settling(self, request: SettlingRequest) -> SettlingMetric:
+        return measure_settling(request)
+
+    async def measure_fft_metrics(self, request: FftMeasurementRequest) -> FftMetrics:
+        return measure_fft_metrics(request)
+
+    async def measure_linearity(self, request: LinearityRequest) -> LinearityMetrics:
+        return measure_linearity(request)
+
+    async def compare_corner_results(
+        self, request: CornerComparisonRequest
+    ) -> CornerComparison:
+        return compare_corner_results(request)
+
+    async def summarize_monte_carlo(
+        self, request: MonteCarloRequest
+    ) -> MonteCarloSummary:
+        return summarize_monte_carlo(request)
 
     async def job_status(self, job_id: str) -> JobStatus:
         parsed = self._parse_job_id(job_id)

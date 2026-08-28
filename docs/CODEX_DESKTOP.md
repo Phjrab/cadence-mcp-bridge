@@ -19,8 +19,8 @@ The registration starts the stdio server with the absolute Python executable and
 to 180 seconds, which covers the bridge's 120-second SSH operation limit. The full smoke workflow
 still uses the separate five-minute bounded polling deadline.
 
-`default_tools_approval_mode = "writes"` leaves health, status, log tail, result, discovery, and
-profile-list/profile-detail tools read-only. Submission and cancellation additionally have explicit
+`default_tools_approval_mode = "writes"` leaves health, status, log tail, result, discovery,
+profile-list/profile-detail, and measurement tools read-only. Submission and cancellation have explicit
 `approval_mode = "prompt"`; approve them only when the displayed request matches the intended
 smoke job.
 
@@ -28,11 +28,15 @@ smoke job.
 
 1. Restart Codex Desktop after registration.
 2. In a new task, enter `/mcp` and confirm `cadence-mcp-bridge` is enabled and connected.
-3. Confirm exactly these twelve tools are visible:
+3. Confirm exactly these twenty tools are visible:
    `cadence_health`, `cadence_submit_smoke`, `cadence_job_status`,
    `cadence_job_log_tail`, `cadence_job_result`, `cadence_cancel_job`,
    `cadence_list_libraries`, `cadence_list_cells`, and `cadence_inspect_cellview`.
    Also confirm `cadence_list_profiles`, `cadence_get_profile`, and `cadence_submit_profile`.
+   Finally confirm `cadence_get_measurement_contract`, `cadence_measure_dc_power`,
+   `cadence_measure_offset`, `cadence_measure_settling`, `cadence_measure_fft_metrics`,
+   `cadence_measure_linearity`, `cadence_compare_corner_results`, and
+   `cadence_summarize_monte_carlo`.
 4. Confirm there is no raw shell, raw SSH, arbitrary file, SKILL eval, or OCEAN eval tool.
 
 The Codex Desktop app, Codex CLI, and IDE extension share the same host MCP configuration. The
@@ -73,6 +77,12 @@ Fixture profile lifecycle; approve only the fixed fixture submission:
 
 ```text
 fixture-rc-transient 프로파일의 nominal corner를 기본 변수로 실행하고 완료 상태와 artifact metadata만 요약해줘. netlist나 raw waveform 내용은 출력하지 마.
+```
+
+Read-only synthetic ADC contract inspection:
+
+```text
+adc-synthetic-v1 measurement contract의 버전, 단위, 계산식, FFT 정책을 보여줘. 사용자 회로 값은 추정하지 마.
 ```
 
 ## Recovery

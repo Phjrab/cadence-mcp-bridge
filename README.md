@@ -57,11 +57,16 @@ The server exposes the six lifecycle tools plus three metadata-only discovery to
 restricted to a reviewed library/cell/view allowlist and never returns paths or proprietary file
 content. It also exposes `cadence_list_profiles`, `cadence_get_profile`, and
 `cadence_submit_profile`. The registry keeps the synthetic `fixture-rc-transient` profile separate
-from the fixed `actual-differential-amplifier-tb2-transient` ADE L profile. The actual profile has
-no caller-controlled variables, paths, scripts, analyses, or outputs. Register the
+from the fixed `actual-differential-amplifier-tb2-transient` ADE L profile. Eight additional
+read-only tools cover the versioned synthetic ADC contract, power, offset, settling, FFT metrics,
+linearity, corner comparison, and Monte Carlo summary. The actual profile has no caller-controlled
+variables, paths, scripts, analyses, or outputs. Register the
 reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
 `docs/CODEX_DESKTOP.md` for restart, `/mcp`, approval, and acceptance prompts. See
 `docs/ARCHITECTURE.md` for the current boundaries.
+
+See `docs/ADC_MEASUREMENT_CONTRACTS.md` for the exact WP-10 units, formulas, FFT policy,
+reproducibility manifest, and the inputs still required before any actual ADC circuit is measured.
 
 Run the reviewed MCP-to-Spectre health and smoke lifecycle verification with:
 

@@ -147,8 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly twelve tools: six lifecycle tools, three metadata discovery tools, and
-profile list/detail/submission. No remote path, netlist text, command, script text, arbitrary
+server exposes exactly twenty tools: six lifecycle tools, three metadata discovery tools,
+profile list/detail/submission, and eight read-only synthetic ADC measurement tools. No remote path,
+netlist text, command, script text, arbitrary
 analysis, or arbitrary output is accepted.
 
 ## WP-04 acceptance evidence
@@ -217,7 +218,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact twelve-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -314,3 +315,16 @@ Validated on 2026-08-28 against `cadence-vm`:
   and one notice; any other warning or more than two occurrences fails closed;
 - the fixed bias parameters found in the ADE-generated input are recorded in the remote-only run
   manifest but remain unavailable as caller-controlled design variables.
+
+## WP-10 ADC measurement contracts
+
+The eight measurement tools run locally and read only `adc-synthetic-v1`, version `1`. They do not
+submit a Cadence job or access a user design. Exact definitions, units, FFT policy, and the
+Windows-Python reproducibility rationale are in `docs/ADC_MEASUREMENT_CONTRACTS.md`.
+
+WP-10 acceptance uses a coherent 1,024-sample synthetic waveform with a known fundamental,
+harmonic, and two noise tones, plus ideal three-bit transitions and fixed corner/Monte Carlo
+vectors. Tests require expected metrics within `1e-9`, identical repeated output, explicit formulas
+and units, rejection without a contract, and a stable input hash in the measurement manifest.
+Actual-circuit measurement remains unavailable until the user supplies and approves a separate
+complete contract.
