@@ -8,6 +8,7 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+.uv-cache/
 
 # Editors and OS
 .vscode/

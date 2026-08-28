@@ -32,3 +32,18 @@ Every WP uses a dedicated feature branch. Codex must not commit or push directly
 - Headless Spectre smoke simulation verified with exit code 0
 
 See `docs/VERIFIED_ENVIRONMENT.md` for the full evidence baseline.
+
+## Windows development
+
+WP-01 targets Python 3.12 and uses `uv` for reproducible environments:
+
+```powershell
+uv sync --all-groups
+uv run ruff check .
+uv run mypy src
+uv run pytest
+uv run python -m cadence_mcp_bridge --help
+```
+
+These commands are local-only at this stage. They do not connect to the VM, execute Cadence,
+or modify Codex Desktop configuration. See `docs/ARCHITECTURE.md` for the current boundaries.
