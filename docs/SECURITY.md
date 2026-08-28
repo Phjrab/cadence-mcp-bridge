@@ -151,9 +151,12 @@ requires a separate reviewed change and explicit operator approval.
 `basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable. Only `MCP_WorkLib` and the exact
 `mcpMutationTest=validated-v1` contract are eligible. The runner accepts no caller path, library,
 cell, view, property, value, or script text. The V2 contract fingerprints the preserved V1 target,
-rejects an existing V2 destination or backup, and refuses source/V2 OA lock, panic, or recovery
-artifacts. The V2 plan and read-only API preflight passed, but an active source lock owned by
-Virtuoso PID 25425 blocked copy before any V2 design write. See `docs/DESIGN_WRITE_POLICY.md`.
+rejects an existing V2 destination or backup, requires `master.tag` to select the regular `sch.oa`,
+enforces the source topology `35/14/8`, and refuses active OA locks plus panic/recovery artifacts.
+A user-verified, non-authoritative source `sch.oa-` is preserved and covered by the source tree
+fingerprint rather than treated as an active lock. The real V2 run reached the approved property
+apply marker but timed out before verification and rollback; both V2 names now exist, so retry is
+fail-closed and no release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

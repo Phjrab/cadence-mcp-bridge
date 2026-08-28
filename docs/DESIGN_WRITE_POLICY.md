@@ -17,9 +17,17 @@ The user subsequently approved a clean V2 target and backup. Runner 0.9.0 binds 
 to `Differential_Amplifier_TB2_MCP_TEST_V2` and
 `Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP`, uses the IC6.1.5-compatible `dbFindProp`, restores
 the target from the actual backup, compares logical baseline fingerprints, and fingerprints the
-preserved V1 target. The V2 plan and read-only SKILL compatibility preflight passed, but the final
-pre-apply gate found an active OA lock on the read-only source owned by Virtuoso PID 25425. The
-user's lock policy therefore blocks the actual V2 copy; both V2 cell names remain absent.
+preserved V1 target. The source gate now requires `master.tag` to authoritatively select a regular
+`sch.oa`, rejects active locks and panic/recovery artifacts, and requires the source topology to be
+exactly 35 instances, 14 nets, and eight terminals. The separately preserved source `sch.oa-` is
+fingerprinted but is not treated as an active lock after the user's Cadence/OpenAccess read-only
+verification.
+
+Real validation `e55c7e81-cf20-4d5e-b2d9-67dae0ddcd1b` completed source verification, V2 copy,
+baseline fingerprinting, dry-run, unchanged verification, backup, and the approved property apply
+marker. The fixed 90-second process limit then sent SIGTERM before apply verification and rollback.
+Both V2 cell names now exist. No completion manifest or design-write audit records were written,
+so the validation is failed and its post-apply state is not accepted as verified.
 
 ## Permanent protections
 
@@ -37,11 +45,12 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 
 ## Required action before resuming WP-11
 
-The operator must close or otherwise safely finish the Virtuoso session that owns source lock PID
-25425. Codex is not authorized to terminate that process or remove either lock file. After the
-operator confirms the session is closed, the next run must verify that Cadence removed the locks
-normally. A remaining stale lock still blocks execution and requires a separate explicit decision.
-PDK, source, V1, and unrelated library writes remain prohibited.
+The operator must normally close active Virtuoso PID 24345; force termination is not authorized.
+Because both approved V2 names now exist, the current no-reuse/no-overwrite contract prevents a
+second V2 run. Continuing requires a new explicit approval for either a fixed read-only forensic
+inspection followed by a narrowly scoped backup-based rollback/recovery, or a new clean target and
+backup pair. Existing V1, V2, source, PDK, and unrelated library data must not be deleted, reused,
+or modified without that exact approval.
 
 ## Release gate
 
