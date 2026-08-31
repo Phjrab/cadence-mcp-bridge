@@ -147,8 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly twenty tools: six lifecycle tools, three metadata discovery tools,
-profile list/detail/submission, and eight read-only synthetic ADC measurement tools. No remote path,
+server exposes exactly twenty-two tools: six lifecycle tools, three metadata discovery tools,
+profile list/detail/submission, eight read-only synthetic ADC measurement tools, one fixed write
+plan, and one exact confirmation-gated write validation. No remote path,
 netlist text, command, script text, arbitrary
 analysis, or arbitrary output is accepted.
 
@@ -218,7 +219,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-two-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -328,3 +329,145 @@ vectors. Tests require expected metrics within `1e-9`, identical repeated output
 and units, rejection without a contract, and a stable input hash in the measurement manifest.
 Actual-circuit measurement remains unavailable until the user supplies and approves a separate
 complete contract.
+
+## WP-11 controlled write and release checkpoint
+
+The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
+`mcpMutationTest=validated-v1` mutation. V1 remains preserved after its incomplete run. V2 passed
+source verification, copy, 35/14/8 baseline, dry-run, unchanged verification, backup, and the
+approved apply marker, then timed out before verification and rollback. Runner 0.12.0 supplies
+fixed operator-only `design-write-v2-forensic` and confirmation-gated
+`design-write-v2-rollback` commands plus the operator-only
+`design-write-v2-property-diff` inspection; none accepts a path, design identifier, property,
+value, or SKILL text. The property-diff command opens Source, V2 target, and V2 backup read-only
+and reports only a differing property's name, type, presence, and value-equality flag. It never
+reports a property value. Its fixed inspection found exactly two differences: the baseline
+`schGeometryLastUpdated` property exists as `int` in target and backup but has unequal values, and
+`mcpMutationTest` is absent from backup and present as `string` in target. Source, preserved V1,
+V2 target, V2 backup, and `gpdk090` tree fingerprints each matched before and after; source,
+target, and backup topology remained 35/14/8. The conditional rollback command was not invoked.
+Read-only property-diff evidence exists, but no rollback evidence or rollback audit success record
+exists.
+
+`remote/config/design-write-v3-plan.json` remains the immutable approval asset. It uses only the
+approved V3 destination and backup names, preserves all V1/V2 evidence, specifies a 300-second
+worker limit and the full clean validation sequence. Its SHA-256 is
+`3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
+criteria remain present. After the user separately approved implementation and execution, runner
+0.12.0 added a SHA-bound, confirmation-gated, fixed V3 command. The first invocation stopped before
+validation runtime creation or V3 copy because the preflight conservatively classified the
+preserved V1 `sch.oa-` as blocking. Read-only follow-up proved that V1 `master.tag` authoritatively
+selects its regular `sch.oa` and that no active lock, panic, or recovery file exists. The gate now
+preserves and fingerprints that auxiliary file while continuing to reject actual blockers, but the
+V3 sequence was not automatically retried.
+
+The user subsequently approved one corrected-runner invocation. Validation
+`0b9bf93c-11e9-416f-9e4a-69b1060fbd8e` passed copy, baseline, dry-run unchanged verification,
+backup, and apply, then failed at exact-diff verification with `V3 apply changed a baseline
+property`. The process exited normally with no remaining Virtuoso process, but rollback and audit
+finalization were not reached. The V3 target and backup now exist and are preserved. Source, V1
+including `sch.oa-`, both V2 views, and gpdk090 retained their exact pre-run tree fingerprints.
+Do not retry, overwrite, delete, or reuse either V3 view. Further Cadence action requires a new
+fixed read-only forensic and conditional recovery plan plus explicit approval. The release gate
+remains disabled.
+
+The approved fixed read-only follow-up used runner 0.13.0 and validation ID
+`0b9bf93c-11e9-416f-9e4a-69b1060fbd8e`. It reported only property name, type, presence, and
+equality metadata. Exactly two differences were found: `schGeometryLastUpdated` exists as `int` in
+target and backup with unequal values; `mcpMutationTest` is absent from backup, present as `string`
+in target, and equals the fixed approved value. Actual values were neither output nor stored. The
+evidence SHA-256 is `8e1bbd824b1d4ea130c3f921e2745dddfffe9ef533a696e77e7a46884954abf6`.
+Source, V1 including `sch.oa-`, both V2 views, both V3 views, and gpdk090 fingerprints matched
+before and after. No rollback or other design write occurred.
+
+The proposed conditional restore is documented but non-executable at
+`remote/config/design-write-v3-conditional-recovery-plan.json`. Its SHA-256 is
+`edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b`; it contains 14 stages
+and 14 acceptance criteria and is not deployed. A future run must revalidate both hashes, all
+protected fingerprints, the exact two-property diff, topology 35/14/8, and blocker absence before
+an exact confirmation can permit the fixed V3 backup-to-target restore. No current approval permits
+that overwrite.
+
+An additional exact-value investigation was separately approved for only Source, V3 target, and
+V3 backup. Runner 0.14.0 performed the argument-free `design-write-v3-deep-forensic` command once,
+using OpenAccess read mode for all three objects. Their tree fingerprints were identical before
+and after. All retain topology 35/14/8 and the same instance, net, and terminal summary hashes.
+Source and backup contain the same eight cellview properties. The target differs from backup only
+as follows:
+
+- `mcpMutationTest`: target `string` value `validated-v1`; backup and Source absent;
+- `schGeometryLastUpdated`: target `int` value `107169`; backup and Source `int` value `107168`.
+
+The report is mode 600 at the fixed validation evidence path and has SHA-256
+`6329eafc458098b744a40b70fc0a1a0d876af57c326d2d79e854e1ceaeb9b02f`. The original stage log
+shows backup before apply and the investigation classified the state as `SAFE_ROLLBACK_CANDIDATE`.
+The original completion manifest, audit record, and normal runner job record are missing. No
+rollback was run. The exact non-executable plan is
+`remote/config/design-write-v3-exact-conditional-rollback-plan.json`, SHA-256
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`; it is not deployed and
+requires separate explicit approval before the fixed target overwrite.
+
+The separately approved exact rollback attempt used run ID
+`38cfdbf3-ae92-470b-bf38-6789887a3ae9`. Plan and forensic hashes and all three tree fingerprints
+passed before execution. The worker then failed before starting Virtuoso because
+`.cadence_mcp/write-rollback-v3` did not exist, so its child runtime could not be created. No OA
+operation, manifest, or audit append occurred. Post-failure fingerprints exactly matched the
+preflight values. The repository worker and deploy layout have been corrected to create only that
+bounded mode-700 evidence root. Do not deploy and retry the corrected worker without a new explicit
+approval; V3 remains in its pre-rollback state.
+
+The user then supplied that separate approval for corrected commit
+`77c1dcac9c96ab909146128fb92de9f9e0813806`, bound to plan SHA-256
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`. Runner 0.15.0 was
+redeployed and exactly one fresh execution, `575356ae-1853-409f-a913-25c1ba9038a8`, rechecked every
+precondition and completed as `V3_ROLLBACK_VERIFIED`. It restored the fixed V3 target from the
+fixed V3 backup with exactly two expected property transitions: `mcpMutationTest` was removed and
+`schGeometryLastUpdated` changed from `107169` to `107168`. Topology remained 35/14/8, all logical
+structure hashes were unchanged, the final target property hash matched the backup, and Source and
+backup tree fingerprints were unchanged. All 15 acceptance criteria passed.
+
+The immutable manifest is
+`.cadence_mcp/write-rollback-v3/575356ae-1853-409f-a913-25c1ba9038a8/rollback-manifest.json`
+(mode 400, SHA-256 `77c92d1bd0bf7c68666c60cceb630ad66945ece402d4f36271a24eb6078aac34`). The audit file
+`.cadence_mcp/audit/v3-rollback-events.jsonl` is mode 600 and contained exactly 14 records for this
+run (verification-time SHA-256
+`4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f`). Preserve all V1/V2/V3
+objects and evidence. Do not start V4, create a tag, or create a release without a separately
+reviewed V4 plan and explicit approval; the failed V3 validation is not converted into a release
+PASS by its successful recovery.
+
+The next clean-validation proposal is checked in at
+`remote/config/design-write-v4-plan.json`, SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It uses only the new fixed
+V4 target and backup names, preserves every V1/V2/V3 cellview, and contains 18 fixed stages and 18
+acceptance criteria. It distinguishes the proposed one-property semantic mutation from the bounded
+Cadence-maintained `schGeometryLastUpdated` integer side effect discovered during V3. The asset is
+planning-only: it has no confirmation token and is absent from the runner and deployment manifest.
+Implementation and execution remained prohibited until a separate approval was explicitly bound to
+this raw plan SHA-256.
+
+That approval was later provided. Runner 0.16.0 deployed the fixed operator-only V4 command and
+executed it exactly once as `e636eeba-80dc-4280-b2ea-4f23b0cd1139`. The run completed
+`V4_CLEAN_VALIDATION_VERIFIED` with all 18 criteria passing. The apply changed only the approved
+`mcpMutationTest=validated-v1` semantic property and the bounded OA-maintained
+`schGeometryLastUpdated` integer from `107168` to `107169`. Instance, net, terminal, and topology
+hashes remained unchanged. Rollback restored the target from the fixed V4 backup; the final target
+and backup share property summary SHA-256
+`cf24d8a4f8434b2208afa48a4b555c322f29470b7a8632ded90037b3221374a4`.
+
+The mode-400 manifest SHA-256 is
+`e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`; the mode-600 audit had
+exactly 18 records for the run and verification-time SHA-256
+`befbe1e5ebdf253c892085214881e829209720990f4f3a37b70232f8c909ac35`. Independent post-checks
+found no Virtuoso process or blocking artifact and reproduced every protected tree fingerprint.
+Do not rerun, clean up, merge, tag, or release without the next explicit authorization.
+
+Packaging lifecycle is independently verifiable with:
+
+```powershell
+.\scripts\verify-package.ps1
+```
+
+The script builds, installs, checks, and uninstalls the current `0.1.0` package entirely in a
+validated temporary directory. `v1.0.0` remains prohibited until a clean copy-only sequence,
+dry-run/apply equivalence, backup restore, and design immutability checks pass.

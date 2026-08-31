@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.7.0
+RUNNER_VERSION=0.16.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -17,9 +17,25 @@ DISCOVERY_RUNTIME="$CADENCE_MCP_ROOT/discovery-runtime"
 PROFILE_HELPER="$CADENCE_MCP_ROOT/py26/profile_json.py"
 FIXTURE_PROFILE="$CADENCE_MCP_ROOT/profiles/fixture-rc-transient/profile.json"
 ACTUAL_PROFILE="$CADENCE_MCP_ROOT/profiles/actual-differential-amplifier-tb2-transient/profile.json"
+WRITE_POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
+WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
+WRITE_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-validation.sh"
+WRITE_PREFLIGHT="$CADENCE_MCP_ROOT/write/design-write-readonly-preflight.il"
+V2_RECOVERY_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v2-recovery.sh"
+V3_PLAN="$CADENCE_MCP_ROOT/config/design-write-v3-plan.json"
+V3_HELPER="$CADENCE_MCP_ROOT/py26/v3_validation_json.py"
+V3_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-validation.sh"
+V3_FORENSIC_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-forensic.sh"
+V3_DEEP_FORENSIC_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-deep-forensic.sh"
+V3_EXACT_ROLLBACK_PLAN="$CADENCE_MCP_ROOT/config/design-write-v3-exact-conditional-rollback-plan.json"
+V3_EXACT_ROLLBACK_HELPER="$CADENCE_MCP_ROOT/py26/v3_exact_rollback_json.py"
+V3_EXACT_ROLLBACK_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-exact-rollback.sh"
+V4_PLAN="$CADENCE_MCP_ROOT/config/design-write-v4-plan.json"
+V4_HELPER="$CADENCE_MCP_ROOT/py26/v4_validation_json.py"
+V4_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v4-validation.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|design-write-v3-exact-rollback|design-write-v4-plan-check|design-write-v4-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -293,6 +309,114 @@ runner_discovery_health() {
     printf '%s\n' '{"isolated_runtime":true,"ocean_headless":true,"skill_headless":true}'
 }
 
+runner_design_write_plan() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" plan
+}
+
+runner_design_write_preflight() {
+    [ "$#" -eq 0 ] || usage
+    [ -x "$VIRTUOSO_BIN" ] || cadence_mcp_fail "Virtuoso is unavailable" 69
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" source-check \
+        || cadence_mcp_fail "source master or artifact check failed" 65
+    runtime="$CADENCE_MCP_ROOT/write-validation/preflight"
+    mkdir -p "$runtime" || cadence_mcp_fail "preflight runtime creation failed" 73
+    chmod 700 "$runtime"
+    (
+        cd /home/buet/cds_work || exit 73
+        timeout 60 "$VIRTUOSO_BIN" -nograph -nocdsinit -restore "$WRITE_PREFLIGHT" \
+            -log "$runtime/skill.log" > "$runtime/skill.stdout" 2> "$runtime/skill.stderr"
+    ) || cadence_mcp_fail "fixed write preflight failed" 69
+    grep -q '^MCP_WRITE_PREFLIGHT|true|' "$runtime/skill.stdout" \
+        || cadence_mcp_fail "write preflight marker missing" 69
+    grep '^MCP_WRITE_PREFLIGHT|true|' "$runtime/skill.stdout" | tail -n 1
+}
+
+runner_design_write_validate() {
+    [ "$#" -eq 3 ] || usage
+    validation_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$validation_id" || cadence_mcp_fail "invalid validation id" 64
+    case "$origin" in mcp|operator) ;; *) cadence_mcp_fail "invalid validation origin" 64 ;; esac
+    "$CADENCE_MCP_PYTHON" "$WRITE_HELPER" "$WRITE_POLICY" confirm "$confirmation" \
+        || cadence_mcp_fail "write confirmation rejected" 64
+    "$WRITE_WORKER" "$validation_id" "$origin"
+}
+
+runner_design_write_v2_forensic() {
+    [ "$#" -eq 0 ] || usage
+    "$V2_RECOVERY_WORKER" forensic
+}
+
+runner_design_write_v2_property_diff() {
+    [ "$#" -eq 0 ] || usage
+    "$V2_RECOVERY_WORKER" property-diff
+}
+
+runner_design_write_v2_rollback() {
+    [ "$#" -eq 1 ] || usage
+    [ "$1" = "APPROVE_MCP_V2_BACKUP_ROLLBACK" ] \
+        || cadence_mcp_fail "V2 rollback confirmation rejected" 64
+    "$V2_RECOVERY_WORKER" rollback
+}
+
+runner_design_write_v3_plan_check() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$V3_HELPER" "$V3_PLAN" plan-check
+}
+
+runner_design_write_v3_validate() {
+    [ "$#" -eq 3 ] || usage
+    validation_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$validation_id" || cadence_mcp_fail "invalid V3 validation id" 64
+    case "$origin" in mcp|operator) ;; *) cadence_mcp_fail "invalid V3 validation origin" 64 ;; esac
+    "$CADENCE_MCP_PYTHON" "$V3_HELPER" "$V3_PLAN" confirm "$confirmation" \
+        || cadence_mcp_fail "V3 confirmation rejected" 64
+    "$V3_WORKER" "$validation_id" "$origin"
+}
+
+runner_design_write_v3_property_diff() {
+    [ "$#" -eq 0 ] || usage
+    "$V3_FORENSIC_WORKER"
+}
+
+runner_design_write_v3_deep_forensic() {
+    [ "$#" -eq 0 ] || usage
+    "$V3_DEEP_FORENSIC_WORKER"
+}
+
+runner_design_write_v3_exact_rollback() {
+    [ "$#" -eq 3 ] || usage
+    run_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$run_id" || cadence_mcp_fail "invalid rollback run id" 64
+    [ "$origin" = "operator" ] || cadence_mcp_fail "invalid rollback origin" 64
+    "$CADENCE_MCP_PYTHON" "$V3_EXACT_ROLLBACK_HELPER" "$V3_EXACT_ROLLBACK_PLAN" \
+        confirm "$confirmation" || cadence_mcp_fail "exact rollback confirmation rejected" 64
+    "$V3_EXACT_ROLLBACK_WORKER" "$run_id" "$origin"
+}
+
+runner_design_write_v4_plan_check() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$V4_HELPER" "$V4_PLAN" plan-check
+}
+
+runner_design_write_v4_validate() {
+    [ "$#" -eq 3 ] || usage
+    run_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$run_id" || cadence_mcp_fail "invalid V4 run id" 64
+    [ "$origin" = "operator" ] || cadence_mcp_fail "invalid V4 origin" 64
+    "$CADENCE_MCP_PYTHON" "$V4_HELPER" "$V4_PLAN" confirm "$confirmation" \
+        || cadence_mcp_fail "V4 confirmation rejected" 64
+    "$V4_WORKER" "$run_id" "$origin"
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -322,6 +446,19 @@ case "$command_name" in
     list-libraries) runner_list_libraries "$@" ;;
     list-cells) runner_list_cells "$@" ;;
     inspect-cellview) runner_inspect_cellview "$@" ;;
+    design-write-plan) runner_design_write_plan "$@" ;;
+    design-write-preflight) runner_design_write_preflight "$@" ;;
+    design-write-validate) runner_design_write_validate "$@" ;;
+    design-write-v2-forensic) runner_design_write_v2_forensic "$@" ;;
+    design-write-v2-property-diff) runner_design_write_v2_property_diff "$@" ;;
+    design-write-v2-rollback) runner_design_write_v2_rollback "$@" ;;
+    design-write-v3-plan-check) runner_design_write_v3_plan_check "$@" ;;
+    design-write-v3-validate) runner_design_write_v3_validate "$@" ;;
+    design-write-v3-property-diff) runner_design_write_v3_property_diff "$@" ;;
+    design-write-v3-deep-forensic) runner_design_write_v3_deep_forensic "$@" ;;
+    design-write-v3-exact-rollback) runner_design_write_v3_exact_rollback "$@" ;;
+    design-write-v4-plan-check) runner_design_write_v4_plan_check "$@" ;;
+    design-write-v4-validate) runner_design_write_v4_validate "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;

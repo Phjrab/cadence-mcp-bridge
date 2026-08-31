@@ -1,0 +1,121 @@
+{
+  "plan_version": 2,
+  "plan_id": "mcp-cellview-property-v3-exact-conditional-rollback",
+  "status": "awaiting_separate_explicit_rollback_approval",
+  "execution_enabled": false,
+  "required_confirmation": null,
+  "forensic_classification": "SAFE_ROLLBACK_CANDIDATE",
+  "forensic_validation_id": "0b9bf93c-11e9-416f-9e4a-69b1060fbd8e",
+  "forensic_report_path": "/home/buet/cds_work/.cadence_mcp/write-validation-v3/0b9bf93c-11e9-416f-9e4a-69b1060fbd8e/deep-forensic-v1/v3-deep-forensic-report.json",
+  "forensic_report_sha256": "6329eafc458098b744a40b70fc0a1a0d876af57c326d2d79e854e1ceaeb9b02f",
+  "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+  "target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3/schematic",
+  "backup": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic",
+  "operation": "restore_fixed_v3_target_from_fixed_v3_backup",
+  "target_overwrite_required": true,
+  "deletion_required": false,
+  "fallback_name_allowed": false,
+  "automatic_retry_allowed": false,
+  "current_tree_fingerprints": {
+    "source": "f7010facc4304367497cb9a385fe21b39c4c6180d6489e8d42691348d4d85563",
+    "target": "7fbd8c7a0f1849428af8ac5fe7851440bd8a5e80a81ebfb3c05239d7f2069e8c",
+    "backup": "81790c8bd5e1e9e348e35a1310583016774363231bae68f08f1c0c0454638ab9"
+  },
+  "expected_structural_fingerprints": {
+    "topology": {
+      "instances": 35,
+      "nets": 14,
+      "terminals": 8
+    },
+    "instance_summary_sha256": "1353e7eb382d40162e98e08840e869618b4cf284650adb7ab52f10dc4e1bb414",
+    "net_summary_sha256": "15b53f1b99da90078793471c9af9dd91963262924184050d7fedabcd541dbda4",
+    "terminal_summary_sha256": "044cc55d412451c4c38ed7c8ee18f1adf3faf920b39478dc5173c13094620580",
+    "target_property_summary_before_sha256": "19a46f90904ad90a1adf44443f843da682246ae25b350aea6dd33d1af8617242",
+    "target_property_summary_after_sha256": "cf24d8a4f8434b2208afa48a4b555c322f29470b7a8632ded90037b3221374a4",
+    "backup_property_summary_sha256": "cf24d8a4f8434b2208afa48a4b555c322f29470b7a8632ded90037b3221374a4"
+  },
+  "exact_expected_property_changes": [
+    {
+      "name": "mcpMutationTest",
+      "object_scope": "cellview",
+      "before_present": true,
+      "before_type": "string",
+      "before_value": "validated-v1",
+      "after_present": false,
+      "after_type": null,
+      "after_value": null,
+      "relationship": "approved_mutation_removed_by_baseline_restore"
+    },
+    {
+      "name": "schGeometryLastUpdated",
+      "object_scope": "cellview",
+      "before_present": true,
+      "before_type": "int",
+      "before_value": 107169,
+      "after_present": true,
+      "after_type": "int",
+      "after_value": 107168,
+      "relationship": "baseline_property_restored_from_backup"
+    }
+  ],
+  "protected_read_only_objects": [
+    "MyDesignLib/Differential_Amplifier_TB2/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic"
+  ],
+  "preconditions": [
+    "the raw plan SHA-256 and forensic report SHA-256 match separately reviewed values",
+    "a new exact confirmation bound to this raw plan SHA-256 has been explicitly approved",
+    "no Virtuoso process, OpenAccess lock, panic artifact, or recovery artifact is active on the three fixed cellviews",
+    "the source, target, and backup tree fingerprints exactly match current_tree_fingerprints",
+    "all three cellviews open read-only and retain the fixed structural fingerprints",
+    "the complete target-to-backup property diff still contains exactly the two exact_expected_property_changes",
+    "the backup contains neither mcpMutationTest nor any unexplained difference from the source baseline",
+    "a non-mutating dry-run predicts the exact target property-summary transition recorded by this plan"
+  ],
+  "conditional_sequence": [
+    "verify_plan_sha256",
+    "verify_forensic_report_sha256",
+    "verify_no_active_process_or_blocking_artifact",
+    "fingerprint_fixed_source_target_backup",
+    "read_only_reverify_structural_and_exact_property_state",
+    "non_mutating_fixed_backup_restore_dry_run",
+    "verify_dry_run_exactly_matches_two_expected_property_changes",
+    "explicit_plan_sha_bound_confirmation_gate",
+    "restore_only_fixed_v3_target_from_fixed_v3_backup",
+    "read_only_reopen_and_verify_target_equals_backup",
+    "verify_mcpMutationTest_absent_and_baseline_property_restored",
+    "verify_source_and_backup_tree_fingerprints_unchanged",
+    "write_new_bounded_recovery_manifest",
+    "append_new_bounded_recovery_audit_records"
+  ],
+  "acceptance_criteria": [
+    "no step executes unless all preconditions pass",
+    "the only writable object is the exact fixed V3 target",
+    "the fixed V3 backup is the only rollback source and remains unchanged",
+    "the source remains read-only and its tree fingerprint is unchanged",
+    "no deletion, rename, fallback destination, cleanup, or automatic retry occurs",
+    "target topology remains 35 instances, 14 nets, and 8 terminals",
+    "target instance, net, and terminal summary hashes remain unchanged",
+    "mcpMutationTest changes from string validated-v1 to absent",
+    "schGeometryLastUpdated changes from int 107169 to int 107168",
+    "no other target property changes",
+    "target property-summary hash equals the fixed backup property-summary hash after restore",
+    "target and backup open read-only and compare exactly equal after restore",
+    "the recovery manifest is newly created, immutable for the run, and records every stage",
+    "the recovery audit contains bounded new records for every completed stage",
+    "any failure stops closed without cleanup, retry, or release-gate advancement"
+  ],
+  "fail_closed": {
+    "on_precondition_failure": "stop_without_write",
+    "on_apply_or_verification_failure": "stop_without_retry_or_cleanup_and_preserve_evidence",
+    "release_gate_after_failure": "FAILED"
+  },
+  "post_recovery_next_step": {
+    "clean_validation_required": true,
+    "reuse_v3_names": false,
+    "new_destination_required": true,
+    "new_plan_and_separate_mutation_approval_required": true,
+    "suggested_generation": "V4"
+  },
+  "release_gate_enabled": false
+}

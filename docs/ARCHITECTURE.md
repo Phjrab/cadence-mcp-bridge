@@ -1,15 +1,21 @@
 # Architecture
 
-## Scope at WP-10
+## Scope at WP-11 checkpoint
 
 WP-10 retains the versioned simulation profile registry and adds a separate local, versioned ADC
 measurement-contract registry. Only the non-proprietary `adc-synthetic-v1` contract exists; the
 actual ADE L profile is not treated as an ADC and no actual-circuit measurement is inferred.
+The controlled-write boundary fixes one approved source, a dedicated work library, one semantic
+property mutation, and generation-specific targets/backups. Historical V1/V2/V3 evidence remains
+preserved. Runner 0.16.0 completed the separately approved V4 clean validation against new fixed
+names, explicitly bounded the Cadence-maintained `schGeometryLastUpdated` side effect, restored the
+V4 target from its backup, and proved Source/PDK/prior-evidence immutability. No v1 tag or release
+is permitted until the reviewed branch is integrated and the remaining release checklist passes.
 
 ## Layer boundaries
 
 ```text
-MCPServer v2 stdio adapter (twenty allowlisted tools)
+MCPServer v2 stdio adapter (twenty-two allowlisted tools)
           |
           v
 CadenceService (transport-independent orchestration)
@@ -27,6 +33,10 @@ measurement engine            |
 - `profiles.py` owns the reviewed local profile contract and rejects unknown profiles/corners.
 - `measurement_models.py` defines bounded measurement inputs, structured metrics, and manifests.
 - `measurements.py` owns the deterministic synthetic ADC calculations and closed contract registry.
+- `write_policy.py` permanently classifies PDK/shared/source libraries as non-writable and makes
+  only the fixed `MCP_WorkLib` contract eligible; the remote target-existence check remains the
+  final fail-closed gate.
+- `write_models.py` defines the immutable plan and validation-result contracts.
 - `errors.py` maps failures to stable, sanitized envelopes.
 - `sanitization.py` removes credential, license, and Windows-profile details and bounds output.
 - `service.py` separates application behavior from the SSH and MCP adapters.
@@ -99,8 +109,11 @@ result responses carry explicit bounds and truncation metadata, and known secret
 before crossing the MCP boundary.
 
 The Windows process may write local runtime metadata only in bounded application locations.
-Before WP-11, remote writes are limited to `/home/buet/cds_work/.cadence_mcp`; design data,
-PDKs, shared libraries, and CentOS system files remain read-only.
+Remote application writes remain limited to `/home/buet/cds_work/.cadence_mcp`. The user separately
+approved `/home/buet/cds_work/MCP_WorkLib`, preservation of all V1/V2/V3 evidence, and one
+plan-bound V4 clean validation. Only the new V4 target and its backup were writable during that
+sequence; rollback left the target logically equal to the backup baseline. PDKs, source/shared
+libraries, historical evidence, and CentOS system files remain read-only.
 
 ## Data contracts
 

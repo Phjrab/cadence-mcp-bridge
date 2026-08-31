@@ -28,6 +28,83 @@ from cadence_mcp_bridge.models import (
 )
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
+
+
+def write_plan() -> DesignWritePlan:
+    return DesignWritePlan(
+        policy_version=2,
+        plan_id="mcp-cellview-property-v2",
+        plan_sha256="a" * 64,
+        source="MyDesignLib/Differential_Amplifier_TB2/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        backup="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        preserved_target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        operation="set_cellview_property",
+        property_name="mcpMutationTest",
+        old_value=None,
+        proposed_value="validated-v1",
+        affected_objects=1,
+        original_library_mutations=0,
+        destructive=False,
+        source_exists=True,
+        source_master_authoritative=True,
+        source_artifact_present=False,
+        target_exists=False,
+        backup_exists=False,
+        preserved_target_exists=True,
+        ready=True,
+        confirmation="APPROVE_MCP_WRITE_VALIDATED_V2",
+    )
+
+
+def write_result(validation_id: UUID) -> DesignWriteValidationResult:
+    return DesignWriteValidationResult(
+        validation_id=validation_id,
+        plan_id="mcp-cellview-property-v2",
+        plan_sha256="a" * 64,
+        source="MyDesignLib/Differential_Amplifier_TB2/schematic",
+        target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        backup="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        preserved_target="MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        operation="set_cellview_property",
+        property_name="mcpMutationTest",
+        old_value=None,
+        proposed_value="validated-v1",
+        affected_objects=1,
+        original_library_mutations=0,
+        destructive=False,
+        copy_verified=True,
+        dry_run_unchanged=True,
+        backup_verified=True,
+        apply_verified=True,
+        rollback_verified=True,
+        source_unchanged=True,
+        preserved_target_unchanged=True,
+        topology_unchanged=True,
+        baseline_fingerprint="a" * 64,
+        rollback_fingerprint="a" * 64,
+        audit_recorded=True,
+        sequence=(
+            "source_verify",
+            "copy",
+            "baseline",
+            "dry_run",
+            "dry_run_unchanged",
+            "backup",
+            "apply",
+            "verify_apply",
+            "source_unchanged_before_rollback",
+            "rollback",
+            "verify_rollback",
+            "source_unchanged",
+            "complete",
+        ),
+    )
 
 
 class FakeBackend:
@@ -96,6 +173,15 @@ class FakeBackend:
     ) -> JobStatus:
         return self._status(job_id).model_copy(update={"profile": profile_id})
 
+    async def design_write_plan(self) -> DesignWritePlan:
+        return write_plan()
+
+    async def execute_design_write_validation(
+        self, validation_id: UUID, confirmation: WriteConfirmation
+    ) -> DesignWriteValidationResult:
+        assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V2"
+        return write_result(validation_id)
+
     @staticmethod
     def _status(job_id: UUID, state: JobState = JobState.QUEUED) -> JobStatus:
         now = datetime.now(UTC)
@@ -137,12 +223,19 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_measure_linearity",
         "cadence_compare_corner_results",
         "cadence_summarize_monte_carlo",
+        "cadence_design_write_plan",
+        "cadence_execute_design_write_validation",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
     assert tools["cadence_list_libraries"].input_schema["properties"] == {}
     assert tools["cadence_list_profiles"].input_schema["properties"] == {}
+    assert tools["cadence_design_write_plan"].input_schema["properties"] == {}
+    confirmation_schema = tools["cadence_execute_design_write_validation"].input_schema[
+        "properties"
+    ]["confirmation"]
+    assert "APPROVE_MCP_WRITE_VALIDATED_V2" in str(confirmation_schema)
     assert tools["cadence_get_profile"].input_schema["properties"]["profile_id"]["enum"] == [
         "fixture-rc-transient",
         "actual-differential-amplifier-tb2-transient",
@@ -192,13 +285,17 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_measure_linearity",
         "cadence_compare_corner_results",
         "cadence_summarize_monte_carlo",
+        "cadence_design_write_plan",
     }
     destructive = {
         name
         for name, tool in tools.items()
         if tool.annotations is not None and tool.annotations.destructive_hint
     }
-    assert destructive == {"cadence_cancel_job"}
+    assert destructive == {
+        "cadence_cancel_job",
+        "cadence_execute_design_write_validation",
+    }
     assert tools["cadence_health"].annotations is not None
     assert tools["cadence_health"].annotations.read_only_hint is True
     assert tools["cadence_submit_smoke"].annotations is not None
@@ -414,6 +511,26 @@ async def test_measurement_tool_rejects_request_without_contract() -> None:
         )
 
     assert result.is_error
+
+
+@pytest.mark.asyncio
+async def test_in_memory_client_calls_fixed_design_write_tools() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+
+    async with Client(server) as client:
+        plan = await client.call_tool("cadence_design_write_plan")
+        result = await client.call_tool(
+            "cadence_execute_design_write_validation",
+            {"confirmation": "APPROVE_MCP_WRITE_VALIDATED_V2"},
+        )
+
+    assert not plan.is_error
+    assert not result.is_error
+    assert cast(dict[str, Any], plan.structured_content)["ready"] is True
+    payload = cast(dict[str, Any], result.structured_content)
+    assert payload["apply_verified"] is True
+    assert payload["rollback_verified"] is True
+    assert payload["source_unchanged"] is True
 
 
 @pytest.mark.asyncio

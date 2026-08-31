@@ -46,6 +46,11 @@ from cadence_mcp_bridge.models import (
 )
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
+from cadence_mcp_bridge.write_models import (
+    DesignWritePlan,
+    DesignWriteValidationResult,
+    WriteConfirmation,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -143,6 +148,12 @@ _CANCEL = ToolAnnotations(
     read_only_hint=False,
     destructive_hint=True,
     idempotent_hint=True,
+    open_world_hint=False,
+)
+_WRITE_VALIDATION = ToolAnnotations(
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=False,
     open_world_hint=False,
 )
 
@@ -415,6 +426,33 @@ def create_server(service: CadenceService) -> MCPServer:
         request: MonteCarloRequest,
     ) -> Annotated[CallToolResult, MonteCarloSummary]:
         return await _stable_result(service.summarize_monte_carlo(request))
+
+    @server.tool(
+        name="cadence_design_write_plan",
+        description=(
+            "Read the one fixed copy-based property mutation plan and current target readiness; "
+            "this performs no OA database write."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_design_write_plan() -> Annotated[CallToolResult, DesignWritePlan]:
+        return await _stable_result(service.design_write_plan())
+
+    @server.tool(
+        name="cadence_execute_design_write_validation",
+        description=(
+            "Execute the approved one-time copy, dry-run, backup, fixed property apply, exact "
+            "verification, and rollback sequence. Requires the exact reviewed confirmation and "
+            "is destructive/state-changing."
+        ),
+        annotations=_WRITE_VALIDATION,
+        structured_output=True,
+    )
+    async def cadence_execute_design_write_validation(
+        confirmation: WriteConfirmation,
+    ) -> Annotated[CallToolResult, DesignWriteValidationResult]:
+        return await _stable_result(service.execute_design_write_validation(confirmation))
 
     return server
 

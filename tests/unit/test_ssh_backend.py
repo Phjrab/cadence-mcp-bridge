@@ -275,6 +275,106 @@ async def test_submit_actual_profile_uses_no_path_or_variable_arguments(
 
 
 @pytest.mark.asyncio
+async def test_design_write_plan_uses_no_caller_arguments(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = {
+        "policy_version": 2,
+        "plan_id": "mcp-cellview-property-v2",
+        "plan_sha256": "a" * 64,
+        "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+        "target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        "backup": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        "preserved_target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        "operation": "set_cellview_property",
+        "property_name": "mcpMutationTest",
+        "old_value": None,
+        "proposed_value": "validated-v1",
+        "affected_objects": 1,
+        "original_library_mutations": 0,
+        "destructive": False,
+        "source_exists": True,
+        "source_master_authoritative": True,
+        "source_artifact_present": False,
+        "target_exists": False,
+        "backup_exists": False,
+        "preserved_target_exists": True,
+        "ready": True,
+        "confirmation": "APPROVE_MCP_WRITE_VALIDATED_V2",
+    }
+    run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    plan = await backend.design_write_plan()
+
+    assert plan.ready is True
+    assert run.call_args.args[0][-1:] == ["design-write-plan"]
+
+
+@pytest.mark.asyncio
+async def test_design_write_validation_passes_only_uuid_confirmation_and_origin(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    validation_id = uuid4()
+    payload = {
+        "validation_id": str(validation_id),
+        "plan_id": "mcp-cellview-property-v2",
+        "plan_sha256": "a" * 64,
+        "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+        "target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        "backup": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        "preserved_target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+        "operation": "set_cellview_property",
+        "property_name": "mcpMutationTest",
+        "old_value": None,
+        "proposed_value": "validated-v1",
+        "affected_objects": 1,
+        "original_library_mutations": 0,
+        "destructive": False,
+        "copy_verified": True,
+        "dry_run_unchanged": True,
+        "backup_verified": True,
+        "apply_verified": True,
+        "rollback_verified": True,
+        "source_unchanged": True,
+        "preserved_target_unchanged": True,
+        "topology_unchanged": True,
+        "baseline_fingerprint": "a" * 64,
+        "rollback_fingerprint": "a" * 64,
+        "audit_recorded": True,
+        "sequence": [
+            "source_verify",
+            "copy",
+            "baseline",
+            "dry_run",
+            "dry_run_unchanged",
+            "backup",
+            "apply",
+            "verify_apply",
+            "source_unchanged_before_rollback",
+            "rollback",
+            "verify_rollback",
+            "source_unchanged",
+            "complete",
+        ],
+    }
+    run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    result = await backend.execute_design_write_validation(
+        validation_id, "APPROVE_MCP_WRITE_VALIDATED_V2"
+    )
+
+    assert result.rollback_verified is True
+    assert run.call_args.args[0][-4:] == [
+        "design-write-validate",
+        str(validation_id),
+        "APPROVE_MCP_WRITE_VALIDATED_V2",
+        "mcp",
+    ]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("profile_id", ["../x", "x;id", "$(id)", "--help"])
 async def test_malicious_profile_ids_are_rejected_before_subprocess(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch, profile_id: str
@@ -361,6 +461,8 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
 
     assert public_methods == {
         "cancel",
+        "design_write_plan",
+        "execute_design_write_validation",
         "health",
         "inspect_cellview",
         "list_cells",

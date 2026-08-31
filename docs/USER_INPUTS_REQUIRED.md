@@ -36,3 +36,21 @@ one can be added, the user must provide and approve:
 
 These inputs must form a new versioned, reviewed contract. None will be inferred from the synthetic
 fixture or from the existing differential-amplifier ADE profile.
+
+## WP-11 controlled design write — validation resolved
+
+The user supplied the complete fixed write contract and actual-apply approval on 2026-08-28.
+`MCP_WorkLib` was created and registered, and the approved source copy was created at
+`MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic`. Validation then failed before dry-run
+completion because of a legacy IC6.1.5 property-query API mismatch. The approved property was not
+applied, and no backup or rollback stage ran.
+
+V1/V2/V3 attempts and recovery evidence remain preserved. The user subsequently approved immutable
+V4 plan SHA-256 `c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66` and one fixed execution.
+Run `e636eeba-80dc-4280-b2ea-4f23b0cd1139` passed all 18 criteria, restored the V4 target from its
+fixed backup, and proved Source, PDK, and all prior evidence unchanged. No controlled-write domain
+input remains outstanding.
+
+The remaining user decision is repository/release authorization: review the WP-11 feature branch,
+explicitly authorize its PR merge when satisfied, and separately authorize the final `v1.0.0`
+version/tag/private-release step. No tag or release has been created.

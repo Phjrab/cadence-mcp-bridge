@@ -1,0 +1,34 @@
+{
+  "policy_version": 2,
+  "plan_id": "mcp-cellview-property-v2",
+  "source": {
+    "library": "MyDesignLib",
+    "cell": "Differential_Amplifier_TB2",
+    "view": "schematic",
+    "path": "/home/buet/cds_work/MyDesignLib/Differential_Amplifier_TB2/schematic"
+  },
+  "target": {
+    "library": "MCP_WorkLib",
+    "library_path": "/home/buet/cds_work/MCP_WorkLib",
+    "cell": "Differential_Amplifier_TB2_MCP_TEST_V2",
+    "view": "schematic"
+  },
+  "backup_cell": "Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP",
+  "preserved_target": {
+    "library": "MCP_WorkLib",
+    "cell": "Differential_Amplifier_TB2_MCP_TEST",
+    "view": "schematic",
+    "path": "/home/buet/cds_work/MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic"
+  },
+  "operation": "set_cellview_property",
+  "property": {
+    "name": "mcpMutationTest",
+    "type": "string",
+    "old_value": null,
+    "proposed_value": "validated-v1"
+  },
+  "affected_objects": 1,
+  "original_library_mutations": 0,
+  "destructive": false,
+  "confirmation": "APPROVE_MCP_WRITE_VALIDATED_V2"
+}

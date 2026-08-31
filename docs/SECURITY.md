@@ -2,8 +2,9 @@
 
 ## Security objective
 
-The bridge provides a small, reviewable path from twenty MCP tools to fixed simulation profiles
-and three metadata-only design discovery operations. It is not a general remote
+The bridge provides a small, reviewable path from twenty-two MCP tools to fixed simulation profiles,
+three metadata-only design discovery operations, one fixed write plan, and one confirmation-gated
+validation operation. It is not a general remote
 administration, file access, OCEAN, SKILL, netlist, or shell interface. Every boundary fails
 closed when identity, path containment, allowlist membership, process ownership, payload shape,
 or output limits cannot be proved.
@@ -15,20 +16,21 @@ files, PDK models, proprietary netlists, full PSF/raw data, design libraries, un
 and the integrity and availability of the CentOS/Cadence installation. None may be committed,
 placed in audit records, or returned through MCP.
 
-The only remotely writable application area before WP-11 is:
+The remotely writable application area is:
 
 ```text
 /home/buet/cds_work/.cadence_mcp
 ```
 
-The Cadence installation, PDKs, shared libraries, design data, CentOS system files, and all paths
-outside that root remain read-only and outside the runner contract.
+The user separately approved `/home/buet/cds_work/MCP_WorkLib` for one exact copy-based validation.
+The Cadence installation, PDKs, shared libraries, source design data, CentOS system files, and all
+other paths remain read-only and outside the runner contract.
 
 ## Trust boundaries and data flow
 
 ```text
 model/user
-  -> twenty typed MCP tools
+  -> twenty-two typed MCP tools
   -> CadenceService (UUID ownership and input validation)
   -> local bounded ADC measurement engine, or
      OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
@@ -74,6 +76,8 @@ fixed jobs root.
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
+| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | V4 completed once under plan-bound approval; its target/backup and all earlier evidence must now remain preserved |
+| Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence and explicit release authorization | controlled-write evidence passes, but branch integration, versioning, tag, and private release remain pending |
 
 ## Origin and audit contract
 
@@ -140,6 +144,88 @@ accepts no arguments and cannot delete. It examines only canonical UUID director
 parent is the fixed jobs root and skips symlinks and unrelated files. Automatic or destructive
 remote cleanup, force-push, and destructive remote repair are prohibited. Any future deletion
 requires a separate reviewed change and explicit operator approval.
+
+## Controlled-write gate
+
+`src/cadence_mcp_bridge/write_policy.py` is intentionally fail-closed. `gpdk090`, `analogLib`,
+`basic`, `MyDesignLib`, and `MyFirstDesign` are non-writable. Only `MCP_WorkLib` and the exact
+`mcpMutationTest=validated-v1` contract are eligible. The runner accepts no caller path, library,
+cell, view, property, value, or script text. The V2 contract fingerprints the preserved V1 target,
+rejects an existing V2 destination or backup, requires `master.tag` to select the regular `sch.oa`,
+enforces the source topology `35/14/8`, and refuses active OA locks plus panic/recovery artifacts.
+A user-verified, non-authoritative source `sch.oa-` is preserved and covered by the source tree
+fingerprint rather than treated as an active lock. The real V2 run reached the approved property
+apply marker but timed out before verification and rollback; both V2 names now exist, so retry is
+fail-closed. A later fixed read-only inspection proved that `schGeometryLastUpdated` has the same
+`int` type and presence but unequal values, while `mcpMutationTest` exists only in the target as
+`string`. No property value was returned or stored. Source, V1, both V2 views, and `gpdk090` were
+unchanged, so the investigation is read-only, but the conditionally approved restore was not
+invoked. The reviewed V3 plan SHA-256 remains
+`3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
+criteria remain present. Runner 0.12.0 binds a separate operator-only command to that raw plan
+hash, fixed V3 names, fixed 300-second limit, and an exact confirmation. It fingerprints Source,
+V1, both V2 views, and `gpdk090` before and after. Its first invocation failed closed before V3
+copy because the preserved V1 `sch.oa-` was treated as blocking; V1 `master.tag` was then verified
+to select regular `sch.oa`, and the gate was corrected to preserve the auxiliary file while still
+rejecting locks and panic/recovery artifacts. A separately approved single corrected invocation
+then passed copy, baseline, non-mutating dry-run, backup, and the approved property apply, but
+failed exact-diff verification because a baseline property also changed. Rollback and audit were
+not reached. V3 target and backup now exist as preserved evidence, while Source, V1 including
+`sch.oa-`, both V2 views, and `gpdk090` retained their exact tree fingerprints. No automatic retry,
+tag, or release occurred. Runner 0.13.0 subsequently performed an approved fixed read-only
+property-diff inspection. It returned no values and proved exactly two differences:
+`schGeometryLastUpdated` has equal presence/type but unequal value, and `mcpMutationTest` is absent
+from backup, present as `string` in target, and equal to the fixed approved value. Source, V1, both
+V2 views, both V3 views, and `gpdk090` were unchanged. The resulting conditional recovery plan is
+non-executable, not deployed, and still requires separate explicit approval. No release is allowed.
+See `docs/DESIGN_WRITE_POLICY.md`.
+
+Runner 0.14.0 adds a narrower exact-value forensic command approved for Source, V3 target, and V3
+backup only. It accepts no arguments, opens all three OA cellviews with mode `r`, bounds property
+and structural output, verifies each full tree fingerprint before and after, and writes only a
+mode-600 forensic report below the fixed `.cadence_mcp` evidence directory. It identified the
+complete diff as `mcpMutationTest` (`validated-v1` to absent) and `schGeometryLastUpdated`
+(`107169` to `107168`) without changing any design object. Its exact conditional rollback plan is
+non-executable, not deployed, and has no confirmation token. A separate approval bound to plan
+SHA-256 `eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911` is required before
+any target overwrite. Missing original manifest/audit/job records remain explicitly recorded;
+release remains blocked.
+
+The first plan-authorized rollback invocation failed closed before Virtuoso startup or OA access
+because the fixed rollback evidence parent directory was absent. Post-failure checks proved Source,
+V3 target, and V3 backup tree fingerprints unchanged and found no rollback manifest or audit file.
+The corrected worker can create only the fixed mode-700 `.cadence_mcp/write-rollback-v3` root, but
+automatic deployment or retry is prohibited. The target still contains the two forensic
+differences, and a new explicit approval is required before another write attempt.
+
+After a separate single-retry approval bound to the unchanged plan hash, corrected runner 0.15.0
+was redeployed and run `575356ae-1853-409f-a913-25c1ba9038a8` completed
+`V3_ROLLBACK_VERIFIED`. The only target changes were the plan-fixed removal of
+`mcpMutationTest=validated-v1` and restoration of `schGeometryLastUpdated` from `107169` to
+`107168`. All 15 acceptance criteria passed; topology and logical structure hashes were unchanged,
+the target property hash matched the backup, and Source and backup tree fingerprints remained
+unchanged. The immutable manifest SHA-256 is
+`77c92d1bd0bf7c68666c60cceb630ad66945ece402d4f36271a24eb6078aac34`; the 14-record audit
+file verification-time SHA-256 is
+`4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f`. This recovery authorizes
+no cleanup, V4 write, tag, or release, and the original failed validation evidence remains
+preserved.
+
+The proposed V4 clean-validation plan is a repository-only, non-executable asset with SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It fixes new V4 target and
+backup names, protects Source, PDK, and all V1/V2/V3 evidence, and permits no overwrite, fallback,
+cleanup, or automatic retry. Its 18 acceptance criteria treat `mcpMutationTest` as the sole proposed
+semantic change and `schGeometryLastUpdated` as the only bounded OA metadata side effect, whose
+exact observed transition must be recorded. After separate plan-bound approval, runner 0.16.0 added
+only an operator-only fixed confirmation and executed run
+`e636eeba-80dc-4280-b2ea-4f23b0cd1139` exactly once. All 18 criteria passed. The only apply
+differences were the approved mutation and bounded metadata transition; rollback restored the
+baseline property hash. Source, PDK, and all V1/V2/V3 evidence tree fingerprints were unchanged.
+The immutable manifest SHA-256 is
+`e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`, and the 18-record audit
+verification-time SHA-256 is
+`befbe1e5ebdf253c892085214881e829209720990f4f3a37b70232f8c909ac35`. No automatic retry,
+cleanup, tag, or release occurred.
 
 ## Verification
 
