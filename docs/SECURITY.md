@@ -72,6 +72,7 @@ fixed jobs root.
 | Proprietary design disclosure | library/cell/view discovery | PDK exclusion, exact nested allowlist, real-path and symlink checks, names/existence only, helper never opens a cellview file | allowlisted names themselves are disclosed |
 | Design modification or lock creation | OCEAN/SKILL headless checks | fixed no-graph scripts, isolated working/log directory under `.cadence_mcp`, no design open/save calls, before/after metadata and lock fingerprints | Cadence installation behavior is trusted |
 | Profile parameter injection | profile, corner, numeric variables | closed schemas, local registry, finite range checks, empty actual-variable schema, safe token formatting, remote registry/source revalidation before job creation | each future actual profile requires separate review |
+| Snapshot baseline drift | fixed actual source and ADE-state metadata | argument-free read-only audit, bounded hashes/timestamps, parameter declaration/reference metadata, latest-manifest hash comparison, fail-closed baseline decision | timestamps do not prove semantic equivalence; fixed ADE introspection remains required |
 | ADE state modification | actual testbench automation | fixed read-only state/source paths, source copied into `.cadence_mcp`, reviewed wrapper, before/after metadata and lock fingerprints | correctness depends on the approved existing ADE-generated netlist |
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
@@ -123,6 +124,13 @@ Synthetic measurement results contain only structured scalar/vector metrics, uni
 a small manifest with contract ID/version, processor identity, and canonical input SHA-256. The
 input arrays are not echoed in results or written to remote storage. Measurement tools cannot read
 PSF, netlists, models, paths, or arbitrary signal expressions and never invoke SSH.
+
+The operator-only actual-profile baseline audit accepts no arguments and is not an MCP tool. It
+returns only fixed profile/source SHA-256 values, ADE-state tree-metadata SHA-256, bounded UTC
+timestamps and counts, exact allowlisted parameter names, and declaration/reference booleans. It
+does not return a containing statement, source or state content, a remote path, or a discovered
+parameter value. Two consecutive audits must retain identical profile, source, and state
+fingerprints.
 
 ## Process, concurrency, and recovery
 
