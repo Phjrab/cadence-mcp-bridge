@@ -10,8 +10,8 @@ last_completed_wp: WP-10
 next_wp: WP-11
 current_feature_branch: wp/WP-11-controlled-design-writes-release
 base_main_commit: 28974d6557a8db8080cd7c0dee9017c9fd65fd60
-last_commit: 7f28576b2303f89e83028415921fe58b089c1373
-last_push: 2026-08-31T13:15:38.0842605+09:00
+last_commit: 3015fe1526896eadc0500e2233d80bb6fc23c3f2
+last_push: 2026-08-31T14:35:45.7089591+09:00
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
