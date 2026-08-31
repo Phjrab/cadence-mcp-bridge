@@ -50,10 +50,13 @@ the module is no longer importable, and removes only its validated temporary dir
       verifier pass on the release-preparation branch.
 - [x] `pyproject.toml`, package `__version__`, `uv.lock`, and installed CLI report `1.0.0`.
 - [x] Final release notes contain no proprietary data, raw design content, credentials, or secrets.
-- [ ] The `wp/WP-11-v1-release` branch is reviewed and integrated through an explicitly approved PR.
-- [ ] An annotated `v1.0.0` tag is created from the reviewed main commit and pushed to the private
-      repository under separate authorization.
-- [ ] A private GitHub release is created from that exact tag under separate authorization.
+- [x] The `wp/WP-11-v1-release` branch was reviewed and integrated through explicitly approved
+      PR #13 as merge commit `8a0d44fab90e2095cc39322baef60fc09d741cd6`.
+- [x] Annotated tag `v1.0.0` was created from that exact reviewed main commit and pushed to the
+      private repository under separate authorization.
+- [x] The stable GitHub release was published from that exact tag in the private repository under
+      separate authorization.
 
-The repository is a release candidate, not a published release. Tagging and GitHub publication are
-deliberately excluded from this preparation run.
+Version `v1.0.0` is published. The annotated tag peels to
+`8a0d44fab90e2095cc39322baef60fc09d741cd6`, and the private-repository release is available at
+`https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v1.0.0`.
