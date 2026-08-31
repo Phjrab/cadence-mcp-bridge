@@ -53,3 +53,12 @@ evidence parent directory was absent. No design write, manifest, or rollback aud
 three protected fingerprints remained unchanged. The evidence-root setup is corrected in source
 but was not redeployed or retried. V3 rollback therefore remains incomplete and the release gate
 continues to fail.
+
+A separately approved corrected-runner retry used fresh run ID
+`575356ae-1853-409f-a913-25c1ba9038a8` and completed `V3_ROLLBACK_VERIFIED`. All 15 rollback
+acceptance criteria passed: the target was restored from the fixed backup by removing only the
+approved mutation and restoring the single OA-maintained baseline property; topology and logical
+structure hashes were unchanged, and Source and backup remained immutable. An immutable manifest
+and 14-stage audit record were verified. This successful recovery preserves the failed V3 evidence
+but does not make the earlier clean validation pass. V4, tag, and release remain unstarted and
+require a separately reviewed clean-validation plan and explicit approval.

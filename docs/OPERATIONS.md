@@ -416,6 +416,26 @@ preflight values. The repository worker and deploy layout have been corrected to
 bounded mode-700 evidence root. Do not deploy and retry the corrected worker without a new explicit
 approval; V3 remains in its pre-rollback state.
 
+The user then supplied that separate approval for corrected commit
+`77c1dcac9c96ab909146128fb92de9f9e0813806`, bound to plan SHA-256
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`. Runner 0.15.0 was
+redeployed and exactly one fresh execution, `575356ae-1853-409f-a913-25c1ba9038a8`, rechecked every
+precondition and completed as `V3_ROLLBACK_VERIFIED`. It restored the fixed V3 target from the
+fixed V3 backup with exactly two expected property transitions: `mcpMutationTest` was removed and
+`schGeometryLastUpdated` changed from `107169` to `107168`. Topology remained 35/14/8, all logical
+structure hashes were unchanged, the final target property hash matched the backup, and Source and
+backup tree fingerprints were unchanged. All 15 acceptance criteria passed.
+
+The immutable manifest is
+`.cadence_mcp/write-rollback-v3/575356ae-1853-409f-a913-25c1ba9038a8/rollback-manifest.json`
+(mode 400, SHA-256 `77c92d1bd0bf7c68666c60cceb630ad66945ece402d4f36271a24eb6078aac34`). The audit file
+`.cadence_mcp/audit/v3-rollback-events.jsonl` is mode 600 and contained exactly 14 records for this
+run (verification-time SHA-256
+`4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f`). Preserve all V1/V2/V3
+objects and evidence. Do not start V4, create a tag, or create a release without a separately
+reviewed V4 plan and explicit approval; the failed V3 validation is not converted into a release
+PASS by its successful recovery.
+
 Packaging lifecycle is independently verifiable with:
 
 ```powershell

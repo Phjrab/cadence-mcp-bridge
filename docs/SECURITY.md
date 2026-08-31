@@ -198,6 +198,19 @@ The corrected worker can create only the fixed mode-700 `.cadence_mcp/write-roll
 automatic deployment or retry is prohibited. The target still contains the two forensic
 differences, and a new explicit approval is required before another write attempt.
 
+After a separate single-retry approval bound to the unchanged plan hash, corrected runner 0.15.0
+was redeployed and run `575356ae-1853-409f-a913-25c1ba9038a8` completed
+`V3_ROLLBACK_VERIFIED`. The only target changes were the plan-fixed removal of
+`mcpMutationTest=validated-v1` and restoration of `schGeometryLastUpdated` from `107169` to
+`107168`. All 15 acceptance criteria passed; topology and logical structure hashes were unchanged,
+the target property hash matched the backup, and Source and backup tree fingerprints remained
+unchanged. The immutable manifest SHA-256 is
+`77c92d1bd0bf7c68666c60cceb630ad66945ece402d4f36271a24eb6078aac34`; the 14-record audit
+file verification-time SHA-256 is
+`4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f`. This recovery authorizes
+no cleanup, V4 write, tag, or release, and the original failed validation evidence remains
+preserved.
+
 ## Verification
 
 Run the repeatable local security gate:

@@ -2,7 +2,8 @@
 
 ## Current status
 
-WP-11 design writes are **blocked after an incomplete real validation**. The user approved the
+WP-11 release progression is **blocked pending a new clean validation**, while the preserved V3
+target has been successfully restored from its fixed backup. The user approved the
 dedicated `MCP_WorkLib` library, the exact source and destination, and the sole string property
 mutation. The bridge now exposes one read-only plan tool and one confirmation-gated validation
 tool, for a total of twenty-two public tools.
@@ -99,18 +100,30 @@ confirmation tied to that raw hash, and is not deployed to the runner. Source, t
 must remain untouched until separate rollback approval; overwrite, retry, cleanup, deletion, and
 fallback names are not currently authorized. The earlier redacted plan remains historical evidence.
 
-The user explicitly approved rollback under the exact plan hash. Runner 0.15.0 revalidated the
-plan, forensic report, blockers, and all three pre-rollback tree fingerprints. Execution ID
-`38cfdbf3-ae92-470b-bf38-6789887a3ae9` then stopped before Virtuoso or any OA write because the
-fixed rollback evidence parent directory did not yet exist. No run directory, manifest, or rollback
-audit was created, and Source, V3 target, and V3 backup retained their exact pre-run fingerprints.
-The source worker and deployment layout now include bounded creation of that mode-700 evidence
-root, but the corrected runner was not redeployed or retried because the plan forbids automatic
-retry. A separate explicit retry approval is required.
+The first plan-authorized rollback execution, ID
+`38cfdbf3-ae92-470b-bf38-6789887a3ae9`, stopped before Virtuoso or any OA write because the fixed
+rollback evidence parent directory did not yet exist. After a separate approval tied to the same
+plan hash, corrected runner 0.15.0 was redeployed and exactly one new execution was performed with
+ID `575356ae-1853-409f-a913-25c1ba9038a8`. All preconditions were revalidated. The fixed V3
+backup restored only `mcpMutationTest` (`string`, `validated-v1` to absent) and
+`schGeometryLastUpdated` (`int`, `107169` to `107168`) on the fixed V3 target. All 15 plan
+acceptance criteria passed: topology stayed 35/14/8, instance/net/terminal logical hashes were
+unchanged, the target property hash matched the backup, and Source and backup tree fingerprints
+were unchanged. The result is `V3_ROLLBACK_VERIFIED`.
+
+The immutable rollback manifest is mode 400 at
+`.cadence_mcp/write-rollback-v3/575356ae-1853-409f-a913-25c1ba9038a8/rollback-manifest.json`,
+SHA-256 `77c92d1bd0bf7c68666c60cceb630ad66945ece402d4f36271a24eb6078aac34`. The mode-600 audit file
+`.cadence_mcp/audit/v3-rollback-events.jsonl` contains exactly 14 records for this run and has
+SHA-256 `4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f` at verification time.
+The original V3 validation manifest, audit, and job record remain missing historical evidence.
+V1, V2, the V3 target, and the V3 backup remain preserved; no cleanup or additional mutation is
+authorized.
 
 ## Release gate
 
-`v1.0.0` must not be created until a real approved copy has passed dry-run/apply equivalence,
+`v1.0.0` must not be created until a new real approved clean copy has passed dry-run/apply equivalence,
 backup restore, all local/security/integration tests, install/uninstall verification, and design
-source/PDK immutability checks. Because V3 exact-diff and rollback acceptance failed, no tag or
-GitHub release may be created from this checkpoint.
+source/PDK immutability checks. The V3 recovery gate passed, but it does not retroactively complete
+the failed V3 clean validation. V4, a tag, and a GitHub release remain prohibited until a separate
+V4 plan and explicit approval are reviewed and its complete clean-validation gate succeeds.
