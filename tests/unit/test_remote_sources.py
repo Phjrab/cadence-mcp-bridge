@@ -52,6 +52,10 @@ V3_EXACT_ROLLBACK_WORKER = (
 V3_EXACT_ROLLBACK_SCRIPT = (
     PROJECT_ROOT / "remote" / "write" / "design-write-v3-exact-rollback.il"
 )
+V4_PLAN = PROJECT_ROOT / "remote" / "config" / "design-write-v4-plan.json"
+V4_HELPER = PROJECT_ROOT / "remote" / "py26" / "v4_validation_json.py"
+V4_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v4-validation.sh"
+V4_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v4-validation.il"
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -80,6 +84,8 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-v3-property-diff",
         "design-write-v3-deep-forensic",
         "design-write-v3-exact-rollback",
+        "design-write-v4-plan-check",
+        "design-write-v4-validate",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -98,7 +104,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.15.0" in runner
+    assert "RUNNER_VERSION=0.16.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -341,6 +347,39 @@ def test_v3_validation_is_fixed_confirmation_gated_and_rollback_backed() -> None
     assert "v3_validation_json.py" in deploy
     assert "design-write-v3-plan.json" in deploy
     assert "design-write-v3-validation.il" in deploy
+
+
+def test_v4_validation_is_plan_bound_fixed_and_rollback_backed() -> None:
+    plan = json.loads(V4_PLAN.read_text(encoding="utf-8"))
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = V4_HELPER.read_text(encoding="utf-8")
+    worker = V4_WORKER.read_text(encoding="utf-8")
+    skill = V4_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert plan["execution_enabled"] is False
+    assert "c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66" in helper
+    assert "APPROVE_MCP_WRITE_VALIDATED_V4_C5B2F418" in helper
+    assert "design-write-v4-plan-check" in runner
+    assert "design-write-v4-validate" in runner
+    assert "active Virtuoso process blocks V4 validation" in worker
+    assert "Differential_Amplifier_TB2_MCP_TEST_V4/schematic" in worker
+    assert "Differential_Amplifier_TB2_MCP_TEST_V4_BACKUP/schematic" in worker
+    assert "source_before" in worker and "source_after" in worker
+    assert "v3_target_before" in worker and "v3_target_after" in worker
+    assert "v3_backup_before" in worker and "v3_backup_after" in worker
+    assert "pdk_before" in worker and "pdk_after" in worker
+    assert 'dbReplaceProp(targetCv propertyName "string" propertyValue)' in skill
+    assert "schGeometryLastUpdated" in skill
+    assert "MCP_V4_METADATA" in skill
+    assert "dbCopyCellView(backupCv workLib targetCell sourceView nil nil t)" in skill
+    assert "V4_CLEAN_VALIDATION_VERIFIED" in helper
+    for forbidden in ("evalstring", "load(", "dbCreateInst", "dbDeleteObject"):
+        assert forbidden not in skill
+    assert "design-write-v4-plan.json" in deploy
+    assert "run-design-write-v4-validation.sh" in deploy
+    assert "v4_validation_json.py" in deploy
+    assert "design-write-v4-validation.il" in deploy
 
 
 def test_v3_forensic_is_fixed_read_only_and_value_redacted() -> None:

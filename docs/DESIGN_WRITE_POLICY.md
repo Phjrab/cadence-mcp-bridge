@@ -2,8 +2,9 @@
 
 ## Current status
 
-WP-11 release progression is **blocked pending a new clean validation**, while the preserved V3
-target has been successfully restored from its fixed backup. The user approved the
+WP-11 controlled-write acceptance is **verified; release progression remains pending**. The
+preserved V3 target was restored from its fixed backup, and a new V4 clean validation subsequently
+passed all 18 plan criteria. The user approved the
 dedicated `MCP_WorkLib` library, the exact source and destination, and the sole string property
 mutation. The bridge now exposes one read-only plan tool and one confirmation-gated validation
 tool, for a total of twenty-two public tools.
@@ -125,8 +126,9 @@ authorized.
 `v1.0.0` must not be created until a new real approved clean copy has passed dry-run/apply equivalence,
 backup restore, all local/security/integration tests, install/uninstall verification, and design
 source/PDK immutability checks. The V3 recovery gate passed, but it does not retroactively complete
-the failed V3 clean validation. V4, a tag, and a GitHub release remain prohibited until a separate
-V4 plan and explicit approval are reviewed and its complete clean-validation gate succeeds.
+the failed V3 clean validation. V4 now satisfies this controlled-write gate, but a tag and GitHub
+release remain prohibited until repository acceptance, versioning, and release authorization are
+completed.
 
 ## Proposed V4 clean-validation plan
 
@@ -139,10 +141,22 @@ single `mcpMutationTest` string property. The plan separately bounds the Cadence
 `schGeometryLastUpdated` integer as the only permitted metadata side effect: its exact observed
 before/after values must be recorded, and no other baseline property may change.
 
-The plan contains 18 stages and 18 acceptance criteria. It is deliberately non-executable:
+The immutable plan contains 18 stages and 18 acceptance criteria. Its checked-in planning flags
+remain deliberately non-executable:
 `execution_enabled`, `implementation_enabled`, and `release_gate_enabled` are false;
-`required_confirmation` is null. No V4 runner command, worker, SKILL program, confirmation token,
-deployment entry, remote directory, copy, backup, mutation, rollback, tag, or release was created.
-Any implementation and one real execution require a new explicit approval bound to the raw plan
-SHA-256. A changed target, backup, mutation, metadata policy, sequence, or criterion invalidates
-that approval.
+`required_confirmation` is null. After a separate approval bound to the unchanged raw hash, runner
+0.16.0 implemented an operator-only fixed confirmation outside the plan asset and executed exactly
+once. Run `e636eeba-80dc-4280-b2ea-4f23b0cd1139` completed
+`V4_CLEAN_VALIDATION_VERIFIED`. The actual apply diff contained only `mcpMutationTest` and the
+bounded `schGeometryLastUpdated` transition from `107168` to `107169`; topology and structural
+hashes stayed fixed at 35/14/8. Rollback removed the mutation and restored the full property hash
+`cf24d8a4f8434b2208afa48a4b555c322f29470b7a8632ded90037b3221374a4`.
+
+The immutable mode-400 manifest is
+`.cadence_mcp/write-validation-v4/e636eeba-80dc-4280-b2ea-4f23b0cd1139/validation-manifest.json`,
+SHA-256 `e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`. The mode-600 audit file
+contains exactly 18 records for this run and had verification-time SHA-256
+`befbe1e5ebdf253c892085214881e829209720990f4f3a37b70232f8c909ac35`. Source, V1, both V2
+views, restored V3 target, V3 backup, and `gpdk090` tree fingerprints were identical before and
+after. V4 target and backup remain as restored evidence. No retry, cleanup, tag, or release was
+performed.

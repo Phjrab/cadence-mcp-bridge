@@ -67,6 +67,12 @@ That planning gate is now represented by non-executable V4 plan SHA-256
 `c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It fixes new V4 target and
 backup names, preserves all earlier evidence, and defines 18 stages and 18 acceptance criteria,
 including a separate bounded check for the Cadence-maintained metadata transition observed in V3.
-No implementation, deployment, confirmation token, V4 cellview, mutation, tag, or release was
-created. The release remains blocked pending separate plan-bound mutation approval and successful
-execution.
+After separate approval bound to that exact plan hash, runner 0.16.0 executed V4 run
+`e636eeba-80dc-4280-b2ea-4f23b0cd1139` exactly once. All 18 criteria passed, including non-mutating
+dry-run, fixed backup, exact semantic/metadata diff, rollback, complete baseline restoration,
+immutable manifest, bounded audit, and Source/PDK/prior-evidence immutability. The actual apply
+contained only `mcpMutationTest=validated-v1` and the bounded OA metadata transition from `107168`
+to `107169`; rollback removed the mutation and restored the prior property hash. Manifest SHA-256
+is `e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`. No retry, cleanup,
+tag, or release occurred. The package remains version `0.1.0` pending reviewed branch integration
+and separately authorized final release preparation.

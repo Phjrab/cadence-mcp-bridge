@@ -330,7 +330,7 @@ and units, rejection without a contract, and a stable input hash in the measurem
 Actual-circuit measurement remains unavailable until the user supplies and approves a separate
 complete contract.
 
-## WP-11 blocked write and release checkpoint
+## WP-11 controlled write and release checkpoint
 
 The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
 `mcpMutationTest=validated-v1` mutation. V1 remains preserved after its incomplete run. V2 passed
@@ -443,8 +443,24 @@ V4 target and backup names, preserves every V1/V2/V3 cellview, and contains 18 f
 acceptance criteria. It distinguishes the proposed one-property semantic mutation from the bounded
 Cadence-maintained `schGeometryLastUpdated` integer side effect discovered during V3. The asset is
 planning-only: it has no confirmation token and is absent from the runner and deployment manifest.
-Do not implement, deploy, create either V4 cellview, or perform any OA write until a separate
-approval is explicitly bound to this raw plan SHA-256.
+Implementation and execution remained prohibited until a separate approval was explicitly bound to
+this raw plan SHA-256.
+
+That approval was later provided. Runner 0.16.0 deployed the fixed operator-only V4 command and
+executed it exactly once as `e636eeba-80dc-4280-b2ea-4f23b0cd1139`. The run completed
+`V4_CLEAN_VALIDATION_VERIFIED` with all 18 criteria passing. The apply changed only the approved
+`mcpMutationTest=validated-v1` semantic property and the bounded OA-maintained
+`schGeometryLastUpdated` integer from `107168` to `107169`. Instance, net, terminal, and topology
+hashes remained unchanged. Rollback restored the target from the fixed V4 backup; the final target
+and backup share property summary SHA-256
+`cf24d8a4f8434b2208afa48a4b555c322f29470b7a8632ded90037b3221374a4`.
+
+The mode-400 manifest SHA-256 is
+`e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`; the mode-600 audit had
+exactly 18 records for the run and verification-time SHA-256
+`befbe1e5ebdf253c892085214881e829209720990f4f3a37b70232f8c909ac35`. Independent post-checks
+found no Virtuoso process or blocking artifact and reproduced every protected tree fingerprint.
+Do not rerun, clean up, merge, tag, or release without the next explicit authorization.
 
 Packaging lifecycle is independently verifiable with:
 

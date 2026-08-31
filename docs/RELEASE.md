@@ -52,5 +52,6 @@ the module is no longer importable, and removes only its validated temporary dir
 - annotated `v1.0.0` tag is pushed to the private repository;
 - private GitHub release is created from the reviewed tag.
 
-The checklist is intentionally incomplete while the design-write contract is blocked. Current
-version `0.1.0` is not a v1 release.
+The V4 controlled-write dry-run/apply/rollback and immutability evidence now passes. The checklist
+remains incomplete because the package version is still `0.1.0`, the WP-11 feature branch is not
+integrated, and no annotated tag or private GitHub release exists.

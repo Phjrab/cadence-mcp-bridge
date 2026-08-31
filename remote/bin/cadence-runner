@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.15.0
+RUNNER_VERSION=0.16.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -30,9 +30,12 @@ V3_DEEP_FORENSIC_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-deep-forensic
 V3_EXACT_ROLLBACK_PLAN="$CADENCE_MCP_ROOT/config/design-write-v3-exact-conditional-rollback-plan.json"
 V3_EXACT_ROLLBACK_HELPER="$CADENCE_MCP_ROOT/py26/v3_exact_rollback_json.py"
 V3_EXACT_ROLLBACK_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-exact-rollback.sh"
+V4_PLAN="$CADENCE_MCP_ROOT/config/design-write-v4-plan.json"
+V4_HELPER="$CADENCE_MCP_ROOT/py26/v4_validation_json.py"
+V4_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v4-validation.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|design-write-v3-exact-rollback|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|design-write-v3-exact-rollback|design-write-v4-plan-check|design-write-v4-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -397,6 +400,23 @@ runner_design_write_v3_exact_rollback() {
     "$V3_EXACT_ROLLBACK_WORKER" "$run_id" "$origin"
 }
 
+runner_design_write_v4_plan_check() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$V4_HELPER" "$V4_PLAN" plan-check
+}
+
+runner_design_write_v4_validate() {
+    [ "$#" -eq 3 ] || usage
+    run_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$run_id" || cadence_mcp_fail "invalid V4 run id" 64
+    [ "$origin" = "operator" ] || cadence_mcp_fail "invalid V4 origin" 64
+    "$CADENCE_MCP_PYTHON" "$V4_HELPER" "$V4_PLAN" confirm "$confirmation" \
+        || cadence_mcp_fail "V4 confirmation rejected" 64
+    "$V4_WORKER" "$run_id" "$origin"
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -437,6 +457,8 @@ case "$command_name" in
     design-write-v3-property-diff) runner_design_write_v3_property_diff "$@" ;;
     design-write-v3-deep-forensic) runner_design_write_v3_deep_forensic "$@" ;;
     design-write-v3-exact-rollback) runner_design_write_v3_exact_rollback "$@" ;;
+    design-write-v4-plan-check) runner_design_write_v4_plan_check "$@" ;;
+    design-write-v4-validate) runner_design_write_v4_validate "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;

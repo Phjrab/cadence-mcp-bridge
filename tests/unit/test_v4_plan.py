@@ -53,13 +53,17 @@ def test_v4_plan_bounds_semantic_and_oa_metadata_changes() -> None:
     assert plan["destructive"] is False
 
 
-def test_v4_plan_is_not_exposed_or_deployed() -> None:
+def test_v4_plan_implementation_is_fixed_after_separate_approval() -> None:
     runner = RUNNER.read_text(encoding="utf-8")
     deploy = DEPLOY.read_text(encoding="utf-8")
 
-    assert "design-write-v4" not in runner
-    assert "design-write-v4-plan.json" not in deploy
-    assert "APPROVE_MCP_WRITE_VALIDATED_V4" not in runner
+    assert "design-write-v4-plan-check" in runner
+    assert "design-write-v4-validate" in runner
+    assert "design-write-v4-plan.json" in deploy
+    assert "run-design-write-v4-validation.sh" in deploy
+    assert "v4_validation_json.py" in deploy
+    assert "design-write-v4-validation.il" in deploy
+    assert "APPROVE_MCP_WRITE_VALIDATED_V4_C5B2F418" not in runner
 
 
 def test_v4_plan_canonical_sha256() -> None:
