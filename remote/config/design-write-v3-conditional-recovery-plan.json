@@ -1,0 +1,83 @@
+{
+  "plan_version": 1,
+  "plan_id": "mcp-cellview-property-v3-conditional-recovery",
+  "status": "awaiting_explicit_recovery_approval",
+  "execution_enabled": false,
+  "required_confirmation": null,
+  "forensic_validation_id": "0b9bf93c-11e9-416f-9e4a-69b1060fbd8e",
+  "forensic_evidence_sha256": "8e1bbd824b1d4ea130c3f921e2745dddfffe9ef533a696e77e7a46884954abf6",
+  "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+  "target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3/schematic",
+  "backup": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic",
+  "operation": "restore_v3_target_from_v3_backup",
+  "target_overwrite_required": true,
+  "deletion_required": false,
+  "fallback_name_allowed": false,
+  "automatic_retry_allowed": false,
+  "expected_topology": {
+    "instances": 35,
+    "nets": 14,
+    "terminals": 8
+  },
+  "observed_differences": [
+    {
+      "name": "schGeometryLastUpdated",
+      "backup_type": "int",
+      "target_type": "int",
+      "backup_present": true,
+      "target_present": true,
+      "value_equal": false,
+      "approved_value_equal": null
+    },
+    {
+      "name": "mcpMutationTest",
+      "backup_type": "absent",
+      "target_type": "string",
+      "backup_present": false,
+      "target_present": true,
+      "value_equal": false,
+      "approved_value_equal": true
+    }
+  ],
+  "protected_read_only_objects": [
+    "MyDesignLib/Differential_Amplifier_TB2/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic",
+    "gpdk090"
+  ],
+  "sequence": [
+    "verify_plan_sha256",
+    "verify_forensic_evidence_sha256",
+    "verify_no_active_virtuoso_or_blocking_artifact",
+    "fingerprint_all_protected_objects",
+    "verify_exact_two_property_differences",
+    "verify_v3_backup_matches_source_baseline",
+    "non_mutating_restore_dry_run",
+    "explicit_recovery_confirmation_gate",
+    "restore_v3_target_from_fixed_v3_backup",
+    "reopen_and_verify_target_baseline",
+    "verify_approved_property_absent",
+    "verify_all_protected_fingerprints_unchanged",
+    "write_bounded_recovery_audit",
+    "write_recovery_manifest"
+  ],
+  "acceptance_criteria": [
+    "the raw plan SHA-256 and fixed forensic evidence SHA-256 match reviewed values",
+    "no Virtuoso process, OA lock, panic artifact, or recovery artifact is active on V2 or V3 views",
+    "V1 master.tag selects sch.oa and preserved V1 sch.oa- remains untouched under its tree fingerprint",
+    "Source, V1, both V2 views, V3 backup, and gpdk090 match their recorded pre-recovery fingerprints",
+    "V3 target and backup both have topology 35 instances, 14 nets, and 8 terminals",
+    "V3 backup logically matches the source baseline and does not contain mcpMutationTest",
+    "the only V3 target-to-backup differences are schGeometryLastUpdated value inequality and mcpMutationTest presence",
+    "mcpMutationTest is string in V3 target, absent in V3 backup, and equal to the fixed approved value without returning that value",
+    "the dry-run reports an exact fixed-backup restore and performs no OA write",
+    "restore cannot execute without a new exact confirmation bound to this plan SHA-256",
+    "restore writes only the fixed V3 target from the fixed V3 backup and performs no deletion or fallback",
+    "after restore the V3 target logically equals V3 backup, topology remains 35/14/8, and mcpMutationTest is absent",
+    "Source, V1, both V2 views, V3 backup, and gpdk090 fingerprints remain unchanged after restore",
+    "audit and manifest contain bounded metadata only and any failure stops without retry"
+  ],
+  "release_gate_enabled": false
+}

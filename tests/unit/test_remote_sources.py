@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -25,6 +26,12 @@ V3_PLAN = PROJECT_ROOT / "remote" / "config" / "design-write-v3-plan.json"
 V3_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_validation_json.py"
 V3_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-validation.sh"
 V3_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v3-validation.il"
+V3_FORENSIC_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_forensic_json.py"
+V3_FORENSIC_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-forensic.sh"
+V3_FORENSIC_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v3-property-diff.il"
+V3_RECOVERY_PLAN = (
+    PROJECT_ROOT / "remote" / "config" / "design-write-v3-conditional-recovery-plan.json"
+)
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -50,6 +57,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-v2-rollback",
         "design-write-v3-plan-check",
         "design-write-v3-validate",
+        "design-write-v3-property-diff",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -68,7 +76,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.12.0" in runner
+    assert "RUNNER_VERSION=0.13.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -311,3 +319,83 @@ def test_v3_validation_is_fixed_confirmation_gated_and_rollback_backed() -> None
     assert "v3_validation_json.py" in deploy
     assert "design-write-v3-plan.json" in deploy
     assert "design-write-v3-validation.il" in deploy
+
+
+def test_v3_forensic_is_fixed_read_only_and_value_redacted() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = V3_FORENSIC_HELPER.read_text(encoding="utf-8")
+    worker = V3_FORENSIC_WORKER.read_text(encoding="utf-8")
+    skill = V3_FORENSIC_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "design-write-v3-property-diff" in runner
+    assert "0b9bf93c-11e9-416f-9e4a-69b1060fbd8e" in worker
+    assert "active Virtuoso process blocks V3 forensic inspection" in worker
+    assert "fingerprint_tree" in worker
+    for token in (
+        "source_before",
+        "source_after",
+        "v1_before",
+        "v1_after",
+        "v2_target_before",
+        "v2_target_after",
+        "v2_backup_before",
+        "v2_backup_after",
+        "v3_target_before",
+        "v3_target_after",
+        "v3_backup_before",
+        "v3_backup_after",
+        "pdk_before",
+        "pdk_after",
+    ):
+        assert token in worker
+    assert 'dbOpenCellViewByType' in skill
+    assert '"r"' in skill
+    assert "MCP_V3_FORENSIC_DIFF" in skill
+    assert "approvedEqual" in skill
+    assert "~>value" in skill
+    for forbidden in (
+        "dbSave",
+        "dbCopyCellView",
+        "dbReplaceProp",
+        "dbCreateInst",
+        "dbDeleteObject",
+        "evalstring",
+        "load(",
+        "return(nil)",
+    ):
+        assert forbidden not in skill
+    assert '"property_values_included": False' in helper
+    assert '"differences": differences' in helper
+    assert '"approved_value_equal"' in helper
+    assert '"validated-v1"' not in helper
+    assert "run-design-write-v3-forensic.sh" in deploy
+    assert "v3_forensic_json.py" in deploy
+    assert "design-write-v3-property-diff.il" in deploy
+
+
+def test_v3_conditional_recovery_plan_is_immutable_and_non_executable() -> None:
+    raw = V3_RECOVERY_PLAN.read_bytes()
+    plan = json.loads(raw)
+
+    assert hashlib.sha256(raw).hexdigest() == (
+        "edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b"
+    )
+    assert plan["plan_id"] == "mcp-cellview-property-v3-conditional-recovery"
+    assert plan["status"] == "awaiting_explicit_recovery_approval"
+    assert plan["execution_enabled"] is False
+    assert plan["required_confirmation"] is None
+    assert plan["target_overwrite_required"] is True
+    assert plan["deletion_required"] is False
+    assert plan["fallback_name_allowed"] is False
+    assert plan["automatic_retry_allowed"] is False
+    assert plan["forensic_evidence_sha256"] == (
+        "8e1bbd824b1d4ea130c3f921e2745dddfffe9ef533a696e77e7a46884954abf6"
+    )
+    assert len(plan["observed_differences"]) == 2
+    assert len(plan["acceptance_criteria"]) == 14
+    assert len(plan["sequence"]) == 14
+    assert plan["release_gate_enabled"] is False
+    assert "design-write-v3-conditional-recovery-plan.json" not in DEPLOY.read_text(
+        encoding="utf-8"
+    )

@@ -371,6 +371,23 @@ Do not retry, overwrite, delete, or reuse either V3 view. Further Cadence action
 fixed read-only forensic and conditional recovery plan plus explicit approval. The release gate
 remains disabled.
 
+The approved fixed read-only follow-up used runner 0.13.0 and validation ID
+`0b9bf93c-11e9-416f-9e4a-69b1060fbd8e`. It reported only property name, type, presence, and
+equality metadata. Exactly two differences were found: `schGeometryLastUpdated` exists as `int` in
+target and backup with unequal values; `mcpMutationTest` is absent from backup, present as `string`
+in target, and equals the fixed approved value. Actual values were neither output nor stored. The
+evidence SHA-256 is `8e1bbd824b1d4ea130c3f921e2745dddfffe9ef533a696e77e7a46884954abf6`.
+Source, V1 including `sch.oa-`, both V2 views, both V3 views, and gpdk090 fingerprints matched
+before and after. No rollback or other design write occurred.
+
+The proposed conditional restore is documented but non-executable at
+`remote/config/design-write-v3-conditional-recovery-plan.json`. Its SHA-256 is
+`edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b`; it contains 14 stages
+and 14 acceptance criteria and is not deployed. A future run must revalidate both hashes, all
+protected fingerprints, the exact two-property diff, topology 35/14/8, and blocker absence before
+an exact confirmation can permit the fixed V3 backup-to-target restore. No current approval permits
+that overwrite.
+
 Packaging lifecycle is independently verifiable with:
 
 ```powershell

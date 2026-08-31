@@ -172,7 +172,13 @@ then passed copy, baseline, non-mutating dry-run, backup, and the approved prope
 failed exact-diff verification because a baseline property also changed. Rollback and audit were
 not reached. V3 target and backup now exist as preserved evidence, while Source, V1 including
 `sch.oa-`, both V2 views, and `gpdk090` retained their exact tree fingerprints. No automatic retry,
-tag, or release occurred. No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
+tag, or release occurred. Runner 0.13.0 subsequently performed an approved fixed read-only
+property-diff inspection. It returned no values and proved exactly two differences:
+`schGeometryLastUpdated` has equal presence/type but unequal value, and `mcpMutationTest` is absent
+from backup, present as `string` in target, and equal to the fixed approved value. Source, V1, both
+V2 views, both V3 views, and `gpdk090` were unchanged. The resulting conditional recovery plan is
+non-executable, not deployed, and still requires separate explicit approval. No release is allowed.
+See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

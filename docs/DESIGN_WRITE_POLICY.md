@@ -55,6 +55,14 @@ source-final verification, manifest creation, or audit append. No retry was atte
 target and backup now exist as preserved incomplete evidence. Source, V1 (including `sch.oa-`),
 both V2 views, and `gpdk090` tree fingerprints remained exactly unchanged.
 
+Runner 0.13.0 adds one argument-free, operator-only, fixed read-only V3 property-diff command.
+It opens Source, V3 target, and V3 backup only in read mode, fingerprints Source, V1, both V2
+views, both V3 views, and `gpdk090` before and after, and rejects any active Virtuoso process or
+blocking artifact. The approved investigation found exactly two differences without returning or
+storing values: `schGeometryLastUpdated` is `int` and present on both sides with unequal values;
+`mcpMutationTest` is absent from backup, present as `string` in target, and its equality to the
+fixed approved value is true. All seven protected fingerprints remained unchanged.
+
 ## Permanent protections
 
 - PDK libraries, including `gpdk090`, are permanently read-only.
@@ -71,12 +79,14 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 
 ## Required action before resuming WP-11
 
-The prepared V3 plan remains unchanged at the approved SHA, but its clean-destination precondition
-can no longer pass because both V3 names now exist. Continuing requires a separately reviewed,
-explicitly approved fixed read-only V3 forensic plan. Any conditional recovery must have its own
-exact acceptance criteria and approval. The V3 target and backup, V1 `sch.oa-`, all V1/V2 evidence,
-Source, and PDK must remain untouched until then; retry, overwrite, deletion, and fallback names are
-not authorized.
+The clean V3 plan remains unchanged at its approved SHA, but its clean-destination precondition can
+no longer pass. The read-only forensic is complete. The separate, non-executable conditional
+recovery plan is `remote/config/design-write-v3-conditional-recovery-plan.json`, SHA-256
+`edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b`. It has 14 fixed stages
+and 14 acceptance criteria, requires a future exact confirmation tied to that raw hash, and is not
+deployed to the runner. The V3 target and backup, V1 `sch.oa-`, all V1/V2 evidence, Source, and PDK
+must remain untouched until separate recovery approval; retry, overwrite, deletion, and fallback
+names are not currently authorized.
 
 ## Release gate
 

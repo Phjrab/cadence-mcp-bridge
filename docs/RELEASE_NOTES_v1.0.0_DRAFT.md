@@ -32,4 +32,9 @@ approved single corrected invocation passed V3 copy, baseline, non-mutating dry-
 the approved property apply, then failed exact-diff verification because a baseline property also
 changed. Rollback and audit were not reached, and no retry was attempted. V3 target and backup now
 exist as preserved incomplete evidence; protected Source/V1/V2/PDK fingerprints remained
-unchanged. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or released.
+unchanged. A fixed read-only follow-up found exactly the baseline metadata timestamp inequality and
+the approved property presence, with no property values returned or stored and all Source/V1/V2/V3/
+PDK fingerprints unchanged. Conditional recovery plan SHA-256
+`edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b` remains non-executable
+and awaits separate approval. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or
+released.
