@@ -55,12 +55,16 @@ uv run python -m cadence_mcp_bridge serve
 The server exposes the six lifecycle tools plus three metadata-only discovery tools,
 `cadence_list_libraries`, `cadence_list_cells`, and `cadence_inspect_cellview`. Discovery is
 restricted to a reviewed library/cell/view allowlist and never returns paths or proprietary file
-content. It also exposes `cadence_list_profiles`, `cadence_get_profile`, and
+content. The separate `cadence_inspect_ade_profile` tool accepts only the fixed actual profile ID
+and returns bounded ADE-state, OA-structure, fingerprint, and drift metadata without raw state,
+netlist, model, path, SKILL, or OCEAN content. It also exposes `cadence_list_profiles`, `cadence_get_profile`, and
 `cadence_submit_profile`. The registry keeps the synthetic `fixture-rc-transient` profile separate
 from the fixed `actual-differential-amplifier-tb2-transient` ADE L profile. Eight additional
 read-only tools cover the versioned synthetic ADC contract, power, offset, settling, FFT metrics,
 linearity, corner comparison, and Monte Carlo summary. The actual profile has no caller-controlled
-variables, paths, scripts, analyses, or outputs. Register the
+variables, paths, scripts, analyses, or outputs. The current state1 inspection fails closed as
+`profile_drift` because its enabled analysis differs from the reviewed transient profile and the
+source snapshot is older than the state metadata. Register the
 reviewed server with `.\scripts\install-codex-mcp.ps1`, then follow
 `docs/CODEX_DESKTOP.md` for restart, `/mcp`, approval, and acceptance prompts. See
 `docs/ARCHITECTURE.md` for the current boundaries.

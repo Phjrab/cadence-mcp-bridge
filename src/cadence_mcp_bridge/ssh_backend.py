@@ -25,6 +25,7 @@ from cadence_mcp_bridge.errors import (
     RemoteFailureError,
 )
 from cadence_mcp_bridge.models import (
+    AdeProfileIntrospection,
     ArtifactMetadata,
     CellList,
     CellViewInspection,
@@ -61,6 +62,7 @@ class _RunnerCommand(StrEnum):
     LIST_LIBRARIES = "list-libraries"
     LIST_CELLS = "list-cells"
     INSPECT_CELLVIEW = "inspect-cellview"
+    INSPECT_ADE_PROFILE = "inspect-ade-profile"
     SUBMIT_PROFILE = "submit-profile"
     DESIGN_WRITE_PLAN = "design-write-plan"
     DESIGN_WRITE_VALIDATE = "design-write-validate"
@@ -246,6 +248,15 @@ class OpenSshBackend:
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         payload = await self._invoke_json(_RunnerCommand.INSPECT_CELLVIEW, library, cell, view)
         return self._validate(CellViewInspection, payload)
+
+    async def inspect_ade_profile(self, profile_id: str) -> AdeProfileIntrospection:
+        if profile_id != ACTUAL_PROFILE_ID:
+            raise InvalidInputError("profile is outside the ADE introspection allowlist")
+        payload = await self._invoke_json(_RunnerCommand.INSPECT_ADE_PROFILE, profile_id)
+        result = self._validate(AdeProfileIntrospection, payload)
+        if result.profile_id != profile_id:
+            raise RemoteFailureError("Remote runner returned mismatched ADE profile metadata")
+        return result
 
     async def submit_profile(
         self,

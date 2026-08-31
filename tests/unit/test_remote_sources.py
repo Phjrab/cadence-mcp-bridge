@@ -14,6 +14,15 @@ RESULT_HELPER = PROJECT_ROOT / "remote" / "py26" / "result_json.py"
 ACTUAL_PROFILE_AUDIT_HELPER = (
     PROJECT_ROOT / "remote" / "py26" / "actual_profile_audit.py"
 )
+ADE_PROFILE_INTROSPECTION_HELPER = (
+    PROJECT_ROOT / "remote" / "py26" / "ade_profile_introspection.py"
+)
+ADE_PROFILE_INTROSPECTION_WORKER = (
+    PROJECT_ROOT / "remote" / "lib" / "run-ade-profile-introspection.sh"
+)
+ADE_PROFILE_INTROSPECTION_SCRIPT = (
+    PROJECT_ROOT / "remote" / "discovery" / "ade-profile-introspection.il"
+)
 DISCOVERY_HELPER = PROJECT_ROOT / "remote" / "py26" / "discovery_json.py"
 DISCOVERY_ALLOWLIST = PROJECT_ROOT / "remote" / "config" / "discovery-allowlist.json"
 WRITE_POLICY = PROJECT_ROOT / "remote" / "config" / "design-write-policy.json"
@@ -70,6 +79,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "submit-smoke",
         "submit-profile",
         "actual-profile-baseline-audit",
+        "inspect-ade-profile",
         "status",
         "log-tail",
         "result",
@@ -108,7 +118,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.17.0" in runner
+    assert "RUNNER_VERSION=0.18.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -199,6 +209,39 @@ def test_actual_profile_baseline_audit_is_fixed_and_metadata_only() -> None:
     assert "len(sys.argv) != 1" in helper
     for forbidden in ("subprocess", "eval(", "exec(", "os.remove", "os.rename"):
         assert forbidden not in helper
+
+
+def test_ade_profile_introspection_is_fixed_read_only_and_bounded() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = ADE_PROFILE_INTROSPECTION_HELPER.read_text(encoding="utf-8")
+    worker = ADE_PROFILE_INTROSPECTION_WORKER.read_text(encoding="utf-8")
+    skill = ADE_PROFILE_INTROSPECTION_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "inspect-ade-profile)" in runner
+    assert "actual-differential-amplifier-tb2-transient" in runner
+    assert "ade_profile_introspection.py" in deploy
+    assert "run-ade-profile-introspection.sh" in deploy
+    assert "ade-profile-introspection.il" in deploy
+    assert '"r"' in skill
+    assert "dbOpenCellViewByType" in skill
+    assert "dbClose" in skill
+    assert "dbSave" not in skill
+    assert "dbOpenCellViewByType" not in helper
+    assert '"paths_included": False' in helper
+    assert '"raw_content_included": False' in helper
+    assert "tail -c 65536" in worker
+    for forbidden in (
+        "eval(",
+        "exec(",
+        "subprocess",
+        "os.remove",
+        "os.rename",
+        "dbSave",
+        "dbReplaceProp",
+        "evalstring",
+    ):
+        assert forbidden not in helper + skill
 
 
 def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() -> None:

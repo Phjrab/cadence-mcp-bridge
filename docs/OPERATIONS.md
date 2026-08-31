@@ -147,8 +147,9 @@ official in-process `Client(MCPServer)` test path. Start the protocol server wit
 ```
 
 No banner is written to stdout. Application and expected-error logging goes to stderr. The
-server exposes exactly twenty-two tools: six lifecycle tools, three metadata discovery tools,
-profile list/detail/submission, eight read-only synthetic ADC measurement tools, one fixed write
+server exposes exactly twenty-three tools: six lifecycle tools, three metadata discovery tools,
+one fixed ADE L introspection tool, profile list/detail/submission, eight read-only synthetic ADC
+measurement tools, one fixed write
 plan, and one exact confirmation-gated write validation. No remote path,
 netlist text, command, script text, arbitrary
 analysis, or arbitrary output is accepted.
@@ -219,7 +220,7 @@ Install or update the user-level MCP entry with:
 The script backs up the existing Codex config before change and is idempotent. It registers the
 absolute virtual-environment Python executable, the module entrypoint, a 20-second startup
 timeout, a 180-second per-tool timeout, and prompt approval for smoke submission and cancellation.
-Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-two-tool allowlist. Detailed
+Restart Codex Desktop and use `/mcp` to confirm the server and exact twenty-three-tool allowlist. Detailed
 acceptance prompts and recovery steps are in `docs/CODEX_DESKTOP.md`.
 
 ## WP-06 acceptance evidence
@@ -307,6 +308,23 @@ and source snapshot, fingerprints only ADE-state tree metadata, classifies the t
 declaration/reference counts, compares the current source hash with the newest successful actual
 manifest, and emits one bounded JSON object. Raw content and remote paths are never returned. This
 command is not part of the MCP tool surface.
+
+Runner 0.18.0 adds `inspect-ade-profile`, exposed through the read-only
+`cadence_inspect_ade_profile` MCP tool. The only accepted argument is the literal
+`actual-differential-amplifier-tb2-transient` profile ID. The fixed worker serializes execution,
+keeps Cadence logs below 65,536 bytes in the private application runtime, parses only reviewed ADE
+state files, and runs a fixed SKILL template that opens the source OA cellview in mode `r` and
+closes it without saving. A response contains no remote path or raw state/netlist/model/SKILL
+content.
+
+The 2026-08-31 actual read-only inspection returned source topology `35/14/8`, model section `NN`,
+temperature 27 C, variables `VBIASN=300m` and `VBIASP=650m`, no named outputs, zero source/state
+locks, and identical source/state/PDK-model/source-netlist fingerprints before and after. It found
+`dc` enabled and `tran` disabled with stored stop time `4m`; the reviewed profile expects `tran`.
+The source snapshot is also older than the newest state metadata. The result is therefore
+`profile_drift` with `analysis_mismatch` and `snapshot_freshness_unconfirmed`. Do not change the
+registry, regenerate the snapshot, or enable parameterized execution automatically. WP-14 may
+prepare a user approval package from this evidence, but execution remains disabled.
 
 Validated on 2026-08-28 against `cadence-vm`:
 

@@ -1,6 +1,6 @@
 # Architecture
 
-## Scope at WP-11 checkpoint
+## Scope at WP-13 checkpoint
 
 WP-10 retains the versioned simulation profile registry and adds a separate local, versioned ADC
 measurement-contract registry. Only the non-proprietary `adc-synthetic-v1` contract exists; the
@@ -9,13 +9,14 @@ The controlled-write boundary fixes one approved source, a dedicated work librar
 property mutation, and generation-specific targets/backups. Historical V1/V2/V3 evidence remains
 preserved. Runner 0.16.0 completed the separately approved V4 clean validation against new fixed
 names, explicitly bounded the Cadence-maintained `schGeometryLastUpdated` side effect, restored the
-V4 target from its backup, and proved Source/PDK/prior-evidence immutability. No v1 tag or release
-is permitted until the reviewed branch is integrated and the remaining release checklist passes.
+V4 target from its backup, and proved Source/PDK/prior-evidence immutability. The published v1.0.0
+surface remains immutable. Runner 0.18.0 adds a separate fixed read-only ADE L introspection path
+for the one reviewed actual profile; parameterized execution remains disabled.
 
 ## Layer boundaries
 
 ```text
-MCPServer v2 stdio adapter (twenty-two allowlisted tools)
+MCPServer v2 stdio adapter (twenty-three allowlisted tools)
           |
           v
 CadenceService (transport-independent orchestration)
@@ -28,7 +29,8 @@ measurement engine            |
 ```
 
 - `config.py` owns operator configuration and enforces fixed SSH and remote-root boundaries.
-- `models.py` defines immutable health, job, artifact, discovery, and error contracts.
+- `models.py` defines immutable health, job, artifact, discovery, ADE-introspection, and error
+  contracts.
 - `discovery.py` enforces the reviewed library/cell/view allowlist before SSH.
 - `profiles.py` owns the reviewed local profile contract and rejects unknown profiles/corners.
 - `measurement_models.py` defines bounded measurement inputs, structured metrics, and manifests.
@@ -66,6 +68,17 @@ Discovery uses a fixed JSON allowlist deployed under `.cadence_mcp/config`. The 
 re-checks `cds.lib`, exact real paths, directory type, and symlink containment before returning
 only names, allowed counts, and existence. It never opens a cellview file and never returns a
 remote path, PDK entry, netlist, model, or cellview content.
+
+ADE introspection is a separate closed path. The caller supplies only the literal
+`actual-differential-amplifier-tb2-transient` profile ID. Runner 0.18.0 invokes one fixed Python
+2.6 metadata parser and one fixed SKILL template. SKILL opens only
+`MyDesignLib/Differential_Amplifier_TB2/schematic` with OA mode `r`, returns counts, closes the
+cellview, and never saves. The helper reads only the fixed state files, source snapshot, source
+tree, and gpdk090 model file. It returns safe design-variable names/numeric values, analysis enable
+state, output names, hashes, timestamps, lock counts, and topology `35/14/8`; paths and raw content
+remain internal. Source, state, PDK model, and source-netlist fingerprints must match before and
+after or the command fails. Contract differences return `profile_drift` and cannot modify either
+the profile registry or Cadence data.
 
 Profile submission accepts one closed profile identifier, one allowed corner, and a profile-specific
 typed variable object. The fixture accepts three bounded numeric variables. The actual profile

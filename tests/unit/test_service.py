@@ -13,6 +13,7 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
 )
 from cadence_mcp_bridge.models import (
+    AdeProfileIntrospection,
     CellList,
     CellViewInspection,
     HealthReport,
@@ -124,6 +125,86 @@ def health_report() -> HealthReport:
     )
 
 
+def ade_introspection() -> AdeProfileIntrospection:
+    return AdeProfileIntrospection.model_validate(
+        {
+            "schema_version": 1,
+            "status": "profile_drift",
+            "profile_id": "actual-differential-amplifier-tb2-transient",
+            "library": "MyDesignLib",
+            "cell": "Differential_Amplifier_TB2",
+            "view": "schematic",
+            "ade_product": "ADE L",
+            "state_name": "state1",
+            "state_exists": True,
+            "simulator": "spectre",
+            "pdk": "gpdk090",
+            "pdk_version": "4.6",
+            "model_section": "NN",
+            "temperature_c": 27.0,
+            "analyses": [
+                {"name": "dc", "enabled": True},
+                {"name": "tran", "enabled": False, "stop_time": "4m"},
+            ],
+            "design_variables": [
+                {"name": "VBIASN", "value": "300m"},
+                {"name": "VBIASP", "value": "650m"},
+            ],
+            "outputs": [],
+            "source_netlist": {
+                "exists": True,
+                "sha256": "a" * 64,
+                "size_bytes": 2104,
+                "mtime_utc": "2026-08-20T09:18:28Z",
+                "state_newest_mtime_utc": "2026-08-20T09:43:40Z",
+                "source_minus_state_seconds": -1512,
+                "source_not_older_than_state": False,
+            },
+            "source_structural_fingerprint": {
+                "instances": 35,
+                "nets": 14,
+                "terminals": 8,
+                "tree_metadata_sha256": "b" * 64,
+            },
+            "locks": {
+                "source_active_count": 0,
+                "state_active_count": 0,
+                "blocking": False,
+            },
+            "fingerprints": {
+                "source": {
+                    "before_sha256": "b" * 64,
+                    "after_sha256": "b" * 64,
+                    "unchanged": True,
+                },
+                "state": {
+                    "before_sha256": "c" * 64,
+                    "after_sha256": "c" * 64,
+                    "unchanged": True,
+                },
+                "pdk_model": {
+                    "before_sha256": "d" * 64,
+                    "after_sha256": "d" * 64,
+                    "unchanged": True,
+                },
+                "source_netlist": {
+                    "before_sha256": "a" * 64,
+                    "after_sha256": "a" * 64,
+                    "unchanged": True,
+                },
+                "all_unchanged": True,
+            },
+            "profile_contract_match": False,
+            "drift_codes": ["analysis_mismatch", "snapshot_freshness_unconfirmed"],
+            "provenance": "fixed_registry+ade_state+oa_readonly+filesystem_metadata",
+            "confidence": "high",
+            "read_only": True,
+            "paths_included": False,
+            "raw_content_included": False,
+        }
+    )
+
+
 class FakeBackend:
     def __init__(self) -> None:
         self.cancelled: UUID | None = None
@@ -170,6 +251,10 @@ class FakeBackend:
 
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         return CellViewInspection(library=library, cell=cell, view=view, exists=True)
+
+    async def inspect_ade_profile(self, profile_id: str) -> AdeProfileIntrospection:
+        assert profile_id == "actual-differential-amplifier-tb2-transient"
+        return ade_introspection()
 
     async def submit_profile(
         self,
@@ -310,6 +395,20 @@ async def test_service_returns_only_allowlisted_discovery_metadata() -> None:
     assert libraries.proprietary_content_included is False
     assert cells.cells == ("NOT_gate",)
     assert cellview.exists is True
+
+
+@pytest.mark.asyncio
+async def test_service_allows_only_the_fixed_actual_ade_profile() -> None:
+    service = CadenceService(FakeBackend())
+
+    inspection = await service.inspect_ade_profile(
+        "actual-differential-amplifier-tb2-transient"
+    )
+
+    assert inspection.status == "profile_drift"
+    assert inspection.paths_included is False
+    with pytest.raises(InvalidInputError, match="allowlist"):
+        await service.inspect_ade_profile("fixture-rc-transient")
 
 
 @pytest.mark.asyncio

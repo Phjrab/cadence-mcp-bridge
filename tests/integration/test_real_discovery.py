@@ -46,3 +46,47 @@ async def test_real_read_only_discovery_through_mcp() -> None:
     ).lower()
     for forbidden in ("/home/", "sch.oa", "symbol.oa", "cds.lib", "file_bytes"):
         assert forbidden not in serialized
+
+
+@pytest.mark.asyncio
+async def test_real_fixed_ade_profile_introspection_through_mcp() -> None:
+    server = create_server(CadenceService(OpenSshBackend(BridgeConfig())))
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "cadence_inspect_ade_profile",
+            {"profile_id": "actual-differential-amplifier-tb2-transient"},
+        )
+        denied = await client.call_tool(
+            "cadence_inspect_ade_profile",
+            {"profile_id": "fixture-rc-transient"},
+        )
+
+    payload = cast(dict[str, Any], result.structured_content)
+    assert result.is_error is False
+    assert payload["status"] in {"ok", "profile_drift"}
+    assert payload["profile_id"] == "actual-differential-amplifier-tb2-transient"
+    assert payload["read_only"] is True
+    assert payload["paths_included"] is False
+    assert payload["raw_content_included"] is False
+    assert payload["fingerprints"]["all_unchanged"] is True
+    assert payload["locks"]["blocking"] is False
+    assert payload["source_structural_fingerprint"] | {
+        "instances": 35,
+        "nets": 14,
+        "terminals": 8,
+    } == payload["source_structural_fingerprint"]
+    if payload["status"] == "profile_drift":
+        assert payload["drift_codes"]
+        assert payload["profile_contract_match"] is False
+    serialized = str(payload).lower()
+    for forbidden in (
+        "/home/",
+        "sch.oa",
+        "cds.lib",
+        "model_file",
+        "state_path",
+        "source_content",
+    ):
+        assert forbidden not in serialized
+    assert denied.is_error is True

@@ -31,6 +31,7 @@ from cadence_mcp_bridge.measurement_models import (
     SettlingRequest,
 )
 from cadence_mcp_bridge.models import (
+    AdeProfileIntrospection,
     CellList,
     CellViewInspection,
     ContractModel,
@@ -108,6 +109,16 @@ ProfileIdInput = Annotated[
                 "actual-differential-amplifier-tb2-transient",
             ],
             "description": "Exact profile identifier from cadence_list_profiles.",
+        }
+    ),
+]
+AdeProfileIdInput = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": ["actual-differential-amplifier-tb2-transient"],
+            "description": "The sole reviewed actual ADE L profile identifier.",
         }
     ),
 ]
@@ -298,6 +309,20 @@ def create_server(service: CadenceService) -> MCPServer:
         view: DiscoveryIdentifierInput,
     ) -> Annotated[CallToolResult, CellViewInspection]:
         return await _stable_result(service.inspect_cellview(library, cell, view))
+
+    @server.tool(
+        name="cadence_inspect_ade_profile",
+        description=(
+            "Inspect the one reviewed ADE L state with fixed read-only OA and metadata probes; "
+            "return no paths, raw state, netlist, model, OCEAN, or SKILL content."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_inspect_ade_profile(
+        profile_id: AdeProfileIdInput,
+    ) -> Annotated[CallToolResult, AdeProfileIntrospection]:
+        return await _stable_result(service.inspect_ade_profile(profile_id))
 
     @server.tool(
         name="cadence_list_profiles",

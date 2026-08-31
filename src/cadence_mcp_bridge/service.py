@@ -41,6 +41,7 @@ from cadence_mcp_bridge.measurements import (
     summarize_monte_carlo,
 )
 from cadence_mcp_bridge.models import (
+    AdeProfileIntrospection,
     CellList,
     CellViewInspection,
     HealthReport,
@@ -53,6 +54,7 @@ from cadence_mcp_bridge.models import (
     SimulationProfile,
 )
 from cadence_mcp_bridge.profiles import (
+    ACTUAL_PROFILE_ID,
     get_profile,
     list_profiles,
     validate_corner,
@@ -88,6 +90,8 @@ class CadenceBackend(Protocol):
     async def list_cells(self, library: str) -> CellList: ...
 
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection: ...
+
+    async def inspect_ade_profile(self, profile_id: str) -> AdeProfileIntrospection: ...
 
     async def submit_profile(
         self,
@@ -212,6 +216,14 @@ class CadenceService:
             safe_view,
         ):
             raise RemoteFailureError("Remote runner returned mismatched cellview metadata")
+        return result
+
+    async def inspect_ade_profile(self, profile_id: str) -> AdeProfileIntrospection:
+        if profile_id != ACTUAL_PROFILE_ID:
+            raise InvalidInputError("profile is outside the ADE introspection allowlist")
+        result = await self._call(lambda: self._backend.inspect_ade_profile(profile_id))
+        if result.profile_id != profile_id:
+            raise RemoteFailureError("Remote runner returned mismatched ADE profile metadata")
         return result
 
     async def list_profiles(self) -> ProfileList:

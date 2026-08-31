@@ -17,15 +17,16 @@ capability-gated mode.
 | Release publication | passed with stale body text | Separate approval required to repair only the GitHub release description |
 | Actual snapshot binding | passed | `VBIASN` and `VBIASP` are referenced but not declared in the source snapshot |
 | Source reproducibility | passed | Current source SHA-256 matches the latest successful actual manifest |
-| Snapshot freshness | unresolved | Source is older than ADE-state metadata; fixed introspection or approved regeneration is needed |
-| Immutable bias baseline | unresolved | User must choose `300m/650m`, `370m/650m`, or another explicit bounded value |
+| Snapshot freshness | unresolved | WP-13 confirmed the source remains older than ADE-state metadata; approved regeneration or explicit snapshot policy is needed |
+| Immutable bias baseline | discovered, unapproved | ADE state reports `300m/650m`; user approval is still required before parameterized execution |
+| ADE analysis contract | drifted | state1 has `dc` enabled and `tran` disabled while the reviewed profile expects `tran` |
 | Actual variable contract | not started | WP-14 and explicit user approval |
 | Actual output contract | not started | Exact logical outputs and extraction policy must be approved |
 | Sweep execution | disabled | Requires WP-15 through WP-17 gates |
 
 ## Planned work-package sequence
 
-1. WP-13: fixed read-only ADE L profile introspection.
+1. WP-13: fixed read-only ADE L profile introspection (completed on feature branch).
 2. WP-14: actual parameter binding and approval package; no variable enablement.
 3. User approval: immutable baseline, variable ranges, steps, and run limits.
 4. WP-15: separate parameterized snapshot profile v2; v1 remains unchanged.
@@ -60,3 +61,16 @@ and freshness comparisons. It is not exposed as an MCP tool.
 The audit outcome is `BASELINE_DECISION_REQUIRED` and `SNAPSHOT_FRESHNESS_UNCONFIRMED`. These
 conditions do not prevent the next read-only introspection work package, but they block
 parameterized actual execution and sweep implementation.
+
+## WP-13 outcome
+
+Runner 0.18.0 and `cadence_inspect_ade_profile` performed fixed read-only introspection of state1.
+The source OA structure is `35/14/8`; state variables are `VBIASN=300m` and `VBIASP=650m`; model
+section and temperature match `NN` and 27 C; no named output is configured. Source, state, PDK
+model, and source snapshot fingerprints were identical before and after and no lock remained.
+
+The state has `dc` enabled and `tran` disabled despite the profile's transient contract, and the
+source snapshot remains older than state metadata. The structured outcome is `PROFILE_DRIFT` with
+`analysis_mismatch` and `snapshot_freshness_unconfirmed`. WP-14 may document exact approval
+choices, but no parameterized execution, profile rewrite, snapshot regeneration, or sweep is
+authorized.

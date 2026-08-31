@@ -12,6 +12,7 @@ from mcp import Client
 
 from cadence_mcp_bridge.errors import AuthenticationError
 from cadence_mcp_bridge.models import (
+    AdeProfileIntrospection,
     CellList,
     CellViewInspection,
     HealthReport,
@@ -107,6 +108,86 @@ def write_result(validation_id: UUID) -> DesignWriteValidationResult:
     )
 
 
+def ade_introspection() -> AdeProfileIntrospection:
+    return AdeProfileIntrospection.model_validate(
+        {
+            "schema_version": 1,
+            "status": "profile_drift",
+            "profile_id": "actual-differential-amplifier-tb2-transient",
+            "library": "MyDesignLib",
+            "cell": "Differential_Amplifier_TB2",
+            "view": "schematic",
+            "ade_product": "ADE L",
+            "state_name": "state1",
+            "state_exists": True,
+            "simulator": "spectre",
+            "pdk": "gpdk090",
+            "pdk_version": "4.6",
+            "model_section": "NN",
+            "temperature_c": 27.0,
+            "analyses": [
+                {"name": "dc", "enabled": True},
+                {"name": "tran", "enabled": False, "stop_time": "4m"},
+            ],
+            "design_variables": [
+                {"name": "VBIASN", "value": "300m"},
+                {"name": "VBIASP", "value": "650m"},
+            ],
+            "outputs": [],
+            "source_netlist": {
+                "exists": True,
+                "sha256": "a" * 64,
+                "size_bytes": 2104,
+                "mtime_utc": "2026-08-20T09:18:28Z",
+                "state_newest_mtime_utc": "2026-08-20T09:43:40Z",
+                "source_minus_state_seconds": -1512,
+                "source_not_older_than_state": False,
+            },
+            "source_structural_fingerprint": {
+                "instances": 35,
+                "nets": 14,
+                "terminals": 8,
+                "tree_metadata_sha256": "b" * 64,
+            },
+            "locks": {
+                "source_active_count": 0,
+                "state_active_count": 0,
+                "blocking": False,
+            },
+            "fingerprints": {
+                "source": {
+                    "before_sha256": "b" * 64,
+                    "after_sha256": "b" * 64,
+                    "unchanged": True,
+                },
+                "state": {
+                    "before_sha256": "c" * 64,
+                    "after_sha256": "c" * 64,
+                    "unchanged": True,
+                },
+                "pdk_model": {
+                    "before_sha256": "d" * 64,
+                    "after_sha256": "d" * 64,
+                    "unchanged": True,
+                },
+                "source_netlist": {
+                    "before_sha256": "a" * 64,
+                    "after_sha256": "a" * 64,
+                    "unchanged": True,
+                },
+                "all_unchanged": True,
+            },
+            "profile_contract_match": False,
+            "drift_codes": ["analysis_mismatch", "snapshot_freshness_unconfirmed"],
+            "provenance": "fixed_registry+ade_state+oa_readonly+filesystem_metadata",
+            "confidence": "high",
+            "read_only": True,
+            "paths_included": False,
+            "raw_content_included": False,
+        }
+    )
+
+
 class FakeBackend:
     def __init__(self) -> None:
         self.failure: Exception | None = None
@@ -164,6 +245,10 @@ class FakeBackend:
     async def inspect_cellview(self, library: str, cell: str, view: str) -> CellViewInspection:
         return CellViewInspection(library=library, cell=cell, view=view, exists=True)
 
+    async def inspect_ade_profile(self, profile_id: str) -> AdeProfileIntrospection:
+        assert profile_id == "actual-differential-amplifier-tb2-transient"
+        return ade_introspection()
+
     async def submit_profile(
         self,
         job_id: UUID,
@@ -212,6 +297,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_libraries",
         "cadence_list_cells",
         "cadence_inspect_cellview",
+        "cadence_inspect_ade_profile",
         "cadence_list_profiles",
         "cadence_get_profile",
         "cadence_submit_profile",
@@ -262,6 +348,12 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cell",
         "view",
     }
+    assert set(tools["cadence_inspect_ade_profile"].input_schema["properties"]) == {
+        "profile_id"
+    }
+    assert tools["cadence_inspect_ade_profile"].input_schema["properties"]["profile_id"][
+        "enum"
+    ] == ["actual-differential-amplifier-tb2-transient"]
     read_only = {
         name
         for name, tool in tools.items()
@@ -275,6 +367,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_libraries",
         "cadence_list_cells",
         "cadence_inspect_cellview",
+        "cadence_inspect_ade_profile",
         "cadence_list_profiles",
         "cadence_get_profile",
         "cadence_get_measurement_contract",
@@ -342,6 +435,10 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             "cadence_inspect_cellview",
             {"library": "MyFirstDesign", "cell": "NOT_gate", "view": "schematic"},
         )
+        ade = await client.call_tool(
+            "cadence_inspect_ade_profile",
+            {"profile_id": "actual-differential-amplifier-tb2-transient"},
+        )
         profiles = await client.call_tool("cadence_list_profiles")
         profile = await client.call_tool(
             "cadence_get_profile", {"profile_id": "fixture-rc-transient"}
@@ -379,6 +476,7 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
     assert cast(dict[str, Any], libraries.structured_content)["allowlist_enforced"] is True
     assert cast(dict[str, Any], cells.structured_content)["cells"] == ["NOT_gate"]
     assert cast(dict[str, Any], cellview.structured_content)["exists"] is True
+    assert cast(dict[str, Any], ade.structured_content)["status"] == "profile_drift"
     assert cast(dict[str, Any], profiles.structured_content)["registry_version"] == 1
     assert cast(dict[str, Any], profile.structured_content)["classification"] == "fixture"
     assert cast(dict[str, Any], profile_submit.structured_content)["state"] == "queued"
@@ -396,6 +494,7 @@ async def test_in_memory_client_calls_all_tools_successfully() -> None:
             libraries,
             cells,
             cellview,
+            ade,
             profiles,
             profile,
             profile_submit,

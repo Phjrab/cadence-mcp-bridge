@@ -2,7 +2,7 @@
 
 ## Security objective
 
-The bridge provides a small, reviewable path from twenty-two MCP tools to fixed simulation profiles,
+The bridge provides a small, reviewable path from twenty-three MCP tools to fixed simulation profiles,
 three metadata-only design discovery operations, one fixed write plan, and one confirmation-gated
 validation operation. It is not a general remote
 administration, file access, OCEAN, SKILL, netlist, or shell interface. Every boundary fails
@@ -30,7 +30,7 @@ other paths remain read-only and outside the runner contract.
 
 ```text
 model/user
-  -> twenty-two typed MCP tools
+  -> twenty-three typed MCP tools
   -> CadenceService (UUID ownership and input validation)
   -> local bounded ADC measurement engine, or
      OpenSshBackend (fixed argv, ssh alias, runner path, command allowlist)
@@ -73,6 +73,7 @@ fixed jobs root.
 | Design modification or lock creation | OCEAN/SKILL headless checks | fixed no-graph scripts, isolated working/log directory under `.cadence_mcp`, no design open/save calls, before/after metadata and lock fingerprints | Cadence installation behavior is trusted |
 | Profile parameter injection | profile, corner, numeric variables | closed schemas, local registry, finite range checks, empty actual-variable schema, safe token formatting, remote registry/source revalidation before job creation | each future actual profile requires separate review |
 | Snapshot baseline drift | fixed actual source and ADE-state metadata | argument-free read-only audit, bounded hashes/timestamps, parameter declaration/reference metadata, latest-manifest hash comparison, fail-closed baseline decision | timestamps do not prove semantic equivalence; fixed ADE introspection remains required |
+| ADE profile introspection drift or disclosure | one fixed state1 profile and OA source | closed profile-ID enum, fixed parser and SKILL template, OA mode `r`, bounded numeric/name grammar, before/after source/state/PDK/netlist fingerprints, no paths or raw content | state serialization and IC6.1.5 read-only behavior are trusted; any contract difference remains fail-closed |
 | ADE state modification | actual testbench automation | fixed read-only state/source paths, source copied into `.cadence_mcp`, reviewed wrapper, before/after metadata and lock fingerprints | correctness depends on the approved existing ADE-generated netlist |
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
@@ -131,6 +132,16 @@ timestamps and counts, exact allowlisted parameter names, and declaration/refere
 does not return a containing statement, source or state content, a remote path, or a discovered
 parameter value. Two consecutive audits must retain identical profile, source, and state
 fingerprints.
+
+The MCP ADE introspection tool accepts only the one actual profile ID. It invokes no caller text,
+path, library, cell, view, state, analysis, output, SKILL, or OCEAN input. Its fixed SKILL template
+opens the one source schematic with mode `r`, reports only `35/14/8` counts, closes the cellview,
+and contains no save or mutation primitive. The fixed Python 2.6 helper parses bounded known state
+records and returns only safe identifiers/numeric values plus hashes, timestamps, lock counts, and
+drift codes. Cadence logs stay in the private runtime and are truncated to 65,536 bytes. Source,
+state, PDK model, and source-netlist fingerprints must be identical before and after. Current
+analysis/freshness differences return `profile_drift`; no automatic profile correction or
+simulation is permitted.
 
 ## Process, concurrency, and recovery
 

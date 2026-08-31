@@ -211,6 +211,104 @@ async def test_discovery_commands_use_fixed_runner_argv(
 
 
 @pytest.mark.asyncio
+async def test_ade_introspection_uses_one_fixed_profile_argument(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = {
+        "schema_version": 1,
+        "status": "profile_drift",
+        "profile_id": "actual-differential-amplifier-tb2-transient",
+        "library": "MyDesignLib",
+        "cell": "Differential_Amplifier_TB2",
+        "view": "schematic",
+        "ade_product": "ADE L",
+        "state_name": "state1",
+        "state_exists": True,
+        "simulator": "spectre",
+        "pdk": "gpdk090",
+        "pdk_version": "4.6",
+        "model_section": "NN",
+        "temperature_c": 27.0,
+        "analyses": [
+            {"name": "dc", "enabled": True, "stop_time": None},
+            {"name": "tran", "enabled": False, "stop_time": "4m"},
+        ],
+        "design_variables": [
+            {"name": "VBIASN", "value": "300m"},
+            {"name": "VBIASP", "value": "650m"},
+        ],
+        "outputs": [],
+        "source_netlist": {
+            "exists": True,
+            "sha256": "a" * 64,
+            "size_bytes": 2104,
+            "mtime_utc": "2026-08-20T09:18:28Z",
+            "state_newest_mtime_utc": "2026-08-20T09:43:40Z",
+            "source_minus_state_seconds": -1512,
+            "source_not_older_than_state": False,
+        },
+        "source_structural_fingerprint": {
+            "instances": 35,
+            "nets": 14,
+            "terminals": 8,
+            "tree_metadata_sha256": "b" * 64,
+        },
+        "locks": {
+            "source_active_count": 0,
+            "state_active_count": 0,
+            "blocking": False,
+        },
+        "fingerprints": {
+            "source": {
+                "before_sha256": "b" * 64,
+                "after_sha256": "b" * 64,
+                "unchanged": True,
+            },
+            "state": {
+                "before_sha256": "c" * 64,
+                "after_sha256": "c" * 64,
+                "unchanged": True,
+            },
+            "pdk_model": {
+                "before_sha256": "d" * 64,
+                "after_sha256": "d" * 64,
+                "unchanged": True,
+            },
+            "source_netlist": {
+                "before_sha256": "a" * 64,
+                "after_sha256": "a" * 64,
+                "unchanged": True,
+            },
+            "all_unchanged": True,
+        },
+        "profile_contract_match": False,
+        "drift_codes": ["analysis_mismatch", "snapshot_freshness_unconfirmed"],
+        "provenance": "fixed_registry+ade_state+oa_readonly+filesystem_metadata",
+        "confidence": "high",
+        "read_only": True,
+        "paths_included": False,
+        "raw_content_included": False,
+    }
+    run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+
+    result = await backend.inspect_ade_profile(
+        "actual-differential-amplifier-tb2-transient"
+    )
+
+    assert result.status == "profile_drift"
+    assert run.call_args.args[0][-2:] == [
+        "inspect-ade-profile",
+        "actual-differential-amplifier-tb2-transient",
+    ]
+
+    run.reset_mock()
+    with pytest.raises(InvalidInputError, match="allowlist"):
+        await backend.inspect_ade_profile("fixture-rc-transient")
+    run.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_submit_profile_uses_fixed_safe_runner_arguments(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -464,6 +562,7 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
         "design_write_plan",
         "execute_design_write_validation",
         "health",
+        "inspect_ade_profile",
         "inspect_cellview",
         "list_cells",
         "list_libraries",

@@ -139,6 +139,132 @@ class SimulationProfile(ProfileSummary):
     ade: AdeProfileMetadata | None = None
 
 
+class AdeDesignVariable(ContractModel):
+    name: Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,63}$")]
+    value: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=32,
+            pattern=r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[munpfkMGT]?$",
+        ),
+    ]
+
+
+class AdeAnalysisMetadata(ContractModel):
+    name: Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,31}$")]
+    enabled: bool
+    stop_time: Annotated[str, Field(min_length=1, max_length=32)] | None = None
+
+
+class AdeSourceFingerprint(ContractModel):
+    instances: Annotated[int, Field(ge=0)]
+    nets: Annotated[int, Field(ge=0)]
+    terminals: Annotated[int, Field(ge=0)]
+    tree_metadata_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
+class AdeFingerprintPair(ContractModel):
+    before_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    after_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    unchanged: bool
+
+
+class AdeProfileFingerprintVerification(ContractModel):
+    source: AdeFingerprintPair
+    state: AdeFingerprintPair
+    pdk_model: AdeFingerprintPair
+    source_netlist: AdeFingerprintPair
+    all_unchanged: bool
+
+    @model_validator(mode="after")
+    def validate_unchanged_summary(self) -> Self:
+        expected = all(
+            item.unchanged
+            for item in (self.source, self.state, self.pdk_model, self.source_netlist)
+        )
+        if self.all_unchanged != expected:
+            raise ValueError("fingerprint summary does not match component results")
+        return self
+
+
+class AdeLockMetadata(ContractModel):
+    source_active_count: Annotated[int, Field(ge=0)]
+    state_active_count: Annotated[int, Field(ge=0)]
+    blocking: bool
+
+
+class AdeSourceNetlistMetadata(ContractModel):
+    exists: Literal[True]
+    sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    size_bytes: Annotated[int, Field(gt=0)]
+    mtime_utc: datetime
+    state_newest_mtime_utc: datetime
+    source_minus_state_seconds: int
+    source_not_older_than_state: bool
+
+    @field_validator("mtime_utc", "state_newest_mtime_utc")
+    @classmethod
+    def require_utc_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamps must include a timezone")
+        return value
+
+
+class AdeProfileIntrospection(ContractModel):
+    schema_version: Literal[1]
+    status: Literal["ok", "profile_drift"]
+    profile_id: Literal["actual-differential-amplifier-tb2-transient"]
+    library: Literal["MyDesignLib"]
+    cell: Literal["Differential_Amplifier_TB2"]
+    view: Literal["schematic"]
+    ade_product: Literal["ADE L"]
+    state_name: Literal["state1"]
+    state_exists: Literal[True]
+    simulator: Literal["spectre"]
+    pdk: Literal["gpdk090"]
+    pdk_version: Literal["4.6"]
+    model_section: Annotated[str, Field(min_length=1, max_length=32)]
+    temperature_c: float
+    analyses: tuple[AdeAnalysisMetadata, ...]
+    design_variables: tuple[AdeDesignVariable, ...]
+    outputs: tuple[Annotated[str, Field(min_length=1, max_length=128)], ...]
+    source_netlist: AdeSourceNetlistMetadata
+    source_structural_fingerprint: AdeSourceFingerprint
+    locks: AdeLockMetadata
+    fingerprints: AdeProfileFingerprintVerification
+    profile_contract_match: bool
+    drift_codes: tuple[
+        Literal[
+            "analysis_mismatch",
+            "design_variable_mismatch",
+            "output_mismatch",
+            "model_mismatch",
+            "temperature_mismatch",
+            "identity_mismatch",
+            "snapshot_freshness_unconfirmed",
+        ],
+        ...,
+    ]
+    provenance: Literal["fixed_registry+ade_state+oa_readonly+filesystem_metadata"]
+    confidence: Literal["high"]
+    read_only: Literal[True]
+    paths_included: Literal[False]
+    raw_content_included: Literal[False]
+
+    @model_validator(mode="after")
+    def validate_status(self) -> Self:
+        expected_match = not self.drift_codes
+        if self.profile_contract_match != expected_match:
+            raise ValueError("profile contract flag does not match drift codes")
+        expected_status = "ok" if expected_match else "profile_drift"
+        if self.status != expected_status:
+            raise ValueError("introspection status does not match drift codes")
+        if not self.fingerprints.all_unchanged or self.locks.blocking:
+            raise ValueError("read-only introspection invariants did not hold")
+        return self
+
+
 class RcTransientVariables(ContractModel):
     resistance_ohm: Annotated[float, Field(ge=100.0, le=10_000.0)] = 1_000.0
     capacitance_f: Annotated[float, Field(ge=1e-13, le=1e-10)] = 1e-12

@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.17.0
+RUNNER_VERSION=0.18.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -16,6 +16,7 @@ DISCOVERY_ALLOWLIST="$CADENCE_MCP_ROOT/config/discovery-allowlist.json"
 DISCOVERY_RUNTIME="$CADENCE_MCP_ROOT/discovery-runtime"
 PROFILE_HELPER="$CADENCE_MCP_ROOT/py26/profile_json.py"
 ACTUAL_PROFILE_AUDIT_HELPER="$CADENCE_MCP_ROOT/py26/actual_profile_audit.py"
+ADE_PROFILE_INTROSPECTION_WORKER="$CADENCE_MCP_ROOT/lib/run-ade-profile-introspection.sh"
 FIXTURE_PROFILE="$CADENCE_MCP_ROOT/profiles/fixture-rc-transient/profile.json"
 ACTUAL_PROFILE="$CADENCE_MCP_ROOT/profiles/actual-differential-amplifier-tb2-transient/profile.json"
 WRITE_POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
@@ -36,7 +37,7 @@ V4_HELPER="$CADENCE_MCP_ROOT/py26/v4_validation_json.py"
 V4_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v4-validation.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|actual-profile-baseline-audit|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|design-write-v3-exact-rollback|design-write-v4-plan-check|design-write-v4-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|actual-profile-baseline-audit|inspect-ade-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|design-write-v3-exact-rollback|design-write-v4-plan-check|design-write-v4-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -186,6 +187,17 @@ runner_submit_profile() {
 runner_actual_profile_baseline_audit() {
     [ "$#" -eq 0 ] || usage
     "$CADENCE_MCP_PYTHON" "$ACTUAL_PROFILE_AUDIT_HELPER"
+}
+
+runner_inspect_ade_profile() {
+    [ "$#" -eq 1 ] || usage
+    [ "$1" = actual-differential-amplifier-tb2-transient ] \
+        || cadence_mcp_fail "profile is outside the ADE introspection allowlist" 64
+    cadence_mcp_ensure_layout
+    runtime="$CADENCE_MCP_ROOT/ade-profile-introspection"
+    mkdir -p "$runtime" || cadence_mcp_fail "ADE introspection runtime unavailable" 73
+    chmod 700 "$runtime"
+    flock "$runtime/runner.lock" "$ADE_PROFILE_INTROSPECTION_WORKER"
 }
 
 runner_status() {
@@ -446,6 +458,7 @@ case "$command_name" in
     submit-smoke) runner_submit_smoke "$@" ;;
     submit-profile) runner_submit_profile "$@" ;;
     actual-profile-baseline-audit) runner_actual_profile_baseline_audit "$@" ;;
+    inspect-ade-profile) runner_inspect_ade_profile "$@" ;;
     status) runner_status "$@" ;;
     log-tail) runner_log_tail "$@" ;;
     result) runner_result "$@" ;;
