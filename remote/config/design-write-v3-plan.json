@@ -1,0 +1,61 @@
+{
+  "plan_version": 1,
+  "plan_id": "mcp-cellview-property-v3",
+  "status": "blocked_on_v2_exact_diff_failure",
+  "execution_enabled": false,
+  "blocking_reason": "V2 target changed at least one baseline property, so the approved V2 rollback precondition did not pass",
+  "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+  "source_topology": {
+    "instances": 35,
+    "nets": 14,
+    "terminals": 8
+  },
+  "target": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3/schematic",
+  "backup": "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic",
+  "preserved_evidence": [
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+    "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic"
+  ],
+  "operation": "set_cellview_property",
+  "property": {
+    "name": "mcpMutationTest",
+    "type": "string",
+    "old_value": null,
+    "proposed_value": "validated-v1"
+  },
+  "affected_objects": 1,
+  "original_library_mutations": 0,
+  "destructive": false,
+  "worker_timeout_seconds": 300,
+  "required_confirmation": null,
+  "acceptance_criteria": [
+    "source master.tag authoritatively selects sch.oa",
+    "source topology is exactly 35 instances, 14 nets, and 8 terminals before and after",
+    "V1 target, V2 target, and V2 backup evidence remain unchanged throughout V3 validation",
+    "V3 destination and V3 backup are absent before execution",
+    "dry-run leaves the V3 database unchanged",
+    "apply changes exactly one cellview property to mcpMutationTest string validated-v1",
+    "V3 backup remains equal to the pre-apply baseline",
+    "rollback removes mcpMutationTest and restores the complete logical baseline",
+    "audit and validation manifest record every successful stage",
+    "any failure stops without retry, deletion, overwrite, or fallback names"
+  ],
+  "sequence": [
+    "source_verify",
+    "V3_destination_absence_check",
+    "V3_backup_absence_check",
+    "V3_copy",
+    "baseline_fingerprint",
+    "dry_run",
+    "unchanged_verification",
+    "backup",
+    "apply",
+    "exact_diff_verification",
+    "rollback",
+    "baseline_restoration_verification",
+    "source_unchanged_verification",
+    "audit_verification"
+  ],
+  "release_gate_enabled": false
+}

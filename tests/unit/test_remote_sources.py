@@ -16,6 +16,11 @@ WRITE_POLICY = PROJECT_ROOT / "remote" / "config" / "design-write-policy.json"
 WRITE_HELPER = PROJECT_ROOT / "remote" / "py26" / "write_validation_json.py"
 WRITE_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-validation.il"
 WRITE_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-validation.sh"
+V2_RECOVERY_HELPER = PROJECT_ROOT / "remote" / "py26" / "v2_recovery_json.py"
+V2_RECOVERY_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v2-recovery.sh"
+V2_FORENSIC_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-forensic.il"
+V2_ROLLBACK_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-rollback.il"
+V3_PLAN = PROJECT_ROOT / "remote" / "config" / "design-write-v3-plan.json"
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -36,6 +41,8 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-plan",
         "design-write-preflight",
         "design-write-validate",
+        "design-write-v2-forensic",
+        "design-write-v2-rollback",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -54,7 +61,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.9.0" in runner
+    assert "RUNNER_VERSION=0.10.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -185,3 +192,56 @@ def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() 
     assert "design-write-policy.json" in deploy
     assert "design-write-validation.il" in deploy
     assert "design-write-readonly-preflight.il" in deploy
+
+
+def test_v2_recovery_is_fixed_read_only_then_exact_backup_restore() -> None:
+    helper = V2_RECOVERY_HELPER.read_text(encoding="utf-8")
+    worker = V2_RECOVERY_WORKER.read_text(encoding="utf-8")
+    forensic = V2_FORENSIC_SCRIPT.read_text(encoding="utf-8")
+    rollback = V2_ROLLBACK_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "APPROVE_MCP_V2_BACKUP_ROLLBACK" in RUNNER.read_text(encoding="utf-8")
+    assert "active Virtuoso process blocks V2 recovery" in worker
+    assert "source-check" in worker
+    assert "fingerprint_tree" in worker
+    assert "MCP_V2_FORENSIC|true|35|14|8|8|9|validated-v1" in forensic
+    assert "dbOpenCellViewByType" in forensic
+    assert "dbCopyCellView" not in forensic
+    assert "dbSave" not in forensic
+    assert "MCP_V2_ROLLBACK|true|35|14|8|8|8|absent" in rollback
+    assert "dbCopyCellView(backupCv workLib targetCell sourceView nil nil t)" in rollback
+    assert "dbDeleteObject" not in rollback
+    assert "design_write_v2_recovery_rollback" in helper
+    assert "v2-forensic-evidence.json" in helper
+    assert "v2-rollback-evidence.json" in helper
+    for source in (forensic, rollback):
+        for forbidden in ("evalstring", "load(", "dbCreateInst", "dbDeleteObject"):
+            assert forbidden not in source
+        assert "return(nil)" not in source
+    assert "run-design-write-v2-recovery.sh" in deploy
+    assert "v2_recovery_json.py" in deploy
+    assert "design-write-v2-forensic.il" in deploy
+    assert "design-write-v2-rollback.il" in deploy
+
+
+def test_v3_plan_is_non_executable_and_preserves_prior_evidence() -> None:
+    plan = json.loads(V3_PLAN.read_text(encoding="utf-8"))
+
+    assert plan["plan_id"] == "mcp-cellview-property-v3"
+    assert plan["status"] == "blocked_on_v2_exact_diff_failure"
+    assert plan["execution_enabled"] is False
+    assert plan["target"] == "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3/schematic"
+    assert plan["backup"] == (
+        "MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic"
+    )
+    assert plan["property"] == {
+        "name": "mcpMutationTest",
+        "type": "string",
+        "old_value": None,
+        "proposed_value": "validated-v1",
+    }
+    assert len(plan["preserved_evidence"]) == 3
+    assert plan["required_confirmation"] is None
+    assert len(plan["acceptance_criteria"]) == 10
+    assert plan["release_gate_enabled"] is False

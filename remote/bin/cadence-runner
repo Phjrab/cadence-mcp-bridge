@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.9.0
+RUNNER_VERSION=0.10.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -21,9 +21,10 @@ WRITE_POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
 WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
 WRITE_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-validation.sh"
 WRITE_PREFLIGHT="$CADENCE_MCP_ROOT/write/design-write-readonly-preflight.il"
+V2_RECOVERY_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v2-recovery.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-rollback|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -332,6 +333,18 @@ runner_design_write_validate() {
     "$WRITE_WORKER" "$validation_id" "$origin"
 }
 
+runner_design_write_v2_forensic() {
+    [ "$#" -eq 0 ] || usage
+    "$V2_RECOVERY_WORKER" forensic
+}
+
+runner_design_write_v2_rollback() {
+    [ "$#" -eq 1 ] || usage
+    [ "$1" = "APPROVE_MCP_V2_BACKUP_ROLLBACK" ] \
+        || cadence_mcp_fail "V2 rollback confirmation rejected" 64
+    "$V2_RECOVERY_WORKER" rollback
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -364,6 +377,8 @@ case "$command_name" in
     design-write-plan) runner_design_write_plan "$@" ;;
     design-write-preflight) runner_design_write_preflight "$@" ;;
     design-write-validate) runner_design_write_validate "$@" ;;
+    design-write-v2-forensic) runner_design_write_v2_forensic "$@" ;;
+    design-write-v2-rollback) runner_design_write_v2_rollback "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;
