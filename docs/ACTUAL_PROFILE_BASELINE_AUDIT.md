@@ -1,7 +1,7 @@
 # Actual Profile Baseline Audit
 
-Date: 2026-08-31  
-Work package: WP-12  
+Date: 2026-08-31
+Work package: WP-12
 Status: `BASELINE_DECISION_REQUIRED`
 
 ## Scope and safety boundary
@@ -130,4 +130,3 @@ release. Those actions retain their later work-package gates.
 - Profile, source, and state fingerprints match across two consecutive audits.
 - Design, ADE-state, PDK, and work-library writes: zero.
 - Raw proprietary content, credentials, license values, and remote paths returned: zero.
-

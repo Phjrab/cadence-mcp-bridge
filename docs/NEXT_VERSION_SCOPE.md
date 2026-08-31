@@ -60,4 +60,3 @@ and freshness comparisons. It is not exposed as an MCP tool.
 The audit outcome is `BASELINE_DECISION_REQUIRED` and `SNAPSHOT_FRESHNESS_UNCONFIRMED`. These
 conditions do not prevent the next read-only introspection work package, but they block
 parameterized actual execution and sweep implementation.
-
