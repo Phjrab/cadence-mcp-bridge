@@ -62,3 +62,11 @@ structure hashes were unchanged, and Source and backup remained immutable. An im
 and 14-stage audit record were verified. This successful recovery preserves the failed V3 evidence
 but does not make the earlier clean validation pass. V4, tag, and release remain unstarted and
 require a separately reviewed clean-validation plan and explicit approval.
+
+That planning gate is now represented by non-executable V4 plan SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It fixes new V4 target and
+backup names, preserves all earlier evidence, and defines 18 stages and 18 acceptance criteria,
+including a separate bounded check for the Cadence-maintained metadata transition observed in V3.
+No implementation, deployment, confirmation token, V4 cellview, mutation, tag, or release was
+created. The release remains blocked pending separate plan-bound mutation approval and successful
+execution.

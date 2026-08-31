@@ -436,6 +436,16 @@ objects and evidence. Do not start V4, create a tag, or create a release without
 reviewed V4 plan and explicit approval; the failed V3 validation is not converted into a release
 PASS by its successful recovery.
 
+The next clean-validation proposal is checked in at
+`remote/config/design-write-v4-plan.json`, SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It uses only the new fixed
+V4 target and backup names, preserves every V1/V2/V3 cellview, and contains 18 fixed stages and 18
+acceptance criteria. It distinguishes the proposed one-property semantic mutation from the bounded
+Cadence-maintained `schGeometryLastUpdated` integer side effect discovered during V3. The asset is
+planning-only: it has no confirmation token and is absent from the runner and deployment manifest.
+Do not implement, deploy, create either V4 cellview, or perform any OA write until a separate
+approval is explicitly bound to this raw plan SHA-256.
+
 Packaging lifecycle is independently verifiable with:
 
 ```powershell

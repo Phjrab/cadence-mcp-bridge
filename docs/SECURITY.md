@@ -76,7 +76,7 @@ fixed jobs root.
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
-| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | the incomplete V3 target and backup now exist, so clean reruns fail closed pending separately approved forensics and recovery |
+| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | V3 recovery is complete, but any new V4 write remains disabled pending separate plan-bound implementation and mutation approval |
 | Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence, no v1 tag while blocked | final release requires a resumed WP-11 run |
 
 ## Origin and audit contract
@@ -210,6 +210,15 @@ file verification-time SHA-256 is
 `4786eab04bdc3ea9d1626b1123e62a25a00ee8efdcce919db4da653ab9c8e34f`. This recovery authorizes
 no cleanup, V4 write, tag, or release, and the original failed validation evidence remains
 preserved.
+
+The proposed V4 clean-validation plan is a repository-only, non-executable asset with SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It fixes new V4 target and
+backup names, protects Source, PDK, and all V1/V2/V3 evidence, and permits no overwrite, fallback,
+cleanup, or automatic retry. Its 18 acceptance criteria treat `mcpMutationTest` as the sole proposed
+semantic change and `schGeometryLastUpdated` as the only bounded OA metadata side effect, whose
+exact observed transition must be recorded. No V4 runner command, confirmation token, deployment,
+or remote artifact exists. Implementation and execution require a separate approval bound to the
+unchanged raw plan hash.
 
 ## Verification
 

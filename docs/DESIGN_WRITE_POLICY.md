@@ -127,3 +127,22 @@ backup restore, all local/security/integration tests, install/uninstall verifica
 source/PDK immutability checks. The V3 recovery gate passed, but it does not retroactively complete
 the failed V3 clean validation. V4, a tag, and a GitHub release remain prohibited until a separate
 V4 plan and explicit approval are reviewed and its complete clean-validation gate succeeds.
+
+## Proposed V4 clean-validation plan
+
+`remote/config/design-write-v4-plan.json` is a planning-only asset with SHA-256
+`c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`. It fixes the new target
+`MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V4/schematic` and backup
+`MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V4_BACKUP/schematic`, preserves all five V1/V2/V3
+cellviews, and keeps Source and `gpdk090` read-only. The proposed semantic mutation remains the
+single `mcpMutationTest` string property. The plan separately bounds the Cadence-maintained
+`schGeometryLastUpdated` integer as the only permitted metadata side effect: its exact observed
+before/after values must be recorded, and no other baseline property may change.
+
+The plan contains 18 stages and 18 acceptance criteria. It is deliberately non-executable:
+`execution_enabled`, `implementation_enabled`, and `release_gate_enabled` are false;
+`required_confirmation` is null. No V4 runner command, worker, SKILL program, confirmation token,
+deployment entry, remote directory, copy, backup, mutation, rollback, tag, or release was created.
+Any implementation and one real execution require a new explicit approval bound to the raw plan
+SHA-256. A changed target, backup, mutation, metadata policy, sequence, or criterion invalidates
+that approval.
