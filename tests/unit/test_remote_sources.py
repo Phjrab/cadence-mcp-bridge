@@ -45,6 +45,13 @@ V3_EXACT_ROLLBACK_PLAN = (
     / "config"
     / "design-write-v3-exact-conditional-rollback-plan.json"
 )
+V3_EXACT_ROLLBACK_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_exact_rollback_json.py"
+V3_EXACT_ROLLBACK_WORKER = (
+    PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-exact-rollback.sh"
+)
+V3_EXACT_ROLLBACK_SCRIPT = (
+    PROJECT_ROOT / "remote" / "write" / "design-write-v3-exact-rollback.il"
+)
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -72,6 +79,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-v3-validate",
         "design-write-v3-property-diff",
         "design-write-v3-deep-forensic",
+        "design-write-v3-exact-rollback",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -90,7 +98,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.14.0" in runner
+    assert "RUNNER_VERSION=0.15.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -458,7 +466,7 @@ def test_v3_deep_forensic_is_fixed_three_object_read_only_and_exact() -> None:
     assert "design-write-v3-deep-forensic.il" in deploy
 
 
-def test_v3_exact_conditional_rollback_plan_is_non_executable_and_not_deployed() -> None:
+def test_v3_exact_conditional_rollback_plan_is_immutable_and_confirmation_bound() -> None:
     raw = V3_EXACT_ROLLBACK_PLAN.read_bytes()
     plan = json.loads(raw)
 
@@ -478,6 +486,35 @@ def test_v3_exact_conditional_rollback_plan_is_non_executable_and_not_deployed()
     assert len(plan["conditional_sequence"]) == 14
     assert len(plan["acceptance_criteria"]) == 15
     assert plan["release_gate_enabled"] is False
-    assert "design-write-v3-exact-conditional-rollback-plan.json" not in DEPLOY.read_text(
+    assert "design-write-v3-exact-conditional-rollback-plan.json" in DEPLOY.read_text(
         encoding="utf-8"
     )
+
+
+def test_v3_exact_rollback_is_plan_bound_fixed_and_confirmation_gated() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = V3_EXACT_ROLLBACK_HELPER.read_text(encoding="utf-8")
+    worker = V3_EXACT_ROLLBACK_WORKER.read_text(encoding="utf-8")
+    skill = V3_EXACT_ROLLBACK_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "APPROVE_V3_ROLLBACK_EB057DA2" in helper
+    assert "design-write-v3-exact-rollback" in runner
+    assert "invalid rollback origin" in runner
+    assert "BLOCKED_PLAN_HASH_MISMATCH" in helper
+    assert "acceptance_criteria" in helper
+    assert "V3_ROLLBACK_VERIFIED" in helper
+    assert "v3-rollback-events.jsonl" in worker
+    assert 'evidence_root="$CADENCE_MCP_ROOT/write-rollback-v3"' in worker
+    assert "write-rollback-v3" in deploy
+    assert "source_before" in worker and "source_after" in worker
+    assert "backup_before" in worker and "backup_after" in worker
+    assert "target_before" in worker and "target_after" in worker
+    assert "dbCopyCellView(backupCv workLib targetCell sourceView nil nil t)" in skill
+    assert 'dbOpenCellViewByType(sourceLib sourceCell sourceView "schematic" "r")' in skill
+    assert "dbSave" not in skill
+    for forbidden in ("dbDeleteObject", "dbReplaceProp", "evalstring", "load("):
+        assert forbidden not in skill
+    assert "run-design-write-v3-exact-rollback.sh" in deploy
+    assert "v3_exact_rollback_json.py" in deploy
+    assert "design-write-v3-exact-rollback.il" in deploy

@@ -99,6 +99,15 @@ confirmation tied to that raw hash, and is not deployed to the runner. Source, t
 must remain untouched until separate rollback approval; overwrite, retry, cleanup, deletion, and
 fallback names are not currently authorized. The earlier redacted plan remains historical evidence.
 
+The user explicitly approved rollback under the exact plan hash. Runner 0.15.0 revalidated the
+plan, forensic report, blockers, and all three pre-rollback tree fingerprints. Execution ID
+`38cfdbf3-ae92-470b-bf38-6789887a3ae9` then stopped before Virtuoso or any OA write because the
+fixed rollback evidence parent directory did not yet exist. No run directory, manifest, or rollback
+audit was created, and Source, V3 target, and V3 backup retained their exact pre-run fingerprints.
+The source worker and deployment layout now include bounded creation of that mode-700 evidence
+root, but the corrected runner was not redeployed or retried because the plan forbids automatic
+retry. A separate explicit retry approval is required.
+
 ## Release gate
 
 `v1.0.0` must not be created until a real approved copy has passed dry-run/apply equivalence,

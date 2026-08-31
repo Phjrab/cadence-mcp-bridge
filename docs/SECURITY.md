@@ -191,6 +191,13 @@ SHA-256 `eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911` is re
 any target overwrite. Missing original manifest/audit/job records remain explicitly recorded;
 release remains blocked.
 
+The first plan-authorized rollback invocation failed closed before Virtuoso startup or OA access
+because the fixed rollback evidence parent directory was absent. Post-failure checks proved Source,
+V3 target, and V3 backup tree fingerprints unchanged and found no rollback manifest or audit file.
+The corrected worker can create only the fixed mode-700 `.cadence_mcp/write-rollback-v3` root, but
+automatic deployment or retry is prohibited. The target still contains the two forensic
+differences, and a new explicit approval is required before another write attempt.
+
 ## Verification
 
 Run the repeatable local security gate:

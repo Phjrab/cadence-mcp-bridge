@@ -47,3 +47,9 @@ three objects match structurally at 35/14/8. The target differs only by approved
 `eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`; it remains non-executable,
 undeployed, and pending separate approval. The original validation manifest, audit, and runner job
 record remain missing, so the release gate stays failed.
+
+An explicitly approved rollback attempt later stopped before Cadence startup because its bounded
+evidence parent directory was absent. No design write, manifest, or rollback audit occurred; all
+three protected fingerprints remained unchanged. The evidence-root setup is corrected in source
+but was not redeployed or retried. V3 rollback therefore remains incomplete and the release gate
+continues to fail.

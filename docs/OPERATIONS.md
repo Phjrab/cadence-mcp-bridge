@@ -407,6 +407,15 @@ rollback was run. The exact non-executable plan is
 `eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`; it is not deployed and
 requires separate explicit approval before the fixed target overwrite.
 
+The separately approved exact rollback attempt used run ID
+`38cfdbf3-ae92-470b-bf38-6789887a3ae9`. Plan and forensic hashes and all three tree fingerprints
+passed before execution. The worker then failed before starting Virtuoso because
+`.cadence_mcp/write-rollback-v3` did not exist, so its child runtime could not be created. No OA
+operation, manifest, or audit append occurred. Post-failure fingerprints exactly matched the
+preflight values. The repository worker and deploy layout have been corrected to create only that
+bounded mode-700 evidence root. Do not deploy and retry the corrected worker without a new explicit
+approval; V3 remains in its pre-rollback state.
+
 Packaging lifecycle is independently verifiable with:
 
 ```powershell
