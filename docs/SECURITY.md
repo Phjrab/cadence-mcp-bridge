@@ -77,7 +77,7 @@ fixed jobs root.
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
 | Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | V4 completed once under plan-bound approval; its target/backup and all earlier evidence must now remain preserved |
-| Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence and explicit release authorization | controlled-write evidence passes, but branch integration, versioning, tag, and private release remain pending |
+| Release before write acceptance | tag or GitHub release | release checklist requires copy apply/rollback evidence, reviewed versioning, branch integration, and explicit publication authorization | controlled-write evidence and the 1.0.0 release candidate pass; branch integration, tag, and private release remain pending |
 
 ## Origin and audit contract
 
