@@ -5,18 +5,18 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
 current_wp: WP-11
-current_status: partial
-last_completed_wp: WP-10
-next_wp: WP-11
-current_feature_branch: wp/WP-11-v1-release
-base_main_commit: d736578b56688a70611d26f88b384322ebf63383
-last_commit: d9d26b1d095a1e3216cd778545bf59bc0dfc5353
-last_push: 2026-08-31T17:49:36.1555740+09:00
+current_status: passed
+last_completed_wp: WP-11
+next_wp: null
+current_feature_branch: wp/WP-11-release-state
+base_main_commit: 8a0d44fab90e2095cc39322baef60fc09d741cd6
+last_commit: 38ee3f7f9eb28a088bfc20790306f23bca771228
+last_push: 2026-08-31T18:30:19.0933488+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review release-candidate commit `d9d26b1d095a1e3216cd778545bf59bc0dfc5353` on `wp/WP-11-v1-release` and explicitly approve its PR merge if acceptable. Package metadata, runtime, lockfile, and the isolated installed CLI report `1.0.0`; all release-preparation verification passes. After merge, creation and push of the annotated `v1.0.0` tag and the private GitHub release require a separate explicit authorization. No tag or release exists yet.
+user_action_required: Review post-release state commit `38ee3f7f9eb28a088bfc20790306f23bca771228` and the following PROJECT_STATE update on `wp/WP-11-release-state`, then explicitly approve its PR merge if acceptable. Version `v1.0.0` is already published from merge commit `8a0d44fab90e2095cc39322baef60fc09d741cd6`; no additional release or work package is pending.
 ```
 
 ## Progress log
@@ -64,3 +64,6 @@ user_action_required: Review release-candidate commit `d9d26b1d095a1e3216cd77854
 - 2026-08-31: Under explicit implementation-and-single-execution approval bound to V4 plan SHA-256 `c5b2f418c5a76bfe54adc24c2ee947a33d904122b404bba323706dfbe3cbdd66`, runner 0.16.0 was deployed and run `e636eeba-80dc-4280-b2ea-4f23b0cd1139` completed `V4_CLEAN_VALIDATION_VERIFIED`. All 18 acceptance criteria passed: V4 copy, 35/14/8 baseline, non-mutating dry-run, backup, the single approved `mcpMutationTest` mutation, exact diff with only bounded `schGeometryLastUpdated` metadata, rollback, logical baseline restoration, protected Source/PDK/V1/V2/V3 fingerprint equality, immutable manifest, and 18-record audit. The mode-400 manifest SHA-256 is `e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`; the audit verification-time SHA-256 is `befbe1e5ebdf253c892085214881e829209720990f4f3a37b70232f8c909ac35`. Ruff, mypy, 171 local tests with eight skips, 18 security tests, package lifecycle, dependency audit, secret scan, and all eight real integrations pass. No retry, cleanup, tag, release, main push, or merge occurred. WP-11 is partial pending feature review/merge and a separately authorized release-finalization run.
 - 2026-08-31: The user explicitly authorized PR #12, and controlled-write commit `41d675d472f227c90f81d845cff7b8b28bb48a39` was merged through GitHub into main as `d736578b56688a70611d26f88b384322ebf63383`; no direct main push, tag, or release occurred.
 - 2026-08-31: From merge commit `d736578b56688a70611d26f88b384322ebf63383`, release branch `wp/WP-11-v1-release` prepared package metadata, runtime `__version__`, lockfile, verifier, final release notes, and checklist at `1.0.0`. Immutable V3/V4 plan files are now raw-byte protected across Windows checkout while retaining their approved SHA-256 values. Ruff, documented strict mypy for 17 source files, 172 default tests with eight skips, 18 security tests, dependency audit, isolated 1.0.0 build/install/version/uninstall, actual smoke E2E, and all eight real integrations pass. No Cadence design write, cleanup, tag, release, main push, or merge occurred. WP-11 remains partial pending release-branch review/merge and separately authorized tag/private-release publication.
+- 2026-08-31: The user explicitly authorized PR #13, and release-preparation head `dfe7aad3b5f830c92f1d59ad586bf73657fb57d0` was merged through GitHub into main as `8a0d44fab90e2095cc39322baef60fc09d741cd6`; no direct main push occurred.
+- 2026-08-31: After all release gates passed under separate explicit publication authorization, annotated tag `v1.0.0` was pushed to the private repository and verified to peel to merge commit `8a0d44fab90e2095cc39322baef60fc09d741cd6`. The stable private-repository GitHub release was published from that exact tag. No main commit/push, design mutation, cleanup, deployment, or next WP occurred. WP-11 is passed and the project enters maintenance mode.
+- 2026-08-31: Post-release checklist state was synchronized on `wp/WP-11-release-state` as commit `38ee3f7f9eb28a088bfc20790306f23bca771228`; the feature branch awaits explicit review and PR merge authorization.
