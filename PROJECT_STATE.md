@@ -8,15 +8,15 @@ current_wp: WP-11
 current_status: passed
 last_completed_wp: WP-11
 next_wp: null
-current_feature_branch: wp/WP-11-release-state
+current_feature_branch: null
 base_main_commit: 8a0d44fab90e2095cc39322baef60fc09d741cd6
 last_commit: 38ee3f7f9eb28a088bfc20790306f23bca771228
 last_push: 2026-08-31T18:30:19.0933488+09:00
-awaiting_user_merge: true
+awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: Review post-release state commit `38ee3f7f9eb28a088bfc20790306f23bca771228` and the following PROJECT_STATE update on `wp/WP-11-release-state`, then explicitly approve its PR merge if acceptable. Version `v1.0.0` is already published from merge commit `8a0d44fab90e2095cc39322baef60fc09d741cd6`; no additional release or work package is pending.
+user_action_required: null
 ```
 
 ## Progress log
@@ -67,3 +67,4 @@ user_action_required: Review post-release state commit `38ee3f7f9eb28a088bfc2079
 - 2026-08-31: The user explicitly authorized PR #13, and release-preparation head `dfe7aad3b5f830c92f1d59ad586bf73657fb57d0` was merged through GitHub into main as `8a0d44fab90e2095cc39322baef60fc09d741cd6`; no direct main push occurred.
 - 2026-08-31: After all release gates passed under separate explicit publication authorization, annotated tag `v1.0.0` was pushed to the private repository and verified to peel to merge commit `8a0d44fab90e2095cc39322baef60fc09d741cd6`. The stable private-repository GitHub release was published from that exact tag. No main commit/push, design mutation, cleanup, deployment, or next WP occurred. WP-11 is passed and the project enters maintenance mode.
 - 2026-08-31: Post-release checklist state was synchronized on `wp/WP-11-release-state` as commit `38ee3f7f9eb28a088bfc20790306f23bca771228`; the feature branch awaits explicit review and PR merge authorization.
+- 2026-08-31: The user explicitly authorized PR #14, and post-release state head `cb3f48e75f3f0f5112f01d3b656ac09561d5f8e9` was merged through GitHub into main as `01eca3978e43d0819e3d46eef0c83fd5489f808d`. The published `v1.0.0` tag and stable private-repository release remained unchanged, no direct main push occurred, and no additional WP is pending.
