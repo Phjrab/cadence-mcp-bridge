@@ -17,6 +17,10 @@ AUDIT_PATH = "/home/buet/cds_work/.cadence_mcp/audit/write-events.jsonl"
 HEX_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 FORENSIC_MARKER = "MCP_V2_FORENSIC|true|35|14|8|8|9|validated-v1"
 ROLLBACK_MARKER = "MCP_V2_ROLLBACK|true|35|14|8|8|8|absent"
+PROPERTY_DIFF_PREFIX = "MCP_V2_PROPERTY_DIFF|"
+PROPERTY_DIFF_SUMMARY_PREFIX = "MCP_V2_PROPERTY_DIFF_SUMMARY|"
+SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.#-]{0,127}$")
+SAFE_TYPE_PATTERN = re.compile(r"^(?:absent|[A-Za-z_][A-Za-z0-9_.#-]{0,63})$")
 
 
 def fail(message):
@@ -110,6 +114,98 @@ def forensic(output_path, hashes):
     emit(payload)
 
 
+def property_diff(output_path, hashes):
+    require_hashes(hashes)
+    source_before, source_after, preserved_before, preserved_after = hashes[:4]
+    target_before, target_after, backup_before, backup_after = hashes[4:8]
+    pdk_before, pdk_after = hashes[8:]
+    if source_before != source_after:
+        raise ValueError("source changed during V2 property diff inspection")
+    if preserved_before != preserved_after:
+        raise ValueError("preserved V1 changed during V2 property diff inspection")
+    if target_before != target_after or backup_before != backup_after:
+        raise ValueError("V2 changed during read-only property diff inspection")
+    if pdk_before != pdk_after:
+        raise ValueError("PDK changed during V2 property diff inspection")
+
+    lines = []
+    with open(output_path, "rb") as handle:
+        for raw_line in handle:
+            raw_line = raw_line.strip()
+            if raw_line.startswith(b"MCP_V2_"):
+                lines.append(raw_line.decode("ascii", "strict"))
+    differences = []
+    summary = None
+    for line in lines:
+        if line.startswith(PROPERTY_DIFF_PREFIX):
+            fields = line.split("|")
+            if len(fields) != 7:
+                raise ValueError("invalid V2 property diff record")
+            name, backup_type, target_type = fields[1:4]
+            backup_present, target_present, value_equal = fields[4:7]
+            if not SAFE_NAME_PATTERN.match(name):
+                raise ValueError("unsafe V2 property name")
+            if not SAFE_TYPE_PATTERN.match(backup_type) or not SAFE_TYPE_PATTERN.match(target_type):
+                raise ValueError("unsafe V2 property type")
+            if backup_present not in ("true", "false"):
+                raise ValueError("invalid backup property presence")
+            if target_present not in ("true", "false"):
+                raise ValueError("invalid target property presence")
+            if value_equal not in ("true", "false"):
+                raise ValueError("invalid property equality flag")
+            if backup_present == "false" and backup_type != "absent":
+                raise ValueError("inconsistent backup property record")
+            if target_present == "false" and target_type != "absent":
+                raise ValueError("inconsistent target property record")
+            differences.append({
+                "name": name,
+                "backup_type": backup_type,
+                "target_type": target_type,
+                "backup_present": backup_present == "true",
+                "target_present": target_present == "true",
+                "value_equal": value_equal == "true",
+            })
+        elif line.startswith(PROPERTY_DIFF_SUMMARY_PREFIX):
+            fields = line.split("|")
+            if len(fields) != 6 or fields[1] != "true" or fields[3:] != ["35", "14", "8"]:
+                raise ValueError("invalid V2 property diff summary")
+            if summary is not None:
+                raise ValueError("duplicate V2 property diff summary")
+            summary = int(fields[2])
+        elif line.startswith("MCP_V2_"):
+            raise ValueError("unexpected V2 property diff marker")
+    if summary is None or summary != len(differences):
+        raise ValueError("V2 property diff count mismatch")
+    if not differences:
+        raise ValueError("V2 property diff reported no differences")
+    if len(set(item["name"] for item in differences)) != len(differences):
+        raise ValueError("duplicate V2 property diff name")
+
+    payload = {
+        "validation_id": VALIDATION_ID,
+        "property_diff_verified": True,
+        "read_only_verified": True,
+        "source_topology": [35, 14, 8],
+        "target_topology": [35, 14, 8],
+        "backup_topology": [35, 14, 8],
+        "source_fingerprint_before": source_before,
+        "source_fingerprint_after": source_after,
+        "preserved_v1_fingerprint_before": preserved_before,
+        "preserved_v1_fingerprint_after": preserved_after,
+        "target_fingerprint_before": target_before,
+        "target_fingerprint_after": target_after,
+        "backup_fingerprint_before": backup_before,
+        "backup_fingerprint_after": backup_after,
+        "pdk_fingerprint_before": pdk_before,
+        "pdk_fingerprint_after": pdk_after,
+        "difference_count": len(differences),
+        "differences": differences,
+        "property_values_included": False,
+    }
+    write_once(os.path.join(EVIDENCE_ROOT, "v2-property-diff-pdk-evidence.json"), payload)
+    emit(payload)
+
+
 def rollback(output_path, hashes):
     require_hashes(hashes)
     require_marker(output_path, ROLLBACK_MARKER)
@@ -143,14 +239,20 @@ def rollback(output_path, hashes):
 
 
 def main():
-    if len(sys.argv) != 11:
+    if len(sys.argv) not in (11, 13):
         return fail("invalid V2 recovery evidence request")
     command = sys.argv[1]
     output_path = sys.argv[2]
     hashes = sys.argv[3:]
     try:
+        if command == "property-diff" and len(sys.argv) != 13:
+            return fail("invalid V2 property diff evidence request")
+        if command != "property-diff" and len(sys.argv) != 11:
+            return fail("invalid V2 recovery evidence request")
         if command == "forensic":
             forensic(output_path, hashes)
+        elif command == "property-diff":
+            property_diff(output_path, hashes)
         elif command == "rollback":
             rollback(output_path, hashes)
         else:

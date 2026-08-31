@@ -19,6 +19,7 @@ WRITE_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-validation.sh
 V2_RECOVERY_HELPER = PROJECT_ROOT / "remote" / "py26" / "v2_recovery_json.py"
 V2_RECOVERY_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v2-recovery.sh"
 V2_FORENSIC_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-forensic.il"
+V2_PROPERTY_DIFF_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-property-diff.il"
 V2_ROLLBACK_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-rollback.il"
 V3_PLAN = PROJECT_ROOT / "remote" / "config" / "design-write-v3-plan.json"
 
@@ -42,6 +43,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-preflight",
         "design-write-validate",
         "design-write-v2-forensic",
+        "design-write-v2-property-diff",
         "design-write-v2-rollback",
         "discovery-health",
         "cleanup-dry-run",
@@ -61,7 +63,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.10.0" in runner
+    assert "RUNNER_VERSION=0.11.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -198,6 +200,7 @@ def test_v2_recovery_is_fixed_read_only_then_exact_backup_restore() -> None:
     helper = V2_RECOVERY_HELPER.read_text(encoding="utf-8")
     worker = V2_RECOVERY_WORKER.read_text(encoding="utf-8")
     forensic = V2_FORENSIC_SCRIPT.read_text(encoding="utf-8")
+    property_diff = V2_PROPERTY_DIFF_SCRIPT.read_text(encoding="utf-8")
     rollback = V2_ROLLBACK_SCRIPT.read_text(encoding="utf-8")
     deploy = DEPLOY.read_text(encoding="utf-8")
 
@@ -205,23 +208,33 @@ def test_v2_recovery_is_fixed_read_only_then_exact_backup_restore() -> None:
     assert "active Virtuoso process blocks V2 recovery" in worker
     assert "source-check" in worker
     assert "fingerprint_tree" in worker
+    assert "/home/buet/cadence/gpdk090_v4.6/libs.oa22/gpdk090" in worker
+    assert "pdk_before" in worker and "pdk_after" in worker
     assert "MCP_V2_FORENSIC|true|35|14|8|8|9|validated-v1" in forensic
     assert "dbOpenCellViewByType" in forensic
     assert "dbCopyCellView" not in forensic
     assert "dbSave" not in forensic
+    assert "MCP_V2_PROPERTY_DIFF" in property_diff
+    assert '"r"' in property_diff
+    assert "~>value" in property_diff
+    assert "MCP_V2_PROPERTY_DIFF|%s|%s|%s|true|true|false" in property_diff
+    assert "validated-v1" not in property_diff
+    assert "dbCopyCellView" not in property_diff
+    assert "dbSave" not in property_diff
     assert "MCP_V2_ROLLBACK|true|35|14|8|8|8|absent" in rollback
     assert "dbCopyCellView(backupCv workLib targetCell sourceView nil nil t)" in rollback
     assert "dbDeleteObject" not in rollback
     assert "design_write_v2_recovery_rollback" in helper
     assert "v2-forensic-evidence.json" in helper
     assert "v2-rollback-evidence.json" in helper
-    for source in (forensic, rollback):
+    for source in (forensic, property_diff, rollback):
         for forbidden in ("evalstring", "load(", "dbCreateInst", "dbDeleteObject"):
             assert forbidden not in source
         assert "return(nil)" not in source
     assert "run-design-write-v2-recovery.sh" in deploy
     assert "v2_recovery_json.py" in deploy
     assert "design-write-v2-forensic.il" in deploy
+    assert "design-write-v2-property-diff.il" in deploy
     assert "design-write-v2-rollback.il" in deploy
 
 

@@ -156,10 +156,14 @@ enforces the source topology `35/14/8`, and refuses active OA locks plus panic/r
 A user-verified, non-authoritative source `sch.oa-` is preserved and covered by the source tree
 fingerprint rather than treated as an active lock. The real V2 run reached the approved property
 apply marker but timed out before verification and rollback; both V2 names now exist, so retry is
-fail-closed. A later fixed read-only forensic proved that at least one baseline property also
-differs between V2 target and backup, so the conditionally approved restore was not invoked. The
-reviewed V3 plan remains non-executable with no confirmation token and a disabled release gate.
-No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
+fail-closed. A later fixed read-only inspection proved that `schGeometryLastUpdated` has the same
+`int` type and presence but unequal values, while `mcpMutationTest` exists only in the target as
+`string`. No property value was returned or stored. Source, V1, both V2 views, and `gpdk090` were
+unchanged, so the investigation is read-only, but the conditionally approved restore was not
+invoked. The reviewed V3 plan SHA-256 remains
+`3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
+criteria remain present, while execution, confirmation, and release gates remain disabled. No
+release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

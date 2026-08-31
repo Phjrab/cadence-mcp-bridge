@@ -66,3 +66,56 @@ def test_rollback_evidence_records_fixed_audit_and_changed_target(tmp_path: Path
     assert evidence["approved_property_absent"] is True
     assert audit[0]["event"] == "design_write_v2_recovery_rollback"
     assert audit[0]["validation_id"] == helper.VALIDATION_ID
+
+
+def test_property_diff_evidence_contains_metadata_but_no_values(tmp_path: Path) -> None:
+    helper = _load_helper(tmp_path)
+    output = tmp_path / "property-diff.stdout"
+    output.write_bytes(
+        b"legacy banner \xa9\n"
+        b"MCP_V2_PROPERTY_DIFF|baselineStamp|string|string|true|true|false\n"
+        b"MCP_V2_PROPERTY_DIFF|mcpMutationTest|absent|string|false|true|false\n"
+        b"MCP_V2_PROPERTY_DIFF_SUMMARY|true|2|35|14|8\n"
+    )
+    hashes = ["a" * 64, "a" * 64, "b" * 64, "b" * 64]
+    hashes.extend(["c" * 64, "c" * 64, "d" * 64, "d" * 64])
+    hashes.extend(["e" * 64, "e" * 64])
+
+    helper.property_diff(str(output), hashes)
+
+    evidence_path = tmp_path / "v2-property-diff-pdk-evidence.json"
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    serialized = evidence_path.read_text(encoding="utf-8")
+    assert evidence["property_diff_verified"] is True
+    assert evidence["property_values_included"] is False
+    assert evidence["difference_count"] == 2
+    assert evidence["pdk_fingerprint_before"] == evidence["pdk_fingerprint_after"]
+    assert evidence["differences"][0] == {
+        "name": "baselineStamp",
+        "backup_type": "string",
+        "target_type": "string",
+        "backup_present": True,
+        "target_present": True,
+        "value_equal": False,
+    }
+    assert "validated-v1" not in serialized
+
+
+def test_property_diff_rejects_changed_fingerprint(tmp_path: Path) -> None:
+    helper = _load_helper(tmp_path)
+    output = tmp_path / "property-diff.stdout"
+    output.write_text(
+        "MCP_V2_PROPERTY_DIFF|changed|string|string|true|true|false\n"
+        "MCP_V2_PROPERTY_DIFF_SUMMARY|true|1|35|14|8\n",
+        encoding="utf-8",
+    )
+    hashes = ["a" * 64, "e" * 64, "b" * 64, "b" * 64]
+    hashes.extend(["c" * 64, "c" * 64, "d" * 64, "d" * 64])
+    hashes.extend(["f" * 64, "f" * 64])
+
+    try:
+        helper.property_diff(str(output), hashes)
+    except ValueError as error:
+        assert str(error) == "source changed during V2 property diff inspection"
+    else:
+        raise AssertionError("changed source fingerprint was accepted")

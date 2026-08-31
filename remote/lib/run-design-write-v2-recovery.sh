@@ -9,17 +9,19 @@ SOURCE_VIEW=/home/buet/cds_work/MyDesignLib/Differential_Amplifier_TB2/schematic
 PRESERVED_VIEW=/home/buet/cds_work/MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST/schematic
 TARGET_VIEW=/home/buet/cds_work/MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2/schematic
 BACKUP_VIEW=/home/buet/cds_work/MCP_WorkLib/Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic
+PDK_VIEW=/home/buet/cadence/gpdk090_v4.6/libs.oa22/gpdk090
 POLICY="$CADENCE_MCP_ROOT/config/design-write-policy.json"
 WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
 RECOVERY_HELPER="$CADENCE_MCP_ROOT/py26/v2_recovery_json.py"
 FORENSIC_SCRIPT="$CADENCE_MCP_ROOT/write/design-write-v2-forensic.il"
+PROPERTY_DIFF_SCRIPT="$CADENCE_MCP_ROOT/write/design-write-v2-property-diff.il"
 ROLLBACK_SCRIPT="$CADENCE_MCP_ROOT/write/design-write-v2-rollback.il"
 EVIDENCE_ROOT="$CADENCE_MCP_ROOT/write-validation/e55c7e81-cf20-4d5e-b2d9-67dae0ddcd1b"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
 
 [ "$#" -eq 1 ] || cadence_mcp_fail "invalid V2 recovery invocation" 64
 mode=$1
-case "$mode" in forensic|rollback) ;; *) cadence_mcp_fail "invalid V2 recovery mode" 64 ;; esac
+case "$mode" in forensic|property-diff|rollback) ;; *) cadence_mcp_fail "invalid V2 recovery mode" 64 ;; esac
 
 [ -x "$VIRTUOSO_BIN" ] || cadence_mcp_fail "Virtuoso is unavailable" 69
 if ps -ef | grep '[v]irtuoso' >/dev/null 2>&1; then
@@ -53,7 +55,14 @@ target_before=$(fingerprint_tree "$TARGET_VIEW") \
 backup_before=$(fingerprint_tree "$BACKUP_VIEW") \
     || cadence_mcp_fail "V2 backup recovery fingerprint failed" 70
 
-runtime="$EVIDENCE_ROOT/recovery-$mode-v2"
+if [ "$mode" = "property-diff" ]; then
+    [ -d "$PDK_VIEW" ] && [ ! -L "$PDK_VIEW" ] \
+        || cadence_mcp_fail "fixed PDK fingerprint root is unavailable" 69
+    pdk_before=$(fingerprint_tree "$PDK_VIEW") \
+        || cadence_mcp_fail "PDK pre-inspection fingerprint failed" 70
+fi
+
+runtime="$EVIDENCE_ROOT/recovery-$mode-v6"
 [ ! -e "$runtime" ] || cadence_mcp_fail "V2 recovery runtime already exists" 65
 mkdir -m 700 "$runtime" || cadence_mcp_fail "V2 recovery runtime creation failed" 73
 stdout_file="$runtime/skill.stdout"
@@ -61,6 +70,7 @@ stderr_file="$runtime/skill.stderr"
 log_file="$runtime/skill.log"
 case "$mode" in
     forensic) script=$FORENSIC_SCRIPT ;;
+    property-diff) script=$PROPERTY_DIFF_SCRIPT ;;
     rollback) script=$ROLLBACK_SCRIPT ;;
 esac
 (
@@ -84,12 +94,22 @@ target_after=$(fingerprint_tree "$TARGET_VIEW") \
     || cadence_mcp_fail "V2 target post-recovery fingerprint failed" 70
 backup_after=$(fingerprint_tree "$BACKUP_VIEW") \
     || cadence_mcp_fail "V2 backup post-recovery fingerprint failed" 70
+if [ "$mode" = "property-diff" ]; then
+    pdk_after=$(fingerprint_tree "$PDK_VIEW") \
+        || cadence_mcp_fail "PDK post-inspection fingerprint failed" 70
+fi
 
 case "$mode" in
     forensic)
         "$CADENCE_MCP_PYTHON" "$RECOVERY_HELPER" forensic "$stdout_file" \
             "$source_before" "$source_after" "$preserved_before" "$preserved_after" \
             "$target_before" "$target_after" "$backup_before" "$backup_after"
+        ;;
+    property-diff)
+        "$CADENCE_MCP_PYTHON" "$RECOVERY_HELPER" property-diff "$stdout_file" \
+            "$source_before" "$source_after" "$preserved_before" "$preserved_after" \
+            "$target_before" "$target_after" "$backup_before" "$backup_after" \
+            "$pdk_before" "$pdk_after"
         ;;
     rollback)
         "$CADENCE_MCP_PYTHON" "$RECOVERY_HELPER" rollback "$stdout_file" \

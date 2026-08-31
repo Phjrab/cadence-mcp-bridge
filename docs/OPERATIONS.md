@@ -335,18 +335,26 @@ complete contract.
 The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
 `mcpMutationTest=validated-v1` mutation. V1 remains preserved after its incomplete run. V2 passed
 source verification, copy, 35/14/8 baseline, dry-run, unchanged verification, backup, and the
-approved apply marker, then timed out before verification and rollback. Runner 0.10.0 supplies
+approved apply marker, then timed out before verification and rollback. Runner 0.11.0 supplies
 fixed operator-only `design-write-v2-forensic` and confirmation-gated
-`design-write-v2-rollback` commands; neither accepts a path, design identifier, property, value,
-or SKILL text. The successful compatibility-correct forensic found that the V2 target changed a
-baseline property in addition to the approved property, so the conditional rollback command was
-not invoked. No V2 recovery evidence or audit success record exists.
+`design-write-v2-rollback` commands plus the operator-only
+`design-write-v2-property-diff` inspection; none accepts a path, design identifier, property,
+value, or SKILL text. The property-diff command opens Source, V2 target, and V2 backup read-only
+and reports only a differing property's name, type, presence, and value-equality flag. It never
+reports a property value. Its fixed inspection found exactly two differences: the baseline
+`schGeometryLastUpdated` property exists as `int` in target and backup but has unequal values, and
+`mcpMutationTest` is absent from backup and present as `string` in target. Source, preserved V1,
+V2 target, V2 backup, and `gpdk090` tree fingerprints each matched before and after; source,
+target, and backup topology remained 35/14/8. The conditional rollback command was not invoked.
+Read-only property-diff evidence exists, but no rollback evidence or rollback audit success record
+exists.
 
 `remote/config/design-write-v3-plan.json` is a non-executable review asset. It uses only the
 approved V3 destination and backup names, preserves all V1/V2 evidence, specifies a 300-second
-worker limit and the full clean validation sequence, and has no confirmation token. Do not add or
-run a V3 mutation command until the user separately approves the plan after resolving the V2
-disposition.
+worker limit and the full clean validation sequence, and has no confirmation token. Its SHA-256 is
+`3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
+criteria remain present, with execution and release gates disabled. Do not add or run a V3
+mutation command until the user separately approves the plan after resolving the V2 disposition.
 
 Packaging lifecycle is independently verifiable with:
 

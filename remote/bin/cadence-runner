@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.10.0
+RUNNER_VERSION=0.11.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -24,7 +24,7 @@ WRITE_PREFLIGHT="$CADENCE_MCP_ROOT/write/design-write-readonly-preflight.il"
 V2_RECOVERY_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v2-recovery.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-rollback|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -338,6 +338,11 @@ runner_design_write_v2_forensic() {
     "$V2_RECOVERY_WORKER" forensic
 }
 
+runner_design_write_v2_property_diff() {
+    [ "$#" -eq 0 ] || usage
+    "$V2_RECOVERY_WORKER" property-diff
+}
+
 runner_design_write_v2_rollback() {
     [ "$#" -eq 1 ] || usage
     [ "$1" = "APPROVE_MCP_V2_BACKUP_ROLLBACK" ] \
@@ -378,6 +383,7 @@ case "$command_name" in
     design-write-preflight) runner_design_write_preflight "$@" ;;
     design-write-validate) runner_design_write_validate "$@" ;;
     design-write-v2-forensic) runner_design_write_v2_forensic "$@" ;;
+    design-write-v2-property-diff) runner_design_write_v2_property_diff "$@" ;;
     design-write-v2-rollback) runner_design_write_v2_rollback "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
