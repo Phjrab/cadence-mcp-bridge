@@ -6,10 +6,16 @@ Before doing any work, read these files in full:
 
 1. `CODEX_MASTER_PROMPT.md`
 2. `PROJECT_STATE.md`
-3. `docs/VERIFIED_ENVIRONMENT.md`
-4. `docs/SECURITY.md`
+3. `docs/CURRENT_PHASE_PLAN.md`
+4. `docs/VERIFIED_ENVIRONMENT.md`
+5. `docs/SECURITY.md`
+6. Only the sections of `docs/AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md` that the current WP explicitly requires
 
 `CODEX_MASTER_PROMPT.md` is the authoritative execution contract.
+
+Do not read or execute the full long-term roadmap as a single run instruction. Treat
+`docs/CURRENT_PHASE_PLAN.md` as the bounded phase plan and consult only the roadmap sections
+needed to understand or verify the active WP.
 
 ## One work package per run
 

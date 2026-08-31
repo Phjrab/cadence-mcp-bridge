@@ -8,45 +8,20 @@
 
 ---
 
-## Post-v1 실행 권한 구조
-
-`v1.0.0` 이후 개발은 다음 세 문서 계층으로 통제한다.
-
-1. **Long-term roadmap:** `docs/AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md`
-2. **Current phase:** `docs/CURRENT_PHASE_PLAN.md`
-3. **Active WP:** `PROJECT_STATE.md`
-
-이 파일은 계속해서 Git, 보안, 승인, 테스트, 완료 보고와 STOP 규칙을 포함하는 최상위
-실행 계약이다. `docs/archive/CODEX_MASTER_PROMPT_v1.0.0.md`는 출판된 v1 계약의 원문
-기록이며, 이 파일의 기존 v1 규칙은 삭제되거나 약화되지 않는다. 문서 사이에 모순이
-있으면 더 좁고 더 안전한 규칙을 적용하고 작업을 자동 확대하지 않는다.
-
-전체 장기 roadmap은 권한 부여 문서도, 한 번의 실행 지시도 아니다. 각 실행에서는
-`docs/CURRENT_PHASE_PLAN.md`와 `PROJECT_STATE.md`로 범위를 정한 뒤 현재 WP에 필요한 roadmap
-section만 참조한다. roadmap에 적힌 write, compute, 배포, 외부 서비스 또는 비용 발생 작업은
-각 WP의 구체적인 계약과 필요한 별도 사용자 승인이 없으면 실행할 수 없다.
-
-WP-00부터 WP-11까지는 출판된 `v1.0.0`의 완료 이력이다. post-v1 작업은 이를 미완료로
-되돌리거나 재실행하지 않으며, 현재 phase와 active WP에 정의된 새 작업만 수행한다.
-
----
-
 ## 0. 이 파일을 Codex에서 사용하는 방법
 
 이 문서는 단순 참고 문서가 아니라 **프로젝트 전체의 권위 있는 실행 명세**다.
 
 Codex는 작업을 시작할 때 다음 순서로 행동한다.
 
-1. 저장소 루트의 `AGENTS.md`, 이 파일, `PROJECT_STATE.md`, `docs/CURRENT_PHASE_PLAN.md`,
-   `docs/VERIFIED_ENVIRONMENT.md`, `docs/SECURITY.md`를 지정된 순서로 전부 읽는다.
-2. 현재 WP에 필요한 경우에만 장기 roadmap의 관련 section을 읽는다.
-3. `PROJECT_STATE.md`에 기록된 첫 번째 미완료 워크패키지 하나만 실행한다.
-4. 사용자가 특정 WP를 명시했다면 그 WP만 실행한다.
-5. 현재 WP의 수락 기준을 모두 검증한다.
-6. 관련 문서와 `PROJECT_STATE.md`를 갱신한다.
-7. 비밀정보가 포함되지 않았는지 확인한 뒤 현재 WP 전용 feature branch에 커밋하고 원격에 푸시한다.
-8. 아래의 **필수 완료 보고서 형식**으로 결과와 다음 실행 모델을 출력한다.
-9. 다음 WP를 같은 실행에서 자동으로 시작하지 않는다.
+1. 저장소 루트의 `AGENTS.md`, 이 파일, `PROJECT_STATE.md`를 전부 읽는다.
+2. `PROJECT_STATE.md`에 기록된 첫 번째 미완료 워크패키지 하나만 실행한다.
+3. 사용자가 특정 WP를 명시했다면 그 WP만 실행한다.
+4. 현재 WP의 수락 기준을 모두 검증한다.
+5. 관련 문서와 `PROJECT_STATE.md`를 갱신한다.
+6. 비밀정보가 포함되지 않았는지 확인한 뒤 현재 WP 전용 feature branch에 커밋하고 원격에 푸시한다.
+7. 아래의 **필수 완료 보고서 형식**으로 결과와 다음 실행 모델을 출력한다.
+8. 다음 WP를 같은 실행에서 자동으로 시작하지 않는다.
 
 `PROJECT_STATE.md`가 없다면 `WP-00`부터 시작한다.
 
