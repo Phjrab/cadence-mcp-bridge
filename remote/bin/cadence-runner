@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.11.0
+RUNNER_VERSION=0.12.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -22,9 +22,12 @@ WRITE_HELPER="$CADENCE_MCP_ROOT/py26/write_validation_json.py"
 WRITE_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-validation.sh"
 WRITE_PREFLIGHT="$CADENCE_MCP_ROOT/write/design-write-readonly-preflight.il"
 V2_RECOVERY_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v2-recovery.sh"
+V3_PLAN="$CADENCE_MCP_ROOT/config/design-write-v3-plan.json"
+V3_HELPER="$CADENCE_MCP_ROOT/py26/v3_validation_json.py"
+V3_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-validation.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -350,6 +353,23 @@ runner_design_write_v2_rollback() {
     "$V2_RECOVERY_WORKER" rollback
 }
 
+runner_design_write_v3_plan_check() {
+    [ "$#" -eq 0 ] || usage
+    "$CADENCE_MCP_PYTHON" "$V3_HELPER" "$V3_PLAN" plan-check
+}
+
+runner_design_write_v3_validate() {
+    [ "$#" -eq 3 ] || usage
+    validation_id=$1
+    confirmation=$2
+    origin=$3
+    cadence_mcp_validate_job_id "$validation_id" || cadence_mcp_fail "invalid V3 validation id" 64
+    case "$origin" in mcp|operator) ;; *) cadence_mcp_fail "invalid V3 validation origin" 64 ;; esac
+    "$CADENCE_MCP_PYTHON" "$V3_HELPER" "$V3_PLAN" confirm "$confirmation" \
+        || cadence_mcp_fail "V3 confirmation rejected" 64
+    "$V3_WORKER" "$validation_id" "$origin"
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -385,6 +405,8 @@ case "$command_name" in
     design-write-v2-forensic) runner_design_write_v2_forensic "$@" ;;
     design-write-v2-property-diff) runner_design_write_v2_property_diff "$@" ;;
     design-write-v2-rollback) runner_design_write_v2_rollback "$@" ;;
+    design-write-v3-plan-check) runner_design_write_v3_plan_check "$@" ;;
+    design-write-v3-validate) runner_design_write_v3_validate "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;

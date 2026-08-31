@@ -162,8 +162,13 @@ fail-closed. A later fixed read-only inspection proved that `schGeometryLastUpda
 unchanged, so the investigation is read-only, but the conditionally approved restore was not
 invoked. The reviewed V3 plan SHA-256 remains
 `3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
-criteria remain present, while execution, confirmation, and release gates remain disabled. No
-release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
+criteria remain present. Runner 0.12.0 binds a separate operator-only command to that raw plan
+hash, fixed V3 names, fixed 300-second limit, and an exact confirmation. It fingerprints Source,
+V1, both V2 views, and `gpdk090` before and after. Its first invocation failed closed before V3
+copy because the preserved V1 `sch.oa-` was treated as blocking; V1 `master.tag` was then verified
+to select regular `sch.oa`, and the gate was corrected to preserve the auxiliary file while still
+rejecting locks and panic/recovery artifacts. No automatic retry, V3 mutation, tag, or release
+occurred. No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

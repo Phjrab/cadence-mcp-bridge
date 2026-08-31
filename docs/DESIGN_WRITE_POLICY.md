@@ -36,6 +36,17 @@ target differed from the 35/14/8 backup by exactly the approved `mcpMutationTest
 precondition did not pass. The backup restore command was not invoked, no recovery audit or
 success evidence was written, and both V2 cellviews remain preserved without deletion.
 
+The user subsequently approved implementation and execution of the immutable V3 plan SHA-256
+`3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`. Runner 0.12.0 now has
+an operator-only command whose plan, target, backup, confirmation, timeout, protected
+fingerprints, SKILL program, sequence, audit schema, and manifest are fixed in reviewed source.
+The first invocation stopped before validation-directory creation or V3 copy because preflight
+classified the preserved V1 `sch.oa-` auxiliary file as blocking. Read-only verification showed
+that V1 `master.tag` authoritatively selects its regular `sch.oa` and that no active lock, panic,
+or recovery file exists. The corrected gate preserves and fingerprints V1 `sch.oa-` without
+treating it as a lock. Per the plan's no-automatic-retry criterion, V3 was not invoked again.
+Both V3 names remain absent and no mutation occurred.
+
 ## Permanent protections
 
 - PDK libraries, including `gpdk090`, are permanently read-only.
@@ -52,17 +63,14 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 
 ## Required action before resuming WP-11
 
-The prepared V3 plan is stored in `remote/config/design-write-v3-plan.json`. It fixes the target
-and backup to the user-selected V3 names, preserves V1 and both V2 cellviews as evidence, raises the
-worker limit to 300 seconds, and keeps `execution_enabled=false`, `required_confirmation=null`, and
-`release_gate_enabled=false`. Its status is `blocked_on_v2_exact_diff_failure`; there is no V3
-apply command. Continuing requires a new explicit decision to either authorize a broader,
-backup-based V2 restore despite the baseline-property mismatch or preserve the failed V2 state and
-separately approve implementation and execution of the reviewed V3 plan.
+The prepared V3 plan remains unchanged at the approved SHA. The fixed implementation and corrected
+preflight are deployed, but the failed pre-copy invocation was not retried. Continuing requires a
+new explicit authorization to invoke the same V3 target and backup after acknowledging that the V1
+`sch.oa-` auxiliary file will remain untouched and covered by the V1 before/after fingerprint.
 
 ## Release gate
 
 `v1.0.0` must not be created until a real approved copy has passed dry-run/apply equivalence,
 backup restore, all local/security/integration tests, install/uninstall verification, and design
-source/PDK immutability checks. Because the required sequence did not complete, no tag or GitHub
+source/PDK immutability checks. Because the V3 sequence did not start, no tag or GitHub
 release may be created from this checkpoint.

@@ -22,10 +22,12 @@ eligible for a predefined mutation.
 
 ## Blocking release evidence
 
-The write contract and explicit approval were supplied, and the approved destination copy was
-created. The real sequence stopped before dry-run completion on a legacy IC6.1.5 property-query
-API mismatch, so apply, backup, rollback, and baseline-restoration evidence do not exist. The
-destination now exists and the policy forbids overwrite. A new V2 target and backup were approved
-and remain absent, but the actual V2 sequence was blocked before copy by an active source OA lock
-owned by Virtuoso PID 25425. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or
-released.
+V1 and V2 attempts remain preserved as incomplete evidence. A V3 clean-validation plan was
+approved at SHA-256 `3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`, and runner
+0.12.0 implements its fixed confirmation-gated sequence. The first V3 invocation stopped before
+runtime creation or copy because preflight treated the preserved V1 `sch.oa-` auxiliary file as a
+blocking recovery artifact. Read-only verification proved V1 `master.tag` selects regular
+`sch.oa`; the corrected gate now preserves and fingerprints the auxiliary file, but the mutation
+was not automatically retried. V3 target and backup remain absent, and no V3 dry-run, apply,
+rollback, or audit evidence exists. Package version remains `0.1.0`, and `v1.0.0` has not been
+tagged or released.

@@ -22,6 +22,9 @@ V2_FORENSIC_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-forens
 V2_PROPERTY_DIFF_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-property-diff.il"
 V2_ROLLBACK_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v2-rollback.il"
 V3_PLAN = PROJECT_ROOT / "remote" / "config" / "design-write-v3-plan.json"
+V3_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_validation_json.py"
+V3_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-validation.sh"
+V3_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v3-validation.il"
 
 
 def test_runner_exposes_only_allowlisted_commands() -> None:
@@ -45,6 +48,8 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-v2-forensic",
         "design-write-v2-property-diff",
         "design-write-v2-rollback",
+        "design-write-v3-plan-check",
+        "design-write-v3-validate",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -63,7 +68,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.11.0" in runner
+    assert "RUNNER_VERSION=0.12.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -258,3 +263,51 @@ def test_v3_plan_is_non_executable_and_preserves_prior_evidence() -> None:
     assert plan["required_confirmation"] is None
     assert len(plan["acceptance_criteria"]) == 10
     assert plan["release_gate_enabled"] is False
+
+
+def test_v3_validation_is_fixed_confirmation_gated_and_rollback_backed() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = V3_HELPER.read_text(encoding="utf-8")
+    worker = V3_WORKER.read_text(encoding="utf-8")
+    skill = V3_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "APPROVE_MCP_WRITE_VALIDATED_V3_3362E4FC" in helper
+    assert "design-write-v3-validate" in runner
+    assert "design-write-v3-plan-check" in runner
+    assert "3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87" in helper
+    assert "active Virtuoso process blocks V3 validation" in worker
+    assert "timeout 300" in worker
+    assert 'v1_master_references" = "sch.oa"' in worker
+    assert "protected V1 artifact blocks V3 validation" in worker
+    assert "protected V2 artifact blocks V3 validation" in worker
+    for path in (
+        "Differential_Amplifier_TB2_MCP_TEST/schematic",
+        "Differential_Amplifier_TB2_MCP_TEST_V2/schematic",
+        "Differential_Amplifier_TB2_MCP_TEST_V2_BACKUP/schematic",
+        "Differential_Amplifier_TB2_MCP_TEST_V3/schematic",
+        "Differential_Amplifier_TB2_MCP_TEST_V3_BACKUP/schematic",
+        "/home/buet/cadence/gpdk090_v4.6/libs.oa22/gpdk090",
+    ):
+        assert path in worker
+    assert "source_before" in worker and "source_after" in worker
+    assert "v1_before" in worker and "v1_after" in worker
+    assert "v2_target_before" in worker and "v2_target_after" in worker
+    assert "v2_backup_before" in worker and "v2_backup_after" in worker
+    assert "pdk_before" in worker and "pdk_after" in worker
+    assert "MCP_V3_STAGE|dry_run|true|absent|1|0|false" in skill
+    assert 'dbReplaceProp(targetCv propertyName "string" propertyValue)' in skill
+    assert "dbCopyCellView(backupCv workLib targetCell sourceView nil nil t)" in skill
+    assert "mcpV3PropertiesContained" in skill
+    assert "mcpV3PropertiesEqual" in skill
+    assert "MCP_V3_STAGE|exact_diff_verification|true|1" in skill
+    assert "MCP_V3_STAGE|baseline_restoration_verification|true" in skill
+    assert "return(nil)" not in skill
+    for forbidden in ("evalstring", "load(", "dbCreateInst", "dbDeleteObject"):
+        assert forbidden not in skill
+    assert "property_values_included" in helper
+    assert "design_write_v3_" in helper
+    assert "run-design-write-v3-validation.sh" in deploy
+    assert "v3_validation_json.py" in deploy
+    assert "design-write-v3-plan.json" in deploy
+    assert "design-write-v3-validation.il" in deploy

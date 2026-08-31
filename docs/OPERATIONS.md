@@ -335,7 +335,7 @@ complete contract.
 The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
 `mcpMutationTest=validated-v1` mutation. V1 remains preserved after its incomplete run. V2 passed
 source verification, copy, 35/14/8 baseline, dry-run, unchanged verification, backup, and the
-approved apply marker, then timed out before verification and rollback. Runner 0.11.0 supplies
+approved apply marker, then timed out before verification and rollback. Runner 0.12.0 supplies
 fixed operator-only `design-write-v2-forensic` and confirmation-gated
 `design-write-v2-rollback` commands plus the operator-only
 `design-write-v2-property-diff` inspection; none accepts a path, design identifier, property,
@@ -349,12 +349,18 @@ target, and backup topology remained 35/14/8. The conditional rollback command w
 Read-only property-diff evidence exists, but no rollback evidence or rollback audit success record
 exists.
 
-`remote/config/design-write-v3-plan.json` is a non-executable review asset. It uses only the
+`remote/config/design-write-v3-plan.json` remains the immutable approval asset. It uses only the
 approved V3 destination and backup names, preserves all V1/V2 evidence, specifies a 300-second
-worker limit and the full clean validation sequence, and has no confirmation token. Its SHA-256 is
+worker limit and the full clean validation sequence. Its SHA-256 is
 `3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`; all ten acceptance
-criteria remain present, with execution and release gates disabled. Do not add or run a V3
-mutation command until the user separately approves the plan after resolving the V2 disposition.
+criteria remain present. After the user separately approved implementation and execution, runner
+0.12.0 added a SHA-bound, confirmation-gated, fixed V3 command. The first invocation stopped before
+validation runtime creation or V3 copy because the preflight conservatively classified the
+preserved V1 `sch.oa-` as blocking. Read-only follow-up proved that V1 `master.tag` authoritatively
+selects its regular `sch.oa` and that no active lock, panic, or recovery file exists. The gate now
+preserves and fingerprints that auxiliary file while continuing to reject actual blockers, but the
+V3 sequence was not automatically retried. V3 target and backup remain absent, and a new explicit
+retry approval is required. The release gate remains disabled.
 
 Packaging lifecycle is independently verifiable with:
 
