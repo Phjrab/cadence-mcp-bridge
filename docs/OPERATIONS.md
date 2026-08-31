@@ -301,6 +301,13 @@ wrapper, and records the source SHA-256 and applied configuration in `run-manife
 writes the original cellview, state, PDK, model, or simulation result directory. MCP exposes only
 bounded completion and artifact metadata.
 
+Runner 0.17.0 adds the operator-only `actual-profile-baseline-audit` command for WP-12. It accepts
+no arguments and does not invoke Spectre, OCEAN, or Virtuoso. It hashes the fixed deployed profile
+and source snapshot, fingerprints only ADE-state tree metadata, classifies the two fixed bias-token
+declaration/reference counts, compares the current source hash with the newest successful actual
+manifest, and emits one bounded JSON object. Raw content and remote paths are never returned. This
+command is not part of the MCP tool surface.
+
 Validated on 2026-08-28 against `cadence-vm`:
 
 - the fixture profile completed on the actual VM with exit code 0, zero errors, zero warnings,

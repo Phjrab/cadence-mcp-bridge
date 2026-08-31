@@ -11,6 +11,9 @@ RUNNER = PROJECT_ROOT / "remote" / "bin" / "cadence-runner"
 COMMON = PROJECT_ROOT / "remote" / "lib" / "runner-common.sh"
 DEPLOY = PROJECT_ROOT / "scripts" / "deploy-remote.ps1"
 RESULT_HELPER = PROJECT_ROOT / "remote" / "py26" / "result_json.py"
+ACTUAL_PROFILE_AUDIT_HELPER = (
+    PROJECT_ROOT / "remote" / "py26" / "actual_profile_audit.py"
+)
 DISCOVERY_HELPER = PROJECT_ROOT / "remote" / "py26" / "discovery_json.py"
 DISCOVERY_ALLOWLIST = PROJECT_ROOT / "remote" / "config" / "discovery-allowlist.json"
 WRITE_POLICY = PROJECT_ROOT / "remote" / "config" / "design-write-policy.json"
@@ -66,6 +69,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "health",
         "submit-smoke",
         "submit-profile",
+        "actual-profile-baseline-audit",
         "status",
         "log-tail",
         "result",
@@ -104,7 +108,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.16.0" in runner
+    assert "RUNNER_VERSION=0.17.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -180,6 +184,21 @@ def test_profile_runner_is_fixed_and_manifest_backed() -> None:
     assert "source_sha256" in helper
     assert "design-netlist.scs" in helper
     assert "script_text" not in runner
+
+
+def test_actual_profile_baseline_audit_is_fixed_and_metadata_only() -> None:
+    helper = ACTUAL_PROFILE_AUDIT_HELPER.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "actual-profile-baseline-audit" in RUNNER.read_text(encoding="utf-8")
+    assert "actual_profile_audit.py" in deploy
+    assert 'PARAMETERS = ("VBIASN", "VBIASP")' in helper
+    assert '"raw_content_included": False' in helper
+    assert '"paths_included": False' in helper
+    assert '"source_content":' not in helper
+    assert "len(sys.argv) != 1" in helper
+    for forbidden in ("subprocess", "eval(", "exec(", "os.remove", "os.rename"):
+        assert forbidden not in helper
 
 
 def test_design_write_contract_is_single_target_copy_only_and_rollback_backed() -> None:
