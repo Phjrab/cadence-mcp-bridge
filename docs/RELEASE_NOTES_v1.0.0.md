@@ -1,7 +1,8 @@
-# Cadence MCP Bridge v1.0.0 — Draft Release Notes
+# Cadence MCP Bridge v1.0.0 — Release Candidate
 
-Status: **not released**. This draft must not be used to create a tag or GitHub release until the
-WP-11 controlled-write acceptance gate passes.
+Status: **not yet published**. The controlled-write acceptance gate passes and package metadata is
+prepared at `1.0.0`. An annotated tag and private GitHub release require review, branch integration,
+and separate explicit authorization.
 
 ## Planned v1 capabilities
 
@@ -20,7 +21,7 @@ path, raw netlist, PDK content, raw PSF, credential, or license value interface.
 source design libraries remain read-only. Only a separately allowlisted work-library copy may be
 eligible for a predefined mutation.
 
-## Blocking release evidence
+## Controlled-write validation evidence
 
 V1 and V2 attempts remain preserved as incomplete evidence. A V3 clean-validation plan was
 approved at SHA-256 `3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb60619890c87`, and runner
@@ -36,8 +37,8 @@ unchanged. A fixed read-only follow-up found exactly the baseline metadata times
 the approved property presence, with no property values returned or stored and all Source/V1/V2/V3/
 PDK fingerprints unchanged. Conditional recovery plan SHA-256
 `edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b` remains non-executable
-and awaits separate approval. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or
-released.
+and at that time awaited separate approval. The package then remained `0.1.0`; no tag or release
+was created.
 
 A later separately approved, three-object, exact-value read-only forensic classified V3 as
 `SAFE_ROLLBACK_CANDIDATE`. Source and backup exactly match at eight cellview properties and all
@@ -74,5 +75,15 @@ immutable manifest, bounded audit, and Source/PDK/prior-evidence immutability. T
 contained only `mcpMutationTest=validated-v1` and the bounded OA metadata transition from `107168`
 to `107169`; rollback removed the mutation and restored the prior property hash. Manifest SHA-256
 is `e7b306db74fe28040584b39e94b980709d61aa8a19e78ad0987ab688d1e9db7b`. No retry, cleanup,
-tag, or release occurred. The package remains version `0.1.0` pending reviewed branch integration
-and separately authorized final release preparation.
+tag, or release occurred. The release-preparation branch now carries package version `1.0.0` and
+the completed candidate checklist. The annotated tag and private GitHub release remain pending
+reviewed branch integration and separate publication authorization.
+
+## Release readiness
+
+- Package metadata, runtime version, lockfile, and installed CLI agree on `1.0.0`.
+- Ruff, strict mypy, the complete default test suite, security/dependency gate, all eight real
+  integrations, and isolated build/install/version/uninstall verification pass.
+- V4 run `e636eeba-80dc-4280-b2ea-4f23b0cd1139` passed all 18 controlled-write acceptance criteria.
+- No source, PDK, shared library, ADE state, or preserved V1/V2/V3 evidence was modified.
+- No `v1.0.0` tag or GitHub release is created by the release-preparation run.

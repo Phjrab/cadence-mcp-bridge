@@ -468,6 +468,7 @@ Packaging lifecycle is independently verifiable with:
 .\scripts\verify-package.ps1
 ```
 
-The script builds, installs, checks, and uninstalls the current `0.1.0` package entirely in a
-validated temporary directory. `v1.0.0` remains prohibited until a clean copy-only sequence,
-dry-run/apply equivalence, backup restore, and design immutability checks pass.
+The script builds, installs, checks, and uninstalls the `1.0.0` release-candidate package entirely
+in a validated temporary directory. The V4 copy-only sequence, dry-run/apply equivalence, backup
+restore, and design immutability checks pass. The `v1.0.0` tag and private GitHub release remain
+prohibited until this release-preparation branch is reviewed, merged, and separately authorized.

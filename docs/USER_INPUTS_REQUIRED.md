@@ -51,6 +51,7 @@ Run `e636eeba-80dc-4280-b2ea-4f23b0cd1139` passed all 18 criteria, restored the 
 fixed backup, and proved Source, PDK, and all prior evidence unchanged. No controlled-write domain
 input remains outstanding.
 
-The remaining user decision is repository/release authorization: review the WP-11 feature branch,
-explicitly authorize its PR merge when satisfied, and separately authorize the final `v1.0.0`
-version/tag/private-release step. No tag or release has been created.
+The remaining user decision is repository/release authorization: review the
+`wp/WP-11-v1-release` release-preparation branch, explicitly authorize its PR merge when satisfied,
+and then separately authorize creation of the annotated `v1.0.0` tag and private GitHub release.
+No tag or release has been created.

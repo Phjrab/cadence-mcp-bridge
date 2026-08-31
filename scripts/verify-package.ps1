@@ -38,7 +38,7 @@ try {
         throw "Package installation failed."
     }
     $installedVersion = (& $python -m cadence_mcp_bridge --version).Trim()
-    if ($LASTEXITCODE -ne 0 -or $installedVersion -ne "0.1.0") {
+    if ($LASTEXITCODE -ne 0 -or $installedVersion -ne "1.0.0") {
         throw "Installed CLI version verification failed."
     }
 

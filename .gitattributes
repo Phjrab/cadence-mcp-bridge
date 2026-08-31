@@ -1,4 +1,9 @@
 *.py text eol=lf
 *.sh text eol=lf
 *.scs text eol=lf
+remote/config/*.json text eol=lf
+remote/config/design-write-v3-plan.json -text
+remote/config/design-write-v3-conditional-recovery-plan.json -text
+remote/config/design-write-v3-exact-conditional-rollback-plan.json -text
+remote/config/design-write-v4-plan.json -text
 remote/bin/cadence-runner text eol=lf

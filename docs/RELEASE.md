@@ -40,18 +40,20 @@ the module is no longer importable, and removes only its validated temporary dir
 5. Any future remote application-root removal requires a separate retention decision and explicit
    operator approval.
 
-## v1.0.0 checklist
+## v1.0.0 release-candidate checklist
 
-- all WP-00 through WP-11 acceptance criteria pass;
-- controlled write target and mutation are explicitly approved;
-- dry-run/apply equivalence and rollback pass on a copy;
-- source, PDK, shared library, and ADE state fingerprints remain unchanged;
-- Ruff, strict mypy, default tests, security gate, real integrations, and package verifier pass;
-- package version and `__version__` are both `1.0.0`;
-- release notes contain no proprietary data or secrets;
-- annotated `v1.0.0` tag is pushed to the private repository;
-- private GitHub release is created from the reviewed tag.
+- [x] WP-00 through WP-10 are integrated and their acceptance evidence passes.
+- [x] The controlled-write target and sole mutation were explicitly approved.
+- [x] V4 dry-run/apply equivalence and backup rollback passed on the approved copy.
+- [x] Source, PDK, shared libraries, ADE state, and preserved V1/V2/V3 evidence remained unchanged.
+- [x] Ruff, strict mypy, default tests, the security gate, all real integrations, and the package
+      verifier pass on the release-preparation branch.
+- [x] `pyproject.toml`, package `__version__`, `uv.lock`, and installed CLI report `1.0.0`.
+- [x] Final release notes contain no proprietary data, raw design content, credentials, or secrets.
+- [ ] The `wp/WP-11-v1-release` branch is reviewed and integrated through an explicitly approved PR.
+- [ ] An annotated `v1.0.0` tag is created from the reviewed main commit and pushed to the private
+      repository under separate authorization.
+- [ ] A private GitHub release is created from that exact tag under separate authorization.
 
-The V4 controlled-write dry-run/apply/rollback and immutability evidence now passes. The checklist
-remains incomplete because the package version is still `0.1.0`, the WP-11 feature branch is not
-integrated, and no annotated tag or private GitHub release exists.
+The repository is a release candidate, not a published release. Tagging and GitHub publication are
+deliberately excluded from this preparation run.
