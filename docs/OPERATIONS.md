@@ -359,8 +359,17 @@ validation runtime creation or V3 copy because the preflight conservatively clas
 preserved V1 `sch.oa-` as blocking. Read-only follow-up proved that V1 `master.tag` authoritatively
 selects its regular `sch.oa` and that no active lock, panic, or recovery file exists. The gate now
 preserves and fingerprints that auxiliary file while continuing to reject actual blockers, but the
-V3 sequence was not automatically retried. V3 target and backup remain absent, and a new explicit
-retry approval is required. The release gate remains disabled.
+V3 sequence was not automatically retried.
+
+The user subsequently approved one corrected-runner invocation. Validation
+`0b9bf93c-11e9-416f-9e4a-69b1060fbd8e` passed copy, baseline, dry-run unchanged verification,
+backup, and apply, then failed at exact-diff verification with `V3 apply changed a baseline
+property`. The process exited normally with no remaining Virtuoso process, but rollback and audit
+finalization were not reached. The V3 target and backup now exist and are preserved. Source, V1
+including `sch.oa-`, both V2 views, and gpdk090 retained their exact pre-run tree fingerprints.
+Do not retry, overwrite, delete, or reuse either V3 view. Further Cadence action requires a new
+fixed read-only forensic and conditional recovery plan plus explicit approval. The release gate
+remains disabled.
 
 Packaging lifecycle is independently verifiable with:
 

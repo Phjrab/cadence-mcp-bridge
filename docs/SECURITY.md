@@ -76,7 +76,7 @@ fixed jobs root.
 | Warning masking | actual Spectre completion | exact `CMI-2477` code allowlist with maximum count two; every other or additional warning fails | an allowed PDK warning may still merit circuit review |
 | Measurement ambiguity | ADC samples and metric selection | versioned closed contract, fixed units/formulas/FFT policies, request rejection without contract, actual-circuit inputs kept unresolved | a future actual contract requires separate user approval and review |
 | Measurement payload exhaustion | bounded numeric arrays | finite-only values, 4,096-value general limit, exact 1,024-value FFT limit, local deterministic processing | repeated allowed calls can still consume local CPU |
-| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | the incomplete approved target now exists, so all reruns fail closed pending a new authorization |
+| Unauthorized design write | library or mutation request | exact fixed source/target/property, permanent PDK/shared/source classification, canonical plan, target nonexistence check, exact confirmation | the incomplete V3 target and backup now exist, so clean reruns fail closed pending separately approved forensics and recovery |
 | Release before write acceptance | tag or GitHub release | version remains 0.1.0, release checklist requires copy apply/rollback evidence, no v1 tag while blocked | final release requires a resumed WP-11 run |
 
 ## Origin and audit contract
@@ -167,8 +167,12 @@ hash, fixed V3 names, fixed 300-second limit, and an exact confirmation. It fing
 V1, both V2 views, and `gpdk090` before and after. Its first invocation failed closed before V3
 copy because the preserved V1 `sch.oa-` was treated as blocking; V1 `master.tag` was then verified
 to select regular `sch.oa`, and the gate was corrected to preserve the auxiliary file while still
-rejecting locks and panic/recovery artifacts. No automatic retry, V3 mutation, tag, or release
-occurred. No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
+rejecting locks and panic/recovery artifacts. A separately approved single corrected invocation
+then passed copy, baseline, non-mutating dry-run, backup, and the approved property apply, but
+failed exact-diff verification because a baseline property also changed. Rollback and audit were
+not reached. V3 target and backup now exist as preserved evidence, while Source, V1 including
+`sch.oa-`, both V2 views, and `gpdk090` retained their exact tree fingerprints. No automatic retry,
+tag, or release occurred. No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

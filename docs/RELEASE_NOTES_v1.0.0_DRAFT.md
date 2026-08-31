@@ -27,7 +27,9 @@ approved at SHA-256 `3362e4fc13874d4f16c78506c24ae6ebd64c882718fe57e9cb2bb606198
 0.12.0 implements its fixed confirmation-gated sequence. The first V3 invocation stopped before
 runtime creation or copy because preflight treated the preserved V1 `sch.oa-` auxiliary file as a
 blocking recovery artifact. Read-only verification proved V1 `master.tag` selects regular
-`sch.oa`; the corrected gate now preserves and fingerprints the auxiliary file, but the mutation
-was not automatically retried. V3 target and backup remain absent, and no V3 dry-run, apply,
-rollback, or audit evidence exists. Package version remains `0.1.0`, and `v1.0.0` has not been
-tagged or released.
+`sch.oa`; the corrected gate now preserves and fingerprints the auxiliary file. A separately
+approved single corrected invocation passed V3 copy, baseline, non-mutating dry-run, backup, and
+the approved property apply, then failed exact-diff verification because a baseline property also
+changed. Rollback and audit were not reached, and no retry was attempted. V3 target and backup now
+exist as preserved incomplete evidence; protected Source/V1/V2/PDK fingerprints remained
+unchanged. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or released.

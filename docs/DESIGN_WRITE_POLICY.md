@@ -44,8 +44,16 @@ The first invocation stopped before validation-directory creation or V3 copy bec
 classified the preserved V1 `sch.oa-` auxiliary file as blocking. Read-only verification showed
 that V1 `master.tag` authoritatively selects its regular `sch.oa` and that no active lock, panic,
 or recovery file exists. The corrected gate preserves and fingerprints V1 `sch.oa-` without
-treating it as a lock. Per the plan's no-automatic-retry criterion, V3 was not invoked again.
-Both V3 names remain absent and no mutation occurred.
+treating it as a lock. Per the plan's no-automatic-retry criterion, that invocation was not retried.
+
+The user then approved exactly one new corrected-runner invocation. Validation
+`0b9bf93c-11e9-416f-9e4a-69b1060fbd8e` passed source verification, both V3 absence checks, copy,
+the 35/14/8 and eight-property baseline, non-mutating dry-run, unchanged verification, backup,
+and the approved one-property apply. It failed closed at exact-diff verification because a
+baseline property also changed. The fixed script stopped before rollback, baseline restoration,
+source-final verification, manifest creation, or audit append. No retry was attempted. The V3
+target and backup now exist as preserved incomplete evidence. Source, V1 (including `sch.oa-`),
+both V2 views, and `gpdk090` tree fingerprints remained exactly unchanged.
 
 ## Permanent protections
 
@@ -63,14 +71,16 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 
 ## Required action before resuming WP-11
 
-The prepared V3 plan remains unchanged at the approved SHA. The fixed implementation and corrected
-preflight are deployed, but the failed pre-copy invocation was not retried. Continuing requires a
-new explicit authorization to invoke the same V3 target and backup after acknowledging that the V1
-`sch.oa-` auxiliary file will remain untouched and covered by the V1 before/after fingerprint.
+The prepared V3 plan remains unchanged at the approved SHA, but its clean-destination precondition
+can no longer pass because both V3 names now exist. Continuing requires a separately reviewed,
+explicitly approved fixed read-only V3 forensic plan. Any conditional recovery must have its own
+exact acceptance criteria and approval. The V3 target and backup, V1 `sch.oa-`, all V1/V2 evidence,
+Source, and PDK must remain untouched until then; retry, overwrite, deletion, and fallback names are
+not authorized.
 
 ## Release gate
 
 `v1.0.0` must not be created until a real approved copy has passed dry-run/apply equivalence,
 backup restore, all local/security/integration tests, install/uninstall verification, and design
-source/PDK immutability checks. Because the V3 sequence did not start, no tag or GitHub
-release may be created from this checkpoint.
+source/PDK immutability checks. Because V3 exact-diff and rollback acceptance failed, no tag or
+GitHub release may be created from this checkpoint.
