@@ -29,8 +29,21 @@ V3_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v3-validation.il"
 V3_FORENSIC_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_forensic_json.py"
 V3_FORENSIC_WORKER = PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-forensic.sh"
 V3_FORENSIC_SCRIPT = PROJECT_ROOT / "remote" / "write" / "design-write-v3-property-diff.il"
+V3_DEEP_FORENSIC_HELPER = PROJECT_ROOT / "remote" / "py26" / "v3_deep_forensic_json.py"
+V3_DEEP_FORENSIC_WORKER = (
+    PROJECT_ROOT / "remote" / "lib" / "run-design-write-v3-deep-forensic.sh"
+)
+V3_DEEP_FORENSIC_SCRIPT = (
+    PROJECT_ROOT / "remote" / "write" / "design-write-v3-deep-forensic.il"
+)
 V3_RECOVERY_PLAN = (
     PROJECT_ROOT / "remote" / "config" / "design-write-v3-conditional-recovery-plan.json"
+)
+V3_EXACT_ROLLBACK_PLAN = (
+    PROJECT_ROOT
+    / "remote"
+    / "config"
+    / "design-write-v3-exact-conditional-rollback-plan.json"
 )
 
 
@@ -58,6 +71,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "design-write-v3-plan-check",
         "design-write-v3-validate",
         "design-write-v3-property-diff",
+        "design-write-v3-deep-forensic",
         "discovery-health",
         "cleanup-dry-run",
         "audit-tail",
@@ -76,7 +90,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.13.0" in runner
+    assert "RUNNER_VERSION=0.14.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 
@@ -397,5 +411,73 @@ def test_v3_conditional_recovery_plan_is_immutable_and_non_executable() -> None:
     assert len(plan["sequence"]) == 14
     assert plan["release_gate_enabled"] is False
     assert "design-write-v3-conditional-recovery-plan.json" not in DEPLOY.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_v3_deep_forensic_is_fixed_three_object_read_only_and_exact() -> None:
+    runner = RUNNER.read_text(encoding="utf-8")
+    helper = V3_DEEP_FORENSIC_HELPER.read_text(encoding="utf-8")
+    worker = V3_DEEP_FORENSIC_WORKER.read_text(encoding="utf-8")
+    skill = V3_DEEP_FORENSIC_SCRIPT.read_text(encoding="utf-8")
+    deploy = DEPLOY.read_text(encoding="utf-8")
+
+    assert "design-write-v3-deep-forensic" in runner
+    assert "0b9bf93c-11e9-416f-9e4a-69b1060fbd8e" in worker
+    assert "active Virtuoso process blocks V3 deep forensics" in worker
+    assert "deep-forensic-v1" in worker
+    assert "source_before" in worker and "source_after" in worker
+    assert "target_before" in worker and "target_after" in worker
+    assert "backup_before" in worker and "backup_after" in worker
+    for forbidden_scope in (
+        "MCP_TEST/schematic",
+        "MCP_TEST_V2/schematic",
+        "MCP_TEST_V2_BACKUP/schematic",
+        "gpdk090_v4.6/libs.oa22",
+    ):
+        assert forbidden_scope not in worker
+    assert 'dbOpenCellViewByType' in skill and '"r"' in skill
+    assert "MCP_V3_DEEP_PROPERTY" in skill
+    assert "%L" in skill
+    assert "list(35 14 8)" in skill
+    for forbidden in (
+        "dbSave",
+        "dbCopyCellView",
+        "dbReplaceProp",
+        "dbCreateInst",
+        "dbDeleteObject",
+        "evalstring",
+        "load(",
+    ):
+        assert forbidden not in skill
+    assert '"value": value' in helper
+    assert '"SAFE_ROLLBACK_CANDIDATE"' in helper
+    assert '"actual_rollback_performed": False' in helper
+    assert "run-design-write-v3-deep-forensic.sh" in deploy
+    assert "v3_deep_forensic_json.py" in deploy
+    assert "design-write-v3-deep-forensic.il" in deploy
+
+
+def test_v3_exact_conditional_rollback_plan_is_non_executable_and_not_deployed() -> None:
+    raw = V3_EXACT_ROLLBACK_PLAN.read_bytes()
+    plan = json.loads(raw)
+
+    assert hashlib.sha256(raw).hexdigest() == (
+        "eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911"
+    )
+    assert plan["forensic_classification"] == "SAFE_ROLLBACK_CANDIDATE"
+    assert plan["status"] == "awaiting_separate_explicit_rollback_approval"
+    assert plan["execution_enabled"] is False
+    assert plan["required_confirmation"] is None
+    assert plan["target_overwrite_required"] is True
+    assert plan["deletion_required"] is False
+    assert plan["forensic_report_sha256"] == (
+        "6329eafc458098b744a40b70fc0a1a0d876af57c326d2d79e854e1ceaeb9b02f"
+    )
+    assert len(plan["exact_expected_property_changes"]) == 2
+    assert len(plan["conditional_sequence"]) == 14
+    assert len(plan["acceptance_criteria"]) == 15
+    assert plan["release_gate_enabled"] is False
+    assert "design-write-v3-exact-conditional-rollback-plan.json" not in DEPLOY.read_text(
         encoding="utf-8"
     )

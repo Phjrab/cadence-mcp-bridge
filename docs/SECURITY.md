@@ -180,6 +180,17 @@ V2 views, both V3 views, and `gpdk090` were unchanged. The resulting conditional
 non-executable, not deployed, and still requires separate explicit approval. No release is allowed.
 See `docs/DESIGN_WRITE_POLICY.md`.
 
+Runner 0.14.0 adds a narrower exact-value forensic command approved for Source, V3 target, and V3
+backup only. It accepts no arguments, opens all three OA cellviews with mode `r`, bounds property
+and structural output, verifies each full tree fingerprint before and after, and writes only a
+mode-600 forensic report below the fixed `.cadence_mcp` evidence directory. It identified the
+complete diff as `mcpMutationTest` (`validated-v1` to absent) and `schGeometryLastUpdated`
+(`107169` to `107168`) without changing any design object. Its exact conditional rollback plan is
+non-executable, not deployed, and has no confirmation token. A separate approval bound to plan
+SHA-256 `eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911` is required before
+any target overwrite. Missing original manifest/audit/job records remain explicitly recorded;
+release remains blocked.
+
 ## Verification
 
 Run the repeatable local security gate:

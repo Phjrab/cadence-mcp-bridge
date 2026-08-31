@@ -5,7 +5,7 @@ umask 077
 
 . /home/buet/cds_work/.cadence_mcp/lib/runner-common.sh
 
-RUNNER_VERSION=0.13.0
+RUNNER_VERSION=0.14.0
 WORKER="$CADENCE_MCP_ROOT/lib/run-smoke-job.sh"
 PROFILE_WORKER="$CADENCE_MCP_ROOT/lib/run-profile-job.sh"
 VIRTUOSO_BIN=/home/buet/cadence/IC615/tools/dfII/bin/virtuoso
@@ -26,9 +26,10 @@ V3_PLAN="$CADENCE_MCP_ROOT/config/design-write-v3-plan.json"
 V3_HELPER="$CADENCE_MCP_ROOT/py26/v3_validation_json.py"
 V3_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-validation.sh"
 V3_FORENSIC_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-forensic.sh"
+V3_DEEP_FORENSIC_WORKER="$CADENCE_MCP_ROOT/lib/run-design-write-v3-deep-forensic.sh"
 
 usage() {
-    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|discovery-health|cleanup-dry-run|audit-tail' >&2
+    printf '%s\n' 'usage: cadence-runner version|health|submit-smoke|submit-profile|status|log-tail|result|cancel|list-libraries|list-cells|inspect-cellview|design-write-plan|design-write-preflight|design-write-validate|design-write-v2-forensic|design-write-v2-property-diff|design-write-v2-rollback|design-write-v3-plan-check|design-write-v3-validate|design-write-v3-property-diff|design-write-v3-deep-forensic|discovery-health|cleanup-dry-run|audit-tail' >&2
     exit 64
 }
 
@@ -376,6 +377,11 @@ runner_design_write_v3_property_diff() {
     "$V3_FORENSIC_WORKER"
 }
 
+runner_design_write_v3_deep_forensic() {
+    [ "$#" -eq 0 ] || usage
+    "$V3_DEEP_FORENSIC_WORKER"
+}
+
 runner_cleanup_dry_run() {
     [ "$#" -eq 0 ] || usage
     cadence_mcp_ensure_layout
@@ -414,6 +420,7 @@ case "$command_name" in
     design-write-v3-plan-check) runner_design_write_v3_plan_check "$@" ;;
     design-write-v3-validate) runner_design_write_v3_validate "$@" ;;
     design-write-v3-property-diff) runner_design_write_v3_property_diff "$@" ;;
+    design-write-v3-deep-forensic) runner_design_write_v3_deep_forensic "$@" ;;
     discovery-health) runner_discovery_health "$@" ;;
     cleanup-dry-run) runner_cleanup_dry_run "$@" ;;
     audit-tail) runner_audit_tail "$@" ;;

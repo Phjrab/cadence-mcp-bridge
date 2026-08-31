@@ -23,6 +23,7 @@ $files = @(
     @{ Local = "remote/lib/run-design-write-v2-recovery.sh"; Remote = "$remoteRoot/lib/run-design-write-v2-recovery.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-design-write-v3-validation.sh"; Remote = "$remoteRoot/lib/run-design-write-v3-validation.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-design-write-v3-forensic.sh"; Remote = "$remoteRoot/lib/run-design-write-v3-forensic.sh"; Mode = "700" },
+    @{ Local = "remote/lib/run-design-write-v3-deep-forensic.sh"; Remote = "$remoteRoot/lib/run-design-write-v3-deep-forensic.sh"; Mode = "700" },
     @{ Local = "remote/py26/result_json.py"; Remote = "$remoteRoot/py26/result_json.py"; Mode = "700" },
     @{ Local = "remote/py26/discovery_json.py"; Remote = "$remoteRoot/py26/discovery_json.py"; Mode = "700" },
     @{ Local = "remote/py26/profile_json.py"; Remote = "$remoteRoot/py26/profile_json.py"; Mode = "700" },
@@ -30,6 +31,7 @@ $files = @(
     @{ Local = "remote/py26/v2_recovery_json.py"; Remote = "$remoteRoot/py26/v2_recovery_json.py"; Mode = "700" },
     @{ Local = "remote/py26/v3_validation_json.py"; Remote = "$remoteRoot/py26/v3_validation_json.py"; Mode = "700" },
     @{ Local = "remote/py26/v3_forensic_json.py"; Remote = "$remoteRoot/py26/v3_forensic_json.py"; Mode = "700" },
+    @{ Local = "remote/py26/v3_deep_forensic_json.py"; Remote = "$remoteRoot/py26/v3_deep_forensic_json.py"; Mode = "700" },
     @{ Local = "remote/config/discovery-allowlist.json"; Remote = "$remoteRoot/config/discovery-allowlist.json"; Mode = "600" },
     @{ Local = "remote/config/design-write-policy.json"; Remote = "$remoteRoot/config/design-write-policy.json"; Mode = "600" },
     @{ Local = "remote/config/design-write-v3-plan.json"; Remote = "$remoteRoot/config/design-write-v3-plan.json"; Mode = "600" },
@@ -42,6 +44,7 @@ $files = @(
     @{ Local = "remote/write/design-write-v2-rollback.il"; Remote = "$remoteRoot/write/design-write-v2-rollback.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-v3-validation.il"; Remote = "$remoteRoot/write/design-write-v3-validation.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-v3-property-diff.il"; Remote = "$remoteRoot/write/design-write-v3-property-diff.il"; Mode = "600" },
+    @{ Local = "remote/write/design-write-v3-deep-forensic.il"; Remote = "$remoteRoot/write/design-write-v3-deep-forensic.il"; Mode = "600" },
     @{ Local = "remote/profiles/spectre-smoke/smoke.scs"; Remote = "$remoteRoot/profiles/spectre-smoke/smoke.scs"; Mode = "600" },
     @{ Local = "remote/profiles/fixture-rc-transient/profile.json"; Remote = "$remoteRoot/profiles/fixture-rc-transient/profile.json"; Mode = "600" },
     @{ Local = "remote/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Remote = "$remoteRoot/profiles/actual-differential-amplifier-tb2-transient/profile.json"; Mode = "600" }
@@ -84,7 +87,7 @@ foreach ($file in $files) {
     }
 }
 
-$verifyCommand = "bash -n '$remoteRoot/bin/cadence-runner' '$remoteRoot/lib/runner-common.sh' '$remoteRoot/lib/run-smoke-job.sh' '$remoteRoot/lib/run-profile-job.sh' '$remoteRoot/lib/run-design-write-validation.sh' '$remoteRoot/lib/run-design-write-v2-recovery.sh' '$remoteRoot/lib/run-design-write-v3-validation.sh' '$remoteRoot/lib/run-design-write-v3-forensic.sh'; /usr/bin/python -m py_compile '$remoteRoot/py26/result_json.py' '$remoteRoot/py26/discovery_json.py' '$remoteRoot/py26/profile_json.py' '$remoteRoot/py26/write_validation_json.py' '$remoteRoot/py26/v2_recovery_json.py' '$remoteRoot/py26/v3_validation_json.py' '$remoteRoot/py26/v3_forensic_json.py'; rm -f '$remoteRoot/py26/result_json.pyc' '$remoteRoot/py26/discovery_json.pyc' '$remoteRoot/py26/profile_json.pyc' '$remoteRoot/py26/write_validation_json.pyc' '$remoteRoot/py26/v2_recovery_json.pyc' '$remoteRoot/py26/v3_validation_json.pyc' '$remoteRoot/py26/v3_forensic_json.pyc'; '$remoteRoot/bin/cadence-runner' version"
+$verifyCommand = "bash -n '$remoteRoot/bin/cadence-runner' '$remoteRoot/lib/runner-common.sh' '$remoteRoot/lib/run-smoke-job.sh' '$remoteRoot/lib/run-profile-job.sh' '$remoteRoot/lib/run-design-write-validation.sh' '$remoteRoot/lib/run-design-write-v2-recovery.sh' '$remoteRoot/lib/run-design-write-v3-validation.sh' '$remoteRoot/lib/run-design-write-v3-forensic.sh' '$remoteRoot/lib/run-design-write-v3-deep-forensic.sh'; /usr/bin/python -m py_compile '$remoteRoot/py26/result_json.py' '$remoteRoot/py26/discovery_json.py' '$remoteRoot/py26/profile_json.py' '$remoteRoot/py26/write_validation_json.py' '$remoteRoot/py26/v2_recovery_json.py' '$remoteRoot/py26/v3_validation_json.py' '$remoteRoot/py26/v3_forensic_json.py' '$remoteRoot/py26/v3_deep_forensic_json.py'; rm -f '$remoteRoot/py26/result_json.pyc' '$remoteRoot/py26/discovery_json.pyc' '$remoteRoot/py26/profile_json.pyc' '$remoteRoot/py26/write_validation_json.pyc' '$remoteRoot/py26/v2_recovery_json.pyc' '$remoteRoot/py26/v3_validation_json.pyc' '$remoteRoot/py26/v3_forensic_json.pyc' '$remoteRoot/py26/v3_deep_forensic_json.pyc'; '$remoteRoot/bin/cadence-runner' version"
 & ssh @sshOptions $sshAlias $verifyCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Remote syntax or version verification failed."

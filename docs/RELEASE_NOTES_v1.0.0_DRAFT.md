@@ -38,3 +38,12 @@ PDK fingerprints unchanged. Conditional recovery plan SHA-256
 `edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b` remains non-executable
 and awaits separate approval. Package version remains `0.1.0`, and `v1.0.0` has not been tagged or
 released.
+
+A later separately approved, three-object, exact-value read-only forensic classified V3 as
+`SAFE_ROLLBACK_CANDIDATE`. Source and backup exactly match at eight cellview properties and all
+three objects match structurally at 35/14/8. The target differs only by approved
+`mcpMutationTest=validated-v1` and the OA-maintained `schGeometryLastUpdated` change from 107168 to
+107169. No rollback occurred. The new exact conditional plan SHA-256 is
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`; it remains non-executable,
+undeployed, and pending separate approval. The original validation manifest, audit, and runner job
+record remain missing, so the release gate stays failed.

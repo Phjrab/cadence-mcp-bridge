@@ -388,6 +388,25 @@ protected fingerprints, the exact two-property diff, topology 35/14/8, and block
 an exact confirmation can permit the fixed V3 backup-to-target restore. No current approval permits
 that overwrite.
 
+An additional exact-value investigation was separately approved for only Source, V3 target, and
+V3 backup. Runner 0.14.0 performed the argument-free `design-write-v3-deep-forensic` command once,
+using OpenAccess read mode for all three objects. Their tree fingerprints were identical before
+and after. All retain topology 35/14/8 and the same instance, net, and terminal summary hashes.
+Source and backup contain the same eight cellview properties. The target differs from backup only
+as follows:
+
+- `mcpMutationTest`: target `string` value `validated-v1`; backup and Source absent;
+- `schGeometryLastUpdated`: target `int` value `107169`; backup and Source `int` value `107168`.
+
+The report is mode 600 at the fixed validation evidence path and has SHA-256
+`6329eafc458098b744a40b70fc0a1a0d876af57c326d2d79e854e1ceaeb9b02f`. The original stage log
+shows backup before apply and the investigation classified the state as `SAFE_ROLLBACK_CANDIDATE`.
+The original completion manifest, audit record, and normal runner job record are missing. No
+rollback was run. The exact non-executable plan is
+`remote/config/design-write-v3-exact-conditional-rollback-plan.json`, SHA-256
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`; it is not deployed and
+requires separate explicit approval before the fixed target overwrite.
+
 Packaging lifecycle is independently verifiable with:
 
 ```powershell

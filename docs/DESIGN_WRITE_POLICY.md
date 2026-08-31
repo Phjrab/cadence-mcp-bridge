@@ -63,6 +63,17 @@ storing values: `schGeometryLastUpdated` is `int` and present on both sides with
 `mcpMutationTest` is absent from backup, present as `string` in target, and its equality to the
 fixed approved value is true. All seven protected fingerprints remained unchanged.
 
+The user then approved an exact-value deep forensic limited to Source, V3 target, and V3 backup.
+Runner 0.14.0 opens only those three cellviews with OpenAccess read mode and fingerprints their
+complete cellview trees before and after. Forensic report SHA-256
+`6329eafc458098b744a40b70fc0a1a0d876af57c326d2d79e854e1ceaeb9b02f` classifies the state as
+`SAFE_ROLLBACK_CANDIDATE`: Source, target, and backup have identical 35/14/8 structural hashes;
+Source and backup have the same eight exact cellview properties; and the complete target-to-backup
+diff contains only `mcpMutationTest` (`string`, `validated-v1` to absent) and
+`schGeometryLastUpdated` (`int`, `107169` to `107168`). The original validation log proves backup
+preceded apply, but its completion manifest, audit record, and runner job record are missing. The
+deep forensic created only a mode-600 report under `.cadence_mcp`; no OA write or rollback occurred.
+
 ## Permanent protections
 
 - PDK libraries, including `gpdk090`, are permanently read-only.
@@ -80,13 +91,13 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 ## Required action before resuming WP-11
 
 The clean V3 plan remains unchanged at its approved SHA, but its clean-destination precondition can
-no longer pass. The read-only forensic is complete. The separate, non-executable conditional
-recovery plan is `remote/config/design-write-v3-conditional-recovery-plan.json`, SHA-256
-`edb34edf04b8ef4616f2215381cedf10f7ccf3ca7dfdcc8836e01d6e9f3b2d1b`. It has 14 fixed stages
-and 14 acceptance criteria, requires a future exact confirmation tied to that raw hash, and is not
-deployed to the runner. The V3 target and backup, V1 `sch.oa-`, all V1/V2 evidence, Source, and PDK
-must remain untouched until separate recovery approval; retry, overwrite, deletion, and fallback
-names are not currently authorized.
+no longer pass. The exact-value read-only forensic is complete. Its new non-executable conditional
+rollback plan is `remote/config/design-write-v3-exact-conditional-rollback-plan.json`, SHA-256
+`eb057da2a866b92be5e1474bc3d06aba05f6ae49b5001465dd65ed9921afc911`. It has 14 conditional
+stages and 15 acceptance criteria, fixes both exact property transitions, requires a future exact
+confirmation tied to that raw hash, and is not deployed to the runner. Source, target, and backup
+must remain untouched until separate rollback approval; overwrite, retry, cleanup, deletion, and
+fallback names are not currently authorized. The earlier redacted plan remains historical evidence.
 
 ## Release gate
 
