@@ -333,15 +333,20 @@ complete contract.
 ## WP-11 blocked write and release checkpoint
 
 The user approved `MCP_WorkLib`, an exact source/destination copy, and the sole
-`mcpMutationTest=validated-v1` mutation. Runner 0.9.0 and the MCP server expose a fixed plan and an
-exact confirmation-gated validation; callers cannot choose any path, design identifier, property,
-value, or SKILL text. The real run created the destination copy, then stopped before dry-run
-completion because the installed IC6.1.5 lacks the attempted property-query helper. The property
-was not applied and no backup or rollback stage ran. Since the destination now exists, the current
-contract blocks every rerun. A separately approved V2 plan leaves V1 untouched, checks both V2
-names before copy, restores from a real backup, and compares logical fingerprints. Its read-only
-compatibility preflight passed, but actual V2 execution stopped before copy because the source is
-actively locked by Virtuoso PID 25425. No lock, process, V1 artifact, or design was changed.
+`mcpMutationTest=validated-v1` mutation. V1 remains preserved after its incomplete run. V2 passed
+source verification, copy, 35/14/8 baseline, dry-run, unchanged verification, backup, and the
+approved apply marker, then timed out before verification and rollback. Runner 0.10.0 supplies
+fixed operator-only `design-write-v2-forensic` and confirmation-gated
+`design-write-v2-rollback` commands; neither accepts a path, design identifier, property, value,
+or SKILL text. The successful compatibility-correct forensic found that the V2 target changed a
+baseline property in addition to the approved property, so the conditional rollback command was
+not invoked. No V2 recovery evidence or audit success record exists.
+
+`remote/config/design-write-v3-plan.json` is a non-executable review asset. It uses only the
+approved V3 destination and backup names, preserves all V1/V2 evidence, specifies a 300-second
+worker limit and the full clean validation sequence, and has no confirmation token. Do not add or
+run a V3 mutation command until the user separately approves the plan after resolving the V2
+disposition.
 
 Packaging lifecycle is independently verifiable with:
 

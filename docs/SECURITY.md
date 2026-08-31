@@ -156,7 +156,10 @@ enforces the source topology `35/14/8`, and refuses active OA locks plus panic/r
 A user-verified, non-authoritative source `sch.oa-` is preserved and covered by the source tree
 fingerprint rather than treated as an active lock. The real V2 run reached the approved property
 apply marker but timed out before verification and rollback; both V2 names now exist, so retry is
-fail-closed and no release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
+fail-closed. A later fixed read-only forensic proved that at least one baseline property also
+differs between V2 target and backup, so the conditionally approved restore was not invoked. The
+reviewed V3 plan remains non-executable with no confirmation token and a disabled release gate.
+No release is allowed. See `docs/DESIGN_WRITE_POLICY.md`.
 
 ## Verification
 

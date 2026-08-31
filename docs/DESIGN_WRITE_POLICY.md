@@ -29,6 +29,13 @@ marker. The fixed 90-second process limit then sent SIGTERM before apply verific
 Both V2 cell names now exist. No completion manifest or design-write audit records were written,
 so the validation is failed and its post-apply state is not accepted as verified.
 
+The user then approved a fixed read-only V2 forensic check and a backup restore only if the V2
+target differed from the 35/14/8 backup by exactly the approved `mcpMutationTest` property. Runner
+0.10.0 added that closed recovery path. The compatibility-correct forensic result was
+`MCP_V2_FORENSIC_FAILURE|V2 target changed a baseline property`; therefore the user's rollback
+precondition did not pass. The backup restore command was not invoked, no recovery audit or
+success evidence was written, and both V2 cellviews remain preserved without deletion.
+
 ## Permanent protections
 
 - PDK libraries, including `gpdk090`, are permanently read-only.
@@ -45,12 +52,13 @@ execution tool additionally requires the exact `APPROVE_MCP_WRITE_VALIDATED_V2` 
 
 ## Required action before resuming WP-11
 
-The operator must normally close active Virtuoso PID 24345; force termination is not authorized.
-Because both approved V2 names now exist, the current no-reuse/no-overwrite contract prevents a
-second V2 run. Continuing requires a new explicit approval for either a fixed read-only forensic
-inspection followed by a narrowly scoped backup-based rollback/recovery, or a new clean target and
-backup pair. Existing V1, V2, source, PDK, and unrelated library data must not be deleted, reused,
-or modified without that exact approval.
+The prepared V3 plan is stored in `remote/config/design-write-v3-plan.json`. It fixes the target
+and backup to the user-selected V3 names, preserves V1 and both V2 cellviews as evidence, raises the
+worker limit to 300 seconds, and keeps `execution_enabled=false`, `required_confirmation=null`, and
+`release_gate_enabled=false`. Its status is `blocked_on_v2_exact_diff_failure`; there is no V3
+apply command. Continuing requires a new explicit decision to either authorize a broader,
+backup-based V2 restore despite the baseline-property mismatch or preserve the failed V2 state and
+separately approve implementation and execution of the reviewed V3 plan.
 
 ## Release gate
 
