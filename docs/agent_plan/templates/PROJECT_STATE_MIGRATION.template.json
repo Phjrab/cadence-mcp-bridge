@@ -1,0 +1,28 @@
+{
+  "is_template": true,
+  "do_not_overwrite_live_state": true,
+  "schema_version": 2,
+  "project": "cadence-mcp-bridge",
+  "actual_repository_head": null,
+  "actual_visibility": "unknown",
+  "legacy_history_policy": "preserve_verbatim_and_map_without_reset",
+  "current_work_id": null,
+  "current_phase": null,
+  "last_completed_work_id": null,
+  "implementation_status": "planned",
+  "integration_status": "not_pushed",
+  "deployment_validation": "not_run",
+  "release_status": "not_evaluated",
+  "active_branch": null,
+  "reviewed_base_commit": null,
+  "existing_changes_preserved": null,
+  "package_integration": {
+    "package_version": "2.0.0",
+    "status": "not_assessed",
+    "plan_task_id": "PKG-INTEGRATE-01"
+  },
+  "next_work_id": null,
+  "approval_reference": null,
+  "execution_authorized": false,
+  "note": "실제 state 조사 후 필드별 이관. template 값으로 기존 completed/history/current branch를 덮어쓰지 않는다."
+}

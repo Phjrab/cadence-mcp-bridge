@@ -1,0 +1,22 @@
+{
+  "integration_id": "PKG-INTEGRATE-01",
+  "integration_date": "2026-09-14",
+  "package_document_version": "2.0.0",
+  "software_release_baseline": "v1.0.0",
+  "base_main_commit": "a3e6b4a1a5eedd183c994902917d60847bda0799",
+  "source_package_manifest_sha256": "c275a0319d364c25e2a811d736a48d2fb43bb6ca91aebbafd07a0a9dd50de28a",
+  "source_package_checksums_sha256": "7a42058541d48f2f1d28c875373f4e29f0b02abec75769e84d3e3b7a81823f77",
+  "pre_integration_root_contract_sha256": "3d291a8babee489f772937bb3c63ca8129396abaadad2ea2d2432bffc23405cd",
+  "imported_package_file_count": 178,
+  "byte_identical_imported_file_count": 177,
+  "adapted_paths": [
+    "tools/verify_package.py"
+  ],
+  "excluded_paths": [
+    "archive/LEGACY_INPUTS.zip"
+  ],
+  "execution_authorized": false,
+  "runtime_changed": false,
+  "status": "PKG_INTEGRATED_REVIEW_PENDING",
+  "next_repository_wp": "WP-13"
+}

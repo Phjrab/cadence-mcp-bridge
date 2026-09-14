@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "is_template": true,
+  "count": 21,
+  "requirements": [
+    {
+      "id": "R01",
+      "title": "작업 ID와 authority 충돌",
+      "task_ids": [
+        "ICF-00-01",
+        "ICF-00-06"
+      ],
+      "contract": "docs/GIT_STATE_INTEGRATION.md",
+      "required_test": "완료 이력 reset·중복 WP·재통합 시험"
+    },
+    {
+      "id": "R02",
+      "title": "핵심 선행 기반 앞당김",
+      "task_ids": [
+        "ICF-01-01",
+        "ICF-01-03",
+        "ICF-01-04",
+        "ICF-05-01"
+      ],
+      "contract": "docs/ROADMAP.md",
+      "required_test": "DAG 선행 누락과 unsupported capability 거부"
+    },
+    {
+      "id": "R03",
+      "title": "실제 승인과 plan hash 분리",
+      "task_ids": [
+        "ICF-01-02",
+        "ICF-12-02"
+      ],
+      "contract": "docs/SAFETY_APPROVALS.md",
+      "required_test": "self-approval·만료·다른 executor digest 거부"
+    },
+    {
+      "id": "R04",
+      "title": "첫 쓰기 전 durable evidence",
+      "task_ids": [
+        "ICF-01-03",
+        "ICF-01-07"
+      ],
+      "contract": "docs/RECOVERY_EVIDENCE.md",
+      "required_test": "apply 직전/직후 crash·audit write 실패"
+    },
+    {
+      "id": "R05",
+      "title": "count/semantic/bytes/metadata 분리",
+      "task_ids": [
+        "ICF-01-06",
+        "ICF-04-07"
+      ],
+      "contract": "docs/DESIGN_CONTRACTS.md",
+      "required_test": "개수 유지한 pin swap·W/L 변경 탐지"
+    },
+    {
+      "id": "R06",
+      "title": "두 baseline provenance·1 V 유지",
+      "task_ids": [
+        "ICF-00-03",
+        "ICF-02-03"
+      ],
+      "contract": "docs/ENVIRONMENT_BASELINES.md",
+      "required_test": "300m/370m 전역 치환과 VDD 확대 거부"
+    },
+    {
+      "id": "R07",
+      "title": "실제 effective parameter 검증",
+      "task_ids": [
+        "ICF-02-02",
+        "ICF-02-03",
+        "ICF-03-02"
+      ],
+      "contract": "docs/MEASUREMENT_VERIFICATION.md",
+      "required_test": "shadowed parameter와 request-only 변경 탐지"
+    },
+    {
+      "id": "R08",
+      "title": "정밀 측정과 preview 분리",
+      "task_ids": [
+        "ICF-02-05",
+        "ICF-02-07",
+        "ICF-09-04"
+      ],
+      "contract": "docs/MEASUREMENT_VERIFICATION.md",
+      "required_test": "decimation 기반 FFT/settling 오류 fixture"
+    },
+    {
+      "id": "R09",
+      "title": "sweep 초기조건·방향 의미",
+      "task_ids": [
+        "ICF-03-01",
+        "ICF-03-04"
+      ],
+      "contract": "docs/MEASUREMENT_VERIFICATION.md",
+      "required_test": "cold/warm/native 모드를 바꾼 cache 사용 거부"
+    },
+    {
+      "id": "R10",
+      "title": "gm/Id 실제 특성화",
+      "task_ids": [
+        "ICF-06-02",
+        "ICF-06-04"
+      ],
+      "contract": "docs/DESIGN_CONTRACTS.md",
+      "required_test": "table 범위 밖 외삽·다른 PDK table 재사용 거부"
+    },
+    {
+      "id": "R11",
+      "title": "CDF/PCell/netlist round-trip",
+      "task_ids": [
+        "ICF-04-02",
+        "ICF-04-03",
+        "ICF-05-03",
+        "ICF-07-02"
+      ],
+      "contract": "docs/PDK_LAYOUT_TAPEOUT.md",
+      "required_test": "W_total/finger/nf/m mismatch 탐지"
+    },
+    {
+      "id": "R12",
+      "title": "초기 DRC/LVS oracle",
+      "task_ids": [
+        "ICF-05-01",
+        "ICF-05-04",
+        "ICF-05-05"
+      ],
+      "contract": "docs/PDK_LAYOUT_TAPEOUT.md",
+      "required_test": "clean/known-bad/empty/truncated 결과 matrix"
+    },
+    {
+      "id": "R13",
+      "title": "변경 영향·evidence 무효화",
+      "task_ids": [
+        "ICF-01-06",
+        "ICF-08-04",
+        "ICF-11-06"
+      ],
+      "contract": "docs/RECOVERY_EVIDENCE.md",
+      "required_test": "다른 revision/deck의 PASS 재사용 거부"
+    },
+    {
+      "id": "R14",
+      "title": "DUT/TB/top/package 경계",
+      "task_ids": [
+        "ICF-00-04",
+        "ICF-04-06",
+        "ICF-11-01"
+      ],
+      "contract": "docs/DESIGN_CONTRACTS.md",
+      "required_test": "ideal source를 fabrication core로 포함한 fixture"
+    },
+    {
+      "id": "R15",
+      "title": "ADC/AMS/digital/RF 명시",
+      "task_ids": [
+        "ICF-09-01",
+        "ICF-09-03",
+        "ICF-09-06",
+        "ICF-09-07"
+      ],
+      "contract": "docs/ROADMAP.md",
+      "required_test": "unsupported simulator/license를 다른 기능으로 위장 금지"
+    },
+    {
+      "id": "R16",
+      "title": "MCP 밖 우회 경로 통제",
+      "task_ids": [
+        "ICF-01-02",
+        "ICF-12-02",
+        "ICF-14-03"
+      ],
+      "contract": "docs/SAFETY_APPROVALS.md",
+      "required_test": "host shell/key·approval store 접근 threat test"
+    },
+    {
+      "id": "R17",
+      "title": "필요한 설계 관찰과 기밀 균형",
+      "task_ids": [
+        "ICF-02-01",
+        "ICF-04-02",
+        "ICF-05-02"
+      ],
+      "contract": "docs/SAFETY_APPROVALS.md",
+      "required_test": "승인된 typed graph는 허용, raw model/secret 노출 거부"
+    },
+    {
+      "id": "R18",
+      "title": "통계·holdout·수치 재현성",
+      "task_ids": [
+        "ICF-03-06",
+        "ICF-06-07",
+        "ICF-08-07"
+      ],
+      "contract": "docs/REGRESSION_BENCHMARKS.md",
+      "required_test": "seed 누락·MC 모델 미적용·optimizer 평가 계약 변경 거부"
+    },
+    {
+      "id": "R19",
+      "title": "초기 백업·disk·time",
+      "task_ids": [
+        "ICF-01-05",
+        "ICF-01-08",
+        "ICF-14-04"
+      ],
+      "contract": "docs/RECOVERY_EVIDENCE.md",
+      "required_test": "disk-full·restore rehearsal·host/guest clock skew"
+    },
+    {
+      "id": "R20",
+      "title": "최종 stream bytes signoff",
+      "task_ids": [
+        "ICF-11-06",
+        "ICF-11-08"
+      ],
+      "contract": "docs/PDK_LAYOUT_TAPEOUT.md",
+      "required_test": "layer map/pin/hierarchy 변환·최종 hash 불일치 탐지"
+    },
+    {
+      "id": "R21",
+      "title": "capability·모델·상태 정직성",
+      "task_ids": [
+        "ICF-00-05",
+        "ICF-15-01",
+        "ICF-15-03"
+      ],
+      "contract": "docs/MODEL_MATRIX.md",
+      "required_test": "미실행/미지원/역사 자료를 verified로 승격 금지"
+    }
+  ]
+}

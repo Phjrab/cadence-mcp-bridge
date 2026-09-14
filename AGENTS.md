@@ -9,13 +9,21 @@ Before doing any work, read these files in full:
 3. `docs/CURRENT_PHASE_PLAN.md`
 4. `docs/VERIFIED_ENVIRONMENT.md`
 5. `docs/SECURITY.md`
-6. Only the sections of `docs/AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md` that the current WP explicitly requires
+6. `docs/agent_plan/WORK_ID_MAP.md` when the active WP cites an `ICF-*` task or package capability
+7. Only the sections of `docs/AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md` or
+   `docs/agent_plan/` that the current WP explicitly requires
 
 `CODEX_MASTER_PROMPT.md` is the authoritative execution contract.
 
 Do not read or execute the full long-term roadmap as a single run instruction. Treat
 `docs/CURRENT_PHASE_PLAN.md` as the bounded phase plan and consult only the roadmap sections
 needed to understand or verify the active WP.
+
+The imported `docs/agent_plan/` package is a planning and contract reference, not a blanket
+execution approval. Its templates, archived material, example values, future work packages, and
+recovered approvals remain inactive unless the current root contract and a specific active WP make
+them applicable. When rules conflict, preserve the stricter existing approval, security, Git, and
+evidence-protection boundary and record the decision rather than weakening it.
 
 ## One work package per run
 

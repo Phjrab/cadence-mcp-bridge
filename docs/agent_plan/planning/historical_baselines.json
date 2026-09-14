@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "record_kind": "historical_context_not_current_state",
+  "as_of_history": "2026-08-31",
+  "latest_repo_lookup": {
+    "date": "2026-09-05",
+    "result": "404",
+    "visibility": "unknown",
+    "current_head": null,
+    "do_not_infer_deleted_or_private": true
+  },
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "history_review_head": "4fad957753d1e432713b0d517de8a1906d715286",
+  "historical_software_release": "v1.0.0",
+  "historical_runner_version": "0.16.0",
+  "historical_mcp_tool_count": 22,
+  "source": {
+    "library": "MyDesignLib",
+    "cell": "Differential_Amplifier_TB2",
+    "view": "schematic",
+    "ade_state": "state1",
+    "pdk": "gpdk090",
+    "pdk_version": "4.6",
+    "section": "NN",
+    "temperature_c": 27,
+    "transient_stop_s": 0.004
+  },
+  "historical_counts": {
+    "instances": 35,
+    "nets": 14,
+    "terminals": 8,
+    "not_a_complete_fingerprint": true
+  },
+  "baseline_candidates": {
+    "compatibility": {
+      "VBIASN_V": 0.3,
+      "VBIASP_V": 0.65
+    },
+    "prior_research": {
+      "VBIASN_V": 0.37,
+      "VBIASP_V": 0.65
+    }
+  },
+  "research_constraint_vdd_v": 1.0,
+  "current_approved_variable_ranges": null,
+  "raw_history_does_not_grant_permissions": true,
+  "execution_authorized": false,
+  "note": "후속 구현/현재 데이터/실제 승인과 불일치할 수 있다. 로컬 실제 상태와 증거로 확인하고 어느 값을 전역 교체하지 않는다."
+}

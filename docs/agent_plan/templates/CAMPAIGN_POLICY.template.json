@@ -1,0 +1,41 @@
+{
+  "is_template": true,
+  "policy_kind": "bounded_campaign_proposal",
+  "status": "DRAFT",
+  "enabled": false,
+  "execution_authorized": false,
+  "project_id": null,
+  "workspace_namespace": null,
+  "input_revision": null,
+  "profile_version": null,
+  "approved_plan_or_envelope": null,
+  "reviewed_executor_digest": null,
+  "hard_constraints": {
+    "research_vdd_v": 1.0,
+    "constraint_origin": "prior_user_advisor_direction_not_new_execution_permission"
+  },
+  "variable_contracts": [],
+  "measurement_contract_ids": [],
+  "corner_ids": [],
+  "initialization_policy": null,
+  "ordered_points": [],
+  "adaptive_policy": null,
+  "budgets": {
+    "max_points": null,
+    "max_stages": null,
+    "max_runtime_s": null,
+    "min_disk_free_bytes": null,
+    "max_storage_bytes": null,
+    "max_parallelism": 1,
+    "automatic_execution_retries": 0
+  },
+  "protected_artifacts": [
+    "source",
+    "PDK",
+    "original_ADE_state",
+    "historical_V1_V4_evidence"
+  ],
+  "operator_record_ref": null,
+  "on_unknown_write_state": "stop_write_and_read_only_reconcile",
+  "note": "수치가 비어 있는 실행 상한은 무한대로 해석하지 말고 제출을 거부한다."
+}

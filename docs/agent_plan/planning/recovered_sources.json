@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "source_count": 9,
+  "records": [
+    {
+      "archive_path": "CODEX_MASTER_PROMPT_INITIAL.md",
+      "original_basename": "CODEX_MASTER_PROMPT.md",
+      "bytes": 48555,
+      "sha256": "180c5fb3877a04cafdac01018e417aee12b02039bc547ea4922e2bf5c3ac3031",
+      "kind": "initial_prompt_not_current_repo_contract",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md",
+      "original_basename": "AUTONOMOUS_CADENCE_MCP_FULL_ROADMAP.md",
+      "bytes": 88395,
+      "sha256": "87659f672802d64565e13e3a099c544753427fed9e6dce8a396e09e68853bde5",
+      "kind": "historical_170_capability_roadmap",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "CADENCE_MCP_IMPLEMENTATION_REVIEW_AND_ADE_SWEEP_ROADMAP.md",
+      "original_basename": "CADENCE_MCP_IMPLEMENTATION_REVIEW_AND_ADE_SWEEP_ROADMAP.md",
+      "bytes": 50407,
+      "sha256": "3ec19cd0d4a182ae4e07ea13f504aec724d755b94182d5765465f99ed3549452",
+      "kind": "historical_2026_08_31_review",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "CADENCE_MCP_PLAN_REVIEW_AND_HARDENING.md",
+      "original_basename": "CADENCE_MCP_PLAN_REVIEW_AND_HARDENING.md",
+      "bytes": 52387,
+      "sha256": "3cd1e53c54b3f2631503e726fb0870663ededb01826061668009b27bf44dc2ef",
+      "kind": "hardening_review_2026_09_05",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "MODEL_MATRIX_INITIAL.md",
+      "original_basename": "MODEL_MATRIX.md",
+      "bytes": 1148,
+      "sha256": "3c41ac6fe59fee9a488c47cb55f152e2fa2b60a67dd492abf2cbe42bb0fe4e54",
+      "kind": "historical_model_guidance_not_current_entitlement",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "HISTORICAL_ONLY/V3_READ_ONLY_FORENSIC_APPROVAL.md",
+      "original_basename": "V3_READ_ONLY_FORENSIC_APPROVAL.md",
+      "bytes": 9564,
+      "sha256": "b2ee7174afee8bb7d8299ca7dc80bb7c0d52df464170f3ec48cba9224f8fcf06",
+      "kind": "historical_draft_no_replay_authority",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "HISTORICAL_ONLY/V3_CONDITIONAL_ROLLBACK_APPROVAL.md",
+      "original_basename": "V3_CONDITIONAL_ROLLBACK_APPROVAL.md",
+      "bytes": 6900,
+      "sha256": "78a0076b51681a4330280da40bb5601be1578e62a307577366a88a01ed2cbcd0",
+      "kind": "historical_draft_no_replay_authority",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "HISTORICAL_STARTER/cadence-mcp-bridge-starter.zip",
+      "original_basename": "cadence-mcp-bridge-starter.zip",
+      "bytes": 24752,
+      "sha256": "cd059a3bc91c38b18fd60ff280158d03123512d2b8f175542a01b9d3452abeaa",
+      "kind": "old_starter_not_current_repository_backup",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    },
+    {
+      "archive_path": "HISTORICAL_STARTER/cadence-mcp-bridge-starter.bundle",
+      "original_basename": "cadence-mcp-bridge-starter.bundle",
+      "bytes": 23926,
+      "sha256": "92dddf9dce8c1c978588f5edc0fe90f3dc121576903cc4345457212f82002bb7",
+      "kind": "old_starter_git_bundle_not_current_repository_backup",
+      "authority": "HISTORICAL_REFERENCE_ONLY",
+      "execution_authorized": false
+    }
+  ]
+}

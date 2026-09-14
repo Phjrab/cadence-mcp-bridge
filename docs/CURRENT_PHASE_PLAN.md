@@ -11,6 +11,21 @@ The Git, security, approval, testing, completion-report, and STOP rules in
 be reopened or treated as incomplete. Existing evidence from later exploratory branches remains
 historical evidence and is not authority to perform a new mutation.
 
+## Agent-plan integration overlay
+
+The reviewed prompt package is available under `docs/agent_plan/` as a planning reference. Its
+work-package IDs use the independent `ICF-*` namespace and do not renumber, reopen, or supersede
+the repository's existing `WP-*` history. `docs/agent_plan/WORK_ID_MAP.md` is the required
+crosswalk; mappings are evidence references, not automatic completion claims or execution
+authority. The imported package templates and archive references are inactive by default.
+
+The only next implementation task remains **WP-13 — Actual ADE Profile Baseline and Capability
+Audit**. For that WP, the relevant package references are the baseline-reconciliation requirements
+in `ICF-00-03` and the read-only portion of `ICF-02-01`. They may strengthen acceptance checks but
+do not authorize runner deployment, simulation, OA write/save, ADE-state changes, or parameterized
+execution. All other `ICF-*` work remains planning-only until selected by a later bounded phase and
+state update.
+
 ## Phase objective
 
 Reconcile the post-release repository and security truth, establish an authoritative read-only
@@ -54,4 +69,4 @@ WP contract and any required separate user approval.
 
 The phase may advance to ADE/sweep implementation only after WP-13 through WP-16 are integrated and
 all unresolved baseline, capability, approval, and proprietary-data questions are recorded. The
-next execution after WP-12 integration is WP-13 only.
+next execution after PKG-INTEGRATE-01 is reviewed and merged is WP-13 only.

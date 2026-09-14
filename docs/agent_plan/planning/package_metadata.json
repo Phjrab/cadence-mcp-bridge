@@ -1,0 +1,16 @@
+{
+  "document_package_version": "2.0.0",
+  "created_on": "2026-09-05",
+  "language": "ko",
+  "phase_count": 16,
+  "new_task_prompt_count": 120,
+  "legacy_capability_count": 170,
+  "hardening_requirement_count": 21,
+  "recovered_original_count": 9,
+  "software_implementation_included": false,
+  "current_repository_state_verified": false,
+  "contains_execution_authority": false,
+  "default_entrypoint": "START_HERE.md",
+  "first_task": "PKG-INTEGRATE-01",
+  "first_task_effect": "documentation_only_no_eda_or_remote_changes"
+}

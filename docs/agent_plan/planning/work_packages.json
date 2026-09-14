@@ -1,0 +1,2789 @@
+{
+  "schema_version": 1,
+  "document_package_version": "2.0.0",
+  "is_template": true,
+  "contains_execution_authority": false,
+  "phase_count": 16,
+  "task_count": 120,
+  "phases": [
+    {
+      "id": "F00",
+      "title": "기록 복구·문서 통합·현재 상태 정합성",
+      "goal": "실제 로컬 진행 이력과 통합 계획을 연결하고 다음 작업을 정확히 선택한다.",
+      "direction": "과거 원본을 보존하되 active authority로 자동 승격하지 않는다. WP 번호를 재사용하지 않고 코드·실환경·병합·배포 상태를 분리한다.",
+      "gate": "M0 진입: 현재 상태·권한·baseline의 출처가 추적 가능하며 미확인 사항을 숨기지 않는다.",
+      "legacy": [
+        "P0-01",
+        "P0-02",
+        "P0-03",
+        "P0-07"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-00-01",
+          "title": "현황·authority·작업 ID 매핑",
+          "design": "현재 root/branch/HEAD/dirty state/AGENTS/state를 조사하고 기존 WP와 새 ICF ID를 evidence로 매핑한다. PKG-INTEGRATE-01 완료를 자동 가정하지 않는다.",
+          "artifact": "WORK_ID_MAP.md와 상태 이관 기록",
+          "positive": "같은 통합을 두 번 실행해도 완료 이력이 reset되지 않고 현재 작업이 정확히 유지됨",
+          "negative": "dirty worktree·미병합 PR·중복 WP-12를 의도적으로 넣어 덮어쓰기/재실행을 거부",
+          "level": "DOC",
+          "dependencies": [],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-00-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-00-02",
+          "title": "저장소 접근·노출·데이터 분류 점검",
+          "design": "현재 visibility와 접근 가능한 보안 설정을 읽고 코드 공개와 PDK/설계 데이터 보관 정책을 분리한다. 404에서 private를 추론하지 않는다.",
+          "artifact": "repository-access-audit.md와 데이터 분류표",
+          "positive": "actual visibility 또는 조회불가 원인이 기록되고 기존 공개 여부 문서와 시점이 구분됨",
+          "negative": "credentials/raw model/기존 approval를 docs 자동 import에 섞어도 commit 대상에서 제외",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-00-01"
+          ],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-02.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-00-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-00-03",
+          "title": "호환 baseline과 연구 baseline 정리",
+          "design": "VDD=1.0 V를 유지하며 300m/650m·370m/650m의 source/state/input/load/revision 출처를 조사한다. 기존 성공 기준을 파괴하지 않는다.",
+          "artifact": "baseline-registry 제안과 의사결정 기록",
+          "positive": "compatibility/scientific baseline이 별도 version으로 추적되고 미확정 범위가 비활성",
+          "negative": "다른 VCM 또는 오래된 netlist의 수치를 최신값이라고 승격하는 요청 거부",
+          "level": "READ",
+          "dependencies": [
+            "ICF-00-02"
+          ],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-00-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-00-04",
+          "title": "DUT·TB·chip-top·측정 경계 정의",
+          "design": "현재 35/14/8은 과거 TB 참고값이다. exact connectivity로 DUT/이상적 자극/온칩 bias/외부 interface를 구분한다.",
+          "artifact": "design-boundaries.md와 typed port contract",
+          "positive": "핀 역할·전원·바이어스·부하·측정 가능성 및 CMFB/startup 적용 여부가 명시됨",
+          "negative": "ideal source를 제작 core로 잘못 포함하거나 임의 pin 이름을 생성하면 invalid",
+          "level": "READ",
+          "dependencies": [
+            "ICF-00-03"
+          ],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-00-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-00-05",
+          "title": "모델·SDK·환경 호환표 동기화",
+          "design": "실제 앱 선택 모델과 설치 lockfile/API를 확인하고 과거 문서의 모델·MCP SDK 표기를 현재 설치 증거와 구분한다. dependency 자동 upgrade 금지.",
+          "artifact": "model-environment-resolution.md",
+          "positive": "실제 모델 ID/effort 또는 unavailable 상태와 SDK/runtime 버전이 분리 기록됨",
+          "negative": "모델 표시명으로 존재하지 않는 CLI flag를 생성하거나 SDK major를 자동 변경하지 않음",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-00-04"
+          ],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-05.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-00-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-00-06",
+          "title": "다음 실행 전용 계획 생성",
+          "design": "현재 evidence를 기준으로 준비된 다음 WP 하나와 필요한 세부 수락 기준만 CURRENT_PHASE_PLAN에 연결한다. 모든 미래 task를 pending 현재 이력으로 덮어쓰지 않는다.",
+          "artifact": "CURRENT_PHASE_PLAN.md와 migration report",
+          "positive": "한 작업 선택·후속 모델·exact prompt가 결정적이며 현재 blocked 작업의 의존성을 건너뛰지 않음",
+          "negative": "계획 숫자가 증가했다는 이유로 실제 capability를 verified 처리하지 않음",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-00-05"
+          ],
+          "phase_id": "F00",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-00-06.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-01-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F01",
+      "title": "최소 공통 기반: 기술 계약·권한·journal·복구",
+      "goal": "나중 모든 기능이 재사용할 단일 사용자 신뢰성 기반을 먼저 구현한다.",
+      "direction": "다중 사용자 플랫폼 전체를 미리 만들지 않는다. 한 PDK·한 runner·동시 실행 1개에서 실제 강제와 crash 복구를 증명한다.",
+      "gate": "M0 완료: 승인·상태·보존·복구를 테스트로 보이고 각 다음 capability의 권한을 제한한다.",
+      "legacy": [
+        "P0-04",
+        "P0-05",
+        "P0-06",
+        "P8-01",
+        "P10-01",
+        "P10-04",
+        "P10-05",
+        "P10-06",
+        "P12-05",
+        "P12-08",
+        "P12-09"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-01-01",
+          "title": "최소 TechnologyAdapter와 capability 모델",
+          "design": "gpdk090 장치/모델/LPP/DBU/deck/도구 조합을 operator config로 분리한다. core에 새 절대경로를 하드코딩하지 않고 logical ID로 조회한다.",
+          "artifact": "technology-adapter schema와 gpdk090 adapter",
+          "positive": "한 PDK에서 기존 profile 회귀가 유지되고 executable/functional_verified/license 상태가 분리됨",
+          "negative": "unknown device/model/deck 또는 wrong version이 default fallback하지 않음",
+          "level": "READ",
+          "dependencies": [
+            "ICF-00-06"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-01-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-02",
+          "title": "권한 저장소·운영 역할 경계",
+          "design": "개발/운영 역할과 host-shell/SSH 우회 경로를 모델링하고 operator-owned approval record를 executor가 검증하게 한다.",
+          "artifact": "threat-model와 approval validator",
+          "positive": "agent가 approved=true를 보내거나 policy 파일을 바꿔도 실행 권한을 만들 수 없음",
+          "negative": "재사용·만료·철회 token, 다른 target/code digest의 동일 plan 승인을 거부",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-01"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-03",
+          "title": "Durable intent journal·manifest 기초",
+          "design": "첫 write 전 INTENT_PREPARED/APPLY_STARTED 등을 fsync 가능한 저장소에 기록한다. runtime journal과 완료 manifest, 원래 누락된 과거 기록을 구분한다.",
+          "artifact": "journal schema와 fault-injection tests",
+          "positive": "apply 직후 crash해도 마지막 확정 단계·보호 fingerprint·복구 조건이 읽힘",
+          "negative": "journal 공간/권한/serialize 실패 시 실제 write가 0건",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-02"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-04",
+          "title": "Durable job identity·소유권 복원",
+          "design": "submit UUID와 request digest, worker handshake, boot/process identity를 기록한다. 응답 유실 후 동일 ID 상태 조회로 reconcile하고 ownership을 재확인한다.",
+          "artifact": "job identity/reconcile layer",
+          "positive": "MCP 재시작 후 허용된 job만 상태/취소 가능하고 child 중복 생성 0건",
+          "negative": "PID 재사용·zombie·다른 boot·다른 principal job takeover 거부",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-03"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-05",
+          "title": "예산·queue·라이선스·디스크 상한",
+          "design": "계산 시간/queue 시간/동시 수/전체 시도 수/저장량을 구분한다. concurrency=1을 기본으로 하며 license wait가 무한 대기하지 않게 한다.",
+          "artifact": "budget-policy schema와 resource gate",
+          "positive": "queued/running/timeout이 분리되고 전체 campaign 한도가 child 분할로 우회되지 않음",
+          "negative": "disk full·권한 상실·license 부재·중복 submit에도 source/PDK 미변경",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-04"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-06",
+          "title": "Revision·semantic hash·stale evidence 기초",
+          "design": "raw bytes/회로 의미/metadata를 분리해 비교하고 입력 dependency DAG에 결과를 결부한다. 포인터 주소 대신 stable logical object ID를 사용한다.",
+          "artifact": "revision/fingerprint/evidence schema",
+          "positive": "W/L·bulk/net 연결 변경을 개수 동일 상태에서도 탐지하고 downstream 결과가 stale됨",
+          "negative": "모든 metadata 일괄 무시·다른 revision PASS 합성·unknown property 삭제 거부",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-05"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-07",
+          "title": "격리된 staging 변경·복구 framework",
+          "design": "immutable parent와 disposable이 아닌 보존형 staging child를 사용한다. 여러 OA 파일을 원자적이라 주장하지 않고 검증된 compensation만 허용한다.",
+          "artifact": "transaction plan API와 crash matrix",
+          "positive": "backup/apply/diff/rollback 각 단계 중단에서 source 불변·중복 apply 없음·승인된 복구만 수행",
+          "negative": "불완전 target 자동 삭제/이름만 바꿔 retry/과거 approval 재사용 거부",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-01-06"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-01-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-08",
+          "title": "백업·복원 연습 및 배포 rollback 기초",
+          "design": "기존 VM을 업그레이드하지 않고 승인된 독립 백업·작업 사본·runner config 복원 절차를 검증한다. snapshot과 독립 백업을 구분한다.",
+          "artifact": "restore rehearsal와 deploy digest report",
+          "positive": "작은 검증용 workspace를 복원해 bytes/semantic integrity를 재검증하고 로그를 보존",
+          "negative": "열린 OA 파일의 단순 복사를 consistent backup으로 PASS하지 않음",
+          "level": "OPS",
+          "dependencies": [
+            "ICF-01-07"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-01-09",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-01-09",
+          "title": "공통 검증·보호 데이터·상태 gate",
+          "design": "schema/unit/mock/real-read/real-compute/write/physical/hardware 상태를 분리하는 gate와 문서 동기화 검사를 만든다.",
+          "artifact": "verify policy와 benchmark registry skeleton",
+          "positive": "미실행·unsupported·missing·truncated를 pass로 변환하지 않고 gate 이유를 기록",
+          "negative": "global tests disable·warning 전체 허용·tool-output prompt injection 차단",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-01-08"
+          ],
+          "phase_id": "F01",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-01-09.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-02-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "실제 ADE·parameter·정밀 measurement",
+      "goal": "현재 회로의 입력과 실제 적용·결과 해석을 연결한다.",
+      "direction": "Snapshot replay부터 유지하고 state-driven batch와 live GUI는 별도 capability로 분리한다. display decimation이 정밀 측정 경로를 손상하지 않게 한다.",
+      "gate": "M1 선행: 한 실제 조건에서 유효한 DCOP/AC 또는 transient measurement를 사람 기준과 비교한다.",
+      "legacy": [
+        "P1-01",
+        "P1-02",
+        "P1-03",
+        "P1-04",
+        "P1-05",
+        "P1-06",
+        "P1-12",
+        "P1-13",
+        "P1-14",
+        "P1-15"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-02-01",
+          "title": "고정 read-only ADE introspection",
+          "design": "approved profile의 state·모델·analyses·variables·outputs와 source dependency를 기능별로 조회한다. 세션이 없다는 이유로 nil을 정상 값과 혼동하지 않는다.",
+          "artifact": "cadence_inspect_ade_profile 계약",
+          "positive": "state/source/PDK bytes 불변과 known profile metadata 조회를 actual에서 확인",
+          "negative": "arbitrary lib/path/script, missing state, dirty live session 혼용 거부",
+          "level": "READ",
+          "dependencies": [
+            "ICF-00-06",
+            "ICF-01-01"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-02-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-02",
+          "title": "Parameter binding·effective value 탐색",
+          "design": "VBIASN/VBIASP의 ADE/instance/top-level/hierarchy scope와 중복 선언 순서를 확인하고 실제 simulator 값 증거 경로를 만든다.",
+          "artifact": "binding registry와 effective-parameter proof",
+          "positive": "요청·wrapper·include·effective value의 연결이 확인되며 기존 baseline 값은 보존됨",
+          "negative": "요청 manifest만 바뀌고 회로 binding이 안 바뀌는 fixture 탐지",
+          "level": "READ",
+          "dependencies": [
+            "ICF-02-01"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-02-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-03",
+          "title": "실제 변수 contract와 profile v2",
+          "design": "선택된 연구 baseline과 허용된 단위/min/max/default를 검증한다. v1 profile은 남기고 versioned profile로 numeric override를 추가한다.",
+          "artifact": "actual profile v2와 dual-side validation",
+          "positive": "서로 다른 승인 point에서 effective value가 요청과 일치하고 source/state 불변",
+          "negative": "NaN/Inf/overflow/unknown variable/VDD 확대/미승인 범위 거부",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-02",
+            "ICF-01-03",
+            "ICF-01-04",
+            "ICF-01-05"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-04",
+          "title": "PSF·result 접근 capability probe",
+          "design": "현재 Spectre/OCEAN에서 result selection·scalar·complex·time-series 추출을 작은 fixture로 확인한다. 결과 root는 server가 job ID로 결정한다.",
+          "artifact": "functional extraction capability report",
+          "positive": "실제 PSF에서 정확한 signal·analysis를 읽고 원본 result bytes를 변경하지 않음",
+          "negative": "wrong analysis·empty result·path traversal·다른 job artifact 읽기 거부",
+          "level": "READ",
+          "dependencies": [
+            "ICF-02-03"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-02-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-05",
+          "title": "정밀 측정과 bounded preview 분리",
+          "design": "full-precision 로컬 data로 계산하고 모델에는 scalar/provenance 및 별도 downsample preview를 제공한다. output logical ID는 승인 registry에 고정한다.",
+          "artifact": "measurement extractor와 preview tool",
+          "positive": "time/complex data 단위·sampling policy·truncation을 분리하고 preview 없이도 metric 재현",
+          "negative": "4096-point display 제한이 FFT/settling 데이터 제한으로 전파되지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-04"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-06",
+          "title": "DCOP·headroom·전력 reference",
+          "design": "Id/gm/gds/VDS/VDSAT/region과 PMOS 부호를 실제 모델 정의에 맞춘다. 전력은 supply 범위와 시간 적분 조건을 명시한다.",
+          "artifact": "DCOP and power measurement contracts",
+          "positive": "기준 testbench와 수치 허용오차 내 일치하고 최소 sat-margin 경로를 추적",
+          "negative": "region 번호 하나로 전 범위 PASS, 비균일 샘플 산술평균, 전류 부호 오류 탐지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-05"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-07",
+          "title": "차동 AC·noise·loop stability",
+          "design": "차동 stimulus normalization과 Ad/CMRR/PSRR/noise 정의를 고정한다. STB는 feedback/probe/loop/부하와 crossings를 식별한다.",
+          "artifact": "AC/noise/STB profiles",
+          "positive": "적절한 기준회로와 gain/BW/loop margin이 일치하며 미정의 loop는 N/A",
+          "negative": "일반 Vout/Vin phase를 PM으로 변환하거나 no crossing을 0° PASS로 처리하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-06"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-08",
+          "title": "Transient·startup·settling 계약",
+          "design": "startup exclusion·최종값·band·stay-within·slew 구간·power ramp·glitch sampling을 명시한다. 실제 입력과 부하 조건을 기록한다.",
+          "artifact": "transient measurement suite",
+          "positive": "known waveform analytic reference 및 실제 결과 비교가 metric별 tolerance 만족",
+          "negative": "later re-entry·overshoot·짧은 glitch·불충분 sampling을 정상 settling로 오판하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-07"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-09",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-09",
+          "title": "State-driven OCEAN·최신 netlisting",
+          "design": "지원 API를 probe한 뒤 fixed state/config로 job-local netlist를 생성한다. snapshot mode를 보존하고 unsupported 시 명시적 block한다.",
+          "artifact": "ade_state execution mode",
+          "positive": "state load/netlist/run/result open을 기능별 실제 검증하고 source/state/PDK 불변",
+          "negative": "과거 input.scs silently reuse·state 저장·schematic fallback·arbitrary OCEAN 거부",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-02-08",
+            "ICF-01-09"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-09.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-02-10",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-02-10",
+          "title": "Live ADE GUI bridge의 별도 경계",
+          "design": "live ADE L을 나중에 지원할 수 있도록 window/session identity·unsaved state·locks·UI/manual actions와 headless capability를 분리한다.",
+          "artifact": "live-session protocol와 opt-in plan",
+          "positive": "동일 session의 read-only 작업을 검증하고 dirty data를 자동 save하지 않음",
+          "negative": "process pointer를 durable session ID로 재사용하거나 열린 사용자의 세션을 강제 종료하지 않음",
+          "level": "READ",
+          "dependencies": [
+            "ICF-02-09"
+          ],
+          "phase_id": "F02",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-02-10.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-03-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "1D·2D·corner·Monte Carlo·adaptive campaign",
+      "goal": "실험을 정확한 조건과 bounded parent-child 작업으로 재현한다.",
+      "direction": "단순 반복문보다 ordered values·초기조건·idempotency·실제 값·측정·budget이 중요하다. native sweep와 independent job을 구분한다.",
+      "gate": "M1 완료: 실제 적용값이 확인된 3-point sweep, 결과·재접속·취소·중복 방지 증거.",
+      "legacy": [
+        "P1-07",
+        "P1-08",
+        "P1-09",
+        "P1-10",
+        "P1-11",
+        "P1-16",
+        "P1-17"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-03-01",
+          "title": "Sweep plan와 실험 의미 schema",
+          "design": "independent/native/sequential 종류, ordered decimal values, endpoints, direction, warm/cold start, initial conditions, profiles와 budgets를 정의한다.",
+          "artifact": "cadence_plan_sweep와 canonical digest",
+          "positive": "같은 input은 같은 normalized plan이고 잘못된 방향·범위·한도를 실행 전 거부",
+          "negative": "zero step·duplicate endpoints·float rounding·script generator 입력 거부",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-01-09",
+            "ICF-02-06"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-03-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-02",
+          "title": "1D parent-child submit·status·result",
+          "design": "approved actual profile로 immutable parent와 child mapping을 만들고 기존 single-job lifecycle을 재사용한다. proposed cap은 운영자 정책으로만 활성화한다.",
+          "artifact": "sweep lifecycle 도구",
+          "positive": "3-point actual run 각각 effective value/metric/result provenance를 확인하고 source 불변",
+          "negative": "manifest만 변경·missing point를 보간 PASS·budget 쪼개기 우회 거부",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-03-01"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-03-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-03",
+          "title": "중단 복구·취소·소유권·cache",
+          "design": "서버/SSH/worker 재시작에 parent-child map을 조정하고 명시된 시도 정책만 허용한다. dependency digest로 cache를 구분한다.",
+          "artifact": "sweep reconciliation tests",
+          "positive": "submit response loss 후 동일 child가 중복 실행되지 않고 해당 campaign만 취소됨",
+          "negative": "과거 profile/PDK/seed/measurement cache 재사용, 임의 job takeover 거부",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-03-02"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-03-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-04",
+          "title": "2D·list·log·native sweep 확장",
+          "design": "cartesian ordering·positive log domain·maximum combinations를 정의하고 native solver family result의 축·초기상태를 해석한다.",
+          "artifact": "versioned axes/family model",
+          "positive": "작은 2D/적합한 log fixture에서 exact point count와 axis matching 검증",
+          "negative": "양수가 아닌 log axis·묵시적 transpose·warm-start 결과를 cold로 labeling하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-03-03"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-03-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-05",
+          "title": "PVT corner campaign",
+          "design": "device process/temperature/supply 조건과 RC corner를 분리한다. 실제 모델 section과 license를 검증한 항목만 등록한다.",
+          "artifact": "corner registry와 campaign",
+          "positive": "각 허용 corner의 기준 run과 units/provenance 확인, 현재 1 V 제약 유지",
+          "negative": "이름 TT/NN 추측·비허용 VDD sweep·실행하지 않은 corner PASS 거부",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-03-04"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-03-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-06",
+          "title": "Monte Carlo process·mismatch·yield",
+          "design": "실제 PDK statistics와 device binding 지원을 먼저 확인한다. seed/PRNG/process/mismatch 모드·run cap·신뢰구간을 기록한다.",
+          "artifact": "MC campaign와 yield report",
+          "positive": "statistics가 적용되는 fixture, reproducibility, independent holdout, confidence 범위 검증",
+          "negative": "임의 Gaussian perturbation을 foundry yield로 표시하거나 200/200을 100% 확정하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-03-05"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-03-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-07",
+          "title": "Coarse-to-fine bounded refinement",
+          "design": "목적 metric과 제약은 frozen contract에서 선택하고 단계/총 시도/최소 interval cap을 유지한다. 관측 실패를 uncertainty로 반영한다.",
+          "artifact": "adaptive planner와 staged plans",
+          "positive": "coarse→fine 실제 소규모 demo에서 근거·중복 point 재사용·총 budget 검증",
+          "negative": "spec/measurement 완화·끝없는 refinement·실패 값 0 대체 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-03-06"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-03-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-03-08",
+          "title": "Campaign 비교·report·첫 실험 완주",
+          "design": "정밀 결과/preview를 구분하고 실패점·missing·confidence·human intervention·실행량을 함께 보고한다.",
+          "artifact": "M1 evidence bundle와 comparison report",
+          "positive": "동일 revision의 actual 3-point 재현 및 restart/cancel negative 결과 모두 추적",
+          "negative": "서로 다른 source/계약 결과를 한 성능 곡선으로 무표시 합치지 않음",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-03-07"
+          ],
+          "phase_id": "F03",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-03-08.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-04-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Schematic 작성·revision·CDF round-trip",
+      "goal": "원본이 아닌 승인된 작업 revision에서 에이전트가 회로와 testbench를 생성한다.",
+      "direction": "전기적 연결과 화면 배선을 구분하되 둘 다 일치시킨다. W/L/m/nf는 PDK CDF·netlist·layout·추출 의미를 검증한다.",
+      "gate": "M2 선행: blank work cell에서 작은 회로를 작성하고 전기적 등가·복구·시뮬레이션을 확인.",
+      "legacy": [
+        "P2-01",
+        "P2-02",
+        "P2-03",
+        "P2-04",
+        "P2-05",
+        "P2-06",
+        "P2-07",
+        "P2-08",
+        "P2-09",
+        "P2-10",
+        "P2-11",
+        "P2-12",
+        "P2-13",
+        "P2-14",
+        "P2-15"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-04-01",
+          "title": "Workspace·revision DAG·promotion",
+          "design": "operator-approved namespace 안에서 stable IDs와 immutable parents/staging children을 생성한다. 복수 cellview 원자성을 가정하지 않는다.",
+          "artifact": "workspace/revision service",
+          "positive": "동일 parent를 여러 후보가 안전하게 참조하고 미검증 child 승격이 거부됨",
+          "negative": "기존 V1~V4 재사용·source overwrite·namespace 자동 확대 거부",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-01-09",
+            "ICF-02-03",
+            "ICF-01-07"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-02",
+          "title": "Logical device·pin·parameter registry",
+          "design": "analogLib와 PDK master를 logical device에 매핑하고 pin order/body/units/CDF semantics를 계약화한다.",
+          "artifact": "device/pin registry",
+          "positive": "한 MOS/R/C/source의 실제 master·model·핀 매핑이 round-trip 기준과 일치",
+          "negative": "이름만 유사한 PCell 선택·hidden default·bulk 누락 탐지",
+          "level": "READ",
+          "dependencies": [
+            "ICF-04-01"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-04-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-03",
+          "title": "Typed instance·parameter 작성",
+          "design": "add/remove/move/set operations를 exact logical ID로 제공한다. CDF callback 필요성과 effective value를 fixture에서 증명한다.",
+          "artifact": "schematic instance toolset",
+          "positive": "승인 staging만 수정하고 parameter change가 netlist에 의도대로 반영됨",
+          "negative": "총 W/finger W/m/nf 혼동·unsupported prop·type fallback 거부",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-02"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-04",
+          "title": "Net·terminal·pin 연결과 검증",
+          "design": "terminal incidence, global nets, bulk, pin directions, multiple drivers를 검증한다. 식별자 data를 코드로 평가하지 않는다.",
+          "artifact": "connectivity authoring API",
+          "positive": "동일 개수의 wrong net/body swap을 탐지하고 symbol/TB 포트 관계가 일치",
+          "negative": "open/short·floating gate·illegal domain·pin order 오류 known-bad 탐지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-03"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-05",
+          "title": "Schematic 표현·symbol·hierarchy",
+          "design": "화면용 wire/label/placement와 electrical nets를 일치시키고 hierarchical symbols/config resolution을 관리한다.",
+          "artifact": "presentation와 hierarchy builder",
+          "positive": "재열기·netlisting 후 topology와 symbol interface가 유지됨",
+          "negative": "시각적으로 붙어 있으나 net이 끊김·의존 subcell 누락·hidden hierarchy fallback 탐지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-04"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-06",
+          "title": "DUT와 TB generator·startup interface",
+          "design": "검증된 DUT를 생성하고 supply/stimulus/load/clock/measurement는 TB template로 분리한다. 실제 chip boundary 계획과 연결한다.",
+          "artifact": "DUT/TB templates",
+          "positive": "inverter/mirror의 actual netlist/simulation 및 stimulus polarity·load 적용 증명",
+          "negative": "ideal clock/bias source를 제작 core에 자동 포함·측정 정의 자체 변경 거부",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-05"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-07",
+          "title": "Semantic diff·metadata policy·rollback",
+          "design": "params/master/connectivity/layout intent hash를 분리하고 exact metadata 변화 조건을 기록한다. 승인된 복구 전용 path를 검증한다.",
+          "artifact": "revision diff와 recovery fixture",
+          "positive": "fault injection에서 source/PDK 불변 및 expected semantic diff/restore 증명",
+          "negative": "개수 동일로 unchanged 선언·timestamp 전체 ignore·강제 metadata 숫자 맞춤 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-06"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-08",
+          "title": "설계 lint·ERC preview·freeze gate",
+          "design": "device/legal parameters/ports/supply/bulk/unsupported models를 사전에 검사하고 검증 완료 revision만 freeze한다.",
+          "artifact": "schematic validation/freeze API",
+          "positive": "known-bad fixtures 전부 거부하고 새로운 parameter가 기존 evidence를 stale 처리",
+          "negative": "검증 실패를 waiver 없이 freeze·동작점 한 점으로 모든 조건 pass 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-07"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-04-09",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-04-09",
+          "title": "M2 schematic benchmark",
+          "design": "blank approved cell부터 inverter/current mirror를 생성해 manual/golden reference와 연결·parameter·시뮬레이션을 비교한다.",
+          "artifact": "reproducible schematic benchmark",
+          "positive": "명시된 작은 topology가 deterministic하고 save/reopen/netlist/effective values 동일",
+          "negative": "실제 작성 없이 기존 회로 copy만으로 synthesis 완료라 주장하지 않음",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-04-08"
+          ],
+          "phase_id": "F04",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-04-09.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-05-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "초기 layout primitive와 DRC/LVS/PEX 검증기",
+      "goal": "큰 analog layout 이전에 작은 primitive 전체 물리 검증 경로를 완주한다.",
+      "direction": "DRC/LVS는 후반 보너스가 아니라 생성기의 검증기다. backend가 없으면 fixture adapter와 실제 미검증 상태를 분리하고 병목을 조기에 공개한다.",
+      "gate": "M2 완료: 작은 회로 schematic→layout→DRC/LVS→PEX→post-layout 동일 revision 증거.",
+      "legacy": [
+        "P4-01",
+        "P4-02",
+        "P4-03",
+        "P4-05",
+        "P4-06",
+        "P4-07",
+        "P4-11",
+        "P4-14",
+        "P6-01",
+        "P6-02",
+        "P6-03",
+        "P6-04",
+        "P6-08",
+        "P6-09",
+        "P7-01"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-05-01",
+          "title": "Physical backend·license·deck probe",
+          "design": "Assura/PVS/Calibre 등 실제 존재·버전·license feature·PDK runset·batch 지원을 조사한다. 파일 이름만으로 verified로 하지 않는다.",
+          "artifact": "verification capability matrix",
+          "positive": "실제 사용 가능한 조합 또는 구체적 unsupported 사유가 확인됨",
+          "negative": "wrong deck/tool version·license env SET만으로 실행 성공 주장 금지",
+          "level": "READ",
+          "dependencies": [
+            "ICF-01-01"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-05-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-02",
+          "title": "Layout read·DBU·LPP·via inventory",
+          "design": "bbox/instances/shapes/pins/nets를 필요한 typed data로 읽고 grid/LPP/via mapping을 technology adapter에서 가져온다.",
+          "artifact": "layout inspect 및 grid/layer contract",
+          "positive": "허용된 작은 layout을 source 불변으로 읽고 unit/grid 왕복 일치",
+          "negative": "wrong purpose·DBU 오해·shape pointer 재사용·unbounded geometry export 거부",
+          "level": "READ",
+          "dependencies": [
+            "ICF-05-01"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-05-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-03",
+          "title": "PCell·geometry·pin primitive",
+          "design": "승인 staging에서 device PCell·rect/path/polygon·via/pin을 만든다. device physical parameter는 CDF round-trip과 일치한다.",
+          "artifact": "layout primitive API",
+          "positive": "한 inverter의 재열기·geometry hash·pins·m/nf·placement orientation 검증",
+          "negative": "wrong LPP·off-grid·nonfinite coordinate·PCell default fallback 탐지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-05-02",
+            "ICF-04-03",
+            "ICF-01-07"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-05-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-04",
+          "title": "DRC lifecycle·false-clean oracle",
+          "design": "known clean/known-bad layout으로 job/runset/top/result/parser를 검증한다. structured rule ID/bbox/severity를 반환한다.",
+          "artifact": "DRC submit/status/result/cancel와 golden suite",
+          "positive": "clean fixture 0건 및 위반 fixture 정확한 class/완료 증거 확인",
+          "negative": "empty layout·missing/truncated result·wrong top·disabled deck를 clean 처리하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-05-03",
+            "ICF-01-09"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-05-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-05",
+          "title": "LVS lifecycle·connectivity oracle",
+          "design": "동일 revision schematic과 layout을 비교하고 open/short/missing/extra/parameter/pin mismatch를 구조화한다.",
+          "artifact": "LVS runner/parser와 fixture suite",
+          "positive": "matched와 intentional mismatch 각각 올바른 결과 및 device mapping 확인",
+          "negative": "reference schematic을 layout에 맞춰 변경·blackbox/exclude 숨김·parser 오류 PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-05-04",
+            "ICF-04-04"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-05-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-06",
+          "title": "작은 PEX·extracted representation 검증",
+          "design": "지원된 extracted view/DSPF 등 형식을 실제로 확인하고 모델·RC corner·port consistency를 검사한다.",
+          "artifact": "PEX adapter와 small golden case",
+          "positive": "actual extraction에서 유효한 parasitic 및 post-layout이 해당 artifact를 사용한 증거",
+          "negative": "schematic fallback·device 이중 포함·empty extracted data를 pass하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-05-05"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-05-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-05-07",
+          "title": "Inverter end-to-end physical benchmark",
+          "design": "F04 생성 회로와 F05 layout을 같은 revision에서 DRC/LVS/PEX/post-layout까지 연결한다.",
+          "artifact": "M2 complete evidence bundle",
+          "positive": "source/reference 보존과 analytic/golden 대비 허용오차 만족, 최종 bytes와 결과 연결",
+          "negative": "각각 다른 revision의 DRC/LVS/PEX PASS를 합성하지 않음",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-05-06",
+            "ICF-04-09",
+            "ICF-02-06"
+          ],
+          "phase_id": "F05",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-05-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-06-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "회로 특성화·사양·topology·sizing 최적화",
+      "goal": "측정된 모델 근거로 회로를 설계하고 독립 검증기로 사양 충족을 판정한다.",
+      "direction": "gm/Id table·bias feasibility·matching intent·PVT/통계 유효성을 선행한다. optimizer는 spec 또는 evaluator를 바꿀 수 없다.",
+      "gate": "M3 pre-layout: DUT/TB 분리 증폭기의 사양·실제 측정·robustness evidence를 freeze.",
+      "legacy": [
+        "P3-01",
+        "P3-02",
+        "P3-03",
+        "P3-04",
+        "P3-05",
+        "P3-06",
+        "P3-07",
+        "P3-08",
+        "P3-09",
+        "P3-10",
+        "P3-11",
+        "P3-12",
+        "P3-13",
+        "P3-14",
+        "P3-15"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-06-01",
+          "title": "Spec·feasibility·평가자 contract",
+          "design": "gain/BW/PM/power/noise/VCM/swing/load/startup/stress와 1 V 조건을 단위·tolerance·validity로 고정한다. infeasible를 은폐하지 않는다.",
+          "artifact": "spec schema와 frozen evaluator",
+          "positive": "누락·모순·적용불가 measurement를 탐지하고 목표 변경은 별도 version/승인",
+          "negative": "optimizer가 tolerance·부하·전압을 완화해 PASS 만들지 못함",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-02-08",
+            "ICF-03-02",
+            "ICF-04-09"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-06-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-02",
+          "title": "소자 characterization·gm/Id table",
+          "design": "실제 model에서 Id/W/gm/Id/gm/gds/caps를 L/VGS/VDS/VBS/temp/corner 축으로 측정하고 interpolation domain을 고정한다.",
+          "artifact": "characterization campaign와 table registry",
+          "positive": "golden points 재시뮬레이션 오차가 사전 tolerance 이내이며 model hash 기록",
+          "negative": "유효영역 외 extrapolation·다른 PDK table·미지원 small-signal field default 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-06-01"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-06-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-03",
+          "title": "Design intent·역할·topology templates",
+          "design": "diff pair/mirror/tail/cascode/compensation/bias/CMFB 역할과 pin/constraints를 검증된 topology template에 연결한다.",
+          "artifact": "intent graph와 topology registry",
+          "positive": "template connectivity 테스트 및 constraints가 schematic/layout에 동일 적용",
+          "negative": "모델이 임의 raw netlist를 제공하거나 승인 없는 topology 전환 거부",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-06-02"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-03.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-06-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-04",
+          "title": "초기 sizing·headroom·bias feasibility",
+          "design": "characterization과 KCL/headroom으로 초기 current/W/L을 제안하고 actual DCOP로 확인한다. 불가능 조건은 후보 reject한다.",
+          "artifact": "initial sizing/bias solver",
+          "positive": "작은 amplifier 후보가 current balance/영역/입출력 조건을 실제 만족",
+          "negative": "region=2 하나로 모든 corner pass·단위 mix·undeclared body bias 탐지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-06-03"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-06-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-05",
+          "title": "Candidate revision·multi-objective optimizer",
+          "design": "grid/random/BO/evolutionary는 승인된 algorithm plugin으로 사용하고 budget/feasible set/Pareto archive를 관리한다.",
+          "artifact": "bounded optimization campaign",
+          "positive": "동일 spec/version에서 모든 후보와 비용·reject reason을 재현/추적",
+          "negative": "spec 변경·실패점 좋은 score·이미 본 holdout 최적화·무제한 후보 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-06-04"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-06-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-06",
+          "title": "보상·noise·전원·common-mode closure",
+          "design": "올바른 loop/CMFB/startup/PSRR/CMRR/noise 조건을 개별 평가한다. matching과 layout 제약을 intent에 기록한다.",
+          "artifact": "stability/noise/power optimization report",
+          "positive": "정의된 루프와 조건에서 사양 확인, 미지원 noise/aging은 미평가로 보고",
+          "negative": "Ad phase를 PM으로 대체·출력 common-mode 미정인데 정상 swing 주장 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-06-05"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-06-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-07",
+          "title": "PVT·통계·독립 holdout 검증",
+          "design": "최적화가 보지 않은 corner/seed/강화 solver 조건에서 frozen 후보를 검증하고 yield confidence를 보고한다.",
+          "artifact": "robustness/holdout report",
+          "positive": "predefined metrics/tolerance/seed split을 유지하고 stochastic uncertainty 명시",
+          "negative": "200/200을 확정 100% yield·통계 미지원 모델에서 mismatch PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-06-06",
+            "ICF-03-05",
+            "ICF-03-06"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-06-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-06-08",
+          "title": "Amplifier schematic freeze·수동 기준 비교",
+          "design": "사양→template→sizing→actual DC/AC/TRAN→robustness를 한 campaign으로 묶고 intent/interface를 freeze한다.",
+          "artifact": "M3 prelayout benchmark",
+          "positive": "독립 reviewer·numeric oracle·raw/semantic evidence와 human intervention 기록",
+          "negative": "실행 성공만으로 설계 성공, 예시 수치를 실제 결과로 기록하지 않음",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-06-07"
+          ],
+          "phase_id": "F06",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-06-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Analog layout intelligence·제약 routing",
+      "goal": "matching과 연결·기생 제약을 만족하는 실제 analog layout을 생성한다.",
+      "direction": "검증된 primitive와 physical oracle 위에 generator를 얹는다. 공통중심·길이 일치 자체를 전기적 성능 보증으로 삼지 않는다.",
+      "gate": "M3 layout: intent가 반영된 증폭기 layout 및 반복 DRC/LVS 증거.",
+      "legacy": [
+        "P4-04",
+        "P4-08",
+        "P4-09",
+        "P4-10",
+        "P4-12",
+        "P4-13",
+        "P5-01",
+        "P5-02",
+        "P5-03",
+        "P5-04",
+        "P5-05",
+        "P5-06",
+        "P5-07",
+        "P5-08",
+        "P5-09",
+        "P5-10",
+        "P5-11",
+        "P5-12",
+        "P5-13",
+        "P5-14"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-07-01",
+          "title": "Intent compiler·floorplan·preview",
+          "design": "역할/critical nets/area/keepout/voltage domains로 floorplan proposal을 만든다. bounded geometry preview와 local precise artifact를 구분한다.",
+          "artifact": "layout plan와 intent coverage",
+          "positive": "모든 critical device/net 제약이 배치·routing 제약으로 추적되고 계획 diff가 재현됨",
+          "negative": "unsupported matching intent 무시·임의 area 증가·외부 파일 export 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-05-07",
+            "ICF-06-03"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-07-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-02",
+          "title": "Finger/fold·orientation·abutment",
+          "design": "W_total/m/nf·source/drain/bulk·diffusion 환경을 기술 계약에 맞춰 분해한다. electrically legal sharing만 허용한다.",
+          "artifact": "finger/abutment planner",
+          "positive": "schematic effective model와 layout/LVS W/L/m 의미가 일치",
+          "negative": "m과 nf 대체·orientation swap로 bulk/source error·불법 diffusion sharing 탐지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-01"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-03",
+          "title": "Matched pair·current mirror generator",
+          "design": "동일 환경/방향/contacts/vias/dummies와 mirror ratio를 포함하는 패턴을 생성한다. 회로 기여 없는 dummy 연결도 명시한다.",
+          "artifact": "matched pair/mirror cells",
+          "positive": "pair symmetry/ratio/connectivity 및 DRC/LVS pass, approved parameter 보존",
+          "negative": "시각 symmetry만 pass·dummy floating·ratio 왜곡·implicit source/drain flip 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-02"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-04",
+          "title": "Common centroid·interdigitation generator",
+          "design": "ABBA/multi-unit arrangement·centroid·edge dummy·routing 비용을 계산한다. 복잡한 패턴은 별도 budget을 사용한다.",
+          "artifact": "centroid/interdigitation library",
+          "positive": "unit count/ratio/centroid와 LVS equivalence·PDK 규칙 만족",
+          "negative": "모든 pair에 centroid 강제·device 개수 손실·pattern 추측을 foundry rule로 표시 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-03"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-05",
+          "title": "Guard ring·substrate·well contacts",
+          "design": "PDK의 허용 ring/tie/contact spacing과 domains를 적용하고 sensitive node coupling 정책을 연결한다.",
+          "artifact": "guard ring/contact generator",
+          "positive": "well/bulk 연결·domain isolation·지원되는 coverage rule 확인",
+          "negative": "guard ring 존재만으로 latch-up/ESD signoff 주장·잘못된 well tie 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-04"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-06",
+          "title": "Net-aware·differential·power routing",
+          "design": "logical connectivity와 layers/vias/grid로 route하며 sensitive pair balance·coupling·current path를 관리한다. 정확한 수정량을 plan에 표시한다.",
+          "artifact": "constrained router",
+          "positive": "open/short preview·DRC/LVS·length/via/RC balance·power path criteria 만족",
+          "negative": "DRC 줄이려 critical route 삭제·unbounded geometry·PDK current limit 추측 거부",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-05"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-07",
+          "title": "Semantic layout diff·bounded repair",
+          "design": "geometry/instance/net/pin hash 및 constrained move/reroute를 staging revision에서 실행한다. 복구는 승인 범위만.",
+          "artifact": "layout transaction 및 repair loop",
+          "positive": "edit별 diff·regression check·crash recovery·원본 보존 확인",
+          "negative": "metadata 전체 ignore·다른 revision shape ID 사용·영향 없는 증거 재활용 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-06"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-07-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-08",
+          "title": "Fill·density·parasitic scoring",
+          "design": "fill/density와 functional routing을 구분하고 PEX 영향 및 domain keepout을 기록한다. heuristic은 signoff가 아니다.",
+          "artifact": "fill plan와 parasitic score",
+          "positive": "공식 rule 지원 범위에서 밀도/연결/RC 변화가 검증되고 evidence stale 처리됨",
+          "negative": "fill 후 이전 PEX/post-layout 결과를 현재 PASS로 사용하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-07-07"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-07-09",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-07-09",
+          "title": "Amplifier analog layout benchmark",
+          "design": "frozen schematic intent를 full layout으로 변환하고 matching·routing·guard ring·area와 DRC/LVS를 검증한다.",
+          "artifact": "M3 layout evidence",
+          "positive": "생성 원인·수정 iteration·검증 결과가 같은 layout revision을 가리킴",
+          "negative": "inverter 성공만으로 모든 analog layout 기능 검증 완료라 주장 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-07-08",
+            "ICF-06-08"
+          ],
+          "phase_id": "F07",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-07-09.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-08-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "정식 physical verification·PEX·post-layout closure",
+      "goal": "작은 검증기에서 확장하여 증폭기와 chip 후보의 물리·수치 결과를 연결한다.",
+      "direction": "올바른 deck/version/input identity가 없는 0-error는 의미가 없다. layout/PEX 변경 시 downstream 무효화를 강제하고 독립 검증을 유지한다.",
+      "gate": "M3 완료: 같은 revision의 DRC/LVS/ERC/PEX/post-layout/robustness 묶음.",
+      "legacy": [
+        "P6-05",
+        "P6-06",
+        "P6-07",
+        "P6-10",
+        "P6-11",
+        "P6-12",
+        "P6-13",
+        "P6-14",
+        "P7-02",
+        "P7-03",
+        "P7-04",
+        "P7-05",
+        "P7-06",
+        "P7-07",
+        "P7-08",
+        "P7-09",
+        "P7-10"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-08-01",
+          "title": "Hierarchical verification·violation mapping",
+          "design": "hierarchy transforms·bbox·rule ID를 stable revision objects에 연결하고 ambiguous mapping은 낮은 confidence로 반환한다.",
+          "artifact": "hierarchical DRC/LVS adapters",
+          "positive": "top·subcell·좌표 변환을 known fixtures로 검증하고 truncated counts를 검출",
+          "negative": "잘못된 layer/transform 객체 자동 수정·ambiguous bbox를 단정하지 않음",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-05-07"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-08-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-02",
+          "title": "DRC 자동 수정·LVS 보존",
+          "design": "spacing/width/enclosure/via class마다 제한된 diff와 예상 영향으로 수정한다. connectivity/intent를 동시에 확인한다.",
+          "artifact": "bounded auto-fix controller",
+          "positive": "iteration/geometry/area cap 안에서 개선되고 기존 electrical net 불변",
+          "negative": "위반 도형 삭제만으로 false clean·LVS reference 자동 변형·무한 oscillation 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-08-01"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-08-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-03",
+          "title": "LVS mismatch 해결·ERC·reliability hooks",
+          "design": "opens/shorts/param/pin/body를 class별 제안하고 ERC/antenna/DFM/EMIR/aging은 실제 backend/model 지원별로 구분한다.",
+          "artifact": "LVS repair 및 reliability capability map",
+          "positive": "지원 체크별 positive/negative 결과와 미지원 항목을 명시적으로 분리",
+          "negative": "ERC PASS만으로 모든 ESD/신뢰성 signoff·임의 waiver·hidden exclusions 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-08-02"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-08-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-04",
+          "title": "PEX identity·artifact·config 검증",
+          "design": "LVS-passed 동일 revision만 signoff extraction을 허용하고 포트/모델/RC corner/형식·hash를 검증한다.",
+          "artifact": "PEX lifecycle와 representation guard",
+          "positive": "실제 extracted elements의 post-layout 사용 증거 및 no double-counting",
+          "negative": "schematic fallback·device duplicate·잘못된 top·empty extraction PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-08-03",
+            "ICF-07-09"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-08-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-05",
+          "title": "Pre/post 동일 계약 비교·hotspot",
+          "design": "same stimulus/load/metric/tolerance에서 비교하고 critical R/C·coupling과 성능 변화 가설을 연결한다.",
+          "artifact": "pre-post report와 hotspot summary",
+          "positive": "delta·absolute result·spec margin·artifact provenance가 재현됨",
+          "negative": "서로 다른 input 조건으로 성능 비교·heuristic correlation을 인과로 확정 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-08-04"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-08-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-06",
+          "title": "Layout/sizing feedback closure",
+          "design": "layout만 바꿀지 schematic sizing까지 바꿀지 영향 DAG로 판단하고 새 candidate에서 재검증한다. topology 변경은 재승인.",
+          "artifact": "cross-domain feedback planner",
+          "positive": "변경 종류별 stale evidence·필수 rerun이 자동 결정되고 budget 준수",
+          "negative": "기존 DRC/PEX를 붙여 shortcut·목표 사양 임의 수정·복구 범위 확대 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-08-05"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-08-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-07",
+          "title": "Post-layout PVT·MC·수치 검증",
+          "design": "지원 통계와 RC/process corner 조합으로 frozen 후보를 독립 검증하고 timestep/tolerance/FFT resolution 민감도를 확인한다.",
+          "artifact": "postlayout robustness bundle",
+          "positive": "baseline와 holdout·수치 오차·unsupported 상태가 명확하고 같은 revision 검증",
+          "negative": "계산 한도 부족을 pass·미실행 corners 삭제·preview sampling 정밀검증 대체 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-08-06",
+            "ICF-03-06",
+            "ICF-06-07"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-08-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-08-08",
+          "title": "Signoff candidate freeze·M3 완주",
+          "design": "유효한 physical/postlayout evidence가 모두 같은 dependency set일 때만 freeze한다. GPDK는 flow validation label을 쓴다.",
+          "artifact": "M3 complete benchmark 및 frozen candidate",
+          "positive": "false-clean fixtures·원본 보존·독립 평가자·candidate provenance 모두 확인",
+          "negative": "GPDK 결과를 foundry-qualified fabrication approval로 표시하지 않음",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-08-07"
+          ],
+          "phase_id": "F08",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-08-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-09-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "ADC·AMS·digital control·RF 확장",
+      "goal": "모든 회로 목표에서 빠지기 쉬운 혼합신호·클록·디지털·주기해석 capability를 추가한다.",
+      "direction": "analog amplifier를 ADC라고 부르지 않는다. 실제 PDK·solver·license를 확인하며 독립 backend를 추가할 수 있게 한다. 기본 amplifier 완주를 이 optional track으로 막지 않는다.",
+      "gate": "M5 확장: 선택한 ADC/AMS/RF 회로군에서 기능·수치·physical 조건의 재현 가능한 benchmark.",
+      "legacy": [],
+      "tasks": [
+        {
+          "id": "ICF-09-01",
+          "title": "Actual ADC contract·code interface",
+          "design": "architecture/resolution/full-scale/code encoding/sample edge/latency/data-valid를 정의하고 DUT/TB/control 경계를 분리한다.",
+          "artifact": "actual ADC spec/profile",
+          "positive": "synthetic contract와 분리된 실제 신호 binding과 valid code reference 확인",
+          "negative": "3-bit synthetic default 자동 적용·경계 code clipping 숨김 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-02-05",
+            "ICF-03-02",
+            "ICF-04-06"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-09-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-02",
+          "title": "Clock·reset·non-overlap·startup 모델",
+          "design": "clock jitter/skew/nonoverlap/reset sequencing을 실제 검증 범위와 연결한다. digital control은 명시된 RTL/gate template를 쓴다.",
+          "artifact": "clock/reset/control contracts",
+          "positive": "clock edge·latency·invalid interval·ramp/startup reference 일치",
+          "negative": "이상 clock만으로 실리콘 timing pass·초기 불능상태를 제외 조건으로 숨김 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-01"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-03",
+          "title": "AMS/cosimulation backend",
+          "design": "실제 license/tool compatibility를 probe하고 logic/analog interface·timescale·discipline을 고정한다. 대체 flow는 동등 범위를 명시한다.",
+          "artifact": "AMS backend adapter",
+          "positive": "작은 mixed-signal fixture에서 data-valid와 analogue response 교차검증",
+          "negative": "simulator unavailable을 단순 transient로 대체 후 AMS verified 선언 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-02"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-04",
+          "title": "FFT·dynamic ADC 측정",
+          "design": "uniform sampling/strobe 지원·coherency/window/ENBW/DC/harmonic fold/bins/N/fs를 정의하고 precision vectors로 계산한다.",
+          "artifact": "SNR/SNDR/THD/ENOB contracts",
+          "positive": "독립 analytic/reference vectors 및 actual dataset에서 tolerance 만족",
+          "negative": "비균일 시간 raw FFT·display decimation 사용·full-scale 조건 생략 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-03"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-05",
+          "title": "Static linearity·code statistics",
+          "design": "ramp/histogram stimulus·DNL/INL endpoint/best-fit·missing code·confidence 정책을 고정한다.",
+          "artifact": "DNL/INL/offset/gain-error suite",
+          "positive": "known transfer function와 missing-code fixtures 판정 일치",
+          "negative": "알고리즘에 유리한 fit로 기준 변경·코드 누락을 0 DNL로 반환 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-04"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-06",
+          "title": "Digital/AMS verification와 physical 연계",
+          "design": "필요한 RTL 기능·timing/coverage·synthesis/netlist equivalence 및 mixed-signal pins/rails를 모델링한다. 도구 지원별 제한을 보고한다.",
+          "artifact": "digital/AMS verification adapter",
+          "positive": "선택된 control block의 functional/timing/physical equivalence evidence",
+          "negative": "디지털 타이밍 미검증인데 ADC 전체 signoff·unsafe clock-domain crossing 무시 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-05"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-07",
+          "title": "RF/periodic analysis capability",
+          "design": "PSS/PAC/PNOISE/HB 등 실제 지원 기능을 probe하고 startup/convergence/steady-state validity와 sideband measurements를 계약화한다.",
+          "artifact": "periodic/RF capability extension",
+          "positive": "지원한 periodic fixture의 수치 reference와 convergence 검증",
+          "negative": "DC/AC 지원을 periodic license 지원으로 추정·convergence 실패 PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-06"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-09-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-09-08",
+          "title": "선택 회로군 전체 benchmark",
+          "design": "ADC/AMS 또는 RF 중 승인된 하나를 pre/layout/physical/post flow로 연결하고 기존 amplifier regression을 유지한다.",
+          "artifact": "M5 circuit-family benchmark",
+          "positive": "정의된 기능 범위와 미지원/미검증 범위가 명확하며 raw IP 노출 없음",
+          "negative": "한 topology 성공으로 모든 ADC/RF architecture 구현 완료 주장 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-09-07"
+          ],
+          "phase_id": "F09",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-09-08.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-10-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "공식 제작 PDK onboarding·MyChip 재타깃팅",
+      "goal": "GPDK 자동화 능력을 실제 제공받은 제작 공정의 검증된 조합으로 이관한다.",
+      "direction": "공정/전압/소자/PCell/deck/pad 이름은 공식 PDK로만 정한다. 초기 inventory는 M0 뒤 병행 가능하지만 target signoff는 실제 flow evidence가 필요하다.",
+      "gate": "M4 선행: 승인된 target에서 re-sizing·layout regeneration·verification·postlayout 재검증.",
+      "legacy": [
+        "P8-02",
+        "P8-03",
+        "P8-04",
+        "P8-05",
+        "P8-06",
+        "P8-07",
+        "P8-08",
+        "P8-09",
+        "P8-10",
+        "P8-11",
+        "P8-12",
+        "P8-13",
+        "P8-14",
+        "P8-15"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-10-01",
+          "title": "공식 PDK secure onboarding·tool 환경",
+          "design": "원문을 보호 로컬 저장소에 두고 version/license/use/export policy·tool compatibility와 파일 digest를 등록한다. 기존 VM 교체 대신 별도 환경을 검토한다.",
+          "artifact": "PDK provenance/capability matrix",
+          "positive": "공식 package revision과 허용 사용·실행 조합이 확인되거나 unknown으로 남음",
+          "negative": "인터넷 예시 공정 노드/PCell hardcode·private Git이면 PDK upload 허용 추정 금지",
+          "level": "READ",
+          "dependencies": [
+            "ICF-01-01",
+            "ICF-00-02"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-10-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-10-02",
+          "title": "Device/model/layer/deck/pad inventory",
+          "design": "device pin/CDF/PCell/W/L/m/nf·통계·RC corner·DBU/layers/vias·verification runset·IO/pad·stream map을 조사한다.",
+          "artifact": "target TechnologyAdapter",
+          "positive": "매핑마다 공식 출처와 functional probe·미지원 항목 기록",
+          "negative": "gpdk090 NN/Assura/1V/routing stack을 그대로 target에 복사하지 않음",
+          "level": "READ",
+          "dependencies": [
+            "ICF-10-01"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-10-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-10-03",
+          "title": "Feasibility·supply·package 결정",
+          "design": "1 V 연구 조건 및 gain/load/speed/power·pin/package 한도에서 topology 가능성을 분석하고 변경 필요 사항을 제안한다.",
+          "artifact": "port feasibility와 승인 요청",
+          "positive": "같은 사양 유지/변경 필요/미달을 구분하고 사용자 동의 없는 spec 변경 없음",
+          "negative": "공정 변환을 단순 W/L 좌표 scale로 처리·VDD 몰래 증가 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-10-02"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-03.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-10-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-10-04",
+          "title": "Target characterization·re-sizing·bias",
+          "design": "새 모델의 특성화를 사용해 sizing/bias/current/CMFB/startup을 다시 찾고 기존 intent와 결과를 연결한다.",
+          "artifact": "target prelayout campaign",
+          "positive": "effective params/DCOP/PVT/실제 지원 statistics 및 independent holdout 검증",
+          "negative": "GPDK table/seed 분포를 target 수율 모델로 대체 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-10-03",
+            "ICF-06-02"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-10-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-10-05",
+          "title": "Layout 재생성·target physical 검증",
+          "design": "target PCell/grid/rule과 matching intent로 새 revision을 만들고 공식 호환 DRC/LVS/PEX를 실행한다.",
+          "artifact": "target layout와 signoff evidence",
+          "positive": "같은 intent의 device equivalence·postlayout metric·공식 deck identity 검증",
+          "negative": "old GDS 좌표 scale·unsupported checks PASS·reference circuit 임의 변형 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-10-04",
+            "ICF-07-09",
+            "ICF-08-07"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-10-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-10-06",
+          "title": "Cross-PDK report·제작 후보 freeze",
+          "design": "동일/변경 사양·device/domain·area/power/speed/yield 차이를 비교하고 공식 target 후보만 FAB_PDK_VALIDATED로 분리한다.",
+          "artifact": "migration report와 target freeze",
+          "positive": "feasibility 변화·원본 보호·새 PDK provenance·verification 한계가 명시됨",
+          "negative": "GPDK FLOW_VALIDATED를 fabrication signoff로 자동 승격 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-10-05"
+          ],
+          "phase_id": "F10",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-10-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-11-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "title": "Chip top·pad/package·최종 stream·제출 준비",
+      "goal": "실제로 제출할 데이터와 검증 결과를 일치시키고 사람의 최종 승인 지점을 만든다.",
+      "direction": "pad/package/board 고려는 초기 사양에서 시작하고 상세 생성은 여기서 한다. 공식 signoff 요구사항은 campaign마다 다시 확인한다.",
+      "gate": "M4 완료: FAB_PDK_VALIDATED → SUBMISSION_READY → 별도 HUMAN_APPROVED_FOR_SUBMISSION.",
+      "legacy": [
+        "P9-01",
+        "P9-02",
+        "P9-03",
+        "P9-04",
+        "P9-05",
+        "P9-06",
+        "P9-07",
+        "P9-08",
+        "P9-09",
+        "P9-10",
+        "P9-11",
+        "P9-12",
+        "P9-13",
+        "P9-14",
+        "P9-15"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-11-01",
+          "title": "Chip top·power domain·test interface",
+          "design": "core/bias/reference/IO/ESD/power/decap/test access/package와 pin map을 최종 계약으로 고정한다.",
+          "artifact": "top architecture와 pin map",
+          "positive": "측정 가능성·supply sequence·domain constraints가 core spec와 일치",
+          "negative": "TB ideal sources 잔존·external bias 요구 누락·핀 수 가정 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-10-03"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-11-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-02",
+          "title": "Padframe·ESD·seal ring·boundary",
+          "design": "공식 cells/orientation/sequence/keepout/seal rule과 die area에 맞춰 배치한다. ESD 증거 범위를 구분한다.",
+          "artifact": "padframe/chip boundary generator",
+          "positive": "pin-to-core 연결·공식 IO 규칙·ERC/LVS 증거 확인",
+          "negative": "그림상 pad만 배치하고 ESD qualified 주장·미승인 pad cell substitute 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-11-01",
+            "ICF-10-06"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-11-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-03",
+          "title": "Top power·sensitive routing·decoupling",
+          "design": "current paths/width/via/domains와 differential/sensitive net shielding·package effects를 관리한다.",
+          "artifact": "chip top routing plan",
+          "positive": "open/short·지원되는 current density/IR 조건·pin map 검증",
+          "negative": "금속 넓이 예시를 foundry safe current로 확정·guard ring이 모든 noise 해결 주장 금지",
+          "level": "WRITE",
+          "dependencies": [
+            "ICF-11-02"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-11-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-04",
+          "title": "Fill/density·final top verification",
+          "design": "최종 pad/fill 포함 chip top에서 official DRC/LVS/ERC/reliability 항목과 waiver 상태를 확인한다.",
+          "artifact": "top signoff evidence",
+          "positive": "같은 final revision/deck/exclusions의 완료 결과 및 known-bad parser regression",
+          "negative": "fill 이전 evidence reuse·승인 없는 waiver·blackbox 무표시 PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-11-03"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-11-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-05",
+          "title": "Top PEX·package/board postlayout",
+          "design": "실제 package 모델·pad load·board fixture 포함 범위를 밝히고 최종 stimulus/부하에서 성능을 검증한다.",
+          "artifact": "top postlayout report",
+          "positive": "측정 계획과 동등 조건·parasitic provenance·stress/startup/robustness 확인",
+          "negative": "package 미포함 결과를 silicon 보증·schematic fallback 숨김 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-11-04"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-11-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-06",
+          "title": "Stream-out·round-trip·최종 bytes 검증",
+          "design": "공식 map/DBU/pins/labels/hierarchy/top으로 GDS/OASIS를 생성하고 최종 파일 기준 official check/equivalence를 수행한다.",
+          "artifact": "stream manifest와 round-trip report",
+          "positive": "최종 제출 hash와 검증 input hash 연결·누락 hierarchy/layer/top 없음",
+          "negative": "단순 reopen 성공으로 전기적 등가 주장·stream 후 수정에 옛 signoff 재사용 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-11-05"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-11-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-07",
+          "title": "Submission package·forms·checksums",
+          "design": "GDS·검증 요약·pin map·필수 양식·hash·PDK/tool versions를 공식 제출 요구에 맞춰 묶는다. 원문 라이선스 제한을 준수한다.",
+          "artifact": "local submission bundle",
+          "positive": "필수 항목 누락 0·재현 가능한 frozen revision·검증과 제출 파일 일치",
+          "negative": "자동 portal upload·임의 MPW 옵션 선택·비용 결제 포함 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-11-06"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-07.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-11-08",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-11-08",
+          "title": "독립 signoff·human approval·archive",
+          "design": "checker/reviewer/operator를 분리하고 final hash·waiver·책임·비용에 결부된 별도 승인을 요청한다. 승인 전에는 제출하지 않는다.",
+          "artifact": "signoff decision와 archive/restore test",
+          "positive": "최종 bytes 변화 시 승인 invalidation·복원 검증·미검증 항목 명시",
+          "negative": "에이전트 자기 승인·과거 GDS approval replay·주문 자동 실행 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-11-07"
+          ],
+          "phase_id": "F11",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-11-08.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-12-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "title": "End-to-end orchestrator·제한된 자율 설계",
+      "goal": "이미 검증한 도구들을 하나의 campaign으로 조합하되 지시·권한·평가를 분리한다.",
+      "direction": "기초 상태/journal/budget은 F01에서 이미 제공한다. 여기서는 역할별 planning과 cross-domain 선택·사용자 상호작용을 확장한다.",
+      "gate": "M5 자율성: 한 승인 envelope에서 동일 spec→최종 검증 흐름 및 인간 개입 수를 측정.",
+      "legacy": [
+        "P10-02",
+        "P10-03",
+        "P10-07",
+        "P10-08",
+        "P10-09",
+        "P10-10",
+        "P10-11",
+        "P10-12",
+        "P10-13"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-12-01",
+          "title": "Task DAG·capability-aware planning",
+          "design": "준비된 실제 capability와 승인 범위로만 stage graph를 만들고 prerequisites/cycle/unsupported를 검증한다.",
+          "artifact": "campaign planner",
+          "positive": "unknown tool/미검증 backend를 실행 plan에 포함하지 않고 dependency를 만족함",
+          "negative": "전체 roadmap를 한 번에 실행·unsupported를 skip PASS·cycle 무한 실행 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-01-09"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-12-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-02",
+          "title": "Role contracts·least privilege·관찰 데이터",
+          "design": "architect/designer/layout/verifier/reviewer 역할을 구분하고 승인된 graph/metric만 전달한다. multi-agent 병렬 write는 잠금으로 막는다.",
+          "artifact": "role policy와 data view schemas",
+          "positive": "운영 agent가 policy/evaluator/승인 저장소를 수정할 수 없으며 관찰은 필요한 만큼 제공",
+          "negative": "log prompt injection·native shell 우회·reviewer 권한 자동 승격 탐지",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-12-01"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-12-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-03",
+          "title": "Spec→candidate→layout cross-domain planning",
+          "design": "수치 optimizer와 설계 추론을 분리하고 후보 선택·feedback·topology 변경을 typed proposal로 연결한다.",
+          "artifact": "autonomous campaign controller",
+          "positive": "bounded budget·human gates·frozen spec 아래 단계 전이와 변경 근거가 추적됨",
+          "negative": "실패를 숨기려고 spec/tolerance 수정·layout 맞추려 schematic 몰래 변경 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-12-02"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-12-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-04",
+          "title": "Recovery·operator handoff UX",
+          "design": "unknown write/권한 부족/라이선스/실패 사양을 다른 상태로 보여주고 현재 승인으로 가능한 read-only 진단을 먼저 수행한다.",
+          "artifact": "handoff/resume protocol",
+          "positive": "같은 미해결 질문을 반복하지 않고 exact 경로·증거·필요 승인만 요청",
+          "negative": "원인 모른 채 Vn+1 target 생성·한도 초기화·재시도 루프 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-12-03"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-04.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-12-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-05",
+          "title": "Independent reviewer·numeric oracle·eval",
+          "design": "모델 self-review와 독립 실행 검증을 구분하고 hidden/holdout fixtures·known-bad tests로 false PASS를 평가한다.",
+          "artifact": "agent eval harness",
+          "positive": "목표 변경/오염된 log/incorrect result 사례를 탐지하고 false PASS율 기록",
+          "negative": "다른 모델 한 번 동의만으로 signoff·성공 사례만 골라 보고 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-12-04"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-05.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-12-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-06",
+          "title": "GPDK end-to-end autonomous benchmark",
+          "design": "검증된 단일 amplifier 또는 작은 회로로 전체 생성·측정·layout·physical·post flow를 반복 재현한다.",
+          "artifact": "FLOW_VALIDATED_GPDK090 campaign",
+          "positive": "회로 성능·검증·복구·예산·human intervention·수치 허용오차·재현성 보고",
+          "negative": "직접 실행하지 않은 stage를 자동화 완료로 표기·GPDK fabrication 주장 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-12-05",
+            "ICF-08-08"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-12-07",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-12-07",
+          "title": "Target PDK submission-ready campaign",
+          "design": "공식 target의 검증된 flow를 통합하되 최종 인간 제출 승인 직전에 멈춘다.",
+          "artifact": "SUBMISSION_READY campaign report",
+          "positive": "동일 final input/deck/stream digest·waiver·artifact chain이 완전함",
+          "negative": "release tag와 칩 제출 승인 혼동·미지원 필수 signoff 항목 PASS 금지",
+          "level": "COMPUTE",
+          "dependencies": [
+            "ICF-12-06",
+            "ICF-11-08"
+          ],
+          "phase_id": "F12",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-12-07.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High 또는 Extra High",
+          "candidate_next_id": "ICF-13-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "title": "실리콘 계측·PCB·sim-to-silicon feedback",
+      "goal": "칩을 받은 뒤의 측정 안전과 데이터 정확성을 별도 도메인으로 구현한다.",
+      "direction": "계측은 원격 EDA compute와 다른 물리적 위험이 있다. 임의 SCPI 금지, 장비·fixture·전압/전류·power sequence·interlock을 승인한다.",
+      "gate": "M5 실리콘: 보정·불확실성을 포함한 reproducible measurement와 redesign evidence.",
+      "legacy": [
+        "P11-01",
+        "P11-02",
+        "P11-03",
+        "P11-04",
+        "P11-05",
+        "P11-06",
+        "P11-07",
+        "P11-08",
+        "P11-09",
+        "P11-10"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-13-01",
+          "title": "Measurement spec·pin map·PCB 계획",
+          "design": "측정 metric/장비/부하/동작 범위와 PCB/package connectivity를 machine-readable로 만들고 초기 chip spec에 feedback한다.",
+          "artifact": "hardware/measurement manifest",
+          "positive": "pin mapping·voltage domain·fixture/current limit·온도 조건·장비 역할 일치",
+          "negative": "칩 미수령인데 hardware verified·board unknown state를 안전 가정 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-00-04"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-13-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-13-02",
+          "title": "Instrument adapter·interlock",
+          "design": "approved instruments와 bounded action templates만 사용하고 power ramp/current limit/emergency stop/connection identity를 강제한다.",
+          "artifact": "instrument MCP adapter",
+          "positive": "mock 및 승인한 장비에서 안전 범위·disconnect/timeout 대응 검증",
+          "negative": "arbitrary SCPI·전원 무한 on·전류제한 해제·다른 장비로 명령 전송 금지",
+          "level": "HARDWARE",
+          "dependencies": [
+            "ICF-13-01"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델 + 운영자 현장 검토",
+          "candidate_next_id": "ICF-13-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-13-03",
+          "title": "Calibration·reference·uncertainty",
+          "design": "instrument/fixture/calibration validity와 측정 오차 전파를 기록한다. raw result 수정 없이 correction provenance를 남긴다.",
+          "artifact": "calibration registry",
+          "positive": "reference 측정·calibration expiry·unit/time alignment·uncertainty 확인",
+          "negative": "보정 전후 혼합·expired calibration PASS·환경 효과를 circuit failure로 확정 금지",
+          "level": "HARDWARE",
+          "dependencies": [
+            "ICF-13-02"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델 + 운영자 현장 검토",
+          "candidate_next_id": "ICF-13-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-13-04",
+          "title": "Silicon characterization·safe sweeps",
+          "design": "온도/전압/주파수 범위와 sample/lot/device ID를 고정하고 실제 장비 상태를 readback한다.",
+          "artifact": "silicon campaign",
+          "positive": "요청과 measured settings·compliance/limit event·safe shutdown 증거",
+          "negative": "수치값 요청만으로 실제 전압 설정 확인·무제한 sweep·power sequence 무시 금지",
+          "level": "HARDWARE",
+          "dependencies": [
+            "ICF-13-03"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델 + 운영자 현장 검토",
+          "candidate_next_id": "ICF-13-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-13-05",
+          "title": "데이터 ingestion·correlation",
+          "design": "CSV/binary 결과를 안전하게 parse하고 pre/post/silicon을 같은 metric 조건에서 비교한다. outlier를 임의 제거하지 않는다.",
+          "artifact": "data ingest와 correlation report",
+          "positive": "source hash·장비·조건·불확실성·재현 가능한 conversion 및 비교",
+          "negative": "메타데이터 없는 측정의 unit 추측·데이터를 모델 성능에 맞게 조작 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-13-04"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-05.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-13-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-13-06",
+          "title": "불일치 진단·재설계·학습 archive",
+          "design": "model/package/PCB/calibration/design 원인을 evidence 기반 가설로 구분하고 새 design revision을 제안한다.",
+          "artifact": "diagnosis와 next-spin proposal",
+          "positive": "관측과 가설 구분·원자료 보존·새 승인 필요 변경 명시",
+          "negative": "측정 차이를 단일 원인으로 단정·PDK 모델 임의 개조·자동 재주문 금지",
+          "level": "CODE",
+          "dependencies": [
+            "ICF-13-05"
+          ],
+          "phase_id": "F13",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-13-06.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-14-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "title": "운영 확장·다중 환경·multi-project",
+      "goal": "기본 단일 사용자 시스템을 팀·다중 PDK·새 도구 환경으로 확장한다.",
+      "direction": "F01의 복원·예산·권한 기반은 앞에서 갖춘다. 이 단계가 기본 실제 sweep 또는 작은 회로 완주의 선행조건이 되지 않게 한다.",
+      "gate": "선택 확장 완료: project/PDK/user 격리와 stdio regression, 운영 복구를 증명.",
+      "legacy": [
+        "P12-01",
+        "P12-02",
+        "P12-03",
+        "P12-04",
+        "P12-06",
+        "P12-07",
+        "P12-10",
+        "P12-11"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-14-01",
+          "title": "Multi-project·multi-PDK registry",
+          "design": "project data roots/ownership/policy/technology versions를 분리하고 capability negotiation을 추가한다.",
+          "artifact": "project/adapter registries",
+          "positive": "교차 project 조회/쓰기 거부와 per-project version drift 검출",
+          "negative": "같은 logical ID의 다른 PDK artifact 혼용·권한 상속 오류 탐지",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-01-09"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-01.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-14-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-14-02",
+          "title": "새 EDA environment·backend 호환",
+          "design": "legacy VM을 보존하면서 공식 target이 요구하는 별도 OS/tool runner를 추가한다. licensing과 serialization 차이를 검증한다.",
+          "artifact": "environment adapter와 compatibility tests",
+          "positive": "기존 regression 유지·같은 의미 입력·다른 버전 수치 tolerance 분리",
+          "negative": "원 VM OS 업그레이드·unsupported library 설치·license 우회 금지",
+          "level": "OPS",
+          "dependencies": [
+            "ICF-14-01"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-14-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-14-03",
+          "title": "Authenticated HTTP MCP·팀 권한",
+          "design": "필요성과 승인 후 TLS/auth/session/origin/RBAC/tenant 분리를 구현한다. local stdio를 계속 지원한다.",
+          "artifact": "optional service transport",
+          "positive": "인증·scope·session isolation·stdio regression·threat-model tests 통과",
+          "negative": "public listener 무단 개방·token passthrough·session hijack·cross-tenant read 거부",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-14-02"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-03.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-14-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-14-04",
+          "title": "Artifact store·quota·retention·restore",
+          "design": "hash-addressed local/protected artifact store와 pin/retention 정책을 도입한다. evidence/approval/원본 삭제는 별도 승인이다.",
+          "artifact": "artifact service와 restore drill",
+          "positive": "disk cap·정확한 artifact integrity·restore 재현·dry-run retention 확인",
+          "negative": "symlink escape·참조중 artifact 삭제·실패 evidence 자동 정리 금지",
+          "level": "OPS",
+          "dependencies": [
+            "ICF-14-03"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-04.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-14-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-14-05",
+          "title": "Observability·license scheduling·usage",
+          "design": "safe metrics로 queue/runtime/license/cost/agent failures를 관찰하고 증거가 있는 capacity만 병렬화한다.",
+          "artifact": "monitoring와 scheduler extension",
+          "positive": "실제 license feature/resource limits·tenant fairness·budget accounting 검증",
+          "negative": "사용량 추측을 청구액 확정·raw logs/PDK metrics 무제한 전송 금지",
+          "level": "OPS",
+          "dependencies": [
+            "ICF-14-04"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-05.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-14-06",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-14-06",
+          "title": "Plugin SDK·policy compliance",
+          "design": "새 EDA/verification/instrument adapter를 typed contract와 signing/review/digest로 배포한다. 계약·데이터 전송 정책을 명시한다.",
+          "artifact": "adapter SDK와 compliance gates",
+          "positive": "untrusted plugin/unsafe capability·권한 확대를 배포 전 차단",
+          "negative": "plugin install이 자동 설계/장비 권한 생성·PDK 계약 범위 추정 금지",
+          "level": "CRITICAL",
+          "dependencies": [
+            "ICF-14-05"
+          ],
+          "phase_id": "F14",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-14-06.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "Extra High",
+          "fallback_model": "현재 선택 가능한 상위 coding/reasoning 모델의 지원되는 높은 추론 설정",
+          "candidate_next_id": "ICF-15-01",
+          "authorization_granted": false
+        }
+      ]
+    },
+    {
+      "id": "F15",
+      "title": "Release·문서·평가·포트폴리오 패키징",
+      "goal": "완료한 범위만 정확히 공개·배포하고 재현 가능한 연구·경력 증거를 만든다.",
+      "direction": "문서 버전, software release, 설계 revision, chip submission approval는 별개다. 기능 추가 단계마다 release 준비를 할 수 있고 모든 미래 track 완료를 기다릴 필요는 없다.",
+      "gate": "각 release: 실제 capability/테스트/한계·안전한 설치·rollback·증거가 일치.",
+      "legacy": [
+        "P0-02",
+        "P0-06",
+        "P0-07",
+        "P10-11"
+      ],
+      "tasks": [
+        {
+          "id": "ICF-15-01",
+          "title": "Capability 문서·도구 목록 동기화",
+          "design": "actual tools/list/schema/deployed runner와 README/사용법/지원 범위를 비교한다. historical/candidate/current를 구분한다.",
+          "artifact": "capability matrix와 docs verifier",
+          "positive": "실제 가능한 기능·미검증·미지원·not_applicable가 자동 문서와 일치",
+          "negative": "문서 tool 존재를 구현으로 인용·snapshot을 full ADE라고 표기 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-00-06"
+          ],
+          "phase_id": "F15",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-15-01.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-15-02",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-15-02",
+          "title": "Regression·package·deployment rehearsal",
+          "design": "수행 범위에 맞는 tests/lock/audit/build/install/uninstall/config backup/deploy digest를 검증한다. real integration은 승인된 작업만.",
+          "artifact": "release verification bundle",
+          "positive": "clean environment 재설치 및 이전 reviewed deployment로 복귀 검증",
+          "negative": "dependency 무단 upgrade·test skip를 PASS·remote deploy 없이 deployed 표시 금지",
+          "level": "OPS",
+          "dependencies": [
+            "ICF-15-01"
+          ],
+          "phase_id": "F15",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-15-02.md",
+          "recommended_model": "GPT-5.6 Sol",
+          "reasoning_effort": "High",
+          "fallback_model": "현재 선택 가능한 동급 상위 coding/reasoning 모델 / High",
+          "candidate_next_id": "ICF-15-03",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-15-03",
+          "title": "Benchmark·수치·failure report",
+          "design": "spec convergence/run count/cost/false PASS/recovery/human intervention과 pre/post 성능을 measured로 기록한다.",
+          "artifact": "benchmark card와 portfolio-safe report",
+          "positive": "원자료 provenance·실제 수치/예시 분리·실패와 한계 포함·공개 범위 검토",
+          "negative": "가상의 최종 gain/DRC/수율 수치·비공개 PDK/IP 공개 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-15-02"
+          ],
+          "phase_id": "F15",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-15-03.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-15-04",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-15-04",
+          "title": "Release candidate·tag/publication gate",
+          "design": "기존 version과 SemVer compatibility를 검토하고 reviewed commit으로만 candidate를 만든다. publication은 별도 specific approval가 필요하다.",
+          "artifact": "release checklist와 notes",
+          "positive": "software/tool/docs/version·검증 결과가 일치하며 tag/visibility 권한 분리",
+          "negative": "모든 단계 끝이라고 자동 v2.0.0 발행·기존 tag 이동·주문 승인과 혼동 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-15-03"
+          ],
+          "phase_id": "F15",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-15-04.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": "ICF-15-05",
+          "authorization_granted": false
+        },
+        {
+          "id": "ICF-15-05",
+          "title": "유지보수·next frontier·문서 백업",
+          "design": "완료 범위와 다음 capability gap을 증거로 연결하고 사용자 소유 package/checksums/기록 복원을 점검한다.",
+          "artifact": "maintenance state와 next-WP prompt",
+          "positive": "다음 WP 하나의 dependencies/model/승인/정확한 시작문장이 있고 완료 이력 유지",
+          "negative": "현재 WP를 pending으로 reset·파일 분실 후 과거 approval 자동 replay 금지",
+          "level": "DOC",
+          "dependencies": [
+            "ICF-15-04"
+          ],
+          "phase_id": "F15",
+          "status": "planning_template_not_assessed",
+          "prompt_path": "prompts/work_packages/ICF-15-05.md",
+          "recommended_model": "GPT-5.6 Terra",
+          "reasoning_effort": "High",
+          "fallback_model": "GPT-5.6 Sol / High",
+          "candidate_next_id": null,
+          "authorization_granted": false
+        }
+      ]
+    }
+  ]
+}

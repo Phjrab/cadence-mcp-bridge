@@ -1,0 +1,46 @@
+{
+  "is_template": true,
+  "status": "DRAFT",
+  "enabled": false,
+  "execution_authorized": false,
+  "contract_id": null,
+  "version": null,
+  "classification": null,
+  "logical_input_ids": [],
+  "analysis_id": null,
+  "stimulus_definition": null,
+  "quantity": null,
+  "unit": null,
+  "formula_ref": null,
+  "precision_sampling": {
+    "method": null,
+    "time_window_s": null,
+    "uniform_interval_s": null,
+    "interpolation_policy": null,
+    "strobe_capability_ref": null
+  },
+  "preview": {
+    "maximum_points": 4096,
+    "not_for_precision_calculation": true
+  },
+  "loop_definition": null,
+  "fft_policy": null,
+  "power_sign_convention": null,
+  "startup_exclusion": null,
+  "tolerance": {
+    "absolute": null,
+    "relative": null,
+    "unit": null
+  },
+  "reference_vectors": [],
+  "invalid_behavior": "return_invalid_or_not_applicable_never_zero_pass",
+  "provenance_fields": [
+    "revision",
+    "job_id",
+    "effective_parameters",
+    "model_digest",
+    "executor_digest",
+    "contract_version",
+    "result_digest"
+  ]
+}

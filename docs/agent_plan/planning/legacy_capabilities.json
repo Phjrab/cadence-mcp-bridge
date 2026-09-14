@@ -1,0 +1,1877 @@
+{
+  "schema_version": 1,
+  "is_template": true,
+  "count": 170,
+  "entries": [
+    {
+      "legacy_id": "P0-01",
+      "title": "Repository visibility 및 access audit",
+      "legacy_goal": "실제 GitHub visibility, collaborators, branch protection, secret exposure를 확인한다.",
+      "legacy_acceptance": "visibility가 의도와 일치하고 PDK/proprietary data가 공개되지 않음",
+      "legacy_artifact": "security audit report",
+      "integrated_task_ids": [
+        "ICF-00-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-02",
+      "title": "문서·release truth reconciliation",
+      "legacy_goal": "README, PROJECT_STATE, RELEASE, GitHub release body를 실제 상태와 일치시킨다.",
+      "legacy_acceptance": "상태 문서 간 모순 0건",
+      "legacy_artifact": "state reconciliation report",
+      "integrated_task_ids": [
+        "ICF-00-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-03",
+      "title": "Actual baseline audit",
+      "legacy_goal": "state1, source netlist, profile fixed parameters와 과거 검증값을 비교한다.",
+      "legacy_acceptance": "사용자 승인 baseline contract 1개",
+      "legacy_artifact": "baseline contract",
+      "integrated_task_ids": [
+        "ICF-00-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-04",
+      "title": "Golden fingerprint registry",
+      "legacy_goal": "source/state/PDK/profile/runner의 immutable hash 기준을 만든다.",
+      "legacy_acceptance": "golden hash set 생성 및 재검증 성공",
+      "legacy_artifact": "golden-fingerprints.json",
+      "integrated_task_ids": [
+        "ICF-01-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-05",
+      "title": "Evidence schema v2",
+      "legacy_goal": "manifest/audit/approval/rollback/provenance 공통 schema를 정의한다.",
+      "legacy_acceptance": "모든 신규 campaign에서 재사용 가능한 schema",
+      "legacy_artifact": "evidence schema",
+      "integrated_task_ids": [
+        "ICF-01-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-06",
+      "title": "Regression gate consolidation",
+      "legacy_goal": "Ruff/mypy/pytest/security/package/real integration을 단일 검증 명령으로 묶는다.",
+      "legacy_acceptance": "clean checkout에서 full gate pass",
+      "legacy_artifact": "verify-all script",
+      "integrated_task_ids": [
+        "ICF-01-09"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P0-07",
+      "title": "Maintenance branch policy",
+      "legacy_goal": "v1.0 hotfix와 future feature branch 정책을 분리한다.",
+      "legacy_acceptance": "direct main/force push 방지",
+      "legacy_artifact": "branch/release policy",
+      "integrated_task_ids": [
+        "ICF-00-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-01",
+      "title": "Fixed ADE profile introspection",
+      "legacy_goal": "allowlisted profile의 state, analyses, variables, outputs, model, lock을 read-only 조회한다.",
+      "legacy_acceptance": "raw content 없이 metadata 조회 성공",
+      "legacy_artifact": "ADE introspection tool",
+      "integrated_task_ids": [
+        "ICF-02-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-02",
+      "title": "Actual parameter binding discovery",
+      "legacy_goal": "VBIASN/VBIASP 및 후보 parameter의 exact Spectre/ADE binding을 확인한다.",
+      "legacy_acceptance": "parameter별 source of truth 확정",
+      "legacy_artifact": "variable contract draft",
+      "integrated_task_ids": [
+        "ICF-02-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-03",
+      "title": "User-approved variable contract",
+      "legacy_goal": "단위/default/min/max/coarse/fine step을 승인한다.",
+      "legacy_acceptance": "unknown/out-of-range 거부",
+      "legacy_artifact": "approved variable schema",
+      "integrated_task_ids": [
+        "ICF-02-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-04",
+      "title": "Parameterized snapshot profile v2",
+      "legacy_goal": "job-local wrapper에서 approved parameter를 변경한다.",
+      "legacy_acceptance": "두 개 이상의 point 실제 Spectre 성공",
+      "legacy_artifact": "actual profile v2",
+      "integrated_task_ids": [
+        "ICF-02-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-05",
+      "title": "PSF/OCEAN capability probe",
+      "legacy_goal": "IC6.1.5에서 scalar/waveform 추출 경로를 검증한다.",
+      "legacy_acceptance": "fixed signal 1개 bounded extraction 성공",
+      "legacy_artifact": "extraction capability report",
+      "integrated_task_ids": [
+        "ICF-02-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-06",
+      "title": "Bounded actual result extraction",
+      "legacy_goal": "logical output ID를 scalar/bounded waveform으로 반환한다.",
+      "legacy_acceptance": "raw PSF/path 미노출, units/provenance 포함",
+      "legacy_artifact": "measurement tools",
+      "integrated_task_ids": [
+        "ICF-02-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-07",
+      "title": "1D sweep engine",
+      "legacy_goal": "plan/submit/status/result/cancel parent-child sweep를 구현한다.",
+      "legacy_acceptance": "3-point actual sweep E2E 성공",
+      "legacy_artifact": "1D sweep MCP tools",
+      "integrated_task_ids": [
+        "ICF-03-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-08",
+      "title": "Sweep recovery/idempotency",
+      "legacy_goal": "MCP/SSH interruption 후 child 중복 없이 resume한다.",
+      "legacy_acceptance": "duplicate child 0건",
+      "legacy_artifact": "sweep recovery",
+      "integrated_task_ids": [
+        "ICF-03-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-09",
+      "title": "2D sweep",
+      "legacy_goal": "두 axis Cartesian sweep와 deterministic ordering을 구현한다.",
+      "legacy_acceptance": "point cap 및 aggregate result 검증",
+      "legacy_artifact": "2D sweep",
+      "integrated_task_ids": [
+        "ICF-03-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-10",
+      "title": "Corner campaign",
+      "legacy_goal": "검증된 model section만 profile corner로 활성화한다.",
+      "legacy_acceptance": "각 corner baseline E2E 성공",
+      "legacy_artifact": "corner registry",
+      "integrated_task_ids": [
+        "ICF-03-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-11",
+      "title": "Adaptive coarse-to-fine",
+      "legacy_goal": "approved budget 안에서 최대 2-stage refinement를 구현한다.",
+      "legacy_acceptance": "무한 loop 없이 budget 준수",
+      "legacy_artifact": "adaptive sweep",
+      "integrated_task_ids": [
+        "ICF-03-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-12",
+      "title": "ADE state-driven runtime",
+      "legacy_goal": "fixed OCEAN/ADE template로 state load/netlist/run을 구현한다.",
+      "legacy_acceptance": "source/state/PDK 불변, baseline 성공",
+      "legacy_artifact": "ADE execution mode",
+      "integrated_task_ids": [
+        "ICF-02-09"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-13",
+      "title": "DC operating-point profile",
+      "legacy_goal": "device Id/gm/VDS/VDSAT/region/sat-margin를 구조화한다.",
+      "legacy_acceptance": "approved device allowlist만 반환",
+      "legacy_artifact": "DCOP contract",
+      "integrated_task_ids": [
+        "ICF-02-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-14",
+      "title": "AC/Noise/STB profiles",
+      "legacy_goal": "gain, bandwidth, phase margin, noise를 versioned contract로 제공한다.",
+      "legacy_acceptance": "실제 baseline E2E와 units 검증",
+      "legacy_artifact": "AC/noise/stb tools",
+      "integrated_task_ids": [
+        "ICF-02-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-15",
+      "title": "Transient measurements",
+      "legacy_goal": "settling, slew, swing, power 등 approved metric을 actual waveform에 연결한다.",
+      "legacy_acceptance": "formula/provenance/reproducibility",
+      "legacy_artifact": "transient contract",
+      "integrated_task_ids": [
+        "ICF-02-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-16",
+      "title": "Monte Carlo campaign",
+      "legacy_goal": "seed, run count, statistic contract를 bounded job으로 관리한다.",
+      "legacy_acceptance": "run cap, reproducible manifest",
+      "legacy_artifact": "MC tools",
+      "integrated_task_ids": [
+        "ICF-03-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P1-17",
+      "title": "Simulation campaign dashboard artifact",
+      "legacy_goal": "sweep/corner/MC 결과를 machine-readable report로 생성한다.",
+      "legacy_acceptance": "raw design 없이 비교 가능",
+      "legacy_artifact": "campaign report",
+      "integrated_task_ids": [
+        "ICF-03-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-01",
+      "title": "Project/workspace/revision model",
+      "legacy_goal": "project, workspace, revision DAG와 promotion 규칙을 구현한다.",
+      "legacy_acceptance": "부모/자식 revision과 immutable manifest",
+      "legacy_artifact": "revision service",
+      "integrated_task_ids": [
+        "ICF-04-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-02",
+      "title": "Library/cell/view controlled creation",
+      "legacy_goal": "approved work library 안에서 cell/view를 생성한다.",
+      "legacy_acceptance": "source/PDK write 0건",
+      "legacy_artifact": "cellview create tool",
+      "integrated_task_ids": [
+        "ICF-04-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-03",
+      "title": "Instance master registry",
+      "legacy_goal": "PDK/analogLib allowlist를 logical device ID로 추상화한다.",
+      "legacy_acceptance": "arbitrary lib/cell 입력 거부",
+      "legacy_artifact": "instance registry",
+      "integrated_task_ids": [
+        "ICF-04-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-04",
+      "title": "Add/remove/move instance",
+      "legacy_goal": "typed instance operation과 dry-run을 구현한다.",
+      "legacy_acceptance": "exact diff와 rollback",
+      "legacy_artifact": "instance tools",
+      "integrated_task_ids": [
+        "ICF-04-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-05",
+      "title": "Device parameter mutation",
+      "legacy_goal": "W/L/m/intent parameter를 PDK schema로 검증한다.",
+      "legacy_acceptance": "unit/range/parameter allowlist",
+      "legacy_artifact": "parameter tools",
+      "integrated_task_ids": [
+        "ICF-04-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-06",
+      "title": "Net and pin authoring",
+      "legacy_goal": "net 생성, terminal 연결, pin 생성/방향 검증을 구현한다.",
+      "legacy_acceptance": "connectivity hash 재현 가능",
+      "legacy_artifact": "net/pin tools",
+      "integrated_task_ids": [
+        "ICF-04-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-07",
+      "title": "Wire and schematic geometry",
+      "legacy_goal": "schematic presentation geometry를 deterministic하게 생성한다.",
+      "legacy_acceptance": "canonical placement, no overlap",
+      "legacy_artifact": "schematic geometry",
+      "integrated_task_ids": [
+        "ICF-04-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-08",
+      "title": "Hierarchy and symbols",
+      "legacy_goal": "하위 cell, symbol view, instance hierarchy를 관리한다.",
+      "legacy_acceptance": "symbol/schematic pin consistency",
+      "legacy_artifact": "hierarchy tools",
+      "integrated_task_ids": [
+        "ICF-04-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-09",
+      "title": "Testbench generator",
+      "legacy_goal": "supply/source/load/clock/measure fixture를 profile template로 생성한다.",
+      "legacy_acceptance": "실제 Spectre baseline 성공",
+      "legacy_artifact": "testbench tools",
+      "integrated_task_ids": [
+        "ICF-04-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-10",
+      "title": "Connectivity validator",
+      "legacy_goal": "floating pin, multiple driver, missing supply, illegal bulk 연결을 검사한다.",
+      "legacy_acceptance": "known bad fixtures 탐지",
+      "legacy_artifact": "schematic lint",
+      "integrated_task_ids": [
+        "ICF-04-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-11",
+      "title": "Canonical schematic fingerprint",
+      "legacy_goal": "instance/master/parameters/connectivity를 canonical hash로 만든다.",
+      "legacy_acceptance": "GUI metadata 변화에 안정적",
+      "legacy_artifact": "logical fingerprint",
+      "integrated_task_ids": [
+        "ICF-04-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-12",
+      "title": "Schematic semantic diff",
+      "legacy_goal": "revision 간 device/net/parameter diff를 구조화한다.",
+      "legacy_acceptance": "raw OA 파일 비교 없이 의미 diff",
+      "legacy_artifact": "diff tool",
+      "integrated_task_ids": [
+        "ICF-04-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-13",
+      "title": "Transaction and rollback",
+      "legacy_goal": "multi-operation plan을 all-or-nothing으로 적용한다.",
+      "legacy_acceptance": "실패 시 baseline 복원",
+      "legacy_artifact": "transaction engine",
+      "integrated_task_ids": [
+        "ICF-04-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-14",
+      "title": "Promotion/freeze",
+      "legacy_goal": "검증된 revision을 schematic freeze 상태로 승격한다.",
+      "legacy_acceptance": "승인·hash·evidence 요구",
+      "legacy_artifact": "freeze gate",
+      "integrated_task_ids": [
+        "ICF-04-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P2-15",
+      "title": "Golden inverter/diffamp authoring demo",
+      "legacy_goal": "빈 work cell에서 두 회로를 생성하고 simulate한다.",
+      "legacy_acceptance": "DRC 이전 schematic E2E",
+      "legacy_artifact": "authoring benchmark",
+      "integrated_task_ids": [
+        "ICF-04-09"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-01",
+      "title": "Specification contract",
+      "legacy_goal": "gain/BW/PM/power/noise/swing/input/output/load/yield 사양 schema를 만든다.",
+      "legacy_acceptance": "모든 objective/constraint에 unit",
+      "legacy_artifact": "spec schema",
+      "integrated_task_ids": [
+        "ICF-06-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-02",
+      "title": "Device role and intent model",
+      "legacy_goal": "diff pair, mirror, tail, cascode, gain stage, compensation 역할을 기록한다.",
+      "legacy_acceptance": "schematic와 layout intent에 재사용",
+      "legacy_artifact": "design intent",
+      "integrated_task_ids": [
+        "ICF-06-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-03",
+      "title": "Topology template library",
+      "legacy_goal": "inverter, mirror, diff pair, OTA/opamp 후보 template를 만든다.",
+      "legacy_acceptance": "template별 connectivity test",
+      "legacy_artifact": "topology registry",
+      "integrated_task_ids": [
+        "ICF-06-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-04",
+      "title": "Initial sizing engine",
+      "legacy_goal": "gm/Id·current density·headroom 기반 초기값을 제안한다.",
+      "legacy_acceptance": "공정 범위 내 finite proposal",
+      "legacy_artifact": "sizing proposal",
+      "integrated_task_ids": [
+        "ICF-06-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-05",
+      "title": "Bias feasibility solver",
+      "legacy_goal": "operating region/headroom/current balance를 검사한다.",
+      "legacy_acceptance": "불가능 topology early reject",
+      "legacy_artifact": "bias solver",
+      "integrated_task_ids": [
+        "ICF-06-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-06",
+      "title": "Candidate revision generator",
+      "legacy_goal": "topology+sizing 조합을 work revision으로 생성한다.",
+      "legacy_acceptance": "deterministic revision",
+      "legacy_artifact": "candidate generator",
+      "integrated_task_ids": [
+        "ICF-06-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-07",
+      "title": "Multi-objective score",
+      "legacy_goal": "spec margin, power, area, robustness를 score한다.",
+      "legacy_acceptance": "weight/provenance/version 고정",
+      "legacy_artifact": "objective engine",
+      "integrated_task_ids": [
+        "ICF-06-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-08",
+      "title": "Optimization campaign",
+      "legacy_goal": "grid/random/Bayesian/evolutionary 중 bounded algorithm을 plugin화한다.",
+      "legacy_acceptance": "run budget 강제",
+      "legacy_artifact": "optimizer",
+      "integrated_task_ids": [
+        "ICF-06-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-09",
+      "title": "Topology mutation",
+      "legacy_goal": "승인된 template 간 topology 변경을 plan으로 생성한다.",
+      "legacy_acceptance": "임의 netlist 생성 금지",
+      "legacy_artifact": "topology planner",
+      "integrated_task_ids": [
+        "ICF-06-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-10",
+      "title": "Stability compensation optimizer",
+      "legacy_goal": "Cc/Rz/second pole를 AC/STB feedback으로 조정한다.",
+      "legacy_acceptance": "PM 및 bandwidth constraint",
+      "legacy_artifact": "compensation agent",
+      "integrated_task_ids": [
+        "ICF-06-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-11",
+      "title": "Noise/power optimizer",
+      "legacy_goal": "noise-power-speed Pareto frontier를 생성한다.",
+      "legacy_acceptance": "Pareto provenance",
+      "legacy_artifact": "tradeoff explorer",
+      "integrated_task_ids": [
+        "ICF-06-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-12",
+      "title": "PVT robust optimization",
+      "legacy_goal": "nominal이 아닌 worst corner objective를 포함한다.",
+      "legacy_acceptance": "corner budget 및 yield report",
+      "legacy_artifact": "robust optimizer",
+      "integrated_task_ids": [
+        "ICF-06-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-13",
+      "title": "Monte Carlo/yield closure",
+      "legacy_goal": "mismatch/process 분포에서 yield 기준을 검증한다.",
+      "legacy_acceptance": "seed/run count/confidence 기록",
+      "legacy_artifact": "yield campaign",
+      "integrated_task_ids": [
+        "ICF-06-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-14",
+      "title": "Human-in-the-loop topology gate",
+      "legacy_goal": "topology 변경 전 계획과 이유를 승인받는다.",
+      "legacy_acceptance": "승인 없는 큰 구조 변경 0건",
+      "legacy_artifact": "approval gate",
+      "integrated_task_ids": [
+        "ICF-06-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P3-15",
+      "title": "Differential amplifier autonomous benchmark",
+      "legacy_goal": "spec→candidate→optimization→freeze까지 재현한다.",
+      "legacy_acceptance": "최종 pre-layout spec pass",
+      "legacy_artifact": "benchmark report",
+      "integrated_task_ids": [
+        "ICF-06-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-01",
+      "title": "Layout read-only discovery",
+      "legacy_goal": "bbox, instances, shapes, pins, nets, layers를 metadata로 조회한다.",
+      "legacy_acceptance": "raw OA file 미노출",
+      "legacy_artifact": "layout inspect",
+      "integrated_task_ids": [
+        "ICF-05-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-02",
+      "title": "Layer-purpose registry",
+      "legacy_goal": "PDK의 허용 LPP와 grid를 logical ID로 매핑한다.",
+      "legacy_acceptance": "unknown layer 거부",
+      "legacy_artifact": "layer adapter",
+      "integrated_task_ids": [
+        "ICF-05-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-03",
+      "title": "PCell placement",
+      "legacy_goal": "approved device PCell을 parameterized inst로 생성한다.",
+      "legacy_acceptance": "master/parameter 검증",
+      "legacy_artifact": "layout add instance",
+      "integrated_task_ids": [
+        "ICF-05-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-04",
+      "title": "Move/rotate/orient",
+      "legacy_goal": "R0/R90/MX/MY 등 PDK 허용 orientation을 적용한다.",
+      "legacy_acceptance": "grid snap/overlap check",
+      "legacy_artifact": "placement operations",
+      "integrated_task_ids": [
+        "ICF-05-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-05",
+      "title": "Primitive shapes",
+      "legacy_goal": "rect/path/polygon을 typed geometry로 생성한다.",
+      "legacy_acceptance": "bbox/layer/width validation",
+      "legacy_artifact": "geometry tools",
+      "integrated_task_ids": [
+        "ICF-05-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-06",
+      "title": "Via/contact creation",
+      "legacy_goal": "fixed via definitions와 via array를 생성한다.",
+      "legacy_acceptance": "from/to layer consistency",
+      "legacy_artifact": "via tools",
+      "integrated_task_ids": [
+        "ICF-05-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-07",
+      "title": "Layout pin creation",
+      "legacy_goal": "net/pin/layer/purpose를 검증하여 pin을 만든다.",
+      "legacy_acceptance": "schematic pin mapping",
+      "legacy_artifact": "pin tool",
+      "integrated_task_ids": [
+        "ICF-05-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-08",
+      "title": "Floorplan boundary",
+      "legacy_goal": "cell boundary, keepout, routing region을 정의한다.",
+      "legacy_acceptance": "area/boundary contract",
+      "legacy_artifact": "floorplan tool",
+      "integrated_task_ids": [
+        "ICF-07-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-09",
+      "title": "Net-aware route segments",
+      "legacy_goal": "schematic connectivity와 연결된 segment를 생성한다.",
+      "legacy_acceptance": "open/short precheck",
+      "legacy_artifact": "routing primitive",
+      "integrated_task_ids": [
+        "ICF-07-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-10",
+      "title": "Layout transaction/dry-run",
+      "legacy_goal": "geometry plan, diff, backup, rollback을 구현한다.",
+      "legacy_acceptance": "exact semantic diff",
+      "legacy_artifact": "layout transaction",
+      "integrated_task_ids": [
+        "ICF-07-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-11",
+      "title": "Connectivity extraction preview",
+      "legacy_goal": "layout 내 예상 net connectivity를 read-only 검사한다.",
+      "legacy_acceptance": "known open/short 탐지",
+      "legacy_artifact": "connectivity preview",
+      "integrated_task_ids": [
+        "ICF-05-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-12",
+      "title": "Layout revision fingerprint",
+      "legacy_goal": "instance/shape/pin/connectivity canonical hash를 만든다.",
+      "legacy_acceptance": "OA metadata에 안정적",
+      "legacy_artifact": "layout fingerprint",
+      "integrated_task_ids": [
+        "ICF-07-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-13",
+      "title": "Preview/export artifact",
+      "legacy_goal": "proprietary data를 보호하며 bbox/placement summary를 생성한다.",
+      "legacy_acceptance": "bounded preview",
+      "legacy_artifact": "layout report",
+      "integrated_task_ids": [
+        "ICF-07-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P4-14",
+      "title": "Inverter layout primitive demo",
+      "legacy_goal": "PCell placement, contacts, routes, pins를 생성한다.",
+      "legacy_acceptance": "첫 DRC 전 layout E2E",
+      "legacy_artifact": "layout demo",
+      "integrated_task_ids": [
+        "ICF-05-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-01",
+      "title": "Schematic-to-layout intent compiler",
+      "legacy_goal": "device role을 matching/symmetry/guard-ring constraint로 변환한다.",
+      "legacy_acceptance": "intent coverage report",
+      "legacy_artifact": "intent compiler",
+      "integrated_task_ids": [
+        "ICF-07-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-02",
+      "title": "Finger/fold planner",
+      "legacy_goal": "W/L/m과 PDK max finger 규칙에서 finger arrangement를 계산한다.",
+      "legacy_acceptance": "electrical equivalence",
+      "legacy_artifact": "finger planner",
+      "integrated_task_ids": [
+        "ICF-07-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-03",
+      "title": "Matched pair generator",
+      "legacy_goal": "동일 orientation, shared environment, symmetric placement를 생성한다.",
+      "legacy_acceptance": "pair symmetry metrics",
+      "legacy_artifact": "matched pair",
+      "integrated_task_ids": [
+        "ICF-07-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-04",
+      "title": "Current mirror generator",
+      "legacy_goal": "abutment/dummy/contact symmetry를 적용한다.",
+      "legacy_acceptance": "mirror matching intent pass",
+      "legacy_artifact": "mirror template",
+      "integrated_task_ids": [
+        "ICF-07-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-05",
+      "title": "Common-centroid generator",
+      "legacy_goal": "ABBA/BAAB 등 pattern과 dummy를 생성한다.",
+      "legacy_acceptance": "centroid 계산 검증",
+      "legacy_artifact": "centroid tool",
+      "integrated_task_ids": [
+        "ICF-07-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-06",
+      "title": "Interdigitation",
+      "legacy_goal": "multi-device pattern과 edge dummy를 생성한다.",
+      "legacy_acceptance": "pattern/connectivity correctness",
+      "legacy_artifact": "interdigitation tool",
+      "integrated_task_ids": [
+        "ICF-07-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-07",
+      "title": "Source/drain abutment",
+      "legacy_goal": "전기적으로 허용된 diffusion sharing만 적용한다.",
+      "legacy_acceptance": "LVS equivalence precheck",
+      "legacy_artifact": "abutment planner",
+      "integrated_task_ids": [
+        "ICF-07-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-08",
+      "title": "Guard ring/substrate contact",
+      "legacy_goal": "well/substrate tie와 ring을 PDK adapter로 생성한다.",
+      "legacy_acceptance": "latch-up/coverage rule",
+      "legacy_artifact": "guard-ring tool",
+      "integrated_task_ids": [
+        "ICF-07-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-09",
+      "title": "Symmetric differential routing",
+      "legacy_goal": "VIN/VOUT differential pair routing balance를 관리한다.",
+      "legacy_acceptance": "length/via/layer symmetry metric",
+      "legacy_artifact": "symmetry router",
+      "integrated_task_ids": [
+        "ICF-07-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-10",
+      "title": "Power/ground routing",
+      "legacy_goal": "current density-aware width/via array와 rails를 만든다.",
+      "legacy_acceptance": "IR/current density policy",
+      "legacy_artifact": "power router",
+      "integrated_task_ids": [
+        "ICF-07-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-11",
+      "title": "Parasitic-aware placement heuristic",
+      "legacy_goal": "critical net length/coupling estimate로 배치를 score한다.",
+      "legacy_acceptance": "placement score reproducible",
+      "legacy_artifact": "placement optimizer",
+      "integrated_task_ids": [
+        "ICF-07-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-12",
+      "title": "Density/fill planning",
+      "legacy_goal": "foundry-required fill을 functional layout과 분리한다.",
+      "legacy_acceptance": "LVS/PEX 영향 기록",
+      "legacy_artifact": "fill planner",
+      "integrated_task_ids": [
+        "ICF-07-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-13",
+      "title": "Layout plan approval artifact",
+      "legacy_goal": "floorplan·groups·estimated area·risks를 사용자에게 제시한다.",
+      "legacy_acceptance": "plan hash 승인",
+      "legacy_artifact": "layout plan",
+      "integrated_task_ids": [
+        "ICF-07-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P5-14",
+      "title": "Differential amplifier layout benchmark",
+      "legacy_goal": "input pair/mirror/tail/guard ring/routing을 생성한다.",
+      "legacy_acceptance": "DRC/LVS phase 진입 가능",
+      "legacy_artifact": "analog layout demo",
+      "integrated_task_ids": [
+        "ICF-07-09"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-01",
+      "title": "Verification capability probe",
+      "legacy_goal": "assura/pvs/calibre executable, license, deck, batch mode를 read-only 확인한다.",
+      "legacy_acceptance": "backend matrix 확정",
+      "legacy_artifact": "capability report",
+      "integrated_task_ids": [
+        "ICF-05-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-02",
+      "title": "DRC plan contract",
+      "legacy_goal": "top cell, revision, backend, deck hash, budget을 canonical plan으로 만든다.",
+      "legacy_acceptance": "plan hash/approval",
+      "legacy_artifact": "DRC plan",
+      "integrated_task_ids": [
+        "ICF-05-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-03",
+      "title": "DRC async lifecycle",
+      "legacy_goal": "submit/status/log/result/cancel을 기존 job system에 통합한다.",
+      "legacy_acceptance": "real layout DRC run",
+      "legacy_artifact": "DRC tools",
+      "integrated_task_ids": [
+        "ICF-05-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-04",
+      "title": "DRC result parser",
+      "legacy_goal": "rule ID, bbox, count, severity를 structured JSON으로 만든다.",
+      "legacy_acceptance": "raw log 미노출",
+      "legacy_artifact": "DRC parser",
+      "integrated_task_ids": [
+        "ICF-05-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-05",
+      "title": "Violation-to-object mapping",
+      "legacy_goal": "bbox와 layout object reference를 안전하게 매핑한다.",
+      "legacy_acceptance": "ambiguous mapping 표시",
+      "legacy_artifact": "violation mapper",
+      "integrated_task_ids": [
+        "ICF-08-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-06",
+      "title": "DRC fix proposal",
+      "legacy_goal": "spacing/width/enclosure/via 등 fix class를 계획한다.",
+      "legacy_acceptance": "실행 전 exact diff",
+      "legacy_artifact": "fix planner",
+      "integrated_task_ids": [
+        "ICF-08-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-07",
+      "title": "Bounded DRC auto-fix loop",
+      "legacy_goal": "iteration/shape mutation/area budget 내에서 수정·재실행한다.",
+      "legacy_acceptance": "무한 loop 없음, rollback",
+      "legacy_artifact": "DRC agent",
+      "integrated_task_ids": [
+        "ICF-08-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-08",
+      "title": "LVS plan/lifecycle",
+      "legacy_goal": "fixed schematic/layout pair로 LVS를 실행한다.",
+      "legacy_acceptance": "real LVS run",
+      "legacy_artifact": "LVS tools",
+      "integrated_task_ids": [
+        "ICF-05-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-09",
+      "title": "LVS result parser",
+      "legacy_goal": "open/short/missing/extra/parameter/pin mismatch를 구조화한다.",
+      "legacy_acceptance": "device/net mapping",
+      "legacy_artifact": "LVS parser",
+      "integrated_task_ids": [
+        "ICF-05-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-10",
+      "title": "LVS fix proposal",
+      "legacy_goal": "connectivity/label/pin/device mismatch에 bounded fix를 제안한다.",
+      "legacy_acceptance": "topology 변경 승인 gate",
+      "legacy_artifact": "LVS planner",
+      "integrated_task_ids": [
+        "ICF-08-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-11",
+      "title": "ERC/checks",
+      "legacy_goal": "floating gate, bulk tie, supply conflict, illegal connection을 검사한다.",
+      "legacy_acceptance": "ERC profile pass",
+      "legacy_artifact": "ERC tool",
+      "integrated_task_ids": [
+        "ICF-08-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-12",
+      "title": "Antenna/DFM hooks",
+      "legacy_goal": "PDK가 제공할 경우 별도 adapter로 활성화한다.",
+      "legacy_acceptance": "unsupported는 명확히 보고",
+      "legacy_artifact": "optional checks",
+      "integrated_task_ids": [
+        "ICF-08-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-13",
+      "title": "Verification evidence bundle",
+      "legacy_goal": "deck/version/hash/result/fixes/iterations를 immutable bundle로 저장한다.",
+      "legacy_acceptance": "재현 가능 evidence",
+      "legacy_artifact": "signoff bundle",
+      "integrated_task_ids": [
+        "ICF-08-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P6-14",
+      "title": "DRC=0/LVS=PASS benchmark",
+      "legacy_goal": "agent-generated differential amplifier layout을 clean하게 만든다.",
+      "legacy_acceptance": "physical verification pass",
+      "legacy_artifact": "benchmark report",
+      "integrated_task_ids": [
+        "ICF-08-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-01",
+      "title": "PEX/RCX capability probe",
+      "legacy_goal": "지원 backend, output view/file, corner, runset을 확인한다.",
+      "legacy_acceptance": "technology-specific path 확정",
+      "legacy_artifact": "PEX capability",
+      "integrated_task_ids": [
+        "ICF-05-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-02",
+      "title": "PEX plan/lifecycle",
+      "legacy_goal": "LVS-passed revision만 extraction 가능하게 한다.",
+      "legacy_acceptance": "LVS gate enforcement",
+      "legacy_artifact": "PEX tools",
+      "integrated_task_ids": [
+        "ICF-08-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-03",
+      "title": "Extracted artifact validation",
+      "legacy_goal": "output 존재, top cell, net/device count, hash를 검증한다.",
+      "legacy_acceptance": "corrupt output fail-closed",
+      "legacy_artifact": "PEX validator",
+      "integrated_task_ids": [
+        "ICF-08-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-04",
+      "title": "Post-layout config/profile",
+      "legacy_goal": "extracted view를 사용하는 fixed simulation profile을 만든다.",
+      "legacy_acceptance": "baseline post-layout E2E",
+      "legacy_artifact": "postlayout profile",
+      "integrated_task_ids": [
+        "ICF-08-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-05",
+      "title": "Pre/post metric comparison",
+      "legacy_goal": "동일 contract로 gain/BW/PM/power/noise 등을 비교한다.",
+      "legacy_acceptance": "delta와 margin report",
+      "legacy_artifact": "comparison tool",
+      "integrated_task_ids": [
+        "ICF-08-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-06",
+      "title": "Parasitic hotspot analysis",
+      "legacy_goal": "critical net R/C와 성능 저하 상관을 구조화한다.",
+      "legacy_acceptance": "bounded summary",
+      "legacy_artifact": "hotspot report",
+      "integrated_task_ids": [
+        "ICF-08-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-07",
+      "title": "Layout optimization loop",
+      "legacy_goal": "placement/routing/metal/via 변경을 plan하고 재검증한다.",
+      "legacy_acceptance": "iteration budget/rollback",
+      "legacy_artifact": "postlayout optimizer",
+      "integrated_task_ids": [
+        "ICF-08-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-08",
+      "title": "Schematic resize feedback",
+      "legacy_goal": "layout만으로 해결 안 되면 sizing revision을 생성한다.",
+      "legacy_acceptance": "cross-domain approval",
+      "legacy_artifact": "resize planner",
+      "integrated_task_ids": [
+        "ICF-08-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-09",
+      "title": "Post-layout PVT/MC",
+      "legacy_goal": "필요 corner와 mismatch까지 post-layout에서 검증한다.",
+      "legacy_acceptance": "budgeted campaign",
+      "legacy_artifact": "postlayout robustness",
+      "integrated_task_ids": [
+        "ICF-08-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P7-10",
+      "title": "Signoff-ready revision freeze",
+      "legacy_goal": "DRC/LVS/PEX/post-layout spec가 모두 pass한 revision을 freeze한다.",
+      "legacy_acceptance": "immutable signoff manifest",
+      "legacy_artifact": "signoff gate",
+      "integrated_task_ids": [
+        "ICF-08-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-01",
+      "title": "Technology adapter framework",
+      "legacy_goal": "PDK-dependent device/layer/model/deck/stream 정보를 plugin contract로 분리한다.",
+      "legacy_acceptance": "gpdk090 adapter로 regression pass",
+      "legacy_artifact": "technology API",
+      "integrated_task_ids": [
+        "ICF-01-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-02",
+      "title": "PDK secure onboarding",
+      "legacy_goal": "MyChip PDK manifest, license, hash, access boundary를 등록한다.",
+      "legacy_acceptance": "raw PDK Git commit 0건",
+      "legacy_artifact": "PDK registry",
+      "integrated_task_ids": [
+        "ICF-10-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-03",
+      "title": "Device/PCell inventory",
+      "legacy_goal": "공식 PDK에서 NMOS/PMOS/R/C/diode/IO 등 exact device schema를 추출한다.",
+      "legacy_acceptance": "approved device map",
+      "legacy_artifact": "device adapter",
+      "integrated_task_ids": [
+        "ICF-10-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-04",
+      "title": "Model/corner inventory",
+      "legacy_goal": "Spectre model, section, temperature, mismatch 지원을 등록한다.",
+      "legacy_acceptance": "baseline smoke per section",
+      "legacy_artifact": "model adapter",
+      "integrated_task_ids": [
+        "ICF-10-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-05",
+      "title": "Layer/via/grid inventory",
+      "legacy_goal": "LPP, routing metals, via, grid, purpose를 등록한다.",
+      "legacy_acceptance": "layout primitive capability",
+      "legacy_artifact": "layout adapter",
+      "integrated_task_ids": [
+        "ICF-10-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-06",
+      "title": "Verification deck inventory",
+      "legacy_goal": "DRC/LVS/PEX backend와 fixed runset을 등록한다.",
+      "legacy_acceptance": "deck hash/version verified",
+      "legacy_artifact": "verification adapter",
+      "integrated_task_ids": [
+        "ICF-10-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-07",
+      "title": "IO/pad/ESD inventory",
+      "legacy_goal": "공식 pad library와 integration rule을 등록한다.",
+      "legacy_acceptance": "pad mapping approved",
+      "legacy_artifact": "IO adapter",
+      "integrated_task_ids": [
+        "ICF-10-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-08",
+      "title": "Topology feasibility review",
+      "legacy_goal": "GPDK090 topology가 MyChip supply/device에 가능한지 분석한다.",
+      "legacy_acceptance": "feasible/modify/reject 판정",
+      "legacy_artifact": "porting report",
+      "integrated_task_ids": [
+        "ICF-10-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-09",
+      "title": "Initial re-sizing",
+      "legacy_goal": "MyChip model에서 gm/Id/headroom 기반 초기 sizing을 생성한다.",
+      "legacy_acceptance": "DC feasibility pass",
+      "legacy_artifact": "ported revision",
+      "integrated_task_ids": [
+        "ICF-10-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-10",
+      "title": "Bias and operating-point closure",
+      "legacy_goal": "새 공정에서 bias/current/saturation margin을 최적화한다.",
+      "legacy_acceptance": "DCOP criteria pass",
+      "legacy_artifact": "bias campaign",
+      "integrated_task_ids": [
+        "ICF-10-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-11",
+      "title": "Pre-layout spec re-optimization",
+      "legacy_goal": "AC/TRAN/Noise/PVT/MC를 다시 수행한다.",
+      "legacy_acceptance": "MyChip pre-layout spec pass",
+      "legacy_artifact": "ported schematic freeze",
+      "integrated_task_ids": [
+        "ICF-10-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-12",
+      "title": "Layout regeneration",
+      "legacy_goal": "GPDK090 좌표 scaling 없이 MyChip PCell/rule로 재합성한다.",
+      "legacy_acceptance": "layout intent preserved",
+      "legacy_artifact": "ported layout",
+      "integrated_task_ids": [
+        "ICF-10-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-13",
+      "title": "MyChip DRC/LVS/PEX",
+      "legacy_goal": "공식 deck으로 physical signoff를 수행한다.",
+      "legacy_acceptance": "DRC=0/LVS=PASS/PEX pass",
+      "legacy_artifact": "MyChip signoff evidence",
+      "integrated_task_ids": [
+        "ICF-10-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-14",
+      "title": "Cross-PDK comparison",
+      "legacy_goal": "spec, area, power, speed, robustness 차이를 기록한다.",
+      "legacy_acceptance": "technology-neutral report",
+      "legacy_artifact": "migration report",
+      "integrated_task_ids": [
+        "ICF-10-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P8-15",
+      "title": "MyChip design freeze",
+      "legacy_goal": "제작 대상 revision을 immutable하게 freeze한다.",
+      "legacy_acceptance": "PDK/hash/approval complete",
+      "legacy_artifact": "target freeze",
+      "integrated_task_ids": [
+        "ICF-10-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-01",
+      "title": "Top-level architecture",
+      "legacy_goal": "core, bias, IO, supply, ground, test pin 구조를 정의한다.",
+      "legacy_acceptance": "top plan 승인",
+      "legacy_artifact": "chip top plan",
+      "integrated_task_ids": [
+        "ICF-11-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-02",
+      "title": "Padframe generation",
+      "legacy_goal": "official pad cells과 orientation/sequence를 배치한다.",
+      "legacy_acceptance": "pad list/pin map pass",
+      "legacy_artifact": "padframe",
+      "integrated_task_ids": [
+        "ICF-11-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-03",
+      "title": "ESD/IO connectivity",
+      "legacy_goal": "pad-to-core protection과 IO rule을 검증한다.",
+      "legacy_acceptance": "ERC/LVS connectivity pass",
+      "legacy_artifact": "IO evidence",
+      "integrated_task_ids": [
+        "ICF-11-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-04",
+      "title": "Power domain/decoupling",
+      "legacy_goal": "supply ring, rails, decap, current path를 설계한다.",
+      "legacy_acceptance": "IR/current density policy",
+      "legacy_artifact": "power plan",
+      "integrated_task_ids": [
+        "ICF-11-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-05",
+      "title": "Seal ring/keepout/chip boundary",
+      "legacy_goal": "공식 rule에 따라 top boundary를 구성한다.",
+      "legacy_acceptance": "die size/boundary pass",
+      "legacy_artifact": "boundary layout",
+      "integrated_task_ids": [
+        "ICF-11-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-06",
+      "title": "Top routing",
+      "legacy_goal": "core-pad, supply, ground, sensitive nets를 route한다.",
+      "legacy_acceptance": "open/short 0건",
+      "legacy_artifact": "top routing",
+      "integrated_task_ids": [
+        "ICF-11-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-07",
+      "title": "Fill/density/DFM",
+      "legacy_goal": "공식 deck에 맞는 fill/density를 적용한다.",
+      "legacy_acceptance": "density/DRC pass",
+      "legacy_artifact": "fill evidence",
+      "integrated_task_ids": [
+        "ICF-11-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-08",
+      "title": "Final DRC/LVS/ERC",
+      "legacy_goal": "chip top 전체 verification을 수행한다.",
+      "legacy_acceptance": "final clean",
+      "legacy_artifact": "top signoff",
+      "integrated_task_ids": [
+        "ICF-11-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-09",
+      "title": "Final PEX/post-layout",
+      "legacy_goal": "pad/package model 포함 여부를 명확히 하여 최종 simulation한다.",
+      "legacy_acceptance": "final spec pass",
+      "legacy_artifact": "top postlayout report",
+      "integrated_task_ids": [
+        "ICF-11-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-10",
+      "title": "Stream-out map validation",
+      "legacy_goal": "official map으로 GDS/OASIS를 생성하고 layer summary를 검증한다.",
+      "legacy_acceptance": "unknown/forbidden layer 0건",
+      "legacy_artifact": "stream-out report",
+      "integrated_task_ids": [
+        "ICF-11-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-11",
+      "title": "GDS integrity checks",
+      "legacy_goal": "top cell, hierarchy, bbox, cell count, hash, reopen 검증을 수행한다.",
+      "legacy_acceptance": "round-trip open 성공",
+      "legacy_artifact": "GDS manifest",
+      "integrated_task_ids": [
+        "ICF-11-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-12",
+      "title": "Submission package builder",
+      "legacy_goal": "GDS, reports, pin map, checksums, forms checklist를 묶는다.",
+      "legacy_acceptance": "tapeout-ready package",
+      "legacy_artifact": "submission bundle",
+      "integrated_task_ids": [
+        "ICF-11-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-13",
+      "title": "Independent signoff review",
+      "legacy_goal": "별도 reviewer agent와 사람이 evidence를 검토한다.",
+      "legacy_acceptance": "critical issue 0건",
+      "legacy_artifact": "review report",
+      "integrated_task_ids": [
+        "ICF-11-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-14",
+      "title": "Human tapeout approval gate",
+      "legacy_goal": "최종 GDS hash와 submission package에 explicit approval을 요구한다.",
+      "legacy_acceptance": "승인 전 업로드 0건",
+      "legacy_artifact": "approval record",
+      "integrated_task_ids": [
+        "ICF-11-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P9-15",
+      "title": "Archive and reproducibility",
+      "legacy_goal": "source revision, PDK hash, tools, evidence를 장기 보관한다.",
+      "legacy_acceptance": "clean restore rehearsal",
+      "legacy_artifact": "tapeout archive",
+      "integrated_task_ids": [
+        "ICF-11-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-01",
+      "title": "Campaign state machine",
+      "legacy_goal": "spec부터 tapeout-ready까지 stage/status/transition을 정의한다.",
+      "legacy_acceptance": "invalid transition 거부",
+      "legacy_artifact": "campaign engine",
+      "integrated_task_ids": [
+        "ICF-01-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-02",
+      "title": "Task graph planner",
+      "legacy_goal": "dependency-aware plan과 budget을 생성한다.",
+      "legacy_acceptance": "cycle/unknown capability 거부",
+      "legacy_artifact": "task graph",
+      "integrated_task_ids": [
+        "ICF-12-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-03",
+      "title": "Agent role contracts",
+      "legacy_goal": "각 역할의 허용 도구와 output schema를 분리한다.",
+      "legacy_acceptance": "least privilege",
+      "legacy_artifact": "role policies",
+      "integrated_task_ids": [
+        "ICF-12-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-04",
+      "title": "Approval scheduler",
+      "legacy_goal": "topology/layout/large compute/signoff/tapeout gate를 관리한다.",
+      "legacy_acceptance": "승인 reference 강제",
+      "legacy_artifact": "approval engine",
+      "integrated_task_ids": [
+        "ICF-01-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-05",
+      "title": "Budget manager",
+      "legacy_goal": "simulation points, MC runs, layout iterations, verification runs를 제한한다.",
+      "legacy_acceptance": "budget 초과 0건",
+      "legacy_artifact": "budget service",
+      "integrated_task_ids": [
+        "ICF-01-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-06",
+      "title": "Failure taxonomy/recovery",
+      "legacy_goal": "recoverable, blocked, unsafe, operator-required를 구분한다.",
+      "legacy_acceptance": "automatic retry policy 준수",
+      "legacy_artifact": "recovery engine",
+      "integrated_task_ids": [
+        "ICF-12-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-07",
+      "title": "Revision selection/Pareto archive",
+      "legacy_goal": "후보 revision과 Pareto frontier를 보존한다.",
+      "legacy_acceptance": "best revision provenance",
+      "legacy_artifact": "revision scorer",
+      "integrated_task_ids": [
+        "ICF-06-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-08",
+      "title": "Cross-domain feedback",
+      "legacy_goal": "simulation→sizing→layout→PEX feedback을 typed proposal로 변환한다.",
+      "legacy_acceptance": "unbounded mutation 금지",
+      "legacy_artifact": "feedback planner",
+      "integrated_task_ids": [
+        "ICF-12-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-09",
+      "title": "Independent reviewer agent",
+      "legacy_goal": "plan/diff/evidence를 별도 pass로 검토한다.",
+      "legacy_acceptance": "self-approval 금지",
+      "legacy_artifact": "review service",
+      "integrated_task_ids": [
+        "ICF-12-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-10",
+      "title": "End-to-end reproducibility",
+      "legacy_goal": "동일 spec/seed/tool/PDK에서 campaign 재현을 검증한다.",
+      "legacy_acceptance": "deterministic evidence",
+      "legacy_artifact": "replay system",
+      "integrated_task_ids": [
+        "ICF-12-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-11",
+      "title": "Benchmark suite",
+      "legacy_goal": "inverter, mirror, diffamp, opamp 등 점진 benchmark를 만든다.",
+      "legacy_acceptance": "각 benchmark DoD",
+      "legacy_artifact": "benchmark registry",
+      "integrated_task_ids": [
+        "ICF-12-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-12",
+      "title": "Spec-to-tapeout demo",
+      "legacy_goal": "GPDK090에서 전체 chain을 한 번 재현한다.",
+      "legacy_acceptance": "L7 acceptance pass",
+      "legacy_artifact": "v2.0 demo",
+      "integrated_task_ids": [
+        "ICF-12-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P10-13",
+      "title": "MyChip tapeout-ready demo",
+      "legacy_goal": "공식 PDK에서 제출 전 단계까지 재현한다.",
+      "legacy_acceptance": "human approval 직전 상태",
+      "legacy_artifact": "target demo",
+      "integrated_task_ids": [
+        "ICF-12-07"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-01",
+      "title": "Measurement specification",
+      "legacy_goal": "DC/AC/transient/noise/power 측정 절차와 limits를 정의한다.",
+      "legacy_acceptance": "사양/안전 승인",
+      "legacy_artifact": "measurement plan",
+      "integrated_task_ids": [
+        "ICF-13-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-02",
+      "title": "PCB/package/pin map model",
+      "legacy_goal": "package와 board connectivity를 machine-readable로 만든다.",
+      "legacy_acceptance": "pin map consistency",
+      "legacy_artifact": "hardware manifest",
+      "integrated_task_ids": [
+        "ICF-13-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-03",
+      "title": "Instrument adapter",
+      "legacy_goal": "approved instrument와 bounded command template를 제공한다.",
+      "legacy_acceptance": "arbitrary SCPI 금지",
+      "legacy_artifact": "instrument MCP",
+      "integrated_task_ids": [
+        "ICF-13-02"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-04",
+      "title": "Calibration workflow",
+      "legacy_goal": "open/short/load/reference/calibration record를 관리한다.",
+      "legacy_acceptance": "calibration evidence",
+      "legacy_artifact": "calibration service",
+      "integrated_task_ids": [
+        "ICF-13-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-05",
+      "title": "Automated characterization",
+      "legacy_goal": "voltage/frequency/temperature sweep를 안전 budget으로 수행한다.",
+      "legacy_acceptance": "hardware limits 준수",
+      "legacy_artifact": "silicon campaign",
+      "integrated_task_ids": [
+        "ICF-13-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-06",
+      "title": "Data ingestion",
+      "legacy_goal": "CSV/binary 측정 데이터를 versioned schema로 저장한다.",
+      "legacy_acceptance": "source hash/provenance",
+      "legacy_artifact": "measurement store",
+      "integrated_task_ids": [
+        "ICF-13-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-07",
+      "title": "Sim-to-silicon comparison",
+      "legacy_goal": "pre/post/silicon metric을 동일 contract로 비교한다.",
+      "legacy_acceptance": "uncertainty 포함",
+      "legacy_artifact": "correlation report",
+      "integrated_task_ids": [
+        "ICF-13-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-08",
+      "title": "Discrepancy diagnosis",
+      "legacy_goal": "model/package/PCB/measurement/design 원인을 rank한다.",
+      "legacy_acceptance": "evidence-based hypotheses",
+      "legacy_artifact": "diagnosis agent",
+      "integrated_task_ids": [
+        "ICF-13-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-09",
+      "title": "Model/design feedback",
+      "legacy_goal": "다음 revision의 sizing/layout/test 개선안을 생성한다.",
+      "legacy_acceptance": "approval 기반 redesign",
+      "legacy_artifact": "feedback plan",
+      "integrated_task_ids": [
+        "ICF-13-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P11-10",
+      "title": "Silicon learning archive",
+      "legacy_goal": "설계·simulation·layout·실리콘 데이터를 연결한다.",
+      "legacy_acceptance": "재사용 가능한 lesson",
+      "legacy_artifact": "silicon knowledge base",
+      "integrated_task_ids": [
+        "ICF-13-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-01",
+      "title": "Multi-project registry",
+      "legacy_goal": "프로젝트별 workspace/evidence/policy를 분리한다.",
+      "legacy_acceptance": "cross-project access 차단",
+      "legacy_artifact": "project service",
+      "integrated_task_ids": [
+        "ICF-14-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-02",
+      "title": "Multi-PDK adapter registry",
+      "legacy_goal": "gpdk090/MyChip/기타 PDK adapter를 versioning한다.",
+      "legacy_acceptance": "PDK drift detection",
+      "legacy_artifact": "adapter registry",
+      "integrated_task_ids": [
+        "ICF-14-01"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-03",
+      "title": "Remote HTTP MCP",
+      "legacy_goal": "필요할 때만 authentication을 갖춘 service mode를 추가한다.",
+      "legacy_acceptance": "stdio regression 없음",
+      "legacy_artifact": "service deployment",
+      "integrated_task_ids": [
+        "ICF-14-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-04",
+      "title": "Role-based access",
+      "legacy_goal": "read/compute/write/signoff/tapeout 권한을 사용자별로 분리한다.",
+      "legacy_acceptance": "least privilege",
+      "legacy_artifact": "RBAC",
+      "integrated_task_ids": [
+        "ICF-14-03"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-05",
+      "title": "License-aware scheduler",
+      "legacy_goal": "Cadence/verification license capacity를 고려한다.",
+      "legacy_acceptance": "과다 checkout 방지",
+      "legacy_artifact": "scheduler",
+      "integrated_task_ids": [
+        "ICF-14-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-06",
+      "title": "Artifact store",
+      "legacy_goal": "대규모 PSF/GDS/evidence를 policy 기반 저장한다.",
+      "legacy_acceptance": "hash/retention/access",
+      "legacy_artifact": "artifact service",
+      "integrated_task_ids": [
+        "ICF-14-04"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-07",
+      "title": "Observability",
+      "legacy_goal": "job/campaign/verification/agent decision metrics를 수집한다.",
+      "legacy_acceptance": "secret/design content 미노출",
+      "legacy_artifact": "monitoring",
+      "integrated_task_ids": [
+        "ICF-14-05"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-08",
+      "title": "Backup/disaster recovery",
+      "legacy_goal": "repository, runner config, evidence, work library 복구를 연습한다.",
+      "legacy_acceptance": "restore test pass",
+      "legacy_artifact": "DR plan",
+      "integrated_task_ids": [
+        "ICF-01-08"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-09",
+      "title": "Policy-as-code",
+      "legacy_goal": "tool/PDK/project 승인 정책을 versioned policy로 관리한다.",
+      "legacy_acceptance": "policy test",
+      "legacy_artifact": "policy engine",
+      "integrated_task_ids": [
+        "ICF-14-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-10",
+      "title": "Plugin capability framework",
+      "legacy_goal": "새 simulator/DRC/PEX/instrument backend를 adapter로 추가한다.",
+      "legacy_acceptance": "core security 유지",
+      "legacy_artifact": "plugin SDK",
+      "integrated_task_ids": [
+        "ICF-14-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    },
+    {
+      "legacy_id": "P12-11",
+      "title": "Compliance/export controls",
+      "legacy_goal": "PDK/license/organization policy를 enforce한다.",
+      "legacy_acceptance": "policy violation fail-closed",
+      "legacy_artifact": "compliance gate",
+      "integrated_task_ids": [
+        "ICF-14-06"
+      ],
+      "status": "planning_mapping_not_completion"
+    }
+  ]
+}
