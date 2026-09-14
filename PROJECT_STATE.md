@@ -20,29 +20,32 @@ wp13_audit_result: PASS_WITH_PROFILE_DRIFT
 wp13_integration_status: merged_pr_19
 wp14_decision_package: docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json
 wp14_decision_package_version: 1
-wp14_package_status: ready_for_review
+wp14_package_status: reviewed_conditionally
 wp14_document_acceptance: passed
 wp14_package_normalized_lf_sha256: 58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d
-wp14_decision_record: docs/decisions/WP14_VBIAS_DECISION_RECORD_V2.json
-wp14_decision_record_version: 2
-wp14_decision_record_normalized_lf_sha256: 6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9
-wp14_decision_review_status: blocked_missing_explicit_user_decision
-wp14_confirmation_status: blocked_pending_explicit_baseline_decision
+wp14_decision_record: docs/decisions/WP14_VBIAS_DECISION_RECORD_V3.json
+wp14_decision_record_version: 3
+wp14_decision_record_normalized_lf_sha256: 22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf
+wp14_decision_review_status: blocked_conditional_approval_unsatisfied
+wp14_submitted_bias_selection: "VBIASN=0.300V; VBIASP=0.650V"
+wp14_analysis_policy: require_dc_state_aligned_future_plan
+wp14_snapshot_policy: accept_pinned_snapshot_as_historical_only
+wp14_confirmation_status: blocked_pending_condition_revision_evidence
 wp14_remote_validation: not_run_repository_evidence_only
 profile_contract_status: PROFILE_DRIFT
-baseline_decision_status: BASELINE_DECISION_REQUIRED
+baseline_decision_status: CONDITIONAL_SELECTION_NOT_APPROVED
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
 current_feature_branch: wp/WP-14-vbias-source-of-truth
 base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
-last_commit: 1ce7f1c1df5bbd3400a7dc923c4d0b7a437ce17b
+last_commit: 5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Provide an explicit WP-14 bias choice (both VBIASN/VBIASP in volts), analysis-policy choice, snapshot-policy choice, condition/revision evidence, approver, and timestamp tied to decision package v1 hash; or explicitly defer. No choice was inferred from the continuation request. Feature merge requires separate approval; WP-15 remains unstarted."
+user_action_required: "Provide verified VDD, VCM, load condition, and source/ADE-state revision-equivalence evidence tied to the submitted 0.300V/0.650V selection, then explicitly confirm or reject the scientific baseline against decision record v3. The conditional approval is not triggered while these items remain unverified. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -52,6 +55,8 @@ user_action_required: "Provide an explicit WP-14 bias choice (both VBIASN/VBIASP
 - 2026-09-14: WP-14 document checks, Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 308-file secret preflight, 18 security tests, and strict dependency audit passed. No known dependency vulnerabilities were found. Existing audit/runtime/release files and prior progress-log entries are unchanged. No SSH, runner deployment, MCP tool change, simulation, OA write/save, ADE state, source/schematic/layout/work-library/PDK/V1-V4 modification, tag, release, direct-main push, or WP-15 work occurred. The requested decision package is ready for review; baseline confirmation remains BLOCKED pending explicit user choices and condition evidence.
 - 2026-09-14: Continuation review reconfirmed remote HEAD `3a65afd87151fc07257de1b3855692dcd9a016a1`, preserved decision package v1 byte-for-byte, and reconfirmed its normalized-LF SHA-256 `58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`. Because no concrete bias, analysis, or snapshot choice and no new condition/revision evidence were supplied, separate decision review record v2 keeps every decision field unset and every execution/mutation gate false. WP-14 remains BLOCKED; no Cadence, remote, runtime, design, PDK, tag, release, merge, or WP-15 operation occurred.
 - 2026-09-14: Decision review record v2 was fixed at normalized-LF SHA-256 `6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9` in documentation commit `1ce7f1c1df5bbd3400a7dc923c4d0b7a437ce17b`. v1 blob/hash preservation, null decision fields, false permission gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 309-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. Remote E2E was not run because this WP explicitly forbids simulation/deployment and is documentary only.
+- 2026-09-14: User submission selected `VBIASN=0.300 V`, `VBIASP=0.650 V`, a future state-aligned DC plan, and historical-only treatment of the pinned snapshot, identifying approver `Phjrab` and timestamp `2026-09-14T15:30:00+09:00`. Because scientific approval was conditional on sufficient evidence while VDD, VCM, load, and source/state revision equivalence were explicitly `unverified`, versioned decision record v3 records the selection without confirming a baseline. All execution/mutation gates remain false and WP-14 remains BLOCKED.
+- 2026-09-14: Decision record v3 was fixed at normalized-LF SHA-256 `22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf` in documentation commit `5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce`. v1/v2 preservation, exact submitted fields, unresolved-condition retention, false execution gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 310-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. No remote E2E or external mutation was performed.
 
 `last_commit` identifies the verified documentation commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
