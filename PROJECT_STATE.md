@@ -4,8 +4,8 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-13
-current_status: passed
+current_wp: WP-14
+current_status: blocked
 last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
@@ -17,20 +17,40 @@ deployment_status: existing_remote_runner_0.18.0_unchanged
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
+wp13_integration_status: merged_pr_19
+wp14_decision_package: docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json
+wp14_decision_package_version: 1
+wp14_package_status: ready_for_review
+wp14_document_acceptance: passed
+wp14_package_normalized_lf_sha256: 58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d
+wp14_confirmation_status: blocked_pending_explicit_baseline_decision
+wp14_remote_validation: not_run_repository_evidence_only
 profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: BASELINE_DECISION_REQUIRED
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
-current_feature_branch: wp/WP-13-actual-ade-baseline-audit
-base_main_commit: 198900ecc96c9cadd3697022f96c90bd5baf937a
-last_commit: 6bb81ba5311f071fdb123e2fb8014de9b8fe97d1
-last_push: 2026-09-14T19:04:38.3004604+09:00
+current_feature_branch: wp/WP-14-vbias-source-of-truth
+base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
+last_commit: 4359ad6f16fbc015ac06cea9c2d33df1ae134ae4
+last_push: null
+push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: pass
-user_action_required: "Review and explicitly approve the WP-13 audit feature branch for PR merge. After merge, WP-14 may prepare the VBIASN/VBIASP, analysis-mode, and snapshot-freshness decision package; parameterized execution remains disabled."
+last_e2e_result: not_run
+user_action_required: "Review WP-14 decision package v1 and provide explicit VBIASN/VBIASP, analysis-policy, and snapshot-policy choices with condition/revision evidence or defer. Package/PR review is not baseline or execution approval. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
+
+## WP-14 checkpoint
+
+- 2026-09-14: PR #19 merged reviewed WP-13 head `7ec535ea035f0a1a424d802d051726a2a4b12930` as `b12cff904fe31a1d68490836c1fe6765734b9bf0`. GitHub MERGED state, exact latest origin/main, ancestry, private visibility, and a clean starting tree were verified before creating `wp/WP-14-vbias-source-of-truth` from that commit. This run performed no merge.
+- 2026-09-14: Documentation commit `4359ad6f16fbc015ac06cea9c2d33df1ae134ae4` prepared version-1 `WP14_VBIAS_DECISION_PACKAGE` with normalized-LF SHA-256 `58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`. Six pinned repository evidence blobs connect the undeclared source references, fixed wrapper/profile and dated ADE `300m/650m` observations, and historical research `370m/650m` candidate. Operating-condition/revision equivalence, analysis policy, and freshness remain unresolved. No bias is selected, no approval field is populated, and all execution permissions remain false. The old WP-15 implementation numbering is explicitly marked historical; the current PDK-design phase remains authoritative.
+- 2026-09-14: WP-14 document checks, Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 308-file secret preflight, 18 security tests, and strict dependency audit passed. No known dependency vulnerabilities were found. Existing audit/runtime/release files and prior progress-log entries are unchanged. No SSH, runner deployment, MCP tool change, simulation, OA write/save, ADE state, source/schematic/layout/work-library/PDK/V1-V4 modification, tag, release, direct-main push, or WP-15 work occurred. The requested decision package is ready for review; baseline confirmation remains BLOCKED pending explicit user choices and condition evidence.
+
+`last_commit` identifies the verified documentation commit preceding this state checkpoint.
+`last_push` remains null at commit time because the first push of this branch follows the commit;
+the completion report records the final remote HEAD comparison. No pending field is evidence of
+a successful push or a baseline approval.
 
 ## Progress log
 
