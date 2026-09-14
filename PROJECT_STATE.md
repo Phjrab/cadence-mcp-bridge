@@ -38,20 +38,25 @@ wp14_source_state_revision_equivalence: unverified
 wp14_vdd_actual_profile_status: unverified
 wp14_vcm_actual_profile_status: unverified
 wp14_load_condition_status: unverified
+wp14_condition_collector_plan: docs/plans/WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN_V1.json
+wp14_condition_collector_plan_version: 1
+wp14_condition_collector_plan_normalized_lf_sha256: 4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb
+wp14_condition_collector_plan_status: ready_for_review_role_binding_required
+wp14_role_binding_status: unresolved_not_inferred
 profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
 current_feature_branch: wp/WP-14-vbias-source-of-truth
 base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
-last_commit: cc472e46ad4a2db24fc0e8a107f547a3ca466678
+last_commit: 1a5eb663b95731c23380a26fd2eb2c741ba4b9b1
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Provide VDD, VCM, load, and source/ADE-state revision-equivalence evidence through a newly reviewed bounded read-only method or operator evidence, then explicitly confirm or reject the scientific baseline against decision record v4. Existing fixed introspection cannot establish those fields. Feature merge requires separate approval; WP-15 remains unstarted."
+user_action_required: "Review WP-14 condition-evidence collector plan v1. Then either provide an exact immutable VDD/VCM/load role-binding manifest or separately approve a fixed names-only role-discovery plan. Plan review alone does not authorize implementation, deployment, execution, or baseline approval. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -65,6 +70,8 @@ user_action_required: "Provide VDD, VCM, load, and source/ADE-state revision-equ
 - 2026-09-14: Decision record v3 was fixed at normalized-LF SHA-256 `22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf` in documentation commit `5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce`. v1/v2 preservation, exact submitted fields, unresolved-condition retention, false execution gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 310-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. No remote E2E or external mutation was performed.
 - 2026-09-14: Three fixed baseline calls and one allowlisted read-only ADE/OA introspection on runner 0.18.0 reconfirmed stable profile/source/state hashes, `state1` values `300m/650m`, source structure 35/14/8, unchanged protected fingerprints, and no blocking locks. Source and state now have individual audit fingerprints, but VDD, VCM, load, and semantic source/state revision equivalence remain unverified; the snapshot remains 1,512 seconds older than state metadata. Decision record v4 therefore keeps evidence sufficiency and scientific baseline approval false. Only bounded `.cadence_mcp/ade-profile-introspection` runtime artifacts were refreshed; no deployment, simulation, OA save, ADE/design/PDK modification, merge, or WP-15 work occurred.
 - 2026-09-14: Decision record v4 was fixed at normalized-LF SHA-256 `95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46` in evidence commit `cc472e46ad4a2db24fc0e8a107f547a3ca466678`. v1-v3 preservation, audit provenance, exact current observations, unresolved-condition retention, false authorization gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 311-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
+- 2026-09-14: Planning-only `WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN` v1 defines an argument-free, operator-only, non-MCP collector contract for VDD, VCM, load, and source/state semantic linkage. It fixes the profile/cellview/state/file/model allowlist, redacted schema, OA read-only lifecycle, fingerprint/lock/timeout/size gates, fail-closed rules, and 20 acceptance criteria. Exact OA role selectors remain `UNRESOLVED_NOT_INFERRED`; a hash-bound binding manifest is a mandatory prerequisite. No implementation, deployment, collector execution, Cadence invocation, simulation, mutation, merge, or WP-15 work occurred.
+- 2026-09-14: Collector plan v1 was fixed at normalized-LF SHA-256 `4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb` in plan commit `1a5eb663b95731c23380a26fd2eb2c741ba4b9b1`. All 20 criteria, exact target allowlist, zero-argument/non-MCP contract, false authority flags, resource and redaction limits, unresolved role-binding gate, v1-v4 preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 313-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
 
 `last_commit` identifies the verified documentation commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
