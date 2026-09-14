@@ -163,3 +163,23 @@ fields remain unset, all execution and mutation permissions remain false, and co
 `BLOCKED_MISSING_EXPLICIT_USER_DECISION`. Passing document checks does not authorize actual bias
 application, simulation, deployment, MCP changes, OA write/save, ADE-state changes, or design/PDK
 changes.
+
+## Conditional decision record v3
+
+The user submitted `VBIASN=0.300 V`, `VBIASP=0.650 V`, analysis policy
+`require_dc_state_aligned_future_plan`, and snapshot policy
+`accept_pinned_snapshot_as_historical_only`, tied to version-1 package hash
+`58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`.
+The submission identifies `Phjrab` and timestamp `2026-09-14T15:30:00+09:00`. These supplied
+fields are retained verbatim in a separate non-executable record at
+`docs/decisions/WP14_VBIAS_DECISION_RECORD_V3.json`; versions 1 and 2 remain unchanged.
+Its normalized-LF SHA-256 is
+`22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf`.
+
+The scientific approval is expressly conditional on sufficient condition and revision evidence.
+The same submission marks VDD, VCM, load condition, and source/state revision equivalence as
+`unverified`. The condition is therefore not satisfied: version 3 records the submitted selection
+but does not confirm it as the scientific baseline. Accepting the pinned snapshot as historical
+only does not establish freshness. The future DC policy is a planning choice and does not authorize
+a simulation. Confirmation remains `BLOCKED_CONDITIONAL_APPROVAL_UNSATISFIED`; every execution and
+mutation gate remains false.

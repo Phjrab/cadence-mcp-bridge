@@ -1,0 +1,92 @@
+{
+  "record_id": "WP14_VBIAS_DECISION_RECORD",
+  "record_version": 3,
+  "created_on": "2026-09-14",
+  "artifact_kind": "non_executable_conditional_decision_record",
+  "status": "BLOCKED_CONDITIONAL_APPROVAL_UNSATISFIED",
+  "reviewed_feature_branch": "wp/WP-14-vbias-source-of-truth",
+  "reviewed_feature_head": "6791a6285d6d72e0cb362bdd0ccf42eec938739c",
+  "source_proposal": {
+    "path": "docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json",
+    "package_id": "WP14_VBIAS_DECISION_PACKAGE",
+    "package_version": 1,
+    "normalized_lf_sha256": "58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d",
+    "preserved_without_overwrite": true
+  },
+  "predecessor_record": {
+    "path": "docs/decisions/WP14_VBIAS_DECISION_RECORD_V2.json",
+    "record_version": 2,
+    "normalized_lf_sha256": "6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9",
+    "preserved_without_overwrite": true
+  },
+  "submitted_selection": {
+    "vbiasn_v": 0.3,
+    "vbiasp_v": 0.65,
+    "selection_basis": "actual_ADE_state_observation",
+    "analysis_policy": "require_dc_state_aligned_future_plan",
+    "snapshot_policy": "accept_pinned_snapshot_as_historical_only",
+    "approver": "Phjrab",
+    "approval_timestamp": "2026-09-14T15:30:00+09:00",
+    "scientific_baseline_approval_condition": "Approve only if condition and revision evidence is sufficient."
+  },
+  "submitted_operating_context": {
+    "source": "MyDesignLib/Differential_Amplifier_TB2/schematic",
+    "ade_environment": "ADE L",
+    "ade_state": "state1",
+    "pdk": "gpdk090 v4.6",
+    "model_corner": "NN",
+    "temperature_c": 27,
+    "analysis": "transient",
+    "stop_time": "4m",
+    "source_fingerprint": {
+      "instances": 35,
+      "nets": 14,
+      "terminals": 8
+    },
+    "ade_state_metadata_sha256": "a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d",
+    "vdd": "unverified",
+    "vcm": "unverified",
+    "load_condition": "unverified",
+    "source_state_revision_equivalence": "unverified"
+  },
+  "review_result": {
+    "bias_selection_recorded": true,
+    "analysis_policy_recorded": true,
+    "snapshot_policy_recorded": true,
+    "approval_identity_recorded": true,
+    "condition_revision_evidence_sufficient": false,
+    "conditional_approval_triggered": false,
+    "scientific_baseline_approved": false,
+    "snapshot_treated_as_current": false,
+    "inference_performed": false,
+    "finding": "The submitted selection is explicit, but its scientific approval is conditional on sufficient condition and revision evidence. VDD, VCM, load condition, and source/state revision equivalence are explicitly unverified, so the approval condition is not satisfied."
+  },
+  "blockers": [
+    "VDD_UNVERIFIED",
+    "VCM_UNVERIFIED",
+    "LOAD_CONDITION_UNVERIFIED",
+    "SOURCE_STATE_REVISION_EQUIVALENCE_UNVERIFIED",
+    "CONDITIONAL_SCIENTIFIC_APPROVAL_NOT_TRIGGERED",
+    "SNAPSHOT_FRESHNESS_UNCONFIRMED"
+  ],
+  "gates": {
+    "baseline_confirmed": false,
+    "profile_drift_resolved": false,
+    "snapshot_freshness_confirmed": false,
+    "parameterized_execution_enabled": false,
+    "simulation_authorized": false,
+    "deployment_authorized": false,
+    "mcp_change_authorized": false,
+    "oa_write_or_save_authorized": false,
+    "ade_state_change_authorized": false,
+    "design_or_pdk_change_authorized": false
+  },
+  "next_required_input": {
+    "condition_evidence": "Provide verified VDD, VCM, and load conditions tied to the selected 0.300 V/0.650 V observation.",
+    "revision_evidence": "Provide an identifiable source and ADE-state revision relationship demonstrating that the observed selection belongs to the reviewed source/state pair.",
+    "approval_resolution": "After the missing evidence is reviewed, explicitly confirm or reject the scientific baseline against this versioned record."
+  },
+  "supersedes": null,
+  "overwrites_prior_records": false,
+  "execution_authority": "none"
+}
