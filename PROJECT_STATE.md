@@ -23,29 +23,35 @@ wp14_decision_package_version: 1
 wp14_package_status: reviewed_conditionally
 wp14_document_acceptance: passed
 wp14_package_normalized_lf_sha256: 58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d
-wp14_decision_record: docs/decisions/WP14_VBIAS_DECISION_RECORD_V3.json
-wp14_decision_record_version: 3
-wp14_decision_record_normalized_lf_sha256: 22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf
-wp14_decision_review_status: blocked_conditional_approval_unsatisfied
+wp14_decision_record: docs/decisions/WP14_VBIAS_DECISION_RECORD_V4.json
+wp14_decision_record_version: 4
+wp14_decision_record_normalized_lf_sha256: 95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46
+wp14_decision_review_status: blocked_condition_revision_evidence_incomplete
 wp14_submitted_bias_selection: "VBIASN=0.300V; VBIASP=0.650V"
 wp14_analysis_policy: require_dc_state_aligned_future_plan
 wp14_snapshot_policy: accept_pinned_snapshot_as_historical_only
-wp14_confirmation_status: blocked_pending_condition_revision_evidence
-wp14_remote_validation: not_run_repository_evidence_only
+wp14_confirmation_status: blocked_pending_complete_condition_evidence_and_final_approval
+wp14_remote_validation: fixed_read_only_audit_passed_with_unresolved_conditions
+wp14_source_revision_fingerprint: 046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714
+wp14_ade_state_revision_fingerprint: a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d
+wp14_source_state_revision_equivalence: unverified
+wp14_vdd_actual_profile_status: unverified
+wp14_vcm_actual_profile_status: unverified
+wp14_load_condition_status: unverified
 profile_contract_status: PROFILE_DRIFT
-baseline_decision_status: CONDITIONAL_SELECTION_NOT_APPROVED
+baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
 current_feature_branch: wp/WP-14-vbias-source-of-truth
 base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
-last_commit: 5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce
+last_commit: cc472e46ad4a2db24fc0e8a107f547a3ca466678
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Provide verified VDD, VCM, load condition, and source/ADE-state revision-equivalence evidence tied to the submitted 0.300V/0.650V selection, then explicitly confirm or reject the scientific baseline against decision record v3. The conditional approval is not triggered while these items remain unverified. Feature merge requires separate approval; WP-15 remains unstarted."
+user_action_required: "Provide VDD, VCM, load, and source/ADE-state revision-equivalence evidence through a newly reviewed bounded read-only method or operator evidence, then explicitly confirm or reject the scientific baseline against decision record v4. Existing fixed introspection cannot establish those fields. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -57,6 +63,8 @@ user_action_required: "Provide verified VDD, VCM, load condition, and source/ADE
 - 2026-09-14: Decision review record v2 was fixed at normalized-LF SHA-256 `6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9` in documentation commit `1ce7f1c1df5bbd3400a7dc923c4d0b7a437ce17b`. v1 blob/hash preservation, null decision fields, false permission gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 309-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. Remote E2E was not run because this WP explicitly forbids simulation/deployment and is documentary only.
 - 2026-09-14: User submission selected `VBIASN=0.300 V`, `VBIASP=0.650 V`, a future state-aligned DC plan, and historical-only treatment of the pinned snapshot, identifying approver `Phjrab` and timestamp `2026-09-14T15:30:00+09:00`. Because scientific approval was conditional on sufficient evidence while VDD, VCM, load, and source/state revision equivalence were explicitly `unverified`, versioned decision record v3 records the selection without confirming a baseline. All execution/mutation gates remain false and WP-14 remains BLOCKED.
 - 2026-09-14: Decision record v3 was fixed at normalized-LF SHA-256 `22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf` in documentation commit `5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce`. v1/v2 preservation, exact submitted fields, unresolved-condition retention, false execution gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 310-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. No remote E2E or external mutation was performed.
+- 2026-09-14: Three fixed baseline calls and one allowlisted read-only ADE/OA introspection on runner 0.18.0 reconfirmed stable profile/source/state hashes, `state1` values `300m/650m`, source structure 35/14/8, unchanged protected fingerprints, and no blocking locks. Source and state now have individual audit fingerprints, but VDD, VCM, load, and semantic source/state revision equivalence remain unverified; the snapshot remains 1,512 seconds older than state metadata. Decision record v4 therefore keeps evidence sufficiency and scientific baseline approval false. Only bounded `.cadence_mcp/ade-profile-introspection` runtime artifacts were refreshed; no deployment, simulation, OA save, ADE/design/PDK modification, merge, or WP-15 work occurred.
+- 2026-09-14: Decision record v4 was fixed at normalized-LF SHA-256 `95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46` in evidence commit `cc472e46ad4a2db24fc0e8a107f547a3ca466678`. v1-v3 preservation, audit provenance, exact current observations, unresolved-condition retention, false authorization gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 311-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
 
 `last_commit` identifies the verified documentation commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
