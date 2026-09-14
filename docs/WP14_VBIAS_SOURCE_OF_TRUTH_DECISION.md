@@ -145,3 +145,21 @@ remote-SHA verification follow this recorded evidence and are reported in the co
 No runtime rejection mechanism is claimed by the proposal's negative review cases. Actual remote
 E2E is not run in WP-14; prior WP-13 observations retain their original scope/date. Scientific
 baseline confirmation remains BLOCKED despite passing document and regression checks.
+
+## Decision review record v2
+
+The continuation review verified feature HEAD
+`3a65afd87151fc07257de1b3855692dcd9a016a1` and the version-1 package's normalized-LF
+SHA-256 `58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`.
+The version-1 proposal remains unchanged. A separate non-executable review artifact is stored at
+`docs/decisions/WP14_VBIAS_DECISION_RECORD_V2.json`.
+Its SHA-256 after UTF-8 CRLF-to-LF normalization, retaining the final newline, is
+`6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9`.
+
+The reviewed continuation request supplied no concrete VBIASN/VBIASP selection, no analysis
+policy, no snapshot policy, and no new condition/revision evidence. Version 2 therefore records
+only the absence of a decision; it does not select, recommend, or infer a value. All decision
+fields remain unset, all execution and mutation permissions remain false, and confirmation stays
+`BLOCKED_MISSING_EXPLICIT_USER_DECISION`. Passing document checks does not authorize actual bias
+application, simulation, deployment, MCP changes, OA write/save, ADE-state changes, or design/PDK
+changes.
