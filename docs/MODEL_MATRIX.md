@@ -16,5 +16,10 @@ Model recommendations are based on the GPT-5.6 family available in Codex as of 2
 | WP-09 ADE profiles | GPT-5.6 Sol | max | GPT-5.6 Terra max |
 | WP-10 ADC measurements | GPT-5.6 Sol | max | GPT-5.6 Terra max |
 | WP-11 Controlled writes/release | GPT-5.6 Sol | max | GPT-5.6 Terra max |
+| WP-12 Roadmap integration and governance reconciliation | GPT-5.6 Terra | high | GPT-5.6 Sol high |
+| WP-13 Actual ADE profile baseline and capability audit | GPT-5.6 Sol | max | GPT-5.6 Terra max |
+| WP-14 VBIASN/VBIASP source-of-truth confirmation | GPT-5.6 Sol | max | GPT-5.6 Terra max |
+| WP-15 PDK abstraction design | GPT-5.6 Sol | max | GPT-5.6 Terra max |
+| WP-16 ADE and sweep capability inventory | GPT-5.6 Sol | max | GPT-5.6 Terra max |
 
 Small documentation or formatting follow-ups may use GPT-5.6 Luna at medium or high effort. Critical acceptance should use the WP model above.

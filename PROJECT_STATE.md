@@ -5,18 +5,20 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
 current_wp: WP-12
-current_status: passed
-last_completed_wp: WP-12
-next_wp: WP-13
-current_feature_branch: wp/WP-12-baseline-reconciliation
-base_main_commit: 4fad957753d1e432713b0d517de8a1906d715286
-last_commit: e9f266f04735ca97b7b03e8ea9799d78f1d2b365
-last_push: 2026-08-31T19:48:50.8501149+09:00
+current_status: pending
+last_completed_wp: WP-11
+next_wp: WP-12
+release_baseline: v1.0.0
+development_track: autonomous-custom-ic-design
+current_feature_branch: wp/WP-12-roadmap-integration
+base_main_commit: f560bfeb89c148356223449d7095b7eff4b19092
+last_commit: 5b3bf590c89705eb08d93d327dff9e296d0fa166
+last_push: 2026-08-31T21:16:07.1290272+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: "Review and merge WP-12, then choose the immutable VBIASN baseline and snapshot-freshness policy before parameterized actual execution; WP-13 read-only introspection may proceed after merge."
+user_action_required: "Review and merge WP-12 roadmap integration. After merge, begin WP-13 read-only Actual ADE Profile Baseline and Capability Audit; no parameterized execution is authorized."
 ```
 
 ## Progress log
@@ -70,3 +72,4 @@ user_action_required: "Review and merge WP-12, then choose the immutable VBIASN 
 - 2026-08-31: The user explicitly authorized PR #14, and post-release state head `cb3f48e75f3f0f5112f01d3b656ac09561d5f8e9` was merged through GitHub into main as `01eca3978e43d0819e3d46eef0c83fd5489f808d`. The published `v1.0.0` tag and stable private-repository release remained unchanged, no direct main push occurred, and no additional WP is pending.
 - 2026-08-31: The final-state metadata head `ad3578f94f9e61d31edf9d1df15db005401ff82d` was explicitly authorized and merged through PR #15 as `4fad957753d1e432713b0d517de8a1906d715286`; the user later restored the repository from public to private visibility without changing main, the `v1.0.0` tag, or the stable release.
 - 2026-08-31: WP-12 deployed runner 0.17.0 and an argument-free, operator-only actual-profile baseline audit. Two read-only runs proved identical profile/source/state fingerprints, no raw content or paths, current-source equality with the latest successful actual manifest, and zero design/ADE-state/PDK/work-library writes. `VBIASN` and `VBIASP` are each referenced once but not declared in the source snapshot, so the fixed wrapper supplies `300m/650m`; the snapshot is 1,512 seconds older than the newest ADE-state metadata. The result is `BASELINE_DECISION_REQUIRED` and `SNAPSHOT_FRESHNESS_UNCONFIRMED`, while WP-13 read-only introspection may proceed after review and merge.
+- 2026-08-31: Post-v1 roadmap transition was integrated on `wp/WP-12-roadmap-integration` from `origin/main` `f560bfeb89c148356223449d7095b7eff4b19092` as documentation commit `5b3bf590c89705eb08d93d327dff9e296d0fa166`. The published WP-00 through WP-11/v1.0.0 history is preserved. The previously merged read-only baseline evidence remains in the immutable progress log but is not authority for mutation or parameterized execution. Active tracking is reset as explicitly requested to WP-12 pending on the `autonomous-custom-ic-design` development track; this transition changed repository documentation only and schedules WP-13 as the next post-merge read-only audit. Ruff, mypy, 175 local tests with eight expected skips, 18 security tests, secret scanning, document authority assertions, and functional-change scope assertions passed without any Cadence, runner, OA, ADE, schematic, layout, work-library, or PDK operation.
