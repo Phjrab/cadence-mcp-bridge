@@ -25,20 +25,25 @@ the current repository before use.
 | WP-12 Baseline reconciliation (merged implementation) | Fixed read-only actual-profile audit and fingerprints | ICF-00-03, ICF-02-01 | Evidence input; decision/freshness remain unresolved |
 | WP-12 Roadmap integration (merged documentation) | Post-v1 authority and bounded phase plan | ICF-00-01, ICF-00-06 | Documentation reference; does not complete ICF tasks |
 | PKG-INTEGRATE-01 | Package import, authority decisions, and this crosswalk | ICF-00-01 planning prerequisite | Merged through PR #18 as `198900ecc96c9cadd3697022f96c90bd5baf937a` |
-| WP-13 Actual ADE Profile Baseline and Capability Audit | Bounded actual read-only audit | ICF-00-03 plus read-only portion of ICF-02-01 | Audit passed with profile drift; feature integration review pending |
+| WP-13 Actual ADE Profile Baseline and Capability Audit | Bounded actual read-only audit | ICF-00-03 plus read-only portion of ICF-02-01 | Merged through PR #19 as `b12cff904fe31a1d68490836c1fe6765734b9bf0`; profile drift remains |
+| WP-14 VBIASN/VBIASP Source-of-Truth Confirmation | Versioned compatibility/research candidate decision package | ICF-00-03 baseline separation only | Proposal ready for review; scientific baseline confirmation blocked; no ICF task marked complete |
 
 ## Current selection
 
 The duplicate historical use of `WP-12` is disambiguated by title and merged commit history, not by
 rewriting old entries. PKG-INTEGRATE-01 is an orthogonal documentation task and does not consume the
-next implementation number. WP-13 is the active feature work until its audit branch is reviewed and
-merged; only then may WP-14 begin as defined in `docs/CURRENT_PHASE_PLAN.md`.
+next implementation number. WP-13 is now merged; WP-14 is the active documentation task defined in
+`docs/CURRENT_PHASE_PLAN.md`. It prepares a decision package, keeps all approval fields unset, and
+does not start WP-15.
 
-Only these package sections are relevant to WP-13:
+The following references were used by WP-13 and remain dated evidence:
 
 - `docs/agent_plan/prompts/work_packages/ICF-00-03.md` for compatibility/research baseline separation;
 - `docs/agent_plan/prompts/work_packages/ICF-02-01.md` for fixed read-only ADE introspection.
 
-WP-13 must use the root contract's stronger boundary: no remote runner deployment, MCP tool change,
-simulation, OA write/save, ADE-state modification, schematic/layout/work-library/PDK mutation, or
-parameterized execution. Unknown or stale evidence remains unresolved rather than inferred.
+WP-14 references only the compatibility/research baseline requirements of `ICF-00-03` and the
+related historical context in `docs/agent_plan/docs/ENVIRONMENT_BASELINES.md`. Its namespace,
+template approvals, proposed VDD, and next-task suggestions do not replace the active WP contract.
+There is no WP-14 probe, remote runner deployment, MCP tool change, simulation, OA write/save,
+ADE-state modification, schematic/layout/work-library/PDK mutation, or parameterized execution.
+Unknown or stale evidence remains unresolved rather than inferred.

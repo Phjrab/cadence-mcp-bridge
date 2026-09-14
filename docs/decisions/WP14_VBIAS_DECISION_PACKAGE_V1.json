@@ -1,0 +1,167 @@
+{
+  "package_id": "WP14_VBIAS_DECISION_PACKAGE",
+  "package_version": 1,
+  "created_on": "2026-09-14",
+  "status": "BASELINE_DECISION_REQUIRED",
+  "artifact_kind": "non_executable_approval_proposal",
+  "repository_base_commit": "b12cff904fe31a1d68490836c1fe6765734b9bf0",
+  "wp13_head_commit": "7ec535ea035f0a1a424d802d051726a2a4b12930",
+  "profile_id": "actual-differential-amplifier-tb2-transient",
+  "design": {
+    "library": "MyDesignLib",
+    "cell": "Differential_Amplifier_TB2",
+    "view": "schematic",
+    "ade_product": "ADE L",
+    "state": "state1"
+  },
+  "evidence": [
+    {
+      "id": "wp13_audit",
+      "path": "docs/WP13_ACTUAL_ADE_BASELINE_CAPABILITY_AUDIT.md",
+      "git_blob_oid": "d76f2cace0fbb40bcb6cdf6652f2f3df4e089d73",
+      "role": "2026-09-14 read-only observation; not re-probed in WP-14"
+    },
+    {
+      "id": "wp12_audit",
+      "path": "docs/ACTUAL_PROFILE_BASELINE_AUDIT.md",
+      "git_blob_oid": "59e2a2df4d4e6e33048232fdd7d4df8d96c2ffc1",
+      "role": "historical snapshot binding and reported research candidate"
+    },
+    {
+      "id": "fixed_profile",
+      "path": "remote/profiles/actual-differential-amplifier-tb2-transient/profile.json",
+      "git_blob_oid": "ebab0c41bf90e08d34a9bc8dfe21293f175926c6",
+      "role": "registry version 1; fixed compatibility values; empty variable schema"
+    },
+    {
+      "id": "fixed_wrapper",
+      "path": "remote/py26/profile_json.py",
+      "git_blob_oid": "61da3c9ef67983847597ac8b80c3d77da87ac87b",
+      "role": "prepare_actual supplies both fixed values before including the snapshot"
+    },
+    {
+      "id": "local_profile",
+      "path": "src/cadence_mcp_bridge/profiles.py",
+      "git_blob_oid": "8fcbcc9feb5961c68b5c2da270c9268b944e376e",
+      "role": "actual profile accepts NoProfileVariables; no caller bias override"
+    },
+    {
+      "id": "imported_history",
+      "path": "docs/agent_plan/docs/ENVIRONMENT_BASELINES.md",
+      "git_blob_oid": "658be1ca04a037c31075aea81b5bb226edc39c3e",
+      "role": "planning/history only; research context is not a current measurement or approval"
+    }
+  ],
+  "inherited_wp13_observations": {
+    "observed_on": "2026-09-14",
+    "revalidated_remotely_in_wp14": false,
+    "profile_sha256": "dea735f2ba81ba5ca714df8dba1b752be1fa3ab67f5742c2cee76eb5af849a4b",
+    "source_snapshot_sha256": "30e941fdc24ffdc30a8dc989ffb884cd2a5256797adfa5ce2b2c032af67d5351",
+    "ade_state_tree_metadata_sha256": "a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d",
+    "source_modified_utc": "2026-08-20T09:18:28Z",
+    "state_newest_metadata_utc": "2026-08-20T09:43:40Z",
+    "source_minus_state_seconds": -1512,
+    "source_topology": {"instances": 35, "nets": 14, "terminals": 8},
+    "source_parameters": {
+      "VBIASN": {"declared": false, "reference_count": 1, "declared_value_v": null},
+      "VBIASP": {"declared": false, "reference_count": 1, "declared_value_v": null}
+    },
+    "ade_bias_tokens": {"VBIASN": "300m", "VBIASP": "650m"},
+    "ade_dc_enabled": true,
+    "ade_tran_enabled": false,
+    "ade_stored_tran_stop": "4m",
+    "profile_analysis": "tran",
+    "profile_stop_time_s": 0.004,
+    "named_outputs": [],
+    "pdk": "gpdk090",
+    "pdk_version": "4.6",
+    "model_section": "NN",
+    "temperature_c": 27,
+    "snapshot_matches_latest_successful_manifest": true,
+    "before_after_fingerprints_unchanged": true,
+    "source_state_locks": 0,
+    "remote_runner_reported_version": "0.18.0",
+    "main_runner_version": "0.17.0",
+    "remote_runner_byte_identity_verified": false
+  },
+  "candidates": [
+    {
+      "candidate_id": "compatibility-observation",
+      "candidate_version": 1,
+      "role": "preserved_v1_regression_record",
+      "tokens": {"VBIASN": "300m", "VBIASP": "650m"},
+      "values_v": {"VBIASN": 0.3, "VBIASP": 0.65},
+      "evidence_ids": ["fixed_profile", "fixed_wrapper", "wp12_audit", "wp13_audit"],
+      "scientific_baseline_approved": false,
+      "condition_equivalence_proven": false
+    },
+    {
+      "candidate_id": "research-report",
+      "candidate_version": 1,
+      "role": "historical_scientific_candidate_unverified",
+      "tokens": {"VBIASN": "370m", "VBIASP": "650m"},
+      "values_v": {"VBIASN": 0.37, "VBIASP": 0.65},
+      "evidence_ids": ["wp12_audit", "imported_history"],
+      "source_revision_sha256": null,
+      "ade_state_revision_sha256": null,
+      "original_measurement_artifact_id": null,
+      "scientific_baseline_approved": false,
+      "condition_equivalence_proven": false
+    }
+  ],
+  "unresolved_context": {
+    "research_vdd_v_reported_by_imported_plan": 1.0,
+    "reported_vdd_verified_for_both_candidates": false,
+    "vcm_v": null,
+    "input_signal_definition": null,
+    "load_definition": null,
+    "device_geometry_revision": null,
+    "research_model_corner_temperature": null,
+    "research_analysis_and_measurement": null,
+    "source_state_semantic_equivalence": null,
+    "note": "Topology counts and timestamps cannot establish identical operating conditions."
+  },
+  "decision_fields": {
+    "selected_candidate_id": null,
+    "approved_values_v": {"VBIASN": null, "VBIASP": null},
+    "approved_analysis_policy": null,
+    "approved_snapshot_policy": null,
+    "approved_source_sha256": null,
+    "approved_condition_evidence_ids": [],
+    "approved_by": null,
+    "approved_at": null,
+    "approval_record_id": null
+  },
+  "available_decisions": {
+    "bias": ["compatibility-observation", "research-report", "explicit_other_with_evidence", "defer"],
+    "analysis": ["preserve_tran_snapshot_contract", "require_dc_state_aligned_future_plan", "defer"],
+    "snapshot": ["accept_pinned_snapshot_as_historical_only", "require_separately_approved_regeneration", "defer"],
+    "default_selection": null
+  },
+  "gates": {
+    "profile_contract_status": "PROFILE_DRIFT",
+    "baseline_decision_status": "BASELINE_DECISION_REQUIRED",
+    "snapshot_freshness_status": "SNAPSHOT_FRESHNESS_UNCONFIRMED",
+    "baseline_approved": false,
+    "parameterized_execution_enabled": false,
+    "sweep_enabled": false,
+    "actual_bias_apply_authorized": false,
+    "simulation_authorized": false,
+    "deployment_authorized": false,
+    "mcp_change_authorized": false,
+    "oa_write_or_save_authorized": false,
+    "ade_state_write_authorized": false,
+    "protected_data_write_authorized": false
+  },
+  "approval_rules": [
+    "This proposal contains no baseline choice, approval, command, or runtime configuration.",
+    "A future approval record must reference the package version and normalized-LF SHA-256.",
+    "Require explicit choices for both bias values, analysis policy, and snapshot policy.",
+    "Missing, mismatched, stale, or deferred evidence leaves scientific baseline confirmation blocked.",
+    "Accepting the pinned historical snapshot never asserts that it represents the latest ADE state.",
+    "A source/state/profile hash change requires a new evidence review and proposal revision.",
+    "Historical approvals and a PR merge do not approve a scientific baseline or execution.",
+    "Baseline approval is planning-only and never enables apply, simulation, deployment, or sweep.",
+    "Keep this version unchanged after review; record later decisions in a separate versioned artifact."
+  ]
+}
