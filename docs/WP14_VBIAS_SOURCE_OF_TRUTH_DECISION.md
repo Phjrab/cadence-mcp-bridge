@@ -183,3 +183,28 @@ but does not confirm it as the scientific baseline. Accepting the pinned snapsho
 only does not establish freshness. The future DC policy is a planning choice and does not authorize
 a simulation. Confirmation remains `BLOCKED_CONDITIONAL_APPROVAL_UNSATISFIED`; every execution and
 mutation gate remains false.
+
+## Condition and revision evidence audit v4
+
+At `2026-09-14T20:09:28+09:00`, the deployed runner reported version `0.18.0`. Three
+argument-free baseline audits surrounding one fixed allowlisted ADE-profile introspection produced
+stable profile, source-snapshot, and ADE-state metadata hashes. The OA source opened in read-only
+mode with 35 instances, 14 nets, and 8 terminals; source, state, source-netlist, and PDK-model
+fingerprints were unchanged, no blocking lock was reported, and no simulation or OA save occurred.
+The fixed command refreshed only its bounded private introspection runtime artifacts.
+
+The current ADE-state observation ties `VBIASN=300m` and `VBIASP=650m` to the audited `state1`
+metadata fingerprint. It also reconfirms DC enabled, transient disabled with stored stop `4m`,
+model section `NN`, temperature 27 C, no named outputs, `analysis_mismatch`, and
+`snapshot_freshness_unconfirmed`. The source snapshot remains 1,512 seconds older than the newest
+state metadata. The source tree and state metadata are individually fingerprinted, and their design
+identity binding matches, but the fixed interface exposes no semantic revision-equivalence proof.
+
+VDD, VCM, and load condition are not present in the bounded result and remain `unverified`. The
+repository's `1.0 V` value is explicitly historical research context, not a current ADE observation.
+Consequently the submitted `0.300/0.650 V` selection is linked to the audited ADE state but not to a
+complete operating condition or proven source/state revision equivalence. Evidence sufficiency is
+false, and no final scientific baseline approval is inferred. The separate v4 record is
+`docs/decisions/WP14_VBIAS_DECISION_RECORD_V4.json`; versions 1 through 3 remain unchanged.
+Its normalized-LF SHA-256 is
+`95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46`.
