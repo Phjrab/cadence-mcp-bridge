@@ -208,3 +208,19 @@ false, and no final scientific baseline approval is inferred. The separate v4 re
 `docs/decisions/WP14_VBIAS_DECISION_RECORD_V4.json`; versions 1 through 3 remain unchanged.
 Its normalized-LF SHA-256 is
 `95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46`.
+
+## Condition evidence collector plan v1
+
+A planning-only fixed collector contract is recorded in
+`docs/plans/WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN_V1.json` and summarized in
+`docs/WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN.md`. It covers only VDD, VCM, load condition, and
+source/ADE-state semantic revision evidence. It accepts no caller arguments, is operator-only and
+not an MCP tool, opens only the fixed source cellview with OA mode `r`, and fails closed on locks,
+ambiguous roles, unsupported values, bounds, timeouts, or fingerprint drift.
+The plan's normalized-LF SHA-256 is
+`4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb`.
+
+The plan does not invent the currently unknown OA role selectors. A separately reviewed immutable
+role-binding manifest must fix the exact instance/net/terminal/property tuples and expected
+cardinality before implementation. Plan review does not authorize binding discovery,
+implementation, deployment, execution, or scientific baseline approval.

@@ -1,0 +1,270 @@
+{
+  "plan_id": "WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN",
+  "plan_version": 1,
+  "created_on": "2026-09-14",
+  "status": "PLAN_READY_FOR_REVIEW_ROLE_BINDING_REQUIRED",
+  "artifact_kind": "non_executable_read_only_collector_plan",
+  "bound_decision_record": {
+    "path": "docs/decisions/WP14_VBIAS_DECISION_RECORD_V4.json",
+    "record_version": 4,
+    "normalized_lf_sha256": "95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46"
+  },
+  "purpose": "Collect bounded evidence for VDD, VCM, load condition, and source/ADE-state semantic revision linkage without simulation, design mutation, or raw design disclosure.",
+  "authority": {
+    "implementation_authorized": false,
+    "deployment_authorized": false,
+    "execution_authorized": false,
+    "simulation_authorized": false,
+    "mcp_exposure_authorized": false,
+    "oa_write_or_save_authorized": false,
+    "ade_state_change_authorized": false,
+    "design_or_pdk_change_authorized": false
+  },
+  "fixed_command_contract": {
+    "planned_operator_command": "wp14-condition-evidence",
+    "accepted_arguments": [],
+    "origin": "operator_only",
+    "mcp_tool": false,
+    "arbitrary_shell": false,
+    "arbitrary_skill": false,
+    "caller_paths": false,
+    "caller_design_identifiers": false,
+    "caller_property_names": false,
+    "caller_values": false
+  },
+  "exact_allowlist": {
+    "profile_id": "actual-differential-amplifier-tb2-transient",
+    "source_cellview": {
+      "library": "MyDesignLib",
+      "cell": "Differential_Amplifier_TB2",
+      "view": "schematic",
+      "open_mode": "r"
+    },
+    "ade_state": {
+      "product": "ADE L",
+      "state": "state1",
+      "simulator": "spectre",
+      "files": [
+        "ADE_state.info",
+        "analyses",
+        "modelSetup",
+        "outputs",
+        "simulatorOptions",
+        "variables"
+      ]
+    },
+    "source_snapshot": "fixed profile source_netlist only",
+    "model": {
+      "pdk": "gpdk090",
+      "version": "4.6",
+      "section": "NN",
+      "access": "hash_only"
+    },
+    "condition_fields": [
+      "VDD",
+      "VCM",
+      "load_condition"
+    ],
+    "revision_fields": [
+      "source_revision_fingerprint",
+      "ade_state_revision_fingerprint",
+      "source_state_semantic_link"
+    ]
+  },
+  "role_binding_precondition": {
+    "required": true,
+    "current_status": "UNRESOLVED_NOT_INFERRED",
+    "reason": "Existing bounded evidence does not identify exact OA instances, nets, terminals, and properties representing VDD, VCM, or load.",
+    "required_immutable_manifest": {
+      "schema_version": 1,
+      "source_cellview": "exact allowlisted source cellview",
+      "vdd_selector": "exact instance/net/terminal/property tuple",
+      "vcm_selector": "exact instance/net/terminal/property tuple",
+      "load_selectors": "ordered fixed list of exact instance/net/terminal/property tuples",
+      "expected_master_cells": "fixed exact library/cell/view triples",
+      "expected_cardinality": "exactly one VDD, exactly one VCM, and an explicit bounded load count",
+      "sha256": "required before implementation review"
+    },
+    "allowed_sources": [
+      "operator-provided reviewed evidence",
+      "separately approved fixed names-only role discovery"
+    ],
+    "automatic_guessing": false,
+    "implementation_before_binding_review": false
+  },
+  "planned_sequence": [
+    "verify_plan_and_role_binding_hashes",
+    "reject_arguments_and_unapproved_installation_identity",
+    "reject active_or_ambiguous_source_or_state_locks",
+    "capture_protected_before_fingerprints",
+    "parse_only_allowlisted_ADE_state_files_with_fixed_grammar",
+    "open_exact_source_cellview_read_only",
+    "resolve_only_hash_bound_role_selectors_with_exact_cardinality",
+    "collect_finite_bounded_condition_values_and_units",
+    "close_source_cellview_without_save",
+    "capture_protected_after_fingerprints",
+    "require_every_protected_fingerprint_unchanged",
+    "classify_semantic_revision_link_without_timestamp_inference",
+    "emit_one_bounded_redacted_JSON_object",
+    "stop"
+  ],
+  "read_limits": {
+    "maximum_state_entries": 4096,
+    "maximum_state_tree_bytes": 134217728,
+    "maximum_individual_state_file_bytes": 1048576,
+    "maximum_source_tree_entries": 4096,
+    "maximum_source_tree_bytes": 134217728,
+    "maximum_source_snapshot_bytes": 10485760,
+    "maximum_model_hash_input_bytes": 67108864,
+    "maximum_load_elements": 8,
+    "maximum_output_bytes": 32768,
+    "maximum_each_log_bytes": 65536,
+    "total_timeout_seconds": 90,
+    "oa_open_close_timeout_seconds": 30,
+    "concurrency": 1,
+    "lock_mode": "nonblocking_single_worker_fail_closed"
+  },
+  "numeric_policy": {
+    "finite_only": true,
+    "vdd_range_v": [
+      0.0,
+      5.0
+    ],
+    "vcm_range_v": [
+      -5.0,
+      5.0
+    ],
+    "load_value_min_exclusive": 0.0,
+    "load_value_max_inclusive": 1000000000000.0,
+    "load_unit_allowlist": [
+      "ohm",
+      "F",
+      "A"
+    ],
+    "engineering_suffix_allowlist": [
+      "a",
+      "f",
+      "p",
+      "n",
+      "u",
+      "m",
+      "k",
+      "M",
+      "G",
+      "T"
+    ]
+  },
+  "output_schema": {
+    "schema_version": 1,
+    "plan_id": "WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN",
+    "plan_sha256": "64 lowercase hexadecimal characters",
+    "profile_id": "exact fixed profile ID",
+    "status": "ok | incomplete_evidence | blocked",
+    "conditions": {
+      "vdd": {
+        "status": "observed | absent | ambiguous | unsupported",
+        "value_v": "finite number or null",
+        "selector_sha256": "64 lowercase hexadecimal characters or null"
+      },
+      "vcm": {
+        "status": "observed | absent | ambiguous | unsupported",
+        "value_v": "finite number or null",
+        "selector_sha256": "64 lowercase hexadecimal characters or null"
+      },
+      "load": {
+        "status": "observed | absent | ambiguous | unsupported",
+        "kind": "resistive | capacitive | current | mixed | null",
+        "differential": "boolean or null",
+        "elements": "array of at most 8 bounded kind/value/unit objects",
+        "selector_set_sha256": "64 lowercase hexadecimal characters or null"
+      }
+    },
+    "bias_observation": {
+      "vbiasn_v": "finite number or null",
+      "vbiasp_v": "finite number or null",
+      "tied_to_state_fingerprint": "boolean"
+    },
+    "revision": {
+      "source_fingerprint_sha256": "64 lowercase hexadecimal characters",
+      "state_fingerprint_sha256": "64 lowercase hexadecimal characters",
+      "source_snapshot_sha256": "64 lowercase hexadecimal characters",
+      "semantic_link_status": "explicitly_bound | not_proven | conflicting",
+      "semantic_link_evidence_kind": "generation_manifest_hash_binding | embedded_revision_binding | none",
+      "timestamps_reported_as_equivalence": false
+    },
+    "invariants": {
+      "fingerprints_all_unchanged": "boolean",
+      "source_opened_read_only": "boolean",
+      "source_closed_without_save": "boolean",
+      "blocking_locks": "boolean",
+      "simulation_run": false,
+      "raw_content_included": false,
+      "paths_included": false
+    },
+    "blockers": "bounded enum array"
+  },
+  "sensitive_output_denylist": [
+    "raw netlist or ADE-state content",
+    "OA object dumps",
+    "instance, net, terminal, or property names",
+    "filesystem paths",
+    "PDK model content",
+    "waveforms or PSF data",
+    "license values or endpoints",
+    "environment variables",
+    "credentials, tokens, or keys",
+    "process command lines",
+    "unbounded logs or errors"
+  ],
+  "lock_policy": {
+    "delete_or_unlock": false,
+    "active_lock": "BLOCKED",
+    "stale_or_ambiguous_lock": "BLOCKED_AND_REPORT_BOUNDED_METADATA",
+    "panic_or_recovery_artifact": "BLOCKED_AND_REPORT_BOUNDED_METADATA",
+    "allowed_lock_report_fields": [
+      "artifact_class",
+      "owner",
+      "mtime_utc",
+      "pid",
+      "pid_running"
+    ]
+  },
+  "fail_closed_conditions": [
+    "plan or role-binding SHA mismatch",
+    "any argument or caller-supplied design value",
+    "installation identity or runner version outside the reviewed contract",
+    "missing, symlinked, unreadable, oversized, or non-regular fixed input",
+    "active, stale, ambiguous, panic, or recovery blocking artifact",
+    "role selector mismatch or unexpected cardinality",
+    "unsupported expression, unit, master cell, or property type",
+    "non-finite or out-of-range numeric value",
+    "source, state, profile, source snapshot, model, or binding fingerprint change",
+    "OA open mode other than r or close failure",
+    "timeout, concurrent invocation, oversized output, or unbounded error",
+    "missing explicit semantic revision link",
+    "any attempted simulation, save, write, deployment, or MCP exposure"
+  ],
+  "acceptance_criteria": [
+    "AC-01: plan v1 and decision record v4 hashes are verified before any future implementation",
+    "AC-02: the command accepts zero arguments and is operator-only, absent from the MCP surface",
+    "AC-03: the exact profile, source cellview, ADE state, state files, source snapshot, and model hash target are compiled into reviewed code",
+    "AC-04: an immutable exact role-binding manifest is reviewed and hash-bound before implementation; no instance, net, terminal, or property selector is guessed",
+    "AC-05: no arbitrary shell, SKILL, path, design identifier, property name, value, or expression input exists",
+    "AC-06: source OA is opened only with mode r and is closed without save on success and failure paths",
+    "AC-07: all fixed files and trees satisfy symlink, type, readability, entry-count, and byte-size limits",
+    "AC-08: source, state, profile, source snapshot, PDK model, and binding fingerprints are captured before and after and all are unchanged",
+    "AC-09: active or ambiguous locks and panic/recovery artifacts cause BLOCKED without deletion, unlock, rename, or retry",
+    "AC-10: VDD and VCM are emitted only for one exact bound selector each; absent, ambiguous, unsupported, or out-of-range evidence emits null and a blocker",
+    "AC-11: load output contains at most eight exact bound elements with finite values and allowlisted kinds and units; ambiguity emits no guessed aggregate",
+    "AC-12: ADE-state bias values remain separately identified and are tied to the exact state fingerprint from the same observation",
+    "AC-13: source/state semantic equivalence requires an explicit hash or embedded revision binding; identity, topology, hashes, or timestamps alone never establish equivalence",
+    "AC-14: output validates against the fixed schema, is at most 32768 bytes, and contains no raw content, paths, object names, PDK content, licenses, credentials, or unbounded errors",
+    "AC-15: total execution ends within 90 seconds, OA open/close within 30 seconds, and nonblocking concurrency remains exactly one",
+    "AC-16: simulation, netlisting, result extraction, profile mutation, OA save, ADE-state write, design/PDK/work-library write, deployment, and MCP changes are absent",
+    "AC-17: negative tests cover arguments, injection, Unicode/confusable identifiers, symlinks, oversized inputs, duplicate roles, unsupported expressions, lock states, fingerprint drift, timeout, and redaction",
+    "AC-18: actual execution requires separate approvals for the reviewed role binding, implementation/deployment, and one fixed read-only invocation",
+    "AC-19: collector success records evidence only and never confirms the scientific baseline; final approval or rejection remains a separate user decision",
+    "AC-20: failure performs no cleanup, unlock, automatic retry, fallback target, simulation, mutation, merge, or WP-15 work"
+  ],
+  "next_gate": "User reviews this plan and either supplies an exact immutable role-binding manifest or separately approves a fixed names-only role-discovery plan. No implementation, deployment, or execution is authorized by plan approval alone."
+}
