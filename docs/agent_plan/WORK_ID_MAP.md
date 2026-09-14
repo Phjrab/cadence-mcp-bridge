@@ -24,15 +24,15 @@ the current repository before use.
 | WP-11 Controlled writes and v1 release | Staged write, backup, rollback, audit, release | ICF-01-07, ICF-01-08, ICF-15-04 | Specific V1-V4 evidence only; no general write authority |
 | WP-12 Baseline reconciliation (merged implementation) | Fixed read-only actual-profile audit and fingerprints | ICF-00-03, ICF-02-01 | Evidence input; decision/freshness remain unresolved |
 | WP-12 Roadmap integration (merged documentation) | Post-v1 authority and bounded phase plan | ICF-00-01, ICF-00-06 | Documentation reference; does not complete ICF tasks |
-| PKG-INTEGRATE-01 | Package import, authority decisions, and this crosswalk | ICF-00-01 planning prerequisite | Documentation integration only; review pending |
-| WP-13 Actual ADE Profile Baseline and Capability Audit | Next bounded read-only audit | ICF-00-03 plus read-only portion of ICF-02-01 | **Next actual task after merge; not started here** |
+| PKG-INTEGRATE-01 | Package import, authority decisions, and this crosswalk | ICF-00-01 planning prerequisite | Merged through PR #18 as `198900ecc96c9cadd3697022f96c90bd5baf937a` |
+| WP-13 Actual ADE Profile Baseline and Capability Audit | Bounded actual read-only audit | ICF-00-03 plus read-only portion of ICF-02-01 | Audit passed with profile drift; feature integration review pending |
 
 ## Current selection
 
 The duplicate historical use of `WP-12` is disambiguated by title and merged commit history, not by
 rewriting old entries. PKG-INTEGRATE-01 is an orthogonal documentation task and does not consume the
-next implementation number. The single next task remains WP-13 as defined in
-`docs/CURRENT_PHASE_PLAN.md`.
+next implementation number. WP-13 is the active feature work until its audit branch is reviewed and
+merged; only then may WP-14 begin as defined in `docs/CURRENT_PHASE_PLAN.md`.
 
 Only these package sections are relevant to WP-13:
 
