@@ -1,0 +1,26 @@
+{
+  "is_template": true,
+  "status": "DRAFT",
+  "enabled": false,
+  "execution_authorized": false,
+  "logical_device_id": null,
+  "technology_id": null,
+  "schematic_master_id": null,
+  "layout_pcell_id": null,
+  "simulator_model_id": null,
+  "pins": [],
+  "body_domain": null,
+  "parameters": {
+    "width_total": null,
+    "width_per_finger": null,
+    "length": null,
+    "nf": null,
+    "m": null
+  },
+  "cdf_callback_policy": null,
+  "effective_netlist_evidence": null,
+  "layout_roundtrip_evidence": null,
+  "lvs_parameter_evidence": null,
+  "units_policy": null,
+  "validity_domain": null
+}

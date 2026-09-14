@@ -1,0 +1,40 @@
+{
+  "is_template": true,
+  "status": "DRAFT",
+  "enabled": false,
+  "execution_authorized": false,
+  "technology_id": null,
+  "official_release": null,
+  "pdk_manifest_sha256": null,
+  "license_policy_ref": null,
+  "supported_environments": [],
+  "logical_devices": {},
+  "pin_orders": {},
+  "parameter_schemas": {},
+  "layer_purpose_pairs": {},
+  "dbu_per_micron": null,
+  "manufacturing_grid": null,
+  "via_definitions": {},
+  "models": {
+    "simulator": null,
+    "process_corners": [],
+    "statistical_models": [],
+    "rc_corners": []
+  },
+  "verification": {
+    "drc_backend": null,
+    "drc_deck_id": null,
+    "lvs_backend": null,
+    "lvs_deck_id": null,
+    "pex_backend": null,
+    "pex_deck_id": null
+  },
+  "stream": {
+    "format": null,
+    "map_id": null,
+    "top_cell_rules_ref": null
+  },
+  "io_pad_registry": {},
+  "capability_evidence": [],
+  "note": "실제 경로와 PDK 내용은 운영자 관리 보호 config에 보관한다. MCP 입력은 logical ID다. 미확인 값을 과거 MyChip 예시로 채우지 않는다."
+}

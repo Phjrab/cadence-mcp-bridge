@@ -29,21 +29,6 @@ section만 참조한다. roadmap에 적힌 write, compute, 배포, 외부 서비
 WP-00부터 WP-11까지는 출판된 `v1.0.0`의 완료 이력이다. post-v1 작업은 이를 미완료로
 되돌리거나 재실행하지 않으며, 현재 phase와 active WP에 정의된 새 작업만 수행한다.
 
-### 통합 agent plan의 지위
-
-`docs/agent_plan/`에는 장기 Autonomous Custom IC Design 계획과 작업별 제안 계약이
-보존되어 있다. 이 문서군은 root 실행 계약을 대체하지 않으며, 다음 순서로만 적용한다.
-
-1. 이 root `CODEX_MASTER_PROMPT.md`와 `AGENTS.md`의 더 강한 현재 제한
-2. `PROJECT_STATE.md`와 `docs/CURRENT_PHASE_PLAN.md`가 선택한 하나의 active WP
-3. `docs/agent_plan/WORK_ID_MAP.md`가 그 WP에 연결한 관련 `ICF-*` 문서
-
-패키지의 전체 roadmap, template, archive, example, 승인 요청문은 실행 지시나 승인으로
-해석하지 않는다. `docs/agent_plan/CODEX_MASTER_PROMPT.md`의 보강 규칙은 위 계층 안에서만
-공통 참고 계약으로 사용하며, 충돌 해소 내역은
-`docs/agent_plan/INTEGRATION_DECISIONS.md`에 기록한다. 수정 전 이 파일의 원문은
-`docs/archive/CODEX_MASTER_PROMPT_pre_PKG-INTEGRATE-01.md`에 SHA-256 보존되어 있다.
-
 ---
 
 ## 0. 이 파일을 Codex에서 사용하는 방법
