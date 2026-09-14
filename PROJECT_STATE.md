@@ -4,27 +4,32 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: PKG-INTEGRATE-01
+current_wp: WP-13
 current_status: passed
-last_completed_wp: WP-12
-next_wp: WP-13
+last_completed_wp: WP-13
+next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: not_applicable
+implementation_status: audit_only_unmerged_capability_reference
 documentation_status: verified
 integration_status: review_pending
-deployment_status: not_deployed
+deployment_status: existing_remote_runner_0.18.0_unchanged
 release_status: published_v1.0.0_unchanged
-package_integration_status: PKG_INTEGRATED_REVIEW_PENDING
-current_feature_branch: wp/PKG-INTEGRATE-01-prompt-package
-base_main_commit: a3e6b4a1a5eedd183c994902917d60847bda0799
-last_commit: c8a4c880fac9652e41cd71043b04436301c23475
-last_push: 2026-09-14T18:19:40.5884028+09:00
+package_integration_status: merged_pr_18
+wp13_audit_result: PASS_WITH_PROFILE_DRIFT
+profile_contract_status: PROFILE_DRIFT
+baseline_decision_status: BASELINE_DECISION_REQUIRED
+snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
+parameterized_execution_enabled: false
+current_feature_branch: wp/WP-13-actual-ade-baseline-audit
+base_main_commit: 198900ecc96c9cadd3697022f96c90bd5baf937a
+last_commit: 6bb81ba5311f071fdb123e2fb8014de9b8fe97d1
+last_push: 2026-09-14T19:04:38.3004604+09:00
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: pass
-user_action_required: "Review and explicitly approve the PKG-INTEGRATE-01 feature branch for PR merge. After merge, begin WP-13 read-only Actual ADE Profile Baseline and Capability Audit; no deployment, simulation, OA write/save, ADE-state change, or parameterized execution is authorized."
+user_action_required: "Review and explicitly approve the WP-13 audit feature branch for PR merge. After merge, WP-14 may prepare the VBIASN/VBIASP, analysis-mode, and snapshot-freshness decision package; parameterized execution remains disabled."
 ```
 
 ## Progress log
@@ -80,3 +85,5 @@ user_action_required: "Review and explicitly approve the PKG-INTEGRATE-01 featur
 - 2026-08-31: WP-12 deployed runner 0.17.0 and an argument-free, operator-only actual-profile baseline audit. Two read-only runs proved identical profile/source/state fingerprints, no raw content or paths, current-source equality with the latest successful actual manifest, and zero design/ADE-state/PDK/work-library writes. `VBIASN` and `VBIASP` are each referenced once but not declared in the source snapshot, so the fixed wrapper supplies `300m/650m`; the snapshot is 1,512 seconds older than the newest ADE-state metadata. The result is `BASELINE_DECISION_REQUIRED` and `SNAPSHOT_FRESHNESS_UNCONFIRMED`, while WP-13 read-only introspection may proceed after review and merge.
 - 2026-08-31: Post-v1 roadmap transition was integrated on `wp/WP-12-roadmap-integration` from `origin/main` `f560bfeb89c148356223449d7095b7eff4b19092` as documentation commit `5b3bf590c89705eb08d93d327dff9e296d0fa166`. The published WP-00 through WP-11/v1.0.0 history is preserved. The previously merged read-only baseline evidence remains in the immutable progress log but is not authority for mutation or parameterized execution. Active tracking is reset as explicitly requested to WP-12 pending on the `autonomous-custom-ic-design` development track; this transition changed repository documentation only and schedules WP-13 as the next post-merge read-only audit. Ruff, mypy, 175 local tests with eight expected skips, 18 security tests, secret scanning, document authority assertions, and functional-change scope assertions passed without any Cadence, runner, OA, ADE, schematic, layout, work-library, or PDK operation.
 - 2026-09-14: Latest `origin/main` `a3e6b4a1a5eedd183c994902917d60847bda0799` was confirmed to contain the reviewed WP-12 roadmap integration. PKG-INTEGRATE-01 imported the verified prompt package as planning-only documentation, preserved the pre-integration root contract byte-for-byte, added an explicit WP/ICF evidence crosswalk, retained all stronger approval/security/Git limits, and excluded the recovered `archive/LEGACY_INPUTS.zip`. No Cadence, runner, job, OA, ADE state, circuit, layout, work-library, PDK, V1-V4 evidence, visibility, tag, release, deployment, merge, or direct-main operation was performed. The integration is documentation-verified and awaits review/merge; the sole next implementation task remains WP-13 read-only baseline and capability audit.
+- 2026-09-14: The user explicitly authorized PR #18, and PKG-INTEGRATE-01 head `a5a4d85197896d7b7b97fb90f5b5cbad1d4937db` was merged through GitHub into main as `198900ecc96c9cadd3697022f96c90bd5baf937a`; no direct-main push, tag, release, deployment, or WP-13 work occurred in that merge run.
+- 2026-09-14: WP-13 performed two current argument-free baseline audits, one fixed legacy IC6.1.5 read-only ADE/OA introspection, and a post-introspection baseline audit using the already deployed runner 0.18.0 without redeployment. Profile, source, and ADE-state hashes remained `dea735f2...`, `30e941fd...`, and `a6ead918...`; source/state/PDK-model/source-netlist before/after fingerprints were unchanged, topology remained 35/14/8, and source/state locks were zero. State1 reports `VBIASN=300m`, `VBIASP=650m`, `dc` enabled, `tran` disabled with stored stop `4m`, and no named outputs, while the reviewed profile expects transient. The result is `PROFILE_DRIFT` with `analysis_mismatch` and `snapshot_freshness_unconfirmed`; the source remains 1,512 seconds older than state metadata. The `300m/650m` and historical `370m/650m` candidates remain unselected, and parameterized execution stays disabled. Only bounded runtime logs/cache under the approved `.cadence_mcp` root were refreshed; no runner deployment, MCP change, simulation, OA save, source/state/PDK/work-library/V1-V4 modification, tag, release, merge, or direct-main push occurred. The runner 0.18.0 implementation remains reference-only on the unmerged historical branch and is not imported by WP-13.
