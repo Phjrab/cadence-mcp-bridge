@@ -19,12 +19,13 @@ the repository's existing `WP-*` history. `docs/agent_plan/WORK_ID_MAP.md` is th
 crosswalk; mappings are evidence references, not automatic completion claims or execution
 authority. The imported package templates and archive references are inactive by default.
 
-The active implementation task is **WP-13 — Actual ADE Profile Baseline and Capability Audit**.
-For that WP, the relevant package references are the baseline-reconciliation requirements
-in `ICF-00-03` and the read-only portion of `ICF-02-01`. They may strengthen acceptance checks but
-do not authorize runner deployment, simulation, OA write/save, ADE-state changes, or parameterized
-execution. All other `ICF-*` work remains planning-only until selected by a later bounded phase and
-state update.
+The active task is **WP-14 — VBIASN/VBIASP Source-of-Truth Confirmation**. WP-13's audit was
+merged through PR #19 as `b12cff904fe31a1d68490836c1fe6765734b9bf0`. WP-14 uses that dated audit
+and the compatibility/research separation in `ICF-00-03` to prepare a repository-only decision
+package. Version 1 is ready for review with no selected baseline; confirmation remains blocked.
+See `docs/WP14_VBIAS_SOURCE_OF_TRUTH_DECISION.md`. The package does not authorize runner deployment,
+simulation, OA write/save, ADE-state changes, or parameterized execution. No fresh remote probe is
+performed in WP-14. Other `ICF-*` tasks remain planning references, not execution instructions.
 
 ## Phase objective
 
@@ -69,4 +70,6 @@ WP contract and any required separate user approval.
 
 The phase may advance to ADE/sweep implementation only after WP-13 through WP-16 are integrated and
 all unresolved baseline, capability, approval, and proprietary-data questions are recorded. The
-next execution after WP-13 is reviewed and merged is WP-14 only.
+next execution remains WP-14 until its explicit baseline decision or blocker is reviewed. WP-15
+must not start automatically when the decision package is pushed or merged. The older numbered
+implementation sequence in `docs/NEXT_VERSION_SCOPE.md` is historical and cannot override this plan.

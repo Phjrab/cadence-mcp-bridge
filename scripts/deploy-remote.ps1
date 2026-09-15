@@ -7,6 +7,7 @@ Set-StrictMode -Version Latest
 $sshAlias = "cadence-vm"
 $remoteRoot = "/home/buet/cds_work/.cadence_mcp"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$lineagePolicyPath = Join-Path $projectRoot "remote/config/runner-lineage.json"
 $sshOptions = @(
     "-o", "BatchMode=yes",
     "-o", "StrictHostKeyChecking=yes",
@@ -19,6 +20,7 @@ $files = @(
     @{ Local = "remote/lib/runner-common.sh"; Remote = "$remoteRoot/lib/runner-common.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-smoke-job.sh"; Remote = "$remoteRoot/lib/run-smoke-job.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-profile-job.sh"; Remote = "$remoteRoot/lib/run-profile-job.sh"; Mode = "700" },
+    @{ Local = "remote/lib/run-wp14-role-discovery.sh"; Remote = "$remoteRoot/lib/run-wp14-role-discovery.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-design-write-validation.sh"; Remote = "$remoteRoot/lib/run-design-write-validation.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-design-write-v2-recovery.sh"; Remote = "$remoteRoot/lib/run-design-write-v2-recovery.sh"; Mode = "700" },
     @{ Local = "remote/lib/run-design-write-v3-validation.sh"; Remote = "$remoteRoot/lib/run-design-write-v3-validation.sh"; Mode = "700" },
@@ -30,6 +32,7 @@ $files = @(
     @{ Local = "remote/py26/discovery_json.py"; Remote = "$remoteRoot/py26/discovery_json.py"; Mode = "700" },
     @{ Local = "remote/py26/profile_json.py"; Remote = "$remoteRoot/py26/profile_json.py"; Mode = "700" },
     @{ Local = "remote/py26/actual_profile_audit.py"; Remote = "$remoteRoot/py26/actual_profile_audit.py"; Mode = "700" },
+    @{ Local = "remote/py26/wp14_role_discovery.py"; Remote = "$remoteRoot/py26/wp14_role_discovery.py"; Mode = "700" },
     @{ Local = "remote/py26/write_validation_json.py"; Remote = "$remoteRoot/py26/write_validation_json.py"; Mode = "700" },
     @{ Local = "remote/py26/v2_recovery_json.py"; Remote = "$remoteRoot/py26/v2_recovery_json.py"; Mode = "700" },
     @{ Local = "remote/py26/v3_validation_json.py"; Remote = "$remoteRoot/py26/v3_validation_json.py"; Mode = "700" },
@@ -42,8 +45,10 @@ $files = @(
     @{ Local = "remote/config/design-write-v3-plan.json"; Remote = "$remoteRoot/config/design-write-v3-plan.json"; Mode = "600" },
     @{ Local = "remote/config/design-write-v3-exact-conditional-rollback-plan.json"; Remote = "$remoteRoot/config/design-write-v3-exact-conditional-rollback-plan.json"; Mode = "600" },
     @{ Local = "remote/config/design-write-v4-plan.json"; Remote = "$remoteRoot/config/design-write-v4-plan.json"; Mode = "600" },
+    @{ Local = "remote/config/runner-lineage.json"; Remote = "$remoteRoot/config/runner-lineage.json"; Mode = "600" },
     @{ Local = "remote/discovery/ocean-smoke.ocn"; Remote = "$remoteRoot/discovery/ocean-smoke.ocn"; Mode = "600" },
     @{ Local = "remote/discovery/skill-smoke.il"; Remote = "$remoteRoot/discovery/skill-smoke.il"; Mode = "600" },
+    @{ Local = "remote/discovery/wp14-role-discovery.il"; Remote = "$remoteRoot/discovery/wp14-role-discovery.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-validation.il"; Remote = "$remoteRoot/write/design-write-validation.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-readonly-preflight.il"; Remote = "$remoteRoot/write/design-write-readonly-preflight.il"; Mode = "600" },
     @{ Local = "remote/write/design-write-v2-forensic.il"; Remote = "$remoteRoot/write/design-write-v2-forensic.il"; Mode = "600" },
@@ -72,11 +77,16 @@ foreach ($file in $files) {
     }
 }
 
+$lineagePolicy = Get-Content -LiteralPath $lineagePolicyPath -Raw | ConvertFrom-Json
+if (-not $lineagePolicy.deployment_enabled) {
+    throw "Remote deployment is blocked: $($lineagePolicy.lineage_status)."
+}
+
 if (-not $PSCmdlet.ShouldProcess("${sshAlias}:$remoteRoot", "Deploy restricted Cadence runner")) {
     return
 }
 
-$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/write' '$remoteRoot/write-validation' '$remoteRoot/write-rollback-v3' '$remoteRoot/write-validation-v4' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/write' '$remoteRoot/write-validation' '$remoteRoot/write-rollback-v3' '$remoteRoot/write-validation-v4' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'"
+$setupCommand = "umask 077; mkdir -p '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/wp14-role-discovery' '$remoteRoot/write' '$remoteRoot/write-validation' '$remoteRoot/write-rollback-v3' '$remoteRoot/write-validation-v4' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'; chmod 700 '$remoteRoot' '$remoteRoot/bin' '$remoteRoot/lib' '$remoteRoot/py26' '$remoteRoot/config' '$remoteRoot/discovery' '$remoteRoot/discovery-runtime' '$remoteRoot/wp14-role-discovery' '$remoteRoot/write' '$remoteRoot/write-validation' '$remoteRoot/write-rollback-v3' '$remoteRoot/write-validation-v4' '$remoteRoot/profiles' '$remoteRoot/profiles/spectre-smoke' '$remoteRoot/profiles/fixture-rc-transient' '$remoteRoot/profiles/actual-differential-amplifier-tb2-transient' '$remoteRoot/jobs'"
 & ssh @sshOptions $sshAlias $setupCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Remote layout creation failed."

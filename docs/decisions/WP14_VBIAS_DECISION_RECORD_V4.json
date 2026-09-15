@@ -1,0 +1,159 @@
+{
+  "record_id": "WP14_VBIAS_DECISION_RECORD",
+  "record_version": 4,
+  "created_at": "2026-09-14T20:09:28+09:00",
+  "artifact_kind": "non_executable_read_only_condition_revision_audit",
+  "status": "BLOCKED_CONDITION_REVISION_EVIDENCE_INCOMPLETE",
+  "reviewed_feature_branch": "wp/WP-14-vbias-source-of-truth",
+  "reviewed_feature_head": "1effb9c819b10dbc1b445c679f8c63edf7d22329",
+  "source_proposal": {
+    "path": "docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json",
+    "package_version": 1,
+    "normalized_lf_sha256": "58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d",
+    "git_blob": "d3f843ebe92d9cee40db6efc5c30666a9c22b3f7"
+  },
+  "predecessor_records": [
+    {
+      "path": "docs/decisions/WP14_VBIAS_DECISION_RECORD_V2.json",
+      "record_version": 2,
+      "normalized_lf_sha256": "6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9",
+      "git_blob": "4855ce012aac98ed61a98d01bdbff3805e2aadeb"
+    },
+    {
+      "path": "docs/decisions/WP14_VBIAS_DECISION_RECORD_V3.json",
+      "record_version": 3,
+      "normalized_lf_sha256": "22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf",
+      "git_blob": "205b27adc431a6ca93a38e200a9494941e74928d"
+    }
+  ],
+  "audit_method": {
+    "deployed_runner_reported_version": "0.18.0",
+    "runner_byte_identity_verified": false,
+    "reference_implementation_head": "15d85bf440b86d191a8f9d07e7b9e687ccf003c0",
+    "baseline_audit_calls": 3,
+    "fixed_ade_profile_introspection_calls": 1,
+    "profile_id": "actual-differential-amplifier-tb2-transient",
+    "caller_controlled_parameters": false,
+    "simulation_run": false,
+    "oa_open_mode": "r",
+    "oa_save": false,
+    "runtime_artifacts_refreshed": true,
+    "runner_deployed_or_modified": false
+  },
+  "current_read_only_observation": {
+    "baseline_sequence_stable": true,
+    "profile_sha256": "dea735f2ba81ba5ca714df8dba1b752be1fa3ab67f5742c2cee76eb5af849a4b",
+    "source_snapshot_sha256": "30e941fdc24ffdc30a8dc989ffb884cd2a5256797adfa5ce2b2c032af67d5351",
+    "source_snapshot_mtime_utc": "2026-08-20T09:18:28Z",
+    "source_tree_fingerprint": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+    "source_structure": {
+      "instances": 35,
+      "nets": 14,
+      "terminals": 8
+    },
+    "ade_state_metadata_sha256": "a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d",
+    "ade_state_newest_mtime_utc": "2026-08-20T09:43:40Z",
+    "source_minus_state_seconds": -1512,
+    "source_not_older_than_state": false,
+    "latest_successful_manifest_matches_source": true,
+    "ade_state_design_variables": {
+      "VBIASN": "300m",
+      "VBIASP": "650m"
+    },
+    "ade_state_analyses": [
+      {
+        "name": "dc",
+        "enabled": true,
+        "stop_time": null
+      },
+      {
+        "name": "tran",
+        "enabled": false,
+        "stop_time": "4m"
+      }
+    ],
+    "profile_analysis": "tran",
+    "model_section": "NN",
+    "temperature_c": 27.0,
+    "named_outputs": [],
+    "drift_codes": [
+      "analysis_mismatch",
+      "snapshot_freshness_unconfirmed"
+    ],
+    "fingerprints_all_unchanged": true,
+    "blocking_locks": false,
+    "raw_content_included": false,
+    "remote_paths_included_in_command_result": false
+  },
+  "condition_and_revision_findings": {
+    "vdd": {
+      "actual_ade_observation": null,
+      "status": "unverified",
+      "historical_research_constraint_v": 1.0,
+      "historical_constraint_is_current_ade_evidence": false
+    },
+    "vcm": {
+      "actual_ade_observation": null,
+      "status": "unverified"
+    },
+    "load_condition": {
+      "actual_ade_observation": null,
+      "status": "unverified"
+    },
+    "source_revision": {
+      "status": "fingerprinted_not_version_labeled",
+      "fingerprint": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714"
+    },
+    "ade_state_revision": {
+      "status": "metadata_fingerprinted_not_version_labeled",
+      "fingerprint": "a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d"
+    },
+    "source_state_identity_binding_match": true,
+    "bias_observation_tied_to_audited_state": true,
+    "source_state_revision_equivalence": "unverified",
+    "selected_bias_tied_to_complete_operating_condition": false,
+    "snapshot_freshness": "SNAPSHOT_FRESHNESS_UNCONFIRMED"
+  },
+  "decision_review": {
+    "submitted_vbiasn_v": 0.3,
+    "submitted_vbiasp_v": 0.65,
+    "submitted_analysis_policy": "require_dc_state_aligned_future_plan",
+    "submitted_snapshot_policy": "accept_pinned_snapshot_as_historical_only",
+    "condition_revision_evidence_sufficient": false,
+    "final_scientific_baseline_approval_received": false,
+    "scientific_baseline_approved": false,
+    "inference_performed": false
+  },
+  "evidence_provenance": [
+    {
+      "path": "docs/ACTUAL_PROFILE_BASELINE_AUDIT.md",
+      "git_blob": "59e2a2df4d4e6e33048232fdd7d4df8d96c2ffc1"
+    },
+    {
+      "path": "docs/WP13_ACTUAL_ADE_BASELINE_CAPABILITY_AUDIT.md",
+      "git_blob": "d76f2cace0fbb40bcb6cdf6652f2f3df4e089d73"
+    },
+    {
+      "path": "docs/agent_plan/planning/historical_baselines.json",
+      "git_blob": "a21c18a1f61c7f399ebc742942053e84c6590735",
+      "authority": "historical_context_not_current_state"
+    }
+  ],
+  "gates": {
+    "baseline_confirmed": false,
+    "operating_condition_complete": false,
+    "source_state_revision_equivalent": false,
+    "profile_drift_resolved": false,
+    "snapshot_freshness_confirmed": false,
+    "parameterized_execution_enabled": false,
+    "simulation_authorized": false,
+    "deployment_authorized": false,
+    "mcp_change_authorized": false,
+    "oa_write_or_save_authorized": false,
+    "ade_state_change_authorized": false,
+    "design_or_pdk_change_authorized": false
+  },
+  "next_required_action": "Provide separately verified VDD, VCM, load, and source/state revision-equivalence evidence through a newly reviewed bounded read-only method or operator evidence, then issue a separate final scientific approval or rejection.",
+  "overwrites_prior_records": false,
+  "execution_authority": "none"
+}

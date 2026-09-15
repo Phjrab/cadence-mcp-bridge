@@ -20,11 +20,22 @@ capability-gated mode.
 | Snapshot freshness | unresolved | WP-13 reconfirmed that the source is 1,512 seconds older than ADE-state metadata; approved regeneration or an explicit snapshot policy is needed |
 | Immutable bias baseline | observed, unapproved | ADE state and the compatibility wrapper report `300m/650m`; the separate `370m/650m` research candidate remains unresolved |
 | ADE analysis contract | drifted | State1 has `dc` enabled and `tran` disabled while the reviewed profile expects transient with stop `4m` |
-| Actual variable contract | not started | WP-14 and explicit user approval |
+| Actual variable contract | proposal only; confirmation blocked | WP-14 version-1 decision package has no selected bias, range, or execution permission |
 | Actual output contract | not started | Exact logical outputs and extraction policy must be approved |
-| Sweep execution | disabled | Requires WP-15 through WP-17 gates |
+| Sweep execution | disabled | Requires current phase completion and a later explicitly scoped implementation phase |
 
-## Planned work-package sequence
+## Current work-package sequence
+
+`docs/CURRENT_PHASE_PLAN.md` is authoritative: WP-13 is merged through PR #19; WP-14 prepares
+the versioned bias/analysis/freshness decision and remains blocked on confirmation. WP-15 is PDK
+abstraction design and WP-16 is the ADE/sweep capability inventory. Neither is started here.
+Parameterized profile, extraction, and sweep implementation need a later bounded phase; their
+active WP IDs are not assigned by this older scope document.
+
+## Superseded implementation sequence (historical planning only)
+
+The list below preserves the pre-roadmap proposal. Its WP-15 onward numbering is superseded by
+the current phase, and its old review-pending wording is historical. It is not execution authority.
 
 1. WP-13: actual ADE baseline and fixed read-only capability audit (completed on feature branch; review pending).
 2. WP-14: actual parameter binding and approval package; no variable enablement.
@@ -75,3 +86,11 @@ unchanged source, state, PDK-model, and source-netlist fingerprints with zero so
 The runner 0.18.0 implementation and MCP exposure remain unmerged reference evidence; current main
 still owns runner 0.17.0. See `docs/WP13_ACTUAL_ADE_BASELINE_CAPABILITY_AUDIT.md`. No baseline was
 selected and parameterized execution remains disabled.
+
+## WP-14 outcome
+
+The repository-only version-1 package records separate compatibility `300m/650m` and reported
+research `370m/650m` candidates, dated WP-13 observations, and unresolved operating-condition,
+analysis, freshness, and provenance questions. All choices remain null and permissions false.
+Document acceptance does not confirm a scientific baseline. See
+`docs/WP14_VBIAS_SOURCE_OF_TRUTH_DECISION.md`; the next work stays WP-14 for explicit review.

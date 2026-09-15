@@ -4,33 +4,91 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: private
-current_wp: WP-13
-current_status: passed
+current_wp: WP-14
+current_status: blocked
 last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: audit_only_unmerged_capability_reference
+implementation_status: wp14_names_only_discovery_repository_implemented_local_verified
 documentation_status: verified
-integration_status: review_pending
-deployment_status: existing_remote_runner_0.18.0_unchanged
+integration_status: implementation_review_pending
+deployment_status: blocked_existing_remote_runner_0.18.0_unchanged_pending_lineage_reconciliation
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
+wp13_integration_status: merged_pr_19
+wp14_decision_package: docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json
+wp14_decision_package_version: 1
+wp14_package_status: reviewed_conditionally
+wp14_document_acceptance: passed
+wp14_package_normalized_lf_sha256: 58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d
+wp14_decision_record: docs/decisions/WP14_VBIAS_DECISION_RECORD_V4.json
+wp14_decision_record_version: 4
+wp14_decision_record_normalized_lf_sha256: 95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46
+wp14_decision_review_status: blocked_condition_revision_evidence_incomplete
+wp14_submitted_bias_selection: "VBIASN=0.300V; VBIASP=0.650V"
+wp14_analysis_policy: require_dc_state_aligned_future_plan
+wp14_snapshot_policy: accept_pinned_snapshot_as_historical_only
+wp14_confirmation_status: blocked_pending_complete_condition_evidence_and_final_approval
+wp14_remote_validation: fixed_read_only_audit_passed_with_unresolved_conditions
+wp14_source_revision_fingerprint: 046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714
+wp14_ade_state_revision_fingerprint: a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d
+wp14_source_state_revision_equivalence: unverified
+wp14_vdd_actual_profile_status: unverified
+wp14_vcm_actual_profile_status: unverified
+wp14_load_condition_status: unverified
+wp14_condition_collector_plan: docs/plans/WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN_V1.json
+wp14_condition_collector_plan_version: 1
+wp14_condition_collector_plan_normalized_lf_sha256: 4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb
+wp14_condition_collector_plan_status: ready_for_review_role_binding_required
+wp14_role_binding_status: unresolved_not_inferred
+wp14_names_only_discovery_plan: docs/plans/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN_V1.json
+wp14_names_only_discovery_plan_version: 1
+wp14_names_only_discovery_plan_normalized_lf_sha256: 2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d
+wp14_names_only_discovery_plan_status: repository_implemented_local_verified_deployment_not_authorized
+wp14_names_only_discovery_implementation: docs/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_IMPLEMENTATION.md
+wp14_repository_runner_candidate_version: 0.19.0
+wp14_remote_runner_observed_version: 0.18.0
+wp14_runner_lineage_status: blocked_pending_explicit_0_18_capability_reconciliation
 profile_contract_status: PROFILE_DRIFT
-baseline_decision_status: BASELINE_DECISION_REQUIRED
+baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
-current_feature_branch: wp/WP-13-actual-ade-baseline-audit
-base_main_commit: 198900ecc96c9cadd3697022f96c90bd5baf937a
-last_commit: 6bb81ba5311f071fdb123e2fb8014de9b8fe97d1
-last_push: 2026-09-14T19:04:38.3004604+09:00
+current_feature_branch: wp/WP-14-vbias-source-of-truth
+base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
+last_commit: 2fd19de737e1e0926d89797082dcef1d1de48fe1
+last_push: null
+push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: pass
-user_action_required: "Review and explicitly approve the WP-13 audit feature branch for PR merge. After merge, WP-14 may prepare the VBIASN/VBIASP, analysis-mode, and snapshot-freshness decision package; parameterized execution remains disabled."
+last_e2e_result: not_run
+user_action_required: "Review the exact pushed WP-14 repository implementation. Before any deployment, separately approve reconciliation of current-main runner 0.17.0 with the unchanged deployed 0.18.0 capability; deployment and one fixed read-only invocation then require separate explicit approvals. No candidate may become a binding or scientific baseline automatically. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
+
+## WP-14 checkpoint
+
+- 2026-09-14: PR #19 merged reviewed WP-13 head `7ec535ea035f0a1a424d802d051726a2a4b12930` as `b12cff904fe31a1d68490836c1fe6765734b9bf0`. GitHub MERGED state, exact latest origin/main, ancestry, private visibility, and a clean starting tree were verified before creating `wp/WP-14-vbias-source-of-truth` from that commit. This run performed no merge.
+- 2026-09-14: Documentation commit `4359ad6f16fbc015ac06cea9c2d33df1ae134ae4` prepared version-1 `WP14_VBIAS_DECISION_PACKAGE` with normalized-LF SHA-256 `58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`. Six pinned repository evidence blobs connect the undeclared source references, fixed wrapper/profile and dated ADE `300m/650m` observations, and historical research `370m/650m` candidate. Operating-condition/revision equivalence, analysis policy, and freshness remain unresolved. No bias is selected, no approval field is populated, and all execution permissions remain false. The old WP-15 implementation numbering is explicitly marked historical; the current PDK-design phase remains authoritative.
+- 2026-09-14: WP-14 document checks, Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 308-file secret preflight, 18 security tests, and strict dependency audit passed. No known dependency vulnerabilities were found. Existing audit/runtime/release files and prior progress-log entries are unchanged. No SSH, runner deployment, MCP tool change, simulation, OA write/save, ADE state, source/schematic/layout/work-library/PDK/V1-V4 modification, tag, release, direct-main push, or WP-15 work occurred. The requested decision package is ready for review; baseline confirmation remains BLOCKED pending explicit user choices and condition evidence.
+- 2026-09-14: Continuation review reconfirmed remote HEAD `3a65afd87151fc07257de1b3855692dcd9a016a1`, preserved decision package v1 byte-for-byte, and reconfirmed its normalized-LF SHA-256 `58ce0aae5aa3f9cf46f65c1f1196b05663206000f52b4fc7a90fdef4f12eda9d`. Because no concrete bias, analysis, or snapshot choice and no new condition/revision evidence were supplied, separate decision review record v2 keeps every decision field unset and every execution/mutation gate false. WP-14 remains BLOCKED; no Cadence, remote, runtime, design, PDK, tag, release, merge, or WP-15 operation occurred.
+- 2026-09-14: Decision review record v2 was fixed at normalized-LF SHA-256 `6d0b280afb72388bb8621c7a2e66120523c20ff8a2f6e1974557133bb5a21ac9` in documentation commit `1ce7f1c1df5bbd3400a7dc923c4d0b7a437ce17b`. v1 blob/hash preservation, null decision fields, false permission gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 309-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. Remote E2E was not run because this WP explicitly forbids simulation/deployment and is documentary only.
+- 2026-09-14: User submission selected `VBIASN=0.300 V`, `VBIASP=0.650 V`, a future state-aligned DC plan, and historical-only treatment of the pinned snapshot, identifying approver `Phjrab` and timestamp `2026-09-14T15:30:00+09:00`. Because scientific approval was conditional on sufficient evidence while VDD, VCM, load, and source/state revision equivalence were explicitly `unverified`, versioned decision record v3 records the selection without confirming a baseline. All execution/mutation gates remain false and WP-14 remains BLOCKED.
+- 2026-09-14: Decision record v3 was fixed at normalized-LF SHA-256 `22f5e558888d4ebf98428b8352d5d6b91eba93b525687e84fb41d9398af71dcf` in documentation commit `5729d5e5b6eb57bb1a8d05f5d3372fadf4840bce`. v1/v2 preservation, exact submitted fields, unresolved-condition retention, false execution gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 310-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed. No remote E2E or external mutation was performed.
+- 2026-09-14: Three fixed baseline calls and one allowlisted read-only ADE/OA introspection on runner 0.18.0 reconfirmed stable profile/source/state hashes, `state1` values `300m/650m`, source structure 35/14/8, unchanged protected fingerprints, and no blocking locks. Source and state now have individual audit fingerprints, but VDD, VCM, load, and semantic source/state revision equivalence remain unverified; the snapshot remains 1,512 seconds older than state metadata. Decision record v4 therefore keeps evidence sufficiency and scientific baseline approval false. Only bounded `.cadence_mcp/ade-profile-introspection` runtime artifacts were refreshed; no deployment, simulation, OA save, ADE/design/PDK modification, merge, or WP-15 work occurred.
+- 2026-09-14: Decision record v4 was fixed at normalized-LF SHA-256 `95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46` in evidence commit `cc472e46ad4a2db24fc0e8a107f547a3ca466678`. v1-v3 preservation, audit provenance, exact current observations, unresolved-condition retention, false authorization gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 311-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
+- 2026-09-14: Planning-only `WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN` v1 defines an argument-free, operator-only, non-MCP collector contract for VDD, VCM, load, and source/state semantic linkage. It fixes the profile/cellview/state/file/model allowlist, redacted schema, OA read-only lifecycle, fingerprint/lock/timeout/size gates, fail-closed rules, and 20 acceptance criteria. Exact OA role selectors remain `UNRESOLVED_NOT_INFERRED`; a hash-bound binding manifest is a mandatory prerequisite. No implementation, deployment, collector execution, Cadence invocation, simulation, mutation, merge, or WP-15 work occurred.
+- 2026-09-14: Collector plan v1 was fixed at normalized-LF SHA-256 `4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb` in plan commit `1a5eb663b95731c23380a26fd2eb2c741ba4b9b1`. All 20 criteria, exact target allowlist, zero-argument/non-MCP contract, false authority flags, resource and redaction limits, unresolved role-binding gate, v1-v4 preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 313-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
+- 2026-09-15: Planning-only `WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN` v1 defines a zero-argument, operator-only, non-MCP OA read-only discovery for exactly the 35/14/8 source fingerprint. It exposes only bounded candidate counts, allowlisted master/property/connection enums, ambiguity/blocker states, and source-bound selector commitments; actual names and values are denied. Unique candidates are not auto-bound. The plan contains 20 acceptance criteria and independent later implementation, deployment, and invocation gates. No implementation, deployment, Cadence execution, simulation, OA/ADE/design/PDK mutation, merge, or WP-15 work occurred.
+- 2026-09-15: Names-only discovery plan v1 was fixed at normalized-LF SHA-256 `2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d` in plan commit `fd82325f0b5caf07f133cc5367d5992a90aa139e`. All 20 criteria, exact target/source-fingerprint binding, closed master/property classification, no-value/no-name output, selector commitments, ambiguity retention, false authority flags, resource and lock limits, v1-v4 and collector-plan preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 315-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
+- 2026-09-15: Under explicit implementation-only approval bound to plan v1 SHA-256 `2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d`, WP-14 added an argument-free operator-only repository command for exactly `MyDesignLib/Differential_Amplifier_TB2/schematic`. The candidate runner is 0.19.0; it uses OA mode `r`, no save/write API, closed master/property/connection enums, property name/type presence without value reads, an in-memory redaction pipe, source-bound opaque commitments, 35/14/8 and protected-fingerprint/lock gates, nonblocking concurrency one, 30/60-second timeouts, 65,536-byte private input and 16,384-byte public output limits, and false semantic confirmation for every candidate. No MCP surface was added and no role or scientific baseline was selected.
+- 2026-09-15: Provenance review confirmed current main carries runner 0.17.0 while deployed 0.18.0 ADE introspection is represented only by historical unmerged head `15d85bf440b86d191a8f9d07e7b9e687ccf003c0`; that stale branch was not merged or reused. A fixed lineage record and deployment-script gate keep deployment disabled until separate 0.18 capability reconciliation approval. Ruff, strict mypy (17 source files), 191 local tests (eight remote integrations skipped; 56 legacy warnings), 321-file secret preflight, 18 security tests, strict locked dependency audit, PowerShell parsing, Python helper compilation, plan/prior-record preservation, and `git diff --check` passed. No SSH, deployment, collector/Cadence execution, simulation, OA/ADE/design/PDK write, merge, release change, retry, or WP-15 work occurred; WP-14 remains blocked pending review and separate later gates.
+
+`last_commit` identifies the verified documentation commit preceding this state checkpoint.
+`last_push` remains null at commit time because the first push of this branch follows the commit;
+the completion report records the final remote HEAD comparison. No pending field is evidence of
+a successful push or a baseline approval.
 
 ## Progress log
 
