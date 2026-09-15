@@ -70,6 +70,7 @@ def test_runner_exposes_only_allowlisted_commands() -> None:
         "submit-smoke",
         "submit-profile",
         "actual-profile-baseline-audit",
+        "wp14-role-discovery",
         "status",
         "log-tail",
         "result",
@@ -108,7 +109,7 @@ def test_runner_uses_fixed_remote_and_cadence_paths() -> None:
     assert "/home/buet/cadence/MMSIM121/tools/bin/spectre" in runner
     assert "setsid" in runner
     assert 'kill -TERM -- "-$pgid"' in runner
-    assert "RUNNER_VERSION=0.17.0" in runner
+    assert "RUNNER_VERSION=0.19.0" in runner
     assert "cadence_mcp_worker_matches" in runner
     assert 'unknown "job worker is unavailable; operator review required"' in runner
 

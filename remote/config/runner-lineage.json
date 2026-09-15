@@ -1,0 +1,10 @@
+{
+  "repository_runner_version": "0.19.0",
+  "repository_base_runner_version": "0.17.0",
+  "observed_remote_runner_version": "0.18.0",
+  "observed_remote_reference_branch": "wp/WP-13-ade-readonly-introspection",
+  "observed_remote_reference_head": "15d85bf440b86d191a8f9d07e7b9e687ccf003c0",
+  "lineage_status": "blocked_pending_explicit_0_18_capability_reconciliation",
+  "deployment_enabled": false,
+  "reason": "The deployed 0.18.0 ADE introspection capability is not present in current main. Deploying 0.19.0 before an explicit reconciliation would silently remove a deployed command."
+}
