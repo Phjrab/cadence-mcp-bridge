@@ -81,3 +81,14 @@ of every simulation, mutation, deployment, MCP, cleanup, retry, merge, and WP-15
 Three later approvals remain independent: the exact role binding, implementation/deployment, and
 one fixed read-only invocation. After evidence is collected, final scientific approval or rejection
 is still a separate user decision.
+
+## Names-only role discovery dependency
+
+The separate planning-only contract
+`docs/plans/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN_V1.json` defines how a future fixed OA
+read-only inspection may produce opaque, source-bound role candidates without returning names or
+values. Candidate discovery does not satisfy the role-binding prerequisite by itself. A unique
+candidate remains unapproved until separately reviewed, and ambiguous or unsupported results stay
+blocked.
+The discovery plan's normalized-LF SHA-256 is
+`2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d`.
