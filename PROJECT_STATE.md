@@ -10,14 +10,15 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_names_only_discovery_repository_implemented_local_verified
+implementation_status: wp14_runner_lineage_reconciliation_repository_implemented_local_verified
 documentation_status: verified
-integration_status: implementation_review_pending
-deployment_status: blocked_existing_remote_runner_0.18.0_unchanged_pending_lineage_reconciliation
+integration_status: runner_lineage_reconciliation_review_pending
+deployment_status: blocked_reconciled_repository_runner_0.19.0_not_deployed
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
 wp13_integration_status: merged_pr_19
+wp14_names_only_discovery_integration_status: merged_pr_20
 wp14_decision_package: docs/decisions/WP14_VBIAS_DECISION_PACKAGE_V1.json
 wp14_decision_package_version: 1
 wp14_package_status: reviewed_conditionally
@@ -50,21 +51,22 @@ wp14_names_only_discovery_plan_status: repository_implemented_local_verified_dep
 wp14_names_only_discovery_implementation: docs/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_IMPLEMENTATION.md
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
-wp14_runner_lineage_status: blocked_pending_explicit_0_18_capability_reconciliation
+wp14_runner_lineage_status: repository_capability_reconciled_local_verified_deployment_blocked
+wp14_runner_lineage_reconciliation: docs/WP14_RUNNER_LINEAGE_RECONCILIATION.md
 profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
-current_feature_branch: wp/WP-14-vbias-source-of-truth
-base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
-last_commit: 2fd19de737e1e0926d89797082dcef1d1de48fe1
+current_feature_branch: wp/WP-14-runner-lineage-reconciliation
+base_main_commit: 0e3ebe266ea7cf6e1d3b693f64243a7e8a82e845
+last_commit: 0e3ebe266ea7cf6e1d3b693f64243a7e8a82e845
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the exact pushed WP-14 repository implementation. Before any deployment, separately approve reconciliation of current-main runner 0.17.0 with the unchanged deployed 0.18.0 capability; deployment and one fixed read-only invocation then require separate explicit approvals. No candidate may become a binding or scientific baseline automatically. Feature merge requires separate approval; WP-15 remains unstarted."
+user_action_required: "Review the exact pushed WP-14 runner-lineage reconciliation and separately approve its GitHub PR merge if acceptable. Remote runner 0.18.0 remains unchanged, repository deployment_enabled remains false, and any later deployment or fixed read-only invocation requires separate explicit approval. No candidate becomes a binding or scientific baseline automatically; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -84,6 +86,8 @@ user_action_required: "Review the exact pushed WP-14 repository implementation. 
 - 2026-09-15: Names-only discovery plan v1 was fixed at normalized-LF SHA-256 `2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d` in plan commit `fd82325f0b5caf07f133cc5367d5992a90aa139e`. All 20 criteria, exact target/source-fingerprint binding, closed master/property classification, no-value/no-name output, selector commitments, ambiguity retention, false authority flags, resource and lock limits, v1-v4 and collector-plan preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 315-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
 - 2026-09-15: Under explicit implementation-only approval bound to plan v1 SHA-256 `2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d`, WP-14 added an argument-free operator-only repository command for exactly `MyDesignLib/Differential_Amplifier_TB2/schematic`. The candidate runner is 0.19.0; it uses OA mode `r`, no save/write API, closed master/property/connection enums, property name/type presence without value reads, an in-memory redaction pipe, source-bound opaque commitments, 35/14/8 and protected-fingerprint/lock gates, nonblocking concurrency one, 30/60-second timeouts, 65,536-byte private input and 16,384-byte public output limits, and false semantic confirmation for every candidate. No MCP surface was added and no role or scientific baseline was selected.
 - 2026-09-15: Provenance review confirmed current main carries runner 0.17.0 while deployed 0.18.0 ADE introspection is represented only by historical unmerged head `15d85bf440b86d191a8f9d07e7b9e687ccf003c0`; that stale branch was not merged or reused. A fixed lineage record and deployment-script gate keep deployment disabled until separate 0.18 capability reconciliation approval. Ruff, strict mypy (17 source files), 191 local tests (eight remote integrations skipped; 56 legacy warnings), 321-file secret preflight, 18 security tests, strict locked dependency audit, PowerShell parsing, Python helper compilation, plan/prior-record preservation, and `git diff --check` passed. No SSH, deployment, collector/Cadence execution, simulation, OA/ADE/design/PDK write, merge, release change, retry, or WP-15 work occurred; WP-14 remains blocked pending review and separate later gates.
+- 2026-09-15: PR #20 merge commit `0e3ebe266ea7cf6e1d3b693f64243a7e8a82e845` was verified as the exact latest local and remote `origin/main` before creating `wp/WP-14-runner-lineage-reconciliation`. The historical 0.18.0 reference head `15d85bf440b86d191a8f9d07e7b9e687ccf003c0` was inspected as evidence only and was not merged, cherry-picked, or reused as a working branch. Repository runner 0.19.0 now independently retains both the fixed `inspect-ade-profile actual-differential-amplifier-tb2-transient` read-only ADE/OA audit and the WP-14 names-only discovery. The restored path fixes every design/state/model/profile identifier, allows only bounded state files and numeric metadata, opens the single source cellview in OA mode `r`, closes without save, requires unchanged source/state/model/netlist fingerprints and zero locks, enforces 35/14/8 topology, nonblocking concurrency one, 90/120-second timeouts, and 65,536-byte public output. It is operator-only and has no MCP exposure or generic shell/SKILL surface.
+- 2026-09-15: Ruff, strict mypy (17 source files), 200 local tests (eight remote integrations skipped; 56 legacy warnings), 326-file secret preflight, 18 security tests, strict locked dependency audit, PowerShell parsing, Python helper compilation, deployment fail-closed verification, and `git diff --check` passed. `deployment_enabled` remains false and the unchanged remote runner remains 0.18.0. No SSH, remote deployment, Cadence/SKILL execution, simulation, OA write/save, ADE state, source/schematic/layout/work-library/PDK change, parameterized execution, stale-branch integration, main push, merge, tag, release, or WP-15 work occurred. WP-14 remains blocked pending feature review/merge and separate explicit deployment and invocation approvals.
 
 `last_commit` identifies the verified documentation commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
