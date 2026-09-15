@@ -43,20 +43,24 @@ wp14_condition_collector_plan_version: 1
 wp14_condition_collector_plan_normalized_lf_sha256: 4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb
 wp14_condition_collector_plan_status: ready_for_review_role_binding_required
 wp14_role_binding_status: unresolved_not_inferred
+wp14_names_only_discovery_plan: docs/plans/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN_V1.json
+wp14_names_only_discovery_plan_version: 1
+wp14_names_only_discovery_plan_normalized_lf_sha256: 2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d
+wp14_names_only_discovery_plan_status: ready_for_review
 profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
 current_feature_branch: wp/WP-14-vbias-source-of-truth
 base_main_commit: b12cff904fe31a1d68490836c1fe6765734b9bf0
-last_commit: 1a5eb663b95731c23380a26fd2eb2c741ba4b9b1
+last_commit: fd82325f0b5caf07f133cc5367d5992a90aa139e
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review WP-14 condition-evidence collector plan v1. Then either provide an exact immutable VDD/VCM/load role-binding manifest or separately approve a fixed names-only role-discovery plan. Plan review alone does not authorize implementation, deployment, execution, or baseline approval. Feature merge requires separate approval; WP-15 remains unstarted."
+user_action_required: "Review WP-14 fixed names-only role-discovery plan v1. A later approval may authorize repository-side implementation and local tests only; deployment and one fixed invocation require separate explicit approvals. No candidate may become a binding or scientific baseline automatically. Feature merge requires separate approval; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -72,6 +76,8 @@ user_action_required: "Review WP-14 condition-evidence collector plan v1. Then e
 - 2026-09-14: Decision record v4 was fixed at normalized-LF SHA-256 `95c897b2ac277e777db56ad7996db94d6a0119a0e4150b1ac29b4637a7058f46` in evidence commit `cc472e46ad4a2db24fc0e8a107f547a3ca466678`. v1-v3 preservation, audit provenance, exact current observations, unresolved-condition retention, false authorization gates, three-file scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 311-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
 - 2026-09-14: Planning-only `WP14_CONDITION_EVIDENCE_COLLECTOR_PLAN` v1 defines an argument-free, operator-only, non-MCP collector contract for VDD, VCM, load, and source/state semantic linkage. It fixes the profile/cellview/state/file/model allowlist, redacted schema, OA read-only lifecycle, fingerprint/lock/timeout/size gates, fail-closed rules, and 20 acceptance criteria. Exact OA role selectors remain `UNRESOLVED_NOT_INFERRED`; a hash-bound binding manifest is a mandatory prerequisite. No implementation, deployment, collector execution, Cadence invocation, simulation, mutation, merge, or WP-15 work occurred.
 - 2026-09-14: Collector plan v1 was fixed at normalized-LF SHA-256 `4588834378f38a65678880fd5c5a1a93fd85545b482a69a1f60a1ef96b5033fb` in plan commit `1a5eb663b95731c23380a26fd2eb2c741ba4b9b1`. All 20 criteria, exact target allowlist, zero-argument/non-MCP contract, false authority flags, resource and redaction limits, unresolved role-binding gate, v1-v4 preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 313-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
+- 2026-09-15: Planning-only `WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN` v1 defines a zero-argument, operator-only, non-MCP OA read-only discovery for exactly the 35/14/8 source fingerprint. It exposes only bounded candidate counts, allowlisted master/property/connection enums, ambiguity/blocker states, and source-bound selector commitments; actual names and values are denied. Unique candidates are not auto-bound. The plan contains 20 acceptance criteria and independent later implementation, deployment, and invocation gates. No implementation, deployment, Cadence execution, simulation, OA/ADE/design/PDK mutation, merge, or WP-15 work occurred.
+- 2026-09-15: Names-only discovery plan v1 was fixed at normalized-LF SHA-256 `2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d` in plan commit `fd82325f0b5caf07f133cc5367d5992a90aa139e`. All 20 criteria, exact target/source-fingerprint binding, closed master/property classification, no-value/no-name output, selector commitments, ambiguity retention, false authority flags, resource and lock limits, v1-v4 and collector-plan preservation, four-file documentation scope, and prior progress-log preservation passed. Ruff, strict mypy (17 source files), 175 local tests (8 actual integrations skipped; 56 legacy warnings), 315-file secret preflight, 18 security tests, strict dependency audit, and `git diff --check` passed.
 
 `last_commit` identifies the verified documentation commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
