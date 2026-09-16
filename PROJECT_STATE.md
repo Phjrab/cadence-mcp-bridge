@@ -10,14 +10,18 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_runner_lineage_reconciliation_repository_implemented_local_verified
+implementation_status: wp14_package_bound_narrow_deployer_repository_implemented_local_verified
 documentation_status: verified
-integration_status: runner_lineage_reconciliation_merged_pr_21
+integration_status: discovery_deployment_approval_package_merged_pr_23
 wp14_post_merge_state_sync_status: merged_pr_22
 wp14_post_merge_state_sync_merged_head: a03b2f76ac1714a2d05f5cc876c699152b38667e
 wp14_post_merge_state_sync_merge_commit: 5ce2ae8480e4f5b1678f99f714ddb250c9103ec0
 wp14_post_merge_state_sync_merged_at: "2026-09-16T05:56:55Z"
-deployment_status: blocked_pending_package_bound_narrow_deployer_and_separate_deployment_approval
+wp14_discovery_deployment_approval_integration_status: merged_pr_23
+wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
+wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
+wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
+deployment_status: blocked_pending_separate_hash_bound_remote_preflight_and_deployment_approval
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -56,7 +60,12 @@ wp14_names_only_discovery_implementation: docs/WP14_FIXED_NAMES_ONLY_ROLE_DISCOV
 wp14_discovery_deployment_execution_approval_package: docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json
 wp14_discovery_deployment_execution_approval_package_version: 1
 wp14_discovery_deployment_execution_approval_package_normalized_lf_sha256: 7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87
-wp14_discovery_deployment_execution_approval_package_status: ready_for_review_not_authority
+wp14_discovery_deployment_execution_approval_package_status: merged_pr_23_request_not_authority
+wp14_narrow_deployer: scripts/deploy-wp14-narrow.ps1
+wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
+wp14_narrow_deployer_normalized_lf_sha256: b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e
+wp14_narrow_deployer_status: repository_implemented_local_verified_remote_not_authorized
+wp14_narrow_remote_authorization_record: absent_required_before_transport
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
 wp14_runner_lineage_status: repository_capability_reconciled_local_verified_deployment_blocked
@@ -69,16 +78,16 @@ profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
-current_feature_branch: wp/WP-14-discovery-deployment-approval-package
-base_main_commit: 5ce2ae8480e4f5b1678f99f714ddb250c9103ec0
-last_commit: 5ce2ae8480e4f5b1678f99f714ddb250c9103ec0
+current_feature_branch: wp/WP-14-narrow-deployer
+base_main_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
+last_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-14 bounded discovery deployment/execution approval package and this documentation-only feature branch. After integration, separately approve only repository-side implementation and local testing of the package-bound narrow deployer if desired. Remote preflight/deployment and one fixed discovery invocation remain later independent approvals. Scientific baseline confirmation remains blocked; WP-15 remains unstarted."
+user_action_required: "Review and integrate the WP-14 narrow-deployer feature branch. After integration, remote preflight/deployment still requires a separate authorization record bound to the immutable package and final deployer hashes. No SSH, deployment, Cadence execution, or discovery invocation is authorized. Scientific baseline confirmation remains blocked; WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -108,6 +117,10 @@ user_action_required: "Review the WP-14 bounded discovery deployment/execution a
 - 2026-09-16: PR #22 merged state-sync head `a03b2f76ac1714a2d05f5cc876c699152b38667e` as latest main `5ce2ae8480e4f5b1678f99f714ddb250c9103ec0`. The version-1 bounded discovery deployment/execution approval package is an approval request, not a grant, and has normalized-LF SHA-256 `7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87`. It fixes eleven runner 0.19.0/compatibility/discovery assets, 24 acceptance criteria, an exact-allowlist deployment boundary, and a separate one-use zero-argument discovery boundary. All authority flags remain false. The current broad deployment script is explicitly ineligible because it also updates unrelated write-validation assets; a narrow package-bound deployer must be separately implemented, locally tested, reviewed, and integrated before any remote approval. No SSH, deployment, Cadence/SKILL execution, simulation, OA save/write, ADE/design/PDK change, role binding, scientific baseline approval, merge, or WP-15 work occurred.
 
 - 2026-09-16: Approval-package validation passed: the package and two bound plan normalized-LF hashes, all eleven asset hashes/modes, 24 acceptance criteria, all-false authority flags, private PR #22/main provenance, three-document change scope, and unchanged `deployment_enabled=false` were verified. Ruff, strict mypy for 17 source files, 200 local tests with eight deliberately skipped remote integrations and 56 existing warnings, 328-file secret preflight, 18 security tests, strict locked dependency audit with no known vulnerabilities, and `git diff --check` passed. No remote integration was run because deployment, SSH, and Cadence execution are outside this documentation-only scope.
+
+- 2026-09-16: Under explicit approval, PR #23 merged approval-package head `f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21` into latest main `6e1014e5432ca5425ab3d46a9489aec94f624f75`. From that exact base, `wp/WP-14-narrow-deployer` implemented an argument-free package-bound deployer for exactly eleven fixed assets. It independently verifies the immutable package, both plan hashes, every normalized-LF asset hash and mode, path containment, lineage, and `deployment_enabled=false`. A separate, exact package-and-deployer-hash-bound authorization record is mandatory and intentionally absent, so current execution stops before transport lookup or any remote command. The future remote path is limited to one 300-second attempt, a fixed preflight, an atomic package-bound before-snapshot, same-directory temporary installs, exact hash/mode and syntax/surface verification, and no Cadence or discovery invocation.
+
+- 2026-09-16: Narrow-deployer validation passed: PowerShell parsing, five dedicated fail-closed tests, Ruff, strict mypy for 17 source files, 205 local tests with eight deliberately skipped remote integrations and 56 existing warnings, 331-file secret preflight, 18 security tests, strict locked dependency audit with no known vulnerabilities, immutable approval-package and lineage checks, and `git diff --check`. An additional non-gating diagnostic `mypy` over legacy tests reproduced 16 pre-existing typing errors in four unchanged test modules; the contract-defined `mypy src` gate passed. No remote preflight, SSH/SCP, deployment, Cadence/SKILL execution, discovery invocation, simulation, OA/ADE/design/PDK change, MCP exposure, direct-main push, merge, or WP-15 work occurred.
 
 `last_commit` identifies the verified base commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
