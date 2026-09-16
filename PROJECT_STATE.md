@@ -12,7 +12,12 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_package_bound_narrow_deployer_repository_implemented_local_verified
 documentation_status: verified
-integration_status: discovery_deployment_approval_package_merged_pr_23
+integration_status: narrow_deployer_merged_pr_24
+wp14_narrow_deployer_integration_status: merged_pr_24
+wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
+wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
+wp14_narrow_deployer_merged_at: "2026-09-16T11:16:42Z"
+wp14_narrow_deployer_post_merge_state_sync_status: prepared_on_current_feature_branch
 wp14_post_merge_state_sync_status: merged_pr_22
 wp14_post_merge_state_sync_merged_head: a03b2f76ac1714a2d05f5cc876c699152b38667e
 wp14_post_merge_state_sync_merge_commit: 5ce2ae8480e4f5b1678f99f714ddb250c9103ec0
@@ -66,8 +71,13 @@ wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
 wp14_narrow_deployer_normalized_lf_sha256: b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e
 wp14_narrow_deployer_status: repository_implemented_local_verified_remote_not_authorized
 wp14_narrow_remote_authorization_record: absent_required_before_transport
+wp14_remote_preflight_status: not_authorized_not_run
+wp14_runner_0_19_0_deployment_status: not_authorized_not_run
+wp14_names_only_discovery_invocation_status: not_authorized_not_run
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
+wp14_remote_runner_observation_freshness: historical_last_observation_not_reprobed
+wp14_deployment_enabled: false
 wp14_runner_lineage_status: repository_capability_reconciled_local_verified_deployment_blocked
 wp14_runner_lineage_reconciliation: docs/WP14_RUNNER_LINEAGE_RECONCILIATION.md
 wp14_runner_lineage_integration_status: merged_pr_21
@@ -78,16 +88,23 @@ profile_contract_status: PROFILE_DRIFT
 baseline_decision_status: CONDITIONAL_SELECTION_EVIDENCE_INCOMPLETE
 snapshot_freshness_status: SNAPSHOT_FRESHNESS_UNCONFIRMED
 parameterized_execution_enabled: false
-current_feature_branch: wp/WP-14-narrow-deployer
-base_main_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
-last_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
+wp14_delegated_assumption_note: WP14_POST_MERGE_PLANNING_ASSUMPTIONS_V1
+wp14_delegated_assumption_status: documentation_only_hypothetical_not_observed_not_applied
+wp14_assumed_vdd_v: 1.0
+wp14_assumed_vcm_v: 0.5
+wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
+wp14_assumptions_confirm_scientific_baseline: false
+wp14_assumptions_authorize_execution: false
+current_feature_branch: wp/WP-14-narrow-deployer-post-merge-state
+base_main_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
+last_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and integrate the WP-14 narrow-deployer feature branch. After integration, remote preflight/deployment still requires a separate authorization record bound to the immutable package and final deployer hashes. No SSH, deployment, Cadence execution, or discovery invocation is authorized. Scientific baseline confirmation remains blocked; WP-15 remains unstarted."
+user_action_required: "Review this PROJECT_STATE-only post-merge synchronization branch; the narrow deployer itself is already merged through PR #24. Remote preflight/deployment still needs separate explicit authority bound to the immutable package and final deployer hashes, and discovery invocation needs its own later approval. The user delegated planning assumptions, recorded below with reasons; these are not observed conditions, a scientific baseline, or execution authority. WP-14 remains blocked and WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -121,6 +138,38 @@ user_action_required: "Review and integrate the WP-14 narrow-deployer feature br
 - 2026-09-16: Under explicit approval, PR #23 merged approval-package head `f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21` into latest main `6e1014e5432ca5425ab3d46a9489aec94f624f75`. From that exact base, `wp/WP-14-narrow-deployer` implemented an argument-free package-bound deployer for exactly eleven fixed assets. It independently verifies the immutable package, both plan hashes, every normalized-LF asset hash and mode, path containment, lineage, and `deployment_enabled=false`. A separate, exact package-and-deployer-hash-bound authorization record is mandatory and intentionally absent, so current execution stops before transport lookup or any remote command. The future remote path is limited to one 300-second attempt, a fixed preflight, an atomic package-bound before-snapshot, same-directory temporary installs, exact hash/mode and syntax/surface verification, and no Cadence or discovery invocation.
 
 - 2026-09-16: Narrow-deployer validation passed: PowerShell parsing, five dedicated fail-closed tests, Ruff, strict mypy for 17 source files, 205 local tests with eight deliberately skipped remote integrations and 56 existing warnings, 331-file secret preflight, 18 security tests, strict locked dependency audit with no known vulnerabilities, immutable approval-package and lineage checks, and `git diff --check`. An additional non-gating diagnostic `mypy` over legacy tests reproduced 16 pre-existing typing errors in four unchanged test modules; the contract-defined `mypy src` gate passed. No remote preflight, SSH/SCP, deployment, Cadence/SKILL execution, discovery invocation, simulation, OA/ADE/design/PDK change, MCP exposure, direct-main push, merge, or WP-15 work occurred.
+
+- 2026-09-16: This state-only run verified GitHub PR #24 as MERGED with reviewed head `fd72b6721c4e18be46770f37c4516bd466d20e82`, merge commit `bc7cf1f3281ca9b6600525bdf98fc810644ac7b7`, and merge time `2026-09-16T11:16:42Z`. Fetched origin/main and the remote main ref equal that merge commit, the reviewed head is its ancestor, the repository is private, and the starting tree was clean. Branch `wp/WP-14-narrow-deployer-post-merge-state` was created from that exact base. PR #24 integration is complete; `awaiting_user_merge` now refers only to this new documentation branch. No merge was performed in this run.
+
+- 2026-09-16: Narrow-deployer readiness remains repository implementation plus local verification only. Runner 0.19.0 remote deployment, remote preflight, and names-only discovery invocation are each not authorized and not run. Runner 0.18.0 and `remote_runner_deployed=true` describe the existing historical observation, not a fresh remote check or deployment of 0.19.0. The unchanged lineage gate is `deployment_enabled=false`; the exact package/deployer-hash-bound remote authorization record is absent and was not created. VDD, VCM, load, source/state semantic equivalence, and snapshot freshness remain unverified. The `0.300/0.650 V` choice remains conditional, scientific baseline confirmation stays blocked, and WP-15 is unstarted.
+
+- 2026-09-16: Post-PR-24 state synchronization validation passed: exact PR/head/main agreement; PROJECT_STATE-only scope; flat YAML metadata syntax and unique keys; unchanged prior checkpoint/progress text and protected status/hash fields; all 15 bound package/deployer/plan/asset normalized-LF hashes; disabled lineage; absent remote authorization record; and explicit separation of planning assumptions from observed evidence. Ruff and strict mypy (17 source files) passed. The full local suite passed 205 tests, with eight deliberately skipped remote integrations and 56 existing deprecation warnings. Secret preflight covered 331 repository files; all 18 dedicated security tests and the strict locked dependency audit passed with no known vulnerabilities. `git diff --check` passed. No additional dependency, test file, or implementation change was needed.
+
+## WP14_POST_MERGE_PLANNING_ASSUMPTIONS_V1
+
+The user's additional instruction delegates provisional choices for VDD, VCM, and other unknowns
+and requests reasons for every choice. This dated note records that delegation within the requested
+PROJECT_STATE-only documentation scope. It is a new hypothetical planning note, not a replacement
+for decision records v1-v4, a measurement, a runtime input, or final scientific approval. All
+original decision/plan/evidence hashes and unresolved actual-condition fields are preserved.
+
+| Item | Delegated planning choice or evidence treatment | Reason and limitation |
+| --- | --- | --- |
+| VDD | Assume 1.000 V for a future planning scenario only. Actual profile remains unverified. | Decision record v4 records a historical research constraint of 1.0 V, also described in `docs/agent_plan/docs/ENVIRONMENT_BASELINES.md`. Reusing that stated goal is more traceable than introducing a new supply or importing the separate historical 1.2 V experiment. It is not a supply measurement or proof of device voltage compatibility. |
+| VCM | Assume 0.500 V relative to a hypothetical 0 V reference, with VCM = VDD / 2. Actual profile remains unverified. | This is an explicitly chosen midpoint of the assumed 0-to-1 V supply for a symmetric planning example. It is not a claim that the amplifier accepts that common-mode level: transistor operating regions, input common-mode range, and connection roles have not been verified. No optimum or valid operating point is asserted. |
+| Load condition | Assume no added external load: an ideal open-circuit external measurement input, with zero added capacitance. Existing internal/testbench load and parasitics remain unknown. | This defines a minimal hypothetical comparison boundary without guessing a resistor, capacitor, next-stage circuit, or modifying the existing testbench. It does not claim that the actual output is unloaded, and it is not suitable evidence for bandwidth, settling, stability, or loaded performance. No load value is applied. |
+| VBIASN / VBIASP | Retain the user's conditional 0.300 V / 0.650 V selection. | These match the dated state1 observation in decision record v4. Their validity at the assumed VDD/VCM/load is unknown; changing supply or common mode can change the operating point. This note does not confirm the pair as a scientific baseline. |
+| Source revision | Pin the existing source fingerprint `046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714` as a historical reference only. | A known fingerprint is reproducible; inventing a revision label would not add evidence. The recorded topology is 35/14/8. The source was not read again during this run. |
+| ADE-state revision | Pin the existing metadata fingerprint `a6ead91891db7b1372e9e41515c76ac3b7dc8b2adeae281f4383d3c1ba32364d` as a historical reference only. | This identifies the metadata previously audited for state1 and links the observed bias pair to that audit. It does not prove the current live state or a semantic match to the source. |
+| Source/state semantic equivalence and bias-condition linkage | Treat as not established; do not assume equivalence. | Separate fingerprints and a shared design identity do not prove that the snapshot was generated from that state or from these assumed operating conditions. Delegation permits a proposed scenario, not fabrication of an observation or lineage proof. |
+| Snapshot freshness | Keep historical-only treatment and `SNAPSHOT_FRESHNESS_UNCONFIRMED`. | The recorded snapshot is 1,512 seconds older than the newest state metadata. Neither age nor the last successful run proves semantic freshness. This run performs no remote probe or snapshot regeneration. |
+| Analysis policy | Retain `require_dc_state_aligned_future_plan`. | The dated state audit has DC enabled and transient disabled, whereas the fixed compatibility profile expects transient. A future DC-oriented plan is consistent with that observation; this note neither edits the profile/state nor executes any analysis. |
+
+These assumptions do not satisfy the missing evidence gates. Actual conditions and source/state
+equivalence must be checked before using them for simulation or a scientific conclusion. This run
+changes only this document: no authorization record, deployment setting, runner, MCP tool, OA/ADE
+state, design, PDK, V1-V4 evidence, or existing decision/plan artifact is changed. No SSH, remote
+preflight/deployment, Cadence/SKILL execution, discovery invocation, or simulation is performed.
 
 `last_commit` identifies the verified base commit preceding this state checkpoint.
 `last_push` remains null at commit time because the first push of this branch follows the commit;
