@@ -186,16 +186,21 @@ wp14_recovery_readiness_review: docs/WP14_RECOVERY_READINESS_REVIEW_V1.md
 wp14_recovery_remote_readiness: blocked_missing_final_authority_current_remote_conditions_unverified
 wp14_recovery_evidence_age_reviewed_at: "2026-09-17T11:09:47Z"
 wp14_recovery_evidence_age_boundary: "2026-09-18T08:05:01Z"
-current_feature_branch: wp/WP-14-recovery-readiness-review
-base_main_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
-last_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
+wp14_recovery_readiness_integration_status: merged_pr_38
+wp14_recovery_readiness_merge_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
+wp14_recovery_approval_request: docs/approvals/WP14_SINGLE_USE_RECOVERY_APPROVAL_REQUEST_V1.md
+wp14_recovery_approval_request_status: request_only_no_execution_authority
+wp14_recovery_request_clock_checked_at: "2026-09-17T11:37:17Z"
+current_feature_branch: wp/WP-14-recovery-approval-request
+base_main_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
+last_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the non-executable recovery readiness document for explicit PR integration. Recovery implementation is merged through PR #37, but remote execution still needs final exact authority, valid pinned evidence and fixed preflight. No grant is created. Preserve consumed records; WP-14 remains blocked and WP-15 unstarted."
+user_action_required: "Review the request-only recovery package for explicit PR integration. No activation, executor identity or validity interval is created. Recheck evidence expiry before any later approval; expired evidence requires a separate renewal contract. Remote recovery and scientific baseline remain blocked; WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -292,6 +297,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Request-package validation passed five normalized hashes, 16 criteria, unique state keys, absent recovery activation, Ruff, strict mypy (17 files), 18 security tests and 361-file secret scan in the existing isolated local validation copy with no actual activation/ledger. An initial sandbox attempt could not start uv; the permitted local rerun passed. No full-suite, dependency audit or remote integration rerun is claimed. Only two documents change; final push SHA is reported after verification.
+
+- 2026-09-17: Verified PR #38 reviewed head 4dde259134b3d7444723253824679c997a293e67 and latest main 40a459379eb2a2f73719a6929d1e9a4fc496ff1f. Added request-only recovery package with 17 future fields and 16 acceptance criteria. At 11:37:17Z evidence age was 3h32m16s, within 24 hours at that check; boundary remains 2026-09-18T08:05:01Z. Identity/UUID/activation interval remain unset. Prior plans/evidence/claims, PUBLIC and false deployment gate are preserved. No Authorization, SSH/SCP, collection/deployment, Cadence/design change, main push/merge or WP-15 work occurs.
 
 - 2026-09-17: Readiness-review local verification passed in a fresh isolated index copy with no actual authorization or operator ledger: Ruff, strict mypy (17 source files), 33 recovery/security tests, repeated 18-test security gate, 360-file secret scan and strict locked dependency audit with no known vulnerabilities. Fifteen documentary criteria, 195 unique state keys, prior progress preservation, immutable file/hash preservation, absent recovery activation and false deployment gate passed. Only the review and this state document change; no full-suite or actual integration rerun is claimed. Final feature SHA is verified after commit/push in the completion report.
 
