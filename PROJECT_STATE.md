@@ -197,16 +197,22 @@ wp14_recovery_authorization_readiness_decision: docs/WP14_RECOVERY_AUTHORIZATION
 wp14_recovery_authorization_readiness_status: blocked_unexpired_missing_executor_and_current_preflight
 wp14_recovery_readiness_decision_at: "2026-09-17T12:01:58.0318796Z"
 wp14_recovery_evidence_temporal_status: within_24_hours_at_decision_only
-current_feature_branch: wp/WP-14-recovery-readiness-decision
-base_main_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
-last_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
+wp14_recovery_readiness_decision_integration_status: merged_pr_40
+wp14_recovery_readiness_decision_merged_head: ea5d863c38d6dacb5ef5129682f0c483246517b4
+wp14_recovery_readiness_decision_merge_commit: 25c3e56c8a3720004d38c77250924c78d1ed4239
+wp14_recovery_authorization_input_review: docs/WP14_RECOVERY_AUTHORIZATION_INPUT_REVIEW_V1.md
+wp14_recovery_authorization_input_review_status: blocked_temporally_eligible_missing_verified_executor_and_current_preflight
+wp14_recovery_authorization_input_review_at: "2026-09-17T12:36:15.9605215Z"
+current_feature_branch: wp/WP-14-recovery-authorization-input-review
+base_main_commit: 25c3e56c8a3720004d38c77250924c78d1ed4239
+last_commit: 25c3e56c8a3720004d38c77250924c78d1ed4239
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the document-only recovery readiness decision for PR integration. Evidence is within 24 hours only at the recorded timestamp, but exact Authorization remains blocked by unverified executor identity and current preflight. Recheck the fixed expiry boundary before any later step. WP-15 remains unstarted."
+user_action_required: "Review and merge the document-only exact-Authorization input review. Recheck UTC before the next task: before 2026-09-18T08:05:01Z, executor binding and every exact field still need separate local verification and explicit approval; at or after the boundary, prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -303,6 +309,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Final isolated validation passed Ruff, strict mypy for 17 source files, and the full local suite with 365 passed, eight deliberately skipped real integrations and 56 existing deprecation warnings. Secret preflight covered 363 repository files; all 18 dedicated security tests and the strict locked dependency audit passed with no known vulnerabilities. Final repository checks cover the exact two-file scope, 17 acceptance criteria, unique state keys, absent recovery Authorization, preserved protected artifacts, PUBLIC, `deployment_enabled=false` and diff whitespace. The first security invocation lacked a local Git index and the next exposed only the known Korean Windows-path output encoding issue; a UTF-8 final rerun passed. No remote integration was enabled or contacted.
+
+- 2026-09-17: Verified PR #40 MERGED with reviewed head `ea5d863c38d6dacb5ef5129682f0c483246517b4` and merge commit/latest origin/main `25c3e56c8a3720004d38c77250924c78d1ed4239`. At `2026-09-17T12:36:15.9605215Z`, evidence observed at `2026-09-17T08:05:01Z` remained within its fixed 24-hour boundary `2026-09-18T08:05:01Z` by approximately 19 hours 28 minutes 45 seconds. The versioned input review documents the exact local executor-binding verification method without deriving or publishing an identity, the current fixed preflight gates, authoritative sources and unresolved status for all 17 closed-schema fields, and immutable single-use claim conditions. Readiness remains BLOCKED because no exact executor binding, UUID, activation interval, explicit grant or current remote preflight exists. No Authorization, claim, SSH/SCP, remote collection/deployment, Cadence, design mutation, main operation or WP-15 work occurred; PUBLIC and `deployment_enabled=false` remain unchanged.
 
 - 2026-09-17: Readiness-decision verification passed in a fresh isolated index copy with no actual Authorization or operator ledger: Ruff, strict mypy (17 source files), 18 direct security tests, repeated 18-test security gate, 362-file secret scan and strict locked dependency audit with no known vulnerabilities. Two-file scope, 14 decision criteria, 206 unique state keys, protected-file preservation, absent recovery Authorization and false deployment gate passed. No full-suite or actual integration rerun is claimed. Final feature SHA is reported after push verification.
 
