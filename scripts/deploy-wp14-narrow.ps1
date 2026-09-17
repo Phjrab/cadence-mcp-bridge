@@ -226,7 +226,7 @@ foreach ($asset in $assets) {
     $preflight.Add("test `"`$(readlink -f '$parent')`" = '$parent'")
     $preflight.Add("test ! -L '$destination' && test ! -e '$temporary' && test ! -L '$temporary'")
 }
-$preflight.Add("printf 'WP14_NARROW_PREFLIGHT_OK\\n'")
+$preflight.Add("printf 'WP14_NARROW_PREFLIGHT_OK\n'")
 if ((Invoke-FixedSsh -FixedCommand ($preflight -join "; ")) -ne "WP14_NARROW_PREFLIGHT_OK") {
     throw "The fixed WP-14 preflight returned an unexpected response."
 }
@@ -245,11 +245,11 @@ foreach ($asset in $assets) {
     $copy = "$snapshotRoot/$relative"
     $copyParent = $copy.Substring(0, $copy.LastIndexOf('/'))
     $snapshot.Add("mkdir -p '$copyParent'")
-    $snapshot.Add("if test -f '$destination'; then sha=`$(sha256sum '$destination' | awk '{print `$1}'); mode=`$(stat -c '%a' '$destination'); printf '%s\\t%s\\t%s\\n' '$relative' `"`$sha`" `"`$mode`" >> '$snapshotRoot/before.tsv'; cp -p '$destination' '$copy'; chmod 400 '$copy'; else printf '%s\\tABSENT\\tABSENT\\n' '$relative' >> '$snapshotRoot/before.tsv'; fi")
+    $snapshot.Add("if test -f '$destination'; then sha=`$(sha256sum '$destination' | awk '{print `$1}'); mode=`$(stat -c '%a' '$destination'); printf '%s\t%s\t%s\n' '$relative' `"`$sha`" `"`$mode`" >> '$snapshotRoot/before.tsv'; cp -p '$destination' '$copy'; chmod 400 '$copy'; else printf '%s\tABSENT\tABSENT\n' '$relative' >> '$snapshotRoot/before.tsv'; fi")
 }
 $snapshot.Add("chmod 400 '$snapshotRoot/before.tsv'")
-$snapshot.Add("find '$snapshotRoot' -type d -exec chmod 500 {} \\;")
-$snapshot.Add("printf 'WP14_NARROW_SNAPSHOT_OK\\n'")
+$snapshot.Add("find '$snapshotRoot' -type d -exec chmod 500 {} \;")
+$snapshot.Add("printf 'WP14_NARROW_SNAPSHOT_OK\n'")
 if ((Invoke-FixedSsh -FixedCommand ($snapshot -join "; ")) -ne "WP14_NARROW_SNAPSHOT_OK") {
     throw "The package-bound before snapshot was not verified."
 }
@@ -274,7 +274,7 @@ try {
         $destination = $remoteDestinations[$asset.Path]
         $temporary = "$destination.wp14-v1-new"
         Send-FixedAsset -LocalPath $staged -RemoteTemporaryPath $temporary
-        $install = "set -eu; test -f '$temporary' && test ! -L '$temporary'; test `"`$(sha256sum '$temporary' | awk '{print `$1}')`" = '$($asset.Hash)'; chmod '$($asset.Mode)' '$temporary'; mv '$temporary' '$destination'; test `"`$(sha256sum '$destination' | awk '{print `$1}')`" = '$($asset.Hash)'; test `"`$(stat -c '%a' '$destination')`" = '$($asset.Mode)'; printf 'WP14_NARROW_INSTALL_OK\\n'"
+        $install = "set -eu; test -f '$temporary' && test ! -L '$temporary'; test `"`$(sha256sum '$temporary' | awk '{print `$1}')`" = '$($asset.Hash)'; chmod '$($asset.Mode)' '$temporary'; mv '$temporary' '$destination'; test `"`$(sha256sum '$destination' | awk '{print `$1}')`" = '$($asset.Hash)'; test `"`$(stat -c '%a' '$destination')`" = '$($asset.Mode)'; printf 'WP14_NARROW_INSTALL_OK\n'"
         if ((Invoke-FixedSsh -FixedCommand $install) -ne "WP14_NARROW_INSTALL_OK") {
             throw "An exact WP-14 asset install was not verified."
         }
@@ -303,7 +303,7 @@ $verify.Add("test `"`$('$remoteRoot/bin/cadence-runner' version)`" = '0.19.0'")
 $verify.Add("grep -F 'inspect-ade-profile) runner_inspect_ade_profile' '$remoteRoot/bin/cadence-runner' >/dev/null")
 $verify.Add("grep -F 'wp14-role-discovery) runner_wp14_role_discovery' '$remoteRoot/bin/cadence-runner' >/dev/null")
 $verify.Add("grep -F 'deployment_enabled' '$remoteRoot/config/runner-lineage.json' >/dev/null")
-$verify.Add("printf 'WP14_NARROW_DEPLOYMENT_VERIFIED\\n'")
+$verify.Add("printf 'WP14_NARROW_DEPLOYMENT_VERIFIED\n'")
 if ((Invoke-FixedSsh -FixedCommand ($verify -join "; ")) -ne "WP14_NARROW_DEPLOYMENT_VERIFIED") {
     throw "The exact WP-14 deployment verification response was not accepted."
 }

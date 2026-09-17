@@ -1,8 +1,14 @@
 # WP-14 Package-Bound Narrow Deployer Implementation
 
-Date: 2026-09-16
+Date: 2026-09-17 (original implementation: 2026-09-16)
 
-Status: `REPOSITORY_IMPLEMENTED_LOCAL_VERIFIED_REMOTE_NOT_AUTHORIZED`
+Status: `LOCAL_ESCAPE_REGRESSION_VERIFIED_DEPLOYMENT_BLOCKED_ON_CONTRACT_GAPS`
+
+The 2026-09-17 correction changes six generated-shell string statements only. See
+`WP14_NARROW_DEPLOYER_CORRECTION_REVIEW_V1.md` for the new deployer hash, isolated fake-transport
+tests, and the identity, live bounds, and single-use gaps that still block deployment. The earlier
+deployment result and approval audit record remain unchanged historical evidence; that approval
+does not apply to the corrected hash.
 
 ## Scope
 
@@ -21,21 +27,25 @@ This implementation does not grant remote authority. Before resolving or invokin
 the script requires a future record at
 `docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V1.json`.
 
-That future record must explicitly authorize remote preflight and deployment, permit exactly one
+That future record must explicitly authorize remote preflight and deployment, declare exactly one
 use, and bind both the immutable package hash and the final normalized-LF hash of the deployer.
-The record is intentionally absent in this implementation run. Therefore current execution fails
+The current code checks the declared count but does not enforce durable consumption or concurrency.
+The live record remains intentionally absent. Therefore current execution fails
 closed before any remote command. `remote/config/runner-lineage.json` remains unchanged with
 `deployment_enabled=false`; the existing broad deployer remains blocked.
 
 ## Implemented deployment boundary
 
-Only after a separately reviewed, exact-hash-bound authorization record exists, the script is
-constrained to:
+The current implementation contains the following controls. They do not establish full compliance
+with the package, and a new authorization record must not be created before the review gaps are
+resolved:
 
 - SSH alias `cadence-vm` and remote root `/home/buet/cds_work/.cadence_mcp`;
 - the package's exact eleven assets with no caller-provided path or value;
-- strict host-key checking, batch mode, bounded connection liveness, one attempt, 300 seconds, and
-  65,536 bytes per transport response;
+- strict host-key checking, batch mode and connection-liveness options; a 300-second elapsed-time
+  check before/after transport and a 65,536-byte check after response collection (not hard live
+  process or memory bounds);
+- no retry loop, but no durable approval consumption or operation-wide concurrency lock;
 - a fixed package-bound before-snapshot that refuses overwrite;
 - same-directory temporary files followed by atomic rename;
 - exact post-install hashes and modes;
@@ -51,6 +61,16 @@ deployment evidence and must stop before the separately approved one-invocation 
 ## Local acceptance
 
 Repository tests verify package and plan immutability, all eleven asset hashes, zero custom
-arguments, exact scope, false lineage gate, authorization-before-transport ordering, no transport
-call in the current state, no design-write asset, no generic shell evaluator, and syntax/surface-only
-remote verification. PowerShell parsing and a direct fail-closed invocation are also required.
+arguments, exact scope, false lineage gate, authorization-before-transport ordering, no design-write
+asset, no generic shell evaluator, and syntax/surface-only remote verification strings. Executable
+tests copy only the required assets into a pytest temporary repository. Synthetic authorization
+exists only there; PATH is replaced by an empty fixture directory and in-process fake SSH/SCP
+functions handle every call. Neither the live repository script nor real SSH/SCP is invoked.
+
+Tests cover generated printf/TSV/find escaping, successful fake sequencing and upload hashes,
+rejected/missing/old-hash authority, binding tamper, failures and wrong markers at each stage,
+completed-response overflow, a pre-transport expired deadline, WhatIf, and historical-regression
+detection. These tests do not execute Bash, Cadence, or remote commands and do not prove an actual
+install, snapshot restore, remote identity, hard in-flight deadline, bounded streaming, or approval
+consumption. The single-use characterization test explicitly reproduces a remaining gap with fake
+preflight failures; it is not a replay acceptance criterion.
