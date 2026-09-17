@@ -12,7 +12,11 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_public_contract_v2_repository_reconciled_remote_not_authorized
 documentation_status: verified
-integration_status: public_contract_v2_merged_pr_33_post_merge_state_pending_review
+integration_status: public_contract_v2_merged_pr_33_state_sync_merged_pr_34
+wp14_public_contract_post_merge_state_status: merged_pr_34
+wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
+wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
+wp14_public_contract_post_merge_state_merged_at: "2026-09-17T07:11:01Z"
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
@@ -154,16 +158,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-public-contract-post-merge-state
-base_main_commit: a18e44800309ae0818fcd8757994b14be49cc2d1
-last_commit: a18e44800309ae0818fcd8757994b14be49cc2d1
+current_feature_branch: wp/WP-14-pr34-state-sync
+base_main_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
+last_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "The v2 public-contract reconciliation is merged through PR #33; only this state-sync feature awaits review. Public policy is already approved. Earlier component merged-head fields retain v1 provenance; the reconciliation fields identify v2 integration. Separate exact-hash/executor/time-bound single-use collection authority, fresh reviewed evidence and deployment authority remain absent. WP-14 stays blocked and WP-15 unstarted."
+user_action_required: "PR #34 integrated the prior state-sync feature. Only wp/WP-14-pr34-state-sync now awaits review. Public policy is already approved. Separate exact-hash/executor/time-bound single-use collection authority, fresh reviewed evidence and deployment authority remain absent. WP-14 stays blocked and WP-15 unstarted. Record this branch's eventual merge in the next substantive WP-14 checkpoint; another standalone post-merge state-sync is not a prerequisite for that checkpoint."
 ```
 
 ## WP-14 checkpoint
@@ -256,6 +260,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: PR #34 state checkpoint validation passed Ruff, mypy (17 source files), 22 public-contract/security tests, 349-file secret preflight, unique metadata keys, protected metadata/history preservation, PROJECT_STATE-only scope and git diff --check. No remote integration was run. The final feature commit and remote SHA comparison are reported after push.
+
+- 2026-09-17: Verified PR #34 MERGED at 2026-09-17T07:11:01Z with approved head 28ca1f3d9db7e68ff98e2e038657279987c41351 and latest origin/main 2d71a83dfea2840729043ce5bd7f87c5824aefa1. Created wp/WP-14-pr34-state-sync from that base and updated only this state document. PUBLIC, deployment_enabled=false, protected hashes/history, conditional bias choices and unresolved evidence remain unchanged. No authorization, SSH/SCP, remote execution/deployment, Cadence, design modification, merge or WP-15 work occurred. awaiting_user_merge refers to this new documentation branch, not the already merged PR #34. Its eventual integration can be recorded with the next substantive WP-14 checkpoint without repeating standalone state-sync branches.
 
 - 2026-09-17: State-sync validation passed: PROJECT_STATE-only diff, unique metadata keys, protected hash/fingerprint/assumption fields and prior history preservation, absent live authorizations and disabled deployment gate. Ruff, strict mypy (17 files), four public-contract tests plus 18 security tests, 349-file secret preflight and git diff --check passed. No full-suite or real integration rerun was needed for this single-document checkpoint; no runtime/code/package change occurred. Feature push SHA will be verified and reported after commit.
 
