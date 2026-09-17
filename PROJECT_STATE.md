@@ -143,7 +143,9 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: consumed_preserved_locally_excluded_from_git
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V2.md
-wp14_narrow_deployment_blockers: "PREFLIGHT_TRANSPORT_FAILURE_CAUSE_UNKNOWN; SINGLE_USE_ATTEMPT_CONSUMED"
+wp14_narrow_deployment_blockers: "CURRENT_CADENCE_PROCESS_GATE_BLOCKED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; SINGLE_USE_ATTEMPT_CONSUMED"
+wp14_preflight_diagnostic: docs/WP14_PREFLIGHT_DIAGNOSTIC_V1.md
+wp14_preflight_diagnostic_status: current_process_predicate_failed_other_fixed_checks_passed
 wp14_narrow_remote_attempts: 1
 wp14_remote_preflight_status: failed_transport_no_success_marker
 wp14_runner_0_19_0_deployment_status: not_reached_preflight_failed
@@ -178,7 +180,7 @@ awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "No repeated deployment approval requested. The user authorized continuation, but the first preflight transport failed and consumed the one-attempt slot. Preserve the local authorization and durable claim; prepare bounded diagnostics and a reviewed recovery contract before any retry. WP-14 remains blocked and WP-15 unstarted."
+user_action_required: "The current Virtuoso/OCEAN process predicate blocks deployment. The operator should finish and normally close the active session without changing protected source data. Preserve the consumed authorization and durable claim. A bounded recovery contract and fresh preimages are still needed before a deployment retry; no repeated blanket approval is requested. WP-14 remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -275,6 +277,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Diagnostic checkpoint local validation passed Ruff, mypy (17 source files), 21 focused fake-transport/security tests, 354-file secret preflight and git diff --check. Tests cover fixed command construction, argument rejection and malformed-output suppression without network calls. Production deployer, collector, existing evidence and consumed authority remain unchanged.
+
+- 2026-09-17: Under continued diagnostic authority, one independent bounded read-only SSH diagnostic at 2026-09-17T08:26:13.895793+00:00 passed host/user/root/runner-executable/snapshot-absence and six fixed parent-directory checks. The no-Virtuoso/OCEAN-process predicate failed. This is a current blocker, not proof of the earlier suppressed failure cause. No process termination, runner execution, deployment retry, authorization/claim reset, Cadence invocation or design change occurred. An initial local-only collection-guard mismatch was corrected before the sole diagnostic SSH call. See WP14_PREFLIGHT_DIAGNOSTIC_V1.md.
 
 - 2026-09-17: Continued from PR #36 merge b9e138c5fefdafd9dc0101776a694199517cd6e6 under the user's remaining-work approval. Exact package/assets and evidence-bound Authorization V2 passed local WhatIf. The single real deployment attempt consumed its durable claim at 2026-09-17T08:20:37.8800486+00:00 and failed at the first read-only preflight transport. Snapshot, upload, installation and discovery were not reached. No retry or cleanup occurred. The consumed activation is preserved locally outside Git publication; see WP14_NARROW_DEPLOYMENT_RESULT_V2.md. All prior evidence, source, PDK and deployment_enabled=false are preserved. No scientific baseline was confirmed.
 
