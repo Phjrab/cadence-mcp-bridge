@@ -10,9 +10,9 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_single_use_remote_collection_request_prepared_remote_collection_not_authorized
+implementation_status: wp14_single_use_remote_collection_request_merged_pr_30_remote_collection_not_authorized
 documentation_status: verified
-integration_status: collector_post_merge_state_synchronized_pr_29_single_use_request_pending_review
+integration_status: single_use_remote_collection_request_merged_pr_30_post_merge_state_pending
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
@@ -99,7 +99,10 @@ wp14_remote_identity_preimage_collector_post_merge_state_merged_at: "2026-09-17T
 wp14_remote_identity_preimage_single_use_approval_package: docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_SINGLE_USE_APPROVAL_PACKAGE_V1.json
 wp14_remote_identity_preimage_single_use_approval_package_version: 1
 wp14_remote_identity_preimage_single_use_approval_package_normalized_lf_sha256: 648409527484c75b67df50c27eccc4a8e28ce22921750592ab6517b135676b9f
-wp14_remote_identity_preimage_single_use_approval_package_status: blocked_pending_review_and_private_visibility_request_not_authority
+wp14_remote_identity_preimage_single_use_approval_package_status: merged_pr_30_request_not_authority_public_visibility_blocker_retained
+wp14_remote_identity_preimage_single_use_approval_package_merged_head: 78abfa69173c3a93aaa33594d193c94d3590bbe3
+wp14_remote_identity_preimage_single_use_approval_package_merge_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
+wp14_remote_identity_preimage_single_use_approval_package_merged_at: "2026-09-17T06:00:12Z"
 wp14_repository_visibility_observed: public
 wp14_repository_visibility_required_for_remote_collection: private
 wp14_repository_visibility_gate: blocked
@@ -113,7 +116,7 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "REPOSITORY_VISIBILITY_PUBLIC; SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_REQUEST_REVIEW_PENDING; SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
+wp14_narrow_deployment_blockers: "REPOSITORY_VISIBILITY_PUBLIC; SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
 wp14_narrow_remote_attempts: 0
 wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
 wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
@@ -139,16 +142,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-single-use-collection-approval-package
-base_main_commit: 282a8bc89215614bd86eaf16febc5db5d57b33d5
-last_commit: 282a8bc89215614bd86eaf16febc5db5d57b33d5
+current_feature_branch: wp/WP-14-single-use-approval-post-merge-state
+base_main_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
+last_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the request-only single-use collection package and its feature commit. The repository is currently public while the fixed contract requires private visibility, so no activation record or transport is permitted. After private visibility is independently verified, a separate exact package/collector-hash/executor-bound, time-bounded single-use authorization is still required before one read-only remote evidence attempt. Fresh identity/preimage evidence, later V2 deployment authority, discovery, and scientific baseline approval remain absent; WP-15 is unstarted."
+user_action_required: "The request-only single-use collection package is merged through PR #30. The repository remains public by user direction, while the fixed collection contract requires private visibility; no activation record or transport is permitted. A separate exact package/collector-hash/executor-bound, time-bounded single-use authorization remains required after the visibility gate is resolved. Fresh identity/preimage evidence, later V2 deployment authority, discovery, and scientific baseline approval remain absent; WP-15 is unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -293,6 +296,8 @@ a successful push or a baseline approval.
 - 2026-09-14: Latest `origin/main` `a3e6b4a1a5eedd183c994902917d60847bda0799` was confirmed to contain the reviewed WP-12 roadmap integration. PKG-INTEGRATE-01 imported the verified prompt package as planning-only documentation, preserved the pre-integration root contract byte-for-byte, added an explicit WP/ICF evidence crosswalk, retained all stronger approval/security/Git limits, and excluded the recovered `archive/LEGACY_INPUTS.zip`. No Cadence, runner, job, OA, ADE state, circuit, layout, work-library, PDK, V1-V4 evidence, visibility, tag, release, deployment, merge, or direct-main operation was performed. The integration is documentation-verified and awaits review/merge; the sole next implementation task remains WP-13 read-only baseline and capability audit.
 - 2026-09-14: The user explicitly authorized PR #18, and PKG-INTEGRATE-01 head `a5a4d85197896d7b7b97fb90f5b5cbad1d4937db` was merged through GitHub into main as `198900ecc96c9cadd3697022f96c90bd5baf937a`; no direct-main push, tag, release, deployment, or WP-13 work occurred in that merge run.
 - 2026-09-14: WP-13 performed two current argument-free baseline audits, one fixed legacy IC6.1.5 read-only ADE/OA introspection, and a post-introspection baseline audit using the already deployed runner 0.18.0 without redeployment. Profile, source, and ADE-state hashes remained `dea735f2...`, `30e941fd...`, and `a6ead918...`; source/state/PDK-model/source-netlist before/after fingerprints were unchanged, topology remained 35/14/8, and source/state locks were zero. State1 reports `VBIASN=300m`, `VBIASP=650m`, `dc` enabled, `tran` disabled with stored stop `4m`, and no named outputs, while the reviewed profile expects transient. The result is `PROFILE_DRIFT` with `analysis_mismatch` and `snapshot_freshness_unconfirmed`; the source remains 1,512 seconds older than state metadata. The `300m/650m` and historical `370m/650m` candidates remain unselected, and parameterized execution stays disabled. Only bounded runtime logs/cache under the approved `.cadence_mcp` root were refreshed; no runner deployment, MCP change, simulation, OA save, source/state/PDK/work-library/V1-V4 modification, tag, release, merge, or direct-main push occurred. The runner 0.18.0 implementation remains reference-only on the unmerged historical branch and is not imported by WP-13.
+- 2026-09-17: PR #30 merged the request-only single-use remote identity/preimage evidence collection package head `78abfa69173c3a93aaa33594d193c94d3590bbe3` as latest main `457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1` at `2026-09-17T06:00:12Z`. GitHub MERGED state, the exact approved head, ancestor/tree equality, fetched and remote main refs, public repository visibility, and a clean starting tree were verified. The merged package remains request-only; no activation record, SSH/SCP, remote evidence collection, deployment, Cadence/SKILL/discovery/simulation, OA/ADE/design/PDK operation, direct-main push, or WP-15 work occurred. Public visibility remains a fail-closed collection blocker under the fixed contract.
+- 2026-09-17: Post-merge state synchronization updated only PROJECT_STATE.md on a dedicated feature branch. State-key uniqueness, single-file scope, request-only authorization absence, Authorization V2 absence, and `deployment_enabled=false` passed. Ruff, strict mypy for 17 source files, 343-file secret preflight, 18 dedicated security tests, strict dependency audit, and `git diff --check` passed. No remote or Cadence operation occurred; WP-14 remains blocked and WP-15 remains unstarted.
 - 2026-09-17: The user explicitly authorized PR #26, and WP-14 narrow-deployer safety-control head `b0e20d553ebf1282310108241426c4fc1e09483c` was merged through GitHub into main as `59a450c63b040a604e644638ef6e02b0a9544d09`. No direct-main push, deployment activation, authorization creation, SSH/SCP, remote preflight, Cadence, discovery, simulation, or design access occurred.
 - 2026-09-17: WP-14 prepared a request-only package for a future fixed, argument-free, read-only collector of fresh remote identity and exact preimage evidence for the eleven managed assets. The package grants no authority, performs no remote contact, preserves `deployment_enabled=false`, and separates repository implementation, one evidence-collection attempt, evidence review, V2 authorization, deployment, and discovery into independent gates. WP-14 remains blocked and WP-15 is not started.
 - 2026-09-17: PR #27 merged the request-only package head `c99be8d268da3ef5df3219ce8693fb7f3ab4c051` as latest main `e60ab270a5e002256f8c5bbf6b81e54f65c10a31`. From that exact base, `wp/WP-14-remote-evidence-collector` implemented the fixed no-argument, operator-only identity/preimage collector with normalized-LF SHA-256 `598d95e785ccdb2c7f711989f7f7036740425f2f5da465b1695bbda87cf61daa`. It fixes the Windows system OpenSSH path, alias, identity, remote root, eleven assets, closed evidence schema, 60-second shared deadline, 32,768-byte combined output limit, strict UTF-8, durable single-use claim, concurrency lock, and no-retry fail-closed behavior. Production contains no fake-transport switch.
