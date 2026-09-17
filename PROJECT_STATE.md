@@ -143,10 +143,14 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: consumed_preserved_locally_excluded_from_git
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V2.md
-wp14_narrow_deployment_blockers: "RECOVERY_CONTRACT_NOT_IMPLEMENTED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; SINGLE_USE_ATTEMPT_CONSUMED"
+wp14_narrow_deployment_blockers: "RECOVERY_REVIEW_AND_FINAL_AUTHORITY_REQUIRED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; ORIGINAL_ATTEMPT_CONSUMED"
 wp14_preflight_diagnostic: docs/WP14_PREFLIGHT_DIAGNOSTIC_V1.md
 wp14_preflight_diagnostic_status: post_close_all_twelve_checks_passed_not_full_preflight
 wp14_post_close_recovery_plan: docs/WP14_POST_CLOSE_RECOVERY_PLAN_V1.md
+wp14_recovery_implementation: docs/WP14_RECOVERY_IMPLEMENTATION_V1.md
+wp14_recovery_candidate: scripts/deploy-wp14-recovery.ps1
+wp14_recovery_candidate_normalized_lf_sha256: e4ed2610aa0cb6a5b930b0ce6a52f1a6d2273c390195f0b58ff3e17c0d976374
+wp14_recovery_status: partial_candidate_local_test_environment_stabilization_required
 wp14_post_close_diagnostic_observed_at: "2026-09-17T08:56:29.420609+00:00"
 wp14_narrow_remote_attempts: 1
 wp14_remote_preflight_status: failed_transport_no_success_marker
@@ -182,7 +186,7 @@ awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Normal Virtuoso closure is verified; no further shutdown action is requested. Next is bounded recovery implementation and isolated local validation under continuation authority. Preserve consumed records; do not reuse the old deployment slot. Final-hash-bound recovery authority and fresh preimage verification remain prerequisites to remote retry. WP-14 remains blocked; WP-15 is unstarted."
+user_action_required: "No operator shutdown action is required. Next local task is UTF-8 fixture and startup-timing test stabilization followed by a clean full-suite run. The recovery candidate is PARTIAL, not merge/deployment ready. Preserve consumed records; no new activation or remote invocation occurred. WP-14 remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -279,6 +283,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Recovery checkpoint is PARTIAL: fifteen dedicated fake-transport recovery tests, Ruff, mypy, syntax, state, preserved activation hash, secret and dependency/security checks passed. Working-copy full-suite failures included two historical absence assumptions conflicting with mandatory preserved local activation evidence. A clean index export resolved those assumptions but exposed nine existing CP949 fixture-read failures; explicit UTF-8 rerun passed eight, with one three-second-budget stderr test passing only on isolated rerun. No clean single full-suite PASS is claimed. Next is local test-environment stabilization, not merge or remote execution; see WP14_RECOVERY_IMPLEMENTATION_V1.md for exact results.
+
+- 2026-09-17: Continued clean feature HEAD 4787fb3c05fb1d1be77b2d2de258a4cdad5609b3 with repository-only recovery implementation. Added a separate fixed candidate retaining the original eleven assets and transport sequence, requiring exact preserved predecessor claim/activation, plan/evidence binding and an independent durable recovery slot under the original shared lock. No original executor, plan, package, evidence, authorization or real ledger was modified. Tests use synthetic temporary fixtures only. No real SSH/SCP, recovery activation, remote deployment, Cadence, design change, main push, merge or WP-15 work occurred.
 
 - 2026-09-17: After the user reported normal Virtuoso closure, the unchanged bounded diagnostic ran once at 2026-09-17T08:56:29.420609+00:00 and all twelve checks passed. The process predicate blocker is resolved, not the consumed deployment slot or full readiness gate. Added a non-executable recovery plan with fifteen acceptance criteria, predecessor preservation, shared concurrency and independent durable single-use recovery requirements. No activation, deployment retry, cleanup, Cadence invocation or design access occurred. Existing failure evidence and grants remain preserved; PUBLIC and deployment_enabled=false are unchanged.
 
