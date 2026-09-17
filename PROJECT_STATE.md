@@ -179,16 +179,23 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-approved-narrow-deployment
-base_main_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
-last_commit: 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d
+wp14_recovery_integration_status: merged_pr_37
+wp14_recovery_merged_head: 5f10a9b417af3fbbd7b40d2135eabd8df8bc4d16
+wp14_recovery_merge_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
+wp14_recovery_readiness_review: docs/WP14_RECOVERY_READINESS_REVIEW_V1.md
+wp14_recovery_remote_readiness: blocked_missing_final_authority_current_remote_conditions_unverified
+wp14_recovery_evidence_age_reviewed_at: "2026-09-17T11:09:47Z"
+wp14_recovery_evidence_age_boundary: "2026-09-18T08:05:01Z"
+current_feature_branch: wp/WP-14-recovery-readiness-review
+base_main_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
+last_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the locally validated feature for explicit PR integration. Local UTF-8/timing stabilization passed the full isolated suite. Remote execution still needs final hash-bound authority and valid reviewed preimages; no activation or remote invocation occurred. Preserve consumed records. WP-14 scientific baseline remains blocked and WP-15 unstarted."
+user_action_required: "Review the non-executable recovery readiness document for explicit PR integration. Recovery implementation is merged through PR #37, but remote execution still needs final exact authority, valid pinned evidence and fixed preflight. No grant is created. Preserve consumed records; WP-14 remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -285,6 +292,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Readiness-review local verification passed in a fresh isolated index copy with no actual authorization or operator ledger: Ruff, strict mypy (17 source files), 33 recovery/security tests, repeated 18-test security gate, 360-file secret scan and strict locked dependency audit with no known vulnerabilities. Fifteen documentary criteria, 195 unique state keys, prior progress preservation, immutable file/hash preservation, absent recovery activation and false deployment gate passed. Only the review and this state document change; no full-suite or actual integration rerun is claimed. Final feature SHA is verified after commit/push in the completion report.
+
+- 2026-09-17: Verified PR #37 MERGED with reviewed head 5f10a9b417af3fbbd7b40d2135eabd8df8bc4d16 and latest fetched/remote main 79bb9c170d6822664438493cd4e3e56eb5c83b7c, then created wp/WP-14-recovery-readiness-review. Recomputed plan/candidate/original-deployer/package/evidence hashes. At 11:09:47Z the pinned evidence was 3h04m46s old, within 24 hours, with boundary 2026-09-18T08:05:01Z; this is not current remote verification. Added a non-executable review and 15 criteria; final authority is absent and remote readiness remains BLOCKED. PUBLIC, deployment_enabled=false, prior history, protected evidence and consumed records remain unchanged. No authorization, SSH/SCP, remote collection/deployment, Cadence, design mutation, merge or WP-15 work occurs. awaiting_user_merge refers to this documentary feature only.
 
 - 2026-09-17: Verified incoming remote/local feature HEAD 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d and stabilized only test fixtures: explicit UTF-8 file I/O, independent output checks, a first-child-only synthetic transport budget with separate pre-start expiry coverage, and UTF-8 legacy synthetic child output. Production deployment/security limits remain unchanged. In a clean Git-index copy without actual activation/ledger files, the final full run passed 365 tests with three real integrations skipped, five deselected and 56 existing deprecation warnings; asynchronous thread warnings were promoted to errors and none occurred. Ruff, mypy, secret scan, 18 security tests and strict dependency audit passed. Prior PARTIAL history is preserved; local acceptance now passes but no remote execution authority is granted. No SSH/SCP, deployment, Cadence, design mutation, merge or WP-15 work occurred. See WP14_TEST_STABILIZATION_V1.md.
 
