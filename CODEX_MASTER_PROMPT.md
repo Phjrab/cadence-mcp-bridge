@@ -1,7 +1,7 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
 > **대상 저장소:** `Phjrab/cadence-mcp-bridge`
-> **가시성:** GitHub Private
+> **가시성:** GitHub Public (2026-09-17 post-v1 사용자 승인 정책)
 > **기본 실행 환경:** Windows 11의 Codex Desktop
 > **원격 대상:** VMware Workstation Pro의 CentOS 6.5 Cadence VM
 > **운영 방식:** 한 번의 Codex 실행에서는 하나의 워크패키지(WP)만 완료하고 멈춘다.
@@ -9,6 +9,17 @@
 ---
 
 ## Post-v1 실행 권한 구조
+
+### 2026-09-17 public 정책 교정
+
+현재 저장소는 사용자의 명시적 승인에 따라 public을 유지한다. 아래 v1의 private
+bootstrap/release/완료 기준과 보고서 표기는 역사적 계약으로 보존하며 현재 가시성
+요구로 재적용하지 않는다. 현재 보고서는 실제 public 상태를 검증한다.
+WP-14의 활성 요청 계약은 version 2 패키지이며 기존 version 1 기록은 불변이다.
+Public 공개 승인은 원격 실행 또는 새 evidence 공개 승인이 아니다. 보호 데이터,
+자격 증명, 활성 authorization, MachineGuid, PDK/OA/ADE 원문은 커밋하지 않는다.
+새 evidence는 로컬에서 정확한 필드를 검토한 후에만 공개할 수 있다. 별도 실행 승인,
+해시 결합, 단일 사용 이력, Git/테스트/STOP 및 deployment_enabled=false 제한은 유지한다.
 
 `v1.0.0` 이후 개발은 다음 세 문서 계층으로 통제한다.
 
@@ -370,7 +381,7 @@ cadence-mcp-bridge/
 
 # 6. GitHub 및 Git 동기화 계약
 
-이 프로젝트는 비공개 저장소 `Phjrab/cadence-mcp-bridge`를 사용한다.
+이 프로젝트는 사용자 승인된 public 저장소 `Phjrab/cadence-mcp-bridge`를 사용한다.
 
 ## 6.1 전역 checkpoint 규칙
 

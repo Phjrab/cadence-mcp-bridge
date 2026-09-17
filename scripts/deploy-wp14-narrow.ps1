@@ -5,8 +5,10 @@ param()
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$packageHash = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
-$packageRelativePath = "docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json"
+$packageHash = "96d8f001776eb61da5ef09ba3945d988bf587c716fea95a35ad890aa95ba2431"
+# Stable lineage key shared with the v1 executor; never reset one-use history on migration.
+$claimPackageHash = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
+$packageRelativePath = "docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V2.json"
 $authorizationRelativePath = "docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V2.json"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $packagePath = Join-Path $projectRoot $packageRelativePath
@@ -86,7 +88,9 @@ function Assert-PackageAndAssets {
     }
     $package = Get-Content -LiteralPath $packagePath -Raw | ConvertFrom-Json
     if ($package.package_id -ne "WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE" -or
-        $package.package_version -ne 1 -or $package.record_kind -ne "approval_request_not_grant") {
+        $package.package_version -ne 2 -or $package.record_kind -ne "approval_request_not_grant" -or
+        $package.repository_binding.repository -cne "Phjrab/cadence-mcp-bridge" -or
+        $package.repository_binding.visibility_required -cne "public") {
         throw "WP-14 approval package identity mismatch."
     }
     foreach ($property in $package.authority.PSObject.Properties) {
@@ -275,7 +279,7 @@ function Claim-OneAttempt {
     [IO.Directory]::CreateDirectory($stateRoot) | Out-Null
     Assert-NoReparseAncestors $stateRoot
     $lockPath = Join-Path $stateRoot 'operation.lock'
-    $claimPath = Join-Path $stateRoot ("attempt-" + $packageHash + ".json")
+    $claimPath = Join-Path $stateRoot ("attempt-" + $claimPackageHash + ".json")
     Assert-NoReparseAncestors $lockPath
     Assert-NoReparseAncestors $claimPath
     try {

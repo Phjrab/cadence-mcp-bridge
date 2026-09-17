@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -17,12 +18,13 @@ ROOT = Path(__file__).resolve().parents[2]
 COLLECTOR = ROOT / "scripts/collect-wp14-remote-preimages.py"
 PACKAGE = (
     ROOT
-    / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V1.json"
+    / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V2.json"
 )
 AUTHORIZATION = Path(
     "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_AUTHORIZATION_V1.json"
 )
-PACKAGE_HASH = "1906357b1ef5ba98a3d28241896fc59d0a4ff8053b64eac9f5d45f9a9bde0fcb"
+PACKAGE_HASH = "7b8d4d623a95e67a6d39e0391bcf5b9869c58dedbf02b0dd638c070853048223"
+CLAIM_HASH = "1906357b1ef5ba98a3d28241896fc59d0a4ff8053b64eac9f5d45f9a9bde0fcb"
 MAIN_COMMIT = "e60ab270a5e002256f8c5bbf6b81e54f65c10a31"
 
 
@@ -64,7 +66,7 @@ def isolated_collector(tmp_path: Path) -> Path:
         COLLECTOR.relative_to(ROOT),
         PACKAGE.relative_to(ROOT),
         Path(
-            "docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json"
+            "docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V2.json"
         ),
         Path("scripts/deploy-wp14-narrow.ps1"),
         Path("remote/config/runner-lineage.json"),
@@ -273,7 +275,7 @@ def test_failed_attempt_is_consumed_without_replay(isolated_collector: Path) -> 
     authorize_fixture(isolated_collector)
     first = run_fixture(isolated_collector, "fail")
     assert first["returncode"] == 1 and len(first["calls"]) == 1
-    claim = isolated_collector / "ledger" / f"attempt-{PACKAGE_HASH}.json"
+    claim = isolated_collector / "ledger" / f"attempt-{CLAIM_HASH}.json"
     assert json.loads(claim.read_text(encoding="utf-8"))["state"] == ("consumed_before_transport")
     second = run_fixture(isolated_collector)
     assert second["returncode"] == 1 and "already consumed" in second["stderr"]
@@ -291,6 +293,71 @@ def test_duplicate_and_oversized_authorization_are_rejected(isolated_collector: 
     )
     result = run_fixture(isolated_collector)
     assert result["returncode"] == 1 and result["calls"] == []
+
+
+def test_oversized_authorization_is_rejected(isolated_collector: Path) -> None:
+    authorize_fixture(isolated_collector)
+    path = isolated_collector / AUTHORIZATION
     path.write_text(" " * 16385, encoding="utf-8")
     result = run_fixture(isolated_collector)
     assert result["returncode"] == 1 and result["calls"] == []
+
+
+@pytest.mark.parametrize("contents", [b"", b"historical consumed claim"])
+def test_predecessor_claim_blocks_new_package_without_modification(
+    isolated_collector: Path, contents: bytes
+) -> None:
+    authorize_fixture(isolated_collector)
+    ledger = isolated_collector / "ledger"
+    ledger.mkdir()
+    claim = ledger / f"attempt-{CLAIM_HASH}.json"
+    claim.write_bytes(contents)
+    result = run_fixture(isolated_collector)
+    assert result["returncode"] == 1 and result["calls"] == []
+    assert claim.read_bytes() == contents
+    assert not (ledger / f"attempt-{PACKAGE_HASH}.json").exists()
+
+
+def test_old_package_authority_is_not_reusable(isolated_collector: Path) -> None:
+    authorize_fixture(isolated_collector, package_normalized_lf_sha256=CLAIM_HASH)
+    result = run_fixture(isolated_collector)
+    assert result["returncode"] == 1 and result["calls"] == []
+    assert not (isolated_collector / "ledger").exists()
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        PACKAGE.relative_to(ROOT),
+        Path("scripts/deploy-wp14-narrow.ps1"),
+        Path(
+            "docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V2.json"
+        ),
+    ],
+)
+def test_migrated_input_tampering_stops_before_transport(
+    isolated_collector: Path, relative: Path
+) -> None:
+    path = isolated_collector / relative
+    path.write_bytes(path.read_bytes() + b"\n")
+    authorize_fixture(isolated_collector)
+    result = run_fixture(isolated_collector)
+    assert result["returncode"] == 1 and result["calls"] == []
+    assert not (isolated_collector / "ledger").exists()
+
+
+def test_concurrent_collections_share_one_lineage_claim(isolated_collector: Path) -> None:
+    authorize_fixture(isolated_collector)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(run_fixture, [isolated_collector, isolated_collector]))
+    assert sorted(result["returncode"] for result in results) == [0, 1]
+    calls = (isolated_collector / "calls.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(calls) == 1
+
+
+def test_publication_sensitive_content_is_suppressed(isolated_collector: Path) -> None:
+    authorize_fixture(isolated_collector)
+    result = run_fixture(isolated_collector, "protected-content")
+    assert result["returncode"] == 1 and len(result["calls"]) == 1
+    assert result["stdout"] == ""
+    assert "SYNTHETIC_PROTECTED_CONTENT" not in result["stderr"]
