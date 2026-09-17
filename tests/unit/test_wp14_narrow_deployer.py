@@ -22,10 +22,11 @@ PACKAGE = (
     ROOT
     / "docs"
     / "approvals"
-    / ("WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json")
+    / ("WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V2.json")
 )
 LINEAGE = ROOT / "remote" / "config" / "runner-lineage.json"
-PACKAGE_HASH = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
+PACKAGE_HASH = "96d8f001776eb61da5ef09ba3945d988bf587c716fea95a35ad890aa95ba2431"
+CLAIM_HASH = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
 OLD_DEPLOYER_HASH = "b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e"
 AUTHORIZATION = Path("docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V2.json")
 PWSH = shutil.which("pwsh")
@@ -464,7 +465,7 @@ def test_failed_preflight_consumes_record_and_blocks_replay(
     before = (isolated_deployer / AUTHORIZATION).read_bytes()
     first = run_fixture(isolated_deployer, "fail-preflight")
     assert first["success"] is False and len(first["calls"]) == 1
-    claim = isolated_deployer / "ledger" / f"attempt-{PACKAGE_HASH}.json"
+    claim = isolated_deployer / "ledger" / f"attempt-{CLAIM_HASH}.json"
     assert json.loads(claim.read_text())["state"] == "consumed_before_transport"
     claim_before = claim.read_bytes()
     result = run_fixture(isolated_deployer, "fail-preflight")
@@ -636,7 +637,7 @@ def test_incomplete_claim_is_never_repaired_or_removed(isolated_deployer: Path) 
     authorize_fixture(isolated_deployer)
     ledger = isolated_deployer / "ledger"
     ledger.mkdir()
-    claim = ledger / f"attempt-{PACKAGE_HASH}.json"
+    claim = ledger / f"attempt-{CLAIM_HASH}.json"
     claim.write_bytes(b"")
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
@@ -708,7 +709,29 @@ def test_claim_remains_after_missing_fake_executable(isolated_deployer: Path) ->
     authorize_fixture(isolated_deployer)
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
-    assert (isolated_deployer / "ledger" / f"attempt-{PACKAGE_HASH}.json").exists()
+    assert (isolated_deployer / "ledger" / f"attempt-{CLAIM_HASH}.json").exists()
+
+
+@pytest.mark.parametrize("contents", [b"", b"historical consumed claim"])
+def test_predecessor_claim_blocks_migrated_deployer(
+    isolated_deployer: Path, contents: bytes
+) -> None:
+    authorize_fixture(isolated_deployer)
+    ledger = isolated_deployer / "ledger"
+    ledger.mkdir()
+    claim = ledger / f"attempt-{CLAIM_HASH}.json"
+    claim.write_bytes(contents)
+    result = run_fixture(isolated_deployer)
+    assert result["success"] is False and result["calls"] == []
+    assert claim.read_bytes() == contents
+    assert not (ledger / f"attempt-{PACKAGE_HASH}.json").exists()
+
+
+def test_old_package_authority_rejected_after_migration(isolated_deployer: Path) -> None:
+    authorize_fixture(isolated_deployer, package_normalized_lf_sha256=CLAIM_HASH)
+    result = run_fixture(isolated_deployer)
+    assert result["success"] is False and result["calls"] == []
+    assert not (isolated_deployer / "ledger").exists()
 
 
 def test_invalid_json_does_not_echo_raw_content(isolated_deployer: Path) -> None:

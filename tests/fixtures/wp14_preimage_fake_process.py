@@ -29,7 +29,7 @@ package = json.loads(
     (
         root
         / "docs/approvals"
-        / "WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V1.json"
+        / "WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V2.json"
     ).read_text()
 )
 for item in package["asset_preimage_allowlist"]:
@@ -102,5 +102,7 @@ if scenario == "missing-line":
     lines.pop()
 if scenario == "extra-line":
     lines.append("UNEXPECTED")
+if scenario == "protected-content":
+    lines[1] += "\tSYNTHETIC_PROTECTED_CONTENT"
 lines.append("WRONG_END" if scenario == "wrong-end" else "WP14_END")
 sys.stdout.write("\n".join(lines) + "\n")

@@ -21,7 +21,7 @@ from typing import Any, BinaryIO
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = (
     PROJECT_ROOT
-    / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V1.json"
+    / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V2.json"
 )
 AUTHORIZATION = (
     PROJECT_ROOT
@@ -30,16 +30,18 @@ AUTHORIZATION = (
 DEPLOYMENT_PACKAGE = (
     PROJECT_ROOT
     / "docs/approvals"
-    / "WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json"
+    / "WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V2.json"
 )
 DEPLOYER = PROJECT_ROOT / "scripts/deploy-wp14-narrow.ps1"
 LINEAGE = PROJECT_ROOT / "remote/config/runner-lineage.json"
 AUTHORIZATION_V2 = (
     PROJECT_ROOT / "docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V2.json"
 )
-PACKAGE_HASH = "1906357b1ef5ba98a3d28241896fc59d0a4ff8053b64eac9f5d45f9a9bde0fcb"
-DEPLOYMENT_PACKAGE_HASH = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
-DEPLOYER_HASH = "227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17"
+PACKAGE_HASH = "7b8d4d623a95e67a6d39e0391bcf5b9869c58dedbf02b0dd638c070853048223"
+# Stable lineage key: version changes must never reset the predecessor's one-use ledger.
+CLAIM_PACKAGE_HASH = "1906357b1ef5ba98a3d28241896fc59d0a4ff8053b64eac9f5d45f9a9bde0fcb"
+DEPLOYMENT_PACKAGE_HASH = "96d8f001776eb61da5ef09ba3945d988bf587c716fea95a35ad890aa95ba2431"
+DEPLOYER_HASH = "3251100bafde66c0df4179d36462de8029c6856b59111629dba627c1b668fddc"
 PACKAGE_BASE_MAIN_COMMIT = "59a450c63b040a604e644638ef6e02b0a9544d09"
 REPOSITORY_MAIN_COMMIT = "e60ab270a5e002256f8c5bbf6b81e54f65c10a31"
 SSH_ALIAS = "cadence-vm"
@@ -183,7 +185,7 @@ def _assert_package_boundary() -> None:
     if (
         package.get("package_id")
         != "WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE"
-        or package.get("package_version") != 1
+        or package.get("package_version") != 2
         or package.get("record_kind") != "approval_request_not_grant"
         or package.get("status") != "READY_FOR_REVIEW"
     ):
@@ -201,6 +203,8 @@ def _assert_package_boundary() -> None:
         raise CollectorError("Evidence package contract is incomplete.")
     if (
         binding.get("base_main_commit") != PACKAGE_BASE_MAIN_COMMIT
+        or binding.get("repository") != "Phjrab/cadence-mcp-bridge"
+        or binding.get("visibility_required") != "public"
         or binding.get("deployment_enabled") is not False
         or contract.get("implemented_now") is not False
         or contract.get("ready_for_remote_use") is not False
@@ -293,7 +297,9 @@ def _claim_attempt(authorization: dict[str, Any]) -> BinaryIO:
     state_root.mkdir(parents=True, exist_ok=True)
     _assert_no_reparse_ancestors(state_root)
     lock_path = state_root / "operation.lock"
-    claim_path = state_root / f"attempt-{PACKAGE_HASH}.json"
+    claim_path = state_root / f"attempt-{CLAIM_PACKAGE_HASH}.json"
+    _assert_no_reparse_ancestors(lock_path)
+    _assert_no_reparse_ancestors(claim_path)
     lock = lock_path.open("a+b")
     try:
         if lock_path.stat().st_size == 0:

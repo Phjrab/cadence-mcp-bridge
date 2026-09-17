@@ -45,6 +45,13 @@ abstraction, and inventory legacy ADE/sweep capabilities before any parameterize
 
 ## Phase acceptance gates
 
+The 2026-09-17 user-approved visibility policy is PUBLIC. WP-14 version-2 request
+packages supersede only the active private-visibility prerequisite and related hash
+bindings; version-1 packages and v1 release history remain preserved. Public operation
+does not authorize transport or publication of fresh evidence. Exact evidence fields
+require local publication review. Deployment remains disabled and existing operation,
+data-protection, single-use, testing and Git approval controls remain mandatory.
+
 - Repository visibility, release baseline, branch policy, and protected-data policy agree across
   GitHub metadata and repository documents.
 - The actual ADE profile baseline is supported by bounded, reproducible evidence.
