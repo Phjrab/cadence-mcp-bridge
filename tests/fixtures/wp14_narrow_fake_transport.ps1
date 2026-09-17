@@ -16,6 +16,6 @@ try {
 catch { $result.error = $_.Exception.Message }
 $calls = Join-Path $PSScriptRoot 'calls.jsonl'
 if (Test-Path -LiteralPath $calls) {
-    $result.calls = @(Get-Content -LiteralPath $calls | ForEach-Object { $_ | ConvertFrom-Json })
+    $result.calls = @(Get-Content -LiteralPath $calls -Encoding utf8 | ForEach-Object { $_ | ConvertFrom-Json })
 }
 Write-Output ('WP14_TEST_RESULT=' + ($result | ConvertTo-Json -Depth 6 -Compress))

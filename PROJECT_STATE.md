@@ -150,7 +150,9 @@ wp14_post_close_recovery_plan: docs/WP14_POST_CLOSE_RECOVERY_PLAN_V1.md
 wp14_recovery_implementation: docs/WP14_RECOVERY_IMPLEMENTATION_V1.md
 wp14_recovery_candidate: scripts/deploy-wp14-recovery.ps1
 wp14_recovery_candidate_normalized_lf_sha256: e4ed2610aa0cb6a5b930b0ce6a52f1a6d2273c390195f0b58ff3e17c0d976374
-wp14_recovery_status: partial_candidate_local_test_environment_stabilization_required
+wp14_recovery_status: repository_local_validation_passed_remote_not_authorized_not_run
+wp14_recovery_test_stabilization: docs/WP14_TEST_STABILIZATION_V1.md
+wp14_recovery_clean_local_tests: "365 passed; 3 remote skipped; 5 remote deselected; 56 legacy warnings"
 wp14_post_close_diagnostic_observed_at: "2026-09-17T08:56:29.420609+00:00"
 wp14_narrow_remote_attempts: 1
 wp14_remote_preflight_status: failed_transport_no_success_marker
@@ -179,14 +181,14 @@ wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
 current_feature_branch: wp/WP-14-approved-narrow-deployment
 base_main_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
-last_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
+last_commit: 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "No operator shutdown action is required. Next local task is UTF-8 fixture and startup-timing test stabilization followed by a clean full-suite run. The recovery candidate is PARTIAL, not merge/deployment ready. Preserve consumed records; no new activation or remote invocation occurred. WP-14 remains blocked and WP-15 unstarted."
+user_action_required: "Review the locally validated feature for explicit PR integration. Local UTF-8/timing stabilization passed the full isolated suite. Remote execution still needs final hash-bound authority and valid reviewed preimages; no activation or remote invocation occurred. Preserve consumed records. WP-14 scientific baseline remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -283,6 +285,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Verified incoming remote/local feature HEAD 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d and stabilized only test fixtures: explicit UTF-8 file I/O, independent output checks, a first-child-only synthetic transport budget with separate pre-start expiry coverage, and UTF-8 legacy synthetic child output. Production deployment/security limits remain unchanged. In a clean Git-index copy without actual activation/ledger files, the final full run passed 365 tests with three real integrations skipped, five deselected and 56 existing deprecation warnings; asynchronous thread warnings were promoted to errors and none occurred. Ruff, mypy, secret scan, 18 security tests and strict dependency audit passed. Prior PARTIAL history is preserved; local acceptance now passes but no remote execution authority is granted. No SSH/SCP, deployment, Cadence, design mutation, merge or WP-15 work occurred. See WP14_TEST_STABILIZATION_V1.md.
 
 - 2026-09-17: Recovery checkpoint is PARTIAL: fifteen dedicated fake-transport recovery tests, Ruff, mypy, syntax, state, preserved activation hash, secret and dependency/security checks passed. Working-copy full-suite failures included two historical absence assumptions conflicting with mandatory preserved local activation evidence. A clean index export resolved those assumptions but exposed nine existing CP949 fixture-read failures; explicit UTF-8 rerun passed eight, with one three-second-budget stderr test passing only on isolated rerun. No clean single full-suite PASS is claimed. Next is local test-environment stabilization, not merge or remote execution; see WP14_RECOVERY_IMPLEMENTATION_V1.md for exact results.
 

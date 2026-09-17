@@ -21,7 +21,23 @@ def _python26_fcntl_stub(tmp_path: Path) -> tuple[Path, dict[str, str]]:
     )
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(stub_directory)
+    # The parent decodes captured streams as UTF-8, including warnings whose
+    # filenames can contain Korean characters. Do not inherit CP949 output.
+    environment["PYTHONIOENCODING"] = "utf-8"
     return stub_directory, environment
+
+
+def test_fixture_child_output_is_utf8(tmp_path: Path) -> None:
+    _, environment = _python26_fcntl_stub(tmp_path)
+    completed = subprocess.run(
+        [sys.executable, "-c", "import sys; print(chr(0xD55C), file=sys.stderr)"],
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    assert completed.stderr.strip() == "\ud55c"
 
 
 def test_source_gate_requires_authoritative_master_and_ignores_preserved_auxiliary(
@@ -37,9 +53,7 @@ def test_source_gate_requires_authoritative_master_and_ignores_preserved_auxilia
     finally:
         sys.path.remove(str(stub_directory))
 
-    (tmp_path / "master.tag").write_text(
-        "-- Master.tag File, Rev:1.0\nsch.oa\n", encoding="ascii"
-    )
+    (tmp_path / "master.tag").write_text("-- Master.tag File, Rev:1.0\nsch.oa\n", encoding="ascii")
     (tmp_path / "sch.oa").write_bytes(b"authoritative")
     (tmp_path / "sch.oa-").write_bytes(b"preserved auxiliary")
 

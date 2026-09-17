@@ -87,8 +87,12 @@ if stage == "preflight":
         sys.exit(42)
     if f"$(id -un)\" = '{actual_user}'" not in command:
         sys.exit(42)
-    package = json.loads(next((root / "docs/approvals").glob("*PACKAGE_V2.json")).read_text())
-    record = json.loads(next((root / "docs/approvals").glob("*AUTHORIZATION_V2.json")).read_text())
+    package = json.loads(
+        next((root / "docs/approvals").glob("*PACKAGE_V2.json")).read_text(encoding="utf-8")
+    )
+    record = json.loads(
+        next((root / "docs/approvals").glob("*AUTHORIZATION_V2.json")).read_text(encoding="utf-8")
+    )
     expected_presence = {entry["path"]: entry["presence"] for entry in record["preimages"]}
     for asset in package["deployment_asset_allowlist"]:
         path = asset["path"]
