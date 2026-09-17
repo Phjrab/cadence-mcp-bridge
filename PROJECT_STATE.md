@@ -12,7 +12,7 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_single_use_remote_collection_request_merged_pr_30_remote_collection_not_authorized
 documentation_status: verified
-integration_status: single_use_remote_collection_request_merged_pr_30_post_merge_state_pending
+integration_status: single_use_request_state_merged_pr_31_public_contract_review_pending
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
@@ -104,8 +104,14 @@ wp14_remote_identity_preimage_single_use_approval_package_merged_head: 78abfa691
 wp14_remote_identity_preimage_single_use_approval_package_merge_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
 wp14_remote_identity_preimage_single_use_approval_package_merged_at: "2026-09-17T06:00:12Z"
 wp14_repository_visibility_observed: public
+wp14_repository_visibility_user_policy: public_explicitly_approved
+wp14_public_contract_review: docs/approvals/WP14_PUBLIC_VISIBILITY_CONTRACT_REVIEW_V1.md
+wp14_public_contract_review_normalized_lf_sha256: 775f9ff35c1c6b259f3a915c1407c0ac8c4d51d12d6a5f17272702340542faa9
+wp14_public_contract_review_status: documentation_only_ready_for_review_no_execution_authority
+wp14_single_use_request_state_integration_status: merged_pr_31
+wp14_single_use_request_state_merge_commit: d9b0916a84e17b958a049810aa01b7c9e59a2025
 wp14_repository_visibility_required_for_remote_collection: private
-wp14_repository_visibility_gate: blocked
+wp14_repository_visibility_gate: legacy_contract_reconciliation_pending_public_policy_already_approved
 wp14_remote_identity_preimage_collection_authorization: docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_AUTHORIZATION_V1.json
 wp14_remote_identity_preimage_collection_authorization_status: absent_not_authorized
 wp14_fresh_identity_preimage_evidence_status: absent_not_collected
@@ -116,7 +122,7 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "REPOSITORY_VISIBILITY_PUBLIC; SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
+wp14_narrow_deployment_blockers: "PUBLIC_POLICY_LEGACY_CONTRACT_RECONCILIATION_PENDING; SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
 wp14_narrow_remote_attempts: 0
 wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
 wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
@@ -142,16 +148,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-single-use-approval-post-merge-state
-base_main_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
-last_commit: 457679cba9e75db0bcc1c8dd3ecd7cb590fc37f1
+current_feature_branch: wp/WP-14-public-contract-review
+base_main_commit: d9b0916a84e17b958a049810aa01b7c9e59a2025
+last_commit: d9b0916a84e17b958a049810aa01b7c9e59a2025
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "The request-only single-use collection package is merged through PR #30. The repository remains public by user direction, while the fixed collection contract requires private visibility; no activation record or transport is permitted. A separate exact package/collector-hash/executor-bound, time-bounded single-use authorization remains required after the visibility gate is resolved. Fresh identity/preimage evidence, later V2 deployment authority, discovery, and scientific baseline approval remain absent; WP-15 is unstarted."
+user_action_required: "Review the public-contract reconciliation package and feature commit. Public repository operation is already approved; no repeat visibility approval or private conversion is requested. The preserved v1 collection contract still states private, so versioned repository reconciliation remains pending. This documentation does not authorize implementation or transport. Exact single-use collection authority, fresh evidence, deployment authority and scientific baseline approval remain absent."
 ```
 
 ## WP-14 checkpoint
@@ -242,6 +248,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Public-contract review validation passed: five immutable normalized-LF bindings, 14 acceptance criteria structure, unique state keys, preserved prior history, absent executable authorizations and deployment_enabled=false; git diff --check, Ruff, mypy (17 files), secret preflight (344 files), 18 security tests and dependency vulnerability audit passed. Feature push SHA is reported after remote verification, not inferred in this record.
+
+- 2026-09-17: PR #31 merged reviewed head `05b134d6e52538637bd241607e3d94e5f958de4a` as latest origin/main `d9b0916a84e17b958a049810aa01b7c9e59a2025`. Public visibility and a clean starting tree were verified. WP-14 prepared `WP14_PUBLIC_VISIBILITY_CONTRACT_REVIEW_V1.md` with 14 documentary acceptance criteria. Existing user approval settles public policy; the remaining discrepancy is migration of immutable private-only contracts and their hash consumers. The review specifies versioned replacements, hash dependency order, predecessor single-use claim preservation and publication boundaries. Existing package/collector/deployer hashes, history and protected evidence remain unchanged. No authorization, SSH/SCP, remote collection, deployment, Cadence/SKILL/discovery/simulation or design operation occurred; WP-14 stays blocked and WP-15 unstarted.
 
 - 2026-08-28: Initial execution plan prepared. WP-00 is pending.
 - 2026-08-28: WP-00 bootstrap committed on wp/WP-00-bootstrap; awaiting user review and merge.
