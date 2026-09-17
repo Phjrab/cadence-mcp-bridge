@@ -37,7 +37,7 @@ wp14_discovery_deployment_approval_integration_status: merged_pr_23
 wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
 wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
-deployment_status: blocked_pending_user_review_of_fresh_evidence_and_new_v2_hash_bound_approval
+deployment_status: blocked_first_preflight_transport_failed_attempt_consumed
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -81,7 +81,7 @@ wp14_narrow_deployer: scripts/deploy-wp14-narrow.ps1
 wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
 wp14_narrow_deployer_normalized_lf_sha256: 3251100bafde66c0df4179d36462de8029c6856b59111629dba627c1b668fddc
 wp14_narrow_deployer_previous_normalized_lf_sha256: 227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17
-wp14_narrow_deployer_status: v2_public_contract_merged_pr_33_remote_not_authorized
+wp14_narrow_deployer_status: authorized_single_attempt_failed_at_preflight
 wp14_narrow_deployer_hardening: docs/WP14_NARROW_DEPLOYER_HARDENING_V1.md
 wp14_narrow_deployer_hardening_integration_status: merged_pr_26
 wp14_narrow_deployer_hardening_merged_head: b0e20d553ebf1282310108241426c4fc1e09483c
@@ -141,12 +141,12 @@ wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REV
 wp14_narrow_deployer_correction_integration_status: merged_pr_26
 wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_APPROVAL_RECORD_V1.json
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
-wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
-wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "FRESH_EVIDENCE_HASH_USER_REVIEW_PENDING; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
-wp14_narrow_remote_attempts: 0
-wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
-wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
+wp14_narrow_deployer_gate_record_status: consumed_preserved_locally_excluded_from_git
+wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V2.md
+wp14_narrow_deployment_blockers: "PREFLIGHT_TRANSPORT_FAILURE_CAUSE_UNKNOWN; SINGLE_USE_ATTEMPT_CONSUMED"
+wp14_narrow_remote_attempts: 1
+wp14_remote_preflight_status: failed_transport_no_success_marker
+wp14_runner_0_19_0_deployment_status: not_reached_preflight_failed
 wp14_names_only_discovery_invocation_status: not_authorized_not_run
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
@@ -169,16 +169,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-remote-evidence-collection
-base_main_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
-last_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
+current_feature_branch: wp/WP-14-approved-narrow-deployment
+base_main_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
+last_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review this feature and fresh evidence SHA-256 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7. The exact single-use collection authority is consumed and cannot be reused. A new evidence/deployer-hash-bound deployment Authorization V2 remains absent and requires a separate proposal and approval. WP-14 stays blocked and WP-15 unstarted."
+user_action_required: "No repeated deployment approval requested. The user authorized continuation, but the first preflight transport failed and consumed the one-attempt slot. Preserve the local authorization and durable claim; prepare bounded diagnostics and a reviewed recovery contract before any retry. WP-14 remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -275,6 +275,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Continued from PR #36 merge b9e138c5fefdafd9dc0101776a694199517cd6e6 under the user's remaining-work approval. Exact package/assets and evidence-bound Authorization V2 passed local WhatIf. The single real deployment attempt consumed its durable claim at 2026-09-17T08:20:37.8800486+00:00 and failed at the first read-only preflight transport. Snapshot, upload, installation and discovery were not reached. No retry or cleanup occurred. The consumed activation is preserved locally outside Git publication; see WP14_NARROW_DEPLOYMENT_RESULT_V2.md. All prior evidence, source, PDK and deployment_enabled=false are preserved. No scientific baseline was confirmed.
 
 - 2026-09-17: Fresh-preimage evidence validation passed Ruff, strict mypy for 17 source files, 70 focused collector/public-contract/security tests, 350-file secret preflight, exact eleven-path package allowlist comparison, required file/allowed-absence semantics, zero blockers, verified remote identity, unique state keys, prior progress preservation, active authorization absence, deployment Authorization V2 absence, deployment_enabled=false and git diff --check. One initial local scope assertion used an order-sensitive string comparison and was corrected before the passing validation; it did not rerun the collector or change evidence. The final scope is PROJECT_STATE.md plus the single evidence JSON. The collection attempt count remains exactly one.
 
