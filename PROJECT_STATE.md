@@ -10,9 +10,9 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_narrow_deployer_safety_controls_locally_verified
+implementation_status: wp14_narrow_deployer_safety_controls_merged_remote_evidence_package_prepared
 documentation_status: verified
-integration_status: narrow_deployer_merged_pr_24
+integration_status: narrow_deployer_safety_controls_merged_pr_26
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
@@ -29,7 +29,7 @@ wp14_discovery_deployment_approval_integration_status: merged_pr_23
 wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
 wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
-deployment_status: blocked_pending_review_fresh_identity_preimages_and_new_v2_hash_bound_approval
+deployment_status: blocked_pending_fixed_collector_implementation_fresh_identity_preimages_and_new_v2_hash_bound_approval
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -73,17 +73,25 @@ wp14_narrow_deployer: scripts/deploy-wp14-narrow.ps1
 wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
 wp14_narrow_deployer_normalized_lf_sha256: 227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17
 wp14_narrow_deployer_previous_normalized_lf_sha256: b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e
-wp14_narrow_deployer_status: local_safety_controls_verified_remote_evidence_unverified
+wp14_narrow_deployer_status: safety_controls_merged_remote_evidence_unverified
 wp14_narrow_deployer_hardening: docs/WP14_NARROW_DEPLOYER_HARDENING_V1.md
-wp14_narrow_deployer_hardening_integration_status: feature_only_pending_review
+wp14_narrow_deployer_hardening_integration_status: merged_pr_26
+wp14_narrow_deployer_hardening_merged_head: b0e20d553ebf1282310108241426c4fc1e09483c
+wp14_narrow_deployer_hardening_merge_commit: 59a450c63b040a604e644638ef6e02b0a9544d09
+wp14_remote_identity_preimage_evidence_approval_package: docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_APPROVAL_PACKAGE_V1.json
+wp14_remote_identity_preimage_evidence_approval_package_version: 1
+wp14_remote_identity_preimage_evidence_approval_package_normalized_lf_sha256: 1906357b1ef5ba98a3d28241896fc59d0a4ff8053b64eac9f5d45f9a9bde0fcb
+wp14_remote_identity_preimage_evidence_approval_package_status: ready_for_review_request_not_authority
+wp14_remote_identity_preimage_collector_status: not_implemented_not_authorized
+wp14_fresh_identity_preimage_evidence_status: absent_not_collected
 wp14_narrow_authorization_schema_version: 2
 wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REVIEW_V1.md
-wp14_narrow_deployer_correction_integration_status: feature_only_pending_review
+wp14_narrow_deployer_correction_integration_status: merged_pr_26
 wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_APPROVAL_RECORD_V1.json
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "FEATURE_REVIEW_INTEGRATION_PENDING; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
+wp14_narrow_deployment_blockers: "EVIDENCE_COLLECTION_PACKAGE_REVIEW_PENDING; FIXED_COLLECTOR_IMPLEMENTATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
 wp14_narrow_remote_attempts: 0
 wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
 wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
@@ -109,9 +117,9 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-narrow-deployment-attempt
-base_main_commit: 42405e271f54595eae69ca193dc9e3fef30dac94
-last_commit: b0e8da3aac0efa1312acc857cf90b5550b165bf2
+current_feature_branch: wp/WP-14-remote-evidence-approval-package
+base_main_commit: 59a450c63b040a604e644638ef6e02b0a9544d09
+last_commit: 59a450c63b040a604e644638ef6e02b0a9544d09
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
@@ -263,3 +271,5 @@ a successful push or a baseline approval.
 - 2026-09-14: Latest `origin/main` `a3e6b4a1a5eedd183c994902917d60847bda0799` was confirmed to contain the reviewed WP-12 roadmap integration. PKG-INTEGRATE-01 imported the verified prompt package as planning-only documentation, preserved the pre-integration root contract byte-for-byte, added an explicit WP/ICF evidence crosswalk, retained all stronger approval/security/Git limits, and excluded the recovered `archive/LEGACY_INPUTS.zip`. No Cadence, runner, job, OA, ADE state, circuit, layout, work-library, PDK, V1-V4 evidence, visibility, tag, release, deployment, merge, or direct-main operation was performed. The integration is documentation-verified and awaits review/merge; the sole next implementation task remains WP-13 read-only baseline and capability audit.
 - 2026-09-14: The user explicitly authorized PR #18, and PKG-INTEGRATE-01 head `a5a4d85197896d7b7b97fb90f5b5cbad1d4937db` was merged through GitHub into main as `198900ecc96c9cadd3697022f96c90bd5baf937a`; no direct-main push, tag, release, deployment, or WP-13 work occurred in that merge run.
 - 2026-09-14: WP-13 performed two current argument-free baseline audits, one fixed legacy IC6.1.5 read-only ADE/OA introspection, and a post-introspection baseline audit using the already deployed runner 0.18.0 without redeployment. Profile, source, and ADE-state hashes remained `dea735f2...`, `30e941fd...`, and `a6ead918...`; source/state/PDK-model/source-netlist before/after fingerprints were unchanged, topology remained 35/14/8, and source/state locks were zero. State1 reports `VBIASN=300m`, `VBIASP=650m`, `dc` enabled, `tran` disabled with stored stop `4m`, and no named outputs, while the reviewed profile expects transient. The result is `PROFILE_DRIFT` with `analysis_mismatch` and `snapshot_freshness_unconfirmed`; the source remains 1,512 seconds older than state metadata. The `300m/650m` and historical `370m/650m` candidates remain unselected, and parameterized execution stays disabled. Only bounded runtime logs/cache under the approved `.cadence_mcp` root were refreshed; no runner deployment, MCP change, simulation, OA save, source/state/PDK/work-library/V1-V4 modification, tag, release, merge, or direct-main push occurred. The runner 0.18.0 implementation remains reference-only on the unmerged historical branch and is not imported by WP-13.
+- 2026-09-17: The user explicitly authorized PR #26, and WP-14 narrow-deployer safety-control head `b0e20d553ebf1282310108241426c4fc1e09483c` was merged through GitHub into main as `59a450c63b040a604e644638ef6e02b0a9544d09`. No direct-main push, deployment activation, authorization creation, SSH/SCP, remote preflight, Cadence, discovery, simulation, or design access occurred.
+- 2026-09-17: WP-14 prepared a request-only package for a future fixed, argument-free, read-only collector of fresh remote identity and exact preimage evidence for the eleven managed assets. The package grants no authority, performs no remote contact, preserves `deployment_enabled=false`, and separates repository implementation, one evidence-collection attempt, evidence review, V2 authorization, deployment, and discovery into independent gates. WP-14 remains blocked and WP-15 is not started.
