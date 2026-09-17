@@ -191,16 +191,22 @@ wp14_recovery_readiness_merge_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
 wp14_recovery_approval_request: docs/approvals/WP14_SINGLE_USE_RECOVERY_APPROVAL_REQUEST_V1.md
 wp14_recovery_approval_request_status: request_only_no_execution_authority
 wp14_recovery_request_clock_checked_at: "2026-09-17T11:37:17Z"
-current_feature_branch: wp/WP-14-recovery-approval-request
-base_main_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
-last_commit: 40a459379eb2a2f73719a6929d1e9a4fc496ff1f
+wp14_recovery_approval_request_integration_status: merged_pr_39
+wp14_recovery_approval_request_merge_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
+wp14_recovery_authorization_readiness_decision: docs/WP14_RECOVERY_AUTHORIZATION_READINESS_DECISION_V1.md
+wp14_recovery_authorization_readiness_status: blocked_unexpired_missing_executor_and_current_preflight
+wp14_recovery_readiness_decision_at: "2026-09-17T12:01:58.0318796Z"
+wp14_recovery_evidence_temporal_status: within_24_hours_at_decision_only
+current_feature_branch: wp/WP-14-recovery-readiness-decision
+base_main_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
+last_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the request-only recovery package for explicit PR integration. No activation, executor identity or validity interval is created. Recheck evidence expiry before any later approval; expired evidence requires a separate renewal contract. Remote recovery and scientific baseline remain blocked; WP-15 unstarted."
+user_action_required: "Review the document-only recovery readiness decision for PR integration. Evidence is within 24 hours only at the recorded timestamp, but exact Authorization remains blocked by unverified executor identity and current preflight. Recheck the fixed expiry boundary before any later step. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -297,6 +303,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Readiness-decision verification passed in a fresh isolated index copy with no actual Authorization or operator ledger: Ruff, strict mypy (17 source files), 18 direct security tests, repeated 18-test security gate, 362-file secret scan and strict locked dependency audit with no known vulnerabilities. Two-file scope, 14 decision criteria, 206 unique state keys, protected-file preservation, absent recovery Authorization and false deployment gate passed. No full-suite or actual integration rerun is claimed. Final feature SHA is reported after push verification.
+
+- 2026-09-17: Verified PR #39 reviewed head 961b60a93021b116ff96e1a7f594b34b217219a0 and latest main 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd. At 12:01:58.0318796Z, evidence observed at 08:05:01Z remained within 24 hours with approximately 20h03m03s until the fixed boundary 2026-09-18T08:05:01Z. Readiness remains BLOCKED because executor identity, an exact 17-field Authorization and current fixed preflight are absent. Added a document-only decision with 14 criteria and an explicit expiry route to a separately reviewed renewal plan. PUBLIC, deployment_enabled=false and all prior evidence/claims remain unchanged. No Authorization, SSH/SCP, remote collection/deployment, Cadence/design change, main push/merge or WP-15 work occurs.
 
 - 2026-09-17: Request-package validation passed five normalized hashes, 16 criteria, unique state keys, absent recovery activation, Ruff, strict mypy (17 files), 18 security tests and 361-file secret scan in the existing isolated local validation copy with no actual activation/ledger. An initial sandbox attempt could not start uv; the permitted local rerun passed. No full-suite, dependency audit or remote integration rerun is claimed. Only two documents change; final push SHA is reported after verification.
 
