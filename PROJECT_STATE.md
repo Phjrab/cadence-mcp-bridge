@@ -10,14 +10,17 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_package_bound_narrow_deployer_repository_implemented_local_verified
+implementation_status: wp14_narrow_deployer_safety_controls_locally_verified
 documentation_status: verified
 integration_status: narrow_deployer_merged_pr_24
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
 wp14_narrow_deployer_merged_at: "2026-09-16T11:16:42Z"
-wp14_narrow_deployer_post_merge_state_sync_status: prepared_on_current_feature_branch
+wp14_narrow_deployer_post_merge_state_sync_status: merged_pr_25
+wp14_narrow_deployer_post_merge_state_sync_merged_head: 5ca08e86c3411e50a13fbe8cb5bb83bec624faf9
+wp14_narrow_deployer_post_merge_state_sync_merge_commit: 42405e271f54595eae69ca193dc9e3fef30dac94
+wp14_narrow_deployer_post_merge_state_sync_merged_at: "2026-09-16T12:19:05Z"
 wp14_post_merge_state_sync_status: merged_pr_22
 wp14_post_merge_state_sync_merged_head: a03b2f76ac1714a2d05f5cc876c699152b38667e
 wp14_post_merge_state_sync_merge_commit: 5ce2ae8480e4f5b1678f99f714ddb250c9103ec0
@@ -26,7 +29,7 @@ wp14_discovery_deployment_approval_integration_status: merged_pr_23
 wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
 wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
-deployment_status: blocked_pending_separate_hash_bound_remote_preflight_and_deployment_approval
+deployment_status: blocked_pending_review_fresh_identity_preimages_and_new_v2_hash_bound_approval
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -60,7 +63,7 @@ wp14_role_binding_status: unresolved_not_inferred
 wp14_names_only_discovery_plan: docs/plans/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_PLAN_V1.json
 wp14_names_only_discovery_plan_version: 1
 wp14_names_only_discovery_plan_normalized_lf_sha256: 2e44ca523c122744f6b16036785f285fc0f6a3d7b1b904326fe84ecc9165f12d
-wp14_names_only_discovery_plan_status: repository_implemented_local_verified_approval_package_ready_deployment_not_authorized
+wp14_names_only_discovery_plan_status: repository_implemented_remote_deployment_blocked_before_preflight_invocation_not_authorized
 wp14_names_only_discovery_implementation: docs/WP14_FIXED_NAMES_ONLY_ROLE_DISCOVERY_IMPLEMENTATION.md
 wp14_discovery_deployment_execution_approval_package: docs/approvals/WP14_BOUNDED_READ_ONLY_DISCOVERY_DEPLOYMENT_EXECUTION_APPROVAL_PACKAGE_V1.json
 wp14_discovery_deployment_execution_approval_package_version: 1
@@ -68,11 +71,22 @@ wp14_discovery_deployment_execution_approval_package_normalized_lf_sha256: 7d93f
 wp14_discovery_deployment_execution_approval_package_status: merged_pr_23_request_not_authority
 wp14_narrow_deployer: scripts/deploy-wp14-narrow.ps1
 wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
-wp14_narrow_deployer_normalized_lf_sha256: b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e
-wp14_narrow_deployer_status: repository_implemented_local_verified_remote_not_authorized
-wp14_narrow_remote_authorization_record: absent_required_before_transport
-wp14_remote_preflight_status: not_authorized_not_run
-wp14_runner_0_19_0_deployment_status: not_authorized_not_run
+wp14_narrow_deployer_normalized_lf_sha256: 227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17
+wp14_narrow_deployer_previous_normalized_lf_sha256: b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e
+wp14_narrow_deployer_status: local_safety_controls_verified_remote_evidence_unverified
+wp14_narrow_deployer_hardening: docs/WP14_NARROW_DEPLOYER_HARDENING_V1.md
+wp14_narrow_deployer_hardening_integration_status: feature_only_pending_review
+wp14_narrow_authorization_schema_version: 2
+wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REVIEW_V1.md
+wp14_narrow_deployer_correction_integration_status: feature_only_pending_review
+wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_APPROVAL_RECORD_V1.json
+wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
+wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
+wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
+wp14_narrow_deployment_blockers: "FEATURE_REVIEW_INTEGRATION_PENDING; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
+wp14_narrow_remote_attempts: 0
+wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
+wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
 wp14_names_only_discovery_invocation_status: not_authorized_not_run
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
@@ -95,16 +109,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-narrow-deployer-post-merge-state
-base_main_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
-last_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
+current_feature_branch: wp/WP-14-narrow-deployment-attempt
+base_main_commit: 42405e271f54595eae69ca193dc9e3fef30dac94
+last_commit: b0e8da3aac0efa1312acc857cf90b5550b165bf2
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review this PROJECT_STATE-only post-merge synchronization branch; the narrow deployer itself is already merged through PR #24. Remote preflight/deployment still needs separate explicit authority bound to the immutable package and final deployer hashes, and discovery invocation needs its own later approval. The user delegated planning assumptions, recorded below with reasons; these are not observed conditions, a scientific baseline, or execution authority. WP-14 remains blocked and WP-15 remains unstarted."
+user_action_required: "Review the repository safety-control implementation and isolated local evidence. No remote authority is granted or activated. Fresh reviewed identity/preimage evidence remains missing; prepare a separately scoped read-only evidence acquisition plan before any remote probe. Integration and later V2 exact-hash/executor-bound remote approval are independent gates. Old approvals cannot be reused; discovery/scientific baseline remain unapproved and WP-15 is unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -144,6 +158,24 @@ user_action_required: "Review this PROJECT_STATE-only post-merge synchronization
 - 2026-09-16: Narrow-deployer readiness remains repository implementation plus local verification only. Runner 0.19.0 remote deployment, remote preflight, and names-only discovery invocation are each not authorized and not run. Runner 0.18.0 and `remote_runner_deployed=true` describe the existing historical observation, not a fresh remote check or deployment of 0.19.0. The unchanged lineage gate is `deployment_enabled=false`; the exact package/deployer-hash-bound remote authorization record is absent and was not created. VDD, VCM, load, source/state semantic equivalence, and snapshot freshness remain unverified. The `0.300/0.650 V` choice remains conditional, scientific baseline confirmation stays blocked, and WP-15 is unstarted.
 
 - 2026-09-16: Post-PR-24 state synchronization validation passed: exact PR/head/main agreement; PROJECT_STATE-only scope; flat YAML metadata syntax and unique keys; unchanged prior checkpoint/progress text and protected status/hash fields; all 15 bound package/deployer/plan/asset normalized-LF hashes; disabled lineage; absent remote authorization record; and explicit separation of planning assumptions from observed evidence. Ruff and strict mypy (17 source files) passed. The full local suite passed 205 tests, with eight deliberately skipped remote integrations and 56 existing deprecation warnings. Secret preflight covered 331 repository files; all 18 dedicated security tests and the strict locked dependency audit passed with no known vulnerabilities. `git diff --check` passed. No additional dependency, test file, or implementation change was needed.
+
+- 2026-09-17: This run verified PR #25 as MERGED with reviewed head `5ca08e86c3411e50a13fbe8cb5bb83bec624faf9`, merge commit/latest fetched origin/main `42405e271f54595eae69ca193dc9e3fef30dac94`, and merge time `2026-09-16T12:19:05Z`. The repository remains private and branch `wp/WP-14-narrow-deployment-attempt` was created from that exact clean base. The user explicitly approved an approval record and one fixed preflight/eleven-asset deployment bound to package `7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87` and deployer `b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e`. Both hashes, both plans, all eleven assets, and the false lineage gate match.
+
+- 2026-09-17: Local AST and POSIX lexical/escape analysis found double-escaped success-marker newlines and a double-escaped snapshot `find -exec` terminator in the exact approved deployer. These are pre-transport blockers; no remote response or deployment failure was fabricated. The user's grant is preserved in a separate approval audit record, but the live deployer authorization file is intentionally not activated. Existing tests assume that live file is absent and do not establish authorized-path success. The script and its approved hash are unchanged. Remote preflight/deployment attempts, uploads, snapshots, Cadence/SKILL/discovery/simulation calls, and OA/ADE/design/PDK accesses are all zero. No retry, cleanup, recovery, fallback, merge, or WP-15 work occurred. The bounded result report specifies repository-only correction/testing and subsequent new hash-bound approval as the next gate; this one-run approval cannot be carried forward to a corrected deployer.
+
+- 2026-09-17: Blocked-deployment checkpoint validation passed: exactly three documentation files, unique flat YAML metadata keys, JSON parsing and Markdown fences, preserved prior checkpoint/progress/assumption text and protected metadata, fifteen immutable package/deployer/plan/asset hashes, unchanged false deployment gate, and absent executable authorization file. Ruff, strict mypy (17 source files), 205 local tests with eight deliberately skipped actual integrations and 56 existing warnings, 333-file secret preflight, 18 security tests, strict locked dependency audit with no known vulnerabilities, and git diff --check passed. These local results do not override the generated-shell readiness failure or establish remote identity, snapshot, hash/mode, runner-version, lock or design-fingerprint evidence. Deployment remains BLOCKED, not completed.
+
+- 2026-09-17: Under the user's escape-correction/local-test-only approval, incoming local and remote `wp/WP-14-narrow-deployment-attempt` HEAD were verified as `d074332805dbdf8c826e27c1cf954ed4a0858864`; origin/main remains `42405e271f54595eae69ca193dc9e3fef30dac94` and the repository PRIVATE. The clean feature branch was continued without merge or rebase. Six generated-shell statements now use the correct marker newlines, TSV separators and find terminator. Corrected deployer normalized-LF SHA-256 is `4d2d78bf127534337838fad4f373f8966d986c6bd421b11438d3c81f87c0f623`; the old package/deployer approval remains unchanged historical evidence and is not reused. The package, eleven assets, two plans, decision records, deployment result v1 and false deployment gate are preserved.
+
+- 2026-09-17: Thirty-four focused tests passed using only pytest temporary repositories, synthetic fixture-only approval records, an empty executable search path and in-process fake SSH/SCP functions. They cover the successful fixed 25-call sequence and exact staged hashes, missing/invalid/old-hash authority, tamper, stage failures, wrong responses, finite output overflow, pre-call expiry, WhatIf and reintroduced escaping regressions. No test invokes the live repository deployer or real transport. Contract review found unresolved remote-preimage identity, in-flight deadline, streaming-output and durable single-use/concurrency gaps; these were documented, not silently implemented outside the escape-only scope. WP-14 remains blocked for deployment, and the next bounded proposal is repository-only hardening. Actual SSH/SCP, remote/Cadence/discovery/simulation/design operations remain zero. `last_commit` now identifies this continuation's verified incoming feature HEAD, not the earlier base checkpoint.
+
+- 2026-09-17: Final escape-correction validation passed: six-file scope; preserved prior history, assumptions and immutable package/two-plan/eleven-asset hashes; corrected deployer hash; absent live authority; false deployment gate; and only the six escaping statements changed in production logic. Ruff, strict mypy (17 source files), 234 local tests with eight deliberately skipped real integrations and 56 existing warnings, 335-file secret scan, 18 security tests, strict locked dependency audit with no known vulnerabilities, both PowerShell syntax checks, document checks and git diff --check passed. The 34 focused fake-transport cases are included in the full suite. These results do not establish remote readiness or resolve the four documented control gaps. No real SSH/SCP, deployment, Cadence, discovery, simulation or design operation occurred.
+
+- 2026-09-17: Under separate repository-only safety-control approval, verified incoming local and remote feature HEAD `b0e8da3aac0efa1312acc857cf90b5550b165bf2`, clean working tree, private repository and unchanged fetched main `42405e271f54595eae69ca193dc9e3fef30dac94`. Continued the same feature without merge/rebase. The deployer now requires a closed V2 authorization with executor/time/evidence/identity bindings and exact eleven preimages; unknown values fail locally rather than being inferred. Fixed host/user/type/owner/link/mode/hash checks precede old-runner execution and preimages are rechecked before snapshot/replacement. Local asynchronous transport enforces a shared monotonic deadline and combined bounded stdout/stderr while running. A package-wide durable CreateNew/WriteThrough/Flush claim and exclusive operator ledger lock enforce one attempt, including failed or uncertain outcomes. The new contract is documented in `docs/WP14_NARROW_DEPLOYER_HARDENING_V1.md`; no actual activation or ledger was created.
+
+- 2026-09-17: Hardened deployer normalized-LF SHA-256 is `227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17`. The prior escape-only hash and original control-gap review remain historical evidence. Package, both plans, eleven assets, original approvals/decisions/results, planning assumptions, source/state/PDK and V1-V4 evidence are unchanged. `deployment_enabled=false` and all remote attempt counters remain unchanged. Tests use copied temporary fixtures, synthetic authority, a temporary ledger and local fake processes, with no production test bypass. Current remote identity/preimages, actual Windows OpenSSH compatibility and real snapshot recoverability are not claimed. Old authority is not reused; review/integration, fresh reviewed identity/preimage evidence and a new V2 stage grant remain prerequisites. Actual SSH/SCP, preflight/deployment, Cadence/discovery/simulation/design operations and WP-15 work remain zero.
+
+- 2026-09-17: Final safety-control acceptance passed: Ruff, strict mypy for 17 source files, 289 local tests including all 89 narrow-deployer cases, eight deliberately skipped real integrations and 56 existing warnings. Both PowerShell files parse without execution. The 337-file secret scan, 18 security tests and strict locked dependency audit passed with no known vulnerabilities. Seven-file scope, document metadata/fences, prior checkpoint/progress/assumption preservation, immutable package/two-plan/eleven-asset hashes, final deployer hash and git diff --check passed. No live V1/V2 authorization file or real operator ledger exists. An intermediate fixture-only Korean-path encoding failure was corrected with explicit UTF-8 before the passing full rerun. Review additionally required explicit exit-42 guards for fixed shell AND assertions and scalar JSON type checks; both have regression coverage. Requested repository hardening is locally verified, while WP-14 and remote deployment remain blocked on separate review/evidence/authority gates.
 
 ## WP14_POST_MERGE_PLANNING_ASSUMPTIONS_V1
 

@@ -1,0 +1,56 @@
+{
+  "record_id": "WP14_NARROW_REMOTE_DEPLOYMENT_APPROVAL_RECORD",
+  "record_version": 1,
+  "record_kind": "user_approval_record_not_deployer_activation",
+  "recorded_on": "2026-09-17",
+  "approval_source": "explicit user message for this execution only",
+  "approval_timestamp": null,
+  "status": "BLOCKED_BEFORE_REMOTE_PREFLIGHT",
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "base_main_commit": "42405e271f54595eae69ca193dc9e3fef30dac94",
+  "feature_branch": "wp/WP-14-narrow-deployment-attempt",
+  "package_normalized_lf_sha256": "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87",
+  "deployer_normalized_lf_sha256": "b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e",
+  "user_approved_scope": {
+    "record_creation": true,
+    "fixed_remote_preflight": true,
+    "exact_eleven_asset_deployment": true,
+    "before_snapshot_and_post_hash_mode_version_verification": true,
+    "maximum_remote_attempts": 1,
+    "deployment_enabled_must_remain_false": true,
+    "automatic_retry_cleanup_recovery_or_scope_expansion": false,
+    "deployer_modification": false,
+    "cadence_or_skill_execution": false,
+    "discovery_invocation": false,
+    "simulation": false,
+    "oa_write_or_save": false,
+    "ade_state_design_or_pdk_change": false,
+    "scientific_baseline_approval": false
+  },
+  "operational_activation": {
+    "activated": false,
+    "deployer_gate_record_created": false,
+    "deployer_gate_record_path": "docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V1.json",
+    "reason": "Local inspection of the exact approved deployer found deterministic shell-escaping blockers before remote contact. This audit record preserves the user's approval without enabling a known-broken deployer. The absent gate is a consequence of the stop decision, not missing user permission.",
+    "remote_preflight_attempts": 0,
+    "remote_deployment_attempts": 0,
+    "managed_assets_installed": 0,
+    "before_snapshot_created": false,
+    "post_install_verification_performed": false,
+    "automatic_retry_performed": false,
+    "carry_forward_to_another_run_or_corrected_hash": false
+  },
+  "blockers": [
+    "LOCAL_PRINTF_MARKER_DOUBLE_ESCAPE",
+    "LOCAL_FIND_EXEC_TERMINATOR_DOUBLE_ESCAPE"
+  ],
+  "additional_test_readiness_gap": "The existing tests assume the activation record is absent. Future authorized-path tests must use an isolated fixture and an explicit fake transport, never the live repository authorization or real SSH/SCP.",
+  "evidence_report": "docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md",
+  "unchanged_assumptions": {
+    "vdd_v": 1.0,
+    "vcm_v": 0.5,
+    "load": "no_added_external_load_hypothesis_existing_load_unknown",
+    "classification": "planning_only_not_observed_not_applied_not_scientific_baseline"
+  },
+  "next_gate": "Separate repository-only deployer correction and isolated local regression testing, followed by review of the new deployer hash and a new explicit remote authorization. No remote retry is authorized by this record."
+}
