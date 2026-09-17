@@ -12,11 +12,15 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_public_contract_v2_repository_reconciled_remote_not_authorized
 documentation_status: verified
-integration_status: public_contract_v2_merged_pr_33_state_sync_merged_pr_34
+integration_status: public_contract_v2_state_sync_merged_pr_35_fresh_preimages_collected
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
 wp14_public_contract_post_merge_state_merged_at: "2026-09-17T07:11:01Z"
+wp14_pr34_state_sync_integration_status: merged_pr_35
+wp14_pr34_state_sync_merged_head: 90586ee5b487a0a3b1ac876a5f9d9a0f324b193c
+wp14_pr34_state_sync_merge_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
+wp14_pr34_state_sync_merged_at: "2026-09-17T07:26:26Z"
 wp14_narrow_deployer_integration_status: merged_pr_24
 wp14_narrow_deployer_merged_head: fd72b6721c4e18be46770f37c4516bd466d20e82
 wp14_narrow_deployer_merge_commit: bc7cf1f3281ca9b6600525bdf98fc810644ac7b7
@@ -33,7 +37,7 @@ wp14_discovery_deployment_approval_integration_status: merged_pr_23
 wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
 wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
-deployment_status: blocked_pending_single_use_collection_authorization_fresh_identity_preimages_and_new_v2_hash_bound_approval
+deployment_status: blocked_pending_user_review_of_fresh_evidence_and_new_v2_hash_bound_approval
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -123,8 +127,15 @@ wp14_single_use_request_state_merge_commit: d9b0916a84e17b958a049810aa01b7c9e59a
 wp14_repository_visibility_required_for_remote_collection: public
 wp14_repository_visibility_gate: public_policy_reconciled_v2_merged_pr_33_no_execution_authority
 wp14_remote_identity_preimage_collection_authorization: docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_COLLECTION_AUTHORIZATION_V1.json
-wp14_remote_identity_preimage_collection_authorization_status: absent_not_authorized
-wp14_fresh_identity_preimage_evidence_status: absent_not_collected
+wp14_remote_identity_preimage_collection_authorization_status: consumed_single_use_not_committed
+wp14_remote_identity_preimage_collection_authorization_normalized_lf_sha256: 631d6dff580edb449cac6b4d342930428bd49bc7fd3337053c9932737a581a20
+wp14_remote_identity_preimage_collection_attempts: 1
+wp14_remote_identity_preimage_collection_status: succeeded_read_only_single_attempt
+wp14_remote_identity_preimage_evidence: docs/evidence/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_V1.json
+wp14_remote_identity_preimage_evidence_normalized_lf_sha256: 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7
+wp14_remote_identity_preimage_evidence_observed_at: "2026-09-17T08:05:01Z"
+wp14_remote_identity_preimage_evidence_summary: "identity_verified; assets=11; present=7; allowed_absent=4; blockers=0"
+wp14_fresh_identity_preimage_evidence_status: collected_schema_validated_pending_user_hash_review
 wp14_narrow_authorization_schema_version: 2
 wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REVIEW_V1.md
 wp14_narrow_deployer_correction_integration_status: merged_pr_26
@@ -132,7 +143,7 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "SINGLE_USE_REMOTE_COLLECTION_AUTHORIZATION_ABSENT; FRESH_REVIEWED_IDENTITY_PREIMAGES_ABSENT; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
+wp14_narrow_deployment_blockers: "FRESH_EVIDENCE_HASH_USER_REVIEW_PENDING; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
 wp14_narrow_remote_attempts: 0
 wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
 wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
@@ -158,19 +169,23 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-pr34-state-sync
-base_main_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
-last_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
+current_feature_branch: wp/WP-14-remote-evidence-collection
+base_main_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
+last_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "PR #34 integrated the prior state-sync feature. Only wp/WP-14-pr34-state-sync now awaits review. Public policy is already approved. Separate exact-hash/executor/time-bound single-use collection authority, fresh reviewed evidence and deployment authority remain absent. WP-14 stays blocked and WP-15 unstarted. Record this branch's eventual merge in the next substantive WP-14 checkpoint; another standalone post-merge state-sync is not a prerequisite for that checkpoint."
+user_action_required: "Review this feature and fresh evidence SHA-256 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7. The exact single-use collection authority is consumed and cannot be reused. A new evidence/deployer-hash-bound deployment Authorization V2 remains absent and requires a separate proposal and approval. WP-14 stays blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-17: Verified PR #35 MERGED at 2026-09-17T07:26:26Z with approved head 90586ee5b487a0a3b1ac876a5f9d9a0f324b193c and latest origin/main a5ebe11a7eaf5b4f36d65009d39fd32841906e7d. From that exact base, branch wp/WP-14-remote-evidence-collection used the user-approved activation record SHA-256 631d6dff580edb449cac6b4d342930428bd49bc7fd3337053c9932737a581a20 for exactly one fixed read-only collector invocation. The durable lineage claim was created before transport and now permanently records this attempt as consumed. The active authorization record was removed after use and is not committed; only its hash is recorded.
+
+- 2026-09-17: Fresh evidence observed at 2026-09-17T08:05:01Z verified hostname cadence, user buet and the canonical non-symlink remote root. Exactly eleven allowlisted preimages were returned: seven regular files owned by buet with link count one and four allowed absences for the not-yet-deployed WP-14 role-discovery helper, wrapper, SKILL asset and runner-lineage file. Every present asset resolved below the fixed root; the evidence has zero blockers and normalized-LF SHA-256 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7. Closed-schema validation and credential/license/PDK/OA/ADE/netlist/waveform/environment-content pattern review passed. No SCP, remote write, temporary file, deployment, old-runner execution, Cadence/SKILL/discovery/simulation, OA/ADE/design/PDK mutation or WP-15 work occurred. The evidence is not deployment authority; user hash review and a separately proposed V2 authorization remain required.
 
 - 2026-09-17: PR #32 reviewed head febd48735a7781b4ffc12e8da7d3e290e7bcd2e2 and merge/latest main c949815bac26e893bad7ad77694905a74d83fd57 were verified with PUBLIC visibility and a clean starting tree. This feature adds three v2 request packages while preserving v1 artifacts and all eleven assets. Root/current-phase overlays honor public policy without granting publication or execution authority. Collector/deployer hash bindings are updated in dependency order; original single-use ledger names and locks prevent version changes from resetting consumed claims. Historical collector commit bindings and merged-head fields remain v1 provenance. No real authorization, operator ledger, SSH/SCP, remote collection/deployment, Cadence, design or WP-15 operation occurred. Current v2 integration awaits review. See docs/WP14_PUBLIC_CONTRACT_RECONCILIATION_V1.md.
 
@@ -260,6 +275,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Fresh-preimage evidence validation passed Ruff, strict mypy for 17 source files, 70 focused collector/public-contract/security tests, 350-file secret preflight, exact eleven-path package allowlist comparison, required file/allowed-absence semantics, zero blockers, verified remote identity, unique state keys, prior progress preservation, active authorization absence, deployment Authorization V2 absence, deployment_enabled=false and git diff --check. One initial local scope assertion used an order-sensitive string comparison and was corrected before the passing validation; it did not rerun the collector or change evidence. The final scope is PROJECT_STATE.md plus the single evidence JSON. The collection attempt count remains exactly one.
 
 - 2026-09-17: PR #34 state checkpoint validation passed Ruff, mypy (17 source files), 22 public-contract/security tests, 349-file secret preflight, unique metadata keys, protected metadata/history preservation, PROJECT_STATE-only scope and git diff --check. No remote integration was run. The final feature commit and remote SHA comparison are reported after push.
 
