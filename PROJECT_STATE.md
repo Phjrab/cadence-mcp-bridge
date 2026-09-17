@@ -37,7 +37,7 @@ wp14_discovery_deployment_approval_integration_status: merged_pr_23
 wp14_discovery_deployment_approval_merged_head: f69b8a7a29b90f4cbad803ccbf2c07f0257d0e21
 wp14_discovery_deployment_approval_merge_commit: 6e1014e5432ca5425ab3d46a9489aec94f624f75
 wp14_discovery_deployment_approval_merged_at: "2026-09-16T09:31:55Z"
-deployment_status: blocked_pending_user_review_of_fresh_evidence_and_new_v2_hash_bound_approval
+deployment_status: blocked_first_preflight_transport_failed_attempt_consumed
 release_status: published_v1.0.0_unchanged
 package_integration_status: merged_pr_18
 wp13_audit_result: PASS_WITH_PROFILE_DRIFT
@@ -81,7 +81,7 @@ wp14_narrow_deployer: scripts/deploy-wp14-narrow.ps1
 wp14_narrow_deployer_implementation: docs/WP14_NARROW_DEPLOYER_IMPLEMENTATION.md
 wp14_narrow_deployer_normalized_lf_sha256: 3251100bafde66c0df4179d36462de8029c6856b59111629dba627c1b668fddc
 wp14_narrow_deployer_previous_normalized_lf_sha256: 227b1c0d3831e7de8f974192d7da9434276ee5a25c2448a6f5ad87922e9e0b17
-wp14_narrow_deployer_status: v2_public_contract_merged_pr_33_remote_not_authorized
+wp14_narrow_deployer_status: authorized_single_attempt_failed_at_preflight
 wp14_narrow_deployer_hardening: docs/WP14_NARROW_DEPLOYER_HARDENING_V1.md
 wp14_narrow_deployer_hardening_integration_status: merged_pr_26
 wp14_narrow_deployer_hardening_merged_head: b0e20d553ebf1282310108241426c4fc1e09483c
@@ -141,12 +141,22 @@ wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REV
 wp14_narrow_deployer_correction_integration_status: merged_pr_26
 wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_APPROVAL_RECORD_V1.json
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
-wp14_narrow_deployer_gate_record_status: absent_no_authority_for_corrected_hash
-wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V1.md
-wp14_narrow_deployment_blockers: "FRESH_EVIDENCE_HASH_USER_REVIEW_PENDING; V2_EXECUTOR_BOUND_REMOTE_AUTHORIZATION_ABSENT"
-wp14_narrow_remote_attempts: 0
-wp14_remote_preflight_status: not_authorized_for_corrected_deployer_not_run
-wp14_runner_0_19_0_deployment_status: not_authorized_for_corrected_deployer_not_run
+wp14_narrow_deployer_gate_record_status: consumed_preserved_locally_excluded_from_git
+wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V2.md
+wp14_narrow_deployment_blockers: "RECOVERY_REVIEW_AND_FINAL_AUTHORITY_REQUIRED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; ORIGINAL_ATTEMPT_CONSUMED"
+wp14_preflight_diagnostic: docs/WP14_PREFLIGHT_DIAGNOSTIC_V1.md
+wp14_preflight_diagnostic_status: post_close_all_twelve_checks_passed_not_full_preflight
+wp14_post_close_recovery_plan: docs/WP14_POST_CLOSE_RECOVERY_PLAN_V1.md
+wp14_recovery_implementation: docs/WP14_RECOVERY_IMPLEMENTATION_V1.md
+wp14_recovery_candidate: scripts/deploy-wp14-recovery.ps1
+wp14_recovery_candidate_normalized_lf_sha256: e4ed2610aa0cb6a5b930b0ce6a52f1a6d2273c390195f0b58ff3e17c0d976374
+wp14_recovery_status: repository_local_validation_passed_remote_not_authorized_not_run
+wp14_recovery_test_stabilization: docs/WP14_TEST_STABILIZATION_V1.md
+wp14_recovery_clean_local_tests: "365 passed; 3 remote skipped; 5 remote deselected; 56 legacy warnings"
+wp14_post_close_diagnostic_observed_at: "2026-09-17T08:56:29.420609+00:00"
+wp14_narrow_remote_attempts: 1
+wp14_remote_preflight_status: failed_transport_no_success_marker
+wp14_runner_0_19_0_deployment_status: not_reached_preflight_failed
 wp14_names_only_discovery_invocation_status: not_authorized_not_run
 wp14_repository_runner_candidate_version: 0.19.0
 wp14_remote_runner_observed_version: 0.18.0
@@ -169,16 +179,16 @@ wp14_assumed_vcm_v: 0.5
 wp14_assumed_external_load_policy: no_added_external_load_hypothesis_existing_load_unknown
 wp14_assumptions_confirm_scientific_baseline: false
 wp14_assumptions_authorize_execution: false
-current_feature_branch: wp/WP-14-remote-evidence-collection
-base_main_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
-last_commit: a5ebe11a7eaf5b4f36d65009d39fd32841906e7d
+current_feature_branch: wp/WP-14-approved-narrow-deployment
+base_main_commit: b9e138c5fefdafd9dc0101776a694199517cd6e6
+last_commit: 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review this feature and fresh evidence SHA-256 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7. The exact single-use collection authority is consumed and cannot be reused. A new evidence/deployer-hash-bound deployment Authorization V2 remains absent and requires a separate proposal and approval. WP-14 stays blocked and WP-15 unstarted."
+user_action_required: "Review the locally validated feature for explicit PR integration. Local UTF-8/timing stabilization passed the full isolated suite. Remote execution still needs final hash-bound authority and valid reviewed preimages; no activation or remote invocation occurred. Preserve consumed records. WP-14 scientific baseline remains blocked and WP-15 unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -275,6 +285,20 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: Verified incoming remote/local feature HEAD 4dce2dbb07ae0f56cf6e820d5c0da12ef5999d7d and stabilized only test fixtures: explicit UTF-8 file I/O, independent output checks, a first-child-only synthetic transport budget with separate pre-start expiry coverage, and UTF-8 legacy synthetic child output. Production deployment/security limits remain unchanged. In a clean Git-index copy without actual activation/ledger files, the final full run passed 365 tests with three real integrations skipped, five deselected and 56 existing deprecation warnings; asynchronous thread warnings were promoted to errors and none occurred. Ruff, mypy, secret scan, 18 security tests and strict dependency audit passed. Prior PARTIAL history is preserved; local acceptance now passes but no remote execution authority is granted. No SSH/SCP, deployment, Cadence, design mutation, merge or WP-15 work occurred. See WP14_TEST_STABILIZATION_V1.md.
+
+- 2026-09-17: Recovery checkpoint is PARTIAL: fifteen dedicated fake-transport recovery tests, Ruff, mypy, syntax, state, preserved activation hash, secret and dependency/security checks passed. Working-copy full-suite failures included two historical absence assumptions conflicting with mandatory preserved local activation evidence. A clean index export resolved those assumptions but exposed nine existing CP949 fixture-read failures; explicit UTF-8 rerun passed eight, with one three-second-budget stderr test passing only on isolated rerun. No clean single full-suite PASS is claimed. Next is local test-environment stabilization, not merge or remote execution; see WP14_RECOVERY_IMPLEMENTATION_V1.md for exact results.
+
+- 2026-09-17: Continued clean feature HEAD 4787fb3c05fb1d1be77b2d2de258a4cdad5609b3 with repository-only recovery implementation. Added a separate fixed candidate retaining the original eleven assets and transport sequence, requiring exact preserved predecessor claim/activation, plan/evidence binding and an independent durable recovery slot under the original shared lock. No original executor, plan, package, evidence, authorization or real ledger was modified. Tests use synthetic temporary fixtures only. No real SSH/SCP, recovery activation, remote deployment, Cadence, design change, main push, merge or WP-15 work occurred.
+
+- 2026-09-17: After the user reported normal Virtuoso closure, the unchanged bounded diagnostic ran once at 2026-09-17T08:56:29.420609+00:00 and all twelve checks passed. The process predicate blocker is resolved, not the consumed deployment slot or full readiness gate. Added a non-executable recovery plan with fifteen acceptance criteria, predecessor preservation, shared concurrency and independent durable single-use recovery requirements. No activation, deployment retry, cleanup, Cadence invocation or design access occurred. Existing failure evidence and grants remain preserved; PUBLIC and deployment_enabled=false are unchanged.
+
+- 2026-09-17: Diagnostic checkpoint local validation passed Ruff, mypy (17 source files), 21 focused fake-transport/security tests, 354-file secret preflight and git diff --check. Tests cover fixed command construction, argument rejection and malformed-output suppression without network calls. Production deployer, collector, existing evidence and consumed authority remain unchanged.
+
+- 2026-09-17: Under continued diagnostic authority, one independent bounded read-only SSH diagnostic at 2026-09-17T08:26:13.895793+00:00 passed host/user/root/runner-executable/snapshot-absence and six fixed parent-directory checks. The no-Virtuoso/OCEAN-process predicate failed. This is a current blocker, not proof of the earlier suppressed failure cause. No process termination, runner execution, deployment retry, authorization/claim reset, Cadence invocation or design change occurred. An initial local-only collection-guard mismatch was corrected before the sole diagnostic SSH call. See WP14_PREFLIGHT_DIAGNOSTIC_V1.md.
+
+- 2026-09-17: Continued from PR #36 merge b9e138c5fefdafd9dc0101776a694199517cd6e6 under the user's remaining-work approval. Exact package/assets and evidence-bound Authorization V2 passed local WhatIf. The single real deployment attempt consumed its durable claim at 2026-09-17T08:20:37.8800486+00:00 and failed at the first read-only preflight transport. Snapshot, upload, installation and discovery were not reached. No retry or cleanup occurred. The consumed activation is preserved locally outside Git publication; see WP14_NARROW_DEPLOYMENT_RESULT_V2.md. All prior evidence, source, PDK and deployment_enabled=false are preserved. No scientific baseline was confirmed.
 
 - 2026-09-17: Fresh-preimage evidence validation passed Ruff, strict mypy for 17 source files, 70 focused collector/public-contract/security tests, 350-file secret preflight, exact eleven-path package allowlist comparison, required file/allowed-absence semantics, zero blockers, verified remote identity, unique state keys, prior progress preservation, active authorization absence, deployment Authorization V2 absence, deployment_enabled=false and git diff --check. One initial local scope assertion used an order-sensitive string comparison and was corrected before the passing validation; it did not rerun the collector or change evidence. The final scope is PROJECT_STATE.md plus the single evidence JSON. The collection attempt count remains exactly one.
 

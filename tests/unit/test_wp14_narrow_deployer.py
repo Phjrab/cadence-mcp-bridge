@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -30,6 +31,25 @@ CLAIM_HASH = "7d93fefb96c65dd9a204a4de3fb0dba087ca112edf894bb3ff97e7ee0d3c6f87"
 OLD_DEPLOYER_HASH = "b48b7cb2b24cb3a8ac257031dd6fa79116ea71a4b2117e22226683837692bc1e"
 AUTHORIZATION = Path("docs/approvals/WP14_NARROW_REMOTE_DEPLOYMENT_AUTHORIZATION_V2.json")
 PWSH = shutil.which("pwsh")
+
+
+@pytest.mark.parametrize(
+    "relative", ["tests/unit/test_wp14_narrow_deployer.py", "tests/fixtures/wp14_fake_process.py"]
+)
+def test_fixture_text_io_has_explicit_utf8(relative: str) -> None:
+    tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"read_text", "write_text"}
+        ):
+            assert any(
+                keyword.arg == "encoding"
+                and isinstance(keyword.value, ast.Constant)
+                and keyword.value.value == "utf-8"
+                for keyword in node.keywords
+            ), node.lineno
 
 
 def normalized_hash(path: Path) -> str:
@@ -205,6 +225,33 @@ def authorize_fixture(fixture: Path, **overrides: object) -> None:
     }
     record.update(overrides)
     (fixture / AUTHORIZATION).write_text(json.dumps(record), encoding="utf-8")
+
+
+def set_fixture_transport_budget(fixture: Path, seconds: int) -> None:
+    """Bound transport tests after first child startup, never reset between calls.
+
+    This edits ONLY the temporary fake executable fixture. Separate pre-start
+    expiry tests retain the production stopwatch, and production is hash-pinned.
+    """
+    assert fixture.name == "isolated fixture" and fixture.resolve() != ROOT.resolve()
+    assert seconds in {3, 4, 8}
+    script = fixture / DEPLOYER.relative_to(ROOT)
+    text = script.read_text(encoding="utf-8")
+    marker = "        $started = $process.Start()"
+    assert text.count(marker) == 1
+    text = text.replace(
+        '$ErrorActionPreference = "Stop"',
+        '$ErrorActionPreference = "Stop"\n$script:fixtureTransportStarted = $false',
+    )
+    text = text.replace(
+        marker,
+        marker + "\n" + "        if (-not $script:fixtureTransportStarted) {\n"
+        "            $script:fixtureTransportStarted = $true\n"
+        f"            $script:maximumWallClockSeconds = {seconds}\n"
+        "            $stopwatch.Restart()\n"
+        "        }",
+    )
+    script.write_text(text, encoding="utf-8")
 
 
 def run_fixture(fixture: Path, scenario: str = "success") -> dict[str, Any]:
@@ -466,7 +513,7 @@ def test_failed_preflight_consumes_record_and_blocks_replay(
     first = run_fixture(isolated_deployer, "fail-preflight")
     assert first["success"] is False and len(first["calls"]) == 1
     claim = isolated_deployer / "ledger" / f"attempt-{CLAIM_HASH}.json"
-    assert json.loads(claim.read_text())["state"] == "consumed_before_transport"
+    assert json.loads(claim.read_text(encoding="utf-8"))["state"] == "consumed_before_transport"
     claim_before = claim.read_bytes()
     result = run_fixture(isolated_deployer, "fail-preflight")
     assert result["success"] is False
@@ -525,7 +572,7 @@ def test_identity_and_preimages_are_closed_and_required(
 ) -> None:
     authorize_fixture(isolated_deployer)
     path = isolated_deployer / AUTHORIZATION
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding="utf-8"))
     entry = record["preimages"][0]
     if mutation == "unknown":
         record["unexpected"] = True
@@ -545,7 +592,7 @@ def test_identity_and_preimages_are_closed_and_required(
         record["remote_identity"]["hostname"] = "unverified"
     else:
         record["remote_identity"]["verified"] = False
-    path.write_text(json.dumps(record))
+    path.write_text(json.dumps(record), encoding="utf-8")
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
     assert not (isolated_deployer / "ledger").exists()
@@ -566,10 +613,10 @@ def test_live_process_is_bounded_without_disclosing_output(
     isolated_deployer: Path,
     scenario: str,
 ) -> None:
-    script = isolated_deployer / DEPLOYER.relative_to(ROOT)
-    script.write_text(
-        script.read_text().replace("$maximumWallClockSeconds = 300", "$maximumWallClockSeconds = 3")
-    )
+    if scenario == "hang":
+        set_fixture_transport_budget(isolated_deployer, 3)
+    # Output/UTF-8 rejection is independent of process-startup timing. Retain the
+    # original 300-second budget; the external harness still has a 30-second cap.
     authorize_fixture(isolated_deployer)
     start = time.monotonic()
     result = run_fixture(isolated_deployer, scenario)
@@ -610,7 +657,9 @@ def test_preimages_are_checked_before_old_runner_and_each_replacement(
     assert result["success"] is True, result["error"]
     calls = result["calls"]
     preflight = calls[0]["command"]
-    entries = json.loads((isolated_deployer / AUTHORIZATION).read_text())["preimages"]
+    entries = json.loads((isolated_deployer / AUTHORIZATION).read_text(encoding="utf-8"))[
+        "preimages"
+    ]
     runner_position = preflight.index("/bin/cadence-runner' version)")
     for entry, install in zip(entries, calls[3:25:2], strict=True):
         assert preflight.index(entry["sha256"]) < runner_position
@@ -624,9 +673,10 @@ def test_duplicate_json_keys_rejected(isolated_deployer: Path) -> None:
     authorize_fixture(isolated_deployer)
     path = isolated_deployer / AUTHORIZATION
     path.write_text(
-        path.read_text().replace(
+        path.read_text(encoding="utf-8").replace(
             '{"schema_version": 2', '{"schema_version": 2, "schema_version": 2'
-        )
+        ),
+        encoding="utf-8",
     )
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
@@ -645,10 +695,7 @@ def test_incomplete_claim_is_never_repaired_or_removed(isolated_deployer: Path) 
 
 
 def test_overlapping_invocations_cannot_start_second_transport(isolated_deployer: Path) -> None:
-    script = isolated_deployer / DEPLOYER.relative_to(ROOT)
-    script.write_text(
-        script.read_text().replace("$maximumWallClockSeconds = 300", "$maximumWallClockSeconds = 8")
-    )
+    set_fixture_transport_budget(isolated_deployer, 8)
     authorize_fixture(isolated_deployer)
     with ThreadPoolExecutor(max_workers=1) as pool:
         first = pool.submit(run_fixture, isolated_deployer, "hang")
@@ -661,7 +708,7 @@ def test_overlapping_invocations_cannot_start_second_transport(isolated_deployer
         assert second["success"] is False and "concurrent" in second["error"]
         assert len(second["calls"]) == 1
         assert first.result()["success"] is False
-    assert len(calls.read_text().splitlines()) == 1
+    assert len(calls.read_text(encoding="utf-8").splitlines()) == 1
 
 
 def test_new_record_id_does_not_reset_package_attempt(isolated_deployer: Path) -> None:
@@ -681,9 +728,9 @@ def test_missing_identity_is_not_discovered_by_contacting_remote(isolated_deploy
 def test_legitimate_absent_new_assets_remain_explicit(isolated_deployer: Path) -> None:
     authorize_fixture(isolated_deployer)
     path = isolated_deployer / AUTHORIZATION
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding="utf-8"))
     record["preimages"][3].update(presence="absent", sha256=None, mode=None)
-    path.write_text(json.dumps(record))
+    path.write_text(json.dumps(record), encoding="utf-8")
     result = run_fixture(isolated_deployer)
     assert result["success"] is True, result["error"]
     destination = "/home/buet/cds_work/.cadence_mcp/lib/run-wp14-role-discovery.sh"
@@ -701,7 +748,7 @@ def test_whatif_never_consumes_authority(isolated_deployer: Path) -> None:
 def test_claim_remains_after_missing_fake_executable(isolated_deployer: Path) -> None:
     script = isolated_deployer / DEPLOYER.relative_to(ROOT)
     script.write_text(
-        script.read_text().replace(
+        script.read_text(encoding="utf-8").replace(
             sys.executable.replace("'", "''"), str(isolated_deployer / "does-not-exist.exe")
         ),
         encoding="utf-8",
@@ -735,14 +782,16 @@ def test_old_package_authority_rejected_after_migration(isolated_deployer: Path)
 
 
 def test_invalid_json_does_not_echo_raw_content(isolated_deployer: Path) -> None:
-    (isolated_deployer / AUTHORIZATION).write_text('{"DO_NOT_DISCLOSE_TEST_PAYLOAD": ')
+    (isolated_deployer / AUTHORIZATION).write_text(
+        '{"DO_NOT_DISCLOSE_TEST_PAYLOAD": ', encoding="utf-8"
+    )
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
     assert "DO_NOT_DISCLOSE" not in result["error"]
 
 
 def test_authorization_size_bound(isolated_deployer: Path) -> None:
-    (isolated_deployer / AUTHORIZATION).write_text(" " * 32769)
+    (isolated_deployer / AUTHORIZATION).write_text(" " * 32769, encoding="utf-8")
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
     assert "size bound" in result["error"]
@@ -751,15 +800,15 @@ def test_authorization_size_bound(isolated_deployer: Path) -> None:
 def test_valid_but_wrong_preimage_is_rejected_by_fake_model(isolated_deployer: Path) -> None:
     authorize_fixture(isolated_deployer)
     path = isolated_deployer / AUTHORIZATION
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding="utf-8"))
     record["preimages"][0]["sha256"] = "a" * 64
-    path.write_text(json.dumps(record))
+    path.write_text(json.dumps(record), encoding="utf-8")
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and len(result["calls"]) == 1
 
 
 def test_only_fixed_native_executables_and_no_test_bypass_in_production() -> None:
-    text = DEPLOYER.read_text()
+    text = DEPLOYER.read_text(encoding="utf-8")
     assert "System32\\OpenSSH\\$Kind.exe" in text
     assert "Get-Command" not in text
     assert "UseShellExecute = $false" in text
@@ -792,13 +841,7 @@ def test_shared_ledger_blocks_second_checkout(isolated_deployer: Path) -> None:
 
 
 def test_deadline_is_shared_across_commands(isolated_deployer: Path) -> None:
-    script = isolated_deployer / DEPLOYER.relative_to(ROOT)
-    script.write_text(
-        script.read_text().replace(
-            "$maximumWallClockSeconds = 300", "$maximumWallClockSeconds = 4"
-        ),
-        encoding="utf-8",
-    )
+    set_fixture_transport_budget(isolated_deployer, 4)
     authorize_fixture(isolated_deployer)
     result = run_fixture(isolated_deployer, "slow-each")
     assert result["success"] is False
@@ -827,11 +870,11 @@ def test_arrays_cannot_bypass_scalar_identity_bindings(isolated_deployer: Path, 
 def test_nested_identity_fields_require_scalars(isolated_deployer: Path, field: str) -> None:
     authorize_fixture(isolated_deployer)
     path = isolated_deployer / AUTHORIZATION
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding="utf-8"))
     if field == "presence":
         record["preimages"][0][field] = ["file"]
     else:
         record["remote_identity"][field] = []
-    path.write_text(json.dumps(record))
+    path.write_text(json.dumps(record), encoding="utf-8")
     result = run_fixture(isolated_deployer)
     assert result["success"] is False and result["calls"] == []
