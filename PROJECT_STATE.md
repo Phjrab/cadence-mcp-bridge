@@ -143,9 +143,11 @@ wp14_narrow_remote_authorization_record: docs/approvals/WP14_NARROW_REMOTE_DEPLO
 wp14_narrow_remote_authorization_status: historical_old_hash_approval_preserved_not_valid_for_corrected_deployer
 wp14_narrow_deployer_gate_record_status: consumed_preserved_locally_excluded_from_git
 wp14_narrow_deployment_result: docs/WP14_NARROW_DEPLOYMENT_RESULT_V2.md
-wp14_narrow_deployment_blockers: "CURRENT_CADENCE_PROCESS_GATE_BLOCKED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; SINGLE_USE_ATTEMPT_CONSUMED"
+wp14_narrow_deployment_blockers: "RECOVERY_CONTRACT_NOT_IMPLEMENTED; HISTORICAL_FAILURE_CAUSE_UNPROVEN; SINGLE_USE_ATTEMPT_CONSUMED"
 wp14_preflight_diagnostic: docs/WP14_PREFLIGHT_DIAGNOSTIC_V1.md
-wp14_preflight_diagnostic_status: current_process_predicate_failed_other_fixed_checks_passed
+wp14_preflight_diagnostic_status: post_close_all_twelve_checks_passed_not_full_preflight
+wp14_post_close_recovery_plan: docs/WP14_POST_CLOSE_RECOVERY_PLAN_V1.md
+wp14_post_close_diagnostic_observed_at: "2026-09-17T08:56:29.420609+00:00"
 wp14_narrow_remote_attempts: 1
 wp14_remote_preflight_status: failed_transport_no_success_marker
 wp14_runner_0_19_0_deployment_status: not_reached_preflight_failed
@@ -180,7 +182,7 @@ awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "The current Virtuoso/OCEAN process predicate blocks deployment. The operator should finish and normally close the active session without changing protected source data. Preserve the consumed authorization and durable claim. A bounded recovery contract and fresh preimages are still needed before a deployment retry; no repeated blanket approval is requested. WP-14 remains blocked and WP-15 unstarted."
+user_action_required: "Normal Virtuoso closure is verified; no further shutdown action is requested. Next is bounded recovery implementation and isolated local validation under continuation authority. Preserve consumed records; do not reuse the old deployment slot. Final-hash-bound recovery authority and fresh preimage verification remain prerequisites to remote retry. WP-14 remains blocked; WP-15 is unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -277,6 +279,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-17: After the user reported normal Virtuoso closure, the unchanged bounded diagnostic ran once at 2026-09-17T08:56:29.420609+00:00 and all twelve checks passed. The process predicate blocker is resolved, not the consumed deployment slot or full readiness gate. Added a non-executable recovery plan with fifteen acceptance criteria, predecessor preservation, shared concurrency and independent durable single-use recovery requirements. No activation, deployment retry, cleanup, Cadence invocation or design access occurred. Existing failure evidence and grants remain preserved; PUBLIC and deployment_enabled=false are unchanged.
 
 - 2026-09-17: Diagnostic checkpoint local validation passed Ruff, mypy (17 source files), 21 focused fake-transport/security tests, 354-file secret preflight and git diff --check. Tests cover fixed command construction, argument rejection and malformed-output suppression without network calls. Production deployer, collector, existing evidence and consumed authority remain unchanged.
 
