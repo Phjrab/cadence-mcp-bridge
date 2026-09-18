@@ -207,20 +207,28 @@ wp14_recovery_authorization_input_review_integration_status: merged_pr_41
 wp14_recovery_authorization_input_review_merge_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
 wp14_local_executor_check: scripts/verify-wp14-executor.ps1
 wp14_local_executor_check_report: docs/WP14_LOCAL_EXECUTOR_CHECK_V1.md
-wp14_local_executor_check_status: repository_implemented_actual_identity_not_read
+wp14_local_executor_check_status: local_rule_ready_single_execution_no_identity_persisted
 wp14_local_executor_check_normalized_lf_sha256: 39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975
 wp14_local_executor_check_local_validation: "37 passed (19 synthetic identity and 18 security); Ruff and mypy passed; secret and dependency scans passed"
 wp14_local_executor_check_started_at: "2026-09-18T04:31:55Z"
-current_feature_branch: wp/WP-14-local-executor-check
-base_main_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
-last_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
+wp14_local_executor_check_integration_status: merged_pr_42
+wp14_local_executor_check_merged_head: d344f97e30e03a88cf878bf6c8a8fba637afb1d9
+wp14_local_executor_check_merge_commit: 8e10143c4bbb0ca74e6af803568ca24c0af0a512
+wp14_local_executor_check_result_report: docs/WP14_LOCAL_EXECUTOR_CHECK_RESULT_V1.md
+wp14_local_executor_check_execution_count: 1
+wp14_local_executor_check_executed_at: "2026-09-18T04:46:35.4834645Z"
+wp14_local_executor_check_result_code: LOCAL_RULE_READY
+wp14_local_executor_check_binding_persisted: false
+current_feature_branch: wp/WP-14-local-executor-check-result
+base_main_commit: 8e10143c4bbb0ca74e6af803568ca24c0af0a512
+last_commit: 8e10143c4bbb0ca74e6af803568ca24c0af0a512
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the independent local executor checker implementation and synthetic tests for PR integration. Actual identity/binding and Authorization remain uncreated. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z prepare only a versioned evidence-renewal plan. WP-15 remains unstarted."
+user_action_required: "Review and merge the single-execution result record. LOCAL_RULE_READY establishes only stable supported local identity inputs and a computable in-memory rule; no binding or Authorization was persisted or created. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z prepare only a versioned evidence-renewal plan. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -317,6 +325,12 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-18: Verified PR #42 merge commit `8e10143c4bbb0ca74e6af803568ca24c0af0a512` as exact latest `origin/main`, PUBLIC visibility, clean starting tree, and checker normalized-LF SHA-256 `39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975`. At `2026-09-18T04:46:35.4834645Z`, before the immutable `2026-09-18T08:05:01Z` evidence boundary, the fixed no-argument local checker was executed exactly once. It returned `LOCAL_RULE_READY` with exit code zero. SID and MachineGuid were read only by the checker, and the binding was computed only in memory; none of those values was output or persisted. No retry occurred.
+
+- 2026-09-18: The one-shot execution establishes only that the local SID/MachineGuid inputs were stable, supported and usable by the fixed digest rule at that instant. It does not compare an Authorization, create an executor binding record, refresh remote evidence or establish deployment readiness. The outer operator wrapper attempted to capture a console-direct line as a PowerShell pipeline object and emitted a post-execution cardinality error after the checker had already returned its one closed-schema success line and exit zero; the checker was not rerun. No Authorization, claim or lock was created, no deployer was executed, and no SSH/SCP, remote operation, Cadence/design change, direct-main action or WP-15 work occurred. PUBLIC and `deployment_enabled=false` remain unchanged.
+
+- 2026-09-18: Result-record validation passed `git diff --check`, Ruff, strict mypy for 17 source files, the 367-file secret preflight, 18 dedicated security tests and the strict dependency audit with no known vulnerabilities. A first full-suite run in the live checkout produced two expected inactive-contract failures because the preserved, untracked and ignored consumed deployment Authorization remains present; it was not deleted or changed. The same tracked tree plus this two-file documentation change passed in a clean temporary repository copy that excluded the live Authorization: 384 passed, eight deliberately skipped real integrations and 56 existing deprecation warnings. The temporary copy was removed after validation. The production checker was not rerun.
 
 - 2026-09-18: Final isolated checker validation passed 19 synthetic identity cases plus 18 security tests (37 total), Ruff and strict mypy for 17 source files. The security gate repeated 18 tests, scanned 366 files and reported no known dependency vulnerabilities. Four-file scope, unique state keys, protected tracked artifacts, absent recovery Authorization and false deployment gates passed. Checker normalized-LF SHA-256 is 39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975. A test-only Ruff encoding finding was corrected before final passing checks. Existing deployment/recovery tests were not rerun because their synthetic Authorization/claim fixtures are outside this identity-only task; no actual checker or remote integration was invoked. Feature commit/push SHA is reported separately after verification.
 
