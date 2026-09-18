@@ -225,16 +225,22 @@ wp14_local_executor_check_result_merge_commit: 75c96cd81ab41859295c3eb71212c2f40
 wp14_local_executor_check_result_merged_at: "2026-09-18T05:36:41Z"
 wp14_local_executor_check_result_state_sync_checked_at: "2026-09-18T05:41:00.4841369Z"
 wp14_local_executor_check_result_evidence_temporal_status: unexpired_at_state_sync_check_only
-current_feature_branch: wp/WP-14-local-executor-result-post-merge-state
-base_main_commit: 75c96cd81ab41859295c3eb71212c2f4004a406b
-last_commit: 75c96cd81ab41859295c3eb71212c2f4004a406b
+wp14_local_executor_check_result_post_merge_state_status: merged_pr_44
+wp14_local_executor_check_result_post_merge_state_merged_head: 8ddf4719016d22227af7ea77e4431c0a8566c6d8
+wp14_local_executor_check_result_post_merge_state_merge_commit: 21dc4cd6c86b3950c621295fe6037fd9166285d3
+wp14_local_executor_check_result_post_merge_state_merged_at: "2026-09-18T05:48:13Z"
+wp14_local_executor_check_result_post_merge_state_checked_at: "2026-09-18T05:49:33.5257595Z"
+wp14_local_executor_check_result_post_merge_state_evidence_temporal_status: unexpired_at_state_sync_check_only
+current_feature_branch: wp/WP-14-pr44-post-merge-state
+base_main_commit: 21dc4cd6c86b3950c621295fe6037fd9166285d3
+last_commit: 21dc4cd6c86b3950c621295fe6037fd9166285d3
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review this PROJECT_STATE-only synchronization branch; the single-execution result is already merged through PR #43. LOCAL_RULE_READY establishes local rule readiness only, not an actual binding record, Authorization or remote readiness. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z preserve existing evidence and consumed claims and prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
+user_action_required: "Review this PROJECT_STATE-only synchronization branch; PR #44 is merged. LOCAL_RULE_READY establishes local rule readiness only, not an actual binding record, Authorization or remote readiness. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z preserve existing evidence and consumed claims and prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -331,6 +337,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-18: Verified PR #44 as MERGED at `2026-09-18T05:48:13Z`, with reviewed head `8ddf4719016d22227af7ea77e4431c0a8566c6d8` and exact latest fetched/remote `origin/main` `21dc4cd6c86b3950c621295fe6037fd9166285d3`. At `2026-09-18T05:49:33.5257595Z`, the existing evidence remained before its immutable `2026-09-18T08:05:01Z` boundary, so this run created `wp/WP-14-pr44-post-merge-state` from that merge commit and changes only PROJECT_STATE.md. The prior PR #44 integration record and all protected records remain unchanged; awaiting_user_merge refers only to this state checkpoint.
+
+- 2026-09-18: This post-merge synchronization preserves `LOCAL_RULE_READY` as local rule readiness only. The checker was not rerun, and no identity/binding, Authorization, claim, lock, deployer, SSH/SCP, remote preflight/deployment, Cadence or design operation occurred. PUBLIC, `deployment_enabled=false`, evidence timestamp/hash, consumed claims, one-execution count, prior histories and unresolved conditions remain unchanged. WP-14 stays blocked and WP-15 remains unstarted.
 
 - 2026-09-18: Verified PR #43 as MERGED at `2026-09-18T05:36:41Z`, with reviewed head `6160a20e71561fd474c3c95390dc1cc0f82e84f5` and exact latest origin/main `75c96cd81ab41859295c3eb71212c2f4004a406b`. At `2026-09-18T05:41:00.4841369Z`, the existing evidence remained before its immutable `2026-09-18T08:05:01Z` boundary, so this run created `wp/WP-14-local-executor-result-post-merge-state` from that main commit and changes only PROJECT_STATE.md. Result-record integration is complete; `awaiting_user_merge` refers solely to this new state checkpoint. The time comparison does not refresh the evidence or establish current remote conditions.
 
