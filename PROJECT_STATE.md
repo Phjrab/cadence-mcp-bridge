@@ -219,16 +219,22 @@ wp14_local_executor_check_execution_count: 1
 wp14_local_executor_check_executed_at: "2026-09-18T04:46:35.4834645Z"
 wp14_local_executor_check_result_code: LOCAL_RULE_READY
 wp14_local_executor_check_binding_persisted: false
-current_feature_branch: wp/WP-14-local-executor-check-result
-base_main_commit: 8e10143c4bbb0ca74e6af803568ca24c0af0a512
-last_commit: 8e10143c4bbb0ca74e6af803568ca24c0af0a512
+wp14_local_executor_check_result_integration_status: merged_pr_43
+wp14_local_executor_check_result_merged_head: 6160a20e71561fd474c3c95390dc1cc0f82e84f5
+wp14_local_executor_check_result_merge_commit: 75c96cd81ab41859295c3eb71212c2f4004a406b
+wp14_local_executor_check_result_merged_at: "2026-09-18T05:36:41Z"
+wp14_local_executor_check_result_state_sync_checked_at: "2026-09-18T05:41:00.4841369Z"
+wp14_local_executor_check_result_evidence_temporal_status: unexpired_at_state_sync_check_only
+current_feature_branch: wp/WP-14-local-executor-result-post-merge-state
+base_main_commit: 75c96cd81ab41859295c3eb71212c2f4004a406b
+last_commit: 75c96cd81ab41859295c3eb71212c2f4004a406b
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge the single-execution result record. LOCAL_RULE_READY establishes only stable supported local identity inputs and a computable in-memory rule; no binding or Authorization was persisted or created. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z prepare only a versioned evidence-renewal plan. WP-15 remains unstarted."
+user_action_required: "Review this PROJECT_STATE-only synchronization branch; the single-execution result is already merged through PR #43. LOCAL_RULE_READY establishes local rule readiness only, not an actual binding record, Authorization or remote readiness. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z preserve existing evidence and consumed claims and prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -325,6 +331,12 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-18: Verified PR #43 as MERGED at `2026-09-18T05:36:41Z`, with reviewed head `6160a20e71561fd474c3c95390dc1cc0f82e84f5` and exact latest origin/main `75c96cd81ab41859295c3eb71212c2f4004a406b`. At `2026-09-18T05:41:00.4841369Z`, the existing evidence remained before its immutable `2026-09-18T08:05:01Z` boundary, so this run created `wp/WP-14-local-executor-result-post-merge-state` from that main commit and changes only PROJECT_STATE.md. Result-record integration is complete; `awaiting_user_merge` refers solely to this new state checkpoint. The time comparison does not refresh the evidence or establish current remote conditions.
+
+- 2026-09-18: `LOCAL_RULE_READY` retains its recorded meaning of local rule readiness at the prior single execution, not an actual binding record, Authorization, remote readiness or scientific baseline approval. The checker was not rerun, and no identity or binding was read, output or stored in this state-only run. No Authorization, claim or operational lock was created; no deployer, SSH/SCP, remote collection/preflight/deployment, Cadence or design operation occurred. PUBLIC, `deployment_enabled=false`, the original evidence timestamp/hash, consumed records, all earlier decision/plan/result records, the execution count of one and unresolved conditions are preserved. WP-14 remains blocked and WP-15 is unstarted. This run performs no main push or merge.
+
+- 2026-09-18: Post-PR-43 state synchronization passed the single-file scope check, 234 unique metadata keys, allowed-field comparison, unchanged historical checkpoint/assumption/progress text, protected checker/evidence normalized-LF hashes, disabled lineage, the fixed UTC boundary and `git diff --check`. Ruff, strict mypy for 17 source files, 18 isolated local security tests and the 367-file secret preflight passed. The full suite, dependency audit and actual checker were not rerun for this documentation-only change; no synthetic Authorization/claim fixtures or remote integrations were executed. Final feature commit and remote SHA verification are reported after push.
 
 - 2026-09-18: Verified PR #42 merge commit `8e10143c4bbb0ca74e6af803568ca24c0af0a512` as exact latest `origin/main`, PUBLIC visibility, clean starting tree, and checker normalized-LF SHA-256 `39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975`. At `2026-09-18T04:46:35.4834645Z`, before the immutable `2026-09-18T08:05:01Z` evidence boundary, the fixed no-argument local checker was executed exactly once. It returned `LOCAL_RULE_READY` with exit code zero. SID and MachineGuid were read only by the checker, and the binding was computed only in memory; none of those values was output or persisted. No retry occurred.
 
