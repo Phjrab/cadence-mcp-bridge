@@ -203,16 +203,24 @@ wp14_recovery_readiness_decision_merge_commit: 25c3e56c8a3720004d38c77250924c78d
 wp14_recovery_authorization_input_review: docs/WP14_RECOVERY_AUTHORIZATION_INPUT_REVIEW_V1.md
 wp14_recovery_authorization_input_review_status: blocked_temporally_eligible_missing_verified_executor_and_current_preflight
 wp14_recovery_authorization_input_review_at: "2026-09-17T12:36:15.9605215Z"
-current_feature_branch: wp/WP-14-recovery-authorization-input-review
-base_main_commit: 25c3e56c8a3720004d38c77250924c78d1ed4239
-last_commit: 25c3e56c8a3720004d38c77250924c78d1ed4239
+wp14_recovery_authorization_input_review_integration_status: merged_pr_41
+wp14_recovery_authorization_input_review_merge_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
+wp14_local_executor_check: scripts/verify-wp14-executor.ps1
+wp14_local_executor_check_report: docs/WP14_LOCAL_EXECUTOR_CHECK_V1.md
+wp14_local_executor_check_status: repository_implemented_actual_identity_not_read
+wp14_local_executor_check_normalized_lf_sha256: 39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975
+wp14_local_executor_check_local_validation: "37 passed (19 synthetic identity and 18 security); Ruff and mypy passed; secret and dependency scans passed"
+wp14_local_executor_check_started_at: "2026-09-18T04:31:55Z"
+current_feature_branch: wp/WP-14-local-executor-check
+base_main_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
+last_commit: 1a673fae8a8e9741b7ea46eccde83de08e444127
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge the document-only exact-Authorization input review. Recheck UTC before the next task: before 2026-09-18T08:05:01Z, executor binding and every exact field still need separate local verification and explicit approval; at or after the boundary, prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
+user_action_required: "Review the independent local executor checker implementation and synthetic tests for PR integration. Actual identity/binding and Authorization remain uncreated. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z prepare only a versioned evidence-renewal plan. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
@@ -309,6 +317,10 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-18: Final isolated checker validation passed 19 synthetic identity cases plus 18 security tests (37 total), Ruff and strict mypy for 17 source files. The security gate repeated 18 tests, scanned 366 files and reported no known dependency vulnerabilities. Four-file scope, unique state keys, protected tracked artifacts, absent recovery Authorization and false deployment gates passed. Checker normalized-LF SHA-256 is 39cc05f53097f3d8847e473200f140e9e9f283eddd04f194f5e7e69c96bfe975. A test-only Ruff encoding finding was corrected before final passing checks. Existing deployment/recovery tests were not rerun because their synthetic Authorization/claim fixtures are outside this identity-only task; no actual checker or remote integration was invoked. Feature commit/push SHA is reported separately after verification.
+
+- 2026-09-18: At 04:31:55Z the evidence was still before its immutable 08:05:01Z expiry. Verified PR #41 merge/latest main 1a673fae8a8e9741b7ea46eccde83de08e444127 and PUBLIC visibility. Added a separate fixed no-argument operator-only local executor checker, pinned to the unchanged recovery deployer hash, and synthetic-only tests. The checker exposes only a success/code envelope and no binding or raw identity. It neither executes nor dot-sources the deployer; a future actual success would establish local rule readiness only, not Authorization matching or remote readiness. This run never invokes the production checker or reads actual identity, creates no Authorization/claim/lock, and performs no SSH/SCP, remote, Cadence, design, main or WP-15 operation. Prior evidence and consumed records are preserved; deployment_enabled=false and WP-14 blocked remain unchanged.
 
 - 2026-09-17: Final isolated validation passed Ruff, strict mypy for 17 source files, and the full local suite with 365 passed, eight deliberately skipped real integrations and 56 existing deprecation warnings. Secret preflight covered 363 repository files; all 18 dedicated security tests and the strict locked dependency audit passed with no known vulnerabilities. Final repository checks cover the exact two-file scope, 17 acceptance criteria, unique state keys, absent recovery Authorization, preserved protected artifacts, PUBLIC, `deployment_enabled=false` and diff whitespace. The first security invocation lacked a local Git index and the next exposed only the known Korean Windows-path output encoding issue; a UTF-8 final rerun passed. No remote integration was enabled or contacted.
 
