@@ -245,6 +245,11 @@ user_action_required: "Review this PROJECT_STATE-only synchronization branch; PR
 
 ## WP-14 checkpoint
 
+Portfolio documentation note (2026-09-24): the public README and release-facing
+documents now distinguish the published `v1.0.0` from blocked WP-14. This is a
+documentation-only clarification; the YAML state, approval/evidence fields,
+single-use claims, deployment gate, and WP-14 execution status above are unchanged.
+
 - 2026-09-17: Verified PR #35 MERGED at 2026-09-17T07:26:26Z with approved head 90586ee5b487a0a3b1ac876a5f9d9a0f324b193c and latest origin/main a5ebe11a7eaf5b4f36d65009d39fd32841906e7d. From that exact base, branch wp/WP-14-remote-evidence-collection used the user-approved activation record SHA-256 631d6dff580edb449cac6b4d342930428bd49bc7fd3337053c9932737a581a20 for exactly one fixed read-only collector invocation. The durable lineage claim was created before transport and now permanently records this attempt as consumed. The active authorization record was removed after use and is not committed; only its hash is recorded.
 
 - 2026-09-17: Fresh evidence observed at 2026-09-17T08:05:01Z verified hostname cadence, user buet and the canonical non-symlink remote root. Exactly eleven allowlisted preimages were returned: seven regular files owned by buet with link count one and four allowed absences for the not-yet-deployed WP-14 role-discovery helper, wrapper, SKILL asset and runner-lineage file. Every present asset resolved below the fixed root; the evidence has zero blockers and normalized-LF SHA-256 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7. Closed-schema validation and credential/license/PDK/OA/ADE/netlist/waveform/environment-content pattern review passed. No SCP, remote write, temporary file, deployment, old-runner execution, Cadence/SKILL/discovery/simulation, OA/ADE/design/PDK mutation or WP-15 work occurred. The evidence is not deployment authority; user hash review and a separately proposed V2 authorization remain required.

@@ -1,5 +1,10 @@
 # Packaging and Release
 
+The stable [v1.0.0 release](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v1.0.0)
+was published on 2026-08-31. The repository is public at the 2026-09-24
+documentation review. References below to a private repository describe the
+release-time history; they are not a current access requirement.
+
 ## Reproducible package verification
 
 Run from Windows PowerShell:
@@ -15,7 +20,7 @@ the module is no longer importable, and removes only its validated temporary dir
 ## Operator install
 
 1. Install Python 3.12 and `uv` on Windows.
-2. Clone the private repository and check out a reviewed release tag.
+2. Clone the repository and check out a reviewed release tag.
 3. Run `uv sync --frozen --all-groups`.
 4. Run `scripts/verify-security.ps1`, `scripts/verify-package.ps1`, and the documented E2E suite.
 5. Register the MCP server with `scripts/install-codex-mcp.ps1 -Confirm`.
@@ -24,7 +29,7 @@ the module is no longer importable, and removes only its validated temporary dir
 ## Upgrade
 
 1. Preserve the existing Codex configuration and remote audit/job data.
-2. Fetch the private repository and review the target signed/reviewed tag and release notes.
+2. Fetch the repository and review the target signed/reviewed tag and release notes.
 3. Run `uv sync --frozen --all-groups` and all verification gates before deployment.
 4. Deploy only through `scripts/deploy-remote.ps1 -Confirm` when the release changes reviewed
    remote files.
@@ -58,5 +63,5 @@ the module is no longer importable, and removes only its validated temporary dir
       separate authorization.
 
 Version `v1.0.0` is published. The annotated tag peels to
-`8a0d44fab90e2095cc39322baef60fc09d741cd6`, and the private-repository release is available at
+`8a0d44fab90e2095cc39322baef60fc09d741cd6`, and the release is available at
 `https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v1.0.0`.

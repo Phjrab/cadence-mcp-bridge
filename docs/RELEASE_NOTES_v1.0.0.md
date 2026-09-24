@@ -1,6 +1,12 @@
 # Cadence MCP Bridge v1.0.0 — Release Candidate
 
-Status: **not yet published**. The controlled-write acceptance gate passes and package metadata is
+> Current publication note (2026-09-24 documentation review): the stable
+> [v1.0.0 GitHub release](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v1.0.0)
+> was published on 2026-08-31 and the repository is now public. The candidate
+> status and pending-publication statements below describe the earlier preparation run,
+> not the present release state.
+
+Historical candidate status: **not yet published at this preparation checkpoint**. The controlled-write acceptance gate passes and package metadata is
 prepared at `1.0.0`. An annotated tag and private GitHub release require review, branch integration,
 and separate explicit authorization.
 

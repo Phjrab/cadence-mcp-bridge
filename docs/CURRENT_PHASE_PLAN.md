@@ -22,7 +22,9 @@ authority. The imported package templates and archive references are inactive by
 The active task is **WP-14 — VBIASN/VBIASP Source-of-Truth Confirmation**. WP-13's audit was
 merged through PR #19 as `b12cff904fe31a1d68490836c1fe6765734b9bf0`. WP-14 uses that dated audit
 and the compatibility/research separation in `ICF-00-03` to prepare a repository-only decision
-package. Version 1 is ready for review with no selected baseline; confirmation remains blocked.
+package. The later V4 decision record conditionally selects `0.300 V / 0.650 V`,
+but missing operating-condition, revision-equivalence, and freshness evidence keeps
+scientific baseline confirmation blocked. The version-1 package remains historical.
 See `docs/WP14_VBIAS_SOURCE_OF_TRUTH_DECISION.md`. The package does not authorize runner deployment,
 simulation, OA write/save, ADE-state changes, or parameterized execution. No fresh remote probe is
 performed in WP-14. Other `ICF-*` tasks remain planning references, not execution instructions.
