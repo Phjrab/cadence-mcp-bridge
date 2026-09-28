@@ -10,7 +10,7 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_v1_remote_evidence_expired_renewal_plan_review_only
+implementation_status: wp14_renewal_collection_contract_request_only_review_required
 documentation_status: verified
 integration_status: public_contract_v2_state_sync_merged_pr_35_fresh_preimages_collected
 wp14_public_contract_post_merge_state_status: merged_pr_34
@@ -241,19 +241,36 @@ wp14_evidence_renewal_plan: docs/WP14_FAIL_CLOSED_EVIDENCE_RENEWAL_PLAN_V1.md
 wp14_evidence_renewal_plan_version: 1
 wp14_evidence_renewal_plan_normalized_lf_sha256: 305e8a4eed2cbabb4160ebe65456b7f0ae694eb02d4a07d800d4cfc12029a432
 wp14_evidence_renewal_plan_status: review_only_no_collection_authority
-current_feature_branch: wp/WP-14-expired-evidence-renewal-plan
-base_main_commit: ece52c7a44befe34d61215c19f9fa39ab2af5384
-last_commit: ece52c7a44befe34d61215c19f9fa39ab2af5384
+wp14_evidence_renewal_plan_integration_status: merged_pr_46
+wp14_evidence_renewal_plan_merged_head: 2fef43d003b5ecaccf9f2b57aee56e42d02f7f53
+wp14_evidence_renewal_plan_merge_commit: 9f2172a5a2ba189afb39ba3751528928e168e06a
+wp14_renewal_collection_request: docs/approvals/WP14_REMOTE_EVIDENCE_RENEWAL_COLLECTION_REQUEST_V1.md
+wp14_renewal_collection_request_version: 1
+wp14_renewal_collection_request_normalized_lf_sha256: 747ec5d73372f7fc8149f773638a0be106d12698fa4a1b7a45306c49a2374f4a
+wp14_renewal_collection_request_status: ready_for_review_no_implementation_or_execution_authority
+wp14_renewal_collection_generation: collection-renewal-v1_proposed_only_not_instantiated
+wp14_renewal_collection_lock_contract: preserve_both_existing_domains_deployment_then_collection_no_new_lock
+wp14_renewal_collection_implementation_status: not_implemented_not_authorized_by_request
+wp14_renewal_collection_execution_status: blocked_expired_v1_new_exact_authority_absent
+current_feature_branch: wp/WP-14-evidence-renewal-collection-contract
+base_main_commit: 9f2172a5a2ba189afb39ba3751528928e168e06a
+last_commit: 9f2172a5a2ba189afb39ba3751528928e168e06a
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-14 expired-evidence renewal plan feature branch. V1 evidence and consumed claims remain historical and cannot authorize recovery; any new collection contract and remote attempt require separate review and exact approval. WP-15 remains unstarted."
+user_action_required: "Review the WP-14 renewal collection request and its exact feature HEAD for PR integration. The next implementation gate is repository-only with synthetic fixtures; a later remote attempt still needs a reviewed collector and exact single-use approval. V1 evidence is expired, consumed records remain preserved, and WP-15 is unstarted."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-28: Renewal-request documentation acceptance passed: 261 unique metadata keys with only allowed current-state updates, complete prior-history preservation, eight normalized-LF provenance digests, all eleven ordered asset/presence rules, 20 sequential criteria (14 documentary and six future-only), no BOM, disabled lineage, and exactly two changed documents. Eight fixed local authorization/claim/lock records retained their pre-run presence and byte hashes; raw contents and identities were not output or committed. Ruff, strict mypy for 17 source files, the 369-file secret preflight, all 18 dedicated local security tests and strict locked dependency audit passed with no known vulnerabilities. The full suite and all collector/deployer/identity/remote tests were not rerun for this documentation checkpoint. Feature commit and remote SHA are reported after push; no remote readiness or scientific baseline is established.
+
+- 2026-09-28: Verified PR #46 MERGED with reviewed head `2fef43d003b5ecaccf9f2b57aee56e42d02f7f53` and exact latest fetched/remote main `9f2172a5a2ba189afb39ba3751528928e168e06a`, PUBLIC visibility and a clean starting tree. Created `wp/WP-14-evidence-renewal-collection-contract` from that base. The new version-1 request-only renewal collection contract defines 14 current documentary acceptance criteria and six future implementation criteria, inherits the exact eleven-asset PUBLIC v2 boundary, and leaves all actual identity, activation, claim and new evidence fields uninstantiated. No historical document or executor is overwritten.
+
+- 2026-09-28: Source review found distinct existing collection and deployment/recovery lock domains. The request preserves both and specifies deployment-then-collection nonblocking acquisition for the proposed renewal, with compatibility testing deferred to the separate repository implementation gate. It reserves one logical `collection-renewal-v1` slot without creating it and rejects UUID/hash/version/checkout resets. The existing collector's rejection of a present deployment activation is not bypassed by deleting the preserved consumed activation; a separate reviewed implementation must validate that exact historical lineage. V1 timestamp/hash, consumed records, common lock bytes, disabled deployment, unresolved scientific conditions and all prior history are preserved. No Authorization/claim/lock creation, identity checker, collector/deployer execution, SSH/SCP, remote collection/preflight/deployment, Cadence/SKILL/simulation, OA/ADE/design/PDK operation, merge, main push or WP-15 work occurs.
 
 - 2026-09-28: PR #45 was verified MERGED with reviewed head `9da09ede0be99fb1e9a5adc181e245d095df786f`; latest fetched and remote `origin/main` are both `ece52c7a44befe34d61215c19f9fa39ab2af5384`. At `2026-09-28T08:44:26.9415628Z`, V1 identity/preimage evidence was past its immutable `2026-09-18T08:05:01Z` boundary. The versioned, review-only fail-closed renewal plan preserves the old observation, hash, consumed collection claim, failed deployment activation and claim, and all protected evidence. It requires a separately reviewed contract and single-use authority for any new collection, with the existing global lock and claim lineage retained. The current collector is not rerunnable by changing its activation record. PUBLIC and `deployment_enabled=false` remain; no Authorization, identity read, claim, lock, SSH/SCP, remote operation, Cadence, design change, recovery, baseline approval, or WP-15 work occurred. WP-14 remains blocked.
 
