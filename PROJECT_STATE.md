@@ -10,7 +10,7 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_public_contract_v2_repository_reconciled_remote_not_authorized
+implementation_status: wp14_v1_remote_evidence_expired_renewal_plan_review_only
 documentation_status: verified
 integration_status: public_contract_v2_state_sync_merged_pr_35_fresh_preimages_collected
 wp14_public_contract_post_merge_state_status: merged_pr_34
@@ -135,7 +135,7 @@ wp14_remote_identity_preimage_evidence: docs/evidence/WP14_REMOTE_IDENTITY_PREIM
 wp14_remote_identity_preimage_evidence_normalized_lf_sha256: 0a469a94880383ffeada740c3b19e261ba5b50382ddf360a91243c7054782ba7
 wp14_remote_identity_preimage_evidence_observed_at: "2026-09-17T08:05:01Z"
 wp14_remote_identity_preimage_evidence_summary: "identity_verified; assets=11; present=7; allowed_absent=4; blockers=0"
-wp14_fresh_identity_preimage_evidence_status: collected_schema_validated_pending_user_hash_review
+wp14_fresh_identity_preimage_evidence_status: expired_v1_historical_only_not_recovery_eligible
 wp14_narrow_authorization_schema_version: 2
 wp14_narrow_deployer_correction_review: docs/WP14_NARROW_DEPLOYER_CORRECTION_REVIEW_V1.md
 wp14_narrow_deployer_correction_integration_status: merged_pr_26
@@ -183,7 +183,7 @@ wp14_recovery_integration_status: merged_pr_37
 wp14_recovery_merged_head: 5f10a9b417af3fbbd7b40d2135eabd8df8bc4d16
 wp14_recovery_merge_commit: 79bb9c170d6822664438493cd4e3e56eb5c83b7c
 wp14_recovery_readiness_review: docs/WP14_RECOVERY_READINESS_REVIEW_V1.md
-wp14_recovery_remote_readiness: blocked_missing_final_authority_current_remote_conditions_unverified
+wp14_recovery_remote_readiness: blocked_expired_evidence_missing_new_contract_and_final_authority
 wp14_recovery_evidence_age_reviewed_at: "2026-09-17T11:09:47Z"
 wp14_recovery_evidence_age_boundary: "2026-09-18T08:05:01Z"
 wp14_recovery_readiness_integration_status: merged_pr_38
@@ -194,7 +194,7 @@ wp14_recovery_request_clock_checked_at: "2026-09-17T11:37:17Z"
 wp14_recovery_approval_request_integration_status: merged_pr_39
 wp14_recovery_approval_request_merge_commit: 7a60affe0aa26b38ec02b6d96bcc3e2fc8660fbd
 wp14_recovery_authorization_readiness_decision: docs/WP14_RECOVERY_AUTHORIZATION_READINESS_DECISION_V1.md
-wp14_recovery_authorization_readiness_status: blocked_unexpired_missing_executor_and_current_preflight
+wp14_recovery_authorization_readiness_status: blocked_v1_evidence_expired_no_authorization_preparation
 wp14_recovery_readiness_decision_at: "2026-09-17T12:01:58.0318796Z"
 wp14_recovery_evidence_temporal_status: within_24_hours_at_decision_only
 wp14_recovery_readiness_decision_integration_status: merged_pr_40
@@ -231,19 +231,33 @@ wp14_local_executor_check_result_post_merge_state_merge_commit: 21dc4cd6c86b3950
 wp14_local_executor_check_result_post_merge_state_merged_at: "2026-09-18T05:48:13Z"
 wp14_local_executor_check_result_post_merge_state_checked_at: "2026-09-18T05:49:33.5257595Z"
 wp14_local_executor_check_result_post_merge_state_evidence_temporal_status: unexpired_at_state_sync_check_only
-current_feature_branch: wp/WP-14-pr44-post-merge-state
-base_main_commit: 21dc4cd6c86b3950c621295fe6037fd9166285d3
-last_commit: 21dc4cd6c86b3950c621295fe6037fd9166285d3
+wp14_pr45_state_sync_integration_status: merged_pr_45
+wp14_pr45_state_sync_merged_head: 9da09ede0be99fb1e9a5adc181e245d095df786f
+wp14_pr45_state_sync_merge_commit: ece52c7a44befe34d61215c19f9fa39ab2af5384
+wp14_v1_evidence_expiry_boundary: "2026-09-18T08:05:01Z"
+wp14_v1_evidence_expiry_checked_at: "2026-09-28T08:44:26.9415628Z"
+wp14_v1_evidence_temporal_status: expired_historical_only
+wp14_evidence_renewal_plan: docs/WP14_FAIL_CLOSED_EVIDENCE_RENEWAL_PLAN_V1.md
+wp14_evidence_renewal_plan_version: 1
+wp14_evidence_renewal_plan_normalized_lf_sha256: 305e8a4eed2cbabb4160ebe65456b7f0ae694eb02d4a07d800d4cfc12029a432
+wp14_evidence_renewal_plan_status: review_only_no_collection_authority
+current_feature_branch: wp/WP-14-expired-evidence-renewal-plan
+base_main_commit: ece52c7a44befe34d61215c19f9fa39ab2af5384
+last_commit: ece52c7a44befe34d61215c19f9fa39ab2af5384
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review this PROJECT_STATE-only synchronization branch; PR #44 is merged. LOCAL_RULE_READY establishes local rule readiness only, not an actual binding record, Authorization or remote readiness. Recheck UTC before later work; at or after 2026-09-18T08:05:01Z preserve existing evidence and consumed claims and prepare only a versioned fail-closed evidence-renewal plan. WP-15 remains unstarted."
+user_action_required: "Review the WP-14 expired-evidence renewal plan feature branch. V1 evidence and consumed claims remain historical and cannot authorize recovery; any new collection contract and remote attempt require separate review and exact approval. WP-15 remains unstarted."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-28: PR #45 was verified MERGED with reviewed head `9da09ede0be99fb1e9a5adc181e245d095df786f`; latest fetched and remote `origin/main` are both `ece52c7a44befe34d61215c19f9fa39ab2af5384`. At `2026-09-28T08:44:26.9415628Z`, V1 identity/preimage evidence was past its immutable `2026-09-18T08:05:01Z` boundary. The versioned, review-only fail-closed renewal plan preserves the old observation, hash, consumed collection claim, failed deployment activation and claim, and all protected evidence. It requires a separately reviewed contract and single-use authority for any new collection, with the existing global lock and claim lineage retained. The current collector is not rerunnable by changing its activation record. PUBLIC and `deployment_enabled=false` remain; no Authorization, identity read, claim, lock, SSH/SCP, remote operation, Cadence, design change, recovery, baseline approval, or WP-15 work occurred. WP-14 remains blocked.
+
+- 2026-09-28: The plan has eight sequential future gates and 17 acceptance criteria; its normalized-LF SHA-256 is `305e8a4eed2cbabb4160ebe65456b7f0ae694eb02d4a07d800d4cfc12029a432`. Ruff, strict mypy for 17 source files, a clean-copy full suite (384 passed, eight remote skips, 56 existing warnings), 368-file secret preflight, 18 security tests, strict dependency audit with no known vulnerabilities, unique state keys, two-document scope, and old evidence/collector/recovery-deployer hashes passed. The live checkout's full suite had two authorization-absence assertion failures because the consumed, ignored deployment authorization remains preserved; no file was removed or changed, and the clean-copy rerun passed. No remote integration was attempted.
 
 - 2026-09-17: Verified PR #35 MERGED at 2026-09-17T07:26:26Z with approved head 90586ee5b487a0a3b1ac876a5f9d9a0f324b193c and latest origin/main a5ebe11a7eaf5b4f36d65009d39fd32841906e7d. From that exact base, branch wp/WP-14-remote-evidence-collection used the user-approved activation record SHA-256 631d6dff580edb449cac6b4d342930428bd49bc7fd3337053c9932737a581a20 for exactly one fixed read-only collector invocation. The durable lineage claim was created before transport and now permanently records this attempt as consumed. The active authorization record was removed after use and is not committed; only its hash is recorded.
 
