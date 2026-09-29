@@ -10,7 +10,7 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_renewal_collection_contract_request_only_review_required
+implementation_status: wp14_renewal_collector_repository_implemented_local_verified
 documentation_status: verified
 integration_status: public_contract_v2_state_sync_merged_pr_35_fresh_preimages_collected
 wp14_public_contract_post_merge_state_status: merged_pr_34
@@ -247,24 +247,43 @@ wp14_evidence_renewal_plan_merge_commit: 9f2172a5a2ba189afb39ba3751528928e168e06
 wp14_renewal_collection_request: docs/approvals/WP14_REMOTE_EVIDENCE_RENEWAL_COLLECTION_REQUEST_V1.md
 wp14_renewal_collection_request_version: 1
 wp14_renewal_collection_request_normalized_lf_sha256: 747ec5d73372f7fc8149f773638a0be106d12698fa4a1b7a45306c49a2374f4a
-wp14_renewal_collection_request_status: ready_for_review_no_implementation_or_execution_authority
-wp14_renewal_collection_generation: collection-renewal-v1_proposed_only_not_instantiated
+wp14_renewal_collection_request_status: merged_pr_47_contract_implemented_repository_only
+wp14_renewal_collection_request_integration_status: merged_pr_47
+wp14_renewal_collection_request_merged_head: 2b6e36511271d111a5e98d8f9f8ed1047c025302
+wp14_renewal_collection_request_merge_commit: 379c5c462604c12ba6429d9dc2c1feaeacfff178
+wp14_renewal_collection_request_merged_at: "2026-09-28T13:56:18Z"
+wp14_renewal_collection_generation: collection-renewal-v1_reserved_not_instantiated
 wp14_renewal_collection_lock_contract: preserve_both_existing_domains_deployment_then_collection_no_new_lock
-wp14_renewal_collection_implementation_status: not_implemented_not_authorized_by_request
+wp14_renewal_collection_implementation: scripts/collect-wp14-renewed-remote-preimages.py
+wp14_renewal_collection_implementation_report: docs/WP14_REMOTE_EVIDENCE_RENEWAL_COLLECTOR_IMPLEMENTATION_V1.md
+wp14_renewal_collection_collector_normalized_lf_sha256: d814d0da7ffc3890274ea24f1b9fc946bf861ec617860c6560cab320f08a3d89
+wp14_renewal_collection_implementation_status: repository_implemented_local_verified_remote_activation_absent
+wp14_renewal_collection_local_tests: "65 passed; synthetic identity, temporary lineage, fake transport only"
+wp14_renewal_collection_full_local_tests: "449 passed; 8 remote skipped; 56 existing warnings; clean tracked-tree copy"
+wp14_renewal_collection_verified_at: "2026-09-28T14:20:55.7201489Z"
+wp14_renewal_collection_activation_status: absent_not_created
+wp14_renewal_collection_claim_status: absent_not_created
+wp14_renewal_collection_evidence_v2_status: absent_not_created
 wp14_renewal_collection_execution_status: blocked_expired_v1_new_exact_authority_absent
-current_feature_branch: wp/WP-14-evidence-renewal-collection-contract
-base_main_commit: 9f2172a5a2ba189afb39ba3751528928e168e06a
-last_commit: 9f2172a5a2ba189afb39ba3751528928e168e06a
+current_feature_branch: wp/WP-14-evidence-renewal-collector
+base_main_commit: 379c5c462604c12ba6429d9dc2c1feaeacfff178
+last_commit: 379c5c462604c12ba6429d9dc2c1feaeacfff178
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-14 renewal collection request and its exact feature HEAD for PR integration. The next implementation gate is repository-only with synthetic fixtures; a later remote attempt still needs a reviewed collector and exact single-use approval. V1 evidence is expired, consumed records remain preserved, and WP-15 is unstarted."
+user_action_required: "Review and merge the WP-14 renewal collector feature. A later run must bind the merged implementation commit, exact collector hash, private predecessor claim digests and current private executor binding in a new exact single-use activation; no remote attempt is authorized now."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-28: Verified GitHub PR #47 MERGED with reviewed request head `2b6e36511271d111a5e98d8f9f8ed1047c025302`, merge/latest fetched and remote main `379c5c462604c12ba6429d9dc2c1feaeacfff178`, merge time `2026-09-28T13:56:18Z`, PUBLIC visibility and a clean starting tree. Reconfirmed request normalized-LF SHA-256 `747ec5d73372f7fc8149f773638a0be106d12698fa4a1b7a45306c49a2374f4a`, then created `wp/WP-14-evidence-renewal-collector` from that exact base. No stale branch was merged or reused.
+
+- 2026-09-28: Added a separate argument-free, operator-only renewal collector and implementation record. Collector normalized-LF SHA-256 is `d814d0da7ffc3890274ea24f1b9fc946bf861ec617860c6560cab320f08a3d89`. It binds the exact request and public-v2 provenance, requires the future closed 19-field activation, acquires the existing deployment lock before the existing collection lock, validates both private predecessor claims and the preserved deployment activation, and durably consumes the fixed `collection-renewal-v1.json` slot before one bounded read-only transport. Closed evidence-v2 output, allowlisted errors, 60-second shared deadline, 32,768-byte combined output, strict UTF-8 and sensitive-field exclusion are enforced. No MCP or generic command surface was added.
+
+- 2026-09-28: Sixty-five focused tests passed with synthetic identity/bindings, temporary ledgers and a local fake SSH process only. They cover success, exact lock order and compatible Windows exclusion, immutable lineage, create-new/fsync/launch/timeout/expiry failure, collision/concurrency/no-retry, malformed/hostile output, size and sensitive-data bounds, and V1/V2 preservation. Ruff, strict mypy for 17 source files, the 373-file secret preflight, all 18 dedicated security tests and the strict locked dependency audit passed. A clean tracked-tree copy without live ignored approvals passed the full local suite: 449 passed, eight deliberately skipped real integrations and 56 existing deprecation warnings. No real identity, Authorization, claim, lock, SSH/SCP, remote collection/deployment, Cadence/SKILL/simulation or OA/ADE/design/PDK operation occurred. PUBLIC and `deployment_enabled=false` remain, WP-14 stays blocked, and WP-15 is unstarted.
 
 - 2026-09-28: Renewal-request documentation acceptance passed: 261 unique metadata keys with only allowed current-state updates, complete prior-history preservation, eight normalized-LF provenance digests, all eleven ordered asset/presence rules, 20 sequential criteria (14 documentary and six future-only), no BOM, disabled lineage, and exactly two changed documents. Eight fixed local authorization/claim/lock records retained their pre-run presence and byte hashes; raw contents and identities were not output or committed. Ruff, strict mypy for 17 source files, the 369-file secret preflight, all 18 dedicated local security tests and strict locked dependency audit passed with no known vulnerabilities. The full suite and all collector/deployer/identity/remote tests were not rerun for this documentation checkpoint. Feature commit and remote SHA are reported after push; no remote readiness or scientific baseline is established.
 
@@ -368,6 +387,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-28: PR #47 integrated the exact renewal request into main as `379c5c462604c12ba6429d9dc2c1feaeacfff178`. This feature implements the new fixed collector and synthetic/fake-transport tests only. The implementation cannot run without a later reviewed activation bound to its merged commit, exact collector hash, private predecessor claim byte hashes and current executor binding. Existing V1 evidence, both consumed predecessor claims, both operational lock files and the consumed deployment activation remain byte-preserved; the renewal activation/claim/V2 evidence remain absent. No actual identity or remote operation occurred, deployment remains disabled, scientific blockers are unchanged, and WP-15 is not started.
 
 - 2026-09-18: Verified PR #44 as MERGED at `2026-09-18T05:48:13Z`, with reviewed head `8ddf4719016d22227af7ea77e4431c0a8566c6d8` and exact latest fetched/remote `origin/main` `21dc4cd6c86b3950c621295fe6037fd9166285d3`. At `2026-09-18T05:49:33.5257595Z`, the existing evidence remained before its immutable `2026-09-18T08:05:01Z` boundary, so this run created `wp/WP-14-pr44-post-merge-state` from that merge commit and changes only PROJECT_STATE.md. The prior PR #44 integration record and all protected records remain unchanged; awaiting_user_merge refers only to this state checkpoint.
 
