@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "95881250a68414cfeef9f27cd00df874f2fe9d765456c9b8b027dc520a42319d",
+  "operation_ids": [
+    "phaseo-candidate-wideband-ac-v1-deploy",
+    "phaseo-candidate-wideband-ac-v1-run"
+  ],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/candidate-wideband-ac-v1",
+  "prior_scalar_result_sha256": {
+    "baseline": "416e6607affef803a87892a314d59733b0b5e839d86410926c08eb3c7476bce4",
+    "midpoint": "e1a6cefaf68d3bd73008bba35e57ab59bc70919f5bb64b8e7894e1cf304b632f"
+  },
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "candidate_bias_mv": [
+    320,
+    702
+  ],
+  "vdd_mv": 1000,
+  "input_vcm_mv": 500,
+  "input_ac_differential_mv": 1000,
+  "frequency_start_hz": 10,
+  "frequency_stop_hz": 100000000,
+  "points_per_decade": 10,
+  "model_section": "NN",
+  "temperature_c": 27,
+  "spectre_attempt_count_before": 6,
+  "files": {
+    "run.sh": "4118f89c566a3563e592d0bea9df67ba7cf5f04b83cdde14970bed61f1986692",
+    "ac_helper.py": "d4634c5cd9a43521aae12845a8bde9a4baa1769957eb6b134c9d1e4799a87d35"
+  }
+}
