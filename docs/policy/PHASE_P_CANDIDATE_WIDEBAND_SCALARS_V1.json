@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1c49ae5721fab85933151e161d6e8bd18f3f6a5c917359363faba7c88e9eb63a",
+  "operation_ids": [
+    "phasep-candidate-wideband-scalars-v1-deploy",
+    "phasep-candidate-wideband-scalars-v1-read"
+  ],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/candidate-wideband-scalars-v1",
+  "wideband_result_sha256": "e2c51d5cf26f3546b4c21c458e9456dcea217ab47f33b10eb83d1ca9c32c33f8",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "psf_tree_sha256": "3354ad0c32abdd01692471e415d2deef6b9cfd51d9a476a210353ec074a5c757",
+  "psf_bytes": 13805,
+  "frequency_start_hz": 10,
+  "frequency_stop_hz": 100000000,
+  "spectre_attempt_count": 7,
+  "new_simulation": false,
+  "files": {
+    "run.sh": "909bfc9cf91f2b9bd9dcdd29afed945af7283f721095524d56d6aebb16938e4e",
+    "scalar_helper.py": "9c5ec1837814c90b656c6267357671f6ac7ac70608b59b8e8cda46f7aba8bba6",
+    "extract.ocn": "9c3fb5c4b82a8bbb96c5b1c021fc1fc568d4d05c3d41c91d2c3c0bc88bd91069"
+  }
+}
