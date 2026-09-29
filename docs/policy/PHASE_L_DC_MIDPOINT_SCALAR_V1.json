@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "754a0e625fb89aebb14f2048f0b699e41c7ef229edecfe9cb1a0316102f92589",
+  "operation_ids": ["phasel-dc-midpoint-scalar-v1-deploy", "phasel-dc-midpoint-scalar-v1-read"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/dc-midpoint-scalar-v1",
+  "midpoint_result_sha256": "bed3104ed38375ea3328e3473691155d656a8ce2b95e105f9c0d5bce22bb03ac",
+  "prior_scalar_result_sha256": "9c95e9ead00c4339632afcc5f672f9edefc5eef417ebbc4be9a1436f2633ed79",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "psf_tree_sha256": "5b9dd83b5b2ce2fc3d5ead2800a3c9aa125c7799eada2defcc072f644735d506",
+  "psf_bytes": 3971,
+  "spectre_attempt_count": 4,
+  "new_simulation": false,
+  "files": {
+    "run.sh": "32b581c3f7f2380f6b0df01a101f370c8e02974cf3af03fcb31a8f6246c23489",
+    "scalar_helper.py": "a787222df72e93f040949a975d468b424bd0777ea03dbc3c719b31ede3844772",
+    "extract.ocn": "348bcabee87d991c931c2760532b10c548b417d2fe449eb301987fb4f0c1aef2"
+  }
+}

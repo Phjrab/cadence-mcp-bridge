@@ -1,0 +1,43 @@
+; Read the existing midpoint DC PSF. No netlist, simulation, or OA write.
+resultPath = "/home/buet/cds_work/.cadence_mcp/wp14-dc-midpoint-v1/psf"
+outputPath = "/home/buet/cds_work/.cadence_mcp/wp14-dc-midpoint-scalars-v1/scalars.txt"
+
+procedure(mcpDcScalar(name)
+  let((data vec)
+    data = getData(name)
+    unless(data data = getData(strcat("/" name)))
+    cond(
+      (numberp(data) data)
+      (drIsWaveform(data)
+        vec = drGetWaveformYVec(data)
+        if(equal(drVectorLength(vec) 1) then drGetElem(vec 0) else nil)
+      )
+      (t nil)
+    )
+  )
+)
+
+let((port vop vom vdd vp vm)
+  port = outfile(outputPath)
+  unless(port exit(1))
+    unless(openResults(resultPath) close(port) exit(1))
+    unless(selectResult('dc) close(port) exit(1))
+    vop = mcpDcScalar("Vop")
+    vom = mcpDcScalar("Vom")
+    vdd = mcpDcScalar("VDD")
+    vp = mcpDcScalar("Vp")
+    vm = mcpDcScalar("Vm")
+    unless(numberp(vop) && numberp(vom) && numberp(vdd) &&
+      numberp(vp) && numberp(vm)
+      close(port)
+      exit(1)
+    )
+    fprintf(port "MCP_DC_MIDPOINT_SCALAR|Vop|%L\n" vop)
+    fprintf(port "MCP_DC_MIDPOINT_SCALAR|Vom|%L\n" vom)
+    fprintf(port "MCP_DC_MIDPOINT_SCALAR|VDD|%L\n" vdd)
+    fprintf(port "MCP_DC_MIDPOINT_SCALAR|Vp|%L\n" vp)
+    fprintf(port "MCP_DC_MIDPOINT_SCALAR|Vm|%L\n" vm)
+  fprintf(port "MCP_DC_MIDPOINT_SCALAR_COMPLETE|true\n")
+  close(port)
+  exit(0)
+)
