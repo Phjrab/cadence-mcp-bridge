@@ -173,9 +173,9 @@ def _preflight(policy: dict[str, Any], old_policy: dict[str, Any], *, deploy: bo
     v1._ssh(
         "set -e; test ! -L "
         + WORKLIB
-        + '; test "$(realpath '
+        + '; test "$(cd '
         + WORKLIB
-        + ')" = '
+        + ' && pwd -P)" = '
         + WORKLIB
         + '; test "$(stat -c %U:%G '
         + WORKLIB
