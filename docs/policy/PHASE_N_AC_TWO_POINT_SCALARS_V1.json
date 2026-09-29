@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1b5ba47186f11f42d42217de0a69ba201e62b883d303588bbca989ec9f99e375",
+  "operation_ids": [
+    "phasen-ac-two-point-scalars-v1-deploy",
+    "phasen-ac-two-point-scalars-v1-baseline",
+    "phasen-ac-two-point-scalars-v1-midpoint"
+  ],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/ac-two-point-scalars-v1",
+  "ac_result_sha256": {
+    "baseline": "4d121c91cd1c1d5503791b9d64e7228215d19033455087d152458d4cd9273be7",
+    "midpoint": "5c68c088c5f8a345e68c3c9709b1010ecf3d26153145016d707b835739597a55"
+  },
+  "psf_tree_sha256": {
+    "baseline": "dab0a9889bbaa3bc4d78a3c9dbbba0cf0cb4258de66190e5944bcf14d3fd870e",
+    "midpoint": "ebe6b713b0280ad03a57cd3638e9b772474bbe563e616a6173162677c40af5b7"
+  },
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "frequencies_hz": [
+    1000,
+    10000
+  ],
+  "spectre_attempt_count": 6,
+  "new_simulation": false,
+  "files": {
+    "run.sh": "fe9fa2ef1585c45a31d99900130bbcfb1c7303d4e5474fadfac70af55d36eafd",
+    "scalar_helper.py": "38e8c484ae845839fb7acdb29c696ce5a70ae5e42d8fa6915452b61f30191648",
+    "extract-baseline.ocn": "51b7e88b5557c0bdf6a3a154c332275eda1730d193a3a7254123af7007240db8",
+    "extract-midpoint.ocn": "d6c56083647729ceb0c1ab2dd6e44d077c1afe7bb2687bc83fe6810119251629"
+  }
+}
