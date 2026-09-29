@@ -4,15 +4,15 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: WP-15
+current_wp: WP-16
 current_status: partial
-last_completed_wp: WP-13
-next_wp: WP-15
+last_completed_wp: WP-15
+next_wp: WP-16
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: wp15_pdk_abstraction_design_pending_review_no_execution_authority
+integration_status: wp16_ade_sweep_inventory_pending_review_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -305,24 +305,44 @@ wp15_public_schema: docs/schemas/technology-adapter-v1.schema.json
 wp15_public_schema_normalized_lf_sha256: c08e780bbbd02218a332c68e31f103e418e50caf6952862204ea3587322fce18
 wp15_gpdk090_regression_seed: docs/technology/gpdk090-v4-6-regression.json
 wp15_gpdk090_regression_seed_normalized_lf_sha256: 65d08539719e2457943e80a8a11b523f26beca3c9bbc1f8781c325189ca057dd
-wp15_design_status: repository_only_verified_pending_review
+wp15_design_status: repository_only_merged_pr_54_no_execution_authority
+wp15_integration_status: merged_pr_54
+wp15_merged_head: a1a342fe7fdcb24d2b72fdc92710ee5bb91eaf1c
+wp15_merge_commit: 239b1fc7e4fd0d59e1e17d089d2a16d16856dc13
+wp15_merged_at: "2026-09-29T08:02:52Z"
 wp15_schema_validation: "2 synthetic positive and 10 fail-closed negative cases passed"
 wp15_full_local_tests: "542 passed; 8 remote integrations skipped; 56 existing warnings; clean tracked-tree clone"
 wp15_security_validation: "381-file secret preflight; 18 security tests; strict dependency audit no known vulnerabilities"
 wp15_execution_authorized: false
 wp15_wp14_blocker_carried: true
 wp15_proprietary_pdk_content_included: false
-current_feature_branch: wp/WP-15-pdk-abstraction-design
-base_main_commit: bda274650384e32553bc115a681b01f271abf0e7
-last_commit: bda274650384e32553bc115a681b01f271abf0e7
+wp16_inventory_report: docs/WP16_ADE_SWEEP_CAPABILITY_INVENTORY_V1.md
+wp16_inventory_report_normalized_lf_sha256: e2c7786ce0310a0ac121ce86cc191f5dccaffc0feb36fbe4b7cc1b495d5c901f
+wp16_inventory_status: repository_only_pending_review_current_remote_unverified
+wp16_document_validation: "unique state keys; required inventory sections; three-file documentation scope; report SHA-256 verified"
+wp16_full_local_tests: "542 passed; 8 remote integrations skipped; 56 existing warnings; clean tracked-tree clone"
+wp16_security_validation: "382-file secret preflight; 18 security tests; strict dependency audit no known vulnerabilities"
+wp16_remote_probe_performed: false
+wp16_parameterized_execution_authorized: false
+wp16_sweep_execution_authorized: false
+wp16_wp14_blocker_carried: true
+current_feature_branch: wp/WP-16-ade-sweep-capability-inventory
+base_main_commit: 239b1fc7e4fd0d59e1e17d089d2a16d16856dc13
+last_commit: 239b1fc7e4fd0d59e1e17d089d2a16d16856dc13
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-15 documentation/schema feature branch for integration. WP-14 remains blocked; any actual local checker, collection Authorization, PDK onboarding, adapter activation, remote or Cadence execution requires a separate exact approval."
+user_action_required: "Review the WP-16 repository-only capability inventory feature branch for integration. WP-14 scientific baseline and fresh remote evidence remain blocked; any live ADE/PSF probe, local checker, collection Authorization, deployment, parameterized run or sweep requires a separately scoped exact approval."
 ```
+
+## WP-16 checkpoint
+
+- 2026-09-29: Verified GitHub PR #54 MERGED with reviewed WP-15 head `a1a342fe7fdcb24d2b72fdc92710ee5bb91eaf1c` as latest fetched and remote main `239b1fc7e4fd0d59e1e17d089d2a16d16856dc13` at `2026-09-29T08:02:52Z`. The user then explicitly requested WP-16. This dedicated branch records a repository-only matrix of fixed profile submission, historical read-only ADE introspection, absent actual PSF extraction, and absent sweep/state-driven execution. Current runner 0.19.0 is repository-side only; remote 0.18.0 is the last historical observation. No fresh identity/claim/preflight, remote probe, Cadence run, simulation, sweep, profile/PDK/design write or new authority is claimed. WP-14's scientific and evidence blockers remain; PUBLIC visibility and `deployment_enabled=false` are unchanged.
+
+- 2026-09-29: WP-16 repository-only acceptance passed: the report separates fixed repository interfaces, dated real evidence and unverified capabilities; records current single-operation limits versus unset sweep budgets; and defines fail-closed prerequisites without proposing a generic execution surface. State-key uniqueness, report sections and SHA-256, three-file documentation-only scope and `git diff --check` passed. Ruff and strict mypy for 17 source files passed. A clean tracked-tree clone without preserved operational approvals passed 542 local tests with eight remote integrations skipped and 56 existing warnings. Current-tree secret preflight scanned 382 files; 18 security tests and the strict locked dependency audit passed with no known vulnerabilities. No remote or Cadence operation occurred; branch review/merge and independent WP-14/real capability gates remain pending.
 
 ## WP-15 checkpoint
 
