@@ -6,6 +6,8 @@ remote/phase-campaign/role-v2/role_v2_helper.py text eol=lf
 remote/phase-campaign/role-v3/run.sh text eol=lf
 remote/phase-campaign/role-v3/role_v3_helper.py text eol=lf
 remote/phase-campaign/role-v3/role-v3-diagnostic.il text eol=lf
+remote/phase-campaign/role-v4/run.sh text eol=lf
+remote/phase-campaign/role-v4/role_v4_helper.py text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
