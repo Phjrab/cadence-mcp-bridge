@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "8ce8005a53fb4a25f294671e3c3aa7f0e0dafe7ddb952a95a73c1a1f06e427c6",
+  "operation_ids": ["phaseb-oa-facts-v7-deploy", "phaseb-oa-facts-v7-read"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/role-v7",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "v6_files": {
+    "run.sh": "39b9726c2680f2f45139567805e656f5d069a9308b89410412ad2f94cbd4c9b6",
+    "role_v6_helper.py": "2740de59da2cd99ec64163f00aa503dda613e608dd837f0b4610027d71560681"
+  },
+  "files": {
+    "run.sh": "770fa465457f1b062c1070089a81b0f790d19886a9fedaf616883335c24add2b",
+    "oa_facts_v7.py": "d3f48455e7067950fe42261706f363ec0a18258792b8f876030958e6226d530c",
+    "oa-facts-v7.il": "83709af000e607cbe6f22cf8b7874fe973d937d743f4be12fa2e3bb7d6b95a80"
+  }
+}
