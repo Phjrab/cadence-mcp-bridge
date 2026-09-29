@@ -73,3 +73,5 @@ def test_preflight_uses_nested_role_snapshot_contract() -> None:
     assert 'snapshot.get("locks") != []' in operator
     assert ' && pwd -P)" = ' in operator
     assert "realpath" not in operator
+    assert 'v1._ssh("test ! -e " + RUNTIME + " && test ! -L " + RUNTIME)' in operator
+    assert 'v1._ssh("test -d " + RUNTIME' not in operator
