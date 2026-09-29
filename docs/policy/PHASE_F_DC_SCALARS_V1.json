@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "010a5b8439fd75fc779b49d12b4c87a4db96e68db09a72133f922602e4a09abe",
+  "operation_ids": ["phasef-dc-scalars-v1-deploy", "phasef-dc-scalars-v1-read"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/scalar-v1",
+  "dc_v2_files": {
+    "run.sh": "8f72226d983170b4f87ca0c03f79826b4af81a57ca65878660958ad64f1e7ef8",
+    "dc_helper.py": "d5469ffac5bcd2ba8ec96025fa49369fcc2952d363bf3776f649c1f850147e05"
+  },
+  "baseline_result_sha256": "251c6bac6674fe97360a280d5c718ed99557b93e6f3ab1e685dbdb360e451091",
+  "candidate_result_sha256": "560a44dd7475a213e96827bf0d63b05d30dff0263ce0d60c60aaa43746586725",
+  "psf_tree_sha256": {
+    "baseline": "3718f6ab9c09da4e0d34a7995c46704b42e7d3dc1b1c827b3d355de2d0a903c0",
+    "candidate": "4e6e85cce1836659a629599aec7b8e15a339aa8886c364f7c3443ba8d26d5873"
+  },
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "files": {
+    "run.sh": "b28f3bdd4023bbf47006640bc6e8eb456090131ac41d7bba1d9905d3481f7b82",
+    "scalar_helper.py": "69b029cc2ed5ded37dc0463ae2d20ae55915d4f784e9a5e52f8407fddf40ef4a",
+    "extract.ocn": "0e86faf2937fdcd994699988402e905e79dc4a26bf21e6d8b2b317e514bce8d2"
+  }
+}
