@@ -15,6 +15,11 @@ Before doing any work, read these files in full:
 
 `CODEX_MASTER_PROMPT.md` is the authoritative execution contract.
 
+For questions, blockers, and completion reports, also read
+`docs/interaction/GOALS_FACTS_AND_APPROVALS.md`. It separates user design choices,
+facts the agent must investigate within existing authority, and separately approved
+execution. It does not grant access or relax any approval gate.
+
 Do not read or execute the full long-term roadmap as a single run instruction. Treat
 `docs/CURRENT_PHASE_PLAN.md` as the bounded phase plan and consult only the roadmap sections
 needed to understand or verify the active WP.
