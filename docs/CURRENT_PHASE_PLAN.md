@@ -22,13 +22,18 @@ authority. The imported package templates and archive references are inactive by
 The user explicitly selected **WP-16 — ADE and Sweep Capability Inventory** after PR #54
 integrated the repository-only WP-15 design as
 `239b1fc7e4fd0d59e1e17d089d2a16d16856dc13`. WP-13's audit was merged through PR #19 as
-`b12cff904fe31a1d68490836c1fe6765734b9bf0`. WP-14 remains blocked: its
-scientific baseline and fresh remote evidence are unconfirmed, and its merged
-local checker has not been actually invoked. The WP-16 selection permits a
-repository-only capability inventory, not an unscoped remote read-only probe,
-parameterized execution, sweep, or WP-14 baseline promotion. See
-`docs/WP16_ADE_SWEEP_CAPABILITY_INVENTORY_V1.md`. Other `ICF-*`
-tasks remain planning references, not execution instructions.
+`b12cff904fe31a1d68490836c1fe6765734b9bf0`. WP-16's repository-only inventory
+was merged through PR #55 as `b2239f5743034aa019d33dd29f6c1e4da230d17e`;
+the active intent/fact/approval interaction rule was merged through PR #56 as
+`85706385cfb82b60d829f44c1ac197339eebbafd`. WP-14 remains blocked: its
+scientific baseline and fresh remote evidence are unconfirmed. A separately
+approved one-time renewal local preflight returned `LOCAL_PREFLIGHT_READY` on
+2026-09-29; it established only local prerequisites at that instant, not remote
+or circuit facts. See `docs/WP16_ADE_SWEEP_CAPABILITY_INVENTORY_V1.md` and
+`docs/interaction/GOALS_FACTS_AND_APPROVALS.md`. No unscoped remote probe,
+parameterized execution, sweep, or WP-14 baseline promotion follows from these
+merges or the local result. Other `ICF-*` tasks remain planning references, not
+execution instructions.
 
 ## Phase objective
 
