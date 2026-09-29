@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "adapter_id": "gpdk090-v4-6-regression",
+  "lifecycle": "draft",
+  "execution_authorized": false,
+  "technology": {
+    "technology_id": "gpdk090",
+    "official_release": "4.6",
+    "role": "regression_reference"
+  },
+  "source_of_truth": {
+    "status": "unverified",
+    "pdk_manifest_sha256": null,
+    "documentation_revision_ref": null,
+    "license_policy_ref": null,
+    "approval_ref": null
+  },
+  "device_roles": {},
+  "models": {
+    "simulator_id": "spectre",
+    "observed_process_corner_ids": ["NN"],
+    "qualified_process_corner_ids": [],
+    "qualified_rc_corner_ids": [],
+    "binding_ref": null,
+    "status": "historical_only"
+  },
+  "layers": {
+    "routing_role_ids": [],
+    "via_role_ids": [],
+    "dbu_per_micron": null,
+    "manufacturing_grid_um": null,
+    "binding_ref": null,
+    "status": "unverified"
+  },
+  "verification": {
+    "drc": { "backend_id": null, "deck_binding_ref": null, "status": "unverified" },
+    "lvs": { "backend_id": null, "deck_binding_ref": null, "status": "unverified" },
+    "pex": { "backend_id": null, "deck_binding_ref": null, "status": "unverified" }
+  },
+  "io_stream": {
+    "pad_binding_ref": null,
+    "stream_map_binding_ref": null,
+    "status": "unverified"
+  },
+  "evidence_refs": ["actual-profile-state1-historical"]
+}
