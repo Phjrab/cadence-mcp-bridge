@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "88226087cc47b176fe47b31dc1f8435ea0e7ebeb05cbc1d2dc095be15664e9e4",
+  "operation_ids": ["phaseb-role-v5-deploy", "phaseb-role-v5-read"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/role-v5",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "v4_files": {
+    "run.sh": "1d004a68cd4cadf712f07af1661d9575a22a3cf41d1b8ace703c4bb9d991d1bb",
+    "role_v4_helper.py": "8d3067a17c4d6cd66b64a831f01cf6a48e468e38805e2a9d6e7abd17a8928c86"
+  },
+  "files": {
+    "run.sh": "6cf07d5fc06b63e7802ce1a9331ffeb1c147f9b785efd7de854276db07b120ca",
+    "role_v5_helper.py": "2dd6eb59e687ec6e6e94acf2a23088838460dfbffdd093dd9bc16c595d8cc8ff"
+  }
+}
