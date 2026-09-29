@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "b9e48b62cda8d0b354a97d86c8dbe7f2cdeb4c7cfe02edc890666d4fa019922e",
+  "operation_id": "phasej-ac-scalar-local-recovery-v1",
+  "v2_scalar_files": {
+    "run.sh": "0e8c5deb9e7fb0fb1fbf31e6dc4ee8479e72dbc0888c95d726d4a739e8a1d91a",
+    "scalar_helper.py": "19de7d5f1c704dff2e9539a0ed7e296183b3f44d7a2fde2fe7c69b46a29b14c3",
+    "extract.ocn": "4c8b2e9e671c5a142f797bf810a292fa20c75dd2ca675c703d2000c131c0fa60"
+  },
+  "private_artifact_sha256": {
+    "scalars.txt": "c42b7b72aaa7dd8bfd15b40a569b29ee94cd43cd1315886f69bf395f392dd77d",
+    "before.json": "328a81742fb811764b51b387da0638facb48b27025ded1bfbe538607fc34f466",
+    "ocean.log": "5318effdf51c744f82a3e44948bd945ceeecb89d54a91f14ec2b88fc16e5b7ce",
+    "attempt-status.txt": "3528516a2442265db26599ad9491046363d6200a97285c51ea6eb717de5211d0",
+    "result.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "ac_psf_file_sha256": {
+    "ac1.ac": "802adcb41b6d70f61ece8df85de264dd093937a215ae4f77d0fec1f42930d4f4",
+    "logFile": "18df4d2fe3061e31f5d57e476ebef65b2aa0cbaac6aa1ab44bb661b7f74e8071"
+  },
+  "ac_psf_tree_sha256": "f1ddc9b70069055babebdb12ee3b46265b70396020223abfaff71bfcaad8b3e6",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "frequencies_hz": [
+    1000,
+    10000
+  ],
+  "spectre_attempt_count": 3,
+  "new_eda_execution": false,
+  "remote_write": false
+}
