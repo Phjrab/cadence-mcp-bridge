@@ -12,7 +12,7 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: wp14_renewal_activation_request_merged_pr_50_no_execution_authority
+integration_status: wp14_renewal_local_preflight_pending_review_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -280,19 +280,34 @@ wp14_renewal_activation_request_integration_status: merged_pr_50
 wp14_renewal_activation_request_merged_head: b1f32e941d4410158ea4ca5a92c8897656e226a7
 wp14_renewal_activation_request_merge_commit: 6a931958998899118443924e735557d4bd6acafb
 wp14_renewal_activation_request_merged_at: "2026-09-29T05:17:48Z"
-current_feature_branch: wp/WP-14-renewal-activation-post-merge-state
-base_main_commit: 6a931958998899118443924e735557d4bd6acafb
-last_commit: 6a931958998899118443924e735557d4bd6acafb
+wp14_renewal_activation_post_merge_state_status: merged_pr_51
+wp14_renewal_activation_post_merge_state_merged_head: 577968abf027d76df66ac2ded5df17862d24a582
+wp14_renewal_activation_post_merge_state_merge_commit: f6917a0eb49239f81cdf034df68d2254069cfc22
+wp14_renewal_activation_post_merge_state_merged_at: "2026-09-29T05:44:30Z"
+wp14_renewal_local_preflight: scripts/verify-wp14-renewal-local.py
+wp14_renewal_local_preflight_report: docs/WP14_RENEWAL_LOCAL_PREFLIGHT_IMPLEMENTATION_V1.md
+wp14_renewal_local_preflight_normalized_lf_sha256: 6cc1d22981dd2cbf53a58a747093c14e22eef3a2733b9490829b032b152f309b
+wp14_renewal_local_preflight_status: repository_implemented_isolated_tests_passed_actual_execution_not_authorized
+wp14_renewal_local_preflight_tests: "93 synthetic local checks and 18 security tests passed; full suite excluded to avoid forbidden collector/deployer imports and execution"
+wp14_renewal_local_preflight_actual_execution_count: 0
+wp14_renewal_local_preflight_private_inputs: not_read_not_output_not_persisted
+current_feature_branch: wp/WP-14-renewal-local-preflight
+base_main_commit: f6917a0eb49239f81cdf034df68d2254069cfc22
+last_commit: f6917a0eb49239f81cdf034df68d2254069cfc22
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge this PROJECT_STATE-only post-merge synchronization branch if acceptable. The merged request is not execution authority; separate exact single-use authorization and private local preflight remain required."
+user_action_required: "Review the standalone renewal local preflight implementation and explicitly approve its PR integration if acceptable. Actual private checker execution and any later exact collection Authorization remain separate gates; neither is performed or authorized by this repository-only checkpoint."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-29: Verified PR #51 merge/latest fetched and remote main `f6917a0eb49239f81cdf034df68d2254069cfc22`, PUBLIC visibility and a clean tree; created `wp/WP-14-renewal-local-preflight` from that exact base. Added an independent no-argument, operator-only local checker bound to the unchanged renewal request, activation request and collector source. It has a ten-second total budget with a termination reserve, 512-byte closed success/code output, memory-only username/MachineGuid checking, fixed predecessor/absence checks and existing deployment-then-collection lock compatibility without artifact creation. Existing collectors/deployers are neither modified nor imported/executed. The actual checker, identity/claim providers and private ledgers are not exercised; all dynamic tests use synthetic identity, temporary files and a fake local child. No Authorization, claim, lock, V2 evidence, SSH/SCP, remote collection/deployment, Cadence or design operation occurs. WP-14 remains blocked, deployment disabled and WP-15 unstarted; prior absence/readiness fields remain historical, not freshly observed.
+
+- 2026-09-29: Renewal local preflight acceptance passed 93 new isolated cases plus 18 dedicated security tests (111 total), including default ten-second termination, 512/513-byte boundaries, private-output suppression, fixed two-lock contention, collision rejection and fixture-byte preservation. Ruff passed repository-wide; strict mypy passed 18 files including the new checker. Secret preflight passed 378 repository files; the security gate repeated all 18 cases and the locked dependency audit reported no known vulnerabilities. The full suite was deliberately not invoked because existing collector/deployer imports and execution are forbidden in this run. No actual checker/identity/ledger/remote acceptance is claimed. Only the new checker, its two test files, its implementation document and PROJECT_STATE change; prior history and protected source/contract/evidence hashes are preserved. Commit and remote SHA are recorded in the completion report after feature-only push.
 
 - 2026-09-29: Verified PR #50 MERGED with reviewed request-only head `b1f32e941d4410158ea4ca5a92c8897656e226a7`, merge commit/latest fetched and remote main `6a931958998899118443924e735557d4bd6acafb`, merged at `2026-09-29T05:17:48Z`. This dedicated feature branch synchronizes only `PROJECT_STATE.md`. The request grants no Authorization or execution authority; WP-14 remains blocked and WP-15 unstarted. PUBLIC visibility and `deployment_enabled=false` were reverified. Private identity, claim, lock and V2-evidence state were not inspected or changed; historical absence entries are retained as prior records, not fresh preflight. No collector, SSH/SCP, remote operation, Cadence or design action occurred.
 
