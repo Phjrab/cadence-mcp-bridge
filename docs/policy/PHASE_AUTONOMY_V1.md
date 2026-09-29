@@ -51,7 +51,7 @@ not a request for the same user approval again.
 
 The WP-14 role discovery extension is separately bound by
 `docs/policy/PHASE_B_ROLE_V1.json` and `scripts/phase_b_role_campaign.py`.
-It inherits the original eight-hour clock and preserves the earlier uncertain ADE
+It preserves the original campaign start record and the earlier uncertain ADE
 inspection record. Its two one-shot operations deploy three exact files to a new
 managed version directory and run a names-only, read-only OA role probe. It cannot
 apply a bias, run Spectre, or establish numeric VDD/VCM/load values. Those
@@ -66,11 +66,14 @@ rules remain independent boundaries.
 
 ## Campaign ceilings
 
-One active EDA job; eight elapsed campaign hours; 100 Spectre attempts, 20 DRC,
+One active EDA job; 100 Spectre attempts, 20 DRC,
 20 LVS, 10 PEX; three modifications of the same code change; two communication
 retries per fixed read; 5 GiB new results; managed disk free space at least the
 greater of 2 GiB and ten percent. Paid resources: zero. Usage accumulates across
-phases and resumes. The current operator implementation enforces its eight-hour
-read campaign and per-operation retries; no simulation or deployment API is
-available in that implementation. Later typed implementations must enforce the
-corresponding cumulative ceilings before activation.
+phases and resumes. The user explicitly removed the elapsed-time ceiling on
+2026-09-30. `docs/policy/PHASE_ELAPSED_LIMIT_V2.json` binds that single change to
+the original campaign digest through a private delegation record. The original
+`started-at.json` and V1 policy digest remain unchanged as historical evidence;
+they do not reset the other budgets or consumed claims. The operator still enforces
+per-operation retries. Later typed implementations must enforce the remaining
+cumulative ceilings before activation.

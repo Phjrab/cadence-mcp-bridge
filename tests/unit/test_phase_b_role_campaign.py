@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib
 import json
+import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,51 @@ def test_manifest_matches_reviewed_bytes_and_original_campaign() -> None:
     manifest = phase_b._manifest_bytes(policy)
     assert b"\r" not in manifest
     assert manifest.count(b"\n") == len(phase_b.LOCAL_FILES)
+
+
+def test_expired_historical_clock_allows_new_delegated_operation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    parent_digest = phase_b._sha(
+        phase_b._canonical(json.loads(phase_b.parent.POLICY.read_text(encoding="utf-8")))
+    )
+    (tmp_path / "started-at.json").write_text(
+        json.dumps(
+            {
+                "at": (datetime.now(UTC) - timedelta(hours=12)).isoformat(),
+                "policy_sha256": parent_digest,
+            }
+        ),
+        encoding="utf-8",
+    )
+    policy = json.loads(phase_b.POLICY.read_text(encoding="utf-8"))
+    digest = phase_b._sha(phase_b._canonical(policy))
+    delegation = tmp_path / "phase-b-delegation.json"
+    delegation.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "campaign_id": "AUTO-PHASE-01",
+                "parent_policy_sha256": parent_digest,
+                "policy_sha256": digest,
+                "user_delegation": "explicit-in-current-task",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(phase_b.parent, "_load_authority", lambda: parent_digest)
+    monkeypatch.setattr(phase_b.parent, "_state_root", lambda: tmp_path)
+    monkeypatch.setattr(phase_b, "DELEGATION", delegation)
+    calls = iter((b"same-head\n", b"same-head\n", b""))
+    monkeypatch.setattr(
+        phase_b,
+        "_command",
+        lambda _argv: subprocess.CompletedProcess(_argv, 0, next(calls), b""),
+    )
+    observed_policy, observed_digest, observed_root = phase_b._authority()
+    assert observed_policy == policy
+    assert observed_digest == digest
+    assert observed_root == tmp_path
 
 
 def test_recovery_rejects_unexpected_stage_file(monkeypatch: pytest.MonkeyPatch) -> None:

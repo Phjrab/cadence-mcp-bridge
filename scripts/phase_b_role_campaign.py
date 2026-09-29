@@ -1,6 +1,6 @@
 """Fixed, journaled WP-14 role discovery under the existing phase campaign.
 
-This operator entry point adds one versioned deployment and one read. It inherits
+This operator entry point adds one versioned deployment and one read. It preserves
 the original campaign clock and delegation; it does not reset legacy claims.
 """
 
@@ -11,7 +11,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -90,8 +90,8 @@ def _authority() -> tuple[dict[str, Any], str, Path]:
     except (KeyError, TypeError, ValueError) as exc:
         raise PhaseBError("BLOCKED_UNCERTAIN_STATE: invalid campaign clock") from exc
     now = datetime.now(UTC)
-    if start > now or now - start > timedelta(hours=8):
-        raise PhaseBError("BUDGET_REACHED: original eight-hour clock")
+    if start > now:
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: original campaign clock is in the future")
 
     policy = parent._read_json(POLICY)
     if policy != {
