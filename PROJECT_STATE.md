@@ -6,6 +6,11 @@ repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
 current_status: blocked
+auto_phase_01_status: partial_policy_adapter_local_verified_pr_not_created
+auto_phase_01_policy: docs/policy/PHASE_AUTONOMY_V1.md
+auto_phase_01_base_main: 3aa1872724ceb477698c76f73eb1a21f6111f9c4
+auto_phase_01_wp14_readonly_status: identity_verified_ade_result_blocked_by_source_locks
+auto_phase_01_dc_status: not_run
 last_completed_wp: WP-16
 next_wp: WP-14
 release_baseline: v1.0.0
@@ -521,6 +526,31 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-29 AUTO-PHASE-01 checkpoint: The user explicitly delegated bounded phase work.
+  PR #57 was confirmed merged at `3aa1872724ceb477698c76f73eb1a21f6111f9c4`;
+  WP-15/WP-16 remain complete and WP-14 remains open. A separate policy adapter and
+  private journal were implemented for two fixed read-only operations without editing
+  legacy claims, authorizations, runner lineage, original circuit or PDK. Four focused
+  synthetic tests, Ruff, mypy, secret preflight and diff checks passed. The wider
+  legacy suite stopped after 197 passes and one existing fake-transport failure,
+  reproduced in the unchanged D: checkout. GitHub CLI fetch/API could not connect;
+  the in-app browser confirmed #57 but has no signed-in session. No transition PR,
+  push, merge or deployment occurred.
+- The fresh VM identity check found user `buet`, host `cadence`, runner `0.18.0`.
+  The fixed ADE read-only inspection returned failure, with no success result;
+  the new journal blocks replay. Read-only diagnosis found two source locks and
+  zero state locks. The original lock files were not removed. A separate fixed
+  baseline audit succeeded: existing profile values remain 300/650 mV; the source
+  snapshot is older than the ADE state. The snapshot's VDD source is 1.0 V and
+  its two input DC sources are 500 mV, but current OA VCM, load, source/state
+  semantic equivalence, and candidate application remain unverified. Raw details
+  and exact fresh file hashes are retained only in private local evidence. No
+  candidate DC simulation or copied-revision mutation was run. The next safe
+  step is to review whether the two source locks belong to an active process,
+  then obtain a lock-free fixed read-only observation; do not delete locks.
+  Campaign clock began `2026-09-29T11:06:47Z`; fixed identity attempts: 1,
+  fixed ADE attempts: 1, fixed baseline audit: 1, Spectre/DC/DRC/LVS/PEX: 0.
 
 - 2026-09-29: PR #50 integrated the exact WP-14 renewal activation request through GitHub as `6a931958998899118443924e735557d4bd6acafb`. This state-only checkpoint records integration without promoting the request to authority, changing private single-use lineage, enabling deployment, or clearing scientific-condition blockers. A separately reviewed exact activation and private local preflight remain future gates; WP-15 is not started.
 

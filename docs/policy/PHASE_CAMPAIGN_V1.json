@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "ssh_alias": "cadence-vm",
+  "remote_user": "buet",
+  "remote_host": "cadence",
+  "managed_root": "/home/buet/cds_work/.cadence_mcp",
+  "allowed_operations": ["identity", "ade_readonly"],
+  "max_elapsed_hours": 8,
+  "max_read_attempts_per_operation": 3
+}

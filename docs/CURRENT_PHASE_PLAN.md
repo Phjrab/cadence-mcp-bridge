@@ -1,5 +1,20 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## AUTO-PHASE-01 active overlay, 2026-09-29
+
+The user's explicit bounded delegation replaces this plan's project-level STOP,
+per-read and per-PR approval gates for future in-scope operations. See
+`policy/PHASE_AUTONOMY_V1.md` and `policy/PHASE_CAMPAIGN_V1.json`. The older
+restrictions below describe the pre-transition phase and remain historical for
+legacy records. A new implementation or remote operation still needs actual
+capability, fresh evidence, integrity, budget, replay, and environmental checks.
+WP-14 remains open; PR #57 and WP-15/WP-16 are complete and are not repeated.
+Use a dedicated reviewed feature PR for the transition, then investigate current
+source/ADE state and perform a minimal copied-revision DC test if capability and
+the protection checks are verified. Candidate biases are 320/702 mV; VDD=1.0 V
+is a hard constraint. Current VCM, load, revision and applied values are unknown
+until freshly observed.
+
 ## Authority and boundary
 
 This is the only active phase plan after the `v1.0.0` release baseline. The complete long-term

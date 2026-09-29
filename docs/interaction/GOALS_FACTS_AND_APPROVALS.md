@@ -1,7 +1,15 @@
 # Goals, facts, and execution approvals
 
-Status: active post-v1 interaction rule. The stricter Git, security, single-use, testing,
-and execution gates in [CODEX_MASTER_PROMPT.md](../../CODEX_MASTER_PROMPT.md) remain binding.
+For the explicit 2026-09-29 AUTO-PHASE-01 delegation, use
+`../policy/PHASE_AUTONOMY_V1.md`. `OPERATOR_APPROVAL` below applies to actions
+outside that delegation. Inside it, a fixed read is authorized by the current
+user instruction and the new campaign policy; fresh observation, identity,
+integrity, budget, and replay checks still apply. This earlier document remains
+the history of how design intent and measured facts are separated.
+
+Status: active post-v1 intent/fact rule. Security, testing and legacy single-use
+gates in [CODEX_MASTER_PROMPT.md](../../CODEX_MASTER_PROMPT.md) remain binding;
+AUTO-PHASE-01 replaces its repeated project-level approvals inside the delegation.
 This is not an approval, operational schema, new fact database, or instruction to start a WP.
 
 ## Three responsibilities
