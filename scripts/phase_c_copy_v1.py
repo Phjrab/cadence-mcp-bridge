@@ -157,7 +157,11 @@ def _preflight(policy: dict[str, Any], old_policy: dict[str, Any], *, deploy: bo
     v1._ssh("cd " + v5.REMOTE_VERSION + " && sha256sum -c manifest.sha256")
     v1._ssh("cd " + v6.REMOTE_VERSION + " && sha256sum -c manifest.sha256")
     v1._ssh("cd " + facts_v7.REMOTE_VERSION + " && sha256sum -c manifest.sha256")
-    snapshot = json.loads(v1._ssh("/usr/bin/python " + v1.HELPER + " preflight", timeout=90))
+    snapshot = json.loads(
+        v1._ssh(
+            "/usr/bin/python " + v1.REMOTE_VERSION + "/wp14_role_discovery.py preflight", timeout=90
+        )
+    )
     protected = snapshot.get("protected", {})
     if (
         protected.get("ade_state_tree") != policy["state_tree_sha256"]

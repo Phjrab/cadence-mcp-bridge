@@ -64,3 +64,10 @@ def test_remote_copy_has_exact_target_and_no_overwrite() -> None:
     assert '"status": "copied"' in helper
     assert "timeout 180" in runner
     assert '"${component_status[0]}" -eq 0' in runner
+
+
+def test_preflight_uses_nested_role_snapshot_contract() -> None:
+    operator = (ROOT / "scripts/phase_c_copy_v1.py").read_text(encoding="utf-8")
+    assert 'v1.REMOTE_VERSION + "/wp14_role_discovery.py preflight"' in operator
+    assert 'protected.get("ade_state_tree")' in operator
+    assert 'snapshot.get("locks") != []' in operator
