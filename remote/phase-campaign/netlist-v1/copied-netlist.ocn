@@ -1,0 +1,9 @@
+; Fixed OCEAN netlist of the already verified work copy. No simulation.
+; The startup project directory must be set before simulator().
+envSetVal("asimenv.startup" "projectDir" 'string
+  "/home/buet/cds_work/.cadence_mcp/wp14-copied-netlist-v1/project")
+simulator('spectre)
+design("MCP_WorkLib" "WP14_AUTO_PHASE_01_TB2" "schematic" "r")
+createNetlist(?recreateAll t ?display nil)
+printf("MCP_WP14_COPIED_NETLIST|true\n")
+exit()

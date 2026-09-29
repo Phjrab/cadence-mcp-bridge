@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "cd6ce5e553fe2c30ff6cfa9e2f32c781d873139b991a45ede2882175528fdfe1",
+  "operation_ids": ["phased-netlist-v1-deploy", "phased-netlist-v1-run"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/netlist-v1",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "copy_files": {
+    "run.sh": "5f863fd2405ae7ef2709e559cac4749fc4727992352d75bf1def5fd1f16649b3",
+    "copy_helper.py": "76f840f1a024849da8ed0bf724f4d488a20c3855d980a47dd99357db328bd90c",
+    "copy-current-oa.il": "403f29f83fb05df0a767a2e5323deca84ba2ea00a11ac0dcb0df3c817b36931c"
+  },
+  "copy_result_sha256": "ba79066b0edb0f94f21baf175508acffec33ce78450f5918f9e5a931f60708d1",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "profile_sha256": "dea735f2ba81ba5ca714df8dba1b752be1fa3ab67f5742c2cee76eb5af849a4b",
+  "target_cellview": "/home/buet/cds_work/MCP_WorkLib/WP14_AUTO_PHASE_01_TB2/schematic",
+  "files": {
+    "run.sh": "7eff5e2b5ee1e1dbb3fa0dcb8d18bd052aef5ec3e4d2b632eba7ff01427d2bb2",
+    "netlist_helper.py": "e1d187039fcb33a651196dc19a45692197e7b233b3e2de7aa88bae1005757645",
+    "copied-netlist.ocn": "9467f5f9b0b76af0ea6cc25a85716b5abe8ef64c97a32e7f5c6009749f592178"
+  }
+}
