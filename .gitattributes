@@ -23,6 +23,8 @@ remote/phase-campaign/netlist-v1/netlist_helper.py text eol=lf
 remote/phase-campaign/netlist-v1/copied-netlist.ocn text eol=lf
 remote/phase-campaign/dc-v1/run.sh text eol=lf
 remote/phase-campaign/dc-v1/dc_helper.py text eol=lf
+remote/phase-campaign/dc-v2/run.sh text eol=lf
+remote/phase-campaign/dc-v2/dc_helper.py text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
