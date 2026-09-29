@@ -15,6 +15,9 @@ remote/phase-campaign/role-v6/role_v6_helper.py text eol=lf
 remote/phase-campaign/role-v7/run.sh text eol=lf
 remote/phase-campaign/role-v7/oa_facts_v7.py text eol=lf
 remote/phase-campaign/role-v7/oa-facts-v7.il text eol=lf
+remote/phase-campaign/copy-v1/run.sh text eol=lf
+remote/phase-campaign/copy-v1/copy_helper.py text eol=lf
+remote/phase-campaign/copy-v1/copy-current-oa.il text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
