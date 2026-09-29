@@ -12,6 +12,10 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
+doc_intent_fact_01_status: documentation_feature_branch_pending_review
+doc_intent_fact_01_rule: docs/interaction/GOALS_FACTS_AND_APPROVALS.md
+doc_intent_fact_01_execution_authority: none
+doc_intent_fact_01_scenario_review: 12_of_12_document_review_only
 integration_status: wp16_ade_sweep_inventory_pending_review_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
@@ -337,6 +341,23 @@ codex_mcp_registered: true
 last_e2e_result: not_run
 user_action_required: "Review the WP-16 repository-only capability inventory feature branch for integration. WP-14 scientific baseline and fresh remote evidence remain blocked; any live ADE/PSF probe, local checker, collection Authorization, deployment, parameterized run or sweep requires a separately scoped exact approval."
 ```
+
+## DOC-INTENT-FACT-01 documentation maintenance
+
+- 2026-09-29: Started this separate documentation-only maintenance task from fetched
+  `origin/main` `b2239f5743034aa019d33dd29f6c1e4da230d17e` (PR #55 merge).
+  The active question/report contract now separates user design intent, agent
+  discovery under existing authority, and operator execution approval. The user
+  supplied `VBIASN=320 mV` and `VBIASP=702 mV` as unvalidated future candidates;
+  `VDD=1.0 V` remains a prior design constraint, not a fresh file observation.
+  Applied values and performance remain unverified. Prior 300/650 mV records,
+  370/650 mV research, decisions, evidence, WP-14 scientific blockers, and
+  WP-15/WP-16 progression are preserved. Twelve interaction cases receive
+  document-level `scenario_review`, not an operational test result. This task
+  creates no new approval or access authority and does not alter the existing
+  functional WP status fields or run any local operational checker, VM, collector,
+  deployer, Cadence, simulation, or design operation. Actual commit and remote
+  push SHA belong to the completion report, not this prospective state entry.
 
 ## WP-16 checkpoint
 

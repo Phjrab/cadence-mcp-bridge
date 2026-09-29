@@ -1,5 +1,33 @@
 # User Inputs Required
 
+## Active post-v1 interpretation — DOC-INTENT-FACT-01
+
+Use [Goals, facts, and execution approvals](interaction/GOALS_FACTS_AND_APPROVALS.md)
+before treating any item below as a current user question. The older WP-09 through
+WP-11 sections are historical contract records, not a new request to resubmit their
+inputs or reopen those WPs. This overlay does not edit their decisions or authorize
+execution.
+
+| Category | Current responsibility | Example |
+| --- | --- | --- |
+| User design choice (`USER_INTENT`) | User decides the desired behavior, constraint, trade-off, or candidate when the active task needs it. | VBIASN 320 mV and VBIASP 702 mV are future candidates; VDD 1.0 V is a prior design constraint. Do not re-ask their values or units. |
+| Agent investigation (`AGENT_DISCOVERY`) | Agent checks present values, connections, source/ADE revisions, hashes, and freshness through an already authorized fixed method. | Actual VDD, input VCM, output load, source/state equivalence. Do not ask the user to calculate hashes or identify raw OA names. |
+| Execution approval (`OPERATOR_APPROVAL`) | User separately authorizes a concrete access or side effect when the existing contract requires it. | One bounded remote read, deployment, simulation, copy-based apply, or PR merge; an approval request alone grants nothing. |
+| Environment/implementation dependency | Agent records a missing capability, expired observation, or unavailable resource and explains the smallest next step. | An undeployed read-only collector is `capability_missing`, not a missing voltage answer from the user. |
+
+Keep candidate, observation, applied value, and validation separate. The 320/702 mV
+candidate and VDD constraint are not observed current-file values or verified
+performance. Historical 300/650 mV observations and 370/650 mV research remain
+unchanged. Historical VCM 0.5 V and no-added-load assumptions are not promoted.
+The WP-14 scientific baseline remains blocked while WP-15/WP-16 repository-only
+progress is preserved. Unknown present conditions are investigation items, not
+user omissions; never infer them or equate a local preflight with remote or circuit
+validation. Future ADC, PLL, or layout specifications are asked only when their
+later active task needs a genuine user design decision. Where an older section
+says the user must supply a technical file identity, expression, or hash, first use
+approved discovery; request only the remaining semantic choice or the minimal
+separate access approval. Do not interpret this as authority for a new tool or run.
+
 ## WP-09 actual ADE profile — resolved
 
 The user supplied and approved the WP-09 project-owned choices on 2026-08-28. The reviewed actual
