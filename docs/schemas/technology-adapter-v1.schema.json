@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cadence-mcp-bridge:technology-adapter:1.0",
+  "title": "Non-executable public technology adapter design v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "adapter_id", "lifecycle", "execution_authorized",
+    "technology", "source_of_truth", "device_roles", "models", "layers",
+    "verification", "io_stream", "evidence_refs"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "adapter_id": { "$ref": "#/$defs/id" },
+    "lifecycle": { "const": "draft" },
+    "execution_authorized": { "const": false },
+    "technology": {
+      "type": "object", "additionalProperties": false,
+      "required": ["technology_id", "official_release", "role"],
+      "properties": {
+        "technology_id": { "$ref": "#/$defs/id" },
+        "official_release": { "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*(?![\\s\\S])" },
+        "role": { "enum": ["regression_reference", "target_candidate"] }
+      }
+    },
+    "source_of_truth": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "pdk_manifest_sha256", "documentation_revision_ref", "license_policy_ref", "approval_ref"],
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "pdk_manifest_sha256": { "$ref": "#/$defs/hash_or_null" },
+        "documentation_revision_ref": { "$ref": "#/$defs/id_or_null" },
+        "license_policy_ref": { "$ref": "#/$defs/id_or_null" },
+        "approval_ref": { "$ref": "#/$defs/id_or_null" }
+      }
+    },
+    "device_roles": {
+      "type": "object", "maxProperties": 32,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/device_role" }
+    },
+    "models": {
+      "type": "object", "additionalProperties": false,
+      "required": ["simulator_id", "observed_process_corner_ids", "qualified_process_corner_ids", "qualified_rc_corner_ids", "binding_ref", "status"],
+      "properties": {
+        "simulator_id": { "enum": ["spectre", "unverified"] },
+        "observed_process_corner_ids": { "$ref": "#/$defs/corner_array" },
+        "qualified_process_corner_ids": { "$ref": "#/$defs/corner_array" },
+        "qualified_rc_corner_ids": { "$ref": "#/$defs/corner_array" },
+        "binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "layers": {
+      "type": "object", "additionalProperties": false,
+      "required": ["routing_role_ids", "via_role_ids", "dbu_per_micron", "manufacturing_grid_um", "binding_ref", "status"],
+      "properties": {
+        "routing_role_ids": { "$ref": "#/$defs/id_array" },
+        "via_role_ids": { "$ref": "#/$defs/id_array" },
+        "dbu_per_micron": { "anyOf": [{ "type": "null" }, { "type": "integer", "minimum": 1, "maximum": 1000000000 }] },
+        "manufacturing_grid_um": { "anyOf": [{ "type": "null" }, { "type": "number", "exclusiveMinimum": 0 }] },
+        "binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["drc", "lvs", "pex"],
+      "properties": {
+        "drc": { "$ref": "#/$defs/backend" },
+        "lvs": { "$ref": "#/$defs/backend" },
+        "pex": { "$ref": "#/$defs/backend" }
+      }
+    },
+    "io_stream": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pad_binding_ref", "stream_map_binding_ref", "status"],
+      "properties": {
+        "pad_binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "stream_map_binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "evidence_refs": { "$ref": "#/$defs/id_array" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string", "minLength": 1, "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?![\\s\\S])"
+    },
+    "id_or_null": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "corner_id": {
+      "type": "string", "minLength": 1, "maxLength": 32,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*(?![\\s\\S])"
+    },
+    "corner_array": {
+      "type": "array", "maxItems": 32, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/corner_id" }
+    },
+    "hash_or_null": {
+      "anyOf": [{ "type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])" }, { "type": "null" }]
+    },
+    "id_array": {
+      "type": "array", "maxItems": 32, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "status": { "enum": ["unverified", "historical_only"] },
+    "device_role": {
+      "type": "object", "additionalProperties": false,
+      "required": ["binding_ref", "pin_role_ids", "parameter_roles", "status"],
+      "properties": {
+        "binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "pin_role_ids": { "$ref": "#/$defs/id_array" },
+        "parameter_roles": {
+          "type": "object", "maxProperties": 32,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "enum": ["um", "count", "ohm", "f", "v", "a", "dimensionless"] }
+        },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "backend": {
+      "type": "object", "additionalProperties": false,
+      "required": ["backend_id", "deck_binding_ref", "status"],
+      "properties": {
+        "backend_id": { "$ref": "#/$defs/id_or_null" },
+        "deck_binding_ref": { "$ref": "#/$defs/id_or_null" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    }
+  }
+}

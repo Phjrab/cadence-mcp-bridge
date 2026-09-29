@@ -4,15 +4,15 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: WP-14
-current_status: blocked
+current_wp: WP-15
+current_status: partial
 last_completed_wp: WP-13
-next_wp: WP-14
+next_wp: WP-15
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: wp14_renewal_local_preflight_merged_pr_52_no_execution_authority
+integration_status: wp15_pdk_abstraction_design_pending_review_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -295,17 +295,40 @@ wp14_renewal_local_preflight_integration_status: merged_pr_52
 wp14_renewal_local_preflight_merged_head: 1829648ce9327d8bb1de7fc5fd9ee01bee5b2c81
 wp14_renewal_local_preflight_merge_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
 wp14_renewal_local_preflight_merged_at: "2026-09-29T06:14:34Z"
-current_feature_branch: wp/WP-14-renewal-local-preflight-post-merge-state
-base_main_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
-last_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
+wp14_renewal_local_preflight_post_merge_state_status: merged_pr_53
+wp14_renewal_local_preflight_post_merge_state_merged_head: 190beb38a061f976386440b7581b9486c6e3f541
+wp14_renewal_local_preflight_post_merge_state_merge_commit: bda274650384e32553bc115a681b01f271abf0e7
+wp14_renewal_local_preflight_post_merge_state_merged_at: "2026-09-29T06:48:17Z"
+wp15_design_report: docs/PDK_ABSTRACTION_DESIGN_V1.md
+wp15_design_report_normalized_lf_sha256: 539c90231afed6cede4b253b804392ad1470e833f5235145f0c6a90a9ae365c7
+wp15_public_schema: docs/schemas/technology-adapter-v1.schema.json
+wp15_public_schema_normalized_lf_sha256: c08e780bbbd02218a332c68e31f103e418e50caf6952862204ea3587322fce18
+wp15_gpdk090_regression_seed: docs/technology/gpdk090-v4-6-regression.json
+wp15_gpdk090_regression_seed_normalized_lf_sha256: 65d08539719e2457943e80a8a11b523f26beca3c9bbc1f8781c325189ca057dd
+wp15_design_status: repository_only_verified_pending_review
+wp15_schema_validation: "2 synthetic positive and 10 fail-closed negative cases passed"
+wp15_full_local_tests: "542 passed; 8 remote integrations skipped; 56 existing warnings; clean tracked-tree clone"
+wp15_security_validation: "381-file secret preflight; 18 security tests; strict dependency audit no known vulnerabilities"
+wp15_execution_authorized: false
+wp15_wp14_blocker_carried: true
+wp15_proprietary_pdk_content_included: false
+current_feature_branch: wp/WP-15-pdk-abstraction-design
+base_main_commit: bda274650384e32553bc115a681b01f271abf0e7
+last_commit: bda274650384e32553bc115a681b01f271abf0e7
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-14 post-merge state synchronization feature branch for integration. Actual private local checker execution requires separate exact-hash approval; renewal collection Authorization is a later independent gate. Neither is authorized or performed by this checkpoint."
+user_action_required: "Review the WP-15 documentation/schema feature branch for integration. WP-14 remains blocked; any actual local checker, collection Authorization, PDK onboarding, adapter activation, remote or Cadence execution requires a separate exact approval."
 ```
+
+## WP-15 checkpoint
+
+- 2026-09-29: Under the user's explicit WP-15 selection, verified PR #53 MERGED with reviewed WP-14 state-sync head `190beb38a061f976386440b7581b9486c6e3f541` as latest fetched and remote main `bda274650384e32553bc115a681b01f271abf0e7` at `2026-09-29T06:48:17Z`. Created a dedicated WP-15 branch for a non-executable public technology-adapter schema, gpdk090 regression seed and threat-model design. The user selection changes scheduling only: WP-14 scientific baseline, fresh evidence and execution authority remain blocked; no WP-14 completion or parameterized-execution claim is made. PUBLIC visibility and `deployment_enabled=false` are preserved. No private PDK content, authorization, SSH/SCP, Cadence, simulation, OA/ADE/design/PDK operation or WP-16 work is included.
+
+- 2026-09-29: WP-15 repository-only acceptance passed: the public JSON Schema validates the gpdk090 seed and a synthetic logical-device case, and rejects ten negative variants including execution enablement, path/newline identifiers, unexpected model fields, false reviewed status and wrong provenance shape. The seed retains exact historical `NN` case but has no physical binding or signoff claim. Ruff and strict mypy for 18 source files passed. In a clean tracked-tree clone without preserved operational approval files, the unchanged code suite passed 542 tests with eight remote integrations skipped and 56 existing warnings; new documentation was validated separately. The current tree's secret preflight scanned 381 files, all 18 dedicated security tests passed, and strict locked dependency audit found no known vulnerabilities. Only six repository documentation/schema/state files are changed. WP-14 remains blocked, WP-15 awaits feature review, and WP-16 is unstarted.
 
 ## WP-14 checkpoint
 

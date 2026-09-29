@@ -27,14 +27,17 @@ the current repository before use.
 | PKG-INTEGRATE-01 | Package import, authority decisions, and this crosswalk | ICF-00-01 planning prerequisite | Merged through PR #18 as `198900ecc96c9cadd3697022f96c90bd5baf937a` |
 | WP-13 Actual ADE Profile Baseline and Capability Audit | Bounded actual read-only audit | ICF-00-03 plus read-only portion of ICF-02-01 | Merged through PR #19 as `b12cff904fe31a1d68490836c1fe6765734b9bf0`; profile drift remains |
 | WP-14 VBIASN/VBIASP Source-of-Truth Confirmation | Versioned compatibility/research candidate decision package | ICF-00-03 baseline separation only | Proposal ready for review; scientific baseline confirmation blocked; no ICF task marked complete |
+| WP-15 PDK Abstraction Design | Public, non-executable technology schema and gpdk090 regression seed | P8-01 technology-adapter intent only | Explicitly selected documentation design; not a P8-01 implementation or PDK qualification |
 
 ## Current selection
 
 The duplicate historical use of `WP-12` is disambiguated by title and merged commit history, not by
 rewriting old entries. PKG-INTEGRATE-01 is an orthogonal documentation task and does not consume the
-next implementation number. WP-13 is now merged; WP-14 is the active documentation task defined in
-`docs/CURRENT_PHASE_PLAN.md`. It prepares a decision package, keeps all approval fields unset, and
-does not start WP-15.
+next implementation number. WP-13 is merged. WP-14 remains blocked with its
+scientific conditions and execution approvals unresolved. The user explicitly
+requested WP-15 as a separate repository-only design checkpoint; this does not
+complete WP-14 or activate the long-term P8-01 implementation. The bounded
+active selection is recorded in `docs/CURRENT_PHASE_PLAN.md` and `PROJECT_STATE.md`.
 
 The following references were used by WP-13 and remain dated evidence:
 
