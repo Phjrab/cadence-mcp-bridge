@@ -147,7 +147,7 @@ def _manifest(policy: dict[str, Any]) -> bytes:
     )
 
 
-def _preflight(policy: dict[str, Any], old_policy: dict[str, Any], *, deploy: bool) -> None:
+def _preflight(policy: dict[str, Any], old_policy: dict[str, Any]) -> None:
     v1._remote_preflight(old_policy)
     v1._ssh("test ! -L " + REMOTE_ROOT + "/phase-campaign")
     v1._ssh("cd " + v1.REMOTE_VERSION + " && sha256sum -c manifest.sha256")
@@ -186,10 +186,7 @@ def _preflight(policy: dict[str, Any], old_policy: dict[str, Any], *, deploy: bo
         + "; test ! -L "
         + TARGET_CELL
     )
-    if deploy:
-        v1._ssh("test ! -e " + RUNTIME + " && test ! -L " + RUNTIME)
-    else:
-        v1._ssh("test -d " + RUNTIME + " && test ! -L " + RUNTIME)
+    v1._ssh("test ! -e " + RUNTIME + " && test ! -L " + RUNTIME)
 
 
 def _finish(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
@@ -199,7 +196,7 @@ def _finish(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
 
 def deploy() -> dict[str, Any]:
     policy, digest, state_root, old_policy = _authority()
-    _preflight(policy, old_policy, deploy=True)
+    _preflight(policy, old_policy)
     record = _reserve(state_root, "deploy", digest)
     v1._ssh(
         "test ! -e "
@@ -255,7 +252,7 @@ def copy() -> dict[str, Any]:
     deployed = parent._read_json(_record_path(state_root, "deploy"))
     if deployed.get("state") != "succeeded" or deployed.get("policy_sha256") != digest:
         raise CopyV1Error("BLOCKED_UNCERTAIN_STATE: copy deployment not verified")
-    _preflight(policy, old_policy, deploy=False)
+    _preflight(policy, old_policy)
     v1._ssh("cd " + REMOTE_VERSION + " && sha256sum -c manifest.sha256")
     record = _reserve(state_root, "copy", digest)
     raw = v1._ssh(REMOTE_VERSION + "/run.sh", timeout=230)
