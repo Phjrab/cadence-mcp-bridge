@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "c096f9fe6392886f114480c1da11e06a21d21ef3521c52388075b331fa782779",
+  "operation_ids": [
+    "phaseh-ac-scalars-v1-deploy",
+    "phaseh-ac-scalars-v1-read"
+  ],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/ac-scalar-v1",
+  "ac_files": {
+    "run.sh": "eb4e005451039721c8e3c2689cff5c8b334a198b8b8ac88b3a1e3d27882d2f28",
+    "ac_helper.py": "c149cb210d0916707b60daece242bc0125dd6f222d090204eeea5925158d4272"
+  },
+  "ac_result_sha256": "da959247b4034b2bf5bb3461c9356a1d9176e0b0a4ba36664e483b3a0df3d103",
+  "psf_tree_sha256": "f1ddc9b70069055babebdb12ee3b46265b70396020223abfaff71bfcaad8b3e6",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "frequencies_hz": [
+    1000,
+    10000
+  ],
+  "spectre_attempt_count": 3,
+  "files": {
+    "run.sh": "2cfbe3b113fedc8c37a1dc9fb13d8b3a34c2cb025ec58d3db53873f380e2d618",
+    "scalar_helper.py": "34b458337b3d2f5082d002e741f1a0209de0809d44b5a47e1b2cb68f70107998",
+    "extract.ocn": "de67bdf7fd84511d44da0999011160646d908389db25ac8570926a694f377233"
+  }
+}
