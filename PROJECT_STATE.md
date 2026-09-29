@@ -12,7 +12,7 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: wp14_renewal_local_preflight_pending_review_no_execution_authority
+integration_status: wp14_renewal_local_preflight_merged_pr_52_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -287,23 +287,29 @@ wp14_renewal_activation_post_merge_state_merged_at: "2026-09-29T05:44:30Z"
 wp14_renewal_local_preflight: scripts/verify-wp14-renewal-local.py
 wp14_renewal_local_preflight_report: docs/WP14_RENEWAL_LOCAL_PREFLIGHT_IMPLEMENTATION_V1.md
 wp14_renewal_local_preflight_normalized_lf_sha256: 6cc1d22981dd2cbf53a58a747093c14e22eef3a2733b9490829b032b152f309b
-wp14_renewal_local_preflight_status: repository_implemented_isolated_tests_passed_actual_execution_not_authorized
+wp14_renewal_local_preflight_status: repository_merged_pr_52_actual_execution_not_authorized
 wp14_renewal_local_preflight_tests: "93 synthetic local checks and 18 security tests passed; full suite excluded to avoid forbidden collector/deployer imports and execution"
 wp14_renewal_local_preflight_actual_execution_count: 0
 wp14_renewal_local_preflight_private_inputs: not_read_not_output_not_persisted
-current_feature_branch: wp/WP-14-renewal-local-preflight
-base_main_commit: f6917a0eb49239f81cdf034df68d2254069cfc22
-last_commit: f6917a0eb49239f81cdf034df68d2254069cfc22
+wp14_renewal_local_preflight_integration_status: merged_pr_52
+wp14_renewal_local_preflight_merged_head: 1829648ce9327d8bb1de7fc5fd9ee01bee5b2c81
+wp14_renewal_local_preflight_merge_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
+wp14_renewal_local_preflight_merged_at: "2026-09-29T06:14:34Z"
+current_feature_branch: wp/WP-14-renewal-local-preflight-post-merge-state
+base_main_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
+last_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the standalone renewal local preflight implementation and explicitly approve its PR integration if acceptable. Actual private checker execution and any later exact collection Authorization remain separate gates; neither is performed or authorized by this repository-only checkpoint."
+user_action_required: "Review the WP-14 post-merge state synchronization feature branch for integration. Actual private local checker execution requires separate exact-hash approval; renewal collection Authorization is a later independent gate. Neither is authorized or performed by this checkpoint."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-29: Verified GitHub PR #52 MERGED with exact approved renewal local preflight head `1829648ce9327d8bb1de7fc5fd9ee01bee5b2c81` as `2f5871a76e42e8227b5d0839b7a3325bb6d7368b` at `2026-09-29T06:14:34Z`. Fetched `origin/main`, remote `refs/heads/main`, and the two-parent merge agree. PUBLIC visibility and `deployment_enabled=false` remain unchanged. This state-only branch records repository integration; the real checker has not run, private identity/claims/locks were not inspected, and no Authorization, claim, lock, V2 evidence, SSH/SCP, remote work, Cadence, design change or WP-15 work occurred. WP-14 remains blocked pending separate exact-hash local-check approval and later independent renewal authority.
 
 - 2026-09-29: Verified PR #51 merge/latest fetched and remote main `f6917a0eb49239f81cdf034df68d2254069cfc22`, PUBLIC visibility and a clean tree; created `wp/WP-14-renewal-local-preflight` from that exact base. Added an independent no-argument, operator-only local checker bound to the unchanged renewal request, activation request and collector source. It has a ten-second total budget with a termination reserve, 512-byte closed success/code output, memory-only username/MachineGuid checking, fixed predecessor/absence checks and existing deployment-then-collection lock compatibility without artifact creation. Existing collectors/deployers are neither modified nor imported/executed. The actual checker, identity/claim providers and private ledgers are not exercised; all dynamic tests use synthetic identity, temporary files and a fake local child. No Authorization, claim, lock, V2 evidence, SSH/SCP, remote collection/deployment, Cadence or design operation occurs. WP-14 remains blocked, deployment disabled and WP-15 unstarted; prior absence/readiness fields remain historical, not freshly observed.
 
