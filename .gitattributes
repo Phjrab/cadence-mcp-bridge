@@ -33,6 +33,9 @@ remote/phase-campaign/candidate-ac-v1/ac_helper.py text eol=lf
 remote/phase-campaign/ac-scalar-v1/run.sh text eol=lf
 remote/phase-campaign/ac-scalar-v1/scalar_helper.py text eol=lf
 remote/phase-campaign/ac-scalar-v1/extract.ocn text eol=lf
+remote/phase-campaign/ac-scalar-v2/run.sh text eol=lf
+remote/phase-campaign/ac-scalar-v2/scalar_helper.py text eol=lf
+remote/phase-campaign/ac-scalar-v2/extract.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
