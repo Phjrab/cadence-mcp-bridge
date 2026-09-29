@@ -41,6 +41,8 @@ remote/phase-campaign/dc-midpoint-v1/dc_helper.py text eol=lf
 remote/phase-campaign/dc-midpoint-scalar-v1/run.sh text eol=lf
 remote/phase-campaign/dc-midpoint-scalar-v1/scalar_helper.py text eol=lf
 remote/phase-campaign/dc-midpoint-scalar-v1/extract.ocn text eol=lf
+remote/phase-campaign/ac-sweep-two-point-v1/run.sh text eol=lf
+remote/phase-campaign/ac-sweep-two-point-v1/ac_helper.py text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text

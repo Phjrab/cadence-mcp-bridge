@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "3611730a8e20ea679f9ddcf3e5c3a814245b37e5beac8160146ad5a697abc15e",
+  "operation_ids": ["phasem-ac-two-point-v1-deploy", "phasem-ac-two-point-v1-baseline", "phasem-ac-two-point-v1-midpoint"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/ac-sweep-two-point-v1",
+  "prior_scalar_result_sha256": "9c6096a5bd14b8e6b3b302b340924093cbcfa4a84699be2533d62b769d79d368",
+  "candidate_ac_result_sha256": "da959247b4034b2bf5bb3461c9356a1d9176e0b0a4ba36664e483b3a0df3d103",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "bias_points_mv": [[300, 650], [310, 676]],
+  "vdd_mv": 1000,
+  "input_vcm_mv": 500,
+  "input_ac_differential_mv": 1000,
+  "frequencies_hz": [1000, 10000],
+  "model_section": "NN",
+  "temperature_c": 27,
+  "spectre_attempt_count_before": 4,
+  "files": {
+    "run.sh": "187f025eb667ccca7ae8b6bcbc222578b0ac8cc387717e9894a2e863c9a46c7f",
+    "ac_helper.py": "3782bf1db3c4503586396d3079acd05db3cc37386154ff221ef9ff48b89e2e64"
+  }
+}
