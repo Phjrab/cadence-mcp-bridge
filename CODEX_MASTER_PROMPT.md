@@ -1,5 +1,14 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-09-29 override:** The user explicitly delegated the bounded
+> `AUTO-PHASE-01` campaign. `docs/policy/PHASE_AUTONOMY_V1.md` and
+> `docs/policy/PHASE_CAMPAIGN_V1.json` supersede this file's project-level
+> one-WP STOP, separate approval for each in-scope read/PR, and no-merge rule.
+> Continue sequentially after a verified phase exit. The legacy single-use
+> records, original/PDK protection, real verification, protected GitHub rules,
+> and platform restrictions remain binding. Historical v1 WP instructions below
+> do not restart completed work. PR #57 and WP-15/WP-16 are complete.
+
 > **대상 저장소:** `Phjrab/cadence-mcp-bridge`
 > **가시성:** GitHub Public (2026-09-17 post-v1 사용자 승인 정책)
 > **기본 실행 환경:** Windows 11의 Codex Desktop

@@ -15,10 +15,28 @@ Before doing any work, read these files in full:
 
 `CODEX_MASTER_PROMPT.md` is the authoritative execution contract.
 
+## Active phase delegation (2026-09-29)
+
+The user's explicit AUTO-PHASE-01 instruction supersedes the project-level one-WP
+STOP, per-PR merge approval, and per-read approval rules below for operations inside
+`docs/policy/PHASE_CAMPAIGN_V1.json` and the scope in
+`docs/policy/PHASE_AUTONOMY_V1.md`. Read the migration record there before using the
+new operator path. The rules below remain historical or apply outside this delegation.
+The old single-use authorization paths and records are unchanged. A new operation
+must pass its own policy, identity, integrity, budget, and replay checks; a policy
+file alone is not proof of user delegation. GitHub protections and platform access
+controls still apply.
+
+Within the delegated scope, finish a phase, report its evidence, then continue the
+next prepared phase without another project-level approval. Create and merge only
+reviewed feature PRs, never push directly to main or bypass required checks/reviews.
+Do not create a PR only to record that a previous PR merged. PR #57 and WP-15/WP-16
+are complete. WP-14 is the current circuit task.
+
 For questions, blockers, and completion reports, also read
 `docs/interaction/GOALS_FACTS_AND_APPROVALS.md`. It separates user design choices,
-facts the agent must investigate within existing authority, and separately approved
-execution. It does not grant access or relax any approval gate.
+facts the agent must investigate, and execution scope. The current user delegation
+governs its in-scope access; the historical approval gates govern legacy operations.
 
 Do not read or execute the full long-term roadmap as a single run instruction. Treat
 `docs/CURRENT_PHASE_PLAN.md` as the bounded phase plan and consult only the roadmap sections
@@ -30,14 +48,14 @@ recovered approvals remain inactive unless the current root contract and a speci
 them applicable. When rules conflict, preserve the stricter existing approval, security, Git, and
 evidence-protection boundary and record the decision rather than weakening it.
 
-## One work package per run
+## Legacy one work package per run (superseded in AUTO-PHASE-01)
 
 - Execute only the requested work package, or the first incomplete WP in `PROJECT_STATE.md`.
 - Do not automatically start the next WP.
 - Finish with the exact completion report required by the master prompt.
 - Always include the recommended model, effort, and exact start prompt for the next run.
 
-## Git discipline
+## Legacy Git discipline (superseded in AUTO-PHASE-01 where noted)
 
 - Inspect status and remote before edits.
 - Never discard unrelated changes.

@@ -1,5 +1,15 @@
 # User Inputs Required
 
+## Active AUTO-PHASE-01 input, 2026-09-29
+
+The user has already delegated in-scope phase work, reviewed PR creation/merge,
+fixed read-only investigation, limited deployment, and copied-revision checks.
+Do not ask again for these actions or for the supplied 320/702 mV candidates and
+1.0 V VDD constraint. Investigate current VCM, load, revision, hashes and actual
+settings. Any older requests below for a separate approval on each in-scope step
+are superseded by `docs/policy/PHASE_AUTONOMY_V1.md`. Platform and GitHub
+requirements still apply.
+
 ## Active post-v1 interpretation — DOC-INTENT-FACT-01
 
 Use [Goals, facts, and execution approvals](interaction/GOALS_FACTS_AND_APPROVALS.md)
