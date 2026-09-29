@@ -1,5 +1,6 @@
 *.py text eol=lf
 *.sh text eol=lf
+remote/discovery/wp14-role-discovery.il text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
