@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "2a30bda217d363a27b49b7a799b3df1fba371d80757ba333e2f57bba5d334c41",
+  "operation_ids": ["phasee-copied-dc-v1-deploy", "phasee-copied-dc-v1-baseline", "phasee-copied-dc-v1-candidate"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/dc-v1",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "netlist_files": {
+    "run.sh": "7eff5e2b5ee1e1dbb3fa0dcb8d18bd052aef5ec3e4d2b632eba7ff01427d2bb2",
+    "netlist_helper.py": "e1d187039fcb33a651196dc19a45692197e7b233b3e2de7aa88bae1005757645",
+    "copied-netlist.ocn": "9467f5f9b0b76af0ea6cc25a85716b5abe8ef64c97a32e7f5c6009749f592178"
+  },
+  "netlist_result_sha256": "6cdc8ca9c365210c79afcc42a562da8b929e1492f932b6fe9a85b430fac12713",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "profile_sha256": "dea735f2ba81ba5ca714df8dba1b752be1fa3ab67f5742c2cee76eb5af849a4b",
+  "baseline_bias_mv": [300, 650],
+  "candidate_bias_mv": [320, 702],
+  "vdd_mv": 1000,
+  "input_vcm_mv": 500,
+  "model_section": "NN",
+  "temperature_c": 27,
+  "files": {
+    "run.sh": "b87d9a9db7ed3459094b88ac6fd0b1b149728befd0119ea9299b137ac7d3701e",
+    "dc_helper.py": "d00ea99d653da8ae234652bd2363891d26f8f000b9dc769f6b757c485575b439"
+  }
+}
