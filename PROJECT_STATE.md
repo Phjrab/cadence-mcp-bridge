@@ -4,19 +4,21 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: WP-16
-current_status: partial
-last_completed_wp: WP-15
-next_wp: WP-16
+current_wp: WP-14
+current_status: blocked
+last_completed_wp: WP-16
+next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-doc_intent_fact_01_status: documentation_feature_branch_pending_review
+doc_intent_fact_01_status: merged_pr_56_documentation_only
 doc_intent_fact_01_rule: docs/interaction/GOALS_FACTS_AND_APPROVALS.md
 doc_intent_fact_01_execution_authority: none
 doc_intent_fact_01_scenario_review: 12_of_12_document_review_only
-integration_status: wp16_ade_sweep_inventory_pending_review_no_execution_authority
+doc_intent_fact_01_merged_head: 5a9c329481150d420db73f32a29fc7f22573abfb
+doc_intent_fact_01_merge_commit: 85706385cfb82b60d829f44c1ac197339eebbafd
+integration_status: wp16_inventory_merged_pr_55_doc_intent_merged_pr_56_wp14_blocked
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -291,10 +293,12 @@ wp14_renewal_activation_post_merge_state_merged_at: "2026-09-29T05:44:30Z"
 wp14_renewal_local_preflight: scripts/verify-wp14-renewal-local.py
 wp14_renewal_local_preflight_report: docs/WP14_RENEWAL_LOCAL_PREFLIGHT_IMPLEMENTATION_V1.md
 wp14_renewal_local_preflight_normalized_lf_sha256: 6cc1d22981dd2cbf53a58a747093c14e22eef3a2733b9490829b032b152f309b
-wp14_renewal_local_preflight_status: repository_merged_pr_52_actual_execution_not_authorized
+wp14_renewal_local_preflight_status: local_preflight_ready_single_real_execution_not_remote_authority
 wp14_renewal_local_preflight_tests: "93 synthetic local checks and 18 security tests passed; full suite excluded to avoid forbidden collector/deployer imports and execution"
-wp14_renewal_local_preflight_actual_execution_count: 0
-wp14_renewal_local_preflight_private_inputs: not_read_not_output_not_persisted
+wp14_renewal_local_preflight_actual_execution_count: 1
+wp14_renewal_local_preflight_result_code: LOCAL_PREFLIGHT_READY
+wp14_renewal_local_preflight_executed_on: "2026-09-29"
+wp14_renewal_local_preflight_private_inputs: read_in_memory_not_output_not_persisted
 wp14_renewal_local_preflight_integration_status: merged_pr_52
 wp14_renewal_local_preflight_merged_head: 1829648ce9327d8bb1de7fc5fd9ee01bee5b2c81
 wp14_renewal_local_preflight_merge_commit: 2f5871a76e42e8227b5d0839b7a3325bb6d7368b
@@ -322,7 +326,10 @@ wp15_wp14_blocker_carried: true
 wp15_proprietary_pdk_content_included: false
 wp16_inventory_report: docs/WP16_ADE_SWEEP_CAPABILITY_INVENTORY_V1.md
 wp16_inventory_report_normalized_lf_sha256: e2c7786ce0310a0ac121ce86cc191f5dccaffc0feb36fbe4b7cc1b495d5c901f
-wp16_inventory_status: repository_only_pending_review_current_remote_unverified
+wp16_inventory_status: repository_only_merged_pr_55_current_remote_unverified
+wp16_integration_status: merged_pr_55
+wp16_merged_head: a9bd623eb64fa873e46de97f88b58c2c2203e034
+wp16_merge_commit: b2239f5743034aa019d33dd29f6c1e4da230d17e
 wp16_document_validation: "unique state keys; required inventory sections; three-file documentation scope; report SHA-256 verified"
 wp16_full_local_tests: "542 passed; 8 remote integrations skipped; 56 existing warnings; clean tracked-tree clone"
 wp16_security_validation: "382-file secret preflight; 18 security tests; strict dependency audit no known vulnerabilities"
@@ -330,17 +337,38 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: wp/WP-16-ade-sweep-capability-inventory
-base_main_commit: 239b1fc7e4fd0d59e1e17d089d2a16d16856dc13
-last_commit: 239b1fc7e4fd0d59e1e17d089d2a16d16856dc13
+current_feature_branch: wp/WP-16-post-merge-final-state
+base_main_commit: 85706385cfb82b60d829f44c1ac197339eebbafd
+last_commit: 85706385cfb82b60d829f44c1ac197339eebbafd
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review the WP-16 repository-only capability inventory feature branch for integration. WP-14 scientific baseline and fresh remote evidence remain blocked; any live ADE/PSF probe, local checker, collection Authorization, deployment, parameterized run or sweep requires a separately scoped exact approval."
+user_action_required: "Review the WP-16 post-merge state branch for integration. WP-14 scientific baseline and fresh remote evidence remain blocked; local preflight readiness does not grant remote access, deployment, Cadence execution, or bias validation."
 ```
+
+## WP-16 post-merge final state
+
+- 2026-09-29: Verified PR #55 merged the reviewed WP-16 inventory head
+  `a9bd623eb64fa873e46de97f88b58c2c2203e034` as
+  `b2239f5743034aa019d33dd29f6c1e4da230d17e`. The repository-only
+  inventory checkpoint is complete; present remote ADE/sweep capability is not
+  validated and parameterized execution remains disabled. PR #56 then merged
+  DOC-INTENT-FACT-01 head `5a9c329481150d420db73f32a29fc7f22573abfb`
+  as latest main `85706385cfb82b60d829f44c1ac197339eebbafd`. The separate
+  2026-09-29 approved, one-time local renewal preflight returned
+  `LOCAL_PREFLIGHT_READY` with exit 0. It read private inputs only in memory and
+  emitted neither identity nor binding; it did not create an Authorization,
+  claim, lock, or V2 evidence. This was local readiness at that instant, not
+  current remote evidence, deployment readiness, a VDD/VCM/load observation,
+  application of 320/702 mV, simulation, or scientific-baseline approval.
+  WP-14 is the remaining blocked scientific checkpoint. Historical 300/650 mV
+  evidence and the 1.0 V design constraint retain their separate meanings.
+  This state reconciliation changes repository documents only; no checker is
+  rerun and no SSH/SCP, remote collector/deployer, Cadence or design operation
+  is performed here.
 
 ## DOC-INTENT-FACT-01 documentation maintenance
 
