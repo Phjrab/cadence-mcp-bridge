@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "0b2f34a85f614bcb847d980fb90257bc1cf4643ee7479eecb2228083c3cb7d74",
+  "operation_ids": ["phasec-copy-v1-deploy", "phasec-copy-v1-run"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/copy-v1",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "v7_files": {
+    "run.sh": "770fa465457f1b062c1070089a81b0f790d19886a9fedaf616883335c24add2b",
+    "oa_facts_v7.py": "d3f48455e7067950fe42261706f363ec0a18258792b8f876030958e6226d530c",
+    "oa-facts-v7.il": "83709af000e607cbe6f22cf8b7874fe973d937d743f4be12fa2e3bb7d6b95a80"
+  },
+  "v7_result_sha256": "aceff81c134c47275fdffca1479b77e4190fda649f2749f79c0a520be4033c11",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "profile_sha256": "dea735f2ba81ba5ca714df8dba1b752be1fa3ab67f5742c2cee76eb5af849a4b",
+  "work_library": "/home/buet/cds_work/MCP_WorkLib",
+  "target_cell": "/home/buet/cds_work/MCP_WorkLib/WP14_AUTO_PHASE_01_TB2",
+  "files": {
+    "run.sh": "5f863fd2405ae7ef2709e559cac4749fc4727992352d75bf1def5fd1f16649b3",
+    "copy_helper.py": "76f840f1a024849da8ed0bf724f4d488a20c3855d980a47dd99357db328bd90c",
+    "copy-current-oa.il": "403f29f83fb05df0a767a2e5323deca84ba2ea00a11ac0dcb0df3c817b36931c"
+  }
+}
