@@ -12,7 +12,7 @@ release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: wp14_renewal_collector_merged_pr_48_remote_activation_absent
+integration_status: wp14_renewal_activation_request_merged_pr_50_no_execution_authority
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -275,20 +275,26 @@ wp14_renewal_collector_post_merge_state_merge_commit: af6c9a19fa0d0e6160d3939097
 wp14_renewal_collector_post_merge_state_merged_at: "2026-09-29T01:48:41Z"
 wp14_renewal_activation_request: docs/approvals/WP14_RENEWAL_SINGLE_USE_ACTIVATION_REQUEST_V1.md
 wp14_renewal_activation_request_normalized_lf_sha256: 9cc668d58448d8c3965751fb1bd25b3acf9f807b8fa1dc2e27547513888be04d
-wp14_renewal_activation_request_status: request_only_blocked_private_inputs_and_separate_authority_absent
-current_feature_branch: wp/WP-14-renewal-activation-request
-base_main_commit: af6c9a19fa0d0e6160d3939097c664d949f036b2
-last_commit: af6c9a19fa0d0e6160d3939097c664d949f036b2
+wp14_renewal_activation_request_status: merged_pr_50_request_only_blocked_private_inputs_and_separate_authority_absent
+wp14_renewal_activation_request_integration_status: merged_pr_50
+wp14_renewal_activation_request_merged_head: b1f32e941d4410158ea4ca5a92c8897656e226a7
+wp14_renewal_activation_request_merge_commit: 6a931958998899118443924e735557d4bd6acafb
+wp14_renewal_activation_request_merged_at: "2026-09-29T05:17:48Z"
+current_feature_branch: wp/WP-14-renewal-activation-post-merge-state
+base_main_commit: 6a931958998899118443924e735557d4bd6acafb
+last_commit: 6a931958998899118443924e735557d4bd6acafb
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge this request-only branch if acceptable. A separate exact single-use authorization and private local preflight are still required before any collector execution; no remote attempt is authorized now."
+user_action_required: "Review and merge this PROJECT_STATE-only post-merge synchronization branch if acceptable. The merged request is not execution authority; separate exact single-use authorization and private local preflight remain required."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-29: Verified PR #50 MERGED with reviewed request-only head `b1f32e941d4410158ea4ca5a92c8897656e226a7`, merge commit/latest fetched and remote main `6a931958998899118443924e735557d4bd6acafb`, merged at `2026-09-29T05:17:48Z`. This dedicated feature branch synchronizes only `PROJECT_STATE.md`. The request grants no Authorization or execution authority; WP-14 remains blocked and WP-15 unstarted. PUBLIC visibility and `deployment_enabled=false` were reverified. Private identity, claim, lock and V2-evidence state were not inspected or changed; historical absence entries are retained as prior records, not fresh preflight. No collector, SSH/SCP, remote operation, Cadence or design action occurred.
 
 - 2026-09-29: Verified PR #49 MERGED with reviewed state-sync head `9cab6ca75740cb6b656770c33802455216207cf4`, merge commit/latest fetched and remote main `af6c9a19fa0d0e6160d3939097c664d949f036b2`, merged at `2026-09-29T01:48:41Z`. PUBLIC visibility and `deployment_enabled=false` remain. Added a separate request-only review of the merged renewal collector's 19-field, single-use activation inputs. Private predecessor claim digests, current executor identity/binding, lock state and exact grant remain unverified and undisclosed. The primary checkout's full suite had 447 pass/2 fail solely because a preserved, ignored historical deployment Authorization exists there; that file was not touched. The same complete suite in a clean temporary repository copy without operational approval artifacts passed 449 tests with 8 remote tests skipped and 56 existing warnings. Ruff, mypy and the security script passed. No Authorization, claim, lock, V2 evidence, identity read, collector invocation, SSH/SCP, remote work, Cadence or design change occurred. WP-14 remains blocked and WP-15 unstarted.
 
@@ -402,6 +408,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-29: PR #50 integrated the exact WP-14 renewal activation request through GitHub as `6a931958998899118443924e735557d4bd6acafb`. This state-only checkpoint records integration without promoting the request to authority, changing private single-use lineage, enabling deployment, or clearing scientific-condition blockers. A separately reviewed exact activation and private local preflight remain future gates; WP-15 is not started.
 
 - 2026-09-29: PR #48 integrated the exact renewal collector implementation as `e1d9e7c2baf9f987145959f9b9cfcb77011ea119`. This post-merge state checkpoint records the reviewed head, merge provenance, PUBLIC visibility and disabled deployment without creating or consuming any authority. The exact collector hash remains `d814d0da7ffc3890274ea24f1b9fc946bf861ec617860c6560cab320f08a3d89`; a later separately reviewed activation must bind the merged implementation, private predecessor-claim digests and current private executor binding before one read-only attempt can be considered. WP-14 remains blocked and WP-15 is not started.
 
