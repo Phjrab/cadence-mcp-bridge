@@ -71,3 +71,5 @@ def test_preflight_uses_nested_role_snapshot_contract() -> None:
     assert 'v1.REMOTE_VERSION + "/wp14_role_discovery.py preflight"' in operator
     assert 'protected.get("ade_state_tree")' in operator
     assert 'snapshot.get("locks") != []' in operator
+    assert ' && pwd -P)" = ' in operator
+    assert "realpath" not in operator
