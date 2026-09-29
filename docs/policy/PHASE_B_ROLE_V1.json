@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "operation_ids": ["phaseb-role-deploy-v1", "phaseb-role-read-v1"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/role-v1",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "installed_preflight_helper_sha256": "aade615a42d9b522bf43ed3e509b703c61ea144f4bd31988b21e88cd50ea68e3",
+  "files": {
+    "run.sh": "3c78e73e4d9f0cdefa8f44e0c818bf96015a66528c11f2d401b7ba2f80040878",
+    "wp14_role_discovery.py": "dc14b6fec53a27d401e222551502d7e894f5e35a9b29b53d802e890998ecd48e",
+    "wp14-role-discovery.il": "9dcdef026bc3191acd0c9256c32a8cc0875778e65d21479e80067de70daa8586"
+  }
+}

@@ -49,6 +49,14 @@ active. New deployment, copy mutation and DC operations need separate typed
 implementations and verification before use; their absence is `capability_missing`,
 not a request for the same user approval again.
 
+The WP-14 role discovery extension is separately bound by
+`docs/policy/PHASE_B_ROLE_V1.json` and `scripts/phase_b_role_campaign.py`.
+It inherits the original eight-hour clock and preserves the earlier uncertain ADE
+inspection record. Its two one-shot operations deploy three exact files to a new
+managed version directory and run a names-only, read-only OA role probe. It cannot
+apply a bias, run Spectre, or establish numeric VDD/VCM/load values. Those
+capabilities require distinct reviewed typed operations.
+
 This is an operational guard, not cryptographic isolation from the same OS account:
 that account can edit code, delegation and state. External sandbox, SSH and GitHub
 rules remain independent boundaries.
