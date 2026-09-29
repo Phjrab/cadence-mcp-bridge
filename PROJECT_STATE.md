@@ -10,9 +10,9 @@ last_completed_wp: WP-13
 next_wp: WP-14
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
-implementation_status: wp14_renewal_collector_repository_implemented_local_verified
+implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
 documentation_status: verified
-integration_status: public_contract_v2_state_sync_merged_pr_35_fresh_preimages_collected
+integration_status: wp14_renewal_collector_merged_pr_48_remote_activation_absent
 wp14_public_contract_post_merge_state_status: merged_pr_34
 wp14_public_contract_post_merge_state_merged_head: 28ca1f3d9db7e68ff98e2e038657279987c41351
 wp14_public_contract_post_merge_state_merge_commit: 2d71a83dfea2840729043ce5bd7f87c5824aefa1
@@ -257,7 +257,11 @@ wp14_renewal_collection_lock_contract: preserve_both_existing_domains_deployment
 wp14_renewal_collection_implementation: scripts/collect-wp14-renewed-remote-preimages.py
 wp14_renewal_collection_implementation_report: docs/WP14_REMOTE_EVIDENCE_RENEWAL_COLLECTOR_IMPLEMENTATION_V1.md
 wp14_renewal_collection_collector_normalized_lf_sha256: d814d0da7ffc3890274ea24f1b9fc946bf861ec617860c6560cab320f08a3d89
-wp14_renewal_collection_implementation_status: repository_implemented_local_verified_remote_activation_absent
+wp14_renewal_collection_implementation_status: merged_pr_48_repository_integrated_remote_activation_absent
+wp14_renewal_collection_integration_status: merged_pr_48
+wp14_renewal_collection_merged_head: 4b90a7b405ccfe504d80cb352430a3bcacd78770
+wp14_renewal_collection_merge_commit: e1d9e7c2baf9f987145959f9b9cfcb77011ea119
+wp14_renewal_collection_merged_at: "2026-09-29T01:35:24Z"
 wp14_renewal_collection_local_tests: "65 passed; synthetic identity, temporary lineage, fake transport only"
 wp14_renewal_collection_full_local_tests: "449 passed; 8 remote skipped; 56 existing warnings; clean tracked-tree copy"
 wp14_renewal_collection_verified_at: "2026-09-28T14:20:55.7201489Z"
@@ -265,19 +269,21 @@ wp14_renewal_collection_activation_status: absent_not_created
 wp14_renewal_collection_claim_status: absent_not_created
 wp14_renewal_collection_evidence_v2_status: absent_not_created
 wp14_renewal_collection_execution_status: blocked_expired_v1_new_exact_authority_absent
-current_feature_branch: wp/WP-14-evidence-renewal-collector
-base_main_commit: 379c5c462604c12ba6429d9dc2c1feaeacfff178
-last_commit: 379c5c462604c12ba6429d9dc2c1feaeacfff178
+current_feature_branch: wp/WP-14-renewal-collector-post-merge-state
+base_main_commit: e1d9e7c2baf9f987145959f9b9cfcb77011ea119
+last_commit: e1d9e7c2baf9f987145959f9b9cfcb77011ea119
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge the WP-14 renewal collector feature. A later run must bind the merged implementation commit, exact collector hash, private predecessor claim digests and current private executor binding in a new exact single-use activation; no remote attempt is authorized now."
+user_action_required: "Review and merge this PROJECT_STATE-only post-merge synchronization branch. Renewal activation preparation remains a separate later WP-14 gate; no remote attempt is authorized now."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-29: Verified GitHub PR #48 MERGED with reviewed renewal-collector head `4b90a7b405ccfe504d80cb352430a3bcacd78770`, merge commit/latest fetched and remote main `e1d9e7c2baf9f987145959f9b9cfcb77011ea119`, merge time `2026-09-29T01:35:24Z`, exact two-parent ancestry and approved-tree equality. Repository visibility remains PUBLIC and runner lineage remains `deployment_enabled=false`. The collector is repository-integrated only: renewal activation, claim and V2 evidence remain absent, execution remains blocked, scientific-condition blockers are unchanged, and WP-15 is unstarted. This dedicated branch updates only `PROJECT_STATE.md`; no identity read, collector/deployer execution, SSH/SCP, remote collection/deployment, Cadence/SKILL/simulation or OA/ADE/design/PDK operation occurred.
 
 - 2026-09-28: Verified GitHub PR #47 MERGED with reviewed request head `2b6e36511271d111a5e98d8f9f8ed1047c025302`, merge/latest fetched and remote main `379c5c462604c12ba6429d9dc2c1feaeacfff178`, merge time `2026-09-28T13:56:18Z`, PUBLIC visibility and a clean starting tree. Reconfirmed request normalized-LF SHA-256 `747ec5d73372f7fc8149f773638a0be106d12698fa4a1b7a45306c49a2374f4a`, then created `wp/WP-14-evidence-renewal-collector` from that exact base. No stale branch was merged or reused.
 
@@ -387,6 +393,8 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-29: PR #48 integrated the exact renewal collector implementation as `e1d9e7c2baf9f987145959f9b9cfcb77011ea119`. This post-merge state checkpoint records the reviewed head, merge provenance, PUBLIC visibility and disabled deployment without creating or consuming any authority. The exact collector hash remains `d814d0da7ffc3890274ea24f1b9fc946bf861ec617860c6560cab320f08a3d89`; a later separately reviewed activation must bind the merged implementation, private predecessor-claim digests and current private executor binding before one read-only attempt can be considered. WP-14 remains blocked and WP-15 is not started.
 
 - 2026-09-28: PR #47 integrated the exact renewal request into main as `379c5c462604c12ba6429d9dc2c1feaeacfff178`. This feature implements the new fixed collector and synthetic/fake-transport tests only. The implementation cannot run without a later reviewed activation bound to its merged commit, exact collector hash, private predecessor claim byte hashes and current executor binding. Existing V1 evidence, both consumed predecessor claims, both operational lock files and the consumed deployment activation remain byte-preserved; the renewal activation/claim/V2 evidence remain absent. No actual identity or remote operation occurred, deployment remains disabled, scientific blockers are unchanged, and WP-15 is not started.
 
