@@ -5,12 +5,13 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: blocked
-auto_phase_01_status: partial_policy_adapter_local_verified_pr_not_created
+current_status: work_copy_dc_observed_spec_unverified
+auto_phase_01_status: active_operating_policy_merged
 auto_phase_01_policy: docs/policy/PHASE_AUTONOMY_V1.md
 auto_phase_01_base_main: 3aa1872724ceb477698c76f73eb1a21f6111f9c4
-auto_phase_01_wp14_readonly_status: identity_verified_ade_result_blocked_by_source_locks
-auto_phase_01_dc_status: not_run
+auto_phase_01_wp14_readonly_status: current_oa_ade_conditions_observed
+auto_phase_01_dc_status: copied_baseline_and_candidate_completed_scalars_observed_no_spec_pass
+auto_phase_01_candidate_ac_status: fixed_two_frequency_capability_under_review_not_run
 last_completed_wp: WP-16
 next_wp: WP-14
 release_baseline: v1.0.0
