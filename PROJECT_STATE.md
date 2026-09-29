@@ -269,19 +269,28 @@ wp14_renewal_collection_activation_status: absent_not_created
 wp14_renewal_collection_claim_status: absent_not_created
 wp14_renewal_collection_evidence_v2_status: absent_not_created
 wp14_renewal_collection_execution_status: blocked_expired_v1_new_exact_authority_absent
-current_feature_branch: wp/WP-14-renewal-collector-post-merge-state
-base_main_commit: e1d9e7c2baf9f987145959f9b9cfcb77011ea119
-last_commit: e1d9e7c2baf9f987145959f9b9cfcb77011ea119
+wp14_renewal_collector_post_merge_state_status: merged_pr_49
+wp14_renewal_collector_post_merge_state_merged_head: 9cab6ca75740cb6b656770c33802455216207cf4
+wp14_renewal_collector_post_merge_state_merge_commit: af6c9a19fa0d0e6160d3939097c664d949f036b2
+wp14_renewal_collector_post_merge_state_merged_at: "2026-09-29T01:48:41Z"
+wp14_renewal_activation_request: docs/approvals/WP14_RENEWAL_SINGLE_USE_ACTIVATION_REQUEST_V1.md
+wp14_renewal_activation_request_normalized_lf_sha256: 9cc668d58448d8c3965751fb1bd25b3acf9f807b8fa1dc2e27547513888be04d
+wp14_renewal_activation_request_status: request_only_blocked_private_inputs_and_separate_authority_absent
+current_feature_branch: wp/WP-14-renewal-activation-request
+base_main_commit: af6c9a19fa0d0e6160d3939097c664d949f036b2
+last_commit: af6c9a19fa0d0e6160d3939097c664d949f036b2
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: not_run
-user_action_required: "Review and merge this PROJECT_STATE-only post-merge synchronization branch. Renewal activation preparation remains a separate later WP-14 gate; no remote attempt is authorized now."
+user_action_required: "Review and merge this request-only branch if acceptable. A separate exact single-use authorization and private local preflight are still required before any collector execution; no remote attempt is authorized now."
 ```
 
 ## WP-14 checkpoint
+
+- 2026-09-29: Verified PR #49 MERGED with reviewed state-sync head `9cab6ca75740cb6b656770c33802455216207cf4`, merge commit/latest fetched and remote main `af6c9a19fa0d0e6160d3939097c664d949f036b2`, merged at `2026-09-29T01:48:41Z`. PUBLIC visibility and `deployment_enabled=false` remain. Added a separate request-only review of the merged renewal collector's 19-field, single-use activation inputs. Private predecessor claim digests, current executor identity/binding, lock state and exact grant remain unverified and undisclosed. The primary checkout's full suite had 447 pass/2 fail solely because a preserved, ignored historical deployment Authorization exists there; that file was not touched. The same complete suite in a clean temporary repository copy without operational approval artifacts passed 449 tests with 8 remote tests skipped and 56 existing warnings. Ruff, mypy and the security script passed. No Authorization, claim, lock, V2 evidence, identity read, collector invocation, SSH/SCP, remote work, Cadence or design change occurred. WP-14 remains blocked and WP-15 unstarted.
 
 - 2026-09-29: Verified GitHub PR #48 MERGED with reviewed renewal-collector head `4b90a7b405ccfe504d80cb352430a3bcacd78770`, merge commit/latest fetched and remote main `e1d9e7c2baf9f987145959f9b9cfcb77011ea119`, merge time `2026-09-29T01:35:24Z`, exact two-parent ancestry and approved-tree equality. Repository visibility remains PUBLIC and runner lineage remains `deployment_enabled=false`. The collector is repository-integrated only: renewal activation, claim and V2 evidence remain absent, execution remains blocked, scientific-condition blockers are unchanged, and WP-15 is unstarted. This dedicated branch updates only `PROJECT_STATE.md`; no identity read, collector/deployer execution, SSH/SCP, remote collection/deployment, Cadence/SKILL/simulation or OA/ADE/design/PDK operation occurred.
 
