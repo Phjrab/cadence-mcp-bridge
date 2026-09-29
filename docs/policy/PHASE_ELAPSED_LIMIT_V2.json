@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "replaces_max_elapsed_hours": 8,
+  "max_elapsed_hours": null,
+  "preserve_original_started_at": true,
+  "preserve_other_cumulative_budgets": true,
+  "user_change": "explicit-in-current-task"
+}

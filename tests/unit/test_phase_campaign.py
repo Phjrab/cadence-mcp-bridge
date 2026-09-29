@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import subprocess
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -34,11 +35,82 @@ def test_exact_delegation_allows_only_versioned_policy(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    assert campaign._load_authority(policy_path, delegation_path) == digest
+    elapsed_policy = json.loads(campaign.ELAPSED_POLICY.read_text(encoding="utf-8"))
+    elapsed_policy_path = tmp_path / "elapsed-policy.json"
+    elapsed_policy_path.write_text(json.dumps(elapsed_policy), encoding="utf-8")
+    elapsed_digest = hashlib.sha256(campaign._canonical(elapsed_policy)).hexdigest()
+    elapsed_delegation_path = tmp_path / "elapsed-delegation.json"
+    elapsed_delegation_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "campaign_id": "AUTO-PHASE-01",
+                "parent_policy_sha256": digest,
+                "policy_sha256": elapsed_digest,
+                "user_delegation": "explicit-in-current-task",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        campaign._load_authority(
+            policy_path, delegation_path, elapsed_policy_path, elapsed_delegation_path
+        )
+        == digest
+    )
+    elapsed_delegation_bytes = elapsed_delegation_path.read_bytes()
+    elapsed_delegation_path.unlink()
+    with pytest.raises(campaign.CampaignError, match="policy or delegation file unavailable"):
+        campaign._load_authority(
+            policy_path, delegation_path, elapsed_policy_path, elapsed_delegation_path
+        )
+    elapsed_delegation_path.write_bytes(elapsed_delegation_bytes)
+    elapsed_policy["max_elapsed_hours"] = 24
+    elapsed_policy_path.write_text(json.dumps(elapsed_policy), encoding="utf-8")
+    with pytest.raises(campaign.CampaignError, match="elapsed limit policy changed"):
+        campaign._load_authority(
+            policy_path, delegation_path, elapsed_policy_path, elapsed_delegation_path
+        )
+    elapsed_policy["max_elapsed_hours"] = None
+    elapsed_policy_path.write_text(json.dumps(elapsed_policy), encoding="utf-8")
     policy["managed_root"] = "/"
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
     with pytest.raises(campaign.CampaignError, match="DENY_OUT_OF_SCOPE"):
-        campaign._load_authority(policy_path, delegation_path)
+        campaign._load_authority(
+            policy_path, delegation_path, elapsed_policy_path, elapsed_delegation_path
+        )
+
+
+def test_elapsed_change_preserves_original_start_and_replay(tmp_path: Path) -> None:
+    original = {
+        "at": (datetime.now(UTC) - timedelta(hours=12)).isoformat(),
+        "policy_sha256": "digest",
+    }
+    start = tmp_path / "started-at.json"
+    start.write_text(json.dumps(original), encoding="utf-8")
+    before = start.read_bytes()
+    record, attempt = campaign._reserve("identity", "digest", tmp_path)
+    assert attempt == 1
+    assert start.read_bytes() == before
+    with pytest.raises(campaign.CampaignError, match="prior attempt outcome unknown"):
+        campaign._reserve("identity", "digest", tmp_path)
+    campaign._replace_record(record, {"state": "transport_failed", "attempt": 1})
+    assert campaign._reserve("identity", "digest", tmp_path)[1] == 2
+
+
+def test_future_campaign_start_still_denied(tmp_path: Path) -> None:
+    (tmp_path / "started-at.json").write_text(
+        json.dumps(
+            {
+                "at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+                "policy_sha256": "digest",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(campaign.CampaignError, match="start is in the future"):
+        campaign._reserve("identity", "digest", tmp_path)
+    assert not (tmp_path / "identity-1.json").exists()
 
 
 def test_reservation_prevents_duplicate_and_unknown_replay(tmp_path: Path) -> None:

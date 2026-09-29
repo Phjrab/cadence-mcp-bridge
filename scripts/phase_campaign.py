@@ -18,6 +18,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "docs/policy/PHASE_CAMPAIGN_V1.json"
 DELEGATION = ROOT / ".codex/phase-campaign-delegation.json"
+ELAPSED_POLICY = ROOT / "docs/policy/PHASE_ELAPSED_LIMIT_V2.json"
+ELAPSED_DELEGATION = ROOT / ".codex/phase-elapsed-limit-v2-delegation.json"
 REMOTE_COMMANDS = {
     "identity": "id -un; hostname; /home/buet/cds_work/.cadence_mcp/bin/cadence-runner version",
     "ade_readonly": (
@@ -60,7 +62,12 @@ def _state_root() -> Path:
     return root
 
 
-def _load_authority(policy_path: Path = POLICY, delegation_path: Path = DELEGATION) -> str:
+def _load_authority(
+    policy_path: Path = POLICY,
+    delegation_path: Path = DELEGATION,
+    elapsed_policy_path: Path = ELAPSED_POLICY,
+    elapsed_delegation_path: Path = ELAPSED_DELEGATION,
+) -> str:
     repository = subprocess.run(
         ["git", "-C", str(ROOT), "remote", "get-url", "origin"],
         capture_output=True,
@@ -96,6 +103,27 @@ def _load_authority(policy_path: Path = POLICY, delegation_path: Path = DELEGATI
         "user_delegation": "explicit-in-current-task",
     }:
         raise CampaignError("DENY_OUT_OF_SCOPE: delegation binding absent or changed")
+    elapsed_policy = _read_json(elapsed_policy_path)
+    if elapsed_policy != {
+        "schema_version": 1,
+        "campaign_id": "AUTO-PHASE-01",
+        "parent_policy_sha256": digest,
+        "replaces_max_elapsed_hours": 8,
+        "max_elapsed_hours": None,
+        "preserve_original_started_at": True,
+        "preserve_other_cumulative_budgets": True,
+        "user_change": "explicit-in-current-task",
+    }:
+        raise CampaignError("DENY_OUT_OF_SCOPE: elapsed limit policy changed")
+    elapsed_digest = hashlib.sha256(_canonical(elapsed_policy)).hexdigest()
+    if _read_json(elapsed_delegation_path) != {
+        "schema_version": 1,
+        "campaign_id": "AUTO-PHASE-01",
+        "parent_policy_sha256": digest,
+        "policy_sha256": elapsed_digest,
+        "user_delegation": "explicit-in-current-task",
+    }:
+        raise CampaignError("DENY_OUT_OF_SCOPE: elapsed limit delegation absent or changed")
     return digest
 
 
@@ -118,8 +146,8 @@ def _reserve(operation: str, digest: str, state_root: Path) -> tuple[Path, int]:
         started = datetime.fromisoformat(start["at"])
     except (KeyError, TypeError, ValueError) as exc:
         raise CampaignError("BLOCKED_UNCERTAIN_STATE: invalid campaign clock") from exc
-    if now - started > timedelta(hours=8) or started > now:
-        raise CampaignError("BUDGET_REACHED: eight-hour campaign limit")
+    if started > now:
+        raise CampaignError("BLOCKED_UNCERTAIN_STATE: campaign start is in the future")
     for attempt in range(1, MAX_ATTEMPTS + 1):
         path = state_root / f"{operation}-{attempt}.json"
         if path.exists():
@@ -164,7 +192,8 @@ def run(operation: str) -> dict[str, Any]:
             if (state_root / f"identity-{index}.json").exists()
         ]
         verified = [
-            item for item in identities
+            item
+            for item in identities
             if item.get("state") == "succeeded" and item.get("policy_sha256") == digest
         ]
         if len(verified) != 1:
@@ -177,8 +206,15 @@ def run(operation: str) -> dict[str, Any]:
     try:
         result = subprocess.run(
             [
-                "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-                "-o", "ConnectTimeout=5", "cadence-vm", command,
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=yes",
+                "-o",
+                "ConnectTimeout=5",
+                "cadence-vm",
+                command,
             ],
             capture_output=True,
             timeout=180 if operation == "ade_readonly" else 30,

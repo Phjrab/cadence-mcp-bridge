@@ -22,6 +22,8 @@ STOP, per-PR merge approval, and per-read approval rules below for operations in
 `docs/policy/PHASE_CAMPAIGN_V1.json` and the scope in
 `docs/policy/PHASE_AUTONOMY_V1.md`. Read the migration record there before using the
 new operator path. The rules below remain historical or apply outside this delegation.
+The user's later explicit removal of the eight-hour elapsed ceiling is bound by
+`docs/policy/PHASE_ELAPSED_LIMIT_V2.json`; all other cumulative limits remain active.
 The old single-use authorization paths and records are unchanged. A new operation
 must pass its own policy, identity, integrity, budget, and replay checks; a policy
 file alone is not proof of user delegation. GitHub protections and platform access
