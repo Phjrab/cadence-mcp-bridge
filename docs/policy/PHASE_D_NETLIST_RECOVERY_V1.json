@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "2a30bda217d363a27b49b7a799b3df1fba371d80757ba333e2f57bba5d334c41",
+  "operation": "phased-netlist-v1-run",
+  "target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "source_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "before_sha256": "0fa357c2e92e20e5a835cc3707668c1fda275e625b4afcd7a4ba905132ee115a",
+  "status_sha256": "0271fa428632d8bcfd8f4a9024045c5a73f83ef05a8a1d91ca31fd0649fb1139",
+  "ocean_log_sha256": "b1925f5087e9e83298813b3a2ee0d5a8a638fc7334ec2cd2fde0c4601f3d3226",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "input_scs_sha256": "d65e913f92e936603dfd4091883100abfb8ee772e12ecc9b6dd1ab43b1c8e445"
+}
