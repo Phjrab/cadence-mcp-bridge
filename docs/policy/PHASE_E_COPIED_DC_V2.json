@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "b337ab3d91b9f90c45f09989deef902e9681b88cea42b3904529bb093a28c953",
+  "operation_ids": ["phasee-copied-dc-v2-deploy", "phasee-copied-dc-v2-resume-baseline", "phasee-copied-dc-v2-candidate"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/dc-v2",
+  "v1_files": {
+    "run.sh": "b87d9a9db7ed3459094b88ac6fd0b1b149728befd0119ea9299b137ac7d3701e",
+    "dc_helper.py": "d00ea99d653da8ae234652bd2363891d26f8f000b9dc769f6b757c485575b439"
+  },
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "baseline_claim": "phasee-copied-dc-v1-baseline",
+  "candidate_claim": "phasee-copied-dc-v1-candidate",
+  "spectre_attempt_count_before_resume": 1,
+  "files": {
+    "run.sh": "8f72226d983170b4f87ca0c03f79826b4af81a57ca65878660958ad64f1e7ef8",
+    "dc_helper.py": "d5469ffac5bcd2ba8ec96025fa49369fcc2952d363bf3776f649c1f850147e05"
+  }
+}
