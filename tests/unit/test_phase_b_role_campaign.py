@@ -22,6 +22,21 @@ def test_manifest_matches_reviewed_bytes_and_original_campaign() -> None:
     for name, path in phase_b.LOCAL_FILES.items():
         assert phase_b._sha(path.read_bytes()) == policy["files"][name]
     assert policy["operation_ids"] == list(phase_b.OPERATIONS.values())
+    manifest = phase_b._manifest_bytes(policy)
+    assert b"\r" not in manifest
+    assert manifest.count(b"\n") == len(phase_b.LOCAL_FILES)
+
+
+def test_recovery_rejects_unexpected_stage_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    policy = json.loads(phase_b.POLICY.read_text(encoding="utf-8"))
+
+    def fake_ssh(command: str, *, timeout: int = 60) -> bytes:
+        del command, timeout
+        return b"run.sh\nwp14_role_discovery.py\nwp14-role-discovery.il\nmanifest.sha256\nextra\n"
+
+    monkeypatch.setattr(phase_b, "_ssh", fake_ssh)
+    with pytest.raises(phase_b.PhaseBError, match="staging file set changed"):
+        phase_b._verify_version_files(phase_b.REMOTE_STAGE, policy)
 
 
 def test_duplicate_operation_is_blocked_without_budget_reset(tmp_path: Path) -> None:

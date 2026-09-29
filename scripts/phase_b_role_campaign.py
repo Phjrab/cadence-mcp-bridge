@@ -157,6 +157,42 @@ def _finish(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _manifest_bytes(policy: dict[str, Any]) -> bytes:
+    lines = [policy["files"][name] + "  " + name + "\n" for name in LOCAL_FILES]
+    return "".join(lines).encode("ascii")
+
+
+def _verify_version_files(directory: str, policy: dict[str, Any]) -> None:
+    names = _ssh("ls -A " + directory).decode("ascii", errors="strict").splitlines()
+    if sorted(names) != sorted([*LOCAL_FILES, "manifest.sha256"]):
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: staging file set changed")
+    checks = " && ".join(
+        "test -f " + directory + "/" + name + " && test ! -L " + directory + "/" + name
+        for name in LOCAL_FILES
+    )
+    _ssh(
+        "test -d "
+        + directory
+        + " && test ! -L "
+        + directory
+        + " && test -f "
+        + directory
+        + "/manifest.sha256"
+        + " && test ! -L "
+        + directory
+        + "/manifest.sha256 && "
+        + checks
+    )
+    manifest_identity = _ssh("stat -c %U:%G:%h " + directory + "/manifest.sha256").strip()
+    if manifest_identity != b"buet:buet:1":
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: staging manifest identity changed")
+    hashes = _ssh("cd " + directory + " && sha256sum " + " ".join(LOCAL_FILES))
+    lines = hashes.decode("ascii", errors="strict").splitlines()
+    expected = [policy["files"][name] + "  " + name for name in LOCAL_FILES]
+    if lines != expected:
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: staging bytes changed")
+
+
 def _remote_preflight(policy: dict[str, Any]) -> None:
     identity = (
         _ssh(
@@ -218,9 +254,9 @@ def deploy() -> dict[str, Any]:
         )
         if result.returncode:
             raise PhaseBError("BLOCKED_UNCERTAIN_STATE: fixed staging copy failed")
-    manifest = "".join(policy["files"][name] + "  " + name + "\n" for name in LOCAL_FILES)
+    manifest = _manifest_bytes(policy)
     manifest_path = state_root / "phaseb-role-manifest.sha256"
-    with manifest_path.open("x", encoding="ascii") as stream:
+    with manifest_path.open("xb") as stream:
         stream.write(manifest)
         stream.flush()
         os.fsync(stream.fileno())
@@ -247,7 +283,70 @@ def deploy() -> dict[str, Any]:
             "state": "succeeded",
             "operation": OPERATIONS["deploy"],
             "policy_sha256": digest,
-            "manifest_sha256": _sha(manifest.encode("ascii")),
+            "manifest_sha256": _sha(manifest),
+            "at": datetime.now(UTC).isoformat(),
+        },
+    )
+
+
+def recover_deploy() -> dict[str, Any]:
+    """Resolve only the already reserved deployment from exact staged bytes."""
+    policy, digest, state_root = _authority()
+    record = state_root / (OPERATIONS["deploy"] + ".json")
+    prior = parent._read_json(record)
+    if prior.get("state") != "reserved" or prior.get("policy_sha256") != digest:
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: no matching reserved deployment")
+    _remote_preflight(policy)
+    locations = (
+        _ssh(
+            "set -e; test ! -L " + REMOTE_ROOT + "/phase-campaign; "
+            "if test -d " + REMOTE_STAGE + "; then echo stage; fi; "
+            "if test -d " + REMOTE_VERSION + "; then echo final; fi"
+        )
+        .decode("ascii", errors="strict")
+        .splitlines()
+    )
+    if locations not in (["stage"], ["final"]):
+        raise PhaseBError("BLOCKED_UNCERTAIN_STATE: deployment location is ambiguous")
+    if locations == ["stage"]:
+        _verify_version_files(REMOTE_STAGE, policy)
+        manifest = _manifest_bytes(policy)
+        path = state_root / "phaseb-role-manifest-lf.sha256"
+        if path.exists():
+            if path.read_bytes() != manifest:
+                raise PhaseBError("BLOCKED_UNCERTAIN_STATE: recovery manifest changed")
+        else:
+            with path.open("xb") as stream:
+                stream.write(manifest)
+                stream.flush()
+                os.fsync(stream.fileno())
+        result = _command((*SCP, str(path), "cadence-vm:" + REMOTE_STAGE + "/manifest.sha256"))
+        if result.returncode:
+            raise PhaseBError("BLOCKED_UNCERTAIN_STATE: recovery manifest copy failed")
+        _ssh(
+            "cd "
+            + REMOTE_STAGE
+            + " && sha256sum -c manifest.sha256"
+            + " && chmod 700 run.sh"
+            + " && chmod 600 wp14_role_discovery.py wp14-role-discovery.il manifest.sha256"
+            + " && mv "
+            + REMOTE_STAGE
+            + " "
+            + REMOTE_VERSION
+            + " && cd "
+            + REMOTE_VERSION
+            + " && sha256sum -c manifest.sha256"
+        )
+    _verify_version_files(REMOTE_VERSION, policy)
+    _ssh("cd " + REMOTE_VERSION + " && sha256sum -c manifest.sha256")
+    return _finish(
+        record,
+        {
+            "state": "succeeded",
+            "operation": OPERATIONS["deploy"],
+            "policy_sha256": digest,
+            "manifest_sha256": _sha(_manifest_bytes(policy)),
+            "reconciled_from_reserved": True,
             "at": datetime.now(UTC).isoformat(),
         },
     )
@@ -300,11 +399,16 @@ def read() -> dict[str, Any]:
 
 
 def main() -> int:
-    if len(sys.argv) != 2 or sys.argv[1] not in OPERATIONS:
-        print("usage: phase_b_role_campaign.py deploy|read", file=sys.stderr)
+    if len(sys.argv) != 2 or sys.argv[1] not in (*OPERATIONS, "recover-deploy"):
+        print("usage: phase_b_role_campaign.py deploy|recover-deploy|read", file=sys.stderr)
         return 2
     try:
-        result = deploy() if sys.argv[1] == "deploy" else read()
+        if sys.argv[1] == "deploy":
+            result = deploy()
+        elif sys.argv[1] == "recover-deploy":
+            result = recover_deploy()
+        else:
+            result = read()
     except (PhaseBError, parent.CampaignError) as exc:
         print(str(exc), file=sys.stderr)
         return 1

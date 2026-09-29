@@ -56,6 +56,9 @@ inspection record. Its two one-shot operations deploy three exact files to a new
 managed version directory and run a names-only, read-only OA role probe. It cannot
 apply a bias, run Spectre, or establish numeric VDD/VCM/load values. Those
 capabilities require distinct reviewed typed operations.
+If the deploy response is uncertain after staging, `recover-deploy` verifies the
+reserved operation and exact campaign-owned staged bytes before completing that
+same operation. It does not reset the journal or create another deploy allowance.
 
 This is an operational guard, not cryptographic isolation from the same OS account:
 that account can edit code, delegation and state. External sandbox, SSH and GitHub
