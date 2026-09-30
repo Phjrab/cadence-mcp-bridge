@@ -301,6 +301,11 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_submit_actual_diagnostic",
         "cadence_actual_diagnostic_status",
         "cadence_actual_diagnostic_result",
+        "cadence_plan_sweep",
+        "cadence_submit_sweep",
+        "cadence_sweep_status",
+        "cadence_sweep_result",
+        "cadence_cancel_sweep",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
@@ -365,6 +370,9 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_actual_diagnostics",
         "cadence_actual_diagnostic_status",
         "cadence_actual_diagnostic_result",
+        "cadence_plan_sweep",
+        "cadence_sweep_status",
+        "cadence_sweep_result",
     }
     destructive = {
         name
@@ -374,6 +382,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     assert destructive == {
         "cadence_cancel_job",
         "cadence_execute_design_write_validation",
+        "cadence_cancel_sweep",
     }
     assert tools["cadence_health"].annotations is not None
     assert tools["cadence_health"].annotations.read_only_hint is True

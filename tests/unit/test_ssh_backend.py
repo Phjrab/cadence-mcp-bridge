@@ -474,6 +474,9 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
         "status",
         "submit_profile",
         "submit_actual_diagnostic",
+        "reserve_sweep_attempt",
+        "lookup_sweep_reservation",
+        "effective_sweep_values",
         "submit_smoke",
     }
     assert "profile" not in inspect.signature(backend.submit_smoke).parameters
