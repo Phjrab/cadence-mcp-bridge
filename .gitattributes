@@ -52,6 +52,10 @@ remote/phase-campaign/candidate-wideband-scalars-v1/run.sh text eol=lf
 remote/phase-campaign/candidate-wideband-scalars-v1/scalar_helper.py text eol=lf
 remote/phase-campaign/differential-dc-v1/run.sh text eol=lf
 remote/phase-campaign/differential-dc-v1/dc_helper.py text eol=lf
+remote/phase-campaign/differential-dc-scalars-v1/run.sh text eol=lf
+remote/phase-campaign/differential-dc-scalars-v1/scalar_helper.py text eol=lf
+remote/phase-campaign/differential-dc-scalars-v1/extract-positive.ocn text eol=lf
+remote/phase-campaign/differential-dc-scalars-v1/extract-negative.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text

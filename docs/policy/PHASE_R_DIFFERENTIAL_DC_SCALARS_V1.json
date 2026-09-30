@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1773043f2351e78872fbc4f903a966084395ee48267fcad3127c63554dde16c3",
+  "operation_ids": ["phaser-differential-dc-scalars-v1-deploy", "phaser-differential-dc-scalars-v1-positive", "phaser-differential-dc-scalars-v1-negative"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/differential-dc-scalars-v1",
+  "dc_result_sha256": {
+    "positive": "2983edf834e865ed7eff1afd51777feafd45b410dbd0b60e702d6c4d77070084",
+    "negative": "bdb1ab3973cc3c7f60e36071bd3c8a070ccf064d319b4e07cb6c93a1d25751b4"
+  },
+  "psf_tree_sha256": {
+    "positive": "49184d7d16301779b547af1e5281dfb45804793782bf599b05bb3a730b5393f6",
+    "negative": "387501f30447f3b3fd11da3c19ca2f6dbd8da48284e677ce3105af2b15920b2a"
+  },
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "input_dc_differential_uv": [1, -1],
+  "spectre_attempt_count": 9,
+  "new_simulation": false,
+  "files": {
+    "run.sh": "9716edc2b618af34a971661ff591e451822b3e591b89353a7f167170e5631312",
+    "scalar_helper.py": "295806daf8f7bcb8e5e0a08e66b4630acfa104248d5ba3144bc488cc66416235",
+    "extract-positive.ocn": "3a8edb142367ea866188b2c51ce84f41f5c3b7d4ff03383dc2c88cf30b92b530",
+    "extract-negative.ocn": "ac4e74b8e5d436a84700fdeab0ec5a50f39ec9ad3014e66dc232ffc3a434ba9e"
+  }
+}
