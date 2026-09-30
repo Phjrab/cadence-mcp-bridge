@@ -17,6 +17,7 @@ auto_phase_01_candidate_ac_status: copied_ac_completed_scalar_locally_recovered_
 auto_phase_01_phase_d_status: three_point_dc_midpoint_completed_scalar_read_implemented
 auto_phase_01_phase_d_ac_sweep_status: baseline_midpoint_ac_completed_scalar_reader_implemented
 auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_reader_implemented
+auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_implemented_execution_pending
 last_completed_wp: WP-16
 next_wp: WP-14
 release_baseline: v1.0.0
@@ -532,6 +533,16 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-30 AUTO-PHASE-01 WP-14 diagnostic capability: The user supplied no numeric
+  acceptance targets. Phase Q implements two fixed, sequential, job-local DC runs
+  at the observed 0.5 V input common mode with +1 and -1 microvolt differential
+  inputs, candidate 320/702 mV bias, and required 1.0 V VDD. It preserves the
+  original circuit, ADE state, PDK, and copied source netlist. Its two Spectre
+  attempts are charged to the existing cumulative counter before execution.
+  Simulation completion and later scalar extraction remain distinct from a
+  design specification PASS. This entry records capability implementation only;
+  the private one-shot runtime journal contains execution outcomes.
 
 - 2026-09-29 AUTO-PHASE-01 checkpoint: The user explicitly delegated bounded phase work.
   PR #57 was confirmed merged at `3aa1872724ceb477698c76f73eb1a21f6111f9c4`;

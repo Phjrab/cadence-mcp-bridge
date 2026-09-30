@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "33fe4ca5e3127ce59b4ebdcabea6a6023d984a4c36b9217ff41681a2d0a20009",
+  "operation_ids": ["phaseq-differential-dc-v1-deploy", "phaseq-differential-dc-v1-positive", "phaseq-differential-dc-v1-negative"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/differential-dc-v1",
+  "prior_scalar_result_sha256": "5755da1d51f1c3d1b6108b0afc816c2a69844af5427b1cadf3a5073154e2c4f3",
+  "candidate_ac_result_sha256": "e2c51d5cf26f3546b4c21c458e9456dcea217ab47f33b10eb83d1ca9c32c33f8",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_target_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_tree_sha256": "dce155df486c1bb70f3cfd4282f6a002031696b92e0754d78e4d8ed10dfc2387",
+  "circuit_netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "candidate_bias_mv": [320, 702],
+  "vdd_mv": 1000,
+  "input_vcm_mv": 500,
+  "input_dc_differential_uv": [1, -1],
+  "model_section": "NN",
+  "temperature_c": 27,
+  "spectre_attempt_count_before": 7,
+  "files": {
+    "run.sh": "ec0fd1b85f6cb0eb11626e2d7fe799cc591c6369f01913443ed114e646b4863c",
+    "dc_helper.py": "97e3638b75a278ffb60988a17713581d9e0175533311e22c3451852ab89d616c"
+  }
+}
