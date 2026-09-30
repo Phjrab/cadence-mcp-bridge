@@ -67,6 +67,8 @@ remote/phase-campaign/native-ac-tran-v1/*.ocn text eol=lf
 remote/phase-campaign/native-ac-tran-v2/*.ocn text eol=lf
 remote/phase-campaign/native-ac-tran-v3/*.ocn text eol=lf
 remote/phase-campaign/native-ac-tran-v4/*.ocn text eol=lf
+remote/phase-campaign/native-candidate-v1/*.ocn text eol=lf
+remote/phase-campaign/native-candidate-v2/*.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
