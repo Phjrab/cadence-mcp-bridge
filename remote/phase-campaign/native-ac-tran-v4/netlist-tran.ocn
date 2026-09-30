@@ -1,0 +1,71 @@
+; Fixed native ADE L state load on the verified read-only source copy.
+; Paths are job-owned. No state or cellview save is called.
+procedure(mcpAdeInstanceSignature(cv)
+  let((records netName)
+    records=nil
+    foreach(inst cv~>instances
+      records=cons(sprintf(nil "I|%s|%s|%s"
+        inst~>name inst~>master~>libName inst~>master~>cellName) records)
+      foreach(instTerm inst~>instTerms
+        netName=if(instTerm~>net then instTerm~>net~>name else "UNCONNECTED")
+        records=cons(sprintf(nil "T|%s|%s|%s"
+          inst~>name instTerm~>term~>name netName) records))
+      foreach(prop inst~>prop
+        records=cons(sprintf(nil "P|%s|%s|%s|%L"
+          inst~>name prop~>name prop~>valueType prop~>value) records)))
+    sort(records 'alphalessp)))
+procedure(mcpAdeNetSignature(cv)
+  let((records netName)
+    records=nil
+    foreach(net cv~>nets records=cons(strcat("N|" net~>name) records))
+    foreach(term cv~>terminals
+      netName=if(term~>net then term~>net~>name else "UNCONNECTED")
+      records=cons(sprintf(nil "C|%s|%L|%s"
+        term~>name term~>direction netName) records))
+    sort(records 'alphalessp)))
+let((source copy same)
+  source=dbOpenCellViewByType("MyDesignLib" "Differential_Amplifier_TB2" "schematic" "" "r")
+  copy=dbOpenCellViewByType("MCP_WorkLib" "WP14_AUTO_PHASE_01_TB2" "schematic" "" "r")
+  unless(source && copy exit(1))
+  same=equal(mcpAdeInstanceSignature(source) mcpAdeInstanceSignature(copy)) &&
+    equal(mcpAdeNetSignature(source) mcpAdeNetSignature(copy))
+  unless(dbClose(source) && dbClose(copy) && same exit(1))
+  printf("MCP_ADE_SOURCE_COPY|true\n"))
+envSetVal("asimenv.startup" "projectDir" 'string
+  "/home/buet/cds_work/.cadence_mcp/native-ac-tran-v4-tran/project")
+envSetVal("asimenv.startup" "simulator" 'string "spectre")
+let((copy win asiSession sevSessionId)
+  unless(sevStartSession(?lib "MCP_WorkLib" ?cell "WP14_AUTO_PHASE_01_TB2"
+    ?view "schematic") exit(1))
+  win=hiGetCurrentWindow()
+  asiSession=asiGetSession(win)
+  sevSessionId=sevSession(win)
+  unless(asiSession && sevSessionId exit(1))
+  copy=asiGetTopCellView(asiSession)
+  unless(copy && copy~>libName=="MCP_WorkLib" &&
+    copy~>cellName=="WP14_AUTO_PHASE_01_TB2" && copy~>viewName=="schematic" exit(1))
+  printf("MCP_ADE_SESSION|true\n")
+  unless(asiLoadState(asiSession ?name "state1" ?option 'dir
+    ?stateDir "/home/buet/cds_work/.cadence_mcp/native-ac-tran-v4-tran/state-root"
+    ?lib "MCP_WorkLib" ?cell "WP14_AUTO_PHASE_01_TB2" ?simulator "spectre") exit(1))
+  printf("MCP_ADE_STATE_LOAD|true\n")
+  foreach(name asiGetAnalysisNameList(asiSession)
+    unless(asiDisableAnalysis(asiGetAnalysis(asiSession name)) exit(1)))
+  let((ana)
+    ana=asiGetAnalysis(asiSession 'tran)
+    unless(ana exit(1))
+    unless(asiGetAnalysisFieldVal(ana 'stop)=="4m" exit(1))
+    unless(asiSetAnalysisOptionVal(ana 'maxstep "10u") exit(1))
+    unless(asiSetAnalysisOptionVal(ana 'method "trap") exit(1))
+    unless(asiEnableAnalysis(ana) && asiIsAnalysisEnabled(ana) exit(1))
+    unless(length(asiGetEnabledAnalysisList(asiSession))==1 exit(1)))
+  printf("MCP_NATIVE_ANALYSIS|tran\n")
+  unless(sevNetlistFile(sevSessionId 'recreate) exit(1))
+  printf("MCP_ADE_NETLIST|true\n")
+  ; Reload the owned saved state to discard transient session changes before quit.
+  unless(asiLoadState(asiSession ?name "state1" ?option 'dir
+    ?stateDir "/home/buet/cds_work/.cadence_mcp/native-ac-tran-v4-tran/state-root"
+    ?lib "MCP_WorkLib" ?cell "WP14_AUTO_PHASE_01_TB2" ?simulator "spectre") exit(1))
+  printf("MCP_NATIVE_SESSION_RESTORED|true\n")
+  unless(sevQuit(sevSessionId) exit(1)))
+exit(0)
