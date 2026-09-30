@@ -5,7 +5,13 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: characterization_complete_spec_not_evaluated
+current_status: sim_mcp_01_verified_spec_not_evaluated
+sim_mcp_01_status: fixed_workcopy_dc_ac_mcp_e2e_verified
+sim_mcp_01_report: docs/SIM_MCP_01_RESULT_V1.md
+sim_mcp_01_remote_version: phase-campaign/sim-mcp-v2
+sim_mcp_01_spectre_attempts_after: 11_of_100
+sim_mcp_01_spec_evaluation: not_evaluated
+sim_mcp_01_platform_tool_approval: prompt_retained_after_auto_review_rejection
 wp14_closeout_status: completed_from_preserved_work_copy_evidence
 wp14_closeout_outcome: CHARACTERIZATION_COMPLETE_SPEC_NOT_EVALUATED
 wp14_closeout_report: docs/WP14_CLOSEOUT_RESULT_V1.md
@@ -26,7 +32,7 @@ auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagno
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
 last_completed_wp: WP-16
-next_wp: awaiting_user_choice_SIM-MCP-01
+next_wp: awaiting_user_choice_SWEEP-MCP-01
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized

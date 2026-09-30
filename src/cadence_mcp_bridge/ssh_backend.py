@@ -15,6 +15,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from cadence_mcp_bridge.actual_diagnostics import (
+    ActualDiagnosticRequest,
+    ActualDiagnosticResult,
+    ActualDiagnosticStatus,
+)
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import (
     AuthenticationError,
@@ -295,6 +300,52 @@ class OpenSshBackend:
             raise RemoteFailureError("Remote runner returned a mismatched validation_id")
         return result
 
+    async def submit_actual_diagnostic(
+        self, job_id: UUID, request: ActualDiagnosticRequest
+    ) -> ActualDiagnosticStatus:
+        return self._validate(
+            ActualDiagnosticStatus,
+            await self._invoke_diagnostic_json("submit", job_id, request.analysis),
+        )
+
+    async def actual_diagnostic_status(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticStatus:
+        return self._validate(
+            ActualDiagnosticStatus,
+            await self._invoke_diagnostic_json("status", job_id, analysis),
+        )
+
+    async def actual_diagnostic_result(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticResult:
+        return self._validate(
+            ActualDiagnosticResult,
+            await self._invoke_diagnostic_json("result", job_id, analysis),
+        )
+
+    async def _invoke_diagnostic_json(
+        self,
+        action: Literal["submit", "status", "result"],
+        job_id: UUID,
+        analysis: Literal["dc", "ac"],
+    ) -> dict[str, Any]:
+        if action not in ("submit", "status", "result") or analysis not in ("dc", "ac"):
+            raise InvalidInputError("unsupported actual diagnostic operation")
+        if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
+            raise InvalidInputError("actual diagnostics require the reviewed managed root")
+        runner = f"{self._config.remote_root}/phase-campaign/sim-mcp-v2/run.sh"
+        output = await asyncio.to_thread(
+            self._invoke_at_path, runner, action, self._job_id(job_id), analysis
+        )
+        try:
+            payload = json.loads(output)
+        except json.JSONDecodeError as exc:
+            raise RemoteFailureError("Remote diagnostic returned invalid JSON") from exc
+        if not isinstance(payload, dict):
+            raise RemoteFailureError("Remote diagnostic returned an invalid payload")
+        return payload
+
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)
         try:
@@ -306,6 +357,9 @@ class OpenSshBackend:
         return payload
 
     def _invoke(self, command: _RunnerCommand, *arguments: str) -> str:
+        return self._invoke_at_path(self._config.runner_path, command.value, *arguments)
+
+    def _invoke_at_path(self, runner_path: str, command: str, *arguments: str) -> str:
         argv = [
             self._ssh_executable,
             "-o",
@@ -319,8 +373,8 @@ class OpenSshBackend:
             "-o",
             f"ServerAliveCountMax={self._SERVER_ALIVE_COUNT_MAX}",
             self._config.ssh_alias,
-            self._config.runner_path,
-            command.value,
+            runner_path,
+            command,
             *arguments,
         ]
         try:

@@ -28,13 +28,14 @@ def test_installer_backs_up_and_replaces_only_named_entry() -> None:
     assert "Registration already matches the reviewed configuration." in source
 
 
-def test_installer_prompts_for_every_side_effect_tool() -> None:
+def test_installer_keeps_prompts_for_side_effecting_tools() -> None:
     source = INSTALLER.read_text(encoding="utf-8")
 
     assert 'default_tools_approval_mode = "writes"' in source
     assert "[mcp_servers.$serverName.tools.cadence_submit_smoke]" in source
     assert "[mcp_servers.$serverName.tools.cadence_cancel_job]" in source
     assert "[mcp_servers.$serverName.tools.cadence_execute_design_write_validation]" in source
-    assert source.count('approval_mode = "prompt"') == 3
+    assert "[mcp_servers.$serverName.tools.cadence_submit_actual_diagnostic]" in source
+    assert source.count('approval_mode = "prompt"') == 4
     for forbidden in ("run_shell", "ssh_exec", "eval_skill", "execute_ocean"):
         assert forbidden not in source

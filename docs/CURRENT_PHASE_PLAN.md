@@ -14,6 +14,9 @@ characterization with no numerical specification evaluation in
 `WP14_CLOSEOUT_RESULT_V1.md`. The original source/ADE scientific baseline and
 historical snapshot equivalence remain unverified. Stop after this closeout's
 report and ask once before beginning the proposed `SIM-MCP-01` implementation.
+The user subsequently selected SIM-MCP-01. Its fixed work-copy DC/AC MCP
+implementation and real client E2E are recorded in `SIM_MCP_01_RESULT_V1.md`.
+The next proposed phase, SWEEP-MCP-01, requires a separate user choice.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,
