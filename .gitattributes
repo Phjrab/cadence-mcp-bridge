@@ -60,6 +60,9 @@ remote/phase-campaign/mos-cdf-v1/run.sh text eol=lf
 remote/phase-campaign/mos-cdf-v1/cdf_helper.py text eol=lf
 remote/phase-campaign/mos-cdf-v1/mos-cdf-v1.il text eol=lf
 remote/phase-campaign/sim-mcp-v2/*.ocn text eol=lf
+remote/phase-campaign/ade-qual-v4/*.ocn text eol=lf
+remote/phase-campaign/ade-qual-v5/*.ocn text eol=lf
+remote/phase-campaign/ade-qual-v6/*.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text

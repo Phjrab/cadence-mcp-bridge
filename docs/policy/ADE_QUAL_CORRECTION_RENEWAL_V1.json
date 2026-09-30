@@ -1,0 +1,11 @@
+{
+  "additional_corrections": 3,
+  "campaign_id": "AUTO-PHASE-01",
+  "checkpoint_sha256": "74ff35ae46cf6434464e791b68435ebefc2282cf39f99be9acd19488db3183b6",
+  "max_elapsed_hours": null,
+  "maximum_corrections": 6,
+  "phase": "ADE-QUAL-01",
+  "preserve_other_cumulative_budgets": true,
+  "prior_corrections_used": 3,
+  "schema_version": 1
+}

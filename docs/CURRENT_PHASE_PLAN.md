@@ -21,6 +21,14 @@ real three-point MCP E2E are recorded in `SWEEP_MCP_01_RESULT_V1.md`. The
 historical circuit bias pairs are a coupled path; no one-axis actual-circuit
 bias range or binding was approved or executed. Ask once before the next
 ADE-QUAL-01 or narrow DESIGN-OPT-01 preparation phase.
+The user selected ADE-QUAL-01 current source/ADE state netlist and analysis
+validation. After the user's explicit three-correction renewal, its first native
+DC bundle completed at observed 300/650 mV, NN, 27 C and VDD=1.0 V. Native
+netlist conditions, one simulation and PSF scalar extraction were verified;
+specification evaluation remains `not_evaluated`. Five of six corrections and
+15 of 100 cumulative Spectre attempts are consumed. See `ADE_QUAL_01_RESULT_V1.md`.
+Earlier failures and the private checkpoint remain preserved. Ask once before
+another major phase; no subsequent phase is active.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

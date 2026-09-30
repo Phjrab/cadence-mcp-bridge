@@ -50,6 +50,15 @@ until a single-axis binding and bounded voltage range are reviewed. The
 historical three bias pairs vary two variables together. See
 [`docs/SWEEP_MCP_01_RESULT_V1.md`](docs/SWEEP_MCP_01_RESULT_V1.md).
 
+ADE-QUAL-01 qualified one current-source/ADE-state DC bundle through native
+netlisting, verified effective conditions, Spectre and PSF scalar extraction.
+The observed biases are 300/650 mV; the 320/702 mV candidate remains separate.
+See [`docs/ADE_QUAL_01_RESULT_V1.md`](docs/ADE_QUAL_01_RESULT_V1.md) for scope,
+resource use and remaining analysis gaps. Earlier failures remain preserved in
+the checkpoint. The existing 31 MCP tools are unchanged. The fixed operator
+`scripts/ade_qual.py status` reads the preserved result; execution requires exact
+private delegation, correction, predecessor, integrity and replay guards.
+
 ## Development and verification
 
 ```powershell
