@@ -5,7 +5,12 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: work_copy_dc_observed_spec_unverified
+current_status: characterization_complete_spec_not_evaluated
+wp14_closeout_status: completed_from_preserved_work_copy_evidence
+wp14_closeout_outcome: CHARACTERIZATION_COMPLETE_SPEC_NOT_EVALUATED
+wp14_closeout_report: docs/WP14_CLOSEOUT_RESULT_V1.md
+wp14_scientific_baseline_status: original_source_ade_semantic_equivalence_unverified
+wp14_spec_evaluation_status: not_evaluated_no_user_numeric_target
 auto_phase_01_status: active_operating_policy_merged
 auto_phase_01_policy: docs/policy/PHASE_AUTONOMY_V1.md
 auto_phase_01_elapsed_ceiling: removed_by_explicit_user_instruction_2026_09_30
@@ -14,14 +19,14 @@ auto_phase_01_base_main: 3aa1872724ceb477698c76f73eb1a21f6111f9c4
 auto_phase_01_wp14_readonly_status: current_oa_ade_conditions_observed
 auto_phase_01_dc_status: copied_baseline_and_candidate_completed_scalars_observed_no_spec_pass
 auto_phase_01_candidate_ac_status: copied_ac_completed_scalar_locally_recovered_diagnostic_only
-auto_phase_01_phase_d_status: three_point_dc_midpoint_completed_scalar_read_implemented
-auto_phase_01_phase_d_ac_sweep_status: baseline_midpoint_ac_completed_scalar_reader_implemented
-auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_reader_implemented
-auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_implemented_execution_pending
-auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_implemented_execution_pending
-auto_phase_01_mos_cdf_status: fixed_read_only_inventory_implemented_execution_pending
+auto_phase_01_phase_d_status: three_point_dc_midpoint_completed_scalar_extracted
+auto_phase_01_phase_d_ac_sweep_status: baseline_midpoint_ac_completed_scalars_extracted
+auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_extracted
+auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_completed
+auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
+auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
 last_completed_wp: WP-16
-next_wp: WP-14
+next_wp: awaiting_user_choice_SIM-MCP-01
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
@@ -535,6 +540,19 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-30 WP14-CLOSEOUT: Reconciled selected terminal-success private journal
+  results against their preserved bytes. The Phase Q/R/S reader and CDF
+  operations had already executed; none was replayed. Local arithmetic and
+  the limited CDF-to-pinned-netlist comparison were rechecked privately. The
+  detailed result is private; `docs/WP14_CLOSEOUT_RESULT_V1.md` is the public
+  status summary.
+  Work-copy characterization is complete for its pinned revision and observed
+  conditions. No numerical specification PASS, original OA/ADE candidate
+  application, historical snapshot equivalence, PCell, LVS, or signoff is
+  claimed. Cumulative budget and one-shot claims are preserved; the elapsed
+  ceiling remains removed. The next implementation phase waits for one user
+  choice.
 
 - 2026-09-30 AUTO-PHASE-01 WP-14 MOS CDF capability: Phase S implements one
   bounded read-only Virtuoso inventory of the eight nmos1v and six pmos1v
