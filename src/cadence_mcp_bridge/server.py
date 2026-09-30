@@ -12,6 +12,12 @@ from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import WithJsonSchema
 
 from cadence_mcp_bridge import __version__
+from cadence_mcp_bridge.actual_diagnostics import (
+    ActualDiagnosticProfiles,
+    ActualDiagnosticRequest,
+    ActualDiagnosticResult,
+    ActualDiagnosticStatus,
+)
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.measurement_models import (
@@ -129,6 +135,12 @@ MeasurementContractIdInput = Annotated[
             "enum": ["adc-synthetic-v1"],
             "description": "Exact versioned measurement contract identifier.",
         }
+    ),
+]
+ActualAnalysisInput = Annotated[
+    str,
+    WithJsonSchema(
+        {"type": "string", "enum": ["dc", "ac"], "description": "Fixed work-copy analysis."}
     ),
 ]
 
@@ -438,6 +450,52 @@ def create_server(service: CadenceService) -> MCPServer:
     )
     async def cadence_design_write_plan() -> Annotated[CallToolResult, DesignWritePlan]:
         return await _stable_result(service.design_write_plan())
+
+    @server.tool(
+        name="cadence_list_actual_diagnostics",
+        description="List the closed DC/AC diagnostic contract for the pinned work copy.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_actual_diagnostics() -> Annotated[
+        CallToolResult, ActualDiagnosticProfiles
+    ]:
+        return await _stable_result(service.list_actual_diagnostics())
+
+    @server.tool(
+        name="cadence_submit_actual_diagnostic",
+        description="Submit a fixed candidate DC or AC diagnostic under cumulative limits.",
+        annotations=_SUBMIT,
+        structured_output=True,
+    )
+    async def cadence_submit_actual_diagnostic(
+        request: ActualDiagnosticRequest,
+    ) -> Annotated[CallToolResult, ActualDiagnosticStatus]:
+        return await _stable_result(service.submit_actual_diagnostic(request))
+
+    @server.tool(
+        name="cadence_actual_diagnostic_status",
+        description="Read simulation and extraction state for one fixed work-copy diagnostic.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_actual_diagnostic_status(
+        job_id: JobIdInput,
+        analysis: ActualAnalysisInput,
+    ) -> Annotated[CallToolResult, ActualDiagnosticStatus]:
+        return await _stable_result(service.actual_diagnostic_status(job_id, analysis))
+
+    @server.tool(
+        name="cadence_actual_diagnostic_result",
+        description="Read bounded scalar or spectrum measurements and provenance.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_actual_diagnostic_result(
+        job_id: JobIdInput,
+        analysis: ActualAnalysisInput,
+    ) -> Annotated[CallToolResult, ActualDiagnosticResult]:
+        return await _stable_result(service.actual_diagnostic_result(job_id, analysis))
 
     @server.tool(
         name="cadence_execute_design_write_validation",

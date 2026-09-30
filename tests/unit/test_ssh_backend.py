@@ -460,6 +460,8 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
     public_methods = {name for name in dir(backend) if not name.startswith("_")}
 
     assert public_methods == {
+        "actual_diagnostic_result",
+        "actual_diagnostic_status",
         "cancel",
         "design_write_plan",
         "execute_design_write_validation",
@@ -471,6 +473,7 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
         "result",
         "status",
         "submit_profile",
+        "submit_actual_diagnostic",
         "submit_smoke",
     }
     assert "profile" not in inspect.signature(backend.submit_smoke).parameters

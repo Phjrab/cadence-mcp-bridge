@@ -36,6 +36,9 @@ $canonicalLines = @(
     'approval_mode = "prompt"',
     "",
     "[mcp_servers.$serverName.tools.cadence_execute_design_write_validation]",
+    'approval_mode = "prompt"',
+    "",
+    "[mcp_servers.$serverName.tools.cadence_submit_actual_diagnostic]",
     'approval_mode = "prompt"'
 )
 $canonicalBlock = $canonicalLines -join $newline
@@ -117,4 +120,4 @@ if (
 
 Write-Output "Registered: $serverName"
 Write-Output "Command: $pythonPath -m cadence_mcp_bridge"
-Write-Output "Approval mode: prompt for submit, cancel, and design write validation"
+Write-Output "Approval mode: prompt for simulation submits, cancel, and design write validation"

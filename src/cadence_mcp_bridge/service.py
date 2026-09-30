@@ -6,6 +6,17 @@ from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol, TypeVar, cast
 from uuid import RFC_4122, UUID, uuid4
 
+from cadence_mcp_bridge.actual_diagnostics import (
+    COPY_SHA256,
+    NETLIST_SHA256,
+    PROFILE_AC,
+    PROFILE_DC,
+    SOURCE_SHA256,
+    ActualDiagnosticProfiles,
+    ActualDiagnosticRequest,
+    ActualDiagnosticResult,
+    ActualDiagnosticStatus,
+)
 from cadence_mcp_bridge.discovery import validate_cell, validate_library, validate_view
 from cadence_mcp_bridge.errors import (
     BackendUnavailableError,
@@ -103,6 +114,18 @@ class CadenceBackend(Protocol):
         self, validation_id: UUID, confirmation: WriteConfirmation
     ) -> DesignWriteValidationResult: ...
 
+    async def submit_actual_diagnostic(
+        self, job_id: UUID, request: ActualDiagnosticRequest
+    ) -> ActualDiagnosticStatus: ...
+
+    async def actual_diagnostic_status(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticStatus: ...
+
+    async def actual_diagnostic_result(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticResult: ...
+
 
 _ResultT = TypeVar("_ResultT")
 
@@ -134,6 +157,64 @@ class CadenceService:
     async def get_measurement_contract(self, contract_id: str) -> AdcMeasurementContract:
         return get_measurement_contract(contract_id)
 
+    async def list_actual_diagnostics(self) -> ActualDiagnosticProfiles:
+        return ActualDiagnosticProfiles()
+
+    async def submit_actual_diagnostic(
+        self, request: ActualDiagnosticRequest
+    ) -> ActualDiagnosticStatus:
+        job_id = uuid4()
+        try:
+            status = await self._call(
+                lambda: self._backend.submit_actual_diagnostic(job_id, request)
+            )
+        except OperationTimeoutError as timeout:
+            try:
+                status = await self._call(
+                    lambda: self._backend.actual_diagnostic_status(job_id, request.analysis)
+                )
+            except BridgeError as recovery_error:
+                raise timeout from recovery_error
+        expected_profile = PROFILE_DC if request.analysis == "dc" else PROFILE_AC
+        if status.job_id != job_id or status.profile_id != expected_profile:
+            raise RemoteFailureError("Remote diagnostic returned mismatched job metadata")
+        return status
+
+    async def actual_diagnostic_status(self, job_id: str, analysis: str) -> ActualDiagnosticStatus:
+        parsed, safe_analysis = self._diagnostic_key(job_id, analysis)
+        status = await self._call(
+            lambda: self._backend.actual_diagnostic_status(parsed, safe_analysis)
+        )
+        if status.job_id != parsed or status.profile_id != self._diagnostic_profile(safe_analysis):
+            raise RemoteFailureError("Remote diagnostic status identity mismatch")
+        return status
+
+    async def actual_diagnostic_result(self, job_id: str, analysis: str) -> ActualDiagnosticResult:
+        parsed, safe_analysis = self._diagnostic_key(job_id, analysis)
+        result = await self._call(
+            lambda: self._backend.actual_diagnostic_result(parsed, safe_analysis)
+        )
+        if result.job_id != parsed or result.profile_id != self._diagnostic_profile(safe_analysis):
+            raise RemoteFailureError("Remote diagnostic result identity mismatch")
+        if (
+            result.source_sha256 != SOURCE_SHA256
+            or result.copy_sha256 != COPY_SHA256
+            or result.netlist_sha256 != NETLIST_SHA256
+        ):
+            raise RemoteFailureError("Remote diagnostic revision mismatch")
+        return result
+
+    @staticmethod
+    def _diagnostic_profile(analysis: Literal["dc", "ac"]) -> str:
+        return PROFILE_DC if analysis == "dc" else PROFILE_AC
+
+    @staticmethod
+    def _diagnostic_key(job_id: str, analysis: str) -> tuple[UUID, Literal["dc", "ac"]]:
+        parsed = CadenceService._parse_job_id(job_id)
+        if analysis not in ("dc", "ac"):
+            raise InvalidInputError("analysis must be dc or ac")
+        return parsed, cast(Literal["dc", "ac"], analysis)
+
     async def measure_dc_power(self, request: DcPowerRequest) -> ScalarMetric:
         return measure_dc_power(request)
 
@@ -149,14 +230,10 @@ class CadenceService:
     async def measure_linearity(self, request: LinearityRequest) -> LinearityMetrics:
         return measure_linearity(request)
 
-    async def compare_corner_results(
-        self, request: CornerComparisonRequest
-    ) -> CornerComparison:
+    async def compare_corner_results(self, request: CornerComparisonRequest) -> CornerComparison:
         return compare_corner_results(request)
 
-    async def summarize_monte_carlo(
-        self, request: MonteCarloRequest
-    ) -> MonteCarloSummary:
+    async def summarize_monte_carlo(self, request: MonteCarloRequest) -> MonteCarloSummary:
         return summarize_monte_carlo(request)
 
     async def job_status(self, job_id: str) -> JobStatus:

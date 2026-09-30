@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "remote_version": "phase-campaign/sim-mcp-v2",
+  "revision_id": "wp14-copied-netlist-v1",
+  "operating_point_id": "candidate-320-702mv-v1",
+  "analyses": ["dc", "ac"],
+  "baseline_spectre_attempts": 9,
+  "baseline_result_reserved_bytes": 1048576,
+  "source_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "copy_sha256": "a02d83653f26f2e34f1f4e402531e66e9d34b5ecc41d29ed6d38a70ed8c6983f",
+  "netlist_sha256": "6189aa9d647671c05a9f03d815530697560c00b661cad95c87f7f415d482192a",
+  "files": {
+    "run.sh": "c3135e98a40cef3eb7b4e20373b749f9fda6c4b86c0fda423b6a61e3c5e52a76",
+    "diagnostic.py": "b9274216a0e2c82a668796c620b6b61e5344644642b22896a34bada6b3b81fa4",
+    "extract-dc.ocn": "470d00be2489b0af96ac660e2ab43f576ba2e3b0c733a0050b83cfe66a9bd75a",
+    "extract-ac.ocn": "655945cdf0826b60c46327c8820d06cebb541ed28339d186121cf6f4336c6eaf"
+  }
+}

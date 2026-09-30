@@ -10,6 +10,15 @@ from uuid import UUID
 import pytest
 from mcp import Client
 
+from cadence_mcp_bridge.actual_diagnostics import (
+    COPY_SHA256,
+    NETLIST_SHA256,
+    SOURCE_SHA256,
+    ActualDiagnosticRequest,
+    ActualDiagnosticResult,
+    ActualDiagnosticStatus,
+    DiagnosticScalar,
+)
 from cadence_mcp_bridge.errors import AuthenticationError
 from cadence_mcp_bridge.models import (
     CellList,
@@ -182,6 +191,69 @@ class FakeBackend:
         assert confirmation == "APPROVE_MCP_WRITE_VALIDATED_V2"
         return write_result(validation_id)
 
+    async def submit_actual_diagnostic(
+        self, job_id: UUID, request: ActualDiagnosticRequest
+    ) -> ActualDiagnosticStatus:
+        return ActualDiagnosticStatus(
+            job_id=job_id,
+            state=JobState.QUEUED,
+            profile_id="actual-wp14-dc-v1" if request.analysis == "dc" else "actual-wp14-ac-v1",
+            revision_id="wp14-copied-netlist-v1",
+            operating_point_id="candidate-320-702mv-v1",
+            updated_at=datetime.now(UTC),
+            simulator="not_started",
+            extraction="not_started",
+        )
+
+    async def actual_diagnostic_status(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticStatus:
+        return ActualDiagnosticStatus(
+            job_id=job_id,
+            state=JobState.SUCCEEDED,
+            profile_id="actual-wp14-dc-v1" if analysis == "dc" else "actual-wp14-ac-v1",
+            revision_id="wp14-copied-netlist-v1",
+            operating_point_id="candidate-320-702mv-v1",
+            updated_at=datetime.now(UTC),
+            simulator="succeeded",
+            extraction="succeeded",
+        )
+
+    async def actual_diagnostic_result(
+        self, job_id: UUID, analysis: Literal["dc", "ac"]
+    ) -> ActualDiagnosticResult:
+        assert analysis == "dc"
+        return ActualDiagnosticResult(
+            job_id=job_id,
+            state=JobState.SUCCEEDED,
+            profile_id="actual-wp14-dc-v1",
+            revision_id="wp14-copied-netlist-v1",
+            operating_point_id="candidate-320-702mv-v1",
+            simulator="succeeded",
+            extraction="succeeded",
+            quality="valid",
+            spec_evaluation="not_evaluated",
+            source_sha256=SOURCE_SHA256,
+            copy_sha256=COPY_SHA256,
+            netlist_sha256=NETLIST_SHA256,
+            wrapper_sha256="d" * 64,
+            psf_sha256="e" * 64,
+            vdd_v=1.0,
+            input_vcm_v=0.5,
+            applied_bias_values_v=(0.32, 0.702),
+            scalars=(
+                DiagnosticScalar(logical_id="vop", value=0.5),
+                DiagnosticScalar(logical_id="vom", value=0.5),
+                DiagnosticScalar(logical_id="vdd", value=1.0),
+                DiagnosticScalar(logical_id="vp", value=0.5),
+                DiagnosticScalar(logical_id="vm", value=0.5),
+                DiagnosticScalar(logical_id="output_common_mode", value=0.5),
+                DiagnosticScalar(logical_id="output_differential", value=0.0),
+            ),
+            spectrum=(),
+            artifact_names=("profile.scs", "spectre.log", "psf", "scalars.txt"),
+        )
+
     @staticmethod
     def _status(job_id: UUID, state: JobState = JobState.QUEUED) -> JobStatus:
         now = datetime.now(UTC)
@@ -225,6 +297,10 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_summarize_monte_carlo",
         "cadence_design_write_plan",
         "cadence_execute_design_write_validation",
+        "cadence_list_actual_diagnostics",
+        "cadence_submit_actual_diagnostic",
+        "cadence_actual_diagnostic_status",
+        "cadence_actual_diagnostic_result",
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
@@ -286,6 +362,9 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_compare_corner_results",
         "cadence_summarize_monte_carlo",
         "cadence_design_write_plan",
+        "cadence_list_actual_diagnostics",
+        "cadence_actual_diagnostic_status",
+        "cadence_actual_diagnostic_result",
     }
     destructive = {
         name
@@ -318,6 +397,51 @@ async def test_submit_returns_without_polling_for_completion() -> None:
 
     assert response.is_error is False
     assert cast(dict[str, Any], response.structured_content)["state"] == "queued"
+
+
+@pytest.mark.asyncio
+async def test_actual_diagnostic_mcp_lifecycle_and_schema_rejections() -> None:
+    server = create_server(CadenceService(FakeBackend()))
+    request = {
+        "revision_id": "wp14-copied-netlist-v1",
+        "analysis": "dc",
+        "operating_point_id": "candidate-320-702mv-v1",
+        "output_id": "dc-node-scalars-v1",
+    }
+    async with Client(server) as client:
+        listing = await client.list_tools()
+        tools = {tool.name: tool for tool in listing.tools}
+        assert tools["cadence_submit_actual_diagnostic"].input_schema["required"] == ["request"]
+        profiles = await client.call_tool("cadence_list_actual_diagnostics")
+        submitted = await client.call_tool("cadence_submit_actual_diagnostic", {"request": request})
+        job_id = cast(dict[str, Any], submitted.structured_content)["job_id"]
+        status = await client.call_tool(
+            "cadence_actual_diagnostic_status", {"job_id": job_id, "analysis": "dc"}
+        )
+        legacy_cancel = await client.call_tool("cadence_cancel_job", {"job_id": job_id})
+        result = await client.call_tool(
+            "cadence_actual_diagnostic_result", {"job_id": job_id, "analysis": "dc"}
+        )
+        invalid_cases = (
+            {**request, "revision_id": "other"},
+            {**request, "operating_point_id": "arbitrary"},
+            {**request, "analysis": "tran"},
+            {**request, "output_id": "raw-psf"},
+            {**request, "output_id": "ac-differential-spectrum-v1"},
+            {**request, "path": "/tmp/secret"},
+        )
+        rejected = [
+            await client.call_tool("cadence_submit_actual_diagnostic", {"request": case})
+            for case in invalid_cases
+        ]
+    assert len(cast(dict[str, Any], profiles.structured_content)["profiles"]) == 2
+    assert cast(dict[str, Any], status.structured_content)["state"] == "succeeded"
+    assert legacy_cancel.is_error is True
+    actual = cast(dict[str, Any], result.structured_content)
+    assert actual["quality"] == "valid"
+    assert actual["spec_evaluation"] == "not_evaluated"
+    assert len(actual["scalars"]) == 7
+    assert all(response.is_error for response in rejected)
 
 
 @pytest.mark.asyncio
