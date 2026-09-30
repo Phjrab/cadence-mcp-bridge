@@ -1,0 +1,58 @@
+{
+  "ac": {
+    "dec": 10,
+    "start_hz": 10,
+    "stop_hz": 100000000.0
+  },
+  "ac_recovery": "preserved_failed_job_copy_extraction_only",
+  "analysis_bundle": [
+    "dc",
+    "ac",
+    "tran"
+  ],
+  "baseline_result_sha256": "b09d1faa742dda4f39371a4373057ce58ef780796f184f84a58571c30e4f9e82",
+  "campaign_id": "AUTO-PHASE-01",
+  "candidate_application": "two_expressions_in_owned_ADE_state_copy",
+  "change_id": "NATIVE-CANDIDATE-01",
+  "corrections_used": 1,
+  "dc_corrections_preserved": "5_of_6",
+  "elapsed_ceiling": null,
+  "failure_checkpoint_sha256": "21d6d8fa6ad4f447f6de25f64743bdbd2e60d0c3bf792c534a4b4bdfd7db4d3a",
+  "files": {
+    "extract-ac.ocn": "4d28761990655d6d333879c39f73f37fa821d511da09339a6c426a07daa963a4",
+    "extract-tran.ocn": "8026ace570ef06049a9ee5932fe198da29f46c0ef91f6f37eb962f5d4613b79c",
+    "helper.py": "dc708a5ca1ee2abe376abd78e9cca7bb9d65bac6400f1bf81eac7e1980107e90",
+    "netlist-tran.ocn": "1674013b359e541a69bea50d5d47e451e82a44d9b903f04aeaa8414287651886",
+    "run.sh": "d477a856609d0607dafd566ab45f90001fe1a25da233802c8b35fc6354206ec0"
+  },
+  "fixed_candidate_variables_v": {
+    "VBIASN": 0.32,
+    "VBIASP": 0.702
+  },
+  "max_new_results_bytes": 5368709120,
+  "max_spectre_attempts": 100,
+  "maximum_corrections_same_change": 3,
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "previous_policy_sha256": "6a61fa3a74cb089a0b17726bfcc54a2db23fd2e3d6f00065c48404209ca12baf",
+  "prior_native_change_corrections_preserved": "3_of_3",
+  "remote_version": "phase-campaign/native-candidate-v2",
+  "reservation_bytes_per_job": 134217728,
+  "reused_result_sha256": {
+    "dc": "b401e57eac543e505dadf135753bd62c09a2fceb05b96a00615d3d6403350dd5",
+    "netlist-ac": "76ebe3b768a4a684cd932e1a26fa3a82a636d2a9b29925b168e603fe2196d172"
+  },
+  "schema_version": 1,
+  "section": "NN",
+  "source_saved_variables_v": {
+    "VBIASN": 0.3,
+    "VBIASP": 0.65
+  },
+  "spec_evaluation": "not_evaluated",
+  "temperature_c": 27,
+  "tran": {
+    "maxstep_s": 1e-05,
+    "method": "trap",
+    "stop_s": 0.004
+  },
+  "vdd_constraint_v": 1.0
+}

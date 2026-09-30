@@ -36,6 +36,21 @@ run has zero notices. See `ADE_QUAL_NATIVE_AC_TRAN_RESULT_V1.md`. Three new
 Spectre attempts bring cumulative use to 18 of 100. This new change consumed its
 three corrections; the earlier DC change remains at five of six. Ask once before
 the next major phase; no subsequent phase is active.
+The user subsequently selected native comparison of the fixed 320/702 mV
+candidate. `NATIVE-CANDIDATE-01` copies the original ADE state separately for DC,
+AC and trap TRAN, changes only the two owned variable expressions, and verifies
+the effective native input before each simulation. It reuses the completed
+300/650 mV native results without rerunning them. VDD=1.0 V, NN, 27 C, the circuit,
+stimulus, load, original/PDK/history protection and all cumulative budgets remain
+bound. No numeric specification target or additional bias range is introduced.
+The candidate native DC/AC/trap TRAN comparison is complete; see
+`NATIVE_CANDIDATE_01_RESULT_V1.md`. Actual owned-state biases are 320/702 mV;
+the original saved state remains 300/650 mV. The v1 AC simulation succeeded but
+extraction failed; v2 reused its preserved PSF for extraction only and completed
+TRAN. One of three candidate corrections is consumed. Previous native AC/TRAN
+retains three-of-three consumed corrections and prior DC retains five of six.
+Cumulative Spectre use is 21 of 100; specification remains `not_evaluated`.
+Ask once before the next major phase; no subsequent phase is active.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,
