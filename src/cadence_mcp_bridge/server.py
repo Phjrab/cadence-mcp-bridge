@@ -52,6 +52,13 @@ from cadence_mcp_bridge.models import (
 )
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
+from cadence_mcp_bridge.sweeps import (
+    SweepPlan,
+    SweepRequest,
+    SweepResult,
+    SweepStatus,
+    SweepSubmission,
+)
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
     DesignWriteValidationResult,
@@ -496,6 +503,55 @@ def create_server(service: CadenceService) -> MCPServer:
         analysis: ActualAnalysisInput,
     ) -> Annotated[CallToolResult, ActualDiagnosticResult]:
         return await _stable_result(service.actual_diagnostic_result(job_id, analysis))
+
+    @server.tool(
+        name="cadence_plan_sweep",
+        description="Validate and hash one bounded variable sweep of a reviewed profile.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_plan_sweep(request: SweepRequest) -> Annotated[CallToolResult, SweepPlan]:
+        return await _stable_result(service.plan_sweep(request))
+
+    @server.tool(
+        name="cadence_submit_sweep",
+        description=(
+            "Start or resume the same experiment key; each point has a deterministic child job."
+        ),
+        annotations=_SUBMIT,
+        structured_output=True,
+    )
+    async def cadence_submit_sweep(
+        submission: SweepSubmission,
+    ) -> Annotated[CallToolResult, SweepStatus]:
+        return await _stable_result(service.submit_sweep(submission))
+
+    @server.tool(
+        name="cadence_sweep_status",
+        description="Read every point's durable state, including failures and unknown outcomes.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_sweep_status(sweep_id: JobIdInput) -> Annotated[CallToolResult, SweepStatus]:
+        return await _stable_result(service.sweep_status(sweep_id))
+
+    @server.tool(
+        name="cadence_sweep_result",
+        description="Read the bounded aggregate with per-point conditions and provenance.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_sweep_result(sweep_id: JobIdInput) -> Annotated[CallToolResult, SweepResult]:
+        return await _stable_result(service.sweep_result(sweep_id))
+
+    @server.tool(
+        name="cadence_cancel_sweep",
+        description="Cancel only child jobs recorded as owned by the requested sweep.",
+        annotations=_CANCEL,
+        structured_output=True,
+    )
+    async def cadence_cancel_sweep(sweep_id: JobIdInput) -> Annotated[CallToolResult, SweepStatus]:
+        return await _stable_result(service.cancel_sweep(sweep_id))
 
     @server.tool(
         name="cadence_execute_design_write_validation",

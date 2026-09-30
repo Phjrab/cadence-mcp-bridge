@@ -8,7 +8,7 @@ protected. Feature changes go through a dedicated PR.
 
 ## Current MCP interface
 
-The server has 26 typed tools. The original 22 lifecycle, discovery, profile,
+The server has 31 typed tools. The original 22 lifecycle, discovery, profile,
 synthetic measurement, and write-validation tools remain available. The
 `actual-differential-amplifier-tb2-transient` profile keeps its existing v1
 contract.
@@ -39,6 +39,16 @@ Spectre and result budgets, and checks the disk floor. The earlier v1 helper and
 its failed pre-simulation job remain in the private VM history. The v2 deployment
 and MCP DC/AC comparison are recorded in private journals; the public phase
 report contains only reviewed status.
+
+SWEEP-MCP-01 adds `cadence_plan_sweep`, `cadence_submit_sweep`,
+`cadence_sweep_status`, `cadence_sweep_result`, and `cadence_cancel_sweep`.
+This first 1D version supports the registered RC fixture's numeric axes, up
+to 16 points, a durable same-key resume, per-point effective-input checks,
+and a cumulative Spectre/result budget guard. Its measurement is simulation
+completion, not an analog scalar. An actual-circuit bias sweep is unavailable
+until a single-axis binding and bounded voltage range are reviewed. The
+historical three bias pairs vary two variables together. See
+[`docs/SWEEP_MCP_01_RESULT_V1.md`](docs/SWEEP_MCP_01_RESULT_V1.md).
 
 ## Development and verification
 

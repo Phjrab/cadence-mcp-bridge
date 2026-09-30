@@ -308,6 +308,50 @@ class OpenSshBackend:
             await self._invoke_diagnostic_json("submit", job_id, request.analysis),
         )
 
+    async def reserve_sweep_attempt(self, job_id: UUID) -> None:
+        result = await self._invoke_sweep_budget("reserve", job_id)
+        if result != {"reserved": True}:
+            raise RemoteFailureError("Sweep budget reservation was not confirmed")
+
+    async def lookup_sweep_reservation(self, job_id: UUID) -> bool:
+        result = await self._invoke_sweep_budget("lookup", job_id)
+        if result not in ({"reserved": True}, {"reserved": False}):
+            raise RemoteFailureError("Sweep budget lookup returned invalid data")
+        return bool(result["reserved"])
+
+    async def effective_sweep_values(self, job_id: UUID) -> dict[str, str]:
+        result = await self._invoke_sweep_budget("effective", job_id)
+        variables = result.get("variables")
+        expected = {"resistance_ohm": "ohm", "capacitance_f": "F", "stop_time_s": "s"}
+        if not isinstance(variables, dict) or set(variables) != set(expected):
+            raise RemoteFailureError("Effective fixture variables missing")
+        values: dict[str, str] = {}
+        for name, unit in expected.items():
+            item = variables[name]
+            if (
+                not isinstance(item, dict)
+                or item.get("unit") != unit
+                or not isinstance(item.get("value"), str)
+            ):
+                raise RemoteFailureError("Effective fixture variable invalid")
+            values[name] = item["value"]
+        return values
+
+    async def _invoke_sweep_budget(
+        self, action: Literal["reserve", "lookup", "effective"], job_id: UUID
+    ) -> dict[str, Any]:
+        if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
+            raise InvalidInputError("sweep budget requires the reviewed managed root")
+        runner = f"{self._config.remote_root}/phase-campaign/sweep-mcp-v1/run.sh"
+        output = await asyncio.to_thread(self._invoke_at_path, runner, action, self._job_id(job_id))
+        try:
+            value = json.loads(output)
+        except json.JSONDecodeError as exc:
+            raise RemoteFailureError("Sweep budget returned invalid JSON") from exc
+        if not isinstance(value, dict):
+            raise RemoteFailureError("Sweep budget returned invalid data")
+        return value
+
     async def actual_diagnostic_status(
         self, job_id: UUID, analysis: Literal["dc", "ac"]
     ) -> ActualDiagnosticStatus:

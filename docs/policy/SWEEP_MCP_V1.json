@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "remote_version": "phase-campaign/sweep-mcp-v1",
+  "profile_id": "fixture-rc-transient",
+  "baseline_spectre_attempts": 11,
+  "baseline_result_reserved_bytes": 269484032,
+  "reservation_bytes_per_point": 134217728,
+  "files": {
+    "run.sh": "bcf25aefa7aaf81f2699ce92eb093bebd306903ff8268bb1fa9db8204bb21af2",
+    "budget.py": "2e871ed01656a4be7c16f2f9137b8178ecbfdcf1d0cb092808e76d9789d0c997"
+  }
+}

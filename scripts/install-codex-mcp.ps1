@@ -39,6 +39,12 @@ $canonicalLines = @(
     'approval_mode = "prompt"',
     "",
     "[mcp_servers.$serverName.tools.cadence_submit_actual_diagnostic]",
+    'approval_mode = "prompt"',
+    "",
+    "[mcp_servers.$serverName.tools.cadence_submit_sweep]",
+    'approval_mode = "prompt"',
+    "",
+    "[mcp_servers.$serverName.tools.cadence_cancel_sweep]",
     'approval_mode = "prompt"'
 )
 $canonicalBlock = $canonicalLines -join $newline

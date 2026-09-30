@@ -69,6 +69,14 @@ from cadence_mcp_bridge.profiles import (
     validate_corner,
     validate_variables,
 )
+from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
+from cadence_mcp_bridge.sweeps import (
+    SweepPlan,
+    SweepRequest,
+    SweepResult,
+    SweepStatus,
+    SweepSubmission,
+)
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
     DesignWriteValidationResult,
@@ -118,6 +126,12 @@ class CadenceBackend(Protocol):
         self, job_id: UUID, request: ActualDiagnosticRequest
     ) -> ActualDiagnosticStatus: ...
 
+    async def reserve_sweep_attempt(self, job_id: UUID) -> None: ...
+
+    async def lookup_sweep_reservation(self, job_id: UUID) -> bool: ...
+
+    async def effective_sweep_values(self, job_id: UUID) -> dict[str, str]: ...
+
     async def actual_diagnostic_status(
         self, job_id: UUID, analysis: Literal["dc", "ac"]
     ) -> ActualDiagnosticStatus: ...
@@ -134,6 +148,27 @@ class CadenceService:
     def __init__(self, backend: CadenceBackend) -> None:
         self._backend = backend
         self._owned_job_ids: set[UUID] = set()
+        from pathlib import Path
+
+        self._sweeps = SweepSupervisor(
+            cast(SweepBackend, backend),
+            Path(__file__).resolve().parents[2] / ".codex" / "sweeps-v1.sqlite3",
+        )
+
+    async def plan_sweep(self, request: SweepRequest) -> SweepPlan:
+        return await self._sweeps.plan(request)
+
+    async def submit_sweep(self, submission: SweepSubmission) -> SweepStatus:
+        return await self._sweeps.submit(submission)
+
+    async def sweep_status(self, sweep_id: str) -> SweepStatus:
+        return await self._sweeps.status(self._parse_job_id(sweep_id))
+
+    async def sweep_result(self, sweep_id: str) -> SweepResult:
+        return await self._sweeps.result(self._parse_job_id(sweep_id))
+
+    async def cancel_sweep(self, sweep_id: str) -> SweepStatus:
+        return await self._sweeps.cancel(self._parse_job_id(sweep_id))
 
     async def health(self) -> HealthReport:
         return await self._call(self._backend.health)
