@@ -8,12 +8,17 @@ per-read and per-PR approval gates for future in-scope operations. See
 restrictions below describe the pre-transition phase and remain historical for
 legacy records. A new implementation or remote operation still needs actual
 capability, fresh evidence, integrity, budget, replay, and environmental checks.
-WP-14 remains open; PR #57 and WP-15/WP-16 are complete and are not repeated.
-Use a dedicated reviewed feature PR for the transition, then investigate current
-source/ADE state and perform a minimal copied-revision DC test if capability and
-the protection checks are verified. Candidate biases are 320/702 mV; VDD=1.0 V
-is a hard constraint. Current VCM, load, revision and applied values are unknown
-until freshly observed.
+WP-14 is the current circuit task; PR #57 and WP-15/WP-16 are complete and are
+not repeated. The 2026-09-30 WP14-CLOSEOUT records completed work-copy
+characterization with no numerical specification evaluation in
+`WP14_CLOSEOUT_RESULT_V1.md`. The original source/ADE scientific baseline and
+historical snapshot equivalence remain unverified. Stop after this closeout's
+report and ask once before beginning the proposed `SIM-MCP-01` implementation.
+The transition was integrated through PR #58. Subsequent bounded observations
+and copied-revision tests are reconciled in the closeout report. Candidate
+biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,
+load scope, revision, and applied values are specific to the cited evidence,
+not assumed for a future live design.
 
 ## Authority and boundary
 
