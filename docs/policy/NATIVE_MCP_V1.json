@@ -1,0 +1,62 @@
+{
+  "ac": {
+    "dec": 10,
+    "start_hz": 10,
+    "stop_hz": 100000000
+  },
+  "analyses": [
+    "dc",
+    "ac",
+    "tran"
+  ],
+  "baseline_result_reserved_bytes": 1611661312,
+  "baseline_spectre_attempts": 21,
+  "campaign_id": "AUTO-PHASE-01",
+  "change_id": "NATIVE-MCP-01",
+  "corrections_used": 0,
+  "eda_concurrency": 1,
+  "elapsed_ceiling": null,
+  "files": {
+    "extract-ac.ocn": "4d28761990655d6d333879c39f73f37fa821d511da09339a6c426a07daa963a4",
+    "extract-tran.ocn": "8026ace570ef06049a9ee5932fe198da29f46c0ef91f6f37eb962f5d4613b79c",
+    "helper.py": "12c135fbf338efba6ab3a7f4c8d5e476e6e82e145839f73fd061ea3f1cd7001c",
+    "netlist-ac.ocn": "d0073ad46812cbf67c039bff71ecfa54f497bc8dfbd7a68d4fd37d458b3e4177",
+    "netlist-dc.ocn": "72e2b4acd45cf6ecfd5f27f12108daaa2d8eafd587e6ce3a8d9c1e3e47fe29c8",
+    "netlist-tran.ocn": "66e2ca668f5fb58b2e71f4193e98409f80625ba4508bb5db9fc3c35dc58071cd",
+    "run.sh": "9fd2273ead24e5f0245a9f72bf888a9de922b1aa839c466ac77c8cbb0ca9fc52"
+  },
+  "fixed_applied_bias_values_v": [
+    0.32,
+    0.702
+  ],
+  "ledger": "existing_sim_mcp_v2_counter_no_reset",
+  "max_new_results_bytes": 5368709120,
+  "max_spectre_attempts": 100,
+  "maximum_corrections_same_change": 3,
+  "operating_point_id": "candidate-320-702mv-v1",
+  "paid_resources": 0,
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "prior_corrections_preserved": {
+    "candidate": "1_of_3",
+    "dc": "5_of_6",
+    "native_ac_tran": "3_of_3"
+  },
+  "reference_result_sha256": "8fccdd046961894e45a9788074b815839ec466892cae558fcd6ab716ebec5c88",
+  "remote_version": "phase-campaign/native-mcp-v1",
+  "reservation_bytes_per_job": 134217728,
+  "revision_id": "wp14-native-ade-v1",
+  "schema_version": 1,
+  "section": "NN",
+  "source_saved_bias_values_v": [
+    0.3,
+    0.65
+  ],
+  "spec_evaluation": "not_evaluated",
+  "temperature_c": 27,
+  "tran": {
+    "maxstep_s": 1e-05,
+    "method": "trap",
+    "stop_s": 0.004
+  },
+  "vdd_constraint_v": 1.0
+}

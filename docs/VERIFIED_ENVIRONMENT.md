@@ -49,3 +49,14 @@ A fixed RC transient simulation completed successfully:
 - license checkout occurred successfully
 
 The trapezoidal ringing notice is accepted only for the infrastructure smoke fixture.
+
+## Native MCP stdio observation, 2026-09-30
+
+NATIVE-MCP-01 verified the bridge as an actual subprocess stdio server with 35
+tools. Fixed native DC/AC/trap TRAN execution and bounded result reads passed;
+details and immutable evidence digests are in `NATIVE_MCP_01_RESULT_V1.md`.
+The MCP SDK's default Windows environment omits PROGRAMDATA, which this Windows
+OpenSSH requires. The bridge restores that missing standard folder via the OS
+known-folder API and isolates SSH stdin from the protocol pipe. Existing values,
+strict host-key checks and BatchMode are preserved. This observation does not
+change the historical OS/Cadence baseline or upgrade the guest.

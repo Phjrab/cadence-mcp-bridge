@@ -8,7 +8,7 @@ protected. Feature changes go through a dedicated PR.
 
 ## Current MCP interface
 
-The server has 31 typed tools. The original 22 lifecycle, discovery, profile,
+The server has 35 typed tools. The original 22 lifecycle, discovery, profile,
 synthetic measurement, and write-validation tools remain available. The
 `actual-differential-amplifier-tb2-transient` profile keeps its existing v1
 contract.
@@ -55,9 +55,21 @@ netlisting, verified effective conditions, Spectre and PSF scalar extraction.
 The observed biases are 300/650 mV; the 320/702 mV candidate remains separate.
 See [`docs/ADE_QUAL_01_RESULT_V1.md`](docs/ADE_QUAL_01_RESULT_V1.md) for scope,
 resource use and remaining analysis gaps. Earlier failures remain preserved in
-the checkpoint. The existing 31 MCP tools are unchanged. The fixed operator
+the checkpoint. That phase retained the then-existing 31 MCP tools. The fixed operator
 `scripts/ade_qual.py status` reads the preserved result; execution requires exact
 private delegation, correction, predecessor, integrity and replay guards.
+
+NATIVE-MCP-01 adds `cadence_list_native_diagnostics`,
+`cadence_submit_native_diagnostic`, `cadence_native_diagnostic_status` and
+`cadence_native_diagnostic_result`. These execute a native ADE owned-state
+DC/AC/trap TRAN bundle at the fixed 320/702 mV candidate, VDD 1 V, NN and 27 C.
+The original saved state remains 300/650 mV. Submission accepts a caller UUID4,
+one analysis, `revision_id=wp14-native-ade-v1` and
+`operating_point_id=candidate-320-702mv-v1`; retain the ID on retry. Existing
+IDs read status without another execution. Results contain DC scalars, AC
+spectrum or a bounded TRAN summary and qualified provenance. No arbitrary
+path, script, variable range or raw waveform is accepted. See
+[`docs/NATIVE_MCP_01_RESULT_V1.md`](docs/NATIVE_MCP_01_RESULT_V1.md).
 
 ## Development and verification
 
@@ -76,6 +88,12 @@ operations on the VM copy and compares new DC/AC observations with the prior
 private candidate records. Its `run` mode reserves the verification; `resume`
 continues only recorded job IDs. Neither command is a general simulation or
 remote-shell interface. Use them only for a new reviewed deployment or recovery.
+
+`scripts/deploy_native_mcp_v1.py` preserves an immutable deployment with the
+existing shared budget ledger. `scripts/verify_native_mcp_v1.py run|resume`
+uses an actual subprocess stdio client and a private journal. Resume reuses
+the recorded request IDs and completed results. Windows SSH stdin is isolated
+from the MCP pipe, and missing PROGRAMDATA is resolved from the OS known folder.
 
 The project server registration is managed with
 [`scripts/install-codex-mcp.ps1`](scripts/install-codex-mcp.ps1). Existing

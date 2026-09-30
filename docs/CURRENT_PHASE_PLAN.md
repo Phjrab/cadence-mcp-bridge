@@ -50,7 +50,20 @@ extraction failed; v2 reused its preserved PSF for extraction only and completed
 TRAN. One of three candidate corrections is consumed. Previous native AC/TRAN
 retains three-of-three consumed corrections and prior DC retains five of six.
 Cumulative Spectre use is 21 of 100; specification remains `not_evaluated`.
-Ask once before the next major phase; no subsequent phase is active.
+The user selected NATIVE-MCP-01: integrate reusable fixed native DC/AC/trap TRAN
+MCP submission, status, bounded result and contract listing. Reuse qualified guards,
+protect prior evidence, enforce caller UUID4 replay identity and shared cumulative
+budgets. Complete implementation, tests, bounded deployment, real MCP E2E and feature
+PR review/merge without intermediate approval. No new voltage range, source promotion
+or numerical target is introduced. Prior correction counters remain unchanged; this
+new capability permits an initial deployment and at most three corrections. Ask once
+before another major phase after reporting completion.
+Its fixed DC/AC/trap TRAN tools passed actual subprocess stdio E2E; see
+`NATIVE_MCP_01_RESULT_V1.md`. Same-ID replay consumes no extra attempt and wrong
+analysis is rejected. Cumulative Spectre use is 24/100; one local transport
+correction is consumed, with remote v1 assets unchanged. Protected references
+remain intact, active EDA is zero, and specification remains `not_evaluated`.
+Ask once before another major phase after reviewed feature PR integration.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

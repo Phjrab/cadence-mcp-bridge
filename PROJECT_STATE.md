@@ -5,7 +5,18 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: native_candidate_320_702mv_dc_ac_tran_verified_spec_not_evaluated
+current_status: native_dc_ac_tran_mcp_stdio_e2e_verified_spec_not_evaluated
+native_mcp_01_status: fixed_native_dc_ac_tran_stdio_mcp_e2e_verified
+native_mcp_01_report: docs/NATIVE_MCP_01_RESULT_V1.md
+native_mcp_01_remote_version: phase-campaign/native-mcp-v1
+native_mcp_01_corrections_used: 1_of_3_local_transport_fix_remote_assets_unchanged
+native_mcp_01_tool_count: 35
+native_mcp_01_new_spectre_attempts: 3
+native_mcp_01_spectre_attempts_after: 24_of_100
+native_mcp_01_result_reserved_bytes_after: 2014314496
+native_mcp_01_transport: actual_subprocess_stdio
+native_mcp_01_replay_status: same_request_id_no_extra_attempts
+native_mcp_01_spec_evaluation: not_evaluated
 native_candidate_01_status: native_owned_candidate_applied_and_compared_with_preserved_baseline
 native_candidate_01_report: docs/NATIVE_CANDIDATE_01_RESULT_V1.md
 native_candidate_01_remote_versions: native_candidate_v1_dc_and_preserved_failed_ac_v2_ac_recovery_and_trap_tran
@@ -576,6 +587,17 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-30 NATIVE-MCP-01: Added four fixed native ADE MCP tools and verified
+  actual subprocess stdio DC/AC/trap TRAN execution, bounded result reads and
+  same-ID replay without extra attempts. Original saved biases remain 300/650 mV;
+  owned applied biases are 320/702 mV at VDD 1 V, NN, 27 C and verified VCM/load.
+  Shared Spectre use is 24/100 and reserved result bytes are 2,014,314,496.
+  The initial transport failure was preserved. Windows known-folder restoration
+  of missing PROGRAMDATA and stdin isolation fixed the stdio SSH path; one of
+  three local corrections is consumed, with remote v1 assets unchanged.
+  Protected snapshots/references remain unchanged and active EDA is zero.
+  See docs/NATIVE_MCP_01_RESULT_V1.md; specification remains not_evaluated.
 
 - 2026-09-30 WP14-CLOSEOUT: Reconciled selected terminal-success private journal
   results against their preserved bytes. The Phase Q/R/S reader and CDF
