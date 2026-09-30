@@ -34,6 +34,49 @@ def completed(stdout: bytes = b"", stderr: bytes = b"", returncode: int = 0) -> 
     return subprocess.CompletedProcess([], returncode, stdout=stdout, stderr=stderr)
 
 
+def test_ssh_restores_only_missing_windows_programdata(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.sys.platform", "win32")
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.os.environ", {"SYSTEMROOT": "C:/Windows"})
+    resolve = Mock()
+
+    def folder(_window: Any, identifier: int, _token: Any, _flags: int, output: Any) -> int:
+        assert identifier == 0x23
+        output.value = "C:/ProgramData"
+        return 0
+
+    resolve.side_effect = folder
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.ssh_backend.ctypes.windll",
+        Mock(shell32=Mock(SHGetFolderPathW=resolve)),
+        raising=False,
+    )
+    assert OpenSshBackend._ssh_environment() == {
+        "SYSTEMROOT": "C:/Windows",
+        "PROGRAMDATA": "C:/ProgramData",
+    }
+
+
+def test_ssh_preserves_existing_programdata(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.sys.platform", "win32")
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.os.environ", {"ProgramData": "D:/Common"})
+    library = Mock()
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.ctypes.windll", library, raising=False)
+    assert OpenSshBackend._ssh_environment() == {"ProgramData": "D:/Common"}
+    library.shell32.SHGetFolderPathW.assert_not_called()
+
+
+def test_ssh_missing_known_folder_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.sys.platform", "win32")
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.os.environ", {})
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.ssh_backend.ctypes.windll",
+        Mock(shell32=Mock(SHGetFolderPathW=Mock(return_value=-1))),
+        raising=False,
+    )
+    with pytest.raises(BackendUnavailableError):
+        OpenSshBackend._ssh_environment()
+
+
 @pytest.mark.asyncio
 async def test_health_uses_fixed_argv_without_a_shell(
     backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch
@@ -51,6 +94,8 @@ async def test_health_uses_fixed_argv_without_a_shell(
     }
     run = Mock(return_value=completed(json.dumps(payload).encode("ascii")))
     monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", run)
+    environment = {"PROGRAMDATA": "C:/ProgramData"}
+    monkeypatch.setattr(backend, "_ssh_environment", lambda: environment)
 
     report = await backend.health()
 
@@ -73,6 +118,8 @@ async def test_health_uses_fixed_argv_without_a_shell(
         "health",
     ]
     assert run.call_args.kwargs == {
+        "stdin": subprocess.DEVNULL,
+        "env": environment,
         "shell": False,
         "capture_output": True,
         "check": False,
@@ -460,6 +507,9 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
     public_methods = {name for name in dir(backend) if not name.startswith("_")}
 
     assert public_methods == {
+        "submit_native_diagnostic",
+        "native_diagnostic_status",
+        "native_diagnostic_result",
         "actual_diagnostic_result",
         "actual_diagnostic_status",
         "cancel",

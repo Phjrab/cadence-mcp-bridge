@@ -63,6 +63,12 @@ from cadence_mcp_bridge.models import (
     ProfileVariables,
     SimulationProfile,
 )
+from cadence_mcp_bridge.native_diagnostics import (
+    NativeDiagnosticProfiles,
+    NativeDiagnosticRequest,
+    NativeDiagnosticResult,
+    NativeDiagnosticStatus,
+)
 from cadence_mcp_bridge.profiles import (
     get_profile,
     list_profiles,
@@ -139,6 +145,20 @@ class CadenceBackend(Protocol):
     async def actual_diagnostic_result(
         self, job_id: UUID, analysis: Literal["dc", "ac"]
     ) -> ActualDiagnosticResult: ...
+
+
+class NativeBackend(Protocol):
+    async def submit_native_diagnostic(
+        self, request: NativeDiagnosticRequest
+    ) -> NativeDiagnosticStatus: ...
+
+    async def native_diagnostic_status(
+        self, job_id: UUID, analysis: str
+    ) -> NativeDiagnosticStatus: ...
+
+    async def native_diagnostic_result(
+        self, job_id: UUID, analysis: str
+    ) -> NativeDiagnosticResult: ...
 
 
 _ResultT = TypeVar("_ResultT")
@@ -249,6 +269,55 @@ class CadenceService:
         if analysis not in ("dc", "ac"):
             raise InvalidInputError("analysis must be dc or ac")
         return parsed, cast(Literal["dc", "ac"], analysis)
+
+    async def list_native_diagnostics(self) -> NativeDiagnosticProfiles:
+        return NativeDiagnosticProfiles()
+
+    async def submit_native_diagnostic(
+        self, request: NativeDiagnosticRequest
+    ) -> NativeDiagnosticStatus:
+        parsed = self._parse_job_id(request.operation_id)
+        try:
+            status = await self._call(
+                lambda: cast(NativeBackend, self._backend).submit_native_diagnostic(request)
+            )
+        except OperationTimeoutError as timeout:
+            try:
+                status = await self._call(
+                    lambda: cast(NativeBackend, self._backend).native_diagnostic_status(
+                        parsed, request.analysis
+                    )
+                )
+            except BridgeError as recovery_error:
+                raise timeout from recovery_error
+        if status.job_id != parsed or status.analysis != request.analysis:
+            raise RemoteFailureError("Remote native submission identity mismatch")
+        return status
+
+    @staticmethod
+    def _native_key(job_id: str, analysis: str) -> UUID:
+        parsed = CadenceService._parse_job_id(job_id)
+        if analysis not in ("dc", "ac", "tran"):
+            raise InvalidInputError("native analysis must be dc, ac or tran")
+        return parsed
+
+    async def native_diagnostic_status(self, job_id: str, analysis: str) -> NativeDiagnosticStatus:
+        parsed = self._native_key(job_id, analysis)
+        status = await self._call(
+            lambda: cast(NativeBackend, self._backend).native_diagnostic_status(parsed, analysis)
+        )
+        if status.job_id != parsed or status.analysis != analysis:
+            raise RemoteFailureError("Remote native status identity mismatch")
+        return status
+
+    async def native_diagnostic_result(self, job_id: str, analysis: str) -> NativeDiagnosticResult:
+        parsed = self._native_key(job_id, analysis)
+        result = await self._call(
+            lambda: cast(NativeBackend, self._backend).native_diagnostic_result(parsed, analysis)
+        )
+        if result.job_id != parsed or result.analysis != analysis:
+            raise RemoteFailureError("Remote native result identity mismatch")
+        return result
 
     async def measure_dc_power(self, request: DcPowerRequest) -> ScalarMetric:
         return measure_dc_power(request)

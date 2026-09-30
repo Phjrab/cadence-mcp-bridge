@@ -50,6 +50,12 @@ from cadence_mcp_bridge.models import (
     ProfileVariables,
     SimulationProfile,
 )
+from cadence_mcp_bridge.native_diagnostics import (
+    NativeDiagnosticProfiles,
+    NativeDiagnosticRequest,
+    NativeDiagnosticResult,
+    NativeDiagnosticStatus,
+)
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.sweeps import (
@@ -66,6 +72,10 @@ from cadence_mcp_bridge.write_models import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+NativeAnalysisInput = Annotated[
+    str, WithJsonSchema({"type": "string", "enum": ["dc", "ac", "tran"]})
+]
 
 JobIdInput = Annotated[
     str,
@@ -457,6 +467,56 @@ def create_server(service: CadenceService) -> MCPServer:
     )
     async def cadence_design_write_plan() -> Annotated[CallToolResult, DesignWritePlan]:
         return await _stable_result(service.design_write_plan())
+
+    @server.tool(
+        name="cadence_list_native_diagnostics",
+        description="List fixed native ADE DC/AC/trap TRAN settings and provenance contract.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_native_diagnostics() -> Annotated[
+        CallToolResult, NativeDiagnosticProfiles
+    ]:
+        return await _stable_result(service.list_native_diagnostics())
+
+    @server.tool(
+        name="cadence_submit_native_diagnostic",
+        description="Submit native ADE netlist, Spectre and PSF extraction. Reuse operation_id on "
+        "retry; existing IDs never execute again. Fixed candidate only; cumulative limits apply.",
+        annotations=ToolAnnotations(
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
+        ),
+        structured_output=True,
+    )
+    async def cadence_submit_native_diagnostic(
+        request: NativeDiagnosticRequest,
+    ) -> Annotated[CallToolResult, NativeDiagnosticStatus]:
+        return await _stable_result(service.submit_native_diagnostic(request))
+
+    @server.tool(
+        name="cadence_native_diagnostic_status",
+        description="Read native netlisting, simulation and extraction state by request ID.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_native_diagnostic_status(
+        job_id: JobIdInput, analysis: NativeAnalysisInput
+    ) -> Annotated[CallToolResult, NativeDiagnosticStatus]:
+        return await _stable_result(service.native_diagnostic_status(job_id, analysis))
+
+    @server.tool(
+        name="cadence_native_diagnostic_result",
+        description="Read native DC scalars, AC spectrum or bounded TRAN summary and provenance.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_native_diagnostic_result(
+        job_id: JobIdInput, analysis: NativeAnalysisInput
+    ) -> Annotated[CallToolResult, NativeDiagnosticResult]:
+        return await _stable_result(service.native_diagnostic_result(job_id, analysis))
 
     @server.tool(
         name="cadence_list_actual_diagnostics",

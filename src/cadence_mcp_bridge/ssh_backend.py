@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import ctypes
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal, TypeVar
@@ -46,6 +49,11 @@ from cadence_mcp_bridge.models import (
     ProfileVariables,
     RcTransientVariables,
     ResultLimitMetadata,
+)
+from cadence_mcp_bridge.native_diagnostics import (
+    NativeDiagnosticRequest,
+    NativeDiagnosticResult,
+    NativeDiagnosticStatus,
 )
 from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
@@ -390,6 +398,41 @@ class OpenSshBackend:
             raise RemoteFailureError("Remote diagnostic returned an invalid payload")
         return payload
 
+    async def submit_native_diagnostic(
+        self, request: NativeDiagnosticRequest
+    ) -> NativeDiagnosticStatus:
+        return self._validate(
+            NativeDiagnosticStatus,
+            await self._invoke_native_json("submit", UUID(request.operation_id), request.analysis),
+        )
+
+    async def native_diagnostic_status(self, job_id: UUID, analysis: str) -> NativeDiagnosticStatus:
+        return self._validate(
+            NativeDiagnosticStatus, await self._invoke_native_json("status", job_id, analysis)
+        )
+
+    async def native_diagnostic_result(self, job_id: UUID, analysis: str) -> NativeDiagnosticResult:
+        return self._validate(
+            NativeDiagnosticResult, await self._invoke_native_json("result", job_id, analysis)
+        )
+
+    async def _invoke_native_json(self, action: str, job_id: UUID, analysis: str) -> dict[str, Any]:
+        if action not in ("submit", "status", "result") or analysis not in ("dc", "ac", "tran"):
+            raise InvalidInputError("unsupported native diagnostic operation")
+        if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
+            raise InvalidInputError("native diagnostics require the reviewed managed root")
+        runner = f"{self._config.remote_root}/phase-campaign/native-mcp-v1/run.sh"
+        output = await asyncio.to_thread(
+            self._invoke_at_path, runner, action, self._job_id(job_id), analysis
+        )
+        try:
+            payload = json.loads(output)
+        except json.JSONDecodeError as exc:
+            raise RemoteFailureError("Remote native diagnostic returned invalid JSON") from exc
+        if not isinstance(payload, dict):
+            raise RemoteFailureError("Remote native diagnostic returned invalid data")
+        return payload
+
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)
         try:
@@ -424,6 +467,8 @@ class OpenSshBackend:
         try:
             completed = subprocess.run(
                 argv,
+                stdin=subprocess.DEVNULL,
+                env=self._ssh_environment(),
                 shell=False,
                 capture_output=True,
                 check=False,
@@ -441,6 +486,32 @@ class OpenSshBackend:
         if completed.returncode != 0:
             self._raise_remote_error(completed.returncode, stderr)
         return stdout
+
+    @staticmethod
+    def _ssh_environment() -> dict[str, str]:
+        """Restore the Windows known folder omitted by MCP's stdio environment.
+
+        Windows OpenSSH requires PROGRAMDATA even with BatchMode enabled. Obtain
+        it from the OS when absent; never infer a drive or loosen SSH checks.
+        """
+        environment = dict(os.environ)
+        if sys.platform == "win32" and not any(
+            key.upper() == "PROGRAMDATA" and value for key, value in environment.items()
+        ):
+            folder = ctypes.create_unicode_buffer(260)
+            resolve = ctypes.windll.shell32.SHGetFolderPathW
+            resolve.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_int,
+                ctypes.c_void_p,
+                ctypes.c_ulong,
+                ctypes.c_wchar_p,
+            ]
+            resolve.restype = ctypes.c_long
+            if resolve(None, 0x23, None, 0, folder) != 0 or not folder.value:
+                raise BackendUnavailableError("Windows common application folder unavailable")
+            environment["PROGRAMDATA"] = folder.value
+        return environment
 
     def _check_output_size(self, output: bytes, stream: str) -> None:
         if len(output) > self._config.max_output_bytes:
