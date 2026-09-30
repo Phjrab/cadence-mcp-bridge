@@ -1,0 +1,26 @@
+{
+  "analysis_bundle": [
+    "dc"
+  ],
+  "campaign_id": "AUTO-PHASE-01",
+  "candidate_preserved_v": [
+    0.32,
+    0.702
+  ],
+  "execution_mode": "ade_state",
+  "files": {
+    "helper.py": "27b5bc9436a70a9d224d9536be05a11ee8472348faccc6f015b2531255a7f754",
+    "netlist.ocn": "97d7c3385fd5a2ec561cac3f67f3c8d530137bb96f51f66e279a7f4439dc28b5",
+    "run.sh": "881b104810c5e019dc12b3fce269a2d34c7e1db69b5fe0ce00c05fd96a1ebfcb"
+  },
+  "max_new_results_bytes": 5368709120,
+  "max_spectre_attempts": 100,
+  "operating_point": "current_state_observed",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "remote_version": "phase-campaign/ade-qual-v4",
+  "reservation_bytes": 134217728,
+  "schema_version": 1,
+  "source_mode": "verified_current_source_copy_readonly",
+  "state_mode": "native_ade_window_load_owned_copy_routing_only",
+  "vdd_constraint_v": 1.0
+}

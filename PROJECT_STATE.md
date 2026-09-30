@@ -5,7 +5,14 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: sweep_mcp_01_fixture_1d_verified_actual_bias_1d_unavailable
+current_status: ade_qual_01_blocked_correction_budget_native_netlist_not_qualified
+ade_qual_01_status: blocked_modification_budget
+ade_qual_01_report: docs/ADE_QUAL_01_CHECKPOINT_V1.md
+ade_qual_01_remote_version: phase-campaign/ade-qual-v4
+ade_qual_01_corrections_used: 3_of_3
+ade_qual_01_spectre_attempts_after: 14_of_100
+ade_qual_01_new_spectre_attempts: 0
+ade_qual_01_spec_evaluation: not_evaluated
 sweep_mcp_01_status: fixture_three_point_mcp_e2e_verified_actual_bias_1d_unavailable
 sweep_mcp_01_report: docs/SWEEP_MCP_01_RESULT_V1.md
 sweep_mcp_01_remote_version: phase-campaign/sweep-mcp-v1
@@ -37,7 +44,7 @@ auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagno
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
 last_completed_wp: WP-16
-next_wp: awaiting_user_choice_ADE-QUAL-01_or_DESIGN-OPT-01_preparation
+next_wp: resume_ADE-QUAL-01_after_bounded_correction_allowance_renewal
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized

@@ -50,6 +50,16 @@ until a single-axis binding and bounded voltage range are reviewed. The
 historical three bias pairs vary two variables together. See
 [`docs/SWEEP_MCP_01_RESULT_V1.md`](docs/SWEEP_MCP_01_RESULT_V1.md).
 
+ADE-QUAL-01 is an incomplete operator prototype. Current-source/ADE-state
+netlisting reached the existing three-correction ceiling before a valid
+native netlist or simulation. The saved-state DC settings were observed and
+protected fingerprints were preserved; this does not qualify state-driven
+execution. See [`docs/ADE_QUAL_01_CHECKPOINT_V1.md`](docs/ADE_QUAL_01_CHECKPOINT_V1.md)
+for failures and the bounded resume checkpoint. The existing 31 MCP tools are
+unchanged. The prototype's fixed `scripts/ade_qual.py status` reconciles the
+preserved job; new execution requires its private policy/delegation and replay
+guards plus renewal of the exhausted correction allowance.
+
 ## Development and verification
 
 ```powershell
