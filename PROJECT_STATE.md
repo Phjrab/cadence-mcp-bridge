@@ -19,6 +19,7 @@ auto_phase_01_phase_d_ac_sweep_status: baseline_midpoint_ac_completed_scalar_rea
 auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_reader_implemented
 auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_implemented_execution_pending
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_implemented_execution_pending
+auto_phase_01_mos_cdf_status: fixed_read_only_inventory_implemented_execution_pending
 last_completed_wp: WP-16
 next_wp: WP-14
 release_baseline: v1.0.0
@@ -534,6 +535,14 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-09-30 AUTO-PHASE-01 WP-14 MOS CDF capability: Phase S implements one
+  bounded read-only Virtuoso inventory of the eight nmos1v and six pmos1v
+  instances in the pinned source schematic. It records selected effective CDF
+  values and defaults privately, checks source/ADE/model fingerprints before
+  and after, and does not save a cellview or run a simulation. This is a
+  binding fact probe, not device-parameter round-trip validation or sizing
+  authority. Runtime outcomes are retained in the private one-shot journal.
 
 - 2026-09-30 AUTO-PHASE-01 WP-14 scalar capability: Phase R implements two
   sequential, fixed read-only OCEAN reads of the existing +1 and -1 microvolt
