@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "parent_policy_sha256": "3b6dfa5fad1a8ce2aa76ddd2acfda0e2868373760fd3cb80e65d61377fb399fc",
+  "operation_ids": ["phases-mos-cdf-v1-deploy", "phases-mos-cdf-v1-read"],
+  "remote_root": "/home/buet/cds_work/.cadence_mcp",
+  "remote_version": "phase-campaign/mos-cdf-v1",
+  "prior_scalar_result_sha256": {
+    "positive": "d1deaa7d28f65c3737c3349f7d768f65155895050913cdf317cd2392f4c569c3",
+    "negative": "2c8a38d866e6423316d937c60d1fa6548a6c7d6ac0ac55e28cd8e60e135405ea"
+  },
+  "oa_facts_result_sha256": "aceff81c134c47275fdffca1479b77e4190fda649f2749f79c0a520be4033c11",
+  "source_fingerprint_sha256": "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714",
+  "state_tree_sha256": "085b7dae004fc0f88d23fd1507a3de49285927ec870d6a2d6a12001bbf0c1193",
+  "model_sha256": "029bf5a0767bedf2ca91301035ad2ad6e354663123402545a1a2d73b99986f8f",
+  "mos_master_counts": {"nmos1v": 8, "pmos1v": 6},
+  "cdf_parameter_names": ["w", "l", "m", "nf", "fw", "width", "length", "fingers", "totalWidth"],
+  "spectre_attempt_count": 9,
+  "new_simulation": false,
+  "files": {
+    "run.sh": "a08e49a2b9fa2dbb5ed5e676af6390f0706527e342723f1e6dfbb65c498618ac",
+    "cdf_helper.py": "88fc180e242a9dcde33b75f9b08209702b19a9f9fd72c8546961e235b133aa69",
+    "mos-cdf-v1.il": "75e5acde22dbb975f54e65e6a286ab1bd78a541cb6a8a895ecf80b33da1d100f"
+  }
+}
