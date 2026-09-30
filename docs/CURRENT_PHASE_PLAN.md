@@ -29,6 +29,13 @@ specification evaluation remains `not_evaluated`. Five of six corrections and
 15 of 100 cumulative Spectre attempts are consumed. See `ADE_QUAL_01_RESULT_V1.md`.
 Earlier failures and the private checkpoint remain preserved. Ask once before
 another major phase; no subsequent phase is active.
+The user subsequently selected native AC/TRAN qualification. Native AC, default
+TRAN and a simulator-recommended trap TRAN comparison completed at the same
+observed 300/650 mV conditions. The default ringing notice is preserved; the trap
+run has zero notices. See `ADE_QUAL_NATIVE_AC_TRAN_RESULT_V1.md`. Three new
+Spectre attempts bring cumulative use to 18 of 100. This new change consumed its
+three corrections; the earlier DC change remains at five of six. Ask once before
+the next major phase; no subsequent phase is active.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

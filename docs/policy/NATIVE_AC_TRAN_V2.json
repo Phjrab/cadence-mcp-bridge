@@ -1,0 +1,54 @@
+{
+  "ac": {
+    "points_per_decade": 10,
+    "start_hz": 10,
+    "stop_hz": 100000000.0
+  },
+  "analysis_bundle": [
+    "ac",
+    "tran"
+  ],
+  "campaign_id": "AUTO-PHASE-01",
+  "candidate_preserved_v": [
+    0.32,
+    0.702
+  ],
+  "change_id": "ADE-QUAL-NATIVE-AC-TRAN-01",
+  "corrections_used": 1,
+  "elapsed_ceiling": null,
+  "execution_mode": "native_ade_state_with_job_session_analysis_override",
+  "files": {
+    "extract-ac.ocn": "4d28761990655d6d333879c39f73f37fa821d511da09339a6c426a07daa963a4",
+    "extract-tran.ocn": "8026ace570ef06049a9ee5932fe198da29f46c0ef91f6f37eb962f5d4613b79c",
+    "helper.py": "60c2c858026a39d7986ddc72937abcfc29d040f863c9bf24990f4c6462d85bd9",
+    "netlist-ac.ocn": "b34713c8df78952bf3a1cfec001e45031469eed4a12ef82665886cd9d2fdcffa",
+    "netlist-tran.ocn": "24c9ca30c8925715a90d461e474fad387c87ae6c7854590e169d28600e00e7f4",
+    "run.sh": "c291a0b64401f49e13bd818b6c276e508f8ddecbd1b994080016cced75010d14"
+  },
+  "max_new_results_bytes": 5368709120,
+  "max_spectre_attempts": 100,
+  "maximum_corrections_same_change": 3,
+  "observed_saved_state": {
+    "bias_v": [
+      0.3,
+      0.65
+    ],
+    "enabled": [
+      "dc"
+    ],
+    "section": "NN",
+    "temperature_c": 27
+  },
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "previous_policy_sha256": "27351197e3c4c22f529558b533cb87d59ca7c05b1362eedc0d16f6667ae7d0f5",
+  "qualified_dc_policy_sha256": "6f3e8f2ff9d4fa4801310fb42592801e70536bba433e8be4e7fea25a11fb4341",
+  "remote_version": "phase-campaign/native-ac-tran-v2",
+  "reservation_bytes_per_job": 134217728,
+  "schema_version": 1,
+  "tran": {
+    "job_maxstep_s": 1e-05,
+    "maximum_extracted_points": 3000,
+    "saved_stop_s": 0.004
+  },
+  "vdd_constraint_v": 1.0
+}

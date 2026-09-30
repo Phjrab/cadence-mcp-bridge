@@ -63,6 +63,10 @@ remote/phase-campaign/sim-mcp-v2/*.ocn text eol=lf
 remote/phase-campaign/ade-qual-v4/*.ocn text eol=lf
 remote/phase-campaign/ade-qual-v5/*.ocn text eol=lf
 remote/phase-campaign/ade-qual-v6/*.ocn text eol=lf
+remote/phase-campaign/native-ac-tran-v1/*.ocn text eol=lf
+remote/phase-campaign/native-ac-tran-v2/*.ocn text eol=lf
+remote/phase-campaign/native-ac-tran-v3/*.ocn text eol=lf
+remote/phase-campaign/native-ac-tran-v4/*.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
