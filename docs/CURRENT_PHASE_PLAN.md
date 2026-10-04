@@ -90,6 +90,17 @@ evaluation remains `not_evaluated`. FF/FS gain reduction is an observed result,
 not a simulator failure or an established device-level cause. Original/PDK and
 prior NN evidence are unchanged. Ask once before `ADE-PVT-DIAG-01` or another
 major phase; no subsequent phase is activated by this characterization.
+The user selected `ADE-PVT-DIAG-01`: read preserved MOS operating points to
+investigate FF/FS gain loss without new simulation, bias change or optimization.
+All 700 fields across five corners were read and source/PDK/prior-job integrity
+verified. Saved input and output PMOS headroom and conductance changes explain
+the two-stage gain collapse; independent local MOS linearizations corroborate
+the prior 10-Hz AC gains. See `ADE_PVT_DIAG_01_RESULT_V1.md` for the numerical
+evidence and approximation limits. One of three diagnostic corrections is
+consumed with the failed v1 preserved. Shared Spectre use remains 32/100;
+specification evaluation remains `not_evaluated`. Complete reviewed feature
+integration, report and ask once before a new bias/headroom planning phase.
+No new range, circuit run or subsequent phase is activated here.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

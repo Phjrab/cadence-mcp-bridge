@@ -1,0 +1,15 @@
+procedure(mcpHasResult(name)
+  let((present)
+    present=nil
+    foreach(entry results()
+      when(equal(sprintf(nil "%s" entry) name) present=t))
+    present))
+; Fixed capability query on preserved DC results; no simulator or state save.
+let((port)
+  port=outfile("@FRAME@")
+  unless(port exit(1))
+  fprintf(port "BEGIN\nPV|%L\n" isCallable('pv))
+@READS@
+  fprintf(port "END\n")
+  close(port))
+exit(0)
