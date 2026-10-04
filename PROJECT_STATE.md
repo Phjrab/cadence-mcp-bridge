@@ -5,7 +5,25 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: preserved_mos_operating_points_explain_ff_fs_gain_loss_no_spec_target
+current_status: finite_bias_validation_complete_numeric_results_private_no_spec_target
+bias_headroom_01_status: sixteen_native_computations_verified_first_reader_failure_recovered_without_rerun
+bias_headroom_01_report: docs/BIAS_HEADROOM_01_RESULT_V1.md
+bias_headroom_01_remote_version: phase-campaign/bias-headroom-v2
+bias_headroom_01_selected_research_pair_mv: recorded_in_private_result
+bias_headroom_01_original_candidate_mv: [320, 702]
+bias_headroom_01_source_promotion: false
+bias_headroom_01_corrections_used: 1_of_3_failed_v1_repair_and_prior_histories_preserved
+bias_headroom_01_new_spectre_attempts: 16
+bias_headroom_01_spectre_attempts_after: 48_of_500
+bias_headroom_01_result_reserved_bytes_after: 5235539968
+bias_headroom_01_reservable_jobs_remaining: 0
+bias_headroom_01_spec_evaluation: not_evaluated
+bias_headroom_01_next_phase: awaiting_one_user_choice_headroom_topology_sizing_plan
+auto_phase_01_spectre_ceiling: 500
+auto_phase_01_spectre_policy: docs/policy/PHASE_SPECTRE_LIMIT_V3.json
+auto_phase_01_active_native_adapter: phase-campaign/native-mcp-v2
+auto_phase_01_active_spectre_consumed: 48
+auto_phase_01_active_results_ceiling_bytes: 5368709120
 ade_pvt_diag_01_status: all_700_fields_read_ff_fs_headroom_conductance_cause_corroborated
 ade_pvt_diag_01_report: docs/ADE_PVT_DIAG_01_RESULT_V1.md
 ade_pvt_diag_01_remote_version: phase-campaign/ade-pvt-diag-v2
@@ -18,7 +36,7 @@ ade_pvt_diag_01_spectre_attempts_after: 32_of_100
 ade_pvt_diag_01_result_reserved_bytes_after: 3088056320
 ade_pvt_diag_01_artifact_bytes_including_deployments: 157921
 ade_pvt_diag_01_spec_evaluation: not_evaluated
-ade_pvt_diag_01_next_phase: awaiting_user_choice_bounded_bias_headroom_plan
+ade_pvt_diag_01_next_phase: user_selected_bounded_bias_headroom_validation_and_500_attempt_ceiling
 ade_pvt_qual_01_status: eight_owned_state_dc_ac_pairs_verified_nn_reused
 ade_pvt_qual_01_report: docs/ADE_PVT_QUAL_01_RESULT_V1.md
 ade_pvt_qual_01_remote_version: phase-campaign/ade-pvt-qual-v1
@@ -448,16 +466,16 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: wp/WP-14-ade-pvt-diag
-base_main_commit: 77450f24ea9742472834a62f227afd05993570ed
+current_feature_branch: wp/WP-14-bias-headroom-safe
+base_main_commit: 9b6280ee5289835ded8820e4e6302cab7f8050f2
 last_commit: recorded_in_private_feature_and_merge_checkpoint
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: preserved_five_corner_mos_reader_and_independent_local_gain_arithmetic_verified
-user_action_required: "Choose once whether to prepare a bounded bias/headroom improvement plan after ADE-PVT-DIAG-01 completion. No repeated in-phase approval is required."
+last_e2e_result: native_500_stdio_replay_and_sixteen_bias_jobs_with_independent_1540_op_355_ac_checks_verified
+user_action_required: "Choose once whether to investigate a bounded FS headroom topology/device-sizing plan. Further simulation is blocked by the unchanged result reservation budget; 127 MiB remains and each job requires 128 MiB."
 ```
 
 ## ADE-PVT-DIAG-01 checkpoint
@@ -876,3 +894,14 @@ a successful push or a baseline approval.
 - 2026-09-17: PR #29 merged collector post-merge state head `c817b0c91e17e1ab62ddc58d0c35be38b540800d` as latest main `282a8bc89215614bd86eaf16febc5db5d57b33d5` at `2026-09-17T05:32:40Z`. The fetched and remote main refs match that exact merge commit. Repository visibility is now observed as public, which conflicts with the fixed private-repository collection contract and is retained as a fail-closed blocker rather than an exception.
 - 2026-09-17: WP-14 prepared request-only single-use collection package v1, normalized-LF SHA-256 `648409527484c75b67df50c27eccc4a8e28ce22921750592ab6517b135676b9f`, bound to original package hash `1906357b...` and collector hash `598d95e...`. The package records 22 acceptance criteria, the collector's exact closed activation schema, its design-bound repository commit, one-use/executor/time-window requirements, and the public-visibility blocker. It is not stored at the activation path, grants no authority, and leaves the activation record, fresh evidence, Authorization V2, deployment, discovery, and scientific baseline approval absent. No SSH/SCP, remote contact, evidence collection, preflight, deployment, Cadence/SKILL/discovery/simulation, OA/ADE/design/PDK operation, merge, or WP-15 work occurred.
 - 2026-09-17: Package validation confirmed all authority flags false, 22 acceptance criteria, the exact original package and collector hashes, a unique 148-key state map, `deployment_enabled=false`, both authorization records absent, and a two-document change scope. Ruff, strict mypy for 17 source files, 328 local tests with eight deliberately skipped real integrations and 56 existing deprecation warnings, 343-file secret preflight, 18 dedicated security tests, strict dependency audit, JSON parsing, normalized-hash verification, and `git diff --check` passed. The public-visibility mismatch remains an intentional fail-closed blocker; WP-14 remains blocked and WP-15 is not started.
+
+## BIAS-HEADROOM-01 checkpoint
+
+- 2026-10-04: The user selected the recommended bias/headroom phase and raised cumulative Spectre attempts to 500. Started from PR #99 merge/latest main `9b6280ee5289835ded8820e4e6302cab7f8050f2`.
+- Native-v2 migration passed real stdio MCP replay and guest boundary checks with the existing ledger, UUIDs and all prior budgets retained.
+- Four fixed pairs completed FF/FS DC. Relative worst-corner headroom selected 300/650 mV; three additional DC and five AC jobs completed. Independent verification covers 1540 OP fields and 355 AC points.
+- One v1 reader failure consumed its calculation; a guard-module reload accidentally extended a historical extraction script. Changed bytes were preserved and the deterministic original script bytes reconstructed. Original timestamps are not claimed restored. Source/OA/ADE/PDK, historical measurements/PSF and pinned NN/PVT/diagnostic trees retain protection. Corrected v2 recovered OP from the preserved PSF without another Spectre run; v1 submissions are retired.
+- Numerical measurements, candidate selection and circuit tradeoffs are retained in the private result. No spec PASS or source promotion.
+- Total Spectre48/500; reserved results5235539968/5368709120 bytes. Remaining127 MiB cannot reserve a128 MiB job. Actual guest disk capacity remains above the floor. Correction1/3; prior histories retained.
+- Complete reviewed feature integration, preserve the private merge checkpoint, and ask once before another major phase. No state-sync-only PR.
+- Public PR payload review rejected exporting actual circuit measurements and derived results. The full report is privately preserved; the sanitized feature branch starts from main and excludes the earlier feature snapshot from its ancestry. That earlier pushed snapshot contained numeric summaries and is not claimed erased.

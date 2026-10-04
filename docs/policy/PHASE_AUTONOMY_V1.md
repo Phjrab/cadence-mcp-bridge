@@ -66,7 +66,7 @@ rules remain independent boundaries.
 
 ## Campaign ceilings
 
-One active EDA job; 100 Spectre attempts, 20 DRC,
+One active EDA job; 500 cumulative Spectre attempts, 20 DRC,
 20 LVS, 10 PEX; three modifications of the same code change; two communication
 retries per fixed read; 5 GiB new results; managed disk free space at least the
 greater of 2 GiB and ten percent. Paid resources: zero. Usage accumulates across
@@ -77,3 +77,12 @@ the original campaign digest through a private delegation record. The original
 they do not reset the other budgets or consumed claims. The operator still enforces
 per-operation retries. Later typed implementations must enforce the remaining
 cumulative ceilings before activation.
+
+The user's explicit 2026-10-04 instruction raises only the Spectre ceiling from
+100 to 500 through `PHASE_SPECTRE_LIMIT_V3.json`. `NATIVE_MCP_V2.json` binds
+the deployed native-v2 guard and unchanged v1 job replay domain. The existing
+shared ledger, consumed reservations, historical policy bytes and prior correction
+histories are retained. Actual stdio MCP replay of preserved DC/AC/TRAN results
+and guest 100/499/500 boundary checks verify the transition without new simulation.
+The finite four-pair bias phase uses the same budget guard and at most sixteen
+new attempts. Storage capacity can stop execution before the 500-attempt ceiling.

@@ -8,6 +8,13 @@
 > records, original/PDK protection, real verification, protected GitHub rules,
 > and platform restrictions remain binding. Historical v1 WP instructions below
 > do not restart completed work. PR #57 and WP-15/WP-16 are complete.
+>
+> **Active 2026-10-04 budget overlay:** The user's explicit instruction raises
+> cumulative Spectre attempts to 500, bound by `docs/policy/PHASE_SPECTRE_LIMIT_V3.json`.
+> Native-v2 enforces this ceiling using the existing counter and UUID replay domain.
+> Result storage remains 5 GiB; other budgets and correction histories remain active.
+> The removed campaign elapsed ceiling stays absent. Historical versioned contracts
+> retain their original limits and evidence; only the reviewed active adapter changes.
 
 > **대상 저장소:** `Phjrab/cadence-mcp-bridge`
 > **가시성:** GitHub Public (2026-09-17 post-v1 사용자 승인 정책)
