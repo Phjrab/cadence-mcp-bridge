@@ -1,0 +1,16 @@
+; Only the fixed ten MOS operating-point fields in five preserved DC datasets.
+procedure(mcpReadOp(port corner alias instance field resultName)
+  let((value)
+    value=pv(instance field ?result resultName)
+    if(numberp(value) then
+      fprintf(port "OP|%s|%s|%s|value|%L\n" corner alias field value)
+    else
+      fprintf(port "OP|%s|%s|%s|missing|nil\n" corner alias field))))
+let((port)
+  port=outfile("@FRAME@")
+  unless(port exit(1))
+  fprintf(port "BEGIN\n")
+@READS@
+  fprintf(port "END\n")
+  close(port))
+exit(0)

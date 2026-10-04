@@ -5,7 +5,20 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: native_fixed_non_nn_corner_dc_ac_characterization_verified_no_spec_target
+current_status: preserved_mos_operating_points_explain_ff_fs_gain_loss_no_spec_target
+ade_pvt_diag_01_status: all_700_fields_read_ff_fs_headroom_conductance_cause_corroborated
+ade_pvt_diag_01_report: docs/ADE_PVT_DIAG_01_RESULT_V1.md
+ade_pvt_diag_01_remote_version: phase-campaign/ade-pvt-diag-v2
+ade_pvt_diag_01_reader_selector: dcOpInfo
+ade_pvt_diag_01_numeric_fields: 700
+ade_pvt_diag_01_missing_fields: 0
+ade_pvt_diag_01_corrections_used: 1_of_3_initial_failure_and_prior_histories_preserved
+ade_pvt_diag_01_new_spectre_attempts: 0
+ade_pvt_diag_01_spectre_attempts_after: 32_of_100
+ade_pvt_diag_01_result_reserved_bytes_after: 3088056320
+ade_pvt_diag_01_artifact_bytes_including_deployments: 157921
+ade_pvt_diag_01_spec_evaluation: not_evaluated
+ade_pvt_diag_01_next_phase: awaiting_user_choice_bounded_bias_headroom_plan
 ade_pvt_qual_01_status: eight_owned_state_dc_ac_pairs_verified_nn_reused
 ade_pvt_qual_01_report: docs/ADE_PVT_QUAL_01_RESULT_V1.md
 ade_pvt_qual_01_remote_version: phase-campaign/ade-pvt-qual-v1
@@ -20,7 +33,7 @@ ade_pvt_qual_01_new_spectre_attempts: 8
 ade_pvt_qual_01_spectre_attempts_after: 32_of_100
 ade_pvt_qual_01_result_reserved_bytes_after: 3088056320
 ade_pvt_qual_01_effective_statistics_verified: false
-ade_pvt_qual_01_next_phase: awaiting_user_choice_ADE_PVT_DIAG_01
+ade_pvt_qual_01_next_phase: user_selected_ADE_PVT_DIAG_01
 ade_pvt_prep_01_status: protected_inventory_completed_non_nn_and_effective_statistics_unqualified
 ade_pvt_prep_01_report: docs/ADE_PVT_PREP_01_RESULT_V1.md
 ade_pvt_prep_01_remote_version: phase-campaign/ade-pvt-prep-v4
@@ -435,17 +448,33 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: wp/WP-14-ade-pvt-prep
-base_main_commit: 20f75ad518518d465ffee671a5a661a562c54321
+current_feature_branch: wp/WP-14-ade-pvt-diag
+base_main_commit: 77450f24ea9742472834a62f227afd05993570ed
 last_commit: recorded_in_private_feature_and_merge_checkpoint
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: protected_pvt_inventory_verified_zero_new_circuit_runs
-user_action_required: "Choose once whether to start proposed ADE-PVT-QUAL-01 after this preparation phase report. No repeated in-phase approval is required."
+last_e2e_result: preserved_five_corner_mos_reader_and_independent_local_gain_arithmetic_verified
+user_action_required: "Choose once whether to prepare a bounded bias/headroom improvement plan after ADE-PVT-DIAG-01 completion. No repeated in-phase approval is required."
 ```
+
+## ADE-PVT-DIAG-01 checkpoint
+
+- 2026-10-04: Started from PR #98 merge/latest main
+  `77450f24ea9742472834a62f227afd05993570ed` on the dedicated diagnostic branch.
+  The user selected preserved MOS reads and FF/FS gain diagnosis. All 700
+  fields were extracted via actual `pv`/`dcOpInfo`, with unchanged original,
+  PDK, prior jobs and shared 32/100 simulation ledger. Input and output PMOS
+  headroom loss and increased conductance explain FF/FS gain collapse; local
+  nodal and independent half-circuit arithmetic corroborate prior AC evidence.
+  No circuit run, bias change, optimization or specification PASS is claimed.
+  V1's failed selector probe and journal are preserved; corrected v2 consumes
+  one of three diagnostic corrections. Full initial regression passed 928
+  tests with eight remote skips; final affected checks passed 116 tests.
+  Private exact-head review/merge records complete this feature without a
+  state-sync-only PR. Ask once before another major phase and stop.
 
 ## ADE-PVT-PREP-01 checkpoint
 

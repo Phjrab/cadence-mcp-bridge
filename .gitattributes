@@ -74,6 +74,8 @@ remote/phase-campaign/ade-pvt-prep-v1/* text eol=lf
 remote/phase-campaign/ade-pvt-prep-v2/* text eol=lf
 remote/phase-campaign/ade-pvt-prep-v3/* text eol=lf
 remote/phase-campaign/ade-pvt-prep-v4/* text eol=lf
+remote/phase-campaign/ade-pvt-diag-v1/*.ocn text eol=lf
+remote/phase-campaign/ade-pvt-diag-v2/*.ocn text eol=lf
 *.scs text eol=lf
 remote/config/*.json text eol=lf
 remote/config/design-write-v3-plan.json -text
