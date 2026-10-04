@@ -75,6 +75,21 @@ variation, non-NN runtime corner behavior and statistical/corner license entitle
 remain unqualified. Three preparation corrections are consumed; all failed/partial
 versions and prior counters remain preserved. Shared Spectre use is still 24/100.
 Report this phase and ask once before the proposed `ADE-PVT-QUAL-01`; it is not active.
+The user subsequently selected `ADE-PVT-QUAL-01`: reuse preserved NN evidence,
+qualify FF/SS/FS/SF through native owned-state DC and AC at fixed 320/702 mV,
+VDD=1.0 V and 27 C, with at most eight new Spectre attempts. Existing circuit,
+VCM, load, stimulus and revision guards remain binding. No highPerf selection,
+temperature/supply sweep, statistical execution or optimization is included.
+Implementation, tests, managed deployment and reviewed feature PR integration
+are delegated without intermediate approval. Preserve all prior correction
+histories and cumulative limits; the removed elapsed ceiling remains absent.
+Report this phase and ask once before another major phase, then stop.
+All eight fixed FF/SS/FS/SF native DC/AC jobs completed; see
+`ADE_PVT_QUAL_01_RESULT_V1.md`. Cumulative Spectre use is 32/100 and specification
+evaluation remains `not_evaluated`. FF/FS gain reduction is an observed result,
+not a simulator failure or an established device-level cause. Original/PDK and
+prior NN evidence are unchanged. Ask once before `ADE-PVT-DIAG-01` or another
+major phase; no subsequent phase is activated by this characterization.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

@@ -5,7 +5,22 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: pdk_pvt_statistics_inventory_verified_no_new_circuit_execution
+current_status: native_fixed_non_nn_corner_dc_ac_characterization_verified_no_spec_target
+ade_pvt_qual_01_status: eight_owned_state_dc_ac_pairs_verified_nn_reused
+ade_pvt_qual_01_report: docs/ADE_PVT_QUAL_01_RESULT_V1.md
+ade_pvt_qual_01_remote_version: phase-campaign/ade-pvt-qual-v1
+ade_pvt_qual_01_max_new_spectre_attempts: 8
+ade_pvt_qual_01_fixed_corners: [FF, SS, FS, SF]
+ade_pvt_qual_01_temperature_c: 27
+ade_pvt_qual_01_fixed_owned_biases_mv: [320, 702]
+ade_pvt_qual_01_vdd_constraint_v: 1.0
+ade_pvt_qual_01_corrections_used: 0_of_3_prior_histories_preserved
+ade_pvt_qual_01_spec_evaluation: not_evaluated
+ade_pvt_qual_01_new_spectre_attempts: 8
+ade_pvt_qual_01_spectre_attempts_after: 32_of_100
+ade_pvt_qual_01_result_reserved_bytes_after: 3088056320
+ade_pvt_qual_01_effective_statistics_verified: false
+ade_pvt_qual_01_next_phase: awaiting_user_choice_ADE_PVT_DIAG_01
 ade_pvt_prep_01_status: protected_inventory_completed_non_nn_and_effective_statistics_unqualified
 ade_pvt_prep_01_report: docs/ADE_PVT_PREP_01_RESULT_V1.md
 ade_pvt_prep_01_remote_version: phase-campaign/ade-pvt-prep-v4
