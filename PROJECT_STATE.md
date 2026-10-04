@@ -5,7 +5,24 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: WP-14
-current_status: native_dc_ac_tran_mcp_stdio_e2e_verified_spec_not_evaluated
+current_status: pdk_pvt_statistics_inventory_verified_no_new_circuit_execution
+ade_pvt_prep_01_status: protected_inventory_completed_non_nn_and_effective_statistics_unqualified
+ade_pvt_prep_01_report: docs/ADE_PVT_PREP_01_RESULT_V1.md
+ade_pvt_prep_01_remote_version: phase-campaign/ade-pvt-prep-v4
+ade_pvt_prep_01_corrections_used: 3_of_3_prior_versions_and_counters_preserved
+ade_pvt_prep_01_model_file_count: 9
+ade_pvt_prep_01_section_count: 10
+ade_pvt_prep_01_mos_binding_counts: [8, 6]
+ade_pvt_prep_01_statistics_blocks_per_section_graph: 5
+ade_pvt_prep_01_mismatch_blocks_per_section_graph: 5
+ade_pvt_prep_01_process_blocks_per_section_graph: 0
+ade_pvt_prep_01_vary_declarations_per_section_graph: 7
+ade_pvt_prep_01_effective_variation_verified: false
+ade_pvt_prep_01_new_circuit_runs: 0
+ade_pvt_prep_01_spectre_attempts_after: 24_of_100
+ade_pvt_prep_01_result_reserved_bytes_after: 2014314496
+ade_pvt_prep_01_preparation_bytes_including_deployment: 117925
+ade_pvt_prep_01_spec_evaluation: not_evaluated
 native_mcp_01_status: fixed_native_dc_ac_tran_stdio_mcp_e2e_verified
 native_mcp_01_report: docs/NATIVE_MCP_01_RESULT_V1.md
 native_mcp_01_remote_version: phase-campaign/native-mcp-v1
@@ -403,17 +420,33 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: wp/WP-16-post-merge-final-state
-base_main_commit: 85706385cfb82b60d829f44c1ac197339eebbafd
-last_commit: 85706385cfb82b60d829f44c1ac197339eebbafd
+current_feature_branch: wp/WP-14-ade-pvt-prep
+base_main_commit: 20f75ad518518d465ffee671a5a661a562c54321
+last_commit: recorded_in_private_feature_and_merge_checkpoint
 last_push: null
 push_verification: pending_at_commit_report_after_remote_sha_check
-awaiting_user_merge: true
+awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: not_run
-user_action_required: "Review the WP-16 post-merge state branch for integration. WP-14 scientific baseline and fresh remote evidence remain blocked; local preflight readiness does not grant remote access, deployment, Cadence execution, or bias validation."
+last_e2e_result: protected_pvt_inventory_verified_zero_new_circuit_runs
+user_action_required: "Choose once whether to start proposed ADE-PVT-QUAL-01 after this preparation phase report. No repeated in-phase approval is required."
 ```
+
+## ADE-PVT-PREP-01 checkpoint
+
+- 2026-10-04: Started from latest fetched main `20f75ad518518d465ffee671a5a661a562c54321`
+  with PR #96 and native MCP work already integrated. The user selected protected
+  PDK PVT/statistics investigation. Ten real model sections and both used MOS
+  definitions were observed across nine files. Mismatch declarations and installed
+  OCEAN/Spectre support are present; effective variation, process statistics,
+  non-NN circuit runs and new runtime license entitlement are not qualified.
+  Three corrections were consumed; V1 support evidence, interrupted V2/V3,
+  diagnostic records and all prior budgets remain preserved. The final V4 read
+  and postflight succeeded with original/PDK/reference integrity, active EDA zero,
+  24/100 Spectre attempts unchanged and no new circuit execution. This feature
+  includes the fixed operator, source/policy manifests, meaningful local checks
+  and the result/minimal qualification plan. No state-sync-only PR or new roadmap
+  run is created. Ask once before another major phase and stop.
 
 ## WP-16 post-merge final state
 

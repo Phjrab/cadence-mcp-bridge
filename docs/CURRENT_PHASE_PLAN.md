@@ -64,6 +64,17 @@ analysis is rejected. Cumulative Spectre use is 24/100; one local transport
 correction is consumed, with remote v1 assets unchanged. Protected references
 remain intact, active EDA is zero, and specification remains `not_evaluated`.
 Ask once before another major phase after reviewed feature PR integration.
+The user selected `ADE-PVT-PREP-01` on 2026-10-04: protected reads of the actual
+PDK corner/statistics definitions and installed execution support, fixed-code
+tests and owned deployment, followed by reviewed feature PR integration. This
+preparation includes no new circuit execution. The inventory is complete in
+`ADE_PVT_PREP_01_RESULT_V1.md`: ten actual sections, MOS definition binding for
+8/6 instances, mismatch declarations present, process declarations absent in the
+inventoried graph, and installed help/API support observed. Effective statistical
+variation, non-NN runtime corner behavior and statistical/corner license entitlement
+remain unqualified. Three preparation corrections are consumed; all failed/partial
+versions and prior counters remain preserved. Shared Spectre use is still 24/100.
+Report this phase and ask once before the proposed `ADE-PVT-QUAL-01`; it is not active.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

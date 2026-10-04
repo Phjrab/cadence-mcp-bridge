@@ -1,0 +1,3 @@
+foreach(api '(modelFile temp desVar monteCarlo monteRun ocnSetXLMode ocnxlCorner ocnxlMonteCarloOptions ocnxlRun)
+  printf("MCP_PVT_API|%s|%L\n" symbolToString(api) isCallable(api)))
+exit(0)

@@ -60,3 +60,14 @@ OpenSSH requires. The bridge restores that missing standard folder via the OS
 known-folder API and isolates SSH stdin from the protocol pipe. Existing values,
 strict host-key checks and BatchMode are preserved. This observation does not
 change the historical OS/Cadence baseline or upgrade the guest.
+
+## Protected PDK support observation, 2026-10-04
+
+ADE-PVT-PREP-01 observed nine bound gpdk090 v4.6 model files and ten real model
+sections, including NN/FF/SS/FS/SF and their highPerf variants. Mismatch statistics
+declarations are present in the selected include graphs; process statistics were
+not found there. Spectre Monte Carlo informational help and nine fixed OCEAN API
+callable checks succeeded. No new circuit run was performed. Actual non-NN,
+effective variation and corner/statistical license qualification remain unverified;
+see `ADE_PVT_PREP_01_RESULT_V1.md`. No model section is added to the active runtime
+profile, and the original/PDK/history and cumulative budgets remain preserved.
