@@ -90,4 +90,3 @@ actual checks are recorded privately, with no state-sync-only PR. Ask once befor
 another major phase. A bounded headroom topology/device-sizing investigation and
 plan is proposed, not activated. Future simulation needs a user-selected storage
 or reservation-policy change; no target is invented to produce specification PASS.
-
