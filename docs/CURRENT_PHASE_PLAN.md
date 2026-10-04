@@ -101,6 +101,22 @@ consumed with the failed v1 preserved. Shared Spectre use remains 32/100;
 specification evaluation remains `not_evaluated`. Complete reviewed feature
 integration, report and ask once before a new bias/headroom planning phase.
 No new range, circuit run or subsequent phase is activated here.
+The user subsequently selected a bounded bias/headroom improvement phase and
+raised cumulative Spectre attempts to 500. `PHASE_SPECTRE_LIMIT_V3.json` and
+`NATIVE_MCP_V2.json` bind the active budget implementation. Preserve prior usage,
+the 5 GiB results ceiling, all correction histories and the removed elapsed limit.
+The private bound `BIAS_HEADROOM_PLAN_V1` record proposes only 300/702, 320/650, 300/650 and
+310/676 mV, using observed saved/qualified endpoints rather than a PDK rating.
+`BIAS_HEADROOM_RUN_V2.json` activates the selected finite validation: eight FF/FS
+DC screens, then three remaining-corner DC and five AC jobs only for the measured
+eligible candidate, at most sixteen new Spectre attempts. VDD=1 V, 27 C, VCM,
+topology, stimulus and load remain verified at execution; no numeric spec target,
+automatic range expansion or original-state promotion is introduced. The first
+v1 computation is reused after a preserved reader failure and exact extraction
+script reconstruction; v1 submissions are retired. The v2 adapter adds write
+containment and avoids guard-module reloads during extraction. Record actual
+results and residual limitations in `BIAS_HEADROOM_01_RESULT_V1.md`, complete
+reviewed feature PR integration, then ask once before another major phase.
 The transition was integrated through PR #58. Subsequent bounded observations
 and copied-revision tests are reconciled in the closeout report. Candidate
 biases remain 320/702 mV; VDD=1.0 V is a hard constraint. The observed VCM,

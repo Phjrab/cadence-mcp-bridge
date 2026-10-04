@@ -24,6 +24,10 @@ STOP, per-PR merge approval, and per-read approval rules below for operations in
 new operator path. The rules below remain historical or apply outside this delegation.
 The user's later explicit removal of the eight-hour elapsed ceiling is bound by
 `docs/policy/PHASE_ELAPSED_LIMIT_V2.json`; all other cumulative limits remain active.
+The user's 2026-10-04 instruction raises the cumulative Spectre ceiling to 500
+through `docs/policy/PHASE_SPECTRE_LIMIT_V3.json` and the native-v2 adapter.
+Consumed attempts and result reservations are retained. The 5 GiB result ceiling,
+other resource limits and all prior correction histories remain binding.
 The old single-use authorization paths and records are unchanged. A new operation
 must pass its own policy, identity, integrity, budget, and replay checks; a policy
 file alone is not proof of user delegation. GitHub protections and platform access

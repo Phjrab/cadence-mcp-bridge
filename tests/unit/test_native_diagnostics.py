@@ -357,6 +357,9 @@ async def test_mcp_native_schema_and_validation() -> None:
         assert tools["cadence_submit_native_diagnostic"].annotations.idempotent_hint  # type: ignore[union-attr]
         profiles = await client.call_tool("cadence_list_native_diagnostics")
         assert profiles.structured_content["analyses"] == ["dc", "ac", "tran"]
+        assert profiles.structured_content["contract_version"] == 2
+        assert profiles.structured_content["campaign_max_spectre_attempts"] == 500
+        assert profiles.structured_content["campaign_max_result_bytes"] == 5 * 1024**3
         submitted = await client.call_tool(
             "cadence_submit_native_diagnostic",
             {
@@ -397,7 +400,7 @@ async def test_backend_narrow_native_transport(monkeypatch: pytest.MonkeyPatch) 
     await backend._invoke_native_json("status", job_id, "tran")
     assert calls == [
         (
-            "/home/buet/cds_work/.cadence_mcp/phase-campaign/native-mcp-v1/run.sh",
+            "/home/buet/cds_work/.cadence_mcp/phase-campaign/native-mcp-v2/run.sh",
             "status",
             str(job_id),
             "tran",

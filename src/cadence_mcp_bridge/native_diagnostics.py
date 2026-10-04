@@ -66,7 +66,10 @@ class NativeSettings(ContractModel):
 
 
 class NativeDiagnosticProfiles(ContractModel):
-    contract_version: Literal[1] = 1
+    contract_version: Literal[2] = 2
+    campaign_max_spectre_attempts: Literal[500] = 500
+    campaign_max_result_bytes: Literal[5368709120] = 5368709120
+    reservation_bytes_per_job: Literal[134217728] = 134217728
     revision_id: Literal["wp14-native-ade-v1"] = REVISION
     operating_point_id: Literal["candidate-320-702mv-v1"] = OPERATING_POINT
     analyses: tuple[Literal["dc"], Literal["ac"], Literal["tran"]] = ("dc", "ac", "tran")
