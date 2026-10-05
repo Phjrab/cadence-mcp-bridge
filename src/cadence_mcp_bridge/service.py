@@ -103,6 +103,13 @@ from cadence_mcp_bridge.registered_measurements import (
     MeasurementResult,
     MeasurementSelection,
 )
+from cadence_mcp_bridge.registered_sweeps import (
+    DesignSweepDescription,
+    DesignSweepPlan,
+    DesignSweepRequest,
+    DesignSweepSelection,
+    RegisteredSweepPlanner,
+)
 from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
 from cadence_mcp_bridge.sweeps import (
     SweepPlan,
@@ -213,6 +220,9 @@ class CadenceService:
         self._pdks = reference_pdk_registry() if pdks is None else pdks
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
+        self._registered_sweeps = RegisteredSweepPlanner(
+            self._designs, self._analyses, self._registered_measurements
+        )
 
         self._sweeps = SweepSupervisor(
             cast(SweepBackend, backend),
@@ -272,6 +282,12 @@ class CadenceService:
 
     async def plan_sweep(self, request: SweepRequest) -> SweepPlan:
         return await self._sweeps.plan(request)
+
+    async def describe_design_sweep(self, request: DesignSweepSelection) -> DesignSweepDescription:
+        return self._registered_sweeps.describe(request)
+
+    async def plan_design_sweep(self, request: DesignSweepRequest) -> DesignSweepPlan:
+        return self._registered_sweeps.plan(request)
 
     async def submit_sweep(self, submission: SweepSubmission) -> SweepStatus:
         return await self._sweeps.submit(submission)

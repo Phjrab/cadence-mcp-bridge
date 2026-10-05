@@ -1,0 +1,178 @@
+{
+  "$defs": {
+    "DesignSweepLinear": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "maxLength": 48,
+          "minLength": 1,
+          "title": "Start",
+          "type": "string"
+        },
+        "stop": {
+          "maxLength": 48,
+          "minLength": 1,
+          "title": "Stop",
+          "type": "string"
+        },
+        "step": {
+          "maxLength": 48,
+          "minLength": 1,
+          "title": "Step",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "stop",
+        "step"
+      ],
+      "title": "DesignSweepLinear",
+      "type": "object"
+    },
+    "VariableValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "maxLength": 48,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "V",
+            "A",
+            "ohm",
+            "F",
+            "s",
+            "Hz",
+            "K",
+            "degC",
+            "1"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "title": "VariableValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "design_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "title": "Design Id",
+      "type": "string"
+    },
+    "analysis_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "variable_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "title": "Variable Id",
+      "type": "string"
+    },
+    "measurement_ids": {
+      "items": {
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9-]{0,63}$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Measurement Ids",
+      "type": "array"
+    },
+    "expected_contract_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Expected Contract Sha256",
+      "type": "string"
+    },
+    "unit": {
+      "enum": [
+        "V",
+        "A",
+        "ohm",
+        "F",
+        "s",
+        "Hz",
+        "K",
+        "degC",
+        "1"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "values": {
+      "anyOf": [
+        {
+          "items": {
+            "maxLength": 48,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Values"
+    },
+    "linear": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DesignSweepLinear"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fixed": {
+      "maxProperties": 32,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]{0,63}$": {
+          "$ref": "#/$defs/VariableValue"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 64
+      },
+      "title": "Fixed",
+      "type": "object"
+    },
+    "initial_condition": {
+      "const": "independent",
+      "default": "independent",
+      "title": "Initial Condition",
+      "type": "string"
+    }
+  },
+  "required": [
+    "design_id",
+    "analysis_id",
+    "variable_id",
+    "measurement_ids",
+    "expected_contract_sha256",
+    "unit",
+    "fixed"
+  ],
+  "title": "DesignSweepRequest",
+  "type": "object"
+}

@@ -1,5 +1,34 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-SWEEP-01 preparation overlay, 2026-10-05
+
+The user selects the recommended registered 1D contract/planning phase after
+merged #113, starting main `13e17f8f8604737a901aeaa5c6d907efc1996a63`.
+Reuse registry v4 variable reviews/analyses/measurements and the 16-point bound.
+Add two closed read-only tools for description and hash-bound exact decimal
+plans. Require every non-axis fixed value; no defaults or guessed range.
+Report local numeric eligibility separately from execution; all points remain
+NOT_RUN. Fixed native analysis compatibility is not a parameterized adapter.
+No generic submission, reservation, durable admission/cancellation, new simulation,
+remote deployment or FS circuit work is activated. Legacy fixture lifecycle is
+preserved. Three corrections for this change; prior correction histories,
+counters, protected objects and removed elapsed ceiling remain. Verify canonical
+local/security/dependency/package gates, full old schemas and preserved native
+measurement/restart regression with fresh protection/accounting. Integrate one
+reviewed feature PR, report scope/limitations and ask once before another phase.
+
+Final gates: 1,534 unit passes / three OS skips / 56 historical warnings and one
+cache warning; focused 76 / one cache warning; security 18 / one cache warning;
+Ruff/mypy 34 modules, strict dependency and isolated package gates pass. Actual
+exported-config stdio preserves 51 full schemas, three native measurements and
+restart identity, while new plans stay NOT_RUN. All four registry schemas,
+protected/accounting objects and journal bytes are unchanged. Two corrections:
+typing/JSON arrays, then Windows temporary-package DLL isolation. Failed/partial
+transcripts are retained. The initial shared-DLL temporary folder was removed
+after source tests ended; final build also used UV_LINK_MODE=copy. Recommend
+GENERIC-EXEC-PREP-01 physical binding preparation, subject to one user choice;
+no next phase or unqualified physical sweep execution is activated.
+
 ## GENERIC-MEAS-01 overlay, 2026-10-05
 
 The user proceeds after RELEASE-LICENSE-01 merged as #112. Starting main:

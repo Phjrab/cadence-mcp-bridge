@@ -1,5 +1,13 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current GENERIC-SWEEP-01 preparation overlay
+
+Current inventory is 53 tools: two local registered 1D description/planning
+interfaces preserve all preceding 51 schemas. They add no execution/transport
+or per-client configuration. Desktop evidence states remain unchanged.
+Older 48/51-tool tables below remain dated evidence. Use 53 tools for a new
+manual qualification; see [sweep preparation](GENERIC_DESIGN_SWEEP_V1.md).
+
 ## Current GENERIC-MEAS-01 overlay
 
 Current inventory is 51 tools: three additive registered measurement readers
@@ -134,7 +142,7 @@ the remote guards and durable admissions remain authoritative, not tool hints.
    journals. Record config digests privately; install the reviewed bridge entry
    using each application's registration UI/config without unrelated edits.
 3. Fully restart each application. Record app version, time, server version,
-   registration status and observed tool inventory. Verify 51 names and schemas
+   registration status and observed tool inventory. Verify 53 names and schemas
    against this phase's inventory. App UI availability alone is not tools/list.
 4. In each app request `cadence_list_designs`, then `cadence_describe_design`
    for a listed ID and `cadence_design_pdk_status` for that ID. Compare structured

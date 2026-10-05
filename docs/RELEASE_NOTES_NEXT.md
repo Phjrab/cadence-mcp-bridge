@@ -23,8 +23,11 @@ imported planning rights remain separately unresolved and outside package artifa
 - Registered measurement contracts in design registry v4 and three bounded
   read-only interfaces reusing admitted completed native DC scalars, AC transfer
   spectrum and TRAN summary; exact provenance/restart and old-schema regression.
+- Registered 1D contract/plan preparation using registry v4 and two local read-only
+  tools; at most 16 exact decimal points, explicit fixed values, numeric denials
+  and unconditional NOT_RUN/no execution. Physical sweep execution remains unqualified.
 
-The MCP surface has 51 tools, adding 29 to the 22 historical names. Existing
+The MCP surface has 53 tools, adding 31 to the 22 historical names. Existing
 declared v1 tool signatures and shared input/result model files are preserved.
 The installed-package acceptance verifies both stdio client configurations and
 denies unqualified execution before admission. See [readiness](RELEASE_READINESS_V1.md).

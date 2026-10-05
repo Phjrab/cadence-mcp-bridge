@@ -44,7 +44,9 @@ try {
     }
 
     $python = Join-Path $environmentDirectory "Scripts\python.exe"
-    & $uv pip install --python $python $wheel[0].FullName
+    # Isolate DLL file identity from the active source environment/cache on Windows.
+    # Shared uv hardlinks can keep a temporary DLL undeletable while tests import it.
+    & $uv pip install --link-mode copy --python $python $wheel[0].FullName
     if ($LASTEXITCODE -ne 0) {
         throw "Package installation failed."
     }
