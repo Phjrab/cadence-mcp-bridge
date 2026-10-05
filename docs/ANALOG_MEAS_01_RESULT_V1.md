@@ -2,8 +2,9 @@
 
 Date: 2026-10-06. Starting main:
 `e3fcfad30f35c68b1a90160d4d5f3a364436ab12` (merged STORAGE-MGMT-01 #117).
-Feature branch: `feat/analog-meas-01`. Containing feature PR and final exact-head
-integration evidence are recorded before acceptance; resulting remote SHA/tree
+Feature branch: `feat/analog-meas-01`; containing feature PR
+[#118](https://github.com/Phjrab/cadence-mcp-bridge/pull/118). All final gates pass;
+integration uses this containing reviewed feature PR. Resulting remote SHA/tree
 verification is retained privately after permitted merge, without a state-sync PR.
 Package/server version stays 1.0.0; no tag/release is created.
 
@@ -64,11 +65,13 @@ implementation scaffolding does not establish physical qualification.
 - Ruff and mypy: PASS, 42 source modules.
 - All-group dependency sync: PASS.
 - Focused analog/registered measurement/sweep lifecycle: 94 passes, one cache warning.
-- Final full unit: pending final transcript before PR acceptance.
+- Final full unit: 1,651 passed, four OS symlink skips, 57 warnings in 771.76 seconds.
 - Security: 18 passes; locked dependency audit: no known vulnerabilities.
 - Actual wheel/sdist license/content audits, isolated install, CLI/uninstall and
   three exported client settings: PASS, 66 tools; fictional v6 metrics stay
   UNQUALIFIED with null values and no admission.
+  Wheel has 50 members and sdist 51, canonical Apache-2.0 license/notices,
+  zero unexpected/private/protected-content findings; imported planning is excluded.
 - Actual exported Codex/Claude SDK stdio: all 63 previous schemas equal;
   gain/bandwidth provenance matches the preserved native AC result; repeat/restart
   values equal. Protected native DC/AC/TRAN, fixture three-point sweep and storage
@@ -93,7 +96,8 @@ metadata, using the complete validated v5 execution projection and explicit test
 Correction 3 restores the regression test's digest import removed earlier as unused.
 Correction 4 updates the old exact-tool-name inventory expectation for the three
 additive analog tools; runtime/source seals stay unchanged. Earlier full-suite
-failure and corrected inventory rerun are retained; final whole-suite gate follows.
+failure and corrected inventory rerun (33 passes) are retained; final whole-suite
+gate passes on the corrected checkout.
 Correction 5 also updates the separate exact read-only-name expectation revealed
 by that rerun. All three analog annotations were already correctly read-only;
 only old test expectations change.

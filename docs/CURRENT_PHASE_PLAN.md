@@ -20,6 +20,17 @@ are required; real Desktop app evidence remains distinct. Preserve failures and
 active correction ceiling 20. Integrate one reviewed feature PR and verify remote
 main. Report and ask once before SPEC-CONTRACT-01. See [workflow](ANALOG_MEASUREMENTS_V1.md).
 
+Final qualification: full unit 1,651 passes/four OS skips/57 warnings, static
+42 source modules, focused 94 passes and corrected server/analog 33 passes,
+security/dependency/distribution/install gates pass. Actual exported SDK stdio
+verifies all 63 old schemas, source provenance, native/sweep/storage regression
+and restart without simulation. Gain is qualified at 10 Hz only; bandwidth is
+partially qualified as a sampled-reference estimate; four other physical metrics
+remain UNQUALIFIED. Five corrections used of 20 with failures preserved.
+Integration uses containing reviewed [PR #118](https://github.com/Phjrab/cadence-mcp-bridge/pull/118),
+with exact remote SHA/tree verification retained privately after permitted merge.
+This completes one phase and does not activate SPEC-CONTRACT-01.
+
 ## STORAGE-MGMT-01 final qualification overlay, 2026-10-06
 
 The user explicitly sets the repository same-change correction ceiling to 20;
