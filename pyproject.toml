@@ -40,6 +40,7 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "remote/py26/*.py" = ["B904", "UP010", "UP024", "UP030", "UP031", "UP032"]
+"src/cadence_mcp_bridge/_environment_probe.py" = ["UP", "I", "SIM", "B"]
 
 [tool.mypy]
 python_version = "3.12"

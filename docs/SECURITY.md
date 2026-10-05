@@ -1,5 +1,23 @@
 # Security and Reliability Baseline
 
+## Generic environment preflight boundary, 2026-10-05
+
+Environment files are operator-owned private configuration, never MCP tool
+inputs. The new CLI executes exactly one bundled read-only probe, with strict
+SSH host keys, batch mode, bounded output/deadline, hashes and nonce binding.
+Binary/protected-root containment and group/other writability are checked;
+version wrappers are bounded and their dedicated process group is closed even
+if the parent exits. Only closed rejection codes reach CLI output.
+
+Environment qualification is not license entitlement, content-fingerprint
+protection of every file, design qualification, or execution authorization.
+The trusted OS/account/SSH config and Cadence installation remain trust
+boundaries, including installation dependencies beyond the selected wrapper
+hashes. Same-account code/config replacement is not cryptographically isolated.
+Existing simulation/replay/locking/budget/fingerprint controls still enforce
+their original routes. No arbitrary command/script/path/netlist/PSF/OA mutation
+surface is added. See [environment workflow](GENERIC_ENVIRONMENT_V1.md).
+
 ## Security objective
 
 The bridge provides a small, reviewable path from twenty-two MCP tools to fixed simulation profiles,
