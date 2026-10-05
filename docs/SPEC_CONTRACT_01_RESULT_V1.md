@@ -3,7 +3,7 @@
 Date: 2026-10-06. Starting main:
 `e3a3fb41d48a391a8c9667237a076dabeea3dda1` (merged ANALOG-MEAS-01 #118).
 Feature branch: `feat/spec-contract-01`. Integration uses the containing reviewed
-feature PR; resulting remote SHA/tree verification is preserved privately after
+feature [PR #119](https://github.com/Phjrab/cadence-mcp-bridge/pull/119); resulting remote SHA/tree verification is preserved privately after
 permitted merge, without a state-sync-only PR. Package/server version stays 1.0.0.
 No tag, release or version bump is created.
 

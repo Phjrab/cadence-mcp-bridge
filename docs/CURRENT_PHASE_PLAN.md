@@ -18,7 +18,8 @@ acceptance pass. Exported Codex/Claude SDK stdio verifies old 66 schemas and nat
 analog/sweep/storage/restart equality with zero new simulation/reservation/deletion.
 Reference has no goals and remains NOT_EVALUATED. One correction of 20 used;
 1,063 prior private records and protected jobs/counters remain equal. Integration
-uses this containing reviewed feature PR; final remote SHA/tree preserved privately.
+uses containing reviewed [PR #119](https://github.com/Phjrab/cadence-mcp-bridge/pull/119);
+final remote SHA/tree preserved privately.
 This completes one phase and does not activate Release Readiness or publication.
 
 ## ANALOG-MEAS-01 activation, 2026-10-06
