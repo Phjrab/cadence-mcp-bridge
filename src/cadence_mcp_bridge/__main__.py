@@ -28,6 +28,12 @@ from cadence_mcp_bridge.environments import (
     prepare_environment,
     qualify_environment,
 )
+from cadence_mcp_bridge.onboarding import (
+    OnboardingRejected,
+    configured_registries_valid,
+    export_client_config,
+    verify_contracts,
+)
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry, load_pdk_registry, register_pdk_adapters
 from cadence_mcp_bridge.server import run_stdio_server
 
@@ -48,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the Cadence MCP server over stdio (the default).",
     )
     subparsers.add_parser("doctor", help="Inspect local prerequisites without remote contact.")
+    for name in ("verify", "client-config"):
+        onboarding = subparsers.add_parser(name, help="Operator-only integrated onboarding.")
+        onboarding.add_argument("--profile", type=Path, required=True)
+        onboarding.add_argument("--design-registry", type=Path, required=True)
+        onboarding.add_argument("--pdk-registry", type=Path, required=True)
+        if name == "verify":
+            onboarding.add_argument("--remote-preflight", action="store_true")
+        else:
+            onboarding.add_argument("--journal", type=Path, required=True)
+            onboarding.add_argument("--output", type=Path, required=True)
+            onboarding.add_argument("--format", choices=("codex", "mcp-json"), required=True)
     environment = subparsers.add_parser(
         "environment", help="Operator-only environment contracts; does not activate MCP execution."
     )
@@ -83,6 +100,38 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command in ("verify", "client-config"):
+        try:
+            paths = (arguments.profile, arguments.design_registry, arguments.pdk_registry)
+            if arguments.command == "verify":
+                onboarding_result = verify_contracts(
+                    *paths, remote_preflight=arguments.remote_preflight
+                )
+            else:
+                onboarding_result = export_client_config(
+                    *paths, arguments.journal, arguments.output, format=arguments.format
+                )
+        except (
+            OSError,
+            ValueError,
+            RecursionError,
+            TimeoutError,
+            subprocess.SubprocessError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "blocked",
+                        "execution_authorized": False,
+                        "reason": failure.reason
+                        if isinstance(failure, (OnboardingRejected, EnvironmentRejected))
+                        else "onboarding_operation_failed",
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(onboarding_result, sort_keys=True))
+        return 0
     if arguments.command == "pdk":
         try:
             if arguments.pdk_action == "schema":
@@ -104,7 +153,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.command == "doctor":
         config_valid = True
         try:
-            BridgeConfig()
+            config_valid = configured_registries_valid(BridgeConfig())
         except ValueError:
             config_valid = False
         print(
@@ -116,6 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     ),
                     "ssh_available": shutil.which("ssh.exe") is not None,
                     "legacy_config_valid": config_valid,
+                    "configured_registries_valid": config_valid,
                     "remote_contact": False,
                     "execution_authorized": False,
                 }

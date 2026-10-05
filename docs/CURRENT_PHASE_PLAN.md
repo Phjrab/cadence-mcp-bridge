@@ -1,5 +1,28 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ONBOARD-CLI-01 overlay, 2026-10-05
+
+The user explicitly proceeds after completed PDK-ADAPTER-01 (merged PR #108).
+Starting main: `730e5bcc7bcb718433d04db00658cef65fadfcbd`. Complete one phase:
+join existing environment/design/PDK contracts in operator `verify`, optional
+explicit existing bounded remote preflight, and private reviewable client-config
+export with persisted registry/journal settings and retained platform approvals.
+Improve local doctor registry validation; provide coherent fictional examples
+without changing historical examples/schemas. MCP tool count remains 48.
+No new execution routing, simulation/reservation/deployment or FS work is needed.
+Preserve cumulative ledgers, prior correction histories and absent elapsed ceiling.
+This new code change has the usual three-correction limit; the prior PDK extra
+allowance does not carry forward. Run local/security/package gates, actual stdio
+from exported configuration and preserved-result regression with fresh guards.
+Complete dedicated feature PR review/integration, report and ask once before
+another major phase. See [workflow](ONBOARDING_CLI_V1.md) and
+[result](ONBOARD_CLI_01_RESULT_V1.md).
+Final gates pass: 1,453 unit passes, three OS symlink skips and 56 existing
+warnings; 136 focused passes, Ruff/mypy, security/dependency and package gates.
+Actual exported-config stdio preserves three native results/restarts; fresh
+guards/accounting are unchanged. Corrections used: 3/3; failures remain private.
+Complete containing feature PR integration and ask once before another phase.
+
 ## PDK-ADAPTER-01 overlay, 2026-10-05
 
 The user explicitly proceeds after the PDK adapter proposal. Start from main
