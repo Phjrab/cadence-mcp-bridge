@@ -82,7 +82,8 @@ editing server code. Arbitrary project execution is still unqualified.
 
 ## Integration and next boundary
 
-Use the containing reviewed feature PR; ending main is verified in the immutable
+Containing feature PR: [#115](https://github.com/Phjrab/cadence-mcp-bridge/pull/115).
+Ending main is verified in the immutable
 private final checkpoint and reported to the user, avoiding a state-sync-only PR.
 No tag, version bump or release is created. GitHub checks/reviews are interpreted
 from actual state, not invented CI PASS when no contexts exist.

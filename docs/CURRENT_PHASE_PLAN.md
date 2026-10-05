@@ -30,7 +30,8 @@ old histories or automatically carry into future phases. Focused 51 and actual
 SDK preserved fixture/native/restart equality pass after that correction.
 Final full unit gate: 1,574 passes / three OS symlink skips / 57 warnings;
 Ruff, mypy (37 modules), security/dependency and audited installed-package
-gates pass. Complete the containing reviewed feature PR and verify remote main.
+gates pass. Integration uses feature PR #115; exact remote main verification is
+retained in the private completion checkpoint, without an extra state-sync PR.
 
 ## GENERIC-SWEEP-01 preparation overlay, 2026-10-05
 

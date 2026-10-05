@@ -5,7 +5,9 @@ project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
 current_wp: GENERIC-SWEEP-INTEGRATION-01
-current_status: registered_fixture_lifecycle_qualified_reviewed_feature_integration
+current_status: registered_fixture_lifecycle_qualified_PR115_remote_completion_checkpoint
+sweep_integration_01_pr: https://github.com/Phjrab/cadence-mcp-bridge/pull/115
+sweep_integration_01_integration: containing_reviewed_feature_PR_exact_remote_SHA_recorded_privately_no_state_sync_PR
 sweep_integration_01_starting_main: e8e5ebdf4628844c8726d8d38b051d5ccd890efc
 sweep_integration_01_workflow: docs/GENERIC_DESIGN_SWEEP_V2.md
 sweep_integration_01_report: docs/GENERIC_SWEEP_INTEGRATION_01_RESULT_V1.md
