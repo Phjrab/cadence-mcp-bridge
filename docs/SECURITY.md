@@ -1,5 +1,15 @@
 # Security and Reliability Baseline
 
+## PDK runtime capability contracts
+
+Runtime v2 metadata is path-free and immutable after bounded startup loading.
+Registration creates a new local operator file; no MCP registration/path or
+executable resolver exists. Only the exact compiled reference claims native
+compatibility. Recomputed hashes cannot redirect technology/host/design/model
+bindings. Missing reference blocks registered admission before transport; legacy
+fixed APIs retain independent guards. Physical PDK/model/deck/license content
+stays protected. See [contract](PDK_ADAPTER_RUNTIME_V2.md).
+
 ## Registered analysis boundary, 2026-10-05
 
 GENERIC-SIM-01 adds six closed interfaces, total 45 tools. Operator registry v3

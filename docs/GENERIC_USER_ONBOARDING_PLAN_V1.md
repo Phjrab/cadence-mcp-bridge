@@ -40,7 +40,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle, durable UUID admission and bounded native results; fixed reference compatibility adapter, other designs blocked; native live cancellation unsupported | Implemented; see analysis workflow/result |
 | GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
-| PDK-ADAPTER-01 | Minimal runtime adapter from the existing WP-15 design; gpdk090 as a reference, private physical bindings | Planned |
+| PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implementation/E2E verified; integration blocked by correction budget and stale test count |
 | ONBOARD-CLI-01 | Complete operator registration/verification/client installation workflow using the current CLI and contracts | Planned |
 | PUBLIC-RELEASE-01 | Review actual release history, interface compatibility and semver after onboarding works | Planned |
 

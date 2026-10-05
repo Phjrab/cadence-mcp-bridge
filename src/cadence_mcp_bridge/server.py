@@ -75,6 +75,13 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.pdk_adapters import (
+    DesignPdkStatus,
+    PdkDescription,
+    PdkList,
+    PdkRejected,
+    load_pdk_registry,
+)
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.sweeps import (
@@ -241,6 +248,9 @@ class DesignContractServer(MCPServer):
         for tool in tools:
             if tool.name in {
                 "cadence_list_designs",
+                "cadence_list_pdk_adapters",
+                "cadence_describe_pdk_adapter",
+                "cadence_design_pdk_status",
                 "cadence_describe_design",
                 "cadence_list_design_variables",
                 "cadence_check_variable_values",
@@ -260,14 +270,19 @@ class DesignContractServer(MCPServer):
         arguments: dict[str, Any],
         context: Context[Any, Any] | None = None,
     ) -> CallToolResult | InputRequiredResult:
-        if name == "cadence_list_designs" and arguments:
+        if name in {"cadence_list_designs", "cadence_list_pdk_adapters"} and arguments:
             raise ToolError("Design listing accepts no arguments")
         if name in {
             "cadence_describe_design",
             "cadence_list_design_variables",
             "cadence_list_analyses",
+            "cadence_design_pdk_status",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
+        if name == "cadence_describe_pdk_adapter" and (
+            set(arguments) != {"adapter_id"} or type(arguments["adapter_id"]) is not str
+        ):
+            raise ToolError("PDK description accepts only one string adapter_id")
         if name == "cadence_check_variable_values" and (
             set(arguments) != {"request"} or type(arguments["request"]) is not dict
         ):
@@ -300,6 +315,38 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_list_pdk_adapters",
+        annotations=_READ_ONLY,
+        description="List registered logical PDK capabilities locally; no execution grant.",
+        structured_output=True,
+    )
+    async def cadence_list_pdk_adapters() -> Annotated[CallToolResult, PdkList]:
+        return await _stable_result(service.list_pdk_adapters())
+
+    @server.tool(
+        name="cadence_describe_pdk_adapter",
+        annotations=_READ_ONLY,
+        description="Inspect a registered PDK ID without physical bindings or model data.",
+        structured_output=True,
+    )
+    async def cadence_describe_pdk_adapter(
+        adapter_id: LogicalId,
+    ) -> Annotated[CallToolResult, PdkDescription]:
+        return await _stable_result(service.describe_pdk_adapter(adapter_id))
+
+    @server.tool(
+        name="cadence_design_pdk_status",
+        annotations=_READ_ONLY,
+        description="Resolve a registered design's PDK and environment compatibility locally. "
+        "Fixed native compatibility is not generic qualification or execution authority.",
+        structured_output=True,
+    )
+    async def cadence_design_pdk_status(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, DesignPdkStatus]:
+        return await _stable_result(service.design_pdk_status(design_id))
 
     @server.tool(
         name="cadence_list_designs",
@@ -838,6 +885,12 @@ def create_server(service: CadenceService) -> MCPServer:
 def create_default_server() -> MCPServer:
     config = BridgeConfig()
     designs = None
+    pdks = None
+    if config.pdk_registry_path is not None:
+        try:
+            pdks, _ = load_pdk_registry(config.pdk_registry_path)
+        except PdkRejected:
+            raise ConfigurationError("Configured PDK registry is invalid") from None
     if config.design_registry_path is not None:
         try:
             designs, _ = load_design_registry(config.design_registry_path)
@@ -845,7 +898,10 @@ def create_default_server() -> MCPServer:
             raise ConfigurationError("Configured design registry is invalid") from None
     return create_server(
         CadenceService(
-            OpenSshBackend(config), designs, analysis_journal=config.analysis_journal_path
+            OpenSshBackend(config),
+            designs,
+            analysis_journal=config.analysis_journal_path,
+            pdks=pdks,
         )
     )
 

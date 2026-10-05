@@ -87,6 +87,8 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.pdk_adapters import DesignPdkStatus, PdkDescription, PdkList, PdkRegistry
+from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 from cadence_mcp_bridge.profiles import (
     get_profile,
     list_profiles,
@@ -194,11 +196,13 @@ class CadenceService:
         designs: RegistryBase | None = None,
         *,
         analysis_journal: Path | None = None,
+        pdks: PdkRegistry | None = None,
     ) -> None:
         self._backend = backend
         self._designs = reference_analysis_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
-        self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal)
+        self._pdks = reference_pdk_registry() if pdks is None else pdks
+        self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
 
         self._sweeps = SweepSupervisor(
             cast(SweepBackend, backend),
@@ -207,6 +211,16 @@ class CadenceService:
 
     async def list_designs(self) -> DesignList:
         return self._designs.listing()
+
+    async def list_pdk_adapters(self) -> PdkList:
+        return self._pdks.listing()
+
+    async def describe_pdk_adapter(self, adapter_id: str) -> PdkDescription:
+        return self._pdks.describe(adapter_id)
+
+    async def design_pdk_status(self, design_id: str) -> DesignPdkStatus:
+        profile = self._designs.profile(design_id)
+        return self._pdks.resolve(design_id, profile.pdk_adapter_id, profile.environment_id)
 
     async def describe_design(self, design_id: str) -> DesignDescription:
         return self._designs.describe(design_id)

@@ -24,6 +24,7 @@ class BridgeConfig(BaseSettings):
 
     ssh_alias: Literal["cadence-vm"] = "cadence-vm"
     design_registry_path: Path | None = None
+    pdk_registry_path: Path | None = None
     analysis_journal_path: Path | None = None
     remote_root: str = "/home/buet/cds_work/.cadence_mcp"
     runner_path: str = "/home/buet/cds_work/.cadence_mcp/bin/cadence-runner"

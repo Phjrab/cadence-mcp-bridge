@@ -30,6 +30,8 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticStatus,
     NativeSettings,
 )
+from cadence_mcp_bridge.pdk_adapters import PdkRegistry
+from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 
 
 class NativeOperations(Protocol):
@@ -46,10 +48,15 @@ class NativeOperations(Protocol):
 
 class AnalysisSupervisor:
     def __init__(
-        self, operations: NativeOperations, registry: RegistryBase, journal: Path | None
+        self,
+        operations: NativeOperations,
+        registry: RegistryBase,
+        journal: Path | None,
+        pdks: PdkRegistry | None = None,
     ) -> None:
         self.operations = operations
         self.registry = registry
+        self.pdks = reference_pdk_registry() if pdks is None else pdks
         self.store = AnalysisStore(default_analysis_journal() if journal is None else journal)
 
     def plan(self, selection: AnalysisSelection) -> AnalysisPlan:
@@ -64,7 +71,14 @@ class AnalysisSupervisor:
         plan_hash = hashlib.sha256(
             json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
-        eligible = contract.adapter_kind == "native-fixed-reference-v1"
+        profile = self.registry.profile(selection.design_id)
+        adapter = self.pdks.find(profile.pdk_adapter_id)
+        eligible = (
+            contract.adapter_kind == "native-fixed-reference-v1"
+            and adapter is not None
+            and adapter.supports_native(profile.environment_id, contract.analysis)
+            and adapter.binding_sha256 == contract.adapter_contract_sha256
+        )
         return AnalysisPlan(
             design_id=selection.design_id,
             analysis_id=selection.analysis_id,

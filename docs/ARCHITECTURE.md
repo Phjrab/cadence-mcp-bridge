@@ -1,8 +1,19 @@
 # Architecture
 
+## Registered PDK layer, 2026-10-05
+
+The current server has 48 tools. `pdk_adapters.py` provides strict path-free
+capability contracts, exclusive operator registration and bounded immutable
+snapshots. `pdk_reference.py` owns gpdk090 as the exact regression adapter.
+Registered analysis admission resolves the configured catalog and digest before
+transport; v3 plan hashes and prior admissions are unchanged. The reference is
+not automatically restored in an explicitly configured catalog. No physical
+bindings or executable resolver is added for another PDK. Legacy fixed routes
+and protected library policy remain intact. See [PDK workflow](PDK_ADAPTER_RUNTIME_V2.md).
+
 ## Registered analysis layer, 2026-10-05
 
-The current server has 45 tools. `analyses.py` defines closed contracts and
+At GENERIC-SIM-01 the server had 45 tools. `analyses.py` defines closed contracts and
 bounded lifecycle envelopes; registry v3 binds profiles/variable sets to a
 compiled adapter digest. `analysis_service.py` selects only registered adapters
 and calls existing CadenceService native methods, preserving backend transport,

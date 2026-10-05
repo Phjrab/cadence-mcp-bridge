@@ -1,5 +1,14 @@
 # Operations
 
+## PDK adapter operator workflow
+
+Runtime catalog v2 uses `pdk schema/validate/register` and
+`CADENCE_MCP_PDK_REGISTRY_PATH`; see [workflow](PDK_ADAPTER_RUNTIME_V2.md).
+Only local operator registration accepts paths. Configured catalogs replace the
+default; invalid catalogs block startup. Restoring the exact reviewed reference
+allows lookup-only admission resume. Journal replacement/deletion is not recovery.
+Registration installs no new physical PDK binding or generic host routing.
+
 ## Registered analysis operator workflow
 
 Use [GENERIC_ANALYSIS_V1.md](GENERIC_ANALYSIS_V1.md) for registry v3 and the

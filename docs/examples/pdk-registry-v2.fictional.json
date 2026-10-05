@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "adapters": [
+    {
+      "schema_version": 2,
+      "adapter_id": "example-pdk",
+      "technology_id": "example-technology",
+      "role": "target_candidate",
+      "environment_ids": [
+        "example-lab"
+      ],
+      "process_corner_ids": [],
+      "rc_corner_ids": [],
+      "binding_kind": "unqualified",
+      "binding_ref": null,
+      "binding_sha256": null,
+      "capabilities": [
+        {
+          "capability_id": "native-dc",
+          "status": "unqualified",
+          "evidence_ref": null
+        }
+      ]
+    }
+  ]
+}

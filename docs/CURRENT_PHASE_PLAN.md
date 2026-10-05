@@ -1,5 +1,24 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## PDK-ADAPTER-01 overlay, 2026-10-05
+
+The user explicitly proceeds after the PDK adapter proposal. Start from main
+`e8c451b6c64fba264a50979bc25563e865f432e2` (PR #107). Implement one phase:
+versioned logical PDK runtime contracts, operator registry, closed inspection
+and registered-analysis capability resolution. Preserve historical WP-15 files,
+reference native behavior and admission identities. No proprietary mappings,
+arbitrary execution, FS change, new simulation/reservation or deployment is needed.
+Run local/security/package gates and sealed actual stdio preserved-result replay
+with fresh integrity/accounting checks. Preserve all budgets/correction histories;
+elapsed ceiling remains absent. Complete feature PR integration, report and ask
+once before another phase. See [workflow](PDK_ADAPTER_RUNTIME_V2.md) and
+[result](PDK_ADAPTER_01_RESULT_V1.md).
+
+Checkpoint: implementation and sealed E2E verified; integration blocked by a
+stale variable test expectation (45 tools, actual 48) after three corrections.
+Preserve failure evidence and a draft feature PR. Stop before another code/test
+correction or merge; resume requires additional correction budget.
+
 ## GENERIC-SIM-01 overlay, 2026-10-05
 
 The user explicitly proceeds after the registered analysis API proposal.
