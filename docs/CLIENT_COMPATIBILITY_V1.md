@@ -1,5 +1,14 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## CLIENT-REAL-QUAL-01 current application checkpoint
+
+See [actual availability and human handoff](CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md).
+The Windows helper is now observed callable; the returned Codex surface is
+ChatGPT, whose UI the applicable Computer Use skill prohibits automating. No
+targetable Claude app is returned. Current global Codex config lacks the bridge
+entry. Actual app calls/inventory remain NOT_TESTED, not a server failure.
+The phase is BLOCKED, not complete; earlier protocol evidence stays separate.
+
 ## RELEASE-READINESS-02 qualification boundary
 
 The current 69-tool snapshot and manual procedure below identify the exact
