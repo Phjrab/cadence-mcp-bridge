@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "adapters": [
+    {
+      "schema_version": 2,
+      "adapter_id": "builtin-rc-no-pdk",
+      "technology_id": "passive-template",
+      "role": "regression_reference",
+      "environment_ids": [
+        "cadence-vm"
+      ],
+      "process_corner_ids": [
+        "nominal"
+      ],
+      "rc_corner_ids": [],
+      "binding_kind": "unqualified",
+      "binding_ref": null,
+      "binding_sha256": null,
+      "capabilities": []
+    }
+  ]
+}

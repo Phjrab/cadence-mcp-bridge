@@ -26,8 +26,10 @@ The user's later explicit removal of the eight-hour elapsed ceiling is bound by
 `docs/policy/PHASE_ELAPSED_LIMIT_V2.json`; all other cumulative limits remain active.
 The user's 2026-10-04 instruction raises the cumulative Spectre ceiling to 500
 through `docs/policy/PHASE_SPECTRE_LIMIT_V3.json` and the native-v2 adapter.
-Consumed attempts and result reservations are retained. The 5 GiB result ceiling,
-other resource limits and all prior correction histories remain binding.
+Consumed attempts and result reservations are retained. The later explicit 2026-10-05 instruction raises the active result ceiling to
+10 GiB through `PHASE_RESULT_LIMIT_V4.json`, preserving consumed reservations.
+Historical versioned limits remain immutable. The other
+resource limits and all prior correction histories remain binding.
 The old single-use authorization paths and records are unchanged. A new operation
 must pass its own policy, identity, integrity, budget, and replay checks; a policy
 file alone is not proof of user delegation. GitHub protections and platform access

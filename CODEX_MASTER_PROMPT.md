@@ -1,5 +1,13 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-05 sweep lifecycle/budget overlay:** The latest user selects
+> GENERIC-SWEEP-INTEGRATION-01 after #114 and explicitly raises result
+> reservations to 10 GiB. Preserve previous preparation, all consumed counters,
+> evidence, protections and removed elapsed ceiling. Reuse existing engine with
+> v5 compiled RC bindings; real-design ranges/routes remain unqualified.
+> See current phase plan and PHASE_RESULT_LIMIT_V4.json. Finish one reviewed
+> feature PR and ask once before ANALOG-MEAS-01.
+
 > **Active 2026-10-05 sweep preparation overlay:** After merged #113, the user
 > selects GENERIC-SWEEP-01 registered 1D contract/planning preparation. Reuse
 > registry v4, exact numeric reviews, analysis and measurement contracts. Add

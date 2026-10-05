@@ -345,9 +345,23 @@ class SweepStore:
                     or point["child_job_id"] != str(child_id(parent, i))
                     or point["operation_key"] != str(operation_key(parent, i))
                     or point["requested_value"] != expected.canonical_values[i]
+                    or point["unit"] != expected.request.unit
                 ):
                     raise ValueError("point mismatch")
-                SweepPoint.model_validate(point)
+                validated = SweepPoint.model_validate(point)
+                if validated.state == PointState.SUCCEEDED:
+                    applied = validated.applied_fixed
+                    if applied is None or set(applied) != set(expected.canonical_fixed):
+                        raise ValueError("effective fixed set mismatch")
+                    if any(
+                        float(Decimal(applied[n])) != float(Decimal(v))
+                        for n, v in expected.canonical_fixed.items()
+                    ):
+                        raise ValueError("effective fixed value mismatch")
+                    if float(Decimal(validated.applied_value or "NaN")) != float(
+                        Decimal(expected.canonical_values[i])
+                    ):
+                        raise ValueError("effective axis mismatch")
             return cast(dict[str, Any], document)
         except (ValueError, KeyError, TypeError) as exc:
             raise InvalidInputError(

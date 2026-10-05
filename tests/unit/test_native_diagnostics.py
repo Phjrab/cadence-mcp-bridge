@@ -353,7 +353,7 @@ async def test_mcp_native_schema_and_validation() -> None:
     backend = Backend()
     async with Client(create_server(CadenceService(cast(CadenceBackend, backend)))) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 53
+        assert len(tools) == 58
         assert tools["cadence_submit_native_diagnostic"].annotations.idempotent_hint  # type: ignore[union-attr]
         profiles = await client.call_tool("cadence_list_native_diagnostics")
         assert profiles.structured_content["analyses"] == ["dc", "ac", "tran"]
@@ -400,7 +400,7 @@ async def test_backend_narrow_native_transport(monkeypatch: pytest.MonkeyPatch) 
     await backend._invoke_native_json("status", job_id, "tran")
     assert calls == [
         (
-            "/home/buet/cds_work/.cadence_mcp/phase-campaign/native-mcp-v2/run.sh",
+            "/home/buet/cds_work/.cadence_mcp/phase-campaign/native-mcp-v3/run.sh",
             "status",
             str(job_id),
             "tran",

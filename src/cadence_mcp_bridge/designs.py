@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from cadence_mcp_bridge.analyses import AnalysisContract, native_adapter_digest
 from cadence_mcp_bridge.errors import InvalidInputError
+from cadence_mcp_bridge.fixture_contracts import FixtureAnalysis, FixtureMeasurement
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.pdk_reference import REFERENCE_ID
 from cadence_mcp_bridge.registered_measurements import (
@@ -122,11 +123,13 @@ class RegistryBase(DesignModel):
         self.profile(design_id)
         return None
 
-    def analyses_for(self, design_id: str) -> tuple[AnalysisContract, ...]:
+    def analyses_for(self, design_id: str) -> tuple[AnalysisContract | FixtureAnalysis, ...]:
         self.profile(design_id)
         return ()
 
-    def measurements_for(self, design_id: str) -> tuple[RegisteredMeasurement, ...]:
+    def measurements_for(
+        self, design_id: str
+    ) -> tuple[RegisteredMeasurement | FixtureMeasurement, ...]:
         self.profile(design_id)
         return ()
 
@@ -272,9 +275,14 @@ class DesignMeasurementRegistry(AnalysisRegistryBase):
                 raise ValueError("duplicate measurement identity")
             seen.add(key)
             profile = next((p for p in self.designs if p.design_id == contract.design_id), None)
-            analysis = next((c for c in self.analysis_contracts
-                             if c.design_id == contract.design_id
-                             and c.analysis_id == contract.analysis_id), None)
+            analysis = next(
+                (
+                    c
+                    for c in self.analysis_contracts
+                    if c.design_id == contract.design_id and c.analysis_id == contract.analysis_id
+                ),
+                None,
+            )
             if (
                 profile is None
                 or contract.measurement_id not in profile.allowed_measurements
@@ -446,6 +454,10 @@ def load_design_registry(
             registry = DesignAnalysisRegistry.model_validate_json(data)
         elif version == 4:
             registry = DesignMeasurementRegistry.model_validate_json(data)
+        elif version == 5:
+            from cadence_mcp_bridge.sweep_registry import DesignSweepRegistry
+
+            registry = DesignSweepRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):
@@ -467,8 +479,10 @@ def reference_measurement_registry() -> DesignMeasurementRegistry:
             definition_sha256=canonical_digest(output),
         )
         for analysis, measurement_id, output in zip(
-            reference.analysis_contracts, reference.designs[0].allowed_measurements,
-            definitions(), strict=True,
+            reference.analysis_contracts,
+            reference.designs[0].allowed_measurements,
+            definitions(),
+            strict=True,
         )
     )
     return DesignMeasurementRegistry(

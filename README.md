@@ -89,6 +89,16 @@ eligibility is separate from execution: every point is NOT_RUN and all
 parameterized physical execution remains unqualified. Reference bias ranges
 remain unqualified. See [sweep preparation](docs/GENERIC_DESIGN_SWEEP_V1.md).
 
+GENERIC-SWEEP-INTEGRATION-01 adds registry v5 and five lifecycle tools around the
+existing engine: prepare, submit/resume, status, result and cancel. The only
+parameterized adapter is the already reviewed passive RC fixture; explicit
+registered contracts and numeric reviews cannot redirect it. Durable registered
+admission uses the same operator journal and deterministic engine identities.
+Real-design ranges remain unqualified. The explicit active cumulative result
+ceiling is now 10 GiB, with 500 attempts and consumed counters retained; new
+immutable native-v3/sweep-v2 guards enforce it. Historical versioned metadata
+retains its earlier fields. See [registered lifecycle](docs/GENERIC_DESIGN_SWEEP_V2.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -96,8 +106,8 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart |
-| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3/v4 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3/v4/v5 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
 | Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, additional qualified measurements, native live cancellation and a new public release after remaining gates |
 
@@ -136,13 +146,13 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 53 typed tools, preserving all previous 51 schemas.
+The server has 58 typed tools, preserving all previous 53 schemas.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
 contract/planning preparation only. Registered
 `cadence_list_measurements`, `cadence_describe_measurement` and
 `cadence_measurement_result` are read-only. `cadence_list_designs` and
-`cadence_describe_design(design_id)` add read-only local introspection; every
-registered generic profile remains unqualified for execution. The original 22
+`cadence_describe_design(design_id)` add read-only local introspection; generic physical profiles remain unqualified; the compiled registered RC fixture
+has a bounded lifecycle adapter. The original 22
 lifecycle, discovery, profile,
 synthetic measurement, and write-validation tools remain available. The
 `actual-differential-amplifier-tb2-transient` profile keeps its existing v1

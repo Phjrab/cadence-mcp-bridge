@@ -8,6 +8,7 @@ from cadence_mcp_bridge.analyses import AnalysisJobQuery, AnalysisSelection
 from cadence_mcp_bridge.analysis_service import AnalysisSupervisor
 from cadence_mcp_bridge.designs import RegistryBase
 from cadence_mcp_bridge.errors import InvalidInputError, RemoteFailureError
+from cadence_mcp_bridge.fixture_contracts import FixtureMeasurement
 from cadence_mcp_bridge.native_diagnostics import NativeDiagnosticResult
 from cadence_mcp_bridge.registered_measurements import (
     MeasurementDescription,
@@ -27,7 +28,9 @@ class MeasurementSupervisor:
         self.registry = registry
         self.analyses = analyses
 
-    def contract(self, selection: MeasurementSelection) -> RegisteredMeasurement:
+    def contract(
+        self, selection: MeasurementSelection
+    ) -> RegisteredMeasurement | FixtureMeasurement:
         contracts = self.registry.measurements_for(selection.design_id)
         contract = next(
             (c for c in contracts if c.measurement_id == selection.measurement_id), None

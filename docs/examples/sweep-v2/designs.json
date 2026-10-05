@@ -1,0 +1,142 @@
+{
+  "schema_version": 5,
+  "designs": [
+    {
+      "schema_version": 1,
+      "design_id": "registered-rc-fixture",
+      "environment_id": "cadence-vm",
+      "pdk_adapter_id": "builtin-rc-no-pdk",
+      "binding": {
+        "library": "BuiltinRC",
+        "cell": "RCFixture",
+        "view": "template",
+        "ade": {
+          "kind": "ade_l",
+          "state": "NotApplicable"
+        }
+      },
+      "allowed_analyses": [
+        "tran"
+      ],
+      "allowed_variables": [
+        "resistance",
+        "capacitance",
+        "stop-time"
+      ],
+      "allowed_measurements": [
+        "completion"
+      ],
+      "allowed_corners": [
+        "nominal"
+      ],
+      "protected_source": true,
+      "work_copy_policy": "owned_copy_only"
+    }
+  ],
+  "variable_sets": [
+    {
+      "design_id": "registered-rc-fixture",
+      "design_profile_sha256": "75f1b7732aa634ab1f556b77c8c46d07f31a5d2726a48fdf945f67f00740951d",
+      "variables": [
+        {
+          "logical_id": "resistance",
+          "cadence_binding": "resistance_ohm",
+          "unit": "ohm",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "owned_copy_only",
+          "range_status": "qualified",
+          "minimum": "100",
+          "maximum": "10000",
+          "step_policy": "continuous",
+          "step": null,
+          "fixed_value": null,
+          "review_id": "resistance-review"
+        },
+        {
+          "logical_id": "capacitance",
+          "cadence_binding": "capacitance_f",
+          "unit": "F",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "owned_copy_only",
+          "range_status": "qualified",
+          "minimum": "0.0000000000001",
+          "maximum": "0.0000000001",
+          "step_policy": "continuous",
+          "step": null,
+          "fixed_value": null,
+          "review_id": "capacitance-review"
+        },
+        {
+          "logical_id": "stop-time",
+          "cadence_binding": "stop_time_s",
+          "unit": "s",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "owned_copy_only",
+          "range_status": "qualified",
+          "minimum": "0.0000000001",
+          "maximum": "0.0000001",
+          "step_policy": "continuous",
+          "step": null,
+          "fixed_value": null,
+          "review_id": "stop-time-review"
+        }
+      ]
+    }
+  ],
+  "range_reviews": [
+    {
+      "review_id": "resistance-review",
+      "design_id": "registered-rc-fixture",
+      "design_profile_sha256": "75f1b7732aa634ab1f556b77c8c46d07f31a5d2726a48fdf945f67f00740951d",
+      "variable_contract_sha256": "a9c7812c2fc04cd701af9bc9b39f23ea6573242d6c5ffb46d652e046e45b73c4",
+      "evidence_id": "existing-fixture-profile-v1",
+      "evidence_sha256": "f0421d7a05a763dc20f10a40c008c752b91a2cd93bf500465f89ca889589a468",
+      "scope": "operator_reviewed_project_numeric_contract"
+    },
+    {
+      "review_id": "capacitance-review",
+      "design_id": "registered-rc-fixture",
+      "design_profile_sha256": "75f1b7732aa634ab1f556b77c8c46d07f31a5d2726a48fdf945f67f00740951d",
+      "variable_contract_sha256": "f8836d7539b6b53b1c558d740d5b24a0969cfa36c8b8f58495299bb768910c38",
+      "evidence_id": "existing-fixture-profile-v1",
+      "evidence_sha256": "f0421d7a05a763dc20f10a40c008c752b91a2cd93bf500465f89ca889589a468",
+      "scope": "operator_reviewed_project_numeric_contract"
+    },
+    {
+      "review_id": "stop-time-review",
+      "design_id": "registered-rc-fixture",
+      "design_profile_sha256": "75f1b7732aa634ab1f556b77c8c46d07f31a5d2726a48fdf945f67f00740951d",
+      "variable_contract_sha256": "13907bfb45ce3684da08981d6845be77c2d28dc8259ef2511cd74fe5dd49c8d6",
+      "evidence_id": "existing-fixture-profile-v1",
+      "evidence_sha256": "f0421d7a05a763dc20f10a40c008c752b91a2cd93bf500465f89ca889589a468",
+      "scope": "operator_reviewed_project_numeric_contract"
+    }
+  ],
+  "analysis_contracts": [
+    {
+      "design_id": "registered-rc-fixture",
+      "analysis_id": "fixture-tran",
+      "analysis": "tran",
+      "design_profile_sha256": "75f1b7732aa634ab1f556b77c8c46d07f31a5d2726a48fdf945f67f00740951d",
+      "variable_set_sha256": "09945e5af2c29196564ed853b6c620ae2ae839827c917dcd9d9f643a7c8080f9",
+      "adapter_kind": "fixture-rc-profile-v1",
+      "adapter_contract_sha256": "f0421d7a05a763dc20f10a40c008c752b91a2cd93bf500465f89ca889589a468",
+      "input_policy": "unqualified"
+    }
+  ],
+  "measurement_contracts": [
+    {
+      "contract_version": 1,
+      "design_id": "registered-rc-fixture",
+      "measurement_id": "completion",
+      "analysis_id": "fixture-tran",
+      "analysis_contract_sha256": "108903054e0b03c53f7c89236e2be1ae522107bcdf527ddeaa3d4d262a7bff9e",
+      "reader": "fixture-completion-v1",
+      "output_id": null,
+      "definition_sha256": "116febf839fdbc5949a40ee8c6b987f34dcde697571e8785b0073daa9a478af4"
+    }
+  ]
+}

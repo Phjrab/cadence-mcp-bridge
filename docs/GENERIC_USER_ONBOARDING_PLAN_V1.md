@@ -170,3 +170,15 @@ range is activated. Preserve legacy fixture/native/measurement regression and
 protected/accounting evidence. Integrate one reviewed feature PR and ask once
 at completion. See [workflow](GENERIC_DESIGN_SWEEP_V1.md) and
 [result](GENERIC_SWEEP_01_RESULT_V1.md).
+
+## Next development ordering, 2026-10-05
+
+The user selects registered sweep lifecycle integration after #114, followed
+by ANALOG-MEAS-01 and SPEC-CONTRACT-01, then release readiness reassessment.
+Completed planning is retained. Only the first major phase is activated here.
+Other Cadence versions/PDKs are deferred without blocking this reference phase.
+Host portability would establish only reference reproducibility, not multi-PDK
+or multi-version qualification. Analog measurements require evidence-specific
+definitions; phase margin requires loop gain. Future operator specifications
+must use actual user targets, never targets reverse-fitted to measurements.
+No automatic search, topology modification, version bump or release is activated.

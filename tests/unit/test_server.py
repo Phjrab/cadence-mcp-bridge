@@ -275,6 +275,11 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
 
     tools = {tool.name: tool for tool in listing.tools}
     assert set(tools) == {
+        "cadence_prepare_design_sweep",
+        "cadence_submit_design_sweep",
+        "cadence_design_sweep_status",
+        "cadence_design_sweep_result",
+        "cadence_cancel_design_sweep",
         "cadence_list_measurements",
         "cadence_describe_measurement",
         "cadence_measurement_result",
@@ -373,6 +378,9 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.read_only_hint
     }
     assert read_only == {
+        "cadence_prepare_design_sweep",
+        "cadence_design_sweep_status",
+        "cadence_design_sweep_result",
         "cadence_describe_design_sweep",
         "cadence_plan_design_sweep",
         "cadence_list_measurements",
@@ -424,6 +432,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.destructive_hint
     }
     assert destructive == {
+        "cadence_cancel_design_sweep",
         "cadence_cancel_job",
         "cadence_execute_design_write_validation",
         "cadence_cancel_sweep",

@@ -29,6 +29,13 @@ from cadence_mcp_bridge.analyses import (
     AnalysisSubmission,
 )
 from cadence_mcp_bridge.analysis_service import AnalysisSupervisor
+from cadence_mcp_bridge.design_sweep_service import (
+    DesignSweepExecutionPlan,
+    DesignSweepExecutionResult,
+    DesignSweepQuery,
+    DesignSweepSubmission,
+    DesignSweepSupervisor,
+)
 from cadence_mcp_bridge.designs import (
     DesignDescription,
     DesignList,
@@ -230,6 +237,11 @@ class CadenceService:
             if sweep_journal is not None
             else Path(__file__).resolve().parents[2] / ".codex" / "sweeps-v1.sqlite3",
         )
+        self._design_sweep_lifecycle = DesignSweepSupervisor(
+            self._registered_sweeps,
+            self._sweeps,
+            self._pdks,
+        )
 
     async def list_designs(self) -> DesignList:
         return self._designs.listing()
@@ -288,6 +300,23 @@ class CadenceService:
 
     async def plan_design_sweep(self, request: DesignSweepRequest) -> DesignSweepPlan:
         return self._registered_sweeps.plan(request)
+
+    async def prepare_design_sweep(self, request: DesignSweepRequest) -> DesignSweepExecutionPlan:
+        return self._design_sweep_lifecycle.prepare(request)
+
+    async def submit_design_sweep(
+        self, submission: DesignSweepSubmission
+    ) -> DesignSweepExecutionResult:
+        return await self._design_sweep_lifecycle.submit(submission)
+
+    async def design_sweep_status(self, request: DesignSweepQuery) -> DesignSweepExecutionResult:
+        return await self._design_sweep_lifecycle.status(request)
+
+    async def design_sweep_result(self, request: DesignSweepQuery) -> DesignSweepExecutionResult:
+        return await self._design_sweep_lifecycle.result(request)
+
+    async def cancel_design_sweep(self, request: DesignSweepQuery) -> DesignSweepExecutionResult:
+        return await self._design_sweep_lifecycle.cancel(request)
 
     async def submit_sweep(self, submission: SweepSubmission) -> SweepStatus:
         return await self._sweeps.submit(submission)

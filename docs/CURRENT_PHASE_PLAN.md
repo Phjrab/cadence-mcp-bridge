@@ -1,5 +1,37 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-SWEEP-INTEGRATION-01 overlay, 2026-10-05
+
+The user selects lifecycle integration after merged #114, starting main
+`e8e5ebdf4628844c8726d8d38b051d5ccd890efc`. Preserve completed planning.
+Registry v5 adds an exact compiled passive RC fixture analysis/completion reader;
+reuse all v4 native validations and all existing sweep lifecycle/identity/guards.
+Add prepare/submit/status/result/cancel around the existing engine and persist
+hash-bound registered admission in the same operator sweep journal. No second
+engine, arbitrary bindings or physical amplifier ranges. Bias ranges remain
+unqualified; VDD=1 V is fixed. Reuse preserved fixture/native results, no new
+simulation. Three corrections for this integration; prior histories remain.
+The user's subsequent explicit result-budget instruction raises cumulative
+reservation to 10 GiB through PHASE_RESULT_LIMIT_V4.json, retaining 62 attempts
+and 7,114,588,160 reserved bytes. Deploy new immutable native-v3/sweep-v2
+adapters with the same replay/ledger domains, 500 attempts, unchanged disk floor,
+EDA lock and absent elapsed ceiling. Historical versioned policies/bytes remain.
+Complete local/security/distribution/protocol and bounded read-only remote
+qualification, reviewed feature PR and exact remote verification. Next phase:
+ANALOG-MEAS-01, then SPEC-CONTRACT-01; ask once at phase completion. Other
+Cadence versions/PDK execution are deferred and are not prerequisites here.
+Claude desktop/rights review remain separate release prerequisites; no release.
+
+The initial three corrections and all failed transcripts are preserved. The user
+subsequently explicitly adds one correction for this phase: standard submit/cancel
+MCP annotations and canonical JSON UUID handling discovered by full/protocol
+verification. The four-correction bound is private hash-bound; it does not reset
+old histories or automatically carry into future phases. Focused 51 and actual
+SDK preserved fixture/native/restart equality pass after that correction.
+Final full unit gate: 1,574 passes / three OS symlink skips / 57 warnings;
+Ruff, mypy (37 modules), security/dependency and audited installed-package
+gates pass. Complete the containing reviewed feature PR and verify remote main.
+
 ## GENERIC-SWEEP-01 preparation overlay, 2026-10-05
 
 The user selects the recommended registered 1D contract/planning phase after
