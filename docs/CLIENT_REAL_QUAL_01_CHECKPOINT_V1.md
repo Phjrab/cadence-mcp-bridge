@@ -3,6 +3,8 @@
 Date: 2026-10-06. Starting main:
 `3432d580994bd825e5d650dd284d110342ac01e3` (merged #120).
 Branch: `feat/client-real-qual-01`. **Phase status: BLOCKED, not complete.**
+Checkpoint integration: [PR #121](https://github.com/Phjrab/cadence-mcp-bridge/pull/121),
+with exact resulting remote SHA/tree recorded privately after permitted merge.
 This checkpoint adds a concrete application handoff and evidence rubric; it does
 not repeat completed CLIENT-COMPAT-01 or release readiness work.
 
