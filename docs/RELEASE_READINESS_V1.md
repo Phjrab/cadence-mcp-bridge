@@ -1,5 +1,17 @@
 # Public release readiness v1
 
+## Current licensing overlay, 2026-10-05
+
+RELEASE-LICENSE-01 applies the user's Apache-2.0 choice to original bridge code,
+with canonical LICENSE and NOTICE and inspected package metadata/artifacts.
+Cadence/PDK/clients/dependencies remain separately licensed. Imported
+`docs/agent_plan/` rights are LEGAL_REVIEW_REQUIRED; curated wheel/sdist exclude
+the material. See [audit](LICENSING_AUDIT_V1.md). The earlier audit below is a
+dated record; its owner-choice/no-LICENSE finding is superseded for current main.
+A blanket Apache claim for the complete repository remains unapproved. Exact
+candidate, real client qualification, accurate scope and publication authorization
+are still required; historical v1 tag/release rights/wording are not rewritten.
+
 Audit date: 2026-10-05. Starting main:
 `fff725cdf64d084d7c55ab30d5a38da15f33fb49` (merged PR #109).
 This is PUBLIC-RELEASE-01 preparation, not publication or a version change.
@@ -78,9 +90,9 @@ without scientific targets retain `spec_evaluation=not_evaluated`.
 
 ## Publication gates still open
 
-1. Owner chooses licensing/use/redistribution terms; package metadata is not a
-   substitute for a license grant. Dependencies, Cadence and PDK retain their own
-   terms; protected vendor/design material is not distributable with this bridge.
+1. Original-code Apache-2.0 selection is implemented. Review imported planning
+   ownership/rights before any full repository bundle; dependencies, Cadence and
+   PDK retain their own terms. Protected vendor material is not distributed.
 2. Select an exact reviewed release candidate, apply consistent version metadata
    only in its authorized phase, and rerun gates on that candidate.
 3. Choose whether publication claims only the validated reference and experimental

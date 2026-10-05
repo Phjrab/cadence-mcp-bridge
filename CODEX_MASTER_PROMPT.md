@@ -1,5 +1,15 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-05 licensing overlay:** The user's Apache-2.0 directive selects
+> RELEASE-LICENSE-01 after merged CLIENT-COMPAT-01 (#111). Apply the canonical
+> license only to original bridge material where rights exist; preserve external
+> Cadence/PDK/client/dependency terms and imported planning rights uncertainty.
+> Audit actual wheel/sdist contents and complete one reviewed feature PR under
+> existing delegation. No tag/release publication, history rewrite, new remote
+> execution/deployment or simulation is activated. Preserve every prior budget,
+> removed elapsed ceiling and evidence. Report conditional readiness and ask once
+> before another major phase. See docs/LICENSING_AUDIT_V1.md.
+
 > **Active 2026-10-05 multi-client program overlay:** The user's directive
 > extends generic onboarding. Cadence MCP Bridge is client independent; Codex
 > and Claude Desktop are local MCP clients of the same server and safety layer.

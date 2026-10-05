@@ -26,6 +26,12 @@ try {
         throw "Package build failed."
     }
 
+    & $sourcePython -I -X utf8 (Join-Path $projectRoot "scripts\verify-distribution.py") `
+        --project $projectRoot --artifacts $distributionDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw "License or distribution-content audit failed."
+    }
+
     $wheel = @(Get-ChildItem -LiteralPath $distributionDirectory -Filter "*.whl")
     if ($wheel.Count -ne 1) {
         throw "Expected exactly one wheel."

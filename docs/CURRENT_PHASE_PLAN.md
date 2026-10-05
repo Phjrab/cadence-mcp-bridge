@@ -1,5 +1,22 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## RELEASE-LICENSE-01 overlay, 2026-10-05
+
+The user selected Apache License 2.0 for original bridge code after merged #111.
+Starting main: `19f8bfb95661f30fd2458d019b3cc9fe6857ea75`. Audit tracked contents,
+local reachable history, external material/dependencies and actual distributions;
+add canonical LICENSE, conservative project-owner NOTICE, scope/third-party
+notice, modern SPDX metadata and an exact curated package-content gate. Preserve
+imported `docs/agent_plan/` and history; its rights remain LEGAL_REVIEW_REQUIRED
+and it is excluded from wheel/sdist. Do not extend the Apache grant to external
+Cadence, PDK, clients or dependencies. No simulation, reservation, deployment,
+release/tag publication, destructive remediation or new scientific target.
+Retain existing ledgers, correction histories, elapsed-limit removal and safety.
+Complete local/security/dependency/package gates, reuse sealed native evidence
+with fresh protected/accounting checks, review and integrate the feature PR.
+Report CONDITIONALLY_READY scope/limits, then ask once before another phase.
+See [audit](LICENSING_AUDIT_V1.md) and [result](RELEASE_LICENSE_01_RESULT_V1.md).
+
 ## CLIENT-COMPAT-01 overlay, 2026-10-05
 
 The user's multi-client directive extends the same onboarding program. PR #110

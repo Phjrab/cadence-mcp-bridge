@@ -1,5 +1,6 @@
 *.py text eol=lf
 *.sh text eol=lf
+LICENSE -text
 remote/discovery/wp14-role-discovery.il text eol=lf
 remote/phase-campaign/role-v2/run.sh text eol=lf
 remote/phase-campaign/role-v2/role_v2_helper.py text eol=lf

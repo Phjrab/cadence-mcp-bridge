@@ -99,9 +99,25 @@ GitHub v1.0.0 was published on 2026-08-31. Current main includes later capabilit
 work. PUBLIC-RELEASE-01 adds installed-wheel CLI/stdio acceptance and a
 [release readiness review](docs/RELEASE_READINESS_V1.md). The conditional next
 version recommendation is v1.1.0 based on additive interfaces; package version
-and release/tag history remain unchanged. The repository currently declares
-Proprietary licensing without a LICENSE file. General use/redistribution terms,
-an exact candidate and publication scope remain owner decisions.
+and release/tag history remain unchanged. The owner selected Apache-2.0 for
+original bridge code; see the licensing boundary below. An exact candidate and
+publication scope remain owner decisions; imported planning rights need review.
+
+## License
+
+Cadence MCP Bridge's original source code is licensed under the
+[Apache License 2.0](LICENSE), with attribution in [NOTICE](NOTICE).
+This grant does not license Cadence Virtuoso, Spectre, ADE, PDKs, MCP clients
+or third-party products. Users must provide their authorized Cadence/PDK
+environment and maintain every required external license and access permission.
+Cadence software, license-server access and PDK files are not included.
+The project is independent; no Cadence, OpenAI or Anthropic endorsement is claimed.
+
+[THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md) records separate dependency terms
+and `LEGAL_REVIEW_REQUIRED` for imported `docs/agent_plan/` material. Root
+LICENSE does not relicense that material. Audited package distributions exclude
+it; a blanket Apache claim for a full repository bundle is not approved.
+See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
