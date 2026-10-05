@@ -12,7 +12,7 @@ protected. Feature changes go through a dedicated PR.
 Codex and Claude Desktop launch the same server package over local stdio.
 Codex TOML and Claude `mcpServers` JSON configuration are prepared and tested
 through actual subprocess protocol clients. Independent JSON-RPC tests verify
-initialization, 48 typed schemas, calls/errors, concurrent read requests,
+initialization, typed schemas, calls/errors, concurrent read requests,
 stdout integrity and EOF shutdown. This is `SERVER_PROTOCOL_QUALIFIED`.
 Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
@@ -74,6 +74,14 @@ remain unqualified. Local gates and preserved-result stdio regression are verifi
 See [PDK workflow](docs/PDK_ADAPTER_RUNTIME_V2.md)
 and [phase result](docs/PDK_ADAPTER_01_RESULT_V1.md).
 
+GENERIC-MEAS-01 adds registry v4 and three read-only measurement tools. They
+bind exact analysis/definition hashes and reuse completed admitted native DC
+voltage scalars, AC differential transfer spectrum and TRAN summary. Results
+retain effective settings, fingerprints and source-result hashes; no new
+simulation or extraction is triggered. Old registry versions remain valid.
+Specifications stay `not_evaluated`; bandwidth, phase margin, power and OP
+definitions are not added. See [measurement workflow](docs/GENERIC_MEASUREMENTS_V1.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -81,10 +89,10 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings |
-| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3/v4 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and a new public release after remaining gates |
+| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, additional qualified measurements, native live cancellation and a new public release after remaining gates |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
@@ -121,7 +129,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 48 typed tools. `cadence_list_designs` and
+The server has 51 typed tools, preserving all previous 48 schemas. Registered
+`cadence_list_measurements`, `cadence_describe_measurement` and
+`cadence_measurement_result` are read-only. `cadence_list_designs` and
 `cadence_describe_design(design_id)` add read-only local introspection; every
 registered generic profile remains unqualified for execution. The original 22
 lifecycle, discovery, profile,

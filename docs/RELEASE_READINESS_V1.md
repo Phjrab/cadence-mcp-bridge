@@ -1,5 +1,17 @@
 # Public release readiness v1
 
+## Current measurement overlay, 2026-10-05
+
+GENERIC-MEAS-01 adds registry v4 measurement definitions and three read-only
+interfaces (51 total); the previous 48 schemas and old admission hashes are
+exactly preserved. Actual SDK stdio verifies three bounded native measurements
+and restart against preserved DC/AC/TRAN, without new simulation. The installed
+package gate now uses v4 fictional contracts and denies unqualified measurement
+reads before admission. Additional measurement definitions and physical adapters
+remain unqualified. Earlier 48-tool tables below are dated readiness evidence.
+Licensing/imported-rights, real desktop qualification and publication gates are
+unchanged. See [measurement workflow](GENERIC_MEASUREMENTS_V1.md).
+
 ## Current licensing overlay, 2026-10-05
 
 RELEASE-LICENSE-01 applies the user's Apache-2.0 choice to original bridge code,

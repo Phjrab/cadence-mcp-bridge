@@ -1,5 +1,20 @@
 # Security and Reliability Baseline
 
+## Registered measurement boundary, 2026-10-05
+
+GENERIC-MEAS-01 adds three read-only tools (51 total) and registry v4 definitions
+bound to exact allowed analysis contracts and compiled reader hashes. Operator
+registration remains outside MCP. Readers require the reviewed fixed native
+analysis; changing design/environment/PDK/mode and recomputing hashes cannot
+activate them. Unqualified/stale/unknown/unadmitted requests fail before result
+transport. Existing plan/admission/PDK/native checks remain. Inputs contain no
+expression/signal/script/path/netlist, result payload or target. Output projects
+bounded validated data/provenance only. JSON-compatible output models are
+separate from strict operator/request models; invalid native data becomes a
+bounded error. No new execution/extraction/journal/reservation or arbitrary PSF
+access is added; specification evaluation stays not_evaluated. See
+[contract and recovery](GENERIC_MEASUREMENTS_V1.md).
+
 ## PDK runtime capability contracts
 
 Runtime v2 metadata is path-free and immutable after bounded startup loading.

@@ -1,5 +1,24 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-MEAS-01 overlay, 2026-10-05
+
+The user proceeds after RELEASE-LICENSE-01 merged as #112. Starting main:
+`a776ec0230ac32f8a2eee2fb99ebd1884c2f1726`. Complete one phase: operator design
+registry v4 hash-bound measurement definitions, three closed read-only MCP tools
+and projections of already validated native DC scalars/AC transfer spectrum/TRAN
+summary. Preserve v1/v2/v3 registry schemas and existing analysis plan/admission
+identities. No arbitrary formula/signal/path, new reader execution, broader PDK,
+electrical range or invented scientific target. PDK/native admission remains
+required; spec_evaluation is not_evaluated. No new simulation, reservation,
+deployment, FS circuit work, release or rights remediation. Keep every old
+ledger, evidence/correction history and the removed elapsed ceiling.
+This change has three corrections. Verify local/security/dependency/package
+gates, actual stdio measurement/result/restart equality against completed jobs,
+unchanged legacy schemas and fresh protected/accounting checks. Complete the
+dedicated reviewed feature PR, report results/limits and ask once before another
+major phase. Imported planning rights and desktop qualification remain separate
+public-release prerequisites.
+
 ## RELEASE-LICENSE-01 overlay, 2026-10-05
 
 The user selected Apache License 2.0 for original bridge code after merged #111.

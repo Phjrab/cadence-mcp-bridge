@@ -20,8 +20,11 @@ imported planning rights remain separately unresolved and outside package artifa
   and path-free PDK v2 capability contracts.
 - Joined local onboarding verification, explicit private Codex/MCP configuration
   export and isolated installed-wheel CLI/stdio acceptance.
+- Registered measurement contracts in design registry v4 and three bounded
+  read-only interfaces reusing admitted completed native DC scalars, AC transfer
+  spectrum and TRAN summary; exact provenance/restart and old-schema regression.
 
-The MCP surface has 48 tools, adding 26 to the 22 historical names. Existing
+The MCP surface has 51 tools, adding 29 to the 22 historical names. Existing
 declared v1 tool signatures and shared input/result model files are preserved.
 The installed-package acceptance verifies both stdio client configurations and
 denies unqualified execution before admission. See [readiness](RELEASE_READINESS_V1.md).
@@ -35,7 +38,7 @@ PSF or unrestricted OA mutation interface exists. Protected originals, PDK,
 private authorization and historical evidence remain protected.
 
 Another operator can register and inspect contracts and export client settings.
-New physical execution routes, real-design numeric sweeps, generic measurements,
+New physical execution routes, real-design numeric sweeps, additional measurement definitions,
 native active cancellation, statistics, layout/DRC/LVS/PEX and optimization remain
 unqualified/planned. A valid measurement is not a specification PASS without a
 target. Bias candidates are not optimality claims.

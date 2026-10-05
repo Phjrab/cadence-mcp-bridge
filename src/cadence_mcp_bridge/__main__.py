@@ -16,6 +16,7 @@ from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.designs import (
     DesignAnalysisRegistry,
     DesignContractRegistry,
+    DesignMeasurementRegistry,
     DesignRegistry,
     RegistryBase,
     load_design_registry,
@@ -83,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     schema = design_actions.add_parser(
         "schema", help="Print the versioned design registry JSON schema."
     )
-    schema.add_argument("--schema-version", type=int, choices=(1, 2, 3), default=1)
+    schema.add_argument("--schema-version", type=int, choices=(1, 2, 3, 4), default=1)
     for action in ("validate", "register"):
         command = design_actions.add_parser(action)
         command.add_argument("--registry", type=Path, required=True)
@@ -218,6 +219,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     1: DesignRegistry,
                     2: DesignContractRegistry,
                     3: DesignAnalysisRegistry,
+                    4: DesignMeasurementRegistry,
                 }
                 design_result = registry_models[arguments.schema_version].model_json_schema()
             elif arguments.design_action == "register":

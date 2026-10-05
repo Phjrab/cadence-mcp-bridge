@@ -33,7 +33,7 @@ from cadence_mcp_bridge.designs import (
     DesignDescription,
     DesignList,
     RegistryBase,
-    reference_analysis_registry,
+    reference_measurement_registry,
 )
 from cadence_mcp_bridge.discovery import validate_cell, validate_library, validate_view
 from cadence_mcp_bridge.errors import (
@@ -59,6 +59,7 @@ from cadence_mcp_bridge.measurement_models import (
     SettlingMetric,
     SettlingRequest,
 )
+from cadence_mcp_bridge.measurement_service import MeasurementSupervisor
 from cadence_mcp_bridge.measurements import (
     compare_corner_results,
     get_measurement_contract,
@@ -94,6 +95,13 @@ from cadence_mcp_bridge.profiles import (
     list_profiles,
     validate_corner,
     validate_variables,
+)
+from cadence_mcp_bridge.registered_measurements import (
+    MeasurementDescription,
+    MeasurementList,
+    MeasurementQuery,
+    MeasurementResult,
+    MeasurementSelection,
 )
 from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
 from cadence_mcp_bridge.sweeps import (
@@ -200,10 +208,11 @@ class CadenceService:
         pdks: PdkRegistry | None = None,
     ) -> None:
         self._backend = backend
-        self._designs = reference_analysis_registry() if designs is None else designs
+        self._designs = reference_measurement_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
         self._pdks = reference_pdk_registry() if pdks is None else pdks
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
+        self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
 
         self._sweeps = SweepSupervisor(
             cast(SweepBackend, backend),
@@ -239,6 +248,15 @@ class CadenceService:
 
     async def plan_analysis(self, request: AnalysisSelection) -> AnalysisPlan:
         return self._analyses.plan(request)
+
+    async def list_measurements(self, design_id: str) -> MeasurementList:
+        return self._registered_measurements.listing(design_id)
+
+    async def describe_measurement(self, request: MeasurementSelection) -> MeasurementDescription:
+        return self._registered_measurements.describe(request)
+
+    async def measurement_result(self, request: MeasurementQuery) -> MeasurementResult:
+        return await self._registered_measurements.result(request)
 
     async def submit_analysis(self, submission: AnalysisSubmission) -> AnalysisStatus:
         return await self._analyses.submit(submission)
