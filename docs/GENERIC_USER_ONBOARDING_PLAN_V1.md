@@ -39,11 +39,11 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-VAR-01 | Logical/Cadence bindings, exact units/types/defaults and separate bound numeric reviews; unqualified ranges reject values, generic execution stays disabled | Implemented; see variable workflow/result |
 | GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle, durable UUID admission and bounded native results; fixed reference compatibility adapter, other designs blocked; native live cancellation unsupported | Implemented; see analysis workflow/result |
 | GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
-| GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
+| GENERIC-MEAS-01 | Registry v4 hash-bound definitions and admitted-result readers for validated native DC/AC/TRAN; keep specification evaluation separate | Implemented; see measurement workflow/result |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
 | ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
 | CLIENT-COMPAT-01 | Same local stdio server and contract policy for MCP clients; Codex adapter regression, Claude registration, protocol integrity and honest desktop qualification matrix; MCPB investigation only | Merged #111; server/configuration qualified, actual desktop E2E unverified |
-| RELEASE-LICENSE-01 | Apache-2.0 original-code boundary, modern metadata, notices, imported-rights review and actual curated distribution audit | Selected by explicit owner directive; whole-repository imported rights remain LEGAL_REVIEW_REQUIRED |
+| RELEASE-LICENSE-01 | Apache-2.0 original-code boundary, modern metadata, notices, imported-rights review and actual curated distribution audit | Merged #112; whole-repository imported rights remain LEGAL_REVIEW_REQUIRED |
 | PUBLIC-RELEASE-01 | Actual release/compatibility/license assessment and installed-wheel stdio acceptance; conditional semver and honest public scope | Preparation verified; publication/owner rights pending |
 
 These phases are not chained execution approval. Dependency review may adjust
@@ -145,3 +145,15 @@ on qualified numeric/physical contracts. Full-repository rights review, actual
 desktop qualification, exact candidate/version and explicit publication scope
 remain prerequisites for the corresponding public release claims. No next major
 phase is automatically activated; report and ask once at the boundary.
+
+## GENERIC-MEAS-01 activation
+
+The user selected this phase after the #112 licensing report. Registered
+analysis/admission and bounded native DC/AC/TRAN extraction provide its
+foundation. Scope: registry v4 definitions and read-only projection, actual
+preserved-job stdio/restart qualification and zero new simulation/reservation/
+deployment. Other definitions/physical adapters and generic real-design sweeps
+stay unqualified. See [workflow](GENERIC_MEASUREMENTS_V1.md) and
+[result](GENERIC_MEAS_01_RESULT_V1.md). Complete one reviewed feature PR and
+report, then ask once. Licensing uncertainty and desktop qualification remain
+separate public-release prerequisites.

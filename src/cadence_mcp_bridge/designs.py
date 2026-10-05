@@ -14,6 +14,11 @@ from cadence_mcp_bridge.analyses import AnalysisContract, native_adapter_digest
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.pdk_reference import REFERENCE_ID
+from cadence_mcp_bridge.registered_measurements import (
+    RegisteredMeasurement,
+    definition,
+    definitions,
+)
 from cadence_mcp_bridge.variable_contracts import (
     DesignVariables,
     RangeReview,
@@ -121,6 +126,10 @@ class RegistryBase(DesignModel):
         self.profile(design_id)
         return ()
 
+    def measurements_for(self, design_id: str) -> tuple[RegisteredMeasurement, ...]:
+        self.profile(design_id)
+        return ()
+
     def variables(self, design_id: str) -> VariableList:
         profile = self.profile(design_id)
         return describe_variables(
@@ -208,8 +217,7 @@ class DesignContractRegistry(VariableRegistryBase):
     schema_version: Literal[2]
 
 
-class DesignAnalysisRegistry(VariableRegistryBase):
-    schema_version: Literal[3]
+class AnalysisRegistryBase(VariableRegistryBase):
     analysis_contracts: Annotated[tuple[AnalysisContract, ...], Field(max_length=48)]
 
     @model_validator(mode="after")
@@ -245,6 +253,46 @@ class DesignAnalysisRegistry(VariableRegistryBase):
     def analyses_for(self, design_id: str) -> tuple[AnalysisContract, ...]:
         self.profile(design_id)
         return tuple(item for item in self.analysis_contracts if item.design_id == design_id)
+
+
+class DesignAnalysisRegistry(AnalysisRegistryBase):
+    schema_version: Literal[3]
+
+
+class DesignMeasurementRegistry(AnalysisRegistryBase):
+    schema_version: Literal[4]
+    measurement_contracts: Annotated[tuple[RegisteredMeasurement, ...], Field(max_length=512)]
+
+    @model_validator(mode="after")
+    def bound_measurements(self) -> Self:
+        seen: set[tuple[str, str]] = set()
+        for contract in self.measurement_contracts:
+            key = (contract.design_id, contract.measurement_id)
+            if key in seen:
+                raise ValueError("duplicate measurement identity")
+            seen.add(key)
+            profile = next((p for p in self.designs if p.design_id == contract.design_id), None)
+            analysis = next((c for c in self.analysis_contracts
+                             if c.design_id == contract.design_id
+                             and c.analysis_id == contract.analysis_id), None)
+            if (
+                profile is None
+                or contract.measurement_id not in profile.allowed_measurements
+                or analysis is None
+                or contract.analysis_contract_sha256 != canonical_digest(analysis)
+            ):
+                raise ValueError("measurement must bind an exact allowed analysis contract")
+            if contract.reader == "native-bounded-result-v1" and (
+                analysis.adapter_kind != "native-fixed-reference-v1"
+                or contract.output_id is None
+                or definition(contract.output_id).analysis != analysis.analysis
+            ):
+                raise ValueError("compiled reader requires the matching qualified native analysis")
+        return self
+
+    def measurements_for(self, design_id: str) -> tuple[RegisteredMeasurement, ...]:
+        self.profile(design_id)
+        return tuple(c for c in self.measurement_contracts if c.design_id == design_id)
 
 
 class DesignSummary(ContractModel):
@@ -364,7 +412,7 @@ def reference_analysis_registry() -> DesignAnalysisRegistry:
 
 def load_design_registry(
     path: Path,
-) -> tuple[DesignRegistry | DesignContractRegistry | DesignAnalysisRegistry, bytes]:
+) -> tuple[RegistryBase, bytes]:
     """Snapshot an explicit local operator file once, with closed bounded JSON."""
 
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -389,18 +437,44 @@ def load_design_registry(
         if not isinstance(payload, dict) or type(payload.get("schema_version")) is not int:
             raise ValueError("integer registry version required")
         version = payload["schema_version"]
-        registry: DesignRegistry | DesignContractRegistry | DesignAnalysisRegistry
+        registry: RegistryBase
         if version == 1:
             registry = DesignRegistry.model_validate_json(data)
         elif version == 2:
             registry = DesignContractRegistry.model_validate_json(data)
         elif version == 3:
             registry = DesignAnalysisRegistry.model_validate_json(data)
+        elif version == 4:
+            registry = DesignMeasurementRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):
         raise DesignRejected() from None
     return registry, data
+
+
+def reference_measurement_registry() -> DesignMeasurementRegistry:
+    """Same pinned reference profile/analyses; additive registered readers only."""
+    reference = reference_analysis_registry()
+    contracts = tuple(
+        RegisteredMeasurement(
+            design_id=analysis.design_id,
+            measurement_id=measurement_id,
+            analysis_id=analysis.analysis_id,
+            analysis_contract_sha256=canonical_digest(analysis),
+            reader="native-bounded-result-v1",
+            output_id=output.output_id,
+            definition_sha256=canonical_digest(output),
+        )
+        for analysis, measurement_id, output in zip(
+            reference.analysis_contracts, reference.designs[0].allowed_measurements,
+            definitions(), strict=True,
+        )
+    )
+    return DesignMeasurementRegistry(
+        **{**reference.model_dump(), "schema_version": 4},
+        measurement_contracts=contracts,
+    )
 
 
 def register_designs(path: Path, output: Path) -> dict[str, object]:

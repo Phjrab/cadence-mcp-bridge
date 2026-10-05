@@ -150,7 +150,11 @@ contracts and resource/integrity/replay guards apply independently.
 Start with `cadence_list_designs`, `cadence_describe_design`,
 `cadence_list_design_variables`, `cadence_list_pdk_adapters`,
 `cadence_design_pdk_status`, `cadence_list_analyses` and `cadence_plan_analysis`.
-There remain 48 MCP tools, with no model-facing registration/path/script fields.
+GENERIC-MEAS-01 extends the same registry to v4 with hash-bound measurements
+and read-only `cadence_list_measurements`, `cadence_describe_measurement` and
+`cadence_measurement_result` (51 total tools). Follow the
+[v4 workflow](GENERIC_MEASUREMENTS_V1.md) for explicit operator migration;
+old registries do not gain implicit readers. No model-facing registration/path/script fields exist.
 Unqualified designs and PDKs cannot dispatch. Only the exact existing reference
 analysis adapter can reuse guarded native DC/AC/trap TRAN. A measurement without
 a scientific target is not a specification PASS.
@@ -159,7 +163,7 @@ a scientific target is not a specification PASS.
 
 This is a complete local description/registration/verification/export workflow.
 New physical execution adapters, a positively qualified second installation,
-reviewed real-design variable ranges, generic measurements and release/legal
+reviewed real-design variable ranges, additional measurements and release/legal
 readiness remain separate work. RELEASE-LICENSE-01 applies Apache-2.0 to original
 bridge source; imported planning rights remain under review and external software
 retains its own terms. Package/release version remains 1.0.0; public visibility

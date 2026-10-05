@@ -63,7 +63,12 @@ async def verify(
     paths = {name: workspace / (name + ".json") for name in ("environment", "designs", "pdks")}
     for name, path in paths.items():
         with path.open("xb") as stream:
-            stream.write((examples / (name + ".json")).read_bytes())
+            fixture = (
+                examples.parent / "design-registry-v4.fictional.json"
+                if name == "designs"
+                else examples / (name + ".json")
+            )
+            stream.write(fixture.read_bytes())
     designs, pdks = workspace / "registered-designs.json", workspace / "registered-pdks.json"
     for kind, proposed, target in (
         ("design", paths["designs"], designs),
@@ -81,6 +86,8 @@ async def verify(
     checked = cli(["verify", *options], workspace)
     if checked["status"] != "consistent_local_contracts" or checked["remote_contact"]:
         raise ValueError("joined local verification failed")
+    if checked["designs"][0]["measurement_contract_count"] != 2:
+        raise ValueError("installed v4 measurement contracts were not registered")
     baseline_data = json.loads(baseline.read_bytes())
     baseline_names = set(baseline_data["tools"])
     if (
@@ -131,7 +138,7 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 48 or not baseline_names.issubset(names):
+            if len(names) != 51 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
             listing = await client.call_tool("cadence_list_designs")
@@ -139,6 +146,29 @@ async def verify(
                 raise ValueError("installed registry inspection failed")
             if listing.structured_content["designs"][0]["design_id"] != "example-amplifier":
                 raise ValueError("installed registry settings were not honored")
+            measurements = await client.call_tool(
+                "cadence_list_measurements", {"design_id": "example-amplifier"}
+            )
+            if (
+                measurements.is_error
+                or measurements.structured_content is None
+                or len(measurements.structured_content["measurements"]) != 2
+            ):
+                raise ValueError("installed measurement registry inspection failed")
+            measured = measurements.structured_content["measurements"][0]
+            denied_measurement = await client.call_tool(
+                "cadence_measurement_result",
+                {
+                    "request": {
+                        "design_id": "example-amplifier",
+                        "measurement_id": measured["measurement_id"],
+                        "operation_id": "00000000-0000-4000-8000-000000000000",
+                        "expected_contract_sha256": measured["contract_sha256"],
+                    }
+                },
+            )
+            if not denied_measurement.is_error or journal.exists():
+                raise ValueError("unqualified installed measurement bypassed admission")
             plan = await client.call_tool(
                 "cadence_plan_analysis",
                 {
@@ -180,6 +210,7 @@ async def verify(
         "client_tool_counts": counts,
         "legacy_tools_preserved": len(baseline_names),
         "unqualified_admission": "denied",
+        "registered_measurements": "v4_list_and_unqualified_read_denial_verified",
         "remote_contact": False,
         "new_simulations": 0,
     }

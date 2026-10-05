@@ -5,7 +5,7 @@
 The repository is public and v1.0.0 was published on 2026-08-31. Its tag peels
 to `8a0d44fab90e2095cc39322baef60fc09d741cd6`. The GitHub release body and
 versioned v1 notes retain stale candidate wording; the historical notes and
-published release are preserved. Post-v1 main has 48 tools and the local
+published release are preserved. Post-v1 main has 51 tools and the local
 onboarding workflow, whereas the published tag has 22. Package/runtime/lock
 metadata remain 1.0.0. See [current readiness](RELEASE_READINESS_V1.md) and
 [proposed next release notes](RELEASE_NOTES_NEXT.md).
@@ -30,8 +30,9 @@ Run from Windows PowerShell:
 The verifier builds the project into a unique system-temporary directory, creates an isolated
 Python 3.12 environment, installs the wheel, checks metadata/runtime/CLI versions,
 then runs isolated installed-package onboarding and actual stdio for both client
-formats. It verifies all 48 tools, preservation of 22 legacy names, configured
-catalogs and denial before admission for the unqualified fictional design.
+formats. It verifies all 51 tools, preservation of 22 legacy names, configured
+v4 measurement catalogs and denial before admission for unqualified fictional
+analysis/measurement reads. Existing 48 schemas remain exactly equal.
 No Cadence transport or simulation occurs. The verifier uninstalls the package, proves
 the module is no longer importable, and removes only its validated temporary directory.
 

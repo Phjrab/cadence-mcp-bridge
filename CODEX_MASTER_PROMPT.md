@@ -1,5 +1,13 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-05 measurement overlay:** The user explicitly selects
+> GENERIC-MEAS-01 after merged #112. Implement one registered measurement phase
+> over qualified bounded native results, keeping existing analysis/admission
+> guards and specification evaluation separate. Complete gates, preserved-job
+> stdio E2E, protection checks and reviewed feature PR integration under existing
+> delegation. No new simulation/deployment, wider scientific qualification or
+> publication follows. Report and ask once at the normal major-phase boundary.
+
 > **Active 2026-10-05 licensing overlay:** The user's Apache-2.0 directive selects
 > RELEASE-LICENSE-01 after merged CLIENT-COMPAT-01 (#111). Apply the canonical
 > license only to original bridge material where rights exist; preserve external

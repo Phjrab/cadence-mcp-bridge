@@ -82,6 +82,13 @@ from cadence_mcp_bridge.pdk_adapters import (
     PdkRejected,
     load_pdk_registry,
 )
+from cadence_mcp_bridge.registered_measurements import (
+    MeasurementDescription,
+    MeasurementList,
+    MeasurementQuery,
+    MeasurementResult,
+    MeasurementSelection,
+)
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.sweeps import (
@@ -260,6 +267,9 @@ class DesignContractServer(MCPServer):
                 "cadence_analysis_status",
                 "cadence_analysis_result",
                 "cadence_cancel_analysis",
+                "cadence_list_measurements",
+                "cadence_describe_measurement",
+                "cadence_measurement_result",
             }:
                 tool.input_schema = {**tool.input_schema, "additionalProperties": False}
         return tools
@@ -277,6 +287,7 @@ class DesignContractServer(MCPServer):
             "cadence_list_design_variables",
             "cadence_list_analyses",
             "cadence_design_pdk_status",
+            "cadence_list_measurements",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_describe_pdk_adapter" and (
@@ -293,6 +304,8 @@ class DesignContractServer(MCPServer):
             "cadence_analysis_status": "request",
             "cadence_analysis_result": "request",
             "cadence_cancel_analysis": "request",
+            "cadence_describe_measurement": "request",
+            "cadence_measurement_result": "request",
         }.get(name)
         if argument is not None and (
             set(arguments) != {argument} or type(arguments[argument]) is not dict
@@ -315,6 +328,43 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_list_measurements",
+        annotations=_READ_ONLY,
+        description="List registered bounded measurement definitions locally for a design ID. "
+        "Reading requires an admitted completed analysis; no simulation or specification grant.",
+        structured_output=True,
+    )
+    async def cadence_list_measurements(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, MeasurementList]:
+        return await _stable_result(service.list_measurements(design_id))
+
+    @server.tool(
+        name="cadence_describe_measurement",
+        annotations=_READ_ONLY,
+        description="Describe a registered design/measurement ID and its contract hash, fixed "
+        "units/method and read eligibility. No private bindings, registration or execution.",
+        structured_output=True,
+    )
+    async def cadence_describe_measurement(
+        request: MeasurementSelection,
+    ) -> Annotated[CallToolResult, MeasurementDescription]:
+        return await _stable_result(service.describe_measurement(request))
+
+    @server.tool(
+        name="cadence_measurement_result",
+        annotations=_READ_ONLY,
+        description="Read a bounded registered measurement from an admitted completed UUID4. "
+        "Use the described contract hash; reuse validated scalar/spectrum/transient data and "
+        "provenance. Never submit or extract anew. spec_evaluation remains not_evaluated.",
+        structured_output=True,
+    )
+    async def cadence_measurement_result(
+        request: MeasurementQuery,
+    ) -> Annotated[CallToolResult, MeasurementResult]:
+        return await _stable_result(service.measurement_result(request))
 
     @server.tool(
         name="cadence_list_pdk_adapters",

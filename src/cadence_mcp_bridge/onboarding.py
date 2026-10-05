@@ -64,6 +64,9 @@ class ContractSnapshot:
                         design.design_id, design.pdk_adapter_id, design.environment_id
                     ).status,
                     "analysis_contract_count": len(self.designs.analyses_for(design.design_id)),
+                    "measurement_contract_count": len(
+                        self.designs.measurements_for(design.design_id)
+                    ),
                 }
                 for design in self.designs.designs
             ],

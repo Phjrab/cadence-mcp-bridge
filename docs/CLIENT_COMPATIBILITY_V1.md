@@ -1,5 +1,16 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current GENERIC-MEAS-01 overlay
+
+Current inventory is 51 tools: three additive registered measurement readers
+preserve all 48 starting-main schemas. Independent JSON-RPC/installed-client
+gates remain, and actual SDK stdio with both exported settings verifies bounded
+DC/AC/TRAN measurement/provenance/restart equality without new simulation.
+Desktop application evidence states below are unchanged; no real desktop E2E
+is claimed. The original 48-tool audit below remains dated phase evidence.
+Use the current 51-tool inventory for future manual qualification. See
+[measurement contracts](GENERIC_MEASUREMENTS_V1.md).
+
 ## Scope and evidence states
 
 Cadence MCP Bridge is one local stdio MCP server. Codex and Claude Desktop
@@ -123,7 +134,7 @@ the remote guards and durable admissions remain authoritative, not tool hints.
    journals. Record config digests privately; install the reviewed bridge entry
    using each application's registration UI/config without unrelated edits.
 3. Fully restart each application. Record app version, time, server version,
-   registration status and observed tool inventory. Verify 48 names and schemas
+   registration status and observed tool inventory. Verify 51 names and schemas
    against this phase's inventory. App UI availability alone is not tools/list.
 4. In each app request `cadence_list_designs`, then `cadence_describe_design`
    for a listed ID and `cadence_design_pdk_status` for that ID. Compare structured
