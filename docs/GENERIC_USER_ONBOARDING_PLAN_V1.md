@@ -42,7 +42,8 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
 | ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
-| CLIENT-COMPAT-01 | Same local stdio server and contract policy for MCP clients; Codex adapter regression, Claude registration, protocol integrity and honest desktop qualification matrix; MCPB investigation only | Selected after merged PUBLIC-RELEASE-01 preparation; before any new release candidate |
+| CLIENT-COMPAT-01 | Same local stdio server and contract policy for MCP clients; Codex adapter regression, Claude registration, protocol integrity and honest desktop qualification matrix; MCPB investigation only | Merged #111; server/configuration qualified, actual desktop E2E unverified |
+| RELEASE-LICENSE-01 | Apache-2.0 original-code boundary, modern metadata, notices, imported-rights review and actual curated distribution audit | Selected by explicit owner directive; whole-repository imported rights remain LEGAL_REVIEW_REQUIRED |
 | PUBLIC-RELEASE-01 | Actual release/compatibility/license assessment and installed-wheel stdio acceptance; conditional semver and honest public scope | Preparation verified; publication/owner rights pending |
 
 These phases are not chained execution approval. Dependency review may adjust
@@ -127,3 +128,20 @@ restarted. Actual Claude verification may remain pending when inaccessible;
 this does not become a false PASS or activate public MCP hosting. See
 [compatibility workflow/matrix](CLIENT_COMPATIBILITY_V1.md). A new release
 candidate should reassess both client evidence and unresolved licensing.
+
+## Apache-2.0 authority and release ordering, 2026-10-05
+
+The owner explicitly chose Apache-2.0 after CLIENT-COMPAT-01 merged as #111.
+That completed phase is preserved. RELEASE-LICENSE-01 applies the selection to
+original bridge material and audits actual artifacts; it must precede the next
+significant public release. Imported planning material is preserved and excluded
+from curated packages pending rights review. This choice is not a license grant
+for Cadence/PDK/client/dependency content or a tag/release publication instruction.
+See [audit](LICENSING_AUDIT_V1.md) and [result](RELEASE_LICENSE_01_RESULT_V1.md).
+
+After this phase, GENERIC-MEAS-01 can reuse qualified extraction evidence without
+requiring broader electrical ranges. Generic real-design sweeps remain dependent
+on qualified numeric/physical contracts. Full-repository rights review, actual
+desktop qualification, exact candidate/version and explicit publication scope
+remain prerequisites for the corresponding public release claims. No next major
+phase is automatically activated; report and ask once at the boundary.

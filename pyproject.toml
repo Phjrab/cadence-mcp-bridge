@@ -8,7 +8,8 @@ version = "1.0.0"
 description = "Restricted Windows MCP bridge for a legacy Cadence environment"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Phjrab" }]
 dependencies = [
     "mcp[cli]>=2,<3",
@@ -30,6 +31,20 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cadence_mcp_bridge"]
+
+[tool.hatch.build.targets.sdist]
+# Package source for rebuilding the wheel, not a copy of private operator state
+# or imported planning material whose redistribution rights remain unverified.
+include = [
+    "/src",
+    "/pyproject.toml",
+    "/uv.lock",
+    "/.gitignore",
+    "/README.md",
+    "/LICENSE",
+    "/NOTICE",
+    "/THIRD_PARTY_NOTICES.md",
+]
 
 [tool.ruff]
 target-version = "py312"

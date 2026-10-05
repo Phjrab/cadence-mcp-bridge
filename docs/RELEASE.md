@@ -10,10 +10,14 @@ onboarding workflow, whereas the published tag has 22. Package/runtime/lock
 metadata remain 1.0.0. See [current readiness](RELEASE_READINESS_V1.md) and
 [proposed next release notes](RELEASE_NOTES_NEXT.md).
 
-Current licensing is Proprietary with no LICENSE file or GitHub-detected license.
-Public visibility is not a general grant of use or redistribution rights. A
-license decision and separately scoped publication are outstanding. This phase
-prepares and verifies; it does not change a tag, version or GitHub release.
+The owner selected Apache-2.0 for original bridge source in RELEASE-LICENSE-01.
+See [licensing audit](LICENSING_AUDIT_V1.md), [LICENSE](../LICENSE),
+[NOTICE](../NOTICE) and [third-party boundaries](../THIRD_PARTY_NOTICES.md).
+Cadence/PDK/client/dependency terms remain separate. Imported planning rights
+are LEGAL_REVIEW_REQUIRED and that material is excluded from package artifacts;
+a blanket whole-repository Apache distribution is not approved. Exact candidate
+and separately scoped publication remain outstanding. This preparation changes
+no version, historical tag/body or GitHub release.
 
 ## Reproducible package verification
 

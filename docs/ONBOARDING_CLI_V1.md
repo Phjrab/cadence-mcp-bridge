@@ -11,6 +11,14 @@ Registration and local consistency do not qualify a new execution route.
 
 ## 1. Install and inspect
 
+The open-source bridge requires Python, separately installed package dependencies
+and local MCP configuration. Cadence Virtuoso/Spectre/ADE, their required licenses,
+PDK access and authorized SSH/environment access are user-provided prerequisites.
+They are not included by cloning or installing the bridge, and retain their own
+terms. Use the full reviewed repository for operator deployment helpers; the
+curated sdist is package source for rebuilding the wheel. See
+[licensing boundaries](../THIRD_PARTY_NOTICES.md).
+
 On Windows with Python 3.12 or 3.13, uv and Windows OpenSSH:
 
 ```powershell
@@ -152,7 +160,8 @@ a scientific target is not a specification PASS.
 This is a complete local description/registration/verification/export workflow.
 New physical execution adapters, a positively qualified second installation,
 reviewed real-design variable ranges, generic measurements and release/legal
-readiness remain separate work. The repository still declares a Proprietary
-license and package/release version 1.0.0; public visibility does not change use
-rights. This phase adds no generic remote execution, optimization, layout,
+readiness remain separate work. RELEASE-LICENSE-01 applies Apache-2.0 to original
+bridge source; imported planning rights remain under review and external software
+retains its own terms. Package/release version remains 1.0.0; public visibility
+alone does not grant rights. This phase adds no generic remote execution, optimization, layout,
 DRC/LVS/PEX, Monte Carlo or multidimensional sweep.

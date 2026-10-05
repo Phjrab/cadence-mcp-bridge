@@ -4,7 +4,9 @@ Status: **unpublished proposal**. Conditional version recommendation: **v1.1.0**
 Current package version remains 1.0.0. These notes describe reviewed post-v1
 capabilities through starting main `fff725cdf64d084d7c55ab30d5a38da15f33fb49`
 and PUBLIC-RELEASE-01 installed-package readiness improvements. An exact future
-candidate, license, version update and publication authorization remain required.
+candidate, version update and publication authorization remain required.
+The owner selected Apache-2.0 for original source in RELEASE-LICENSE-01;
+imported planning rights remain separately unresolved and outside package artifacts.
 
 ## Added since the actual published v1.0.0 tag
 
@@ -43,6 +45,7 @@ target. Bias candidates are not optimality claims.
 Use a reviewed post-v1 commit and the [operator guide](ONBOARDING_CLI_V1.md)
 until a new authorized release exists. The old v1.0.0 tag does not contain these
 additions. v1.0.0 was actually published on 2026-08-31 despite its stale body.
-This proposal changes neither that tag/body nor package version or public rights.
-Current license metadata is Proprietary with no LICENSE file; licensing remains
-an owner decision before general distribution.
+The historical tag/body and package version are unchanged. Current original-code
+metadata and canonical LICENSE declare Apache-2.0, with NOTICE and third-party
+boundaries. This does not relicense Cadence, PDKs, clients/dependencies or
+unverified imported planning material. See [licensing audit](LICENSING_AUDIT_V1.md).
