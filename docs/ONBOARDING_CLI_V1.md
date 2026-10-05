@@ -1,5 +1,10 @@
 # Operator onboarding CLI v1
 
+CLIENT-COMPAT-01 adds `--format claude-desktop` as an alias of the same MCP JSON
+export and optional `--sweep-journal` / `CADENCE_MCP_SWEEP_JOURNAL_PATH` for
+operator-owned local storage. Existing journals are never moved/reset by export.
+See [client configuration, qualification matrix and remaining manual steps](CLIENT_COMPATIBILITY_V1.md).
+
 ONBOARD-CLI-01 joins the existing environment v1, design v1/v2/v3 and PDK v2
 contracts. All commands below are local operator commands, never MCP inputs.
 Registration and local consistency do not qualify a new execution route.

@@ -1,5 +1,14 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-05 multi-client program overlay:** The user's directive
+> extends generic onboarding. Cadence MCP Bridge is client independent; Codex
+> and Claude Desktop are local MCP clients of the same server and safety layer.
+> Historical Codex development instructions below remain evidence/agent workflow,
+> not a requirement for server request semantics. CLIENT-COMPAT-01 follows
+> merged public-release preparation; complete one phase and ask once before
+> another. Local protocol/configuration evidence is distinct from actual
+> desktop E2E. No remote MCP endpoint or release publication is activated.
+
 > **Active 2026-09-29 override:** The user explicitly delegated the bounded
 > `AUTO-PHASE-01` campaign. `docs/policy/PHASE_AUTONOMY_V1.md` and
 > `docs/policy/PHASE_CAMPAIGN_V1.json` supersede this file's project-level

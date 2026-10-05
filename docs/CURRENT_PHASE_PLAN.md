@@ -1,5 +1,32 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## CLIENT-COMPAT-01 overlay, 2026-10-05
+
+The user's multi-client directive extends the same onboarding program. PR #110
+is merged; starting main is `28d5313cbacbde2cdc3aba1389548d4c2e1115bb`.
+Environment/design/variable/analysis/PDK/onboarding foundations permit selecting
+one client compatibility phase now. Licensing/publication remains pending and
+is independent of this implementation. Audit client references and all 48 tool
+contracts, preserve Codex registration, reuse the JSON exporter for Claude,
+make sweep journal location operator configurable without moving/resetting
+existing state, verify stdio using an independent JSON-RPC client and installed
+SDK clients, and reuse completed native results with fresh integrity checks.
+Desktop application execution is separately qualified only when observable.
+Do not equate exported configuration or SDK tests with actual desktop E2E.
+Investigate MCPB only; no bundle/publication/remote endpoint. No new simulation,
+result reservation, remote deployment or FS work. Existing cumulative limits,
+removed elapsed ceiling and old histories remain binding; three corrections
+for this change. Complete reviewed feature PR integration, report precise
+matrix/evidence/limitations, then ask once before another major phase.
+See [compatibility](CLIENT_COMPATIBILITY_V1.md).
+Local full regression passes: 1,458 passes / three OS skips / 56 existing
+warnings; focused 51 / one OS skip; security 18, Ruff/mypy and installed-wheel
+stdio pass. Preserved native DC/AC/TRAN and restart lookup are equal through
+both exported settings, with fresh protected/accounting checks. Real desktop
+qualification remains unverified and is documented separately. Recommend
+GENERIC-MEAS-01 around existing extraction evidence while actual desktop
+qualification remains a public-candidate prerequisite; no next phase is activated.
+
 ## PUBLIC-RELEASE-01 overlay, 2026-10-05
 
 The user explicitly proceeds with readiness review after merged PR #109.

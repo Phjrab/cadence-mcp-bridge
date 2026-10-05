@@ -1,5 +1,20 @@
 # Architecture
 
+## MCP client boundary, 2026-10-05
+
+Codex/Claude Desktop/other MCP hosts → standard local stdio MCP → the same
+MCPServer/service/contracts → existing restricted SSH/Cadence execution.
+Clients are outside the execution architecture. `onboarding.py` exports Codex
+TOML or MCP JSON; `claude-desktop` aliases the existing JSON serializer. No
+client brand participates in tool dispatch, admission, budgets or replay.
+An operator-only `CADENCE_MCP_SWEEP_JOURNAL_PATH` makes sweep storage independent
+of package checkout location. Omission retains the exact legacy repository
+`.codex/sweeps-v1.sqlite3` fallback; this is project history, not CODEX_HOME.
+Never move/reset that ledger merely to onboard a different client. Both clients
+must use the same analysis and sweep journals. No runtime registration/path
+input or new remote execution capability is introduced. See
+[audit and matrix](CLIENT_COMPATIBILITY_V1.md).
+
 ## Registered PDK layer, 2026-10-05
 
 The current server has 48 tools. `pdk_adapters.py` provides strict path-free

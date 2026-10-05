@@ -196,6 +196,7 @@ class CadenceService:
         designs: RegistryBase | None = None,
         *,
         analysis_journal: Path | None = None,
+        sweep_journal: Path | None = None,
         pdks: PdkRegistry | None = None,
     ) -> None:
         self._backend = backend
@@ -206,7 +207,9 @@ class CadenceService:
 
         self._sweeps = SweepSupervisor(
             cast(SweepBackend, backend),
-            Path(__file__).resolve().parents[2] / ".codex" / "sweeps-v1.sqlite3",
+            sweep_journal
+            if sweep_journal is not None
+            else Path(__file__).resolve().parents[2] / ".codex" / "sweeps-v1.sqlite3",
         )
 
     async def list_designs(self) -> DesignList:

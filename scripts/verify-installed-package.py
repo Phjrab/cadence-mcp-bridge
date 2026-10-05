@@ -90,7 +90,11 @@ async def verify(
     ):
         raise ValueError("legacy snapshot does not identify the published 22-tool baseline")
     counts: dict[str, int] = {}
-    for format, filename in (("codex", "client.toml"), ("mcp-json", "client.json")):
+    for format, filename in (
+        ("codex", "client.toml"),
+        ("mcp-json", "client.json"),
+        ("claude-desktop", "claude.json"),
+    ):
         output, journal = workspace / filename, workspace / (format + ".sqlite3")
         cli(
             [
@@ -98,6 +102,8 @@ async def verify(
                 *options,
                 "--journal",
                 str(journal),
+                "--sweep-journal",
+                str(workspace / "sweeps.sqlite3"),
                 "--format",
                 format,
                 "--output",
