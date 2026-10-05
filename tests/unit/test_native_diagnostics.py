@@ -353,7 +353,7 @@ async def test_mcp_native_schema_and_validation() -> None:
     backend = Backend()
     async with Client(create_server(CadenceService(cast(CadenceBackend, backend)))) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 45
+        assert len(tools) == 48
         assert tools["cadence_submit_native_diagnostic"].annotations.idempotent_hint  # type: ignore[union-attr]
         profiles = await client.call_tool("cadence_list_native_diagnostics")
         assert profiles.structured_content["analyses"] == ["dc", "ac", "tran"]

@@ -1,8 +1,10 @@
 # PDK-ADAPTER-01 result v1
 
 Starting main: `e8c451b6c64fba264a50979bc25563e865f432e2` (merged PR #107).
-Feature branch: `feat/pdk-adapter-01`. Integration is recorded by the containing
-feature PR and verified GitHub merge state; no post-merge state-sync PR.
+Feature branch: `feat/pdk-adapter-01`,
+[PR #108](https://github.com/Phjrab/cadence-mcp-bridge/pull/108). The containing
+PR and actual GitHub merge state identify integration/ending SHA; the private
+final checkpoint records exact remote SHA/tree equality. No state-sync-only PR.
 
 ## Implementation
 
@@ -15,8 +17,9 @@ write policies and preserved evidence remain unchanged.
 
 ## Verification
 
-Frozen sync, Ruff and strict mypy (30 files) passed. Focused tests: 171 passed,
-two Windows symlink permission skips. Security: 18 passed, secret scan passed,
+Frozen sync, Ruff and strict mypy (30 files) passed. Final full unit gate:
+1,416 passed, two Windows symlink permission skips, 56 existing warnings.
+Resumed focused tests: 290 passed, two OS symlink skips. Security: 18 passed, secret scan passed,
 no known dependency vulnerabilities. Package build/install/version/uninstall/
 cleanup passed with copy installation.
 
@@ -30,7 +33,7 @@ New Spectre attempts, reservations, deployment bytes and paid resources: zero.
 Current private accounting remains 62/500 attempts and 7,114,588,160 reserved
 bytes; broader private storage ceiling and narrower native-v2 gate are unchanged.
 
-Full unit gate: 1,413 passed, three failed, two OS symlink skips and 56 existing
+Initial full unit gate: 1,413 passed, three failed, two OS symlink skips and 56 existing
 warnings. Two failures are stale 45-tool expectations (actual 48):
 
 - `tests/unit/test_native_diagnostics.py:356`, native MCP schema/validation.
@@ -41,18 +44,27 @@ full-suite invocation lacked the established safe-directory/Git runtime settings
 That exact test passed with those settings (one pass), with no code changes.
 The original full gate remains failed; it is not reported as passed.
 
-Three corrections are exhausted. No fourth code/test correction or merge is
-performed. [Feature PR #108](https://github.com/Phjrab/cadence-mcp-bridge/pull/108)
-remains draft. Resume requires an additional correction allowance for both exact
-expected counts 45 → 48, full validation with established Git settings, review
-and permitted integration. No new simulation or protection change is needed.
-GitHub has no checks/reviews at this checkpoint; absence is not CI success.
+The initial checkpoint exhausted three corrections and stopped with a draft
+[PR #108](https://github.com/Phjrab/cadence-mcp-bridge/pull/108). The user explicitly
+allowed one additional correction: both exact counts 45 → 48. That fourth
+correction is applied; resumed focused tests have 290 passes and two OS symlink
+skips, Ruff/mypy/frozen sync pass, and final full validation passes with the
+established Git settings. Original audits and failure evidence remain intact.
+This is a phase-specific extra allowance, not a general budget reset.
+
+Production source bytes match the successful sealed E2E. Fresh resume postflight
+again proves protection, preserved job trees and accounting unchanged. No new
+simulation, reservation or deployment is needed. GitHub had no checks/reviews
+at the blocked checkpoint; actual checks/reviews/rules are re-read on the final
+feature head before permitted merge. Absence is not CI success.
 
 Corrections: (1) import/style and literal tuple typing; (2) exact server tool set
 and short pytest IDs for Windows temporary names; (3) the separate exact read-only
 tool set. Failed transcripts remain private. First E2E lacked the established Git
 safe-directory runtime settings and was denied locally before transport. Applying
 that operator environment succeeded without changing code or authority bytes.
+Correction (4), explicitly authorized by the user for this phase only, updates
+the two exact tool counts. Total used: 4/4 including the additional one allowance.
 
 ## Remaining limits and next phase
 

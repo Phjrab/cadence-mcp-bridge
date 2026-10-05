@@ -14,10 +14,16 @@ elapsed ceiling remains absent. Complete feature PR integration, report and ask
 once before another phase. See [workflow](PDK_ADAPTER_RUNTIME_V2.md) and
 [result](PDK_ADAPTER_01_RESULT_V1.md).
 
-Checkpoint: implementation and sealed E2E verified; integration blocked by a
-stale native/variable test expectations (45 tools, actual 48) after three corrections.
-Preserve failure evidence and a draft feature PR. Stop before another code/test
-correction or merge; resume requires additional correction budget.
+The first checkpoint stopped after three corrections with two stale test counts.
+The user then explicitly allowed one additional correction for this phase: both
+counts 45 → 48 and required validation/review/integration. Keep the original
+three-correction audit, failed transcripts and blocked checkpoint immutable; the
+new private delegation binds this extra allowance. General policy and prior
+phase budgets are not changed. Final gates pass: 1,416 unit passes, two OS
+symlink skips and 56 existing warnings; resumed focused gate has 290 passes.
+Preserved sealed stdio E2E uses identical production bytes; fresh postflight
+verifies protected objects, job trees and accounting unchanged.
+Complete exact feature review/integration, report, then ask once before ONBOARD-CLI-01.
 
 ## GENERIC-SIM-01 overlay, 2026-10-05
 
