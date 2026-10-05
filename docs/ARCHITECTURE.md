@@ -1,8 +1,20 @@
 # Architecture
 
+## Variable contract layer, 2026-10-05
+
+The current server has 39 tools. `variable_contracts.py` provides strict
+immutable numeric policies and exact bounded Decimal normalization/checks.
+`designs.py` extends the same operator registry loader to v2, binds variable
+sets and separate numeric reviews to canonical profile/contract digests,
+and retains v1 schema/projection compatibility. No configured v1 file silently
+inherits v2 contracts. CadenceService exposes two local read-only methods through
+closed MCP schemas. Neither method calls a backend or grants execution.
+No existing lifecycle/native/SSH route is redirected by registration.
+See [variable contracts](GENERIC_VARIABLES_V1.md).
+
 ## Registered design layer, 2026-10-05
 
-The current server has 37 tools. `designs.py` defines a bounded immutable
+At GENERIC-DESIGN-01 the server had 37 tools. `designs.py` defines a bounded immutable
 operator registry, private Cadence/ADE bindings and logical MCP projections.
 `BridgeConfig.design_registry_path` uses the existing settings namespace.
 The default reference registry is replaced, not merged, when this optional

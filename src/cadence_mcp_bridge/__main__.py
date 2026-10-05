@@ -13,7 +13,12 @@ from pathlib import Path
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig
-from cadence_mcp_bridge.designs import DesignRegistry, load_design_registry, register_designs
+from cadence_mcp_bridge.designs import (
+    DesignContractRegistry,
+    DesignRegistry,
+    load_design_registry,
+    register_designs,
+)
 from cadence_mcp_bridge.environments import (
     EnvironmentProfile,
     EnvironmentRejected,
@@ -52,7 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--output", type=Path, required=True)
     design = subparsers.add_parser("design", help="Operator-only local design registry contracts.")
     design_actions = design.add_subparsers(dest="design_action", required=True)
-    design_actions.add_parser("schema", help="Print the versioned design registry JSON schema.")
+    schema = design_actions.add_parser(
+        "schema", help="Print the versioned design registry JSON schema."
+    )
+    schema.add_argument("--schema-version", type=int, choices=(1, 2), default=1)
     for action in ("validate", "register"):
         command = design_actions.add_parser(action)
         command.add_argument("--registry", type=Path, required=True)
@@ -120,7 +128,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.command == "design":
         try:
             if arguments.design_action == "schema":
-                design_result = DesignRegistry.model_json_schema()
+                design_result = (
+                    DesignContractRegistry if arguments.schema_version == 2 else DesignRegistry
+                ).model_json_schema()
             elif arguments.design_action == "register":
                 design_result = register_designs(arguments.registry, arguments.output)
             else:

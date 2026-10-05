@@ -1,5 +1,23 @@
 # Security and Reliability Baseline
 
+## Variable numeric boundary, 2026-10-05
+
+GENERIC-VAR-01 adds two local read-only tools; total tool count is 39.
+The existing operator-only bounded registry gains v2, exact private variable
+bindings, decimal strings, units/types and mutation policies. Qualified numeric
+ranges require separate one-to-one design/profile/contract-hash-bound operator
+reviews. Stale/substituted/orphan reviews, aliases, invalid defaults/grids,
+code/paths, unknown fields and nonfinite/coerced numeric values are rejected.
+Evidence hashes identify operator-reviewed material; they do not independently
+certify electrical safety. The operator's file ownership/ACL remains the trust
+boundary. MCP neither writes configuration nor exposes review or binding data.
+
+Checks require explicit values and never fill defaults or authorize a run.
+Bias ranges remain unqualified, VDD 1 V is fixed, and spec evaluation stays
+not_evaluated. Generic execution is disabled even for reviewed numeric contracts.
+Existing native budgets, locks, UUID replay, disk floors, fingerprints and
+execution allowlists are unchanged. See [workflow](GENERIC_VARIABLES_V1.md).
+
 ## Registered design boundary, 2026-10-05
 
 GENERIC-DESIGN-01 adds two local read-only tools to the existing 35. Operator

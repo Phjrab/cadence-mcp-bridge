@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "designs": [
+    {
+      "schema_version": 1,
+      "design_id": "example-amplifier",
+      "environment_id": "example-lab-01",
+      "pdk_adapter_id": "example-pdk-v1",
+      "binding": {
+        "library": "ExampleLib",
+        "cell": "ExampleAmplifier",
+        "view": "schematic",
+        "ade": {
+          "kind": "ade_l",
+          "state": "exampleState"
+        }
+      },
+      "allowed_analyses": [
+        "dc",
+        "ac",
+        "tran"
+      ],
+      "allowed_variables": [
+        "bias-n",
+        "bias-p"
+      ],
+      "allowed_measurements": [
+        "dc-output",
+        "ac-gain"
+      ],
+      "allowed_corners": [
+        "nominal"
+      ],
+      "protected_source": true,
+      "work_copy_policy": "read_only"
+    }
+  ],
+  "variable_sets": [
+    {
+      "design_id": "example-amplifier",
+      "design_profile_sha256": "64bea7c378b7e7460012f78a590390fcf59172a05654191f6b275a4d248a7d5f",
+      "variables": [
+        {
+          "logical_id": "bias-n",
+          "cadence_binding": "ExampleBiasN",
+          "unit": "V",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "read_only",
+          "range_status": "unqualified",
+          "minimum": null,
+          "maximum": null,
+          "step_policy": "unqualified",
+          "step": null,
+          "fixed_value": null,
+          "review_id": null
+        },
+        {
+          "logical_id": "bias-p",
+          "cadence_binding": "ExampleBiasP",
+          "unit": "V",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "read_only",
+          "range_status": "unqualified",
+          "minimum": null,
+          "maximum": null,
+          "step_policy": "unqualified",
+          "step": null,
+          "fixed_value": null,
+          "review_id": null
+        }
+      ]
+    }
+  ],
+  "range_reviews": []
+}

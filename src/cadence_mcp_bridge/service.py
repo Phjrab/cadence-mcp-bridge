@@ -20,8 +20,8 @@ from cadence_mcp_bridge.actual_diagnostics import (
 from cadence_mcp_bridge.designs import (
     DesignDescription,
     DesignList,
-    DesignRegistry,
-    reference_registry,
+    RegistryBase,
+    reference_contract_registry,
 )
 from cadence_mcp_bridge.discovery import validate_cell, validate_library, validate_view
 from cadence_mcp_bridge.errors import (
@@ -88,6 +88,11 @@ from cadence_mcp_bridge.sweeps import (
     SweepResult,
     SweepStatus,
     SweepSubmission,
+)
+from cadence_mcp_bridge.variable_contracts import (
+    VariableList,
+    VariableValuesRequest,
+    VariableValuesResult,
 )
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
@@ -171,9 +176,9 @@ _ResultT = TypeVar("_ResultT")
 
 
 class CadenceService:
-    def __init__(self, backend: CadenceBackend, designs: DesignRegistry | None = None) -> None:
+    def __init__(self, backend: CadenceBackend, designs: RegistryBase | None = None) -> None:
         self._backend = backend
-        self._designs = reference_registry() if designs is None else designs
+        self._designs = reference_contract_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
         from pathlib import Path
 
@@ -187,6 +192,12 @@ class CadenceService:
 
     async def describe_design(self, design_id: str) -> DesignDescription:
         return self._designs.describe(design_id)
+
+    async def list_design_variables(self, design_id: str) -> VariableList:
+        return self._designs.variables(design_id)
+
+    async def check_variable_values(self, request: VariableValuesRequest) -> VariableValuesResult:
+        return self._designs.check_variables(request)
 
     async def plan_sweep(self, request: SweepRequest) -> SweepPlan:
         return await self._sweeps.plan(request)
