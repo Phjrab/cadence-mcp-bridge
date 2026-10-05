@@ -1,8 +1,25 @@
 # Architecture
 
+## Registered analysis layer, 2026-10-05
+
+The current server has 45 tools. `analyses.py` defines closed contracts and
+bounded lifecycle envelopes; registry v3 binds profiles/variable sets to a
+compiled adapter digest. `analysis_service.py` selects only registered adapters
+and calls existing CadenceService native methods, preserving backend transport,
+fingerprint/input/resource/replay checks. The current compiled adapter recognizes
+the exact reviewed reference only. v1/v2 schemas and existing routes are intact.
+
+`analysis_store.py` persists operation/design/analysis/plan identity before
+dispatch, in operator-local bounded SQLite state independent of package source.
+Exactly one admission may invoke submit; subsequent requests and restarts only
+look up that ID. Mismatched/uncertain identities never trigger a blind resend.
+The optional journal setting extends BridgeConfig, without MCP path inputs.
+Native live cancellation is not qualified; the endpoint reads and reports
+terminal no-op/unsupported state. See [workflow](GENERIC_ANALYSIS_V1.md).
+
 ## Variable contract layer, 2026-10-05
 
-The current server has 39 tools. `variable_contracts.py` provides strict
+At GENERIC-VAR-01 the server had 39 tools. `variable_contracts.py` provides strict
 immutable numeric policies and exact bounded Decimal normalization/checks.
 `designs.py` extends the same operator registry loader to v2, binds variable
 sets and separate numeric reviews to canonical profile/contract digests,

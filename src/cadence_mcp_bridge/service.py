@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Literal, Protocol, TypeVar, cast
 from uuid import RFC_4122, UUID, uuid4
 
@@ -17,11 +18,22 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.analyses import (
+    AnalysisCancellation,
+    AnalysisJobQuery,
+    AnalysisList,
+    AnalysisPlan,
+    AnalysisResult,
+    AnalysisSelection,
+    AnalysisStatus,
+    AnalysisSubmission,
+)
+from cadence_mcp_bridge.analysis_service import AnalysisSupervisor
 from cadence_mcp_bridge.designs import (
     DesignDescription,
     DesignList,
     RegistryBase,
-    reference_contract_registry,
+    reference_analysis_registry,
 )
 from cadence_mcp_bridge.discovery import validate_cell, validate_library, validate_view
 from cadence_mcp_bridge.errors import (
@@ -176,11 +188,17 @@ _ResultT = TypeVar("_ResultT")
 
 
 class CadenceService:
-    def __init__(self, backend: CadenceBackend, designs: RegistryBase | None = None) -> None:
+    def __init__(
+        self,
+        backend: CadenceBackend,
+        designs: RegistryBase | None = None,
+        *,
+        analysis_journal: Path | None = None,
+    ) -> None:
         self._backend = backend
-        self._designs = reference_contract_registry() if designs is None else designs
+        self._designs = reference_analysis_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
-        from pathlib import Path
+        self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal)
 
         self._sweeps = SweepSupervisor(
             cast(SweepBackend, backend),
@@ -198,6 +216,24 @@ class CadenceService:
 
     async def check_variable_values(self, request: VariableValuesRequest) -> VariableValuesResult:
         return self._designs.check_variables(request)
+
+    async def list_analyses(self, design_id: str) -> AnalysisList:
+        return self._analyses.listing(design_id)
+
+    async def plan_analysis(self, request: AnalysisSelection) -> AnalysisPlan:
+        return self._analyses.plan(request)
+
+    async def submit_analysis(self, submission: AnalysisSubmission) -> AnalysisStatus:
+        return await self._analyses.submit(submission)
+
+    async def analysis_status(self, request: AnalysisJobQuery) -> AnalysisStatus:
+        return await self._analyses.status(request)
+
+    async def analysis_result(self, request: AnalysisJobQuery) -> AnalysisResult:
+        return await self._analyses.result(request)
+
+    async def cancel_analysis(self, request: AnalysisJobQuery) -> AnalysisCancellation:
+        return await self._analyses.cancel(request)
 
     async def plan_sweep(self, request: SweepRequest) -> SweepPlan:
         return await self._sweeps.plan(request)

@@ -1,5 +1,16 @@
 # Operations
 
+## Registered analysis operator workflow
+
+Use [GENERIC_ANALYSIS_V1.md](GENERIC_ANALYSIS_V1.md) for registry v3 and the
+six MCP interfaces. The same design registration/settings mechanism is reused.
+`CADENCE_MCP_ANALYSIS_JOURNAL_PATH` selects a stable private local SQLite
+admission catalog; otherwise use the OS user-state default. Protect/preserve
+this catalog across restarts. Never delete it or choose a new ID to bypass an
+uncertain dispatch. Plans reserve no resources; native runtime guards retain
+authority. Existing completed IDs can be admitted without a new simulation.
+Other designs remain blocked and native live cancellation remains unsupported.
+
 ## Variable operator workflow
 
 Use [GENERIC_VARIABLES_V1.md](GENERIC_VARIABLES_V1.md) and
