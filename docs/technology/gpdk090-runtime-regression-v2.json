@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "adapters": [
+    {
+      "schema_version": 2,
+      "adapter_id": "gpdk090-reference-v1",
+      "technology_id": "gpdk090",
+      "role": "regression_reference",
+      "environment_ids": [
+        "cadence-vm"
+      ],
+      "process_corner_ids": [
+        "nn",
+        "ff",
+        "ss",
+        "fs",
+        "sf"
+      ],
+      "rc_corner_ids": [],
+      "binding_kind": "compiled_native_reference_v1",
+      "binding_ref": "native-fixed-reference-v1",
+      "binding_sha256": "945b3feebb8c48fe3a9d9f2a7b074359fc1f1419a6d63a08ceac32b0e708d9cf",
+      "capabilities": [
+        {
+          "capability_id": "native-dc",
+          "status": "fixed_native_compatibility",
+          "evidence_ref": "native-mcp-reference-dc-ac-tran"
+        },
+        {
+          "capability_id": "native-ac",
+          "status": "fixed_native_compatibility",
+          "evidence_ref": "native-mcp-reference-dc-ac-tran"
+        },
+        {
+          "capability_id": "native-tran",
+          "status": "fixed_native_compatibility",
+          "evidence_ref": "native-mcp-reference-dc-ac-tran"
+        },
+        {
+          "capability_id": "process-corners",
+          "status": "observed",
+          "evidence_ref": "ade-pvt-qual-01"
+        },
+        {
+          "capability_id": "operating-point",
+          "status": "observed",
+          "evidence_ref": "ade-pvt-diag-01"
+        },
+        {
+          "capability_id": "statistical",
+          "status": "unqualified",
+          "evidence_ref": null
+        },
+        {
+          "capability_id": "device-mapping",
+          "status": "unqualified",
+          "evidence_ref": null
+        },
+        {
+          "capability_id": "layout",
+          "status": "unqualified",
+          "evidence_ref": null
+        },
+        {
+          "capability_id": "drc",
+          "status": "unqualified",
+          "evidence_ref": null
+        },
+        {
+          "capability_id": "lvs",
+          "status": "unqualified",
+          "evidence_ref": null
+        },
+        {
+          "capability_id": "pex",
+          "status": "unqualified",
+          "evidence_ref": null
+        }
+      ]
+    }
+  ]
+}

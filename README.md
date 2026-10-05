@@ -45,6 +45,14 @@ resubmission. Inputs have no parameter or voltage fields. Native live
 cancellation is explicitly unsupported. See
 [analysis workflow](docs/GENERIC_ANALYSIS_V1.md).
 
+PDK-ADAPTER-01 implements runtime PDK registry v2 and operator
+`pdk schema/validate/register` with `CADENCE_MCP_PDK_REGISTRY_PATH`. Three
+read-only tools inspect capabilities and resolve design PDK/environment IDs.
+Registered analysis dispatch requires the exact compiled reference; other PDKs
+remain unqualified. Local gates and preserved-result stdio regression are verified.
+See [PDK workflow](docs/PDK_ADAPTER_RUNTIME_V2.md)
+and [phase result](docs/PDK_ADAPTER_01_RESULT_V1.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -52,10 +60,10 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and exact numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility |
-| Supported by contract | Operator-only environment preflight and v1/v2/v3 design registration; bound numeric reviews; compiled fixed-native analysis adapter and durable admission; bounded inputs and protected source; unqualified designs cannot execute |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial |
+| Supported by contract | Operator-only environment preflight, v1/v2/v3 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Execution of newly onboarded environments/designs through qualified adapters; parameterized real-design sweep, generic measurements/PDK runtime adapters, native live cancellation and full public onboarding/release |
+| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and full public onboarding/release |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
@@ -72,7 +80,7 @@ for a future public onboarding release remains undecided.
 
 ## Current MCP interface
 
-The server has 45 typed tools. `cadence_list_designs` and
+The server has 48 typed tools. `cadence_list_designs` and
 `cadence_describe_design(design_id)` add read-only local introspection; every
 registered generic profile remains unqualified for execution. The original 22
 lifecycle, discovery, profile,

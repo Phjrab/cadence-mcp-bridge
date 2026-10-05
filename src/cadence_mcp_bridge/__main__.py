@@ -28,6 +28,7 @@ from cadence_mcp_bridge.environments import (
     prepare_environment,
     qualify_environment,
 )
+from cadence_mcp_bridge.pdk_adapters import PdkRegistry, load_pdk_registry, register_pdk_adapters
 from cadence_mcp_bridge.server import run_stdio_server
 
 
@@ -68,12 +69,38 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--registry", type=Path, required=True)
         if action == "register":
             command.add_argument("--output", type=Path, required=True)
+    pdk = subparsers.add_parser("pdk", help="Operator-only local PDK capability contracts.")
+    pdk_actions = pdk.add_subparsers(dest="pdk_action", required=True)
+    pdk_actions.add_parser("schema", help="Print runtime PDK registry schema v2.")
+    for action in ("validate", "register"):
+        command = pdk_actions.add_parser(action)
+        command.add_argument("--registry", type=Path, required=True)
+        if action == "register":
+            command.add_argument("--output", type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "pdk":
+        try:
+            if arguments.pdk_action == "schema":
+                pdk_result = PdkRegistry.model_json_schema()
+            elif arguments.pdk_action == "register":
+                pdk_result = register_pdk_adapters(arguments.registry, arguments.output)
+            else:
+                registry_pdks, _ = load_pdk_registry(arguments.registry)
+                pdk_result = {
+                    "status": "valid_description",
+                    "adapter_count": len(registry_pdks.adapters),
+                    "execution_authorized": False,
+                }
+        except (OSError, ValueError):
+            print(json.dumps({"status": "blocked", "reason": "pdk_registry_invalid"}))
+            return 1
+        print(json.dumps(pdk_result, sort_keys=True))
+        return 0
     if arguments.command == "doctor":
         config_valid = True
         try:
@@ -152,6 +179,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if arguments.command == "config-check":
         config = BridgeConfig()
+        if config.pdk_registry_path is not None:
+            try:
+                load_pdk_registry(config.pdk_registry_path)
+            except ValueError:
+                print("configuration: invalid PDK registry")
+                return 1
         if config.design_registry_path is not None:
             try:
                 load_design_registry(config.design_registry_path)

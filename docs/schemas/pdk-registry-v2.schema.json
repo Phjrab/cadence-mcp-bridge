@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "PdkAdapter": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "adapter_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Adapter Id",
+          "type": "string"
+        },
+        "technology_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Technology Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "regression_reference",
+            "target_candidate"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "environment_ids": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Environment Ids",
+          "type": "array"
+        },
+        "process_corner_ids": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Process Corner Ids",
+          "type": "array"
+        },
+        "rc_corner_ids": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Rc Corner Ids",
+          "type": "array"
+        },
+        "binding_kind": {
+          "enum": [
+            "unqualified",
+            "compiled_native_reference_v1"
+          ],
+          "title": "Binding Kind",
+          "type": "string"
+        },
+        "binding_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Binding Ref"
+        },
+        "binding_sha256": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Binding Sha256"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/PdkCapability"
+          },
+          "maxItems": 16,
+          "title": "Capabilities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "adapter_id",
+        "technology_id",
+        "role",
+        "environment_ids",
+        "process_corner_ids",
+        "rc_corner_ids",
+        "binding_kind",
+        "binding_ref",
+        "binding_sha256",
+        "capabilities"
+      ],
+      "title": "PdkAdapter",
+      "type": "object"
+    },
+    "PdkCapability": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_id": {
+          "enum": [
+            "native-dc",
+            "native-ac",
+            "native-tran",
+            "process-corners",
+            "operating-point",
+            "statistical",
+            "device-mapping",
+            "layout",
+            "drc",
+            "lvs",
+            "pex"
+          ],
+          "title": "Capability Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "unqualified",
+            "observed",
+            "fixed_native_compatibility"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Evidence Ref"
+        }
+      },
+      "required": [
+        "capability_id",
+        "status",
+        "evidence_ref"
+      ],
+      "title": "PdkCapability",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "adapters": {
+      "items": {
+        "$ref": "#/$defs/PdkAdapter"
+      },
+      "maxItems": 16,
+      "title": "Adapters",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "adapters"
+  ],
+  "title": "PdkRegistry",
+  "type": "object"
+}

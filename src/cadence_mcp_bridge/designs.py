@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from cadence_mcp_bridge.analyses import AnalysisContract, native_adapter_digest
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
+from cadence_mcp_bridge.pdk_reference import REFERENCE_ID
 from cadence_mcp_bridge.variable_contracts import (
     DesignVariables,
     RangeReview,
@@ -284,7 +285,7 @@ def reference_registry() -> DesignRegistry:
                 schema_version=1,
                 design_id="reference-differential-amplifier-tb2",
                 environment_id="cadence-vm",
-                pdk_adapter_id="gpdk090-reference-v1",
+                pdk_adapter_id=REFERENCE_ID,
                 binding=DesignBinding(
                     library="MyDesignLib",
                     cell="Differential_Amplifier_TB2",

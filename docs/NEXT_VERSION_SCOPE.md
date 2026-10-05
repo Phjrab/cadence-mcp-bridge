@@ -1,5 +1,17 @@
 # Next Version Scope
 
+## PDK runtime overlay, 2026-10-05
+
+GENERIC-VAR-01 and GENERIC-SIM-01 completed after the earlier overlay below.
+PDK-ADAPTER-01 adds logical runtime registry v2, three read-only tools (48 total)
+and exact-reference checks in registered analysis admission. Another PDK may be
+described but remains unqualified for execution. See
+[workflow](PDK_ADAPTER_RUNTIME_V2.md) and [result](PDK_ADAPTER_01_RESULT_V1.md).
+The user allowed one extra correction; final local and preserved-result gates pass.
+Integration uses the containing feature PR; actual merge state is checked on GitHub.
+ONBOARD-CLI-01 is proposed next and awaits one continuation decision. No release
+version/tag is selected. Historical scope/gates below remain dated history.
+
 ## Current generic onboarding overlay, 2026-10-05
 
 The user's new program selects GENERIC-ENV-01 as its first bounded implementation
