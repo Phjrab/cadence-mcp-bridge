@@ -1,5 +1,15 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 STORAGE-MGMT-01 overlay:** The user selects implementation
+> after merged planning #116. Inventory only registered result roots; retain
+> historical replay/evidence, original/ADE/PDK and accounting protection. Implement
+> exact plans, dry-run and separately user-selected/operator-authorized leaf cleanup.
+> No historical data deletion is implied by phase development. Reuse shared EDA,
+> 10 GiB/500 cumulative accounting and removed elapsed ceiling. Complete one
+> reviewed feature PR; report actual qualification and ask once before ANALOG-MEAS-01.
+> See docs/SIMULATION_STORAGE_V1.md and the preserved audited planning record.
+
+
 > **Active 2026-10-05 sweep lifecycle/budget overlay:** The latest user selects
 > GENERIC-SWEEP-INTEGRATION-01 after #114 and explicitly raises result
 > reservations to 10 GiB. Preserve previous preparation, all consumed counters,

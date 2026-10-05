@@ -204,7 +204,7 @@ async def test_mcp_closed_schema_and_submission(tmp_path: Path) -> None:
     proposed = await submission(svc)
     async with Client(create_server(svc)) as client:
         tools = (await client.list_tools()).tools
-        assert len(tools) == 58
+        assert len(tools) == 63
         prepared = await client.call_tool(
             "cadence_prepare_design_sweep",
             {

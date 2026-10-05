@@ -232,3 +232,17 @@ the secret preflight, and strict locked-dependency `pip-audit` are mandatory acc
 Unit tests mock subprocess and perform no SSH,
 Cadence, network, or remote filesystem operations. The separately marked integration test
 contacts `cadence-vm` only when `CADENCE_MCP_RUN_INTEGRATION=1` is explicitly set.
+
+## STORAGE-MGMT-01 architecture
+
+Five typed storage tools reuse the service/backend boundary and reference SSH
+adapter. The packaged Python-2.6-compatible worker is an isolated execution
+module: it is separately compiled/qualified on the guest rather than annotated
+with unsupported modern syntax. Its specific Ruff/mypy compatibility exceptions
+apply only to that module; strict typing remains on public contracts and adapters.
+Inventory uses closed result groups, streaming descriptor-relative traversal,
+metadata limits and opaque IDs. Exact cleanup plans require separate operator-owned
+registration and selected-user consent; no historical dependency is silently removed.
+Descriptor-relative quarantine/identity recheck precedes any leaf unlink and durable
+intent/result handles partial or uncertain execution. Cumulative accounting is never
+refunded. See [contract and qualification boundary](SIMULATION_STORAGE_V1.md).

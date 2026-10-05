@@ -103,6 +103,17 @@ from cadence_mcp_bridge.registered_sweeps import (
 )
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
+from cadence_mcp_bridge.storage import (
+    CleanupOutcome,
+    CleanupPlan,
+    CleanupRequest,
+    StorageArtifact,
+    StorageArtifactRequest,
+    StoragePage,
+    StoragePageRequest,
+    StorageSelection,
+    StorageSummary,
+)
 from cadence_mcp_bridge.sweeps import (
     SweepPlan,
     SweepRequest,
@@ -266,6 +277,11 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_storage_summary",
+                "cadence_list_storage_artifacts",
+                "cadence_describe_storage_artifact",
+                "cadence_plan_storage_cleanup",
+                "cadence_execute_storage_cleanup",
                 "cadence_list_designs",
                 "cadence_list_pdk_adapters",
                 "cadence_describe_pdk_adapter",
@@ -299,7 +315,10 @@ class DesignContractServer(MCPServer):
         arguments: dict[str, Any],
         context: Context[Any, Any] | None = None,
     ) -> CallToolResult | InputRequiredResult:
-        if name in {"cadence_list_designs", "cadence_list_pdk_adapters"} and arguments:
+        if (
+            name in {"cadence_list_designs", "cadence_list_pdk_adapters", "cadence_storage_summary"}
+            and arguments
+        ):
             raise ToolError("Design listing accepts no arguments")
         if name in {
             "cadence_describe_design",
@@ -318,6 +337,10 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_list_storage_artifacts": "request",
+            "cadence_describe_storage_artifact": "request",
+            "cadence_plan_storage_cleanup": "request",
+            "cadence_execute_storage_cleanup": "request",
             "cadence_plan_analysis": "request",
             "cadence_submit_analysis": "submission",
             "cadence_analysis_status": "request",
@@ -354,6 +377,68 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_storage_summary",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Inspect only registered reference result roots. Returns bounded totals, "
+        "coverage, protected/replay/evidence classes, disk floor and cumulative reservations. "
+        "No raw contents/paths or automatic deletion; partial totals are lower bounds.",
+    )
+    async def cadence_storage_summary() -> Annotated[CallToolResult, StorageSummary]:
+        return await _stable_result(service.storage_summary())
+
+    @server.tool(
+        name="cadence_list_storage_artifacts",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Page at most 20 opaque artifacts from an inspected snapshot. Snapshot drift "
+        "fails closed. Age and extracted measurements do not grant deletion permission.",
+    )
+    async def cadence_list_storage_artifacts(
+        request: StoragePageRequest,
+    ) -> Annotated[CallToolResult, StoragePage]:
+        return await _stable_result(service.list_storage_artifacts(request))
+
+    @server.tool(
+        name="cadence_describe_storage_artifact",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Describe one opaque registered artifact at the exact snapshot, including "
+        "dependencies, classification and deletion reason. No filesystem path/content inputs.",
+    )
+    async def cadence_describe_storage_artifact(
+        request: StorageArtifactRequest,
+    ) -> Annotated[CallToolResult, StorageArtifact]:
+        return await _stable_result(service.describe_storage_artifact(request))
+
+    @server.tool(
+        name="cadence_plan_storage_cleanup",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Plan at most 16 exact inspected artifact IDs. Returns stable hash, qualified "
+        "candidates and protected exclusions without deleting. Report the plan for user selection.",
+    )
+    async def cadence_plan_storage_cleanup(
+        request: StorageSelection,
+    ) -> Annotated[CallToolResult, CleanupPlan]:
+        return await _stable_result(service.plan_storage_cleanup(request))
+
+    @server.tool(
+        name="cadence_execute_storage_cleanup",
+        annotations=_CANCEL,
+        structured_output=True,
+        description="Dry-run by default. Execute only exact selected IDs from a hash-bound plan "
+        "when an independent operator approval records explicit user selection for this UUID. "
+        "Rechecks fingerprints/dependencies under EDA lock; protected/history/replay data cannot "
+        "be deleted. Retry the same operation UUID; UNKNOWN never authorizes a blind retry. "
+        "Only reviewed isolated intermediate leaves qualify; reservations never refund.",
+    )
+    async def cadence_execute_storage_cleanup(
+        request: CleanupRequest,
+    ) -> Annotated[CallToolResult, CleanupOutcome]:
+        return await _stable_result(service.execute_storage_cleanup(request))
 
     @server.tool(
         name="cadence_describe_design_sweep",

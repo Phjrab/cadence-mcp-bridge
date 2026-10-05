@@ -545,3 +545,14 @@ The script builds, installs, checks, and uninstalls the `1.0.0` release-candidat
 in a validated temporary directory. The V4 copy-only sequence, dry-run/apply equivalence, backup
 restore, and design immutability checks pass. The `v1.0.0` tag and private GitHub release remain
 prohibited until this release-preparation branch is reviewed, merged, and separately authorized.
+
+## Simulation storage management
+
+Use the [bounded storage workflow](SIMULATION_STORAGE_V1.md) for metadata,
+classification, exact plans and default dry-run. The reference result adapter is
+separately deployed/qualified; the old 30-day cleanup command stays dry-run-only.
+An independent operator review and exact explicit human selection record are needed
+before selected intermediate deletion. Phase autonomy is not destructive consent.
+Do not reset cumulative reservations, reclassify preserved results or discard
+uncertain quarantine/audit state. Real-host qualification and any blockers are
+recorded in PROJECT_STATE.md; no automatic cleanup is enabled.

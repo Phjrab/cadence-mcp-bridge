@@ -389,7 +389,7 @@ async def test_mcp_schema_closed_inputs_and_real_result_wrapper(tmp_path: Path) 
     svc = service(backend, tmp_path / "store.sqlite3")
     async with Client(create_server(svc)) as client:
         tools = {tool.name: tool for tool in (await client.list_tools()).tools}
-        assert len(tools) == 58
+        assert len(tools) == 63
         for name in (
             "cadence_list_analyses",
             "cadence_plan_analysis",

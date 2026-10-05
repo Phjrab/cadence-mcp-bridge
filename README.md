@@ -104,6 +104,17 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
 [phase evidence](docs/GENERIC_ENV_01_RESULT_V1.md).
 
+STORAGE-MGMT-01 is in progress on its feature branch. Five typed storage tools
+implement bounded inventory, classification, exact cleanup plans and dry-run/
+selected cleanup contracts. Local tests and installed-package checks are verified;
+reference-host inventory/plan/dry-run protocol is verified, but the initial
+64-artifact bound gives partial coverage. Reported bytes are a lower bound;
+cleanup remains blocked until complete coverage is established.
+Historical replay/evidence results remain protected. Actual deletion requires
+explicit human selection and a separate operator record; real-host deletion
+has not been tested. See the [storage workflow](docs/SIMULATION_STORAGE_V1.md)
+and [current checkpoint](docs/STORAGE_MGMT_01_CHECKPOINT_V1.md).
+
 | Status | Scope |
 | --- | --- |
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
@@ -146,7 +157,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 58 typed tools, preserving all previous 53 schemas.
+This feature branch has 63 typed tools; all previous 58 full schemas are preserved.
+The five new storage interfaces have verified reference-host read/dry-run behavior;
+complete inventory coverage remains pending.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
 contract/planning preparation only. Registered
 `cadence_list_measurements`, `cadence_describe_measurement` and
