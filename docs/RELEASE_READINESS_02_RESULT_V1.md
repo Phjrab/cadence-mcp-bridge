@@ -3,7 +3,7 @@
 Date: 2026-10-06. Starting main:
 `4ea17e2641f316ec0899c9c91f8bea97c6b4086f` (merged SPEC-CONTRACT-01 #119).
 Feature branch: `feat/release-readiness-02`. Integration uses the containing
-reviewed feature PR; exact resulting remote SHA/tree verification is retained
+reviewed feature [PR #120](https://github.com/Phjrab/cadence-mcp-bridge/pull/120); exact resulting remote SHA/tree verification is retained
 privately after permitted merge. Package/server version stays **1.0.0**.
 
 ## Implementation

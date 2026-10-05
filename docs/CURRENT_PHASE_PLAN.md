@@ -19,7 +19,7 @@ native E2E reused with fresh protected postflight; 1,088 prior private records e
 Zero simulation/reservation/deployment/deletion; one correction of 20 consumed.
 Curated package CONDITIONALLY_READY; new GitHub release NOT_READY; whole-tree
 rights LEGAL_REVIEW_REQUIRED. No version/tag/release/body edit or app PASS.
-Integration uses the containing reviewed feature PR, with resulting remote SHA/tree
+Integration uses containing reviewed [PR #120](https://github.com/Phjrab/cadence-mcp-bridge/pull/120), with resulting remote SHA/tree
 recorded privately. Recommend CLIENT-REAL-QUAL-01; ask once at this phase boundary.
 
 ## SPEC-CONTRACT-01 activation, 2026-10-06
