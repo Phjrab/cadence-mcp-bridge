@@ -17,6 +17,7 @@ generic_env_01_new_spectre_attempts: 0
 generic_env_01_runtime_ledgers: unchanged_no_reset_or_activation
 generic_env_01_protected_integrity: fresh_sealed_guard_verified
 generic_env_01_integration_reference: containing_feature_pr_verify_github_state
+generic_env_01_feature_pr: https://github.com/Phjrab/cadence-mcp-bridge/pull/104
 generic_env_01_latest_runtime_budget_source: private_current_ledger_prior_numeric_entries_are_dated_history
 generic_env_01_next_phase: GENERIC-DESIGN-01_pending_one_user_choice
 bias_headroom_01_status: sixteen_native_computations_verified_first_reader_failure_recovered_without_rerun
@@ -483,13 +484,42 @@ current_feature_branch: feat/generic-env-01
 base_main_commit: 407cc401e5027070a54da190537e1b7d91e80a11
 last_commit: recorded_in_private_feature_and_merge_checkpoint
 last_push: null
-push_verification: pending_at_commit_report_after_remote_sha_check
+push_verification: feature_head_verified_final_sha_in_private_checkpoint_and_completion_report
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: generic_env_expected_permission_rejection_native_35_stdio_dc_ac_tran_result_replay_equal_no_new_simulations
 user_action_required: "At this major phase completion, choose once whether to start GENERIC-DESIGN-01. Generic qualification of the reference installation requires operator-managed Cadence executable permission hardening; this phase does not modify that installation."
 ```
+
+## GENERIC-ENV-01 checkpoint
+
+- 2026-10-05: Audited fresh main
+  `407cc401e5027070a54da190537e1b7d91e80a11` (merged PR #103), public visibility,
+  published v1.0.0 and 35 existing MCP tools. The user's one-phase generic
+  onboarding delegation selects GENERIC-ENV-01; no completed WP/circuit phase
+  is reopened. Versioned private operator environment contracts and fixed probe
+  qualification are implemented around the unchanged execution layer.
+- Ruff, strict mypy (23 source files), 1,188 unit tests, the existing security
+  and locked-dependency audit gates, and build/install/uninstall passed. The
+  eight baseline failures were diagnosed and fixed only in the isolated Windows
+  long-path fixture. Three implementation corrections and earlier evidence are
+  preserved privately. Actual Python 2.6 compilation and expected executable
+  permission rejection were verified; the reference environment is not qualified
+  by this new check. Original installation permissions were not changed.
+- Actual stdio still lists 35 tools; preserved native DC/AC/TRAN results compare
+  equal, completed-ID replay consumes no attempts and wrong-analysis reads are
+  rejected. Fresh sealed original/ADE/PDK/reference/history guards pass. New
+  Spectre attempts and result reservations are zero; exact current budgets remain
+  private and unchanged. Older numeric budget fields above are dated phase
+  history, not the current runtime ledger. No elapsed ceiling is restored.
+- PR #104 contains this implementation and reviewed result documentation.
+  Its initial feature head was verified on GitHub as
+  `1d2a7d3c2887c0cdddb07709b1fcab7515d40cec`; final head/merge/remote main
+  verification belongs to the private completion checkpoint and the completion
+  report, without a later state-sync-only PR. At review, GitHub reported a clean
+  mergeable PR, no check runs or submitted reviews, and no effective branch rules.
+  See `docs/GENERIC_ENV_01_RESULT_V1.md`. Ask once before GENERIC-DESIGN-01.
 
 ## ADE-PVT-DIAG-01 checkpoint
 

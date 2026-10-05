@@ -9,6 +9,14 @@ Branch: `feat/generic-env-01`. GitHub is public; v1.0.0 is actually published,
 and the package remains 1.0.0. The one-phase user delegation governs integration
 and the single continuation question. Historical WP/circuit work is preserved.
 
+Feature PR: [#104](https://github.com/Phjrab/cadence-mcp-bridge/pull/104).
+The initial pushed head is `1d2a7d3c2887c0cdddb07709b1fcab7515d40cec`.
+The reviewed feature contains 18 public files. GitHub reported CLEAN/MERGEABLE,
+no check runs, no submitted reviews and no effective branch rules; local gates
+and exact public-diff review supply the verification evidence. Final PR/main
+identity is verified at integration and retained in the private checkpoint and
+completion report. No direct-main/force push or protection bypass is used.
+
 ## Implemented capability
 
 - Frozen closed version-1 environment profiles, shared cross-field validation,
