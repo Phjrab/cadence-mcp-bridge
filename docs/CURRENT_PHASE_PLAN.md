@@ -1,5 +1,25 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ANALOG-MEAS-01 activation, 2026-10-06
+
+User continuation selects this one phase after merged #117 at
+`e3fcfad30f35c68b1a90160d4d5f3a364436ab12`. STORAGE-MGMT-01 is complete;
+actual Linux deletion remains NOT_RUN. Implement registry v6 derived contracts
+around unchanged v5 source/analysis/sweep identities, with three read-only tools.
+Use preserved admitted native AC evidence for differential gain at 10 Hz and
+first downward 3.0 dB crossing relative to that measured reference. Bandwidth
+is a bracketed log-frequency interpolation estimate; no DC plateau/error bound,
+unity-gain or closed-loop claim. Phase margin, power, offset and slew rate retain
+explicit UNQUALIFIED reasons and future scientific/extraction requirements.
+
+No new simulation, extraction, remote deployment, deletion, reservation, target
+registration, optimization or release. Keep 62/500 attempts, 7,114,588,160 / 10 GiB
+reservations, removed elapsed ceiling and all protection/replay rules. Local
+static/full/security/dependency/distribution and exported-client stdio regression
+are required; real Desktop app evidence remains distinct. Preserve failures and
+active correction ceiling 20. Integrate one reviewed feature PR and verify remote
+main. Report and ask once before SPEC-CONTRACT-01. See [workflow](ANALOG_MEASUREMENTS_V1.md).
+
 ## STORAGE-MGMT-01 final qualification overlay, 2026-10-06
 
 The user explicitly sets the repository same-change correction ceiling to 20;

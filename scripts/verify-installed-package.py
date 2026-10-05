@@ -64,7 +64,7 @@ async def verify(
     for name, path in paths.items():
         with path.open("xb") as stream:
             fixture = (
-                examples.parent / "design-registry-v4.fictional.json"
+                examples.parent / "design-registry-v6.fictional.json"
                 if name == "designs"
                 else examples / (name + ".json")
             )
@@ -138,9 +138,39 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 63 or not baseline_names.issubset(names):
+            if len(names) != 66 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
+            analog = await client.call_tool(
+                "cadence_list_analog_measurements", {"design_id": "example-amplifier"}
+            )
+            if (
+                analog.is_error
+                or analog.structured_content is None
+                or len(analog.structured_content["measurements"]) != 6
+                or any(d["read_eligible"] for d in analog.structured_content["measurements"])
+            ):
+                raise ValueError("installed analog registry qualification changed")
+            metric = analog.structured_content["measurements"][0]
+            analog_result = await client.call_tool(
+                "cadence_analog_measurement_result",
+                {
+                    "request": {
+                        "design_id": "example-amplifier",
+                        "measurement_id": metric["measurement_id"],
+                        "expected_contract_sha256": metric["contract_sha256"],
+                        "operation_id": "00000000-0000-4000-8000-000000000000",
+                    }
+                },
+            )
+            if (
+                analog_result.is_error
+                or analog_result.structured_content is None
+                or analog_result.structured_content["status"] != "UNQUALIFIED"
+                or analog_result.structured_content["value"] is not None
+                or journal.exists()
+            ):
+                raise ValueError("installed analog fixture fabricated physical measurement")
             listing = await client.call_tool("cadence_list_designs")
             if listing.is_error or listing.structured_content is None:
                 raise ValueError("installed registry inspection failed")
@@ -243,6 +273,7 @@ async def verify(
         "legacy_tools_preserved": len(baseline_names),
         "unqualified_admission": "denied",
         "registered_measurements": "v4_list_and_unqualified_read_denial_verified",
+        "registered_analog": "v6_six_definitions_unqualified_null_values_no_admission",
         "registered_sweep": "local_contract_plan_unqualified_NOT_RUN_no_admission",
         "remote_contact": False,
         "new_simulations": 0,

@@ -1,5 +1,17 @@
 # Operations
 
+## Registered analog derivation, 2026-10-06
+
+Current inventory: 66 tools. Registry v6 adds operator-owned derived analog
+contracts around unchanged registered source measurements and execution routes.
+List/describe/result use the same server for all clients; no caller expression,
+path, waveform, frequency or specification is accepted. Reuse admitted completed
+AC evidence for 10 Hz gain and sampled-reference bandwidth; other metrics remain
+UNQUALIFIED. No new simulation/extraction/deployment or cleanup is needed.
+See [definitions and workflow](ANALOG_MEASUREMENTS_V1.md). Previous dated counts
+remain historical. Actual Linux deletion and Desktop client qualification remain
+explicitly unverified, as recorded by STORAGE-MGMT-01.
+
 ## Registered sweep lifecycle, 2026-10-05
 
 Current inventory: 58 tools. Registry v5 wraps the existing sweep engine with

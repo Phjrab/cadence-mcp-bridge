@@ -1,5 +1,14 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current ANALOG-MEAS-01 overlay
+
+Current inventory is 66 tools; three read-only analog interfaces use the same
+server and typed operator registry v6. Every previous 63 full tool schema is
+preserved. Exported Codex/Claude stdio SDK qualification is separate from Desktop
+application evidence; CLAUDE_REAL_CLIENT_UNVERIFIED remains. No guest deployment,
+simulation or client-specific execution path is introduced. See
+[analog workflow](ANALOG_MEASUREMENTS_V1.md) for definitions and qualification limits.
+
 ## Current STORAGE-MGMT-01 overlay
 
 The current interface has 63 tools. The five path-free storage interfaces

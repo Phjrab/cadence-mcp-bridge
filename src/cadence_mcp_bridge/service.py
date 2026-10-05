@@ -18,6 +18,14 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.analog_measurements import (
+    AnalogDescription,
+    AnalogList,
+    AnalogQuery,
+    AnalogResult,
+    AnalogSelection,
+)
+from cadence_mcp_bridge.analog_service import AnalogSupervisor
 from cadence_mcp_bridge.analyses import (
     AnalysisCancellation,
     AnalysisJobQuery,
@@ -241,6 +249,7 @@ class CadenceService:
         self._pdks = reference_pdk_registry() if pdks is None else pdks
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
+        self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
         self._registered_sweeps = RegisteredSweepPlanner(
             self._designs, self._analyses, self._registered_measurements
         )
@@ -308,6 +317,15 @@ class CadenceService:
 
     async def measurement_result(self, request: MeasurementQuery) -> MeasurementResult:
         return await self._registered_measurements.result(request)
+
+    async def list_analog_measurements(self, design_id: str) -> AnalogList:
+        return self._analog_measurements.listing(design_id)
+
+    async def describe_analog_measurement(self, request: AnalogSelection) -> AnalogDescription:
+        return self._analog_measurements.describe(request)
+
+    async def analog_measurement_result(self, request: AnalogQuery) -> AnalogResult:
+        return await self._analog_measurements.result(request)
 
     async def submit_analysis(self, submission: AnalysisSubmission) -> AnalysisStatus:
         return await self._analyses.submit(submission)

@@ -1,5 +1,17 @@
 # Generic user onboarding program v1
 
+## ANALOG-MEAS-01 continuation, 2026-10-06
+
+After merged STORAGE-MGMT-01 (#117), the user selects one registered analog
+measurement phase at main `e3fcfad30f35c68b1a90160d4d5f3a364436ab12`.
+Registry v6 adds derived allowlists over unchanged source measurements; three
+read-only tools keep the same execution/security layer. Differential gain at
+10 Hz and bracketed sampled-reference bandwidth use preserved native AC evidence.
+Phase margin, power, offset and slew rate retain explicit missing-science states.
+No new simulation, extraction, deployment, deletion, specification or optimization.
+Complete tests/security/package and preserved-result stdio regression, one reviewed
+PR and remote verification; report and ask once before SPEC-CONTRACT-01.
+
 ## Fresh starting audit
 
 The selected implementation phase starts from `origin/main`
