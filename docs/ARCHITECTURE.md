@@ -1,5 +1,16 @@
 # Architecture
 
+## Specification layer, 2026-10-06
+
+Operator registry v7 adds goal contracts around registered analog results.
+SpecificationSupervisor reads through AnalogSupervisor, MeasurementSupervisor
+and the existing admitted AnalysisSupervisor. It validates exact definition, unit
+and effective conditions before Decimal comparison. Measurement facts remain
+unchanged; evaluation is a separate read-only result. No second executor, replay
+journal or client-specific implementation. Read-only registry additions do not
+change validated sweep execution identity. See
+[specification architecture](SPECIFICATION_CONTRACTS_V1.md).
+
 ## Registered sweep lifecycle, 2026-10-05
 
 Current inventory: 58 tools. Registry v5 wraps the existing sweep engine with

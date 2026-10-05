@@ -2,9 +2,10 @@
 
 Status: **unpublished proposal**. Conditional version recommendation: **v1.1.0**.
 Current package version remains 1.0.0. These notes describe reviewed post-v1
-capabilities through starting main `fff725cdf64d084d7c55ab30d5a38da15f33fb49`
-and PUBLIC-RELEASE-01 installed-package readiness improvements. An exact future
-candidate, version update and publication authorization remain required.
+capabilities through the containing SPEC-CONTRACT-01 feature PR, including
+PUBLIC-RELEASE-01 installed-package readiness improvements. Historical v1.1.0
+wording is a proposal; readiness must be reassessed after specification integration.
+An exact future candidate, version update and publication authorization remain required.
 The owner selected Apache-2.0 for original source in RELEASE-LICENSE-01;
 imported planning rights remain separately unresolved and outside package artifacts.
 
@@ -27,7 +28,18 @@ imported planning rights remain separately unresolved and outside package artifa
   tools; at most 16 exact decimal points, explicit fixed values, numeric denials
   and unconditional NOT_RUN/no execution. Physical sweep execution remains unqualified.
 
-The MCP surface has 53 tools, adding 31 to the 22 historical names. Existing
+- Registered sweep lifecycle in v5 around the existing bounded RC engine;
+  physical bias ranges remain unqualified.
+- Registered storage inventory, dependency classification, exact plans/dry-run
+  and separately selected/operator-authorized cleanup. Historical evidence and
+  replay stay protected; actual reference-host deletion is NOT_RUN.
+- Registry v6 derived 10 Hz differential gain and sampled-reference bandwidth.
+  Bandwidth is PARTIALLY_QUALIFIED; phase margin/power/offset/slew remain UNQUALIFIED.
+- Registry v7 operator-owned specifications and read-only list/describe/evaluate.
+  Exact source/definition/unit/conditions bind PASS/FAIL; partial/unqualified
+  measurements cannot pass. No numerical reference goal exists.
+
+The MCP surface has 69 tools, adding 47 to the 22 historical names. Existing
 declared v1 tool signatures and shared input/result model files are preserved.
 The installed-package acceptance verifies both stdio client configurations and
 denies unqualified execution before admission. See [readiness](RELEASE_READINESS_V1.md).
@@ -41,8 +53,8 @@ PSF or unrestricted OA mutation interface exists. Protected originals, PDK,
 private authorization and historical evidence remain protected.
 
 Another operator can register and inspect contracts and export client settings.
-New physical execution routes, real-design numeric sweeps, additional measurement definitions,
-native active cancellation, statistics, layout/DRC/LVS/PEX and optimization remain
+New physical execution routes, real-design numeric sweeps, further scientifically
+qualified measurement readers, native active cancellation, statistics, layout/DRC/LVS/PEX and optimization remain
 unqualified/planned. A valid measurement is not a specification PASS without a
 target. Bias candidates are not optimality claims.
 

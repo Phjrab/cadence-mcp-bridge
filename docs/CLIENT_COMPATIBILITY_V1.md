@@ -1,5 +1,17 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current SPEC-CONTRACT-01 overlay
+
+Current inventory is 69 tools; three read-only specification interfaces use the
+same server and operator registry v7. All previous 66 complete schemas remain
+equal. Exported Codex/Claude SDK stdio reads preserved native/analog/sweep results
+and empty reference specifications, rejects unknown goals and verifies restart
+without simulation. Isolated installed acceptance exercises all three spec tools
+with a fictional targetless declaration: NOT_EVALUATED, no journal/transport.
+Use 69 tools for future manual qualification. Desktop evidence states remain
+CLAUDE_REAL_CLIENT_UNVERIFIED and fresh Codex app NOT_TESTED. See
+[specification workflow](SPECIFICATION_CONTRACTS_V1.md).
+
 ## Current ANALOG-MEAS-01 overlay
 
 Current inventory is 66 tools; three read-only analog interfaces use the same

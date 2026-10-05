@@ -1,5 +1,17 @@
 # Operations
 
+## Registered specification operations
+
+Use the existing operator design schema/validate/register flow with registry v7.
+MCP list/describe/evaluate are read-only and accept logical IDs/hash/UUID4 only.
+Obtain source definitions and conditions from registered descriptions/admitted
+measurement provenance; these facts are agent/operator discovery, not a request
+for the user to calculate hashes. Targets require actual selected user goals.
+The physical reference has none and stays NOT_EVALUATED. Partial measurements,
+condition mismatches and simulator errors cannot become specification PASS/FAIL.
+No new simulation, cleanup or release authority follows. See
+[complete workflow](SPECIFICATION_CONTRACTS_V1.md).
+
 ## Registered analog derivation, 2026-10-06
 
 Current inventory: 66 tools. Registry v6 adds operator-owned derived analog

@@ -109,6 +109,13 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepSelection,
 )
 from cadence_mcp_bridge.service import CadenceService
+from cadence_mcp_bridge.specifications import (
+    SpecificationDescription,
+    SpecificationEvaluation,
+    SpecificationList,
+    SpecificationQuery,
+    SpecificationSelection,
+)
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.storage import (
     CleanupOutcome,
@@ -284,6 +291,9 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_list_specifications",
+                "cadence_describe_specification",
+                "cadence_evaluate_specification",
                 "cadence_list_analog_measurements",
                 "cadence_describe_analog_measurement",
                 "cadence_analog_measurement_result",
@@ -337,6 +347,7 @@ class DesignContractServer(MCPServer):
             "cadence_design_pdk_status",
             "cadence_list_measurements",
             "cadence_list_analog_measurements",
+            "cadence_list_specifications",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_describe_pdk_adapter" and (
@@ -348,6 +359,8 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_describe_specification": "request",
+            "cadence_evaluate_specification": "request",
             "cadence_describe_analog_measurement": "request",
             "cadence_analog_measurement_result": "request",
             "cadence_list_storage_artifacts": "request",
@@ -542,6 +555,46 @@ def create_server(service: CadenceService) -> MCPServer:
         request: DesignSweepQuery,
     ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
         return await _stable_result(service.cancel_design_sweep(request))
+
+    @server.tool(
+        name="cadence_list_specifications",
+        annotations=_READ_ONLY,
+        description="List up to 32 operator-owned specifications for one registered design. "
+        "Registry v7 is required; empty targets stay not_evaluated. No simulation or registration.",
+        structured_output=True,
+    )
+    async def cadence_list_specifications(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, SpecificationList]:
+        return await _stable_result(service.list_specifications(design_id))
+
+    @server.tool(
+        name="cadence_describe_specification",
+        annotations=_READ_ONLY,
+        description="Describe an operator-registered target, exact unit, measurement-definition "
+        "hash and conditions; obtain its contract hash before evaluation. No caller target.",
+        structured_output=True,
+    )
+    async def cadence_describe_specification(
+        request: SpecificationSelection,
+    ) -> Annotated[CallToolResult, SpecificationDescription]:
+        return await _stable_result(service.describe_specification(request))
+
+    @server.tool(
+        name="cadence_evaluate_specification",
+        annotations=_READ_ONLY,
+        description="Evaluate one registered specification using its described contract hash "
+        "and an optional admitted completed UUID4. Missing target: NOT_EVALUATED; missing selected "
+        "operation: MISSING_MEASUREMENT; partial/unqualified measurement: UNQUALIFIED; differing "
+        "conditions: CONDITION_MISMATCH. PASS/FAIL applies only to this exact operation. "
+        "Invalid/failed source requests are errors, not FAIL. "
+        "No caller facts, simulation or search.",
+        structured_output=True,
+    )
+    async def cadence_evaluate_specification(
+        request: SpecificationQuery,
+    ) -> Annotated[CallToolResult, SpecificationEvaluation]:
+        return await _stable_result(service.evaluate_specification(request))
 
     @server.tool(
         name="cadence_list_analog_measurements",

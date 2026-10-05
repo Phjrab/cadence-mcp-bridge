@@ -1,5 +1,27 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## SPEC-CONTRACT-01 activation, 2026-10-06
+
+Starting main: `e3a3fb41d48a391a8c9667237a076dabeea3dda1`, merged #118.
+Activate one operator-owned specification phase with registry v7 and three
+read-only APIs. Exact measurement/unit/conditions binding; no invented reference
+targets. Strict QUALIFIED only for PASS/FAIL, inclusive range and bounded decimal
+comparators. Empty reference specifications remain NOT_EVALUATED. Preserve
+old schemas, source admission, sweep identity, resources and evidence. Reuse
+preserved results; no simulation, deployment, deletion, optimization or release.
+Run static/full/security/package/stdio and provenance regression, integrate one
+reviewed PR, verify remote main, then report and ask once before Release Readiness.
+
+Final gates: 1,693 full unit passes/four OS skips/57 warnings; 79 focused passes;
+Ruff/mypy 45 modules; security/dependency and final distribution/isolated installed
+acceptance pass. Exported Codex/Claude SDK stdio verifies old 66 schemas and native/
+analog/sweep/storage/restart equality with zero new simulation/reservation/deletion.
+Reference has no goals and remains NOT_EVALUATED. One correction of 20 used;
+1,063 prior private records and protected jobs/counters remain equal. Integration
+uses containing reviewed [PR #119](https://github.com/Phjrab/cadence-mcp-bridge/pull/119);
+final remote SHA/tree preserved privately.
+This completes one phase and does not activate Release Readiness or publication.
+
 ## ANALOG-MEAS-01 activation, 2026-10-06
 
 User continuation selects this one phase after merged #117 at

@@ -1,5 +1,15 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 SPEC-CONTRACT-01 overlay:** User continuation selects
+> one phase after merged ANALOG-MEAS-01 (#118). Implement operator registry v7
+> and bounded read-only specification list/describe/evaluate over admitted analog
+> results. Preserve v1-v6 schemas and every execution/sweep identity. No reference
+> numerical goal exists: targets remain absent and NOT_EVALUATED. Partial or
+> unqualified measurements never yield PASS/FAIL. Conditions, definition hashes
+> and provenance bind each result. No new simulation, deployment, deletion,
+> optimization or release. Active correction ceiling 20; prior histories retained.
+> Finish one reviewed feature PR and ask once before Release Readiness reassessment.
+
 > **Active 2026-10-06 ANALOG-MEAS-01 overlay:** The user selects continuation
 > after merged STORAGE-MGMT-01 (#117). Add operator registry v6 and bounded local
 > derived analog measurements over admitted registered native evidence. Preserve
