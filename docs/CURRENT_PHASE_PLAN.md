@@ -1,5 +1,29 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## Storage-management scheduling directive, 2026-10-05
+
+GENERIC-SWEEP-INTEGRATION-01 is complete and merged as #115 at main
+`3f7bd81131e40f7781351b18e7ec824f362a5ef7`. Preserve that completed phase.
+The user's new directive schedules **STORAGE-MGMT-01 before ANALOG-MEAS-01**,
+then SPEC-CONTRACT-01. See [audited implementation plan](STORAGE_MANAGEMENT_PLAN_V1.md).
+This overlay records program authority and concrete dependencies; storage MCP
+implementation remains PLANNED, with one major-phase activation choice at this
+boundary. The earlier ANALOG-MEAS-01 recommendation below is historical.
+
+Existing operator cleanup is fixed/dry-run-only and is not dependency-aware.
+Implement inventory/classification/summary and exact hash-bound cleanup plans;
+selected deletion additionally requires explicit user intent and an operator-owned
+approval record for exact plan/items. General development autonomy never grants
+historical-result deletion. Unknown, active, replay/evidence-required artifacts,
+ledgers/journals and protected objects fail closed. Do not make legacy 30-day
+candidates deletable by age. Do not refund consumed reservations after deletion.
+
+Keep 10 GiB/500 attempts, existing locks/disk floor and removed elapsed ceiling.
+No new simulation, deployment, data deletion or compaction occurs in this planning
+change. STORAGE-COMPACT-01 remains separate. Complete the planning feature PR,
+report the proposed implementation boundary, and ask once before implementation.
+
+
 ## GENERIC-SWEEP-INTEGRATION-01 overlay, 2026-10-05
 
 The user selects lifecycle integration after merged #114, starting main

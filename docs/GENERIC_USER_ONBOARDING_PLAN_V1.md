@@ -182,3 +182,21 @@ or multi-version qualification. Analog measurements require evidence-specific
 definitions; phase margin requires loop gain. Future operator specifications
 must use actual user targets, never targets reverse-fitted to measurements.
 No automatic search, topology modification, version bump or release is activated.
+
+## Simulation storage directive and next ordering, 2026-10-05
+
+Merged #115 completes the registered RC sweep lifecycle and actual 10 GiB guard
+transition; keep its history and 58-tool regression foundation. The new user
+storage directive schedules STORAGE-MGMT-01 next, ahead of ANALOG-MEAS-01 and
+SPEC-CONTRACT-01. See [source audit and concrete plan](STORAGE_MANAGEMENT_PLAN_V1.md).
+The capability is PLANNED, not an implemented/supported MCP storage API. One
+normal boundary choice activates the implementation; routine phase development
+then remains autonomous. No previous phase is restarted.
+
+Inventory, deterministic dependency-aware classification and cleanup planning
+precede any destructive operation. Exact user-selected plan/items and independent
+operator-owned authorization are required for deletion. The same protections
+apply to every MCP client. Active/replay/evidence/unknown content remains protected;
+age or measurement extraction alone never qualifies raw data for removal.
+Physical reclamation does not decrement cumulative result reservations. Advanced
+compaction, archival, migration and automatic cleanup stay separate future work.
