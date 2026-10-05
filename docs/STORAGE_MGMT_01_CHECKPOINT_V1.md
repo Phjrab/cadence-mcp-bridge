@@ -30,7 +30,8 @@ storage summary or phase acceptance.
 Fourth-correction gates: Ruff/mypy (39 modules), focused 91 passes/one OS skip,
 security 18 passes and no known locked vulnerabilities, final wheel/sdist and
 three exported stdio configurations passed. Artifacts contain canonical license/
-notices and no unexpected/protected files. Full-unit rerun is in progress.
+notices and no unexpected/protected files. Final full-unit rerun passed:
+1,622 passes, four OS symlink skips and 57 warnings in 728.36 seconds.
 The original 1,621-pass/one-failure transcript below is retained as earlier evidence.
 
 A fifth correction has been requested to replace per-job snapshot exhaustion
@@ -39,11 +40,17 @@ retaining strict traversal/output limits and incomplete-coverage denial. Until
 explicit approval, do not modify functional source or redeploy. There is no
 new simulation or selected deletion authority.
 
+The implementation is preserved in draft feature PR
+[#117](https://github.com/Phjrab/cadence-mcp-bridge/pull/117). Remote main remains
+the starting SHA. The draft has no GitHub checks/reviews configured or returned;
+this does not replace the local gates or resolve the inventory acceptance gap.
+It must not be merged in this checkpoint state.
+
 ## Starting state and implementation
 
 - Starting and freshly fetched main: `2797d60cbd4c254cd753527b8542cdae27c1b10a`.
 - Latest merged PR: #116 (storage scheduling); #115 sweep work is preserved.
-- Feature branch: `feat/storage-mgmt-01`; implementation PR not yet created.
+- Feature branch: `feat/storage-mgmt-01`; implementation PR #117 is draft.
 - Tools: 58 to 63; previous full schemas are unchanged.
 - Version/license: 1.0.0 / Apache-2.0 original bridge material, unchanged.
 - Workflow and safety contracts: [SIMULATION_STORAGE_V1.md](SIMULATION_STORAGE_V1.md).

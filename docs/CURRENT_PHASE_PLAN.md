@@ -19,6 +19,16 @@ existing delegation and ask once before ANALOG-MEAS-01. Workflow:
 [simulation storage](SIMULATION_STORAGE_V1.md). Advanced compaction stays deferred.
 
 Current checkpoint: [STORAGE_MGMT_01_CHECKPOINT_V1.md](STORAGE_MGMT_01_CHECKPOINT_V1.md).
+Later fourth-correction qualification supersedes the pending-deployment checkpoint
+below: immutable v2 deploy, actual SDK inventory/plan/dry-run, prior-result and
+protection regression pass. Final full-unit gate has 1,622 passes/four OS skips;
+static/security/dependency/distribution gates pass. Actual inventory reaches the
+64-artifact limit before later registered groups: coverage is PARTIAL and all
+bytes are lower bounds. A fifth correction for bounded group aggregation is
+requested and pending. Draft PR #117 preserves the reviewed checkpoint; do not
+merge until that acceptance gap is resolved. Actual deletion remains NOT_RUN.
+
+Earlier pre-fourth-correction observations, retained for failure provenance:
 Local full-unit verification completed with 1,621 passes and one existing backend
 method-inventory expectation needing the two new typed methods. Initial curated
 distribution/install verification passed. Exact old schemas/results and protected
