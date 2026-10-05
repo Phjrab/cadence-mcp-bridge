@@ -12,6 +12,17 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
+from cadence_mcp_bridge.variable_contracts import (
+    DesignVariables,
+    RangeReview,
+    VariableContract,
+    VariableList,
+    VariableValuesRequest,
+    VariableValuesResult,
+    canonical_digest,
+    check_values,
+    describe_variables,
+)
 
 LogicalId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$", max_length=64)]
 BindingName = Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]{0,63}$", max_length=64)]
@@ -83,8 +94,8 @@ class DesignProfile(DesignModel):
         return self
 
 
-class DesignRegistry(DesignModel):
-    schema_version: Literal[1]
+class RegistryBase(DesignModel):
+    schema_version: int
     designs: Annotated[tuple[DesignProfile, ...], Field(max_length=16)]
 
     @model_validator(mode="after")
@@ -93,6 +104,26 @@ class DesignRegistry(DesignModel):
         if len(set(ids)) != len(ids):
             raise ValueError("duplicate design identifier")
         return self
+
+    def profile(self, design_id: str) -> DesignProfile:
+        for profile in self.designs:
+            if profile.design_id == design_id:
+                return profile
+        raise InvalidInputError("Design ID is not registered")
+
+    def variable_set(self, design_id: str) -> DesignVariables | None:
+        self.profile(design_id)
+        return None
+
+    def variables(self, design_id: str) -> VariableList:
+        profile = self.profile(design_id)
+        return describe_variables(
+            design_id, profile.allowed_variables, self.variable_set(design_id)
+        )
+
+    def check_variables(self, request: VariableValuesRequest) -> VariableValuesResult:
+        profile = self.profile(request.design_id)
+        return check_values(request, self.variable_set(request.design_id), profile.work_copy_policy)
 
     def describe(self, design_id: str) -> DesignDescription:
         # Exact lookup only. No interpolation, normalization or remote discovery.
@@ -121,6 +152,51 @@ class DesignRegistry(DesignModel):
                 for profile in self.designs
             )
         )
+
+
+class DesignRegistry(RegistryBase):
+    schema_version: Literal[1]
+
+
+class DesignContractRegistry(RegistryBase):
+    schema_version: Literal[2]
+    variable_sets: Annotated[tuple[DesignVariables, ...], Field(max_length=16)]
+    range_reviews: Annotated[tuple[RangeReview, ...], Field(max_length=512)]
+
+    @model_validator(mode="after")
+    def bound_numeric_reviews(self) -> Self:
+        profiles = {profile.design_id: profile for profile in self.designs}
+        sets = [item.design_id for item in self.variable_sets]
+        reviews = {review.review_id: review for review in self.range_reviews}
+        if len(set(sets)) != len(sets) or len(reviews) != len(self.range_reviews):
+            raise ValueError("duplicate variable set or range review")
+        used_reviews: set[str] = set()
+        for item in self.variable_sets:
+            profile = profiles.get(item.design_id)
+            if profile is None or item.design_profile_sha256 != canonical_digest(profile):
+                raise ValueError("variable set must bind the exact registered design profile")
+            if {v.logical_id for v in item.variables} != set(profile.allowed_variables):
+                raise ValueError("variable contracts must match the design allowlist")
+            for variable in item.variables:
+                if variable.range_status != "qualified":
+                    continue
+                review = reviews.get(variable.review_id or "")
+                if (
+                    review is None
+                    or review.review_id in used_reviews
+                    or review.design_id != item.design_id
+                    or review.design_profile_sha256 != item.design_profile_sha256
+                    or review.variable_contract_sha256 != canonical_digest(variable)
+                ):
+                    raise ValueError("qualified range requires an exact separate numeric review")
+                used_reviews.add(review.review_id)
+        if used_reviews != set(reviews):
+            raise ValueError("orphan numeric review")
+        return self
+
+    def variable_set(self, design_id: str) -> DesignVariables | None:
+        self.profile(design_id)
+        return next((item for item in self.variable_sets if item.design_id == design_id), None)
 
 
 class DesignSummary(ContractModel):
@@ -179,8 +255,44 @@ def reference_registry() -> DesignRegistry:
     )
 
 
-def load_design_registry(path: Path) -> tuple[DesignRegistry, bytes]:
+def reference_contract_registry() -> DesignContractRegistry:
+    """Reference bias ranges are unknown; VDD is a fixed user constraint only."""
+    profile = reference_registry().designs[0]
+    variables = tuple(
+        VariableContract(
+            logical_id=logical_id,
+            cadence_binding=binding,
+            unit="V",
+            value_type="real",
+            default="1" if logical_id == "vdd" else None,
+            mutation_policy="fixed" if logical_id == "vdd" else "owned_copy_only",
+            range_status="unqualified",
+            minimum=None,
+            maximum=None,
+            step_policy="fixed" if logical_id == "vdd" else "unqualified",
+            step=None,
+            fixed_value="1" if logical_id == "vdd" else None,
+            review_id=None,
+        )
+        for logical_id, binding in (("vbiasn", "VBIASN"), ("vbiasp", "VBIASP"), ("vdd", "VDD"))
+    )
+    return DesignContractRegistry(
+        schema_version=2,
+        designs=(profile,),
+        range_reviews=(),
+        variable_sets=(
+            DesignVariables(
+                design_id=profile.design_id,
+                design_profile_sha256=canonical_digest(profile),
+                variables=variables,
+            ),
+        ),
+    )
+
+
+def load_design_registry(path: Path) -> tuple[DesignRegistry | DesignContractRegistry, bytes]:
     """Snapshot an explicit local operator file once, with closed bounded JSON."""
+
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in items:
@@ -199,8 +311,17 @@ def load_design_registry(path: Path) -> tuple[DesignRegistry, bytes]:
             data = stream.read(REGISTRY_LIMIT + 1)
         if len(data) > REGISTRY_LIMIT:
             raise ValueError("registry too large")
-        json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
-        registry = DesignRegistry.model_validate_json(data)
+        payload = json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
+        if not isinstance(payload, dict) or type(payload.get("schema_version")) is not int:
+            raise ValueError("integer registry version required")
+        version = payload["schema_version"]
+        registry: DesignRegistry | DesignContractRegistry
+        if version == 1:
+            registry = DesignRegistry.model_validate_json(data)
+        elif version == 2:
+            registry = DesignContractRegistry.model_validate_json(data)
+        else:
+            raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):
         raise DesignRejected() from None
     return registry, data

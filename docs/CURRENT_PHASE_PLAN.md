@@ -1,5 +1,22 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-VAR-01 overlay, 2026-10-05
+
+The user explicitly proceeds after the variable-phase proposal. Starting main
+is `cf541f4e7fa42f3c2329f58401161b571de92309` (merged PR #105).
+Implement one bounded phase: operator registry v2 variable contracts, separate
+hash-bound numeric reviews, local MCP inspection/checking, v1 compatibility,
+tests/documentation and permitted feature PR integration. Existing settings and
+execution routes are retained; no simulation, result reservation, deployment or
+FS modification is needed. Reference bias ranges stay unqualified; 320/702 mV
+are candidates and VDD=1 V is a fixed constraint. No target is invented.
+
+See [workflow](GENERIC_VARIABLES_V1.md) and
+[result](GENERIC_VAR_01_RESULT_V1.md). Preserve private source/PDK/history and
+all cumulative counters/correction histories; elapsed remains unbounded.
+Report this complete phase and ask once before GENERIC-SIM-01 or another phase.
+This overlay does not automatically activate the next major phase.
+
 ## GENERIC-DESIGN-01 overlay, 2026-10-05
 
 The user explicitly selects registered design profiles as the next one major

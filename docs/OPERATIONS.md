@@ -1,5 +1,15 @@
 # Operations
 
+## Variable operator workflow
+
+Use [GENERIC_VARIABLES_V1.md](GENERIC_VARIABLES_V1.md) and
+`design schema --schema-version 2` for the existing registry's variable
+contracts and separate numeric reviews. Validate/register exclusively using
+the same settings namespace. v1 remains supported with missing contracts.
+MCP can inspect logical numeric policies and check explicit decimal strings
+locally; it cannot register, fill defaults, mutate, execute or qualify a design.
+No remote deployment or simulation is required for numeric contract inspection.
+
 ## Registered design operator workflow
 
 Use [GENERIC_DESIGN_V1.md](GENERIC_DESIGN_V1.md) for

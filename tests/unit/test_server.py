@@ -277,6 +277,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     assert set(tools) == {
         "cadence_list_designs",
         "cadence_describe_design",
+        "cadence_list_design_variables",
+        "cadence_check_variable_values",
         "cadence_health",
         "cadence_submit_smoke",
         "cadence_job_status",
@@ -359,6 +361,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     assert read_only == {
         "cadence_list_designs",
         "cadence_describe_design",
+        "cadence_list_design_variables",
+        "cadence_check_variable_values",
         "cadence_health",
         "cadence_job_status",
         "cadence_job_log_tail",

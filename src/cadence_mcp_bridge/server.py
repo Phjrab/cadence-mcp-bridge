@@ -74,6 +74,11 @@ from cadence_mcp_bridge.sweeps import (
     SweepStatus,
     SweepSubmission,
 )
+from cadence_mcp_bridge.variable_contracts import (
+    VariableList,
+    VariableValuesRequest,
+    VariableValuesResult,
+)
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
     DesignWriteValidationResult,
@@ -224,7 +229,12 @@ class DesignContractServer(MCPServer):
     async def list_tools(self) -> list[Tool]:
         tools = await super().list_tools()
         for tool in tools:
-            if tool.name in {"cadence_list_designs", "cadence_describe_design"}:
+            if tool.name in {
+                "cadence_list_designs",
+                "cadence_describe_design",
+                "cadence_list_design_variables",
+                "cadence_check_variable_values",
+            }:
                 tool.input_schema = {**tool.input_schema, "additionalProperties": False}
         return tools
 
@@ -236,10 +246,14 @@ class DesignContractServer(MCPServer):
     ) -> CallToolResult | InputRequiredResult:
         if name == "cadence_list_designs" and arguments:
             raise ToolError("Design listing accepts no arguments")
-        if name == "cadence_describe_design" and (
+        if name in {"cadence_describe_design", "cadence_list_design_variables"} and (
             set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str
         ):
             raise ToolError("Design description accepts only one string design_id")
+        if name == "cadence_check_variable_values" and (
+            set(arguments) != {"request"} or type(arguments["request"]) is not dict
+        ):
+            raise ToolError("Variable checking accepts only one request object")
         return await super().call_tool(name, arguments, context)
 
 
@@ -282,6 +296,29 @@ def create_server(service: CadenceService) -> MCPServer:
         design_id: LogicalId,
     ) -> Annotated[CallToolResult, DesignDescription]:
         return await _stable_result(service.describe_design(design_id))
+
+    @server.tool(
+        name="cadence_list_design_variables",
+        description="Inspect registered logical numeric contracts locally; no private bindings.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_design_variables(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, VariableList]:
+        return await _stable_result(service.list_design_variables(design_id))
+
+    @server.tool(
+        name="cadence_check_variable_values",
+        description="Check explicit decimal text and units locally. Never execute, mutate or "
+        "fill defaults; numeric admissibility grants no electrical or execution qualification.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_check_variable_values(
+        request: VariableValuesRequest,
+    ) -> Annotated[CallToolResult, VariableValuesResult]:
+        return await _stable_result(service.check_variable_values(request))
 
     @server.tool(
         name="cadence_health",
