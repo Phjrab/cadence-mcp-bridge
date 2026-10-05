@@ -35,7 +35,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | Phase | Deliverable and acceptance boundary | State |
 | --- | --- | --- |
 | GENERIC-ENV-01 | Operator-owned versioned environment description, local doctor/schema/validation/preparation, one fixed read-only qualification probe; no execution activation | Implemented; see result report |
-| GENERIC-DESIGN-01 | Registered design IDs referencing environment/technology, source/copy policy and qualified capabilities; represent the existing design and preserve compatibility | Proposed next phase |
+| GENERIC-DESIGN-01 | Operator registry and logical design introspection with environment/technology references, source/copy policy and declared allowlists; preserve fixed/native compatibility; generic execution stays unqualified | Implemented; user selected this one phase |
 | GENERIC-VAR-01 | Logical/Cadence bindings, units/types/defaults and independently reviewed ranges; `unqualified` ranges reject parameterized execution | Planned |
 | GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle adapter around existing jobs, UUID/replay/locks/budgets/fingerprints and bounded results | Planned |
 | GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
@@ -50,6 +50,17 @@ but cannot execute it before its adapter and analysis qualify. Scientific ranges
 and measurement definitions must come from reviewed evidence or the user.
 Optimization, multidimensional sweep, layout, DRC/LVS/PEX, Monte Carlo, chip
 orders and final submission are outside this phase.
+
+## GENERIC-DESIGN-01 activation
+
+The user's later explicit instruction selects registered design profiles from
+main `3d41404096a894d2fac0f9fe829a31af12ff4623` (merged PR #104).
+Complete this one phase, verify the existing native behavior using preserved
+results without new simulation, integrate its feature PR, then ask once before
+another major phase. Previous FS circuit evidence stays preserved; no follow-up
+FS structural circuit modification is activated. See
+[design workflow](GENERIC_DESIGN_V1.md) and
+[phase result](GENERIC_DESIGN_01_RESULT_V1.md).
 
 ## GENERIC-ENV-01 acceptance
 

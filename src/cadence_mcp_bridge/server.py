@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Awaitable
-from typing import Annotated
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from mcp.server.mcpserver.context import Context
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import CallToolResult, InputRequiredResult, TextContent, Tool, ToolAnnotations
 from pydantic import WithJsonSchema
 
 from cadence_mcp_bridge import __version__
@@ -19,7 +21,14 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticStatus,
 )
 from cadence_mcp_bridge.config import BridgeConfig
-from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.designs import (
+    DesignDescription,
+    DesignList,
+    DesignRejected,
+    LogicalId,
+    load_design_registry,
+)
+from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
 from cadence_mcp_bridge.measurement_models import (
     AdcMeasurementContract,
     CornerComparison,
@@ -209,10 +218,35 @@ async def _stable_result[ResultT: ContractModel](
         return _call_result(error, is_error=True)
 
 
+class DesignContractServer(MCPServer):
+    """Close new design inputs using public SDK hooks; preserve legacy schemas."""
+
+    async def list_tools(self) -> list[Tool]:
+        tools = await super().list_tools()
+        for tool in tools:
+            if tool.name in {"cadence_list_designs", "cadence_describe_design"}:
+                tool.input_schema = {**tool.input_schema, "additionalProperties": False}
+        return tools
+
+    async def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        context: Context[Any, Any] | None = None,
+    ) -> CallToolResult | InputRequiredResult:
+        if name == "cadence_list_designs" and arguments:
+            raise ToolError("Design listing accepts no arguments")
+        if name == "cadence_describe_design" and (
+            set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str
+        ):
+            raise ToolError("Design description accepts only one string design_id")
+        return await super().call_tool(name, arguments, context)
+
+
 def create_server(service: CadenceService) -> MCPServer:
     """Build an MCP server around an injected service for production or tests."""
 
-    server = MCPServer(
+    server = DesignContractServer(
         name="cadence-mcp-bridge",
         title="Cadence MCP Bridge",
         description="Restricted stdio bridge to the fixed Cadence runner.",
@@ -223,6 +257,31 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_list_designs",
+        description=(
+            "List locally registered design descriptions. Registration grants no execution."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_designs() -> Annotated[CallToolResult, DesignList]:
+        return await _stable_result(service.list_designs())
+
+    @server.tool(
+        name="cadence_describe_design",
+        description=(
+            "Describe the logical allowlists of one registered design ID without source bindings. "
+            "Environment, PDK, variable ranges and generic execution remain unqualified."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_describe_design(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, DesignDescription]:
+        return await _stable_result(service.describe_design(design_id))
 
     @server.tool(
         name="cadence_health",
@@ -633,7 +692,13 @@ def create_server(service: CadenceService) -> MCPServer:
 
 def create_default_server() -> MCPServer:
     config = BridgeConfig()
-    return create_server(CadenceService(OpenSshBackend(config)))
+    designs = None
+    if config.design_registry_path is not None:
+        try:
+            designs, _ = load_design_registry(config.design_registry_path)
+        except DesignRejected:
+            raise ConfigurationError("Configured design registry is invalid") from None
+    return create_server(CadenceService(OpenSshBackend(config), designs))
 
 
 def run_stdio_server() -> None:

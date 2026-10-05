@@ -4,7 +4,7 @@
 
 The user's new program selects GENERIC-ENV-01 as its first bounded implementation
 phase. See [the program plan](GENERIC_USER_ONBOARDING_PLAN_V1.md). Current GitHub
-visibility is public, v1.0.0 is published and main has 35 MCP tools with later
+visibility is public, v1.0.0 is published and the program started with 35 MCP tools with later
 native/sweep/diagnostic capabilities. Completed WP-15/WP-16 and later native
 qualification are not reopened. The dated gate table and sequence below are
 historical; they are not present capability status or execution authority.
@@ -12,6 +12,13 @@ historical; they are not present capability status or execution authority.
 This phase adds private operator environment descriptions and fixed preflight,
 not generic design execution. Public-release semver depends on the eventual
 compatibility review; v1.1.0 is not selected here, and no release/tag is changed.
+
+The user subsequently selected GENERIC-DESIGN-01. That phase adds operator-only
+local design registration and two read-only logical introspection tools (37
+total). Generic execution, environment/PDK resolution and scientific ranges
+remain unqualified. See [the design workflow](GENERIC_DESIGN_V1.md) and
+[phase result](GENERIC_DESIGN_01_RESULT_V1.md). GENERIC-VAR-01 is proposed next
+and awaits one continuation decision.
 
 ## Target
 

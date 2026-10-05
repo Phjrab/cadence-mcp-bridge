@@ -1,8 +1,25 @@
 # Architecture
 
+## Registered design layer, 2026-10-05
+
+The current server has 37 tools. `designs.py` defines a bounded immutable
+operator registry, private Cadence/ADE bindings and logical MCP projections.
+`BridgeConfig.design_registry_path` uses the existing settings namespace.
+The default reference registry is replaced, not merged, when this optional
+local file is configured; invalid configuration blocks startup.
+
+`cadence_list_designs` and `cadence_describe_design` call the injected local
+registry through CadenceService without backend/SSH contact. A narrow server
+subclass uses public SDK listing/call hooks to reject unknown top-level fields
+and expose closed schemas for these two tools. Existing tool signatures,
+schemas, allowlists, backend routes and native job identity remain unchanged.
+Registry entries never select executable code, paths, netlists or remote
+targets. References and scientific ranges stay unresolved/unqualified and
+execution authorization stays false. See [design contract](GENERIC_DESIGN_V1.md).
+
 ## Generic environment layer, 2026-10-05
 
-The current server has 35 tools. GENERIC-ENV-01 adds a parallel operator CLI
+At GENERIC-ENV-01 the server had 35 tools. That phase adds a parallel operator CLI
 contract/preflight path in `environments.py` and a bundled Python-2.6-compatible
 `_environment_probe.py`; the existing MCP service/backend, `BridgeConfig` and
 execution routes remain unchanged. Operator profiles are private, versioned,

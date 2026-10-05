@@ -1,0 +1,189 @@
+{
+  "$defs": {
+    "AdeBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "ade_l",
+            "ade_xl",
+            "explorer",
+            "assembler"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "state": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "state"
+      ],
+      "title": "AdeBinding",
+      "type": "object"
+    },
+    "DesignBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "library": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "Library",
+          "type": "string"
+        },
+        "cell": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "Cell",
+          "type": "string"
+        },
+        "view": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "View",
+          "type": "string"
+        },
+        "ade": {
+          "$ref": "#/$defs/AdeBinding"
+        }
+      },
+      "required": [
+        "library",
+        "cell",
+        "view",
+        "ade"
+      ],
+      "title": "DesignBinding",
+      "type": "object"
+    },
+    "DesignProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "environment_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Environment Id",
+          "type": "string"
+        },
+        "pdk_adapter_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Pdk Adapter Id",
+          "type": "string"
+        },
+        "binding": {
+          "$ref": "#/$defs/DesignBinding"
+        },
+        "allowed_analyses": {
+          "items": {
+            "enum": [
+              "dc",
+              "ac",
+              "tran"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Allowed Analyses",
+          "type": "array"
+        },
+        "allowed_variables": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Variables",
+          "type": "array"
+        },
+        "allowed_measurements": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Measurements",
+          "type": "array"
+        },
+        "allowed_corners": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Corners",
+          "type": "array"
+        },
+        "protected_source": {
+          "const": true,
+          "title": "Protected Source",
+          "type": "boolean"
+        },
+        "work_copy_policy": {
+          "enum": [
+            "read_only",
+            "owned_copy_only"
+          ],
+          "title": "Work Copy Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "design_id",
+        "environment_id",
+        "pdk_adapter_id",
+        "binding",
+        "allowed_analyses",
+        "allowed_variables",
+        "allowed_measurements",
+        "allowed_corners",
+        "protected_source",
+        "work_copy_policy"
+      ],
+      "title": "DesignProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "designs": {
+      "items": {
+        "$ref": "#/$defs/DesignProfile"
+      },
+      "maxItems": 16,
+      "title": "Designs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "designs"
+  ],
+  "title": "DesignRegistry",
+  "type": "object"
+}

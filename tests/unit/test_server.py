@@ -275,6 +275,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
 
     tools = {tool.name: tool for tool in listing.tools}
     assert set(tools) == {
+        "cadence_list_designs",
+        "cadence_describe_design",
         "cadence_health",
         "cadence_submit_smoke",
         "cadence_job_status",
@@ -313,6 +315,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
     }
     assert all(tool.output_schema is not None for tool in tools.values())
     assert tools["cadence_health"].input_schema["properties"] == {}
+    assert tools["cadence_list_designs"].input_schema["properties"] == {}
+    assert set(tools["cadence_describe_design"].input_schema["properties"]) == {"design_id"}
     assert tools["cadence_submit_smoke"].input_schema["properties"] == {}
     assert tools["cadence_list_libraries"].input_schema["properties"] == {}
     assert tools["cadence_list_profiles"].input_schema["properties"] == {}
@@ -353,6 +357,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.read_only_hint
     }
     assert read_only == {
+        "cadence_list_designs",
+        "cadence_describe_design",
         "cadence_health",
         "cadence_job_status",
         "cadence_job_log_tail",

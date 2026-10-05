@@ -23,6 +23,13 @@ uv run cadence-mcp-bridge environment prepare --profile C:\private\environment.j
 uv run cadence-mcp-bridge environment qualify --profile C:\private\environment.json
 ```
 
+GENERIC-DESIGN-01 adds local operator registration through
+`design schema/validate/register` and `CADENCE_MCP_DESIGN_REGISTRY_PATH`.
+MCP clients can list registered IDs and inspect logical design allowlists without
+source edits. Private source/ADE bindings are excluded from MCP results.
+Registration grants no generic execution or electrical-range qualification.
+See [design workflow](docs/GENERIC_DESIGN_V1.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -30,10 +37,10 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostic evidence; bounded fixture sweep; environment contract/CLI tests and actual permission rejection |
-| Supported by contract | Operator-only Windows-to-Linux environment preflight with fixed probe, private profile/hash bindings, protected-root separation, bounded version reads and disk checks; no execution authorization |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostic evidence; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; registered-design local/stdio introspection |
+| Supported by contract | Operator-only Windows-to-Linux environment preflight; versioned local design descriptions and logical list/describe; private bindings, bounded inputs and source protection; no generic execution authorization |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Registered generic designs/variables/analyses/real-design sweep/measurements/PDK runtime adapters and full public onboarding/release |
+| Planned | Generic execution with qualified variables/analyses/real-design sweep/measurements/PDK runtime adapters and full public onboarding/release |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
@@ -50,7 +57,10 @@ for a future public onboarding release remains undecided.
 
 ## Current MCP interface
 
-The server has 35 typed tools. The original 22 lifecycle, discovery, profile,
+The server has 37 typed tools. `cadence_list_designs` and
+`cadence_describe_design(design_id)` add read-only local introspection; every
+registered generic profile remains unqualified for execution. The original 22
+lifecycle, discovery, profile,
 synthetic measurement, and write-validation tools remain available. The
 `actual-differential-amplifier-tb2-transient` profile keeps its existing v1
 contract.
