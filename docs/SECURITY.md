@@ -1,5 +1,24 @@
 # Security and Reliability Baseline
 
+## Registered design boundary, 2026-10-05
+
+GENERIC-DESIGN-01 adds two local read-only tools to the existing 35. Operator
+registration is outside MCP. The registry has closed strict versioned models,
+unique bounded logical IDs/allowlists, private bounded source/ADE names,
+source-protection=true and read-only/owned-copy-only policy. Size is capped at
+65,536 bytes and 16 profiles. Duplicate JSON keys, nonfinite values, input
+symlinks, injected paths/code and execution/qualification flags are rejected.
+Startup takes one validated frozen snapshot; invalid configured input never
+falls back. The local registration copy is exclusive and never overwrites.
+
+MCP projections omit library/cell/view/ADE-state bindings, paths and file bytes.
+Both new tools reject extra arguments, remain bounded and never invoke SSH.
+Generic execution, adapter/environment resolution and electrical ranges remain
+unqualified. A registered ID does not widen existing discovery, profile,
+native-analysis or mutation allowlists. Operator-controlled local files and
+their directory ACLs are the trust boundary, not a sandbox against the operator
+account itself. See [contract/workflow](GENERIC_DESIGN_V1.md).
+
 ## Generic environment preflight boundary, 2026-10-05
 
 Environment files are operator-owned private configuration, never MCP tool

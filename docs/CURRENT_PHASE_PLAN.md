@@ -1,5 +1,24 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-DESIGN-01 overlay, 2026-10-05
+
+The user explicitly selects registered design profiles as the next one major
+phase, starting from main `3d41404096a894d2fac0f9fe829a31af12ff4623`,
+merged PR #104. Implement a versioned bounded local operator registry and
+two read-only MCP introspection tools. Represent the reference amplifier,
+preserve existing execution routes, and separate registration from environment,
+PDK, variable-range and generic execution qualification. No scientific range,
+target or new simulation is needed. Keep private bindings and all prior FS
+evidence protected; do not restart FS circuit changes.
+
+Complete local/security/package gates, actual subprocess introspection and
+preserved native result/replay regression, documentation and the dedicated
+feature PR under the existing autonomy policy. Report and ask once before
+GENERIC-VAR-01 or another major phase. See
+[contract/workflow](GENERIC_DESIGN_V1.md) and
+[result](GENERIC_DESIGN_01_RESULT_V1.md). Existing elapsed-limit removal,
+cumulative budgets, correction histories and protection boundaries remain.
+
 ## GENERIC-ENV-01 overlay, 2026-10-05
 
 The user's NEXT PHASE MASTER PROMPT selects one foundational phase of

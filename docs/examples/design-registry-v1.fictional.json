@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "designs": [
+    {
+      "schema_version": 1,
+      "design_id": "example-amplifier",
+      "environment_id": "example-lab-01",
+      "pdk_adapter_id": "example-pdk-v1",
+      "binding": {
+        "library": "ExampleLib",
+        "cell": "ExampleAmplifier",
+        "view": "schematic",
+        "ade": {
+          "kind": "ade_l",
+          "state": "exampleState"
+        }
+      },
+      "allowed_analyses": [
+        "dc",
+        "ac",
+        "tran"
+      ],
+      "allowed_variables": [
+        "bias-n",
+        "bias-p"
+      ],
+      "allowed_measurements": [
+        "dc-output",
+        "ac-gain"
+      ],
+      "allowed_corners": [
+        "nominal"
+      ],
+      "protected_source": true,
+      "work_copy_policy": "read_only"
+    }
+  ]
+}

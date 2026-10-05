@@ -13,6 +13,7 @@ from pathlib import Path
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig
+from cadence_mcp_bridge.designs import DesignRegistry, load_design_registry, register_designs
 from cadence_mcp_bridge.environments import (
     EnvironmentProfile,
     EnvironmentRejected,
@@ -48,6 +49,14 @@ def build_parser() -> argparse.ArgumentParser:
         command = actions.add_parser(action)
         command.add_argument("--profile", type=Path, required=True)
         if action == "prepare":
+            command.add_argument("--output", type=Path, required=True)
+    design = subparsers.add_parser("design", help="Operator-only local design registry contracts.")
+    design_actions = design.add_subparsers(dest="design_action", required=True)
+    design_actions.add_parser("schema", help="Print the versioned design registry JSON schema.")
+    for action in ("validate", "register"):
+        command = design_actions.add_parser(action)
+        command.add_argument("--registry", type=Path, required=True)
+        if action == "register":
             command.add_argument("--output", type=Path, required=True)
     return parser
 
@@ -108,8 +117,32 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         print(json.dumps(result, sort_keys=True))
         return 0
+    if arguments.command == "design":
+        try:
+            if arguments.design_action == "schema":
+                design_result = DesignRegistry.model_json_schema()
+            elif arguments.design_action == "register":
+                design_result = register_designs(arguments.registry, arguments.output)
+            else:
+                registry, _ = load_design_registry(arguments.registry)
+                design_result = {
+                    "status": "valid_description",
+                    "design_count": len(registry.designs),
+                    "execution_authorized": False,
+                }
+        except (OSError, ValueError):
+            print(json.dumps({"status": "blocked", "reason": "design_registry_invalid"}))
+            return 1
+        print(json.dumps(design_result, sort_keys=True))
+        return 0
     if arguments.command == "config-check":
-        BridgeConfig()
+        config = BridgeConfig()
+        if config.design_registry_path is not None:
+            try:
+                load_design_registry(config.design_registry_path)
+            except ValueError:
+                print("configuration: invalid design registry")
+                return 1
         print("configuration: valid")
         return 0
 

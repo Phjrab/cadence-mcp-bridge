@@ -1,5 +1,15 @@
 # Operations
 
+## Registered design operator workflow
+
+Use [GENERIC_DESIGN_V1.md](GENERIC_DESIGN_V1.md) for
+`design schema/validate/register`, the private registry and
+`CADENCE_MCP_DESIGN_REGISTRY_PATH`. Registration exclusively creates a local
+file; no remote deployment is required. Protect its containing directory,
+validate with `config-check` and restart stdio to load the immutable snapshot.
+MCP exposes only list/describe by logical ID. Existing execution tools continue
+to follow their fixed contracts independently of this registry.
+
 ## Generic environment operator workflow
 
 Use [GENERIC_ENVIRONMENT_V1.md](GENERIC_ENVIRONMENT_V1.md) for the versioned

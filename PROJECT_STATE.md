@@ -4,8 +4,23 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: GENERIC-ENV-01
+current_wp: GENERIC-DESIGN-01
 current_status: implementation_verified
+generic_design_01_report: docs/GENERIC_DESIGN_01_RESULT_V1.md
+generic_design_01_starting_main: 3d41404096a894d2fac0f9fe829a31af12ff4623
+generic_design_01_registry: versioned_operator_local_immutable_snapshot_no_remote_routing
+generic_design_01_mcp_tools: 37_two_local_readonly_tools
+generic_design_01_unit_gate: 1270_passed_1_os_symlink_skip_56_existing_warnings
+generic_design_01_execution_authorized: false
+generic_design_01_native_regression: preserved_dc_ac_tran_equal_same_id_replay_no_extra_attempts
+generic_design_01_corrections_used: 3_of_3_prior_versions_and_histories_preserved
+generic_design_01_new_spectre_attempts: 0
+generic_design_01_result_reservation_delta: 0
+generic_design_01_remote_deployment_bytes: 0
+generic_design_01_runtime_budget_source: private_current_ledger_prior_numeric_entries_are_dated_history
+generic_design_01_protected_integrity: fresh_sealed_guard_and_preserved_job_trees_verified
+generic_design_01_integration_reference: containing_feature_pr_verify_github_state
+generic_design_01_next_phase: GENERIC-VAR-01_pending_one_user_choice
 generic_env_01_report: docs/GENERIC_ENV_01_RESULT_V1.md
 generic_user_onboarding_plan: docs/GENERIC_USER_ONBOARDING_PLAN_V1.md
 generic_env_01_mcp_tools: 35_unchanged
@@ -19,7 +34,7 @@ generic_env_01_protected_integrity: fresh_sealed_guard_verified
 generic_env_01_integration_reference: containing_feature_pr_verify_github_state
 generic_env_01_feature_pr: https://github.com/Phjrab/cadence-mcp-bridge/pull/104
 generic_env_01_latest_runtime_budget_source: private_current_ledger_prior_numeric_entries_are_dated_history
-generic_env_01_next_phase: GENERIC-DESIGN-01_pending_one_user_choice
+generic_env_01_next_phase: user_selected_GENERIC-DESIGN-01
 bias_headroom_01_status: sixteen_native_computations_verified_first_reader_failure_recovered_without_rerun
 bias_headroom_01_report: docs/BIAS_HEADROOM_01_RESULT_V1.md
 bias_headroom_01_remote_version: phase-campaign/bias-headroom-v2
@@ -149,8 +164,8 @@ auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_extracted
 auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_completed
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
-last_completed_wp: GENERIC-ENV-01
-next_wp: GENERIC-DESIGN-01_pending_one_user_choice
+last_completed_wp: GENERIC-DESIGN-01
+next_wp: GENERIC-VAR-01_pending_one_user_choice
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
@@ -492,6 +507,28 @@ last_e2e_result: generic_env_expected_permission_rejection_native_35_stdio_dc_ac
 user_action_required: "At this major phase completion, choose once whether to start GENERIC-DESIGN-01. Generic qualification of the reference installation requires operator-managed Cadence executable permission hardening; this phase does not modify that installation."
 ```
 
+## GENERIC-DESIGN-01 checkpoint
+
+- The user explicitly selected registered design profiles from the verified
+  PR #104 main `3d41404096a894d2fac0f9fe829a31af12ff4623`.
+- Implemented a bounded versioned private operator registry, existing-settings
+  configuration, local schema/validate/register CLI and two typed read-only
+  logical MCP projections. Generic qualification/execution remains disabled.
+- Actual subprocess introspection, preserved DC/AC/TRAN result equality,
+  completed-ID replay and wrong-analysis rejection passed without new attempts,
+  reservations or remote deployment. Fresh sealed integrity, historical job
+  trees and current private cumulative ledger stayed unchanged.
+- Local/security/dependency/package gates and the final unit count are recorded
+  in [the phase report](docs/GENERIC_DESIGN_01_RESULT_V1.md). Dedicated feature
+  integration is verified against actual GitHub rules/checks and exact head.
+  No state-sync-only PR or public release/tag is created.
+- Three correction records and all older phase histories are preserved privately.
+  FS sizing candidates remained ineligible for relative diagnostic screening;
+  the preserved structural analysis is complete but its proposed follow-up
+  circuit modification is not activated. Do not resume it from this phase.
+- Report and ask once before GENERIC-VAR-01. No scientific target/range is
+  invented, elapsed remains unbounded and protected source/PDK boundaries hold.
+
 ## GENERIC-ENV-01 checkpoint
 
 - 2026-10-05: Audited fresh main
@@ -725,6 +762,14 @@ the completion report records the final remote HEAD comparison. No pending field
 a successful push or a baseline approval.
 
 ## Progress log
+
+- 2026-10-05: GENERIC-DESIGN-01 implements private operator design registration
+  and read-only logical MCP introspection from PR #104 main. Exact current
+  reference binding is represented; generic execution stays unqualified.
+  Actual stdio verifies configured metadata and preserved native DC/AC/TRAN
+  result/replay behavior with sealed protection and unchanged resource ledgers.
+  See the containing feature PR and phase report for final local gates and
+  integration. Prior FS evidence is preserved without further circuit work.
 
 - 2026-09-30 NATIVE-MCP-01: Added four fixed native ADE MCP tools and verified
   actual subprocess stdio DC/AC/trap TRAN execution, bounded result reads and
