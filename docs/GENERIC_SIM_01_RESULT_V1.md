@@ -8,7 +8,13 @@ Branch: `feat/generic-sim-01`. This one phase covers implementation, tests,
 documentation, bounded verification and permitted feature PR integration.
 No prior WP/phase, FS improvement or optimization is restarted.
 
-Integration is through this report's containing feature PR. Exact PR/head/main
+Feature PR: [#107](https://github.com/Phjrab/cadence-mcp-bridge/pull/107).
+Initial reviewed head: `a427c051fa56d01b1c7d5c5f12a4588e4ea3da4d`.
+The public scope is 23 files. GitHub inspection reported CLEAN/MERGEABLE,
+no check runs, submitted reviews, comments or effective main branch rules.
+Local gates and exact diff review supply verification; no GitHub CI pass is
+claimed. Final head/checks/rules are rechecked before permitted integration.
+Exact PR/head/main
 and tree equality are recorded at integration in the private final checkpoint
 and completion report. No state-sync PR, direct main push, force push or
 protection bypass is used. The repository remains public; published v1.0.0,
