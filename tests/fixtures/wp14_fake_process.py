@@ -45,11 +45,14 @@ else:
     assert source.is_relative_to(root / "scratch")
     assert args[12].startswith("cadence-vm:/home/buet/cds_work/.cadence_mcp/")
     assert args[12].endswith(".wp14-v1-new")
+    # .NET staging supports long paths even when Python's ordinary Win32 path does not.
+    # Containment is checked above before adding the local extended-path prefix.
+    readable_source = Path("\\\\?\\" + str(source)) if os.name == "nt" else source
     call = {
         "kind": kind,
         "stage": stage,
         "destination": args[12],
-        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "sha256": hashlib.sha256(readable_source.read_bytes()).hexdigest(),
         "pid": os.getpid(),
     }
 with (root / "calls.jsonl").open("a", encoding="utf-8") as stream:

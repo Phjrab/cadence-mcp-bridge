@@ -1,5 +1,23 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-ENV-01 overlay, 2026-10-05
+
+The user's NEXT PHASE MASTER PROMPT selects one foundational phase of
+GENERIC-USER-ONBOARDING. The fresh starting main is
+`407cc401e5027070a54da190537e1b7d91e80a11` (PR #103). Implement operator-owned
+environment contracts and fixed preflight around the existing execution layer.
+This phase does not restart completed WP/circuit work or activate another FS
+circuit modification. [The bounded program plan](GENERIC_USER_ONBOARDING_PLAN_V1.md)
+records the decomposition; [the result](GENERIC_ENV_01_RESULT_V1.md) records
+verification and limits.
+
+Complete local gates, permitted bounded deployment/E2E and dedicated feature PR
+integration under the existing autonomous policy, then report and ask once
+before GENERIC-DESIGN-01. No chained next phase is authorized by this overlay.
+Elapsed remains unbounded; all existing cumulative resource/correction histories
+and original/PDK/evidence protections remain. Environment descriptions and
+qualification never reset or activate runtime ledgers or grant analysis authority.
+
 ## AUTO-PHASE-01 active overlay, 2026-09-29
 
 The user's explicit bounded delegation replaces this plan's project-level STOP,

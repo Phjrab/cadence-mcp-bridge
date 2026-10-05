@@ -1,0 +1,233 @@
+{
+  "$defs": {
+    "CadenceExecutables": {
+      "additionalProperties": false,
+      "properties": {
+        "ocean": {
+          "$ref": "#/$defs/ExecutableBinding"
+        },
+        "spectre": {
+          "$ref": "#/$defs/ExecutableBinding"
+        },
+        "virtuoso": {
+          "$ref": "#/$defs/ExecutableBinding"
+        }
+      },
+      "required": [
+        "virtuoso",
+        "spectre",
+        "ocean"
+      ],
+      "title": "CadenceExecutables",
+      "type": "object"
+    },
+    "EnvironmentLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "disk_floor_bytes": {
+          "maximum": 1099511627776,
+          "minimum": 2147483648,
+          "title": "Disk Floor Bytes",
+          "type": "integer"
+        },
+        "disk_floor_percent": {
+          "maximum": 100,
+          "minimum": 10,
+          "title": "Disk Floor Percent",
+          "type": "integer"
+        },
+        "eda_concurrency": {
+          "const": 1,
+          "title": "Eda Concurrency",
+          "type": "integer"
+        },
+        "paid_resources": {
+          "const": 0,
+          "title": "Paid Resources",
+          "type": "integer"
+        },
+        "result_reserved_bytes": {
+          "maximum": 1099511627776,
+          "minimum": 0,
+          "title": "Result Reserved Bytes",
+          "type": "integer"
+        },
+        "spectre_attempts": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Spectre Attempts",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "disk_floor_bytes",
+        "disk_floor_percent",
+        "spectre_attempts",
+        "result_reserved_bytes",
+        "eda_concurrency",
+        "paid_resources"
+      ],
+      "title": "EnvironmentLimits",
+      "type": "object"
+    },
+    "EnvironmentPaths": {
+      "additionalProperties": false,
+      "properties": {
+        "job_root": {
+          "title": "Job Root",
+          "type": "string"
+        },
+        "managed_root": {
+          "title": "Managed Root",
+          "type": "string"
+        },
+        "protected_roots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Protected Roots",
+          "type": "array"
+        },
+        "result_root": {
+          "title": "Result Root",
+          "type": "string"
+        },
+        "workspace_root": {
+          "title": "Workspace Root",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspace_root",
+        "managed_root",
+        "job_root",
+        "result_root",
+        "protected_roots"
+      ],
+      "title": "EnvironmentPaths",
+      "type": "object"
+    },
+    "ExecutableBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "version"
+      ],
+      "title": "ExecutableBinding",
+      "type": "object"
+    },
+    "HostRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "title": "Architecture",
+          "type": "string"
+        },
+        "hostname": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "title": "Hostname",
+          "type": "string"
+        },
+        "os": {
+          "const": "Linux",
+          "title": "Os",
+          "type": "string"
+        },
+        "python_version": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "title": "Python Version",
+          "type": "string"
+        },
+        "user": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "title": "User",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hostname",
+        "user",
+        "os",
+        "architecture",
+        "python_version"
+      ],
+      "title": "HostRequirements",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A description is never registration or execution authority.",
+  "properties": {
+    "environment_id": {
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "title": "Environment Id",
+      "type": "string"
+    },
+    "host": {
+      "$ref": "#/$defs/HostRequirements"
+    },
+    "limits": {
+      "$ref": "#/$defs/EnvironmentLimits"
+    },
+    "paths": {
+      "$ref": "#/$defs/EnvironmentPaths"
+    },
+    "requested_capabilities": {
+      "items": {
+        "enum": [
+          "ade_native",
+          "dc",
+          "ac",
+          "tran",
+          "psf_extraction"
+        ],
+        "type": "string"
+      },
+      "title": "Requested Capabilities",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "ssh_alias": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "title": "Ssh Alias",
+      "type": "string"
+    },
+    "tools": {
+      "$ref": "#/$defs/CadenceExecutables"
+    }
+  },
+  "required": [
+    "schema_version",
+    "environment_id",
+    "ssh_alias",
+    "host",
+    "paths",
+    "tools",
+    "limits",
+    "requested_capabilities"
+  ],
+  "title": "EnvironmentProfile",
+  "type": "object"
+}

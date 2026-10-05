@@ -1,5 +1,22 @@
 # Architecture
 
+## Generic environment layer, 2026-10-05
+
+The current server has 35 tools. GENERIC-ENV-01 adds a parallel operator CLI
+contract/preflight path in `environments.py` and a bundled Python-2.6-compatible
+`_environment_probe.py`; the existing MCP service/backend, `BridgeConfig` and
+execution routes remain unchanged. Operator profiles are private, versioned,
+closed data. Only a fixed bundled probe path and hash/nonce tokens cross SSH.
+There is no model-facing environment registration, shell or path interface.
+
+The result qualifies observed host/runtime/binary/root/disk preflight only.
+License entitlement, design bindings and requested analyses need independent
+qualification and retain `unqualified`. The declared limits are not a ledger
+or execution authority. Future generic design/analysis adapters can reference
+this contract without replacing proven execution infrastructure. See
+[contract operations](GENERIC_ENVIRONMENT_V1.md) and
+[program decomposition](GENERIC_USER_ONBOARDING_PLAN_V1.md).
+
 ## Scope at WP-11 checkpoint
 
 WP-10 retains the versioned simulation profile registry and adds a separate local, versioned ADC

@@ -1,0 +1,55 @@
+{
+  "environment_id": "fictional-lab",
+  "host": {
+    "architecture": "x86_64",
+    "hostname": "fictional",
+    "os": "Linux",
+    "python_version": "3.12.1",
+    "user": "operator"
+  },
+  "limits": {
+    "disk_floor_bytes": 2147483648,
+    "disk_floor_percent": 10,
+    "eda_concurrency": 1,
+    "paid_resources": 0,
+    "result_reserved_bytes": 0,
+    "spectre_attempts": 0
+  },
+  "paths": {
+    "job_root": "/srv/project/.cadence_mcp/jobs",
+    "managed_root": "/srv/project/.cadence_mcp",
+    "protected_roots": [
+      "/opt/eda",
+      "/srv/project/source",
+      "/srv/project/pdk"
+    ],
+    "result_root": "/srv/project/.cadence_mcp/jobs",
+    "workspace_root": "/srv/project"
+  },
+  "requested_capabilities": [
+    "ade_native",
+    "dc",
+    "ac",
+    "tran",
+    "psf_extraction"
+  ],
+  "schema_version": 1,
+  "ssh_alias": "fictional-host",
+  "tools": {
+    "ocean": {
+      "path": "/opt/eda/bin/ocean",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "version": "fictional-1.0"
+    },
+    "spectre": {
+      "path": "/opt/eda/bin/spectre",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "version": "fictional-1.0"
+    },
+    "virtuoso": {
+      "path": "/opt/eda/bin/virtuoso",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "version": "fictional-1.0"
+    }
+  }
+}

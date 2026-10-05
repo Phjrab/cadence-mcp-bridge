@@ -6,6 +6,48 @@ Spectre, and OCEAN environment. The active operating policy is
 the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
+## Generic onboarding status
+
+GENERIC-ENV-01 adds operator-owned environment descriptions and bounded
+preflight qualification. Another operator can describe their host without
+source edits. Existing MCP execution still uses the registered reference
+environment; a valid profile does not authorize or route a simulation.
+
+```powershell
+uv sync --all-groups
+uv run cadence-mcp-bridge doctor
+uv run cadence-mcp-bridge environment schema
+uv run cadence-mcp-bridge environment validate --profile C:\private\environment.json
+uv run cadence-mcp-bridge environment prepare --profile C:\private\environment.json --output C:\private\new-bundle
+# After separately reviewed deployment of the exact bundled probe:
+uv run cadence-mcp-bridge environment qualify --profile C:\private\environment.json
+```
+
+See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
+[fictional profile](docs/examples/environment-v1.fictional.json),
+[program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
+[phase evidence](docs/GENERIC_ENV_01_RESULT_V1.md).
+
+| Status | Scope |
+| --- | --- |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostic evidence; bounded fixture sweep; environment contract/CLI tests and actual permission rejection |
+| Supported by contract | Operator-only Windows-to-Linux environment preflight with fixed probe, private profile/hash bindings, protected-root separation, bounded version reads and disk checks; no execution authorization |
+| Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
+| Planned | Registered generic designs/variables/analyses/real-design sweep/measurements/PDK runtime adapters and full public onboarding/release |
+
+Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
+statistical simulation/Monte Carlo and multidimensional sweep are not generally
+supported. Existing finite copied-circuit changes are specific reviewed
+operations. No automatic circuit modification capability is added here.
+License-variable presence does not prove entitlement; requested analyses remain
+`unqualified` and a measurement without a user target remains `not_evaluated`.
+The reference installation's writable Cadence executables fail the new generic
+qualification check; its protected installation is unchanged.
+
+GitHub v1.0.0 was published on 2026-08-31. Current main includes later capability
+work. This phase keeps package version and release/tag history unchanged; semver
+for a future public onboarding release remains undecided.
+
 ## Current MCP interface
 
 The server has 35 typed tools. The original 22 lifecycle, discovery, profile,

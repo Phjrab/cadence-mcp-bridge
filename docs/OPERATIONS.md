@@ -1,5 +1,14 @@
 # Operations
 
+## Generic environment operator workflow
+
+Use [GENERIC_ENVIRONMENT_V1.md](GENERIC_ENVIRONMENT_V1.md) for the versioned
+private environment profile and `doctor`, `environment schema/validate/prepare/qualify`
+commands. Preparation is local and exclusive; fixed probe deployment requires
+the operator's approved managed root and reviewed bytes. Qualification emits no
+execution grant, cannot reset a ledger and does not reconfigure the server.
+The existing deployment/lifecycle procedures below retain their own contracts.
+
 ## Restricted runner deployment
 
 WP-02 deploys only the reviewed files under:

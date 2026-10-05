@@ -4,8 +4,22 @@
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: WP-14
-current_status: finite_bias_validation_complete_numeric_results_private_no_spec_target
+current_wp: GENERIC-ENV-01
+current_status: implementation_verified
+generic_env_01_report: docs/GENERIC_ENV_01_RESULT_V1.md
+generic_user_onboarding_plan: docs/GENERIC_USER_ONBOARDING_PLAN_V1.md
+generic_env_01_mcp_tools: 35_unchanged
+generic_env_01_execution_authorized: false
+generic_env_01_remote_status: expected_executable_permission_rejection_verified
+generic_env_01_native_regression: preserved_dc_ac_tran_equal_same_id_replay_no_extra_attempts
+generic_env_01_corrections_used: 3_of_3_prior_versions_and_histories_preserved
+generic_env_01_new_spectre_attempts: 0
+generic_env_01_runtime_ledgers: unchanged_no_reset_or_activation
+generic_env_01_protected_integrity: fresh_sealed_guard_verified
+generic_env_01_integration_reference: containing_feature_pr_verify_github_state
+generic_env_01_feature_pr: https://github.com/Phjrab/cadence-mcp-bridge/pull/104
+generic_env_01_latest_runtime_budget_source: private_current_ledger_prior_numeric_entries_are_dated_history
+generic_env_01_next_phase: GENERIC-DESIGN-01_pending_one_user_choice
 bias_headroom_01_status: sixteen_native_computations_verified_first_reader_failure_recovered_without_rerun
 bias_headroom_01_report: docs/BIAS_HEADROOM_01_RESULT_V1.md
 bias_headroom_01_remote_version: phase-campaign/bias-headroom-v2
@@ -135,8 +149,8 @@ auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_extracted
 auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_completed
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
-last_completed_wp: WP-16
-next_wp: user_choice_before_next_major_phase
+last_completed_wp: GENERIC-ENV-01
+next_wp: GENERIC-DESIGN-01_pending_one_user_choice
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
@@ -466,17 +480,46 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: wp/WP-14-bias-headroom-safe
-base_main_commit: 9b6280ee5289835ded8820e4e6302cab7f8050f2
+current_feature_branch: feat/generic-env-01
+base_main_commit: 407cc401e5027070a54da190537e1b7d91e80a11
 last_commit: recorded_in_private_feature_and_merge_checkpoint
 last_push: null
-push_verification: pending_at_commit_report_after_remote_sha_check
+push_verification: feature_head_verified_final_sha_in_private_checkpoint_and_completion_report
 awaiting_user_merge: false
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: native_500_stdio_replay_and_sixteen_bias_jobs_with_independent_1540_op_355_ac_checks_verified
-user_action_required: "Choose once whether to investigate a bounded FS headroom topology/device-sizing plan. Further simulation is blocked by the unchanged result reservation budget; 127 MiB remains and each job requires 128 MiB."
+last_e2e_result: generic_env_expected_permission_rejection_native_35_stdio_dc_ac_tran_result_replay_equal_no_new_simulations
+user_action_required: "At this major phase completion, choose once whether to start GENERIC-DESIGN-01. Generic qualification of the reference installation requires operator-managed Cadence executable permission hardening; this phase does not modify that installation."
 ```
+
+## GENERIC-ENV-01 checkpoint
+
+- 2026-10-05: Audited fresh main
+  `407cc401e5027070a54da190537e1b7d91e80a11` (merged PR #103), public visibility,
+  published v1.0.0 and 35 existing MCP tools. The user's one-phase generic
+  onboarding delegation selects GENERIC-ENV-01; no completed WP/circuit phase
+  is reopened. Versioned private operator environment contracts and fixed probe
+  qualification are implemented around the unchanged execution layer.
+- Ruff, strict mypy (23 source files), 1,188 unit tests, the existing security
+  and locked-dependency audit gates, and build/install/uninstall passed. The
+  eight baseline failures were diagnosed and fixed only in the isolated Windows
+  long-path fixture. Three implementation corrections and earlier evidence are
+  preserved privately. Actual Python 2.6 compilation and expected executable
+  permission rejection were verified; the reference environment is not qualified
+  by this new check. Original installation permissions were not changed.
+- Actual stdio still lists 35 tools; preserved native DC/AC/TRAN results compare
+  equal, completed-ID replay consumes no attempts and wrong-analysis reads are
+  rejected. Fresh sealed original/ADE/PDK/reference/history guards pass. New
+  Spectre attempts and result reservations are zero; exact current budgets remain
+  private and unchanged. Older numeric budget fields above are dated phase
+  history, not the current runtime ledger. No elapsed ceiling is restored.
+- PR #104 contains this implementation and reviewed result documentation.
+  Its initial feature head was verified on GitHub as
+  `1d2a7d3c2887c0cdddb07709b1fcab7515d40cec`; final head/merge/remote main
+  verification belongs to the private completion checkpoint and the completion
+  report, without a later state-sync-only PR. At review, GitHub reported a clean
+  mergeable PR, no check runs or submitted reviews, and no effective branch rules.
+  See `docs/GENERIC_ENV_01_RESULT_V1.md`. Ask once before GENERIC-DESIGN-01.
 
 ## ADE-PVT-DIAG-01 checkpoint
 

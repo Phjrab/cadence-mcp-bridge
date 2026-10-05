@@ -1,5 +1,18 @@
 # Next Version Scope
 
+## Current generic onboarding overlay, 2026-10-05
+
+The user's new program selects GENERIC-ENV-01 as its first bounded implementation
+phase. See [the program plan](GENERIC_USER_ONBOARDING_PLAN_V1.md). Current GitHub
+visibility is public, v1.0.0 is published and main has 35 MCP tools with later
+native/sweep/diagnostic capabilities. Completed WP-15/WP-16 and later native
+qualification are not reopened. The dated gate table and sequence below are
+historical; they are not present capability status or execution authority.
+
+This phase adds private operator environment descriptions and fixed preflight,
+not generic design execution. Public-release semver depends on the eventual
+compatibility review; v1.1.0 is not selected here, and no release/tag is changed.
+
 ## Target
 
 The next feature line is a security-preserving extension beyond `v1.0.0`. The working release
