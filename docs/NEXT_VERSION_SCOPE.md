@@ -1,5 +1,18 @@
 # Next Version Scope
 
+## Public readiness overlay, 2026-10-05
+
+ONBOARD-CLI-01 completed through merged PR #109. PUBLIC-RELEASE-01 is now the
+explicitly selected one phase: actual release/compatibility/license audit,
+stronger isolated installed-package acceptance and honest candidate documentation.
+Actual published v1.0.0 has 22 tools; main has 48 with the 22 declarations and
+shared public models preserved. Conditional next-version recommendation is
+v1.1.0, based on this additive evidence; no package version/tag/release is changed.
+General external rights remain unresolved under current Proprietary metadata.
+See [readiness](RELEASE_READINESS_V1.md) and [proposed notes](RELEASE_NOTES_NEXT.md).
+Older overlays and gate tables below remain dated history, not active blockers
+or instructions to restart completed phases.
+
 ## PDK runtime overlay, 2026-10-05
 
 GENERIC-VAR-01 and GENERIC-SIM-01 completed after the earlier overlay below.

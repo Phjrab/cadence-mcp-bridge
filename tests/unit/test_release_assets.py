@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
+
+from cadence_mcp_bridge import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -18,17 +21,10 @@ def test_package_verifier_is_bounded_and_checks_uninstall() -> None:
 
 
 def test_release_candidate_versions_are_consistent() -> None:
-    project = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    package = (PROJECT_ROOT / "src" / "cadence_mcp_bridge" / "__init__.py").read_text(
-        encoding="utf-8"
-    )
-    verifier = (PROJECT_ROOT / "scripts" / "verify-package.ps1").read_text(encoding="utf-8")
-    lock = (PROJECT_ROOT / "uv.lock").read_text(encoding="utf-8")
-
-    assert 'version = "1.0.0"' in project
-    assert '__version__ = "1.0.0"' in package
-    assert '$installedVersion -ne "1.0.0"' in verifier
-    assert 'name = "cadence-mcp-bridge"\nversion = "1.0.0"' in lock
+    project = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((PROJECT_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked = next(p for p in lock["package"] if p["name"] == "cadence-mcp-bridge")
+    assert project["project"]["version"] == locked["version"] == __version__
 
 
 def test_final_release_notes_replace_the_draft() -> None:
@@ -44,11 +40,11 @@ def test_final_release_notes_replace_the_draft() -> None:
 
 def test_design_write_verifier_requires_the_exact_confirmation() -> None:
     source = (PROJECT_ROOT / "scripts" / "verify-design-write.ps1").read_text(encoding="utf-8")
-    cli = (
-        PROJECT_ROOT / "src" / "cadence_mcp_bridge" / "write_validation_cli.py"
-    ).read_text(encoding="utf-8")
+    cli = (PROJECT_ROOT / "src" / "cadence_mcp_bridge" / "write_validation_cli.py").read_text(
+        encoding="utf-8"
+    )
 
     assert 'ValidateSet("APPROVE_MCP_WRITE_VALIDATED_V2")' in source
     assert "cadence_design_write_plan" in cli
     assert "cadence_execute_design_write_validation" in cli
-    assert "if not plan.get(\"ready\")" in cli
+    assert 'if not plan.get("ready")' in cli

@@ -1,5 +1,29 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## PUBLIC-RELEASE-01 overlay, 2026-10-05
+
+The user explicitly proceeds with readiness review after merged PR #109.
+Starting main: `fff725cdf64d084d7c55ab30d5a38da15f33fb49`. Audit actual tag/release,
+version, 22-tool legacy compatibility, 48-tool current inventory, installation
+and licensing. Extend the existing package gate to installed-wheel local CLI
+and actual stdio for both exported formats, preventing source-import false passes.
+Keep source/runtime/lock version 1.0.0, historical v1 notes and published release
+unchanged. A proposed semver and candidate notes are not a publication grant.
+Owner licensing is a meaningful unresolved decision; ordinary inspection, local
+fixes/tests and feature PR integration continue autonomously within this phase.
+Reuse native E2E evidence only after exact production-byte identity checks;
+record fresh protection/accounting. No new simulation/reservation/deployment,
+FS work or scientific target is needed. Existing ledgers, correction histories
+and absent elapsed ceiling remain binding; this new code change has three
+corrections. Finish assessment, implementation/gates and reviewed feature PR,
+report residual publication gates and ask once before another major phase.
+See [readiness](RELEASE_READINESS_V1.md) and [result](PUBLIC_RELEASE_01_RESULT_V1.md).
+Final local gates pass: 1,453 unit passes / three OS skips / 56 existing
+warnings, 43 focused passes / one OS skip, Ruff/mypy/security/dependency and
+actual installed-package stdio. One correction of three used. Protected objects,
+job trees/counter, runtime bytes/prior hashes and old tag/release are unchanged.
+Licensing choice remains pending; finish preparation PR and stop for that choice.
+
 ## ONBOARD-CLI-01 overlay, 2026-10-05
 
 The user explicitly proceeds after completed PDK-ADAPTER-01 (merged PR #108).

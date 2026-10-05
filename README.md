@@ -82,8 +82,12 @@ The reference installation's writable Cadence executables fail the new generic
 qualification check; its protected installation is unchanged.
 
 GitHub v1.0.0 was published on 2026-08-31. Current main includes later capability
-work. This phase keeps package version and release/tag history unchanged; semver
-for a future public onboarding release remains undecided.
+work. PUBLIC-RELEASE-01 adds installed-wheel CLI/stdio acceptance and a
+[release readiness review](docs/RELEASE_READINESS_V1.md). The conditional next
+version recommendation is v1.1.0 based on additive interfaces; package version
+and release/tag history remain unchanged. The repository currently declares
+Proprietary licensing without a LICENSE file. General use/redistribution terms,
+an exact candidate and publication scope remain owner decisions.
 
 ## Current MCP interface
 
