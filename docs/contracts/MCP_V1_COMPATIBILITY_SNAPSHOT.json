@@ -1,0 +1,96 @@
+{
+  "release_tag": "v1.0.0",
+  "schema_version": 1,
+  "scope": "tool_names_and_declared_parameter_return_annotations_not_full_behavior",
+  "tag_commit": "8a0d44fab90e2095cc39322baef60fc09d741cd6",
+  "tools": {
+    "cadence_cancel_job": {
+      "parameters": "job_id: JobIdInput",
+      "returns": "Annotated[CallToolResult, JobStatus]"
+    },
+    "cadence_compare_corner_results": {
+      "parameters": "request: CornerComparisonRequest",
+      "returns": "Annotated[CallToolResult, CornerComparison]"
+    },
+    "cadence_design_write_plan": {
+      "parameters": "",
+      "returns": "Annotated[CallToolResult, DesignWritePlan]"
+    },
+    "cadence_execute_design_write_validation": {
+      "parameters": "confirmation: WriteConfirmation",
+      "returns": "Annotated[CallToolResult, DesignWriteValidationResult]"
+    },
+    "cadence_get_measurement_contract": {
+      "parameters": "contract_id: MeasurementContractIdInput",
+      "returns": "Annotated[CallToolResult, AdcMeasurementContract]"
+    },
+    "cadence_get_profile": {
+      "parameters": "profile_id: ProfileIdInput",
+      "returns": "Annotated[CallToolResult, SimulationProfile]"
+    },
+    "cadence_health": {
+      "parameters": "",
+      "returns": "Annotated[CallToolResult, HealthReport]"
+    },
+    "cadence_inspect_cellview": {
+      "parameters": "library: DiscoveryIdentifierInput, cell: DiscoveryIdentifierInput, view: DiscoveryIdentifierInput",
+      "returns": "Annotated[CallToolResult, CellViewInspection]"
+    },
+    "cadence_job_log_tail": {
+      "parameters": "job_id: JobIdInput, stream: LogStreamInput, lines: LogLinesInput=100",
+      "returns": "Annotated[CallToolResult, JobLogTail]"
+    },
+    "cadence_job_result": {
+      "parameters": "job_id: JobIdInput",
+      "returns": "Annotated[CallToolResult, JobResult]"
+    },
+    "cadence_job_status": {
+      "parameters": "job_id: JobIdInput",
+      "returns": "Annotated[CallToolResult, JobStatus]"
+    },
+    "cadence_list_cells": {
+      "parameters": "library: DiscoveryIdentifierInput",
+      "returns": "Annotated[CallToolResult, CellList]"
+    },
+    "cadence_list_libraries": {
+      "parameters": "",
+      "returns": "Annotated[CallToolResult, LibraryList]"
+    },
+    "cadence_list_profiles": {
+      "parameters": "",
+      "returns": "Annotated[CallToolResult, ProfileList]"
+    },
+    "cadence_measure_dc_power": {
+      "parameters": "request: DcPowerRequest",
+      "returns": "Annotated[CallToolResult, ScalarMetric]"
+    },
+    "cadence_measure_fft_metrics": {
+      "parameters": "request: FftMeasurementRequest",
+      "returns": "Annotated[CallToolResult, FftMetrics]"
+    },
+    "cadence_measure_linearity": {
+      "parameters": "request: LinearityRequest",
+      "returns": "Annotated[CallToolResult, LinearityMetrics]"
+    },
+    "cadence_measure_offset": {
+      "parameters": "request: OffsetRequest",
+      "returns": "Annotated[CallToolResult, ScalarMetric]"
+    },
+    "cadence_measure_settling": {
+      "parameters": "request: SettlingRequest",
+      "returns": "Annotated[CallToolResult, SettlingMetric]"
+    },
+    "cadence_submit_profile": {
+      "parameters": "profile_id: ProfileIdInput, corner: ProfileCornerInput, variables: ProfileVariables",
+      "returns": "Annotated[CallToolResult, JobStatus]"
+    },
+    "cadence_submit_smoke": {
+      "parameters": "",
+      "returns": "Annotated[CallToolResult, JobStatus]"
+    },
+    "cadence_summarize_monte_carlo": {
+      "parameters": "request: MonteCarloRequest",
+      "returns": "Annotated[CallToolResult, MonteCarloSummary]"
+    }
+  }
+}

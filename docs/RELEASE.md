@@ -1,5 +1,20 @@
 # Packaging and Release
 
+## Current public readiness, 2026-10-05
+
+The repository is public and v1.0.0 was published on 2026-08-31. Its tag peels
+to `8a0d44fab90e2095cc39322baef60fc09d741cd6`. The GitHub release body and
+versioned v1 notes retain stale candidate wording; the historical notes and
+published release are preserved. Post-v1 main has 48 tools and the local
+onboarding workflow, whereas the published tag has 22. Package/runtime/lock
+metadata remain 1.0.0. See [current readiness](RELEASE_READINESS_V1.md) and
+[proposed next release notes](RELEASE_NOTES_NEXT.md).
+
+Current licensing is Proprietary with no LICENSE file or GitHub-detected license.
+Public visibility is not a general grant of use or redistribution rights. A
+license decision and separately scoped publication are outstanding. This phase
+prepares and verifies; it does not change a tag, version or GitHub release.
+
 ## Reproducible package verification
 
 Run from Windows PowerShell:
@@ -9,26 +24,37 @@ Run from Windows PowerShell:
 ```
 
 The verifier builds the project into a unique system-temporary directory, creates an isolated
-Python 3.12 environment, installs the wheel, checks the CLI version, uninstalls the package, proves
+Python 3.12 environment, installs the wheel, checks metadata/runtime/CLI versions,
+then runs isolated installed-package onboarding and actual stdio for both client
+formats. It verifies all 48 tools, preservation of 22 legacy names, configured
+catalogs and denial before admission for the unqualified fictional design.
+No Cadence transport or simulation occurs. The verifier uninstalls the package, proves
 the module is no longer importable, and removes only its validated temporary directory.
 
 ## Operator install
 
 1. Install Python 3.12 and `uv` on Windows.
-2. Clone the private repository and check out a reviewed release tag.
+2. Clone the public repository and select a reviewed commit/tag. The v1.0.0 tag
+   has only the historical v1 capabilities; current onboarding requires a reviewed
+   post-v1 commit until a new release exists.
 3. Run `uv sync --frozen --all-groups`.
-4. Run `scripts/verify-security.ps1`, `scripts/verify-package.ps1`, and the documented E2E suite.
-5. Register the MCP server with `scripts/install-codex-mcp.ps1 -Confirm`.
+4. Run `scripts/verify-security.ps1` and `scripts/verify-package.ps1`. Actual
+   Cadence execution needs qualified registered operations, private delegation
+   and resource reservation; installation is not simulation authority.
+5. Follow [operator onboarding](ONBOARDING_CLI_V1.md) for private registration,
+   joined verification and explicit client settings. The legacy installer remains
+   the fixed-reference installation path.
 6. Restart Codex Desktop and verify the exact reviewed tool allowlist.
 
 ## Upgrade
 
 1. Preserve the existing Codex configuration and remote audit/job data.
-2. Fetch the private repository and review the target signed/reviewed tag and release notes.
+2. Fetch the public repository and review the actual target commit/tag and notes.
 3. Run `uv sync --frozen --all-groups` and all verification gates before deployment.
-4. Deploy only through `scripts/deploy-remote.ps1 -Confirm` when the release changes reviewed
-   remote files.
-5. Re-run the E2E suite and registration script, then restart Codex Desktop.
+4. Use only the applicable reviewed deployment contract if changed remote bytes
+   require it. A profile or new package never grants deployment authority.
+5. Verify effective settings and integrity, reuse preserved results where appropriate,
+   review/update explicit client settings, then restart Codex Desktop.
 
 ## Uninstall
 
@@ -40,7 +66,7 @@ the module is no longer importable, and removes only its validated temporary dir
 5. Any future remote application-root removal requires a separate retention decision and explicit
    operator approval.
 
-## v1.0.0 release-candidate checklist
+## Historical v1.0.0 release-candidate checklist
 
 - [x] WP-00 through WP-10 are integrated and their acceptance evidence passes.
 - [x] The controlled-write target and sole mutation were explicitly approved.

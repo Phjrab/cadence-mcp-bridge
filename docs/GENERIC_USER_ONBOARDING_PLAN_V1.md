@@ -42,7 +42,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
 | ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
-| PUBLIC-RELEASE-01 | Review actual release history, interface compatibility and semver after onboarding works | Planned |
+| PUBLIC-RELEASE-01 | Actual release/compatibility/license assessment and installed-wheel stdio acceptance; conditional semver and honest public scope | Preparation verified; publication/owner rights pending |
 
 These phases are not chained execution approval. Dependency review may adjust
 their order: design registration can describe an unqualified technology binding,
@@ -103,3 +103,12 @@ and verified; see [workflow](ONBOARDING_CLI_V1.md) and
 [result](ONBOARD_CLI_01_RESULT_V1.md). Other physical execution routes remain
 unqualified. PUBLIC-RELEASE-01 readiness is proposed, not activated; release/tag
 publication and broader generic execution are not implied by this phase.
+
+## PUBLIC-RELEASE-01 readiness result
+
+The user selected readiness after merged #109. Existing v1.0.0 publication is
+recognized; current 48-tool source preserves 22 legacy declarations. Installed
+wheel CLI/stdio acceptance and candidate/readiness documents are verified; see
+[result](PUBLIC_RELEASE_01_RESULT_V1.md). Conditional 1.1.0 is not applied.
+Licensing, exact candidate and explicit publication scope remain decisions;
+no license/version/tag/release change or next major phase is activated.
