@@ -8,6 +8,13 @@ Branch: `feat/generic-design-01`. This one-phase instruction covers
 implementation, verification and permitted feature PR integration. It does not
 restart the prior FS circuit work or authorize another major phase automatically.
 
+Feature PR: [#105](https://github.com/Phjrab/cadence-mcp-bridge/pull/105).
+Initial reviewed head: `a8728189cca0457509409d08397dc7559d046c56`.
+The public scope is 20 files. GitHub inspection reported CLEAN/MERGEABLE,
+no check runs, submitted reviews or inline review comments, and no effective
+main branch rules. Local gates and exact diff review provide verification;
+final head/main are rechecked at integration. No main push or bypass is used.
+
 The repository is public. Package/release baseline remains the actually
 published v1.0.0; no version, release or tag changes. Exact resulting PR/head/main
 and tree equality are recorded at integration in the private final checkpoint
