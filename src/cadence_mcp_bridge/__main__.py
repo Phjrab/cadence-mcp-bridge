@@ -63,8 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
             onboarding.add_argument("--remote-preflight", action="store_true")
         else:
             onboarding.add_argument("--journal", type=Path, required=True)
+            onboarding.add_argument("--sweep-journal", type=Path)
             onboarding.add_argument("--output", type=Path, required=True)
-            onboarding.add_argument("--format", choices=("codex", "mcp-json"), required=True)
+            onboarding.add_argument(
+                "--format", choices=("codex", "mcp-json", "claude-desktop"), required=True
+            )
     environment = subparsers.add_parser(
         "environment", help="Operator-only environment contracts; does not activate MCP execution."
     )
@@ -109,7 +112,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             else:
                 onboarding_result = export_client_config(
-                    *paths, arguments.journal, arguments.output, format=arguments.format
+                    *paths,
+                    arguments.journal,
+                    arguments.output,
+                    format=arguments.format,
+                    sweep_journal=arguments.sweep_journal,
                 )
         except (
             OSError,

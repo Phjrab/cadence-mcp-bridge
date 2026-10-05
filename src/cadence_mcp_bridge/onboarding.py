@@ -151,7 +151,8 @@ def export_client_config(
     journal: Path,
     output: Path,
     *,
-    format: Literal["codex", "mcp-json"],
+    format: Literal["codex", "mcp-json", "claude-desktop"],
+    sweep_journal: Path | None = None,
 ) -> dict[str, object]:
     """Create a new reviewed fragment; no global client config or journal writes."""
     snapshot = load_contracts(profile, designs, pdks)
@@ -168,8 +169,15 @@ def export_client_config(
         or not output_path.parent.is_dir()
     ):
         raise OnboardingRejected("output_or_journal_invalid")
-    if format not in ("codex", "mcp-json"):
+    if format not in ("codex", "mcp-json", "claude-desktop"):
         raise OnboardingRejected("client_format_invalid")
+    sweep_path = None if sweep_journal is None else _local_path(sweep_journal)
+    if sweep_path is not None and (
+        sweep_path in (*inputs, journal_path, output_path)
+        or not sweep_path.parent.is_dir()
+        or (sweep_path.exists() and not sweep_path.is_file())
+    ):
+        raise OnboardingRejected("output_or_journal_invalid")
     # Freeze defaults explicitly, excluding inherited terminal CADENCE_MCP_* overrides.
     config = BridgeConfig(**{k: f.default for k, f in BridgeConfig.model_fields.items()})
     settings = config.model_dump(mode="json")
@@ -177,6 +185,7 @@ def export_client_config(
         design_registry_path=str(design_path),
         pdk_registry_path=str(pdk_path),
         analysis_journal_path=str(journal_path),
+        sweep_journal_path=None if sweep_path is None else str(sweep_path),
     )
     env = {"CADENCE_MCP_" + k.upper(): str(v) for k, v in settings.items() if v is not None}
     env["PYTHONUTF8"] = "1"
@@ -186,7 +195,7 @@ def export_client_config(
         "env": env,
     }
     name = "cadence-mcp-bridge"
-    if format == "mcp-json":
+    if format in ("mcp-json", "claude-desktop"):
         content = json.dumps({"mcpServers": {name: server}}, indent=2, ensure_ascii=True) + "\n"
     else:
         quote = json.dumps

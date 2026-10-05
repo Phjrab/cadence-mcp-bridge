@@ -1,10 +1,24 @@
 # Cadence MCP Bridge
 
-Restricted stdio MCP bridge from Windows to the registered `cadence-vm` Virtuoso,
-Spectre, and OCEAN environment. The active operating policy is
+A safe, bounded, client-independent MCP server connecting MCP clients to
+registered Cadence Virtuoso/ADE/Spectre capabilities. The validated execution
+reference is Windows to the registered `cadence-vm` environment. The active operating policy is
 [`docs/policy/PHASE_AUTONOMY_V1.md`](docs/policy/PHASE_AUTONOMY_V1.md), including
 the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
+
+## MCP clients
+
+Codex and Claude Desktop launch the same server package over local stdio.
+Codex TOML and Claude `mcpServers` JSON configuration are prepared and tested
+through actual subprocess protocol clients. Independent JSON-RPC tests verify
+initialization, 48 typed schemas, calls/errors, concurrent read requests,
+stdout integrity and EOF shutdown. This is `SERVER_PROTOCOL_QUALIFIED`.
+Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
+configuration and SDK tests do not prove real desktop execution. The current
+Codex adapter passes protocol regression; a fresh Codex application E2E is
+also not claimed. See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
+Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
 ## Generic onboarding status
 
@@ -70,7 +84,7 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings |
 | Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and public release readiness |
+| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and a new public release after remaining gates |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally

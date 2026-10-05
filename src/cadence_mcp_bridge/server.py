@@ -901,6 +901,7 @@ def create_default_server() -> MCPServer:
             OpenSshBackend(config),
             designs,
             analysis_journal=config.analysis_journal_path,
+            sweep_journal=config.sweep_journal_path,
             pdks=pdks,
         )
     )

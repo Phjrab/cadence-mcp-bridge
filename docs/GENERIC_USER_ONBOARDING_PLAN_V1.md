@@ -42,6 +42,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
 | ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
+| CLIENT-COMPAT-01 | Same local stdio server and contract policy for MCP clients; Codex adapter regression, Claude registration, protocol integrity and honest desktop qualification matrix; MCPB investigation only | Selected after merged PUBLIC-RELEASE-01 preparation; before any new release candidate |
 | PUBLIC-RELEASE-01 | Actual release/compatibility/license assessment and installed-wheel stdio acceptance; conditional semver and honest public scope | Preparation verified; publication/owner rights pending |
 
 These phases are not chained execution approval. Dependency review may adjust
@@ -112,3 +113,17 @@ wheel CLI/stdio acceptance and candidate/readiness documents are verified; see
 [result](PUBLIC_RELEASE_01_RESULT_V1.md). Conditional 1.1.0 is not applied.
 Licensing, exact candidate and explicit publication scope remain decisions;
 no license/version/tag/release change or next major phase is activated.
+
+## Multi-client program authority, 2026-10-05
+
+The user's later directive explicitly extends this program: Cadence MCP Bridge
+is the product; Codex, Claude Desktop and future MCP hosts are clients. Shared
+environment/design/PDK/storage configuration belongs to the bridge. Client
+adapters only launch the same package; security is enforced server-side.
+PUBLIC-RELEASE-01 preparation is already merged as #110. Existing foundations
+permit CLIENT-COMPAT-01 now; generic sweep/measurement remain planned and are
+not prerequisites for read-only client qualification. No earlier history is
+restarted. Actual Claude verification may remain pending when inaccessible;
+this does not become a false PASS or activate public MCP hosting. See
+[compatibility workflow/matrix](CLIENT_COMPATIBILITY_V1.md). A new release
+candidate should reassess both client evidence and unresolved licensing.

@@ -1,5 +1,14 @@
 # Operations
 
+## Current client-independent registration, 2026-10-05
+
+The current server exposes 48 tools. Codex and Claude Desktop use the same
+local stdio package and server-side contracts. See
+[client compatibility, operator storage and manual qualification](CLIENT_COMPATIBILITY_V1.md).
+The Claude exporter aliases MCP JSON; existing Codex approval settings and
+historical journals are retained. Application E2E is distinct from subprocess
+protocol evidence. Dated earlier tool counts below remain historical.
+
 ## PDK adapter operator workflow
 
 Runtime catalog v2 uses `pdk schema/validate/register` and

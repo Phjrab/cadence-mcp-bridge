@@ -125,7 +125,7 @@ def test_changed_profile_denied_before_ssh(
     remote.assert_not_called()
 
 
-@pytest.mark.parametrize("format", ["codex", "mcp-json"])
+@pytest.mark.parametrize("format", ["codex", "mcp-json", "claude-desktop"])
 def test_export_roundtrip_explicit_defaults_and_exclusive_write(
     contracts: tuple[Path, Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch, format: Any
 ) -> None:
