@@ -1,5 +1,27 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## RELEASE-READINESS-02 activation, 2026-10-06
+
+Starting main `4ea17e2641f316ec0899c9c91f8bea97c6b4086f`, merged #119.
+Preserve completed foundations. Reassess 69 tools/22 legacy declarations,
+v1-v7 schemas, current package/license/client evidence and public scope. Add a
+repeatable local contract gate and updated readiness v2; run existing applicable
+static/security/full/package/installed/protocol gates. Reuse exact prior native
+E2E because no runtime/remote source changes. No release candidate/version/tag/
+publication, actual Desktop claim, deletion or optimization. Complete one reviewed
+PR and report open gates at the normal boundary; no automatic next phase.
+
+Final gates: 1,717 unit passes/four OS symlink skips/57 warnings; focused 56
+passes; Ruff/mypy 45 modules; security/dependency and final distribution/isolated
+install acceptance pass. Audit preserves 69 full schemas, 22 legacy declarations,
+two models and seven registry schemas; API/runtime/remote unchanged. Prior exact
+native E2E reused with fresh protected postflight; 1,088 prior private records equal.
+Zero simulation/reservation/deployment/deletion; one correction of 20 consumed.
+Curated package CONDITIONALLY_READY; new GitHub release NOT_READY; whole-tree
+rights LEGAL_REVIEW_REQUIRED. No version/tag/release/body edit or app PASS.
+Integration uses containing reviewed [PR #120](https://github.com/Phjrab/cadence-mcp-bridge/pull/120), with resulting remote SHA/tree
+recorded privately. Recommend CLIENT-REAL-QUAL-01; ask once at this phase boundary.
+
 ## SPEC-CONTRACT-01 activation, 2026-10-06
 
 Starting main: `e3a3fb41d48a391a8c9667237a076dabeea3dda1`, merged #118.

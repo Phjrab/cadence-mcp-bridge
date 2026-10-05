@@ -1,5 +1,11 @@
 # Public release readiness v1
 
+## Superseding assessment, 2026-10-06
+
+Use [release readiness v2](RELEASE_READINESS_V2.md) for current 69-tool, registry
+v7, Apache-2.0, application and distribution qualification. Everything below is
+dated evidence. Current reassessment performs no release/version/tag publication.
+
 ## Current registered sweep preparation overlay, 2026-10-05
 
 GENERIC-SWEEP-01 prepares local 1D contracts/plans with two read-only interfaces
