@@ -1,5 +1,19 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## CLIENT-REAL-QUAL-01 activation/checkpoint, 2026-10-06
+
+User continuation activates actual app qualification after #120 at
+`3432d580994bd825e5d650dd284d110342ac01e3`. Fresh Windows helper inventory is
+callable, superseding the earlier native-unavailable assessment. Current Codex
+is returned as ChatGPT; the applicable Computer Use skill prohibits that UI.
+No targetable Claude app is returned, and current global Codex config has no
+bridge entry. Actual app inventory/calls remain NOT_TESTED; phase is BLOCKED,
+not complete. Add [concrete human handoff/evidence rubric](CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md)
+through a reviewed checkpoint PR. Do not install immutable replay-test configs
+as live app configs or reset historical journals. Runtime/API/configs/budgets
+remain unchanged; no new remote/simulation/deletion/release action. Resume this
+same phase with direct app evidence; no automatic next development phase.
+
 ## RELEASE-READINESS-02 activation, 2026-10-06
 
 Starting main `4ea17e2641f316ec0899c9c91f8bea97c6b4086f`, merged #119.

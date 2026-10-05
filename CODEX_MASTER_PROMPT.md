@@ -1,5 +1,13 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 CLIENT-REAL-QUAL-01 overlay:** User continuation selects
+> actual app qualification after merged #120. Fresh native app inventory exists,
+> but current ChatGPT-branded Codex UI automation is prohibited by the applicable
+> Computer Use skill and no targetable Claude app was returned. Record a blocked
+> checkpoint and concrete human handoff; no actual Desktop PASS or phase completion.
+> Preserve prior SDK evidence, runtime/profiles/journals/budgets and global configs.
+> No simulation/deployment/deletion/publication or automatic next phase.
+
 > **Active 2026-10-06 RELEASE-READINESS-02 overlay:** User continuation selects
 > one post-SPEC reassessment from merged #119. Audit current API/semver,
 > installation, client evidence, license boundaries and actual distributions.

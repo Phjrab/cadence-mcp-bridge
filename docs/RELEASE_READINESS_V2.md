@@ -1,5 +1,10 @@
 # Release readiness reassessment v2
 
+Current application follow-up: [CLIENT-REAL-QUAL-01 checkpoint](CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md)
+records a callable Windows helper but prohibited control of the returned
+ChatGPT-branded Codex UI and no targetable Claude app. The phase is BLOCKED;
+the application qualification and publication gates below remain open.
+
 Date: 2026-10-06. Phase: RELEASE-READINESS-02. Starting main:
 `4ea17e2641f316ec0899c9c91f8bea97c6b4086f`, merged SPEC-CONTRACT-01 #119.
 This supersedes the **current assessment** in v1; old reports/qualification history

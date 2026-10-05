@@ -163,6 +163,8 @@ The curated original-code package is **CONDITIONALLY_READY**. A new significant
 GitHub release at current main is **NOT_READY**: real client qualification and
 whole-tree imported rights remain unresolved. A local contract PASS never grants
 publication; run `uv run python scripts/verify-release-readiness.py` from a reviewed checkout.
+Actual application qualification is currently blocked; see the
+[client handoff and evidence procedure](docs/CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md).
 
 ## License
 
