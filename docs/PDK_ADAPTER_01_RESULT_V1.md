@@ -30,13 +30,23 @@ New Spectre attempts, reservations, deployment bytes and paid resources: zero.
 Current private accounting remains 62/500 attempts and 7,114,588,160 reserved
 bytes; broader private storage ceiling and narrower native-v2 gate are unchanged.
 
-The full unit gate has a remaining stale count in
-`tests/unit/test_variable_contracts.py::test_mcp_local_validation_is_bounded_closed_and_private`:
-expected 45 tools, actual 48. Three corrections are exhausted. No fourth
-code/test correction or merge is performed; the feature PR remains draft.
-Resume requires an additional correction allowance for expected count 45 → 48,
-necessary validation, review and permitted integration. Final full-suite counts
-and PR URL are retained in the private checkpoint and user report.
+Full unit gate: 1,413 passed, three failed, two OS symlink skips and 56 existing
+warnings. Two failures are stale 45-tool expectations (actual 48):
+
+- `tests/unit/test_native_diagnostics.py:356`, native MCP schema/validation.
+- `tests/unit/test_variable_contracts.py:370`, local variable MCP validation.
+
+The third failure was the delegation fixture's Git remote check because the
+full-suite invocation lacked the established safe-directory/Git runtime settings.
+That exact test passed with those settings (one pass), with no code changes.
+The original full gate remains failed; it is not reported as passed.
+
+Three corrections are exhausted. No fourth code/test correction or merge is
+performed. [Feature PR #108](https://github.com/Phjrab/cadence-mcp-bridge/pull/108)
+remains draft. Resume requires an additional correction allowance for both exact
+expected counts 45 → 48, full validation with established Git settings, review
+and permitted integration. No new simulation or protection change is needed.
+GitHub has no checks/reviews at this checkpoint; absence is not CI success.
 
 Corrections: (1) import/style and literal tuple typing; (2) exact server tool set
 and short pytest IDs for Windows temporary names; (3) the separate exact read-only
@@ -52,7 +62,7 @@ are not implemented. PVT observations do not establish specification compliance.
 No numeric goal or continuous safe bias range is invented. Generic environment
 preflight still rejects writable executable wrappers; installation is unchanged.
 
-After current phase integration, recommended next phase: ONBOARD-CLI-01, joining the existing environment/design/
+After integration, recommended next phase: ONBOARD-CLI-01, joining the environment/design/
 variable/analysis/PDK workflow for another operator and clearly reporting missing
 execution qualification. Real-design sweeps still require reviewed ranges and
 qualified adapters. Report and ask once before another major phase. FS stays paused.

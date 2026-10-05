@@ -15,7 +15,7 @@ once before another phase. See [workflow](PDK_ADAPTER_RUNTIME_V2.md) and
 [result](PDK_ADAPTER_01_RESULT_V1.md).
 
 Checkpoint: implementation and sealed E2E verified; integration blocked by a
-stale variable test expectation (45 tools, actual 48) after three corrections.
+stale native/variable test expectations (45 tools, actual 48) after three corrections.
 Preserve failure evidence and a draft feature PR. Stop before another code/test
 correction or merge; resume requires additional correction budget.
 
