@@ -1,5 +1,14 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 RELEASE-READINESS-02 overlay:** User continuation selects
+> one post-SPEC reassessment from merged #119. Audit current API/semver,
+> installation, client evidence, license boundaries and actual distributions.
+> Add local operator contract audit and current public qualification matrix.
+> Runtime/MCP/remote source, historical policies/evidence and budgets stay exact.
+> Claude real app and imported rights remain unresolved; no version/tag/release,
+> historical release-body edit, deployment, simulation, deletion or optimization.
+> Complete one reviewed feature PR, verify main and report concrete open gates.
+
 > **Active 2026-10-06 SPEC-CONTRACT-01 overlay:** User continuation selects
 > one phase after merged ANALOG-MEAS-01 (#118). Implement operator registry v7
 > and bounded read-only specification list/describe/evaluate over admitted analog

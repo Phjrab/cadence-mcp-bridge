@@ -4,7 +4,8 @@ Status: **unpublished proposal**. Conditional version recommendation: **v1.1.0**
 Current package version remains 1.0.0. These notes describe reviewed post-v1
 capabilities through the containing SPEC-CONTRACT-01 feature PR, including
 PUBLIC-RELEASE-01 installed-package readiness improvements. Historical v1.1.0
-wording is a proposal; readiness must be reassessed after specification integration.
+wording remains a proposal. [Readiness v2](RELEASE_READINESS_V2.md) reassesses
+the post-specification scope; a significant GitHub release is NOT_READY.
 An exact future candidate, version update and publication authorization remain required.
 The owner selected Apache-2.0 for original source in RELEASE-LICENSE-01;
 imported planning rights remain separately unresolved and outside package artifacts.
@@ -42,7 +43,7 @@ imported planning rights remain separately unresolved and outside package artifa
 The MCP surface has 69 tools, adding 47 to the 22 historical names. Existing
 declared v1 tool signatures and shared input/result model files are preserved.
 The installed-package acceptance verifies both stdio client configurations and
-denies unqualified execution before admission. See [readiness](RELEASE_READINESS_V1.md).
+denies unqualified execution before admission. See [readiness](RELEASE_READINESS_V2.md).
 
 ## Demonstrated boundaries
 

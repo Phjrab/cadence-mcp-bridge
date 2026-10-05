@@ -146,18 +146,23 @@ Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
 supported. Existing finite copied-circuit changes are specific reviewed
 operations. No automatic circuit modification capability is added here.
-License-variable presence does not prove entitlement; requested analyses remain
-`unqualified` and a measurement without a user target remains `not_evaluated`.
+License-variable presence does not prove entitlement; newly registered physical
+execution routes remain `unqualified` until separately reviewed. A measurement
+without a user target remains `not_evaluated`.
 The reference installation's writable Cadence executables fail the new generic
 qualification check; its protected installation is unchanged.
 
 GitHub v1.0.0 was published on 2026-08-31. Current main includes later capability
 work. PUBLIC-RELEASE-01 adds installed-wheel CLI/stdio acceptance and a
-[release readiness review](docs/RELEASE_READINESS_V1.md). The conditional next
+[release readiness reassessment](docs/RELEASE_READINESS_V2.md). The conditional next
 version recommendation is v1.1.0 based on additive interfaces; package version
 and release/tag history remain unchanged. The owner selected Apache-2.0 for
 original bridge code; see the licensing boundary below. An exact candidate and
 publication scope remain owner decisions; imported planning rights need review.
+The curated original-code package is **CONDITIONALLY_READY**. A new significant
+GitHub release at current main is **NOT_READY**: real client qualification and
+whole-tree imported rights remain unresolved. A local contract PASS never grants
+publication; run `uv run python scripts/verify-release-readiness.py` from a reviewed checkout.
 
 ## License
 

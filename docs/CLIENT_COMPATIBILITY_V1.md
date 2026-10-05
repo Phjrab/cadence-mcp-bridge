@@ -1,5 +1,13 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## RELEASE-READINESS-02 qualification boundary
+
+The current 69-tool snapshot and manual procedure below identify the exact
+allowlist for future app verification. Registry/SDK probes do not prove absence
+or qualification of a Desktop app. Current controls cannot operate native
+applications; no new Desktop PASS is claimed. See
+[readiness v2](RELEASE_READINESS_V2.md) for remaining gates.
+
 ## Current SPEC-CONTRACT-01 overlay
 
 Current inventory is 69 tools; three read-only specification interfaces use the
@@ -174,8 +182,8 @@ the remote guards and durable admissions remain authoritative, not tool hints.
    journals. Record config digests privately; install the reviewed bridge entry
    using each application's registration UI/config without unrelated edits.
 3. Fully restart each application. Record app version, time, server version,
-   registration status and observed tool inventory. Verify 53 names and schemas
-   against this phase's inventory. App UI availability alone is not tools/list.
+   registration status and observed tool inventory. Verify **69** names and complete schemas
+   against the [current reviewed snapshot](contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json). App UI availability alone is not tools/list.
 4. In each app request `cadence_list_designs`, then `cadence_describe_design`
    for a listed ID and `cadence_design_pdk_status` for that ID. Compare structured
    results for the same configuration; they must not grant execution. Ask for
