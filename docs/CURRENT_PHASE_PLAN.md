@@ -1,5 +1,36 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ANALOG-MEAS-01 activation, 2026-10-06
+
+User continuation selects this one phase after merged #117 at
+`e3fcfad30f35c68b1a90160d4d5f3a364436ab12`. STORAGE-MGMT-01 is complete;
+actual Linux deletion remains NOT_RUN. Implement registry v6 derived contracts
+around unchanged v5 source/analysis/sweep identities, with three read-only tools.
+Use preserved admitted native AC evidence for differential gain at 10 Hz and
+first downward 3.0 dB crossing relative to that measured reference. Bandwidth
+is a bracketed log-frequency interpolation estimate; no DC plateau/error bound,
+unity-gain or closed-loop claim. Phase margin, power, offset and slew rate retain
+explicit UNQUALIFIED reasons and future scientific/extraction requirements.
+
+No new simulation, extraction, remote deployment, deletion, reservation, target
+registration, optimization or release. Keep 62/500 attempts, 7,114,588,160 / 10 GiB
+reservations, removed elapsed ceiling and all protection/replay rules. Local
+static/full/security/dependency/distribution and exported-client stdio regression
+are required; real Desktop app evidence remains distinct. Preserve failures and
+active correction ceiling 20. Integrate one reviewed feature PR and verify remote
+main. Report and ask once before SPEC-CONTRACT-01. See [workflow](ANALOG_MEASUREMENTS_V1.md).
+
+Final qualification: full unit 1,651 passes/four OS skips/57 warnings, static
+42 source modules, focused 94 passes and corrected server/analog 33 passes,
+security/dependency/distribution/install gates pass. Actual exported SDK stdio
+verifies all 63 old schemas, source provenance, native/sweep/storage regression
+and restart without simulation. Gain is qualified at 10 Hz only; bandwidth is
+partially qualified as a sampled-reference estimate; four other physical metrics
+remain UNQUALIFIED. Five corrections used of 20 with failures preserved.
+Integration uses containing reviewed [PR #118](https://github.com/Phjrab/cadence-mcp-bridge/pull/118),
+with exact remote SHA/tree verification retained privately after permitted merge.
+This completes one phase and does not activate SPEC-CONTRACT-01.
+
 ## STORAGE-MGMT-01 final qualification overlay, 2026-10-06
 
 The user explicitly sets the repository same-change correction ceiling to 20;

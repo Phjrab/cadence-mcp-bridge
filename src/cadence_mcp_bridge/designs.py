@@ -133,6 +133,10 @@ class RegistryBase(DesignModel):
         self.profile(design_id)
         return ()
 
+    def sweep_identity_digest(self) -> str:
+        """Old registries retain their full snapshot identity for durable sweep replay."""
+        return canonical_digest(self)
+
     def variables(self, design_id: str) -> VariableList:
         profile = self.profile(design_id)
         return describe_variables(
@@ -458,6 +462,10 @@ def load_design_registry(
             from cadence_mcp_bridge.sweep_registry import DesignSweepRegistry
 
             registry = DesignSweepRegistry.model_validate_json(data)
+        elif version == 6:
+            from cadence_mcp_bridge.analog_registry import DesignAnalogRegistry
+
+            registry = DesignAnalogRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):

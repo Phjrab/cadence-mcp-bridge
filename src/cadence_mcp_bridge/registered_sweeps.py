@@ -222,7 +222,7 @@ class RegisteredSweepPlanner:
             analysis_id=selection.analysis_id,
             variable_id=selection.variable_id,
             measurement_ids=tuple(sorted(selection.measurement_ids)),
-            registry_sha256=canonical_digest(self.registry),
+            registry_sha256=self.registry.sweep_identity_digest(),
             pdk_registry_sha256=canonical_digest(self.analyses.pdks),
             analysis_plan_hash=analysis.plan_hash,
             axis=axis,

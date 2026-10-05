@@ -20,6 +20,13 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.analog_measurements import (
+    AnalogDescription,
+    AnalogList,
+    AnalogQuery,
+    AnalogResult,
+    AnalogSelection,
+)
 from cadence_mcp_bridge.analyses import (
     AnalysisCancellation,
     AnalysisJobQuery,
@@ -277,6 +284,9 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_list_analog_measurements",
+                "cadence_describe_analog_measurement",
+                "cadence_analog_measurement_result",
                 "cadence_storage_summary",
                 "cadence_list_storage_artifacts",
                 "cadence_describe_storage_artifact",
@@ -326,6 +336,7 @@ class DesignContractServer(MCPServer):
             "cadence_list_analyses",
             "cadence_design_pdk_status",
             "cadence_list_measurements",
+            "cadence_list_analog_measurements",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_describe_pdk_adapter" and (
@@ -337,6 +348,8 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_describe_analog_measurement": "request",
+            "cadence_analog_measurement_result": "request",
             "cadence_list_storage_artifacts": "request",
             "cadence_describe_storage_artifact": "request",
             "cadence_plan_storage_cleanup": "request",
@@ -529,6 +542,44 @@ def create_server(service: CadenceService) -> MCPServer:
         request: DesignSweepQuery,
     ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
         return await _stable_result(service.cancel_design_sweep(request))
+
+    @server.tool(
+        name="cadence_list_analog_measurements",
+        annotations=_READ_ONLY,
+        description="List operator-registered analog definitions, source IDs, contract hashes "
+        "and missing scientific qualification. Registry v6 is required; no simulation grant.",
+        structured_output=True,
+    )
+    async def cadence_list_analog_measurements(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, AnalogList]:
+        return await _stable_result(service.list_analog_measurements(design_id))
+
+    @server.tool(
+        name="cadence_describe_analog_measurement",
+        annotations=_READ_ONLY,
+        description="Describe one registered analog metric and exact method, unit, source "
+        "and qualification requirements. No caller formula, frequency, path or registration.",
+        structured_output=True,
+    )
+    async def cadence_describe_analog_measurement(
+        request: AnalogSelection,
+    ) -> Annotated[CallToolResult, AnalogDescription]:
+        return await _stable_result(service.describe_analog_measurement(request))
+
+    @server.tool(
+        name="cadence_analog_measurement_result",
+        annotations=_READ_ONLY,
+        description="Derive a registered analog metric from an admitted completed UUID4 using "
+        "the described contract hash. Gain is at 10 Hz; bandwidth is a bracketed sampled-reference "
+        "estimate. Missing qualification yields UNQUALIFIED, never a fabricated value. "
+        "No simulation, PSF extraction or specification evaluation.",
+        structured_output=True,
+    )
+    async def cadence_analog_measurement_result(
+        request: AnalogQuery,
+    ) -> Annotated[CallToolResult, AnalogResult]:
+        return await _stable_result(service.analog_measurement_result(request))
 
     @server.tool(
         name="cadence_list_measurements",

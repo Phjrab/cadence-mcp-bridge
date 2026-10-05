@@ -1,5 +1,23 @@
 # Security and Reliability Baseline
 
+## Registered analog derivation, 2026-10-06
+
+Registry v6 validates all v5 execution contracts and adds operator-only derived
+analog allowlists with compiled definition/source hashes. Three new read-only
+tools accept only logical IDs, exact contract hash and admitted UUID4. No formula,
+frequency, sample array, target, path, script, remote extraction or simulation is
+introduced. Existing admission/PDK/native validation precedes derivation; missing
+scientific evidence returns UNQUALIFIED with no value. Prior tool schemas remain
+unchanged. Effective conditions and provenance prevent scope-free result claims.
+
+Sweep replay identity uses the complete validated v5 execution projection; only
+new analog read metadata is excluded. Every source execution field remains hashed;
+analog results independently bind their source and definition contracts. Unknown,
+stale, substituted, unadmitted and malformed requests fail closed. Operator-owned
+configuration/ACL remains the trust boundary. Original/ADE/PDK, all earlier jobs,
+resource accounting and evidence are preserved. No cleanup authority follows from
+measurement extraction. See [definitions](ANALOG_MEASUREMENTS_V1.md).
+
 ## Registered 1D sweep preparation, 2026-10-05
 
 Two local read-only tools bind existing startup registry v4 numeric reviews,

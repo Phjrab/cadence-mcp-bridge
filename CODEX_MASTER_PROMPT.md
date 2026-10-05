@@ -1,5 +1,16 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 ANALOG-MEAS-01 overlay:** The user selects continuation
+> after merged STORAGE-MGMT-01 (#117). Add operator registry v6 and bounded local
+> derived analog measurements over admitted registered native evidence. Preserve
+> every v1-v5 schema, old API, analysis/sweep identity, protected source/ADE/PDK,
+> ledgers and prior evidence. Qualify 10 Hz differential gain; label sampled-reference
+> bandwidth interpolation separately. Missing loop gain, signed supply currents,
+> offset definition and step waveform stay UNQUALIFIED. No new simulation,
+> deployment, storage deletion, specification, optimization or release is activated.
+> Active same-change correction ceiling is 20 without resetting earlier histories.
+> Complete one reviewed feature PR, report evidence and ask once before SPEC-CONTRACT-01.
+
 > **Active 2026-10-06 STORAGE-MGMT-01 overlay:** The user selects implementation
 > after merged planning #116. Inventory only registered result roots; retain
 > historical replay/evidence, original/ADE/PDK and accounting protection. Implement

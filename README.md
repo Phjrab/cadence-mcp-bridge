@@ -80,7 +80,17 @@ voltage scalars, AC differential transfer spectrum and TRAN summary. Results
 retain effective settings, fingerprints and source-result hashes; no new
 simulation or extraction is triggered. Old registry versions remain valid.
 Specifications stay `not_evaluated`; bandwidth, phase margin, power and OP
-definitions are not added. See [measurement workflow](docs/GENERIC_MEASUREMENTS_V1.md).
+definitions were outside that phase. See [measurement workflow](docs/GENERIC_MEASUREMENTS_V1.md).
+
+ANALOG-MEAS-01 adds operator registry v6 and three read-only derived measurement
+tools. It reuses registered, admitted native evidence and keeps every old schema
+and execution identity unchanged. Differential gain is measured at **10 Hz**;
+bandwidth is a **sampled-reference 3.0 dB crossing estimate** with its observed
+bracket and conditions. It is not a DC, unity-gain or closed-loop qualification.
+Phase margin, power, offset and slew rate remain **UNQUALIFIED** with explicit
+requirements; no numerical value is invented. No new simulation or PSF extraction
+is triggered, and specifications remain `not_evaluated`.
+See [analog definitions and workflow](docs/ANALOG_MEASUREMENTS_V1.md).
 
 GENERIC-SWEEP-01 prepares registered 1D contracts and local plans with two
 read-only tools. It reuses v4 reviews/analyses/measurements, requires all fixed
@@ -120,7 +130,7 @@ be deleted; historical results remain protected. See the
 | Status | Scope |
 | --- | --- |
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
-| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3/v4/v5 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1–v6 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
 | Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, additional qualified measurements, native live cancellation and a new public release after remaining gates |
 
@@ -159,7 +169,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 63 typed tools; all previous 58 full schemas are preserved.
+The server has 66 typed tools; all previous 63 full schemas are preserved.
+Three new read-only analog interfaces expose operator-registered definitions and
+qualified 10 Hz gain / partial bandwidth estimates; other analog metrics stay unqualified.
 The five new storage interfaces have verified reference-host inventory/plan/dry-run
 behavior; actual Linux deletion is unverified. All clients receive the same guards.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
