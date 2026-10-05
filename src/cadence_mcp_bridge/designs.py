@@ -10,6 +10,7 @@ from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from cadence_mcp_bridge.analyses import AnalysisContract, native_adapter_digest
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.variable_contracts import (
@@ -115,6 +116,10 @@ class RegistryBase(DesignModel):
         self.profile(design_id)
         return None
 
+    def analyses_for(self, design_id: str) -> tuple[AnalysisContract, ...]:
+        self.profile(design_id)
+        return ()
+
     def variables(self, design_id: str) -> VariableList:
         profile = self.profile(design_id)
         return describe_variables(
@@ -158,8 +163,7 @@ class DesignRegistry(RegistryBase):
     schema_version: Literal[1]
 
 
-class DesignContractRegistry(RegistryBase):
-    schema_version: Literal[2]
+class VariableRegistryBase(RegistryBase):
     variable_sets: Annotated[tuple[DesignVariables, ...], Field(max_length=16)]
     range_reviews: Annotated[tuple[RangeReview, ...], Field(max_length=512)]
 
@@ -197,6 +201,49 @@ class DesignContractRegistry(RegistryBase):
     def variable_set(self, design_id: str) -> DesignVariables | None:
         self.profile(design_id)
         return next((item for item in self.variable_sets if item.design_id == design_id), None)
+
+
+class DesignContractRegistry(VariableRegistryBase):
+    schema_version: Literal[2]
+
+
+class DesignAnalysisRegistry(VariableRegistryBase):
+    schema_version: Literal[3]
+    analysis_contracts: Annotated[tuple[AnalysisContract, ...], Field(max_length=48)]
+
+    @model_validator(mode="after")
+    def bound_analysis_adapters(self) -> Self:
+        seen: set[tuple[str, str]] = set()
+        modes: set[tuple[str, str]] = set()
+        reference = reference_contract_registry()
+        for contract in self.analysis_contracts:
+            key = (contract.design_id, contract.analysis_id)
+            mode = (contract.design_id, contract.analysis)
+            if key in seen or mode in modes:
+                raise ValueError("duplicate registered analysis identity or mode")
+            seen.add(key)
+            modes.add(mode)
+            profile = next((p for p in self.designs if p.design_id == contract.design_id), None)
+            if (
+                profile is None
+                or contract.design_profile_sha256 != canonical_digest(profile)
+                or contract.analysis not in profile.allowed_analyses
+            ):
+                raise ValueError("analysis must bind an exact allowed design profile")
+            variables = self.variable_set(contract.design_id)
+            if contract.variable_set_sha256 is not None and (
+                variables is None or contract.variable_set_sha256 != canonical_digest(variables)
+            ):
+                raise ValueError("analysis variable set drift")
+            if contract.adapter_kind == "native-fixed-reference-v1" and (
+                profile != reference.designs[0] or variables != reference.variable_sets[0]
+            ):
+                raise ValueError("compiled native adapter is restricted to its reviewed reference")
+        return self
+
+    def analyses_for(self, design_id: str) -> tuple[AnalysisContract, ...]:
+        self.profile(design_id)
+        return tuple(item for item in self.analysis_contracts if item.design_id == design_id)
 
 
 class DesignSummary(ContractModel):
@@ -290,7 +337,33 @@ def reference_contract_registry() -> DesignContractRegistry:
     )
 
 
-def load_design_registry(path: Path) -> tuple[DesignRegistry | DesignContractRegistry, bytes]:
+def reference_analysis_registry() -> DesignAnalysisRegistry:
+    reference = reference_contract_registry()
+    profile = reference.designs[0]
+    return DesignAnalysisRegistry(
+        schema_version=3,
+        designs=reference.designs,
+        variable_sets=reference.variable_sets,
+        range_reviews=reference.range_reviews,
+        analysis_contracts=tuple(
+            AnalysisContract(
+                design_id=profile.design_id,
+                analysis_id="native-" + analysis,
+                analysis=analysis,
+                design_profile_sha256=canonical_digest(profile),
+                variable_set_sha256=canonical_digest(reference.variable_sets[0]),
+                adapter_kind="native-fixed-reference-v1",
+                adapter_contract_sha256=native_adapter_digest(),
+                input_policy="fixed_operating_point_no_parameters",
+            )
+            for analysis in profile.allowed_analyses
+        ),
+    )
+
+
+def load_design_registry(
+    path: Path,
+) -> tuple[DesignRegistry | DesignContractRegistry | DesignAnalysisRegistry, bytes]:
     """Snapshot an explicit local operator file once, with closed bounded JSON."""
 
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -315,11 +388,13 @@ def load_design_registry(path: Path) -> tuple[DesignRegistry | DesignContractReg
         if not isinstance(payload, dict) or type(payload.get("schema_version")) is not int:
             raise ValueError("integer registry version required")
         version = payload["schema_version"]
-        registry: DesignRegistry | DesignContractRegistry
+        registry: DesignRegistry | DesignContractRegistry | DesignAnalysisRegistry
         if version == 1:
             registry = DesignRegistry.model_validate_json(data)
         elif version == 2:
             registry = DesignContractRegistry.model_validate_json(data)
+        elif version == 3:
+            registry = DesignAnalysisRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):

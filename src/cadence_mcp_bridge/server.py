@@ -20,6 +20,16 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.analyses import (
+    AnalysisCancellation,
+    AnalysisJobQuery,
+    AnalysisList,
+    AnalysisPlan,
+    AnalysisResult,
+    AnalysisSelection,
+    AnalysisStatus,
+    AnalysisSubmission,
+)
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.designs import (
     DesignDescription,
@@ -234,6 +244,12 @@ class DesignContractServer(MCPServer):
                 "cadence_describe_design",
                 "cadence_list_design_variables",
                 "cadence_check_variable_values",
+                "cadence_list_analyses",
+                "cadence_plan_analysis",
+                "cadence_submit_analysis",
+                "cadence_analysis_status",
+                "cadence_analysis_result",
+                "cadence_cancel_analysis",
             }:
                 tool.input_schema = {**tool.input_schema, "additionalProperties": False}
         return tools
@@ -246,14 +262,27 @@ class DesignContractServer(MCPServer):
     ) -> CallToolResult | InputRequiredResult:
         if name == "cadence_list_designs" and arguments:
             raise ToolError("Design listing accepts no arguments")
-        if name in {"cadence_describe_design", "cadence_list_design_variables"} and (
-            set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str
-        ):
+        if name in {
+            "cadence_describe_design",
+            "cadence_list_design_variables",
+            "cadence_list_analyses",
+        } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_check_variable_values" and (
             set(arguments) != {"request"} or type(arguments["request"]) is not dict
         ):
             raise ToolError("Variable checking accepts only one request object")
+        argument = {
+            "cadence_plan_analysis": "request",
+            "cadence_submit_analysis": "submission",
+            "cadence_analysis_status": "request",
+            "cadence_analysis_result": "request",
+            "cadence_cancel_analysis": "request",
+        }.get(name)
+        if argument is not None and (
+            set(arguments) != {argument} or type(arguments[argument]) is not dict
+        ):
+            raise ToolError("Analysis tools accept only their registered request object")
         return await super().call_tool(name, arguments, context)
 
 
@@ -319,6 +348,85 @@ def create_server(service: CadenceService) -> MCPServer:
         request: VariableValuesRequest,
     ) -> Annotated[CallToolResult, VariableValuesResult]:
         return await _stable_result(service.check_variable_values(request))
+
+    @server.tool(
+        name="cadence_list_analyses",
+        description="List registered analysis contracts and "
+        "local dispatch eligibility. Fixed compatibility is not generic environment qualification.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_list_analyses(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, AnalysisList]:
+        return await _stable_result(service.list_analyses(design_id))
+
+    @server.tool(
+        name="cadence_plan_analysis",
+        description="Hash a registered fixed analysis locally. "
+        "Planning does not reserve resources or grant runtime authority.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_plan_analysis(
+        request: AnalysisSelection,
+    ) -> Annotated[CallToolResult, AnalysisPlan]:
+        return await _stable_result(service.plan_analysis(request))
+
+    @server.tool(
+        name="cadence_submit_analysis",
+        description="Admit one UUID4 under its exact current "
+        "plan hash and dispatch the compiled adapter. Retry the same ID: lookup only; never "
+        "blindly resend. Native guards and cumulative budgets remain required.",
+        annotations=ToolAnnotations(
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
+        ),
+        structured_output=True,
+    )
+    async def cadence_submit_analysis(
+        submission: AnalysisSubmission,
+    ) -> Annotated[CallToolResult, AnalysisStatus]:
+        return await _stable_result(service.submit_analysis(submission))
+
+    @server.tool(
+        name="cadence_analysis_status",
+        description="Read an admitted operation's native "
+        "state using its registered design, analysis and durable identity.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_analysis_status(
+        request: AnalysisJobQuery,
+    ) -> Annotated[CallToolResult, AnalysisStatus]:
+        return await _stable_result(service.analysis_status(request))
+
+    @server.tool(
+        name="cadence_analysis_result",
+        description="Read a bounded admitted native result "
+        "and provenance. Specification evaluation remains not_evaluated.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_analysis_result(
+        request: AnalysisJobQuery,
+    ) -> Annotated[CallToolResult, AnalysisResult]:
+        return await _stable_result(service.analysis_result(request))
+
+    @server.tool(
+        name="cadence_cancel_analysis",
+        description="Inspect cancellation capability for an "
+        "admitted operation. Native active cancellation is unsupported; terminal jobs are "
+        "no-ops. No process is signalled and cancellation is never claimed.",
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    async def cadence_cancel_analysis(
+        request: AnalysisJobQuery,
+    ) -> Annotated[CallToolResult, AnalysisCancellation]:
+        return await _stable_result(service.cancel_analysis(request))
 
     @server.tool(
         name="cadence_health",
@@ -735,7 +843,11 @@ def create_default_server() -> MCPServer:
             designs, _ = load_design_registry(config.design_registry_path)
         except DesignRejected:
             raise ConfigurationError("Configured design registry is invalid") from None
-    return create_server(CadenceService(OpenSshBackend(config), designs))
+    return create_server(
+        CadenceService(
+            OpenSshBackend(config), designs, analysis_journal=config.analysis_journal_path
+        )
+    )
 
 
 def run_stdio_server() -> None:

@@ -1,5 +1,29 @@
 # Security and Reliability Baseline
 
+## Registered analysis boundary, 2026-10-05
+
+GENERIC-SIM-01 adds six closed interfaces, total 45 tools. Operator registry v3
+binds exact design/variable digests and a compiled analysis adapter contract.
+The native compatibility adapter accepts only its exact reviewed reference.
+Another design/environment/PDK cannot activate it even by recomputing hashes.
+Unqualified adapters stay blocked; requests have no variables, voltage ranges,
+paths, scripts, raw netlists or qualification flags. Existing generic environment
+preflight restrictions and original/PDK protection remain unchanged.
+
+Admission persists a UUID4/design/analysis/plan tuple before native submission.
+Full-synchronous local transactions select at most one first dispatcher; all
+retries/restarts are lookup-only. Status/result identity is checked on both sides
+of transport. Journal corruption, mismatches, symlinks and bounded capacity fail
+closed without reset. Local state ownership/ACL is the operator trust boundary.
+Remote EDA lock, current shared budgets, disk floor, private authorization,
+effective inputs, bounded extraction and protected fingerprints remain enforced
+by the existing native implementation. A plan is not runtime authority.
+
+Native live cancellation has no qualified route; capability is false and the
+endpoint only reads state. It never invokes unrestricted process control or
+claims cancellation. Results retain not_evaluated specification status.
+See [analysis contract/recovery](GENERIC_ANALYSIS_V1.md).
+
 ## Variable numeric boundary, 2026-10-05
 
 GENERIC-VAR-01 adds two local read-only tools; total tool count is 39.

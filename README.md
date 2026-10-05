@@ -37,6 +37,14 @@ Reference bias ranges remain unqualified; VDD=1 V remains a fixed constraint.
 Numeric matching grants no execution or electrical safety certification.
 See [variable workflow](docs/GENERIC_VARIABLES_V1.md).
 
+GENERIC-SIM-01 adds registry v3 analysis contracts and six lifecycle interfaces.
+The compiled adapter reuses the fixed reference native DC/AC/trap TRAN guards;
+other designs remain unqualified. Durable local admission binds UUID/design/
+analysis/plan; retries and server restarts look up the same job without blind
+resubmission. Inputs have no parameter or voltage fields. Native live
+cancellation is explicitly unsupported. See
+[analysis workflow](docs/GENERIC_ANALYSIS_V1.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -44,10 +52,10 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostic evidence; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable local and stdio introspection, exact numeric checking and v1 compatibility |
-| Supported by contract | Operator-only Windows-to-Linux environment preflight; v1/v2 local design registration and variable numeric reviews; private bindings, bounded inputs and source protection; no generic execution authorization |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and exact numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility |
+| Supported by contract | Operator-only environment preflight and v1/v2/v3 design registration; bound numeric reviews; compiled fixed-native analysis adapter and durable admission; bounded inputs and protected source; unqualified designs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Generic execution with qualified variables/analyses/real-design sweep/measurements/PDK runtime adapters and full public onboarding/release |
+| Planned | Execution of newly onboarded environments/designs through qualified adapters; parameterized real-design sweep, generic measurements/PDK runtime adapters, native live cancellation and full public onboarding/release |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
@@ -64,7 +72,7 @@ for a future public onboarding release remains undecided.
 
 ## Current MCP interface
 
-The server has 39 typed tools. `cadence_list_designs` and
+The server has 45 typed tools. `cadence_list_designs` and
 `cadence_describe_design(design_id)` add read-only local introspection; every
 registered generic profile remains unqualified for execution. The original 22
 lifecycle, discovery, profile,
@@ -76,6 +84,13 @@ contract.
 `cadence_check_variable_values(request)` add bounded local numeric inspection
 and explicit-value checking. No default is filled or applied, no source value
 is inferred, and no simulation or mutation is authorized by these checks.
+
+`cadence_list_analyses`, `cadence_plan_analysis`, `cadence_submit_analysis`,
+`cadence_analysis_status` and `cadence_analysis_result` expose registered
+contracts and the guarded fixed-native compatibility lifecycle.
+`cadence_cancel_analysis` reports capability/state only: terminal no-op or
+unsupported active cancellation. All six reject unknown arguments and private
+execution selectors. Generic environment qualification remains a separate gate.
 
 SIM-MCP-01 adds four tools for the pinned WP14 work-copy revision:
 

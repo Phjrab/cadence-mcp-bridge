@@ -1,5 +1,25 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## GENERIC-SIM-01 overlay, 2026-10-05
+
+The user explicitly proceeds after the registered analysis API proposal.
+Starting main is `962f6ca3db9381cbab3174f4ed8fbd3974a4efcd` (merged PR #106).
+Implement one bounded phase: registry v3 compiled analysis adapters, six closed
+MCP lifecycle interfaces and durable local admission identity, preserving v1/v2
+and legacy execution. The first adapter reuses fixed native reference DC/AC/
+trap TRAN; unqualified designs and parameterized inputs stay blocked. Generic
+environment preflight and PDK/scientific qualification are not bypassed.
+Native active cancellation lacks a qualified route and is reported unsupported.
+
+Verify code/security/package gates and actual stdio with completed DC/AC/TRAN
+IDs only, durable restart lookup and fresh protection/accounting checks. No new
+simulation, reservation, remote deployment, FS change or numerical target is
+needed. Preserve candidate/constraint semantics, private evidence, all budgets
+and correction histories; removed elapsed ceiling stays absent. See
+[workflow](GENERIC_ANALYSIS_V1.md) and [result](GENERIC_SIM_01_RESULT_V1.md).
+Complete feature PR review/integration, report and ask once before another
+major phase. This overlay does not automatically activate a next phase.
+
 ## GENERIC-VAR-01 overlay, 2026-10-05
 
 The user explicitly proceeds after the variable-phase proposal. Starting main

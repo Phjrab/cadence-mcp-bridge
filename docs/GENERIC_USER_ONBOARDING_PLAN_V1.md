@@ -37,7 +37,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-ENV-01 | Operator-owned versioned environment description, local doctor/schema/validation/preparation, one fixed read-only qualification probe; no execution activation | Implemented; see result report |
 | GENERIC-DESIGN-01 | Operator registry and logical design introspection with environment/technology references, source/copy policy and declared allowlists; preserve fixed/native compatibility; generic execution stays unqualified | Implemented; user selected this one phase |
 | GENERIC-VAR-01 | Logical/Cadence bindings, exact units/types/defaults and separate bound numeric reviews; unqualified ranges reject values, generic execution stays disabled | Implemented; see variable workflow/result |
-| GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle adapter around existing jobs, UUID/replay/locks/budgets/fingerprints and bounded results | Planned |
+| GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle, durable UUID admission and bounded native results; fixed reference compatibility adapter, other designs blocked; native live cancellation unsupported | Implemented; see analysis workflow/result |
 | GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
 | PDK-ADAPTER-01 | Minimal runtime adapter from the existing WP-15 design; gpdk090 as a reference, private physical bindings | Planned |
@@ -52,6 +52,13 @@ Optimization, multidimensional sweep, layout, DRC/LVS/PEX, Monte Carlo, chip
 orders and final submission are outside this phase.
 
 ## GENERIC-DESIGN-01 activation
+
+GENERIC-SIM-01 was explicitly selected after PR #106. It implements registered
+analysis contracts and fixed-native compatibility with durable admission, not
+qualification of arbitrary environments/designs. See
+[workflow](GENERIC_ANALYSIS_V1.md) and [result](GENERIC_SIM_01_RESULT_V1.md).
+Evidence supports preparing the PDK adapter before real-design generic sweeps:
+actual bias continuous ranges and new execution bindings remain unqualified.
 
 GENERIC-VAR-01 was subsequently selected explicitly after PR #105. It extends
 the same operator registry and preserves v1/native behavior; see
