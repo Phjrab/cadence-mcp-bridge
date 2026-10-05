@@ -31,6 +31,12 @@ from cadence_mcp_bridge.analyses import (
     AnalysisSubmission,
 )
 from cadence_mcp_bridge.config import BridgeConfig
+from cadence_mcp_bridge.design_sweep_service import (
+    DesignSweepExecutionPlan,
+    DesignSweepExecutionResult,
+    DesignSweepQuery,
+    DesignSweepSubmission,
+)
 from cadence_mcp_bridge.designs import (
     DesignDescription,
     DesignList,
@@ -278,6 +284,11 @@ class DesignContractServer(MCPServer):
                 "cadence_measurement_result",
                 "cadence_describe_design_sweep",
                 "cadence_plan_design_sweep",
+                "cadence_prepare_design_sweep",
+                "cadence_submit_design_sweep",
+                "cadence_design_sweep_status",
+                "cadence_design_sweep_result",
+                "cadence_cancel_design_sweep",
             }:
                 tool.input_schema = {**tool.input_schema, "additionalProperties": False}
         return tools
@@ -316,6 +327,11 @@ class DesignContractServer(MCPServer):
             "cadence_measurement_result": "request",
             "cadence_describe_design_sweep": "request",
             "cadence_plan_design_sweep": "request",
+            "cadence_prepare_design_sweep": "request",
+            "cadence_submit_design_sweep": "submission",
+            "cadence_design_sweep_status": "request",
+            "cadence_design_sweep_result": "request",
+            "cadence_cancel_design_sweep": "request",
         }.get(name)
         if argument is not None and (
             set(arguments) != {argument} or type(arguments[argument]) is not dict
@@ -365,6 +381,69 @@ def create_server(service: CadenceService) -> MCPServer:
         request: DesignSweepRequest,
     ) -> Annotated[CallToolResult, DesignSweepPlan]:
         return await _stable_result(service.plan_design_sweep(request))
+
+    @server.tool(
+        name="cadence_prepare_design_sweep",
+        annotations=_READ_ONLY,
+        description="Bind a registered 1D request to the existing sweep engine. Use described "
+        "contract hash, exact decimal values/units and all fixed values. Only the registry-v5 "
+        "compiled RC fixture has a parameterized route; real-design ranges remain unqualified. "
+        "Returns execution plan hash and blockers without reserving or executing.",
+        structured_output=True,
+    )
+    async def cadence_prepare_design_sweep(
+        request: DesignSweepRequest,
+    ) -> Annotated[CallToolResult, DesignSweepExecutionPlan]:
+        return await _stable_result(service.prepare_design_sweep(request))
+
+    @server.tool(
+        name="cadence_submit_design_sweep",
+        annotations=_SUBMIT,
+        description="Submit/resume a prepared registered RC fixture sweep with the exact plan "
+        "hash and stable experiment UUID. Reuse that UUID on retry/restart; changed contracts "
+        "are denied. Uses existing shared EDA lock, cumulative Spectre/result budget and disk "
+        "guards. No real-design bias sweep or analog specification claim.",
+        structured_output=True,
+    )
+    async def cadence_submit_design_sweep(
+        submission: DesignSweepSubmission,
+    ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
+        return await _stable_result(service.submit_design_sweep(submission))
+
+    @server.tool(
+        name="cadence_design_sweep_status",
+        annotations=_READ_ONLY,
+        description="Read locally journaled status of an admitted design ID/sweep UUID; no replay.",
+        structured_output=True,
+    )
+    async def cadence_design_sweep_status(
+        request: DesignSweepQuery,
+    ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
+        return await _stable_result(service.design_sweep_status(request))
+
+    @server.tool(
+        name="cadence_design_sweep_result",
+        annotations=_READ_ONLY,
+        description="Read bounded admitted sweep points, exact effective inputs and completion "
+        "measurement. NOT_RUN/UNKNOWN never imply success; spec_evaluation stays not_evaluated.",
+        structured_output=True,
+    )
+    async def cadence_design_sweep_result(
+        request: DesignSweepQuery,
+    ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
+        return await _stable_result(service.design_sweep_result(request))
+
+    @server.tool(
+        name="cadence_cancel_design_sweep",
+        annotations=_CANCEL,
+        description="Cancel only recorded children of an admitted design ID/sweep UUID. "
+        "Uncertain sends/cancellation stay UNKNOWN; no unrelated process is signaled.",
+        structured_output=True,
+    )
+    async def cadence_cancel_design_sweep(
+        request: DesignSweepQuery,
+    ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
+        return await _stable_result(service.cancel_design_sweep(request))
 
     @server.tool(
         name="cadence_list_measurements",

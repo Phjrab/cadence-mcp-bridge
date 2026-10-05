@@ -86,3 +86,12 @@ histories are retained. Actual stdio MCP replay of preserved DC/AC/TRAN results
 and guest 100/499/500 boundary checks verify the transition without new simulation.
 The finite four-pair bias phase uses the same budget guard and at most sixteen
 new attempts. Storage capacity can stop execution before the 500-attempt ceiling.
+
+## Active result ceiling overlay, 2026-10-05
+
+The user explicitly increases cumulative result reservation to 10 GiB through
+PHASE_RESULT_LIMIT_V4.json. Native-v3 and sweep-v2 use the same existing ledger
+and job/reservation identities, retain 500 cumulative Spectre attempts and all
+disk/lock/replay/protection rules. The earlier 5 GiB statements describe prior
+versioned contracts; historical deployments and counters are not rewritten.
+No new simulation is required to verify this transition.

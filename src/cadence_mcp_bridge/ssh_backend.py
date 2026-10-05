@@ -350,7 +350,7 @@ class OpenSshBackend:
     ) -> dict[str, Any]:
         if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
             raise InvalidInputError("sweep budget requires the reviewed managed root")
-        runner = f"{self._config.remote_root}/phase-campaign/sweep-mcp-v1/run.sh"
+        runner = f"{self._config.remote_root}/phase-campaign/sweep-mcp-v2/run.sh"
         output = await asyncio.to_thread(self._invoke_at_path, runner, action, self._job_id(job_id))
         try:
             value = json.loads(output)
@@ -421,7 +421,7 @@ class OpenSshBackend:
             raise InvalidInputError("unsupported native diagnostic operation")
         if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
             raise InvalidInputError("native diagnostics require the reviewed managed root")
-        runner = f"{self._config.remote_root}/phase-campaign/native-mcp-v2/run.sh"
+        runner = f"{self._config.remote_root}/phase-campaign/native-mcp-v3/run.sh"
         output = await asyncio.to_thread(
             self._invoke_at_path, runner, action, self._job_id(job_id), analysis
         )

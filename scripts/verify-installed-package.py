@@ -138,7 +138,7 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 53 or not baseline_names.issubset(names):
+            if len(names) != 58 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
             listing = await client.call_tool("cadence_list_designs")

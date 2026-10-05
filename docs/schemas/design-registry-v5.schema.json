@@ -1,0 +1,769 @@
+{
+  "$defs": {
+    "AdeBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "ade_l",
+            "ade_xl",
+            "explorer",
+            "assembler"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "state": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "state"
+      ],
+      "title": "AdeBinding",
+      "type": "object"
+    },
+    "AnalysisContract": {
+      "additionalProperties": false,
+      "properties": {
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "analysis_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "analysis": {
+          "enum": [
+            "dc",
+            "ac",
+            "tran"
+          ],
+          "title": "Analysis",
+          "type": "string"
+        },
+        "design_profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Design Profile Sha256",
+          "type": "string"
+        },
+        "variable_set_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Variable Set Sha256"
+        },
+        "adapter_kind": {
+          "enum": [
+            "native-fixed-reference-v1",
+            "unqualified"
+          ],
+          "title": "Adapter Kind",
+          "type": "string"
+        },
+        "adapter_contract_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Adapter Contract Sha256"
+        },
+        "input_policy": {
+          "enum": [
+            "fixed_operating_point_no_parameters",
+            "unqualified"
+          ],
+          "title": "Input Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "design_id",
+        "analysis_id",
+        "analysis",
+        "design_profile_sha256",
+        "variable_set_sha256",
+        "adapter_kind",
+        "adapter_contract_sha256",
+        "input_policy"
+      ],
+      "title": "AnalysisContract",
+      "type": "object"
+    },
+    "DesignBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "library": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "Library",
+          "type": "string"
+        },
+        "cell": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "Cell",
+          "type": "string"
+        },
+        "view": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "View",
+          "type": "string"
+        },
+        "ade": {
+          "$ref": "#/$defs/AdeBinding"
+        }
+      },
+      "required": [
+        "library",
+        "cell",
+        "view",
+        "ade"
+      ],
+      "title": "DesignBinding",
+      "type": "object"
+    },
+    "DesignProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "environment_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Environment Id",
+          "type": "string"
+        },
+        "pdk_adapter_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Pdk Adapter Id",
+          "type": "string"
+        },
+        "binding": {
+          "$ref": "#/$defs/DesignBinding"
+        },
+        "allowed_analyses": {
+          "items": {
+            "enum": [
+              "dc",
+              "ac",
+              "tran"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Allowed Analyses",
+          "type": "array"
+        },
+        "allowed_variables": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Variables",
+          "type": "array"
+        },
+        "allowed_measurements": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Measurements",
+          "type": "array"
+        },
+        "allowed_corners": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allowed Corners",
+          "type": "array"
+        },
+        "protected_source": {
+          "const": true,
+          "title": "Protected Source",
+          "type": "boolean"
+        },
+        "work_copy_policy": {
+          "enum": [
+            "read_only",
+            "owned_copy_only"
+          ],
+          "title": "Work Copy Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "design_id",
+        "environment_id",
+        "pdk_adapter_id",
+        "binding",
+        "allowed_analyses",
+        "allowed_variables",
+        "allowed_measurements",
+        "allowed_corners",
+        "protected_source",
+        "work_copy_policy"
+      ],
+      "title": "DesignProfile",
+      "type": "object"
+    },
+    "DesignVariables": {
+      "additionalProperties": false,
+      "properties": {
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "design_profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Design Profile Sha256",
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "$ref": "#/$defs/VariableContract"
+          },
+          "maxItems": 32,
+          "title": "Variables",
+          "type": "array"
+        }
+      },
+      "required": [
+        "design_id",
+        "design_profile_sha256",
+        "variables"
+      ],
+      "title": "DesignVariables",
+      "type": "object"
+    },
+    "FixtureAnalysis": {
+      "additionalProperties": false,
+      "properties": {
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "analysis_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "analysis": {
+          "const": "tran",
+          "default": "tran",
+          "title": "Analysis",
+          "type": "string"
+        },
+        "design_profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Design Profile Sha256",
+          "type": "string"
+        },
+        "variable_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Variable Set Sha256",
+          "type": "string"
+        },
+        "adapter_kind": {
+          "const": "fixture-rc-profile-v1",
+          "default": "fixture-rc-profile-v1",
+          "title": "Adapter Kind",
+          "type": "string"
+        },
+        "adapter_contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Adapter Contract Sha256",
+          "type": "string"
+        },
+        "input_policy": {
+          "const": "unqualified",
+          "default": "unqualified",
+          "title": "Input Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "design_id",
+        "analysis_id",
+        "design_profile_sha256",
+        "variable_set_sha256",
+        "adapter_contract_sha256"
+      ],
+      "title": "FixtureAnalysis",
+      "type": "object"
+    },
+    "FixtureMeasurement": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "measurement_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Measurement Id",
+          "type": "string"
+        },
+        "analysis_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "analysis_contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Analysis Contract Sha256",
+          "type": "string"
+        },
+        "reader": {
+          "const": "fixture-completion-v1",
+          "default": "fixture-completion-v1",
+          "title": "Reader",
+          "type": "string"
+        },
+        "output_id": {
+          "const": null,
+          "default": null,
+          "title": "Output Id",
+          "type": "null"
+        },
+        "definition_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Definition Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "design_id",
+        "measurement_id",
+        "analysis_id",
+        "analysis_contract_sha256",
+        "definition_sha256"
+      ],
+      "title": "FixtureMeasurement",
+      "type": "object"
+    },
+    "RangeReview": {
+      "additionalProperties": false,
+      "properties": {
+        "review_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Review Id",
+          "type": "string"
+        },
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "design_profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Design Profile Sha256",
+          "type": "string"
+        },
+        "variable_contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Variable Contract Sha256",
+          "type": "string"
+        },
+        "evidence_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Evidence Sha256",
+          "type": "string"
+        },
+        "scope": {
+          "const": "operator_reviewed_project_numeric_contract",
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "review_id",
+        "design_id",
+        "design_profile_sha256",
+        "variable_contract_sha256",
+        "evidence_id",
+        "evidence_sha256",
+        "scope"
+      ],
+      "title": "RangeReview",
+      "type": "object"
+    },
+    "RegisteredMeasurement": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "design_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Design Id",
+          "type": "string"
+        },
+        "measurement_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Measurement Id",
+          "type": "string"
+        },
+        "analysis_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "analysis_contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Analysis Contract Sha256",
+          "type": "string"
+        },
+        "reader": {
+          "enum": [
+            "native-bounded-result-v1",
+            "unqualified"
+          ],
+          "title": "Reader",
+          "type": "string"
+        },
+        "output_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "dc-node-scalars-v1",
+                "ac-differential-spectrum-v1",
+                "native-tran-summary-v1"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Output Id"
+        },
+        "definition_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Definition Sha256"
+        }
+      },
+      "required": [
+        "design_id",
+        "measurement_id",
+        "analysis_id",
+        "analysis_contract_sha256",
+        "reader",
+        "output_id",
+        "definition_sha256"
+      ],
+      "title": "RegisteredMeasurement",
+      "type": "object"
+    },
+    "VariableContract": {
+      "additionalProperties": false,
+      "properties": {
+        "logical_id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Logical Id",
+          "type": "string"
+        },
+        "cadence_binding": {
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+          "title": "Cadence Binding",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "V",
+            "A",
+            "ohm",
+            "F",
+            "s",
+            "Hz",
+            "K",
+            "degC",
+            "1"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "value_type": {
+          "enum": [
+            "real",
+            "integer"
+          ],
+          "title": "Value Type",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "maxLength": 48,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Default"
+        },
+        "mutation_policy": {
+          "enum": [
+            "read_only",
+            "fixed",
+            "owned_copy_only"
+          ],
+          "title": "Mutation Policy",
+          "type": "string"
+        },
+        "range_status": {
+          "enum": [
+            "unqualified",
+            "qualified"
+          ],
+          "title": "Range Status",
+          "type": "string"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "maxLength": 48,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "maxLength": 48,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Maximum"
+        },
+        "step_policy": {
+          "enum": [
+            "unqualified",
+            "continuous",
+            "grid",
+            "fixed"
+          ],
+          "title": "Step Policy",
+          "type": "string"
+        },
+        "step": {
+          "anyOf": [
+            {
+              "maxLength": 48,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Step"
+        },
+        "fixed_value": {
+          "anyOf": [
+            {
+              "maxLength": 48,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fixed Value"
+        },
+        "review_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Review Id"
+        }
+      },
+      "required": [
+        "logical_id",
+        "cadence_binding",
+        "unit",
+        "value_type",
+        "default",
+        "mutation_policy",
+        "range_status",
+        "minimum",
+        "maximum",
+        "step_policy",
+        "step",
+        "fixed_value",
+        "review_id"
+      ],
+      "title": "VariableContract",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 5,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "designs": {
+      "items": {
+        "$ref": "#/$defs/DesignProfile"
+      },
+      "maxItems": 16,
+      "title": "Designs",
+      "type": "array"
+    },
+    "variable_sets": {
+      "items": {
+        "$ref": "#/$defs/DesignVariables"
+      },
+      "maxItems": 16,
+      "title": "Variable Sets",
+      "type": "array"
+    },
+    "range_reviews": {
+      "items": {
+        "$ref": "#/$defs/RangeReview"
+      },
+      "maxItems": 512,
+      "title": "Range Reviews",
+      "type": "array"
+    },
+    "analysis_contracts": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/AnalysisContract"
+          },
+          {
+            "$ref": "#/$defs/FixtureAnalysis"
+          }
+        ]
+      },
+      "maxItems": 48,
+      "title": "Analysis Contracts",
+      "type": "array"
+    },
+    "measurement_contracts": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/RegisteredMeasurement"
+          },
+          {
+            "$ref": "#/$defs/FixtureMeasurement"
+          }
+        ]
+      },
+      "maxItems": 512,
+      "title": "Measurement Contracts",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "designs",
+    "variable_sets",
+    "range_reviews",
+    "analysis_contracts",
+    "measurement_contracts"
+  ],
+  "title": "DesignSweepRegistry",
+  "type": "object"
+}

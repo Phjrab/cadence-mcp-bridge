@@ -1,5 +1,13 @@
 # Operations
 
+## Registered sweep lifecycle, 2026-10-05
+
+Current inventory: 58 tools. Registry v5 wraps the existing sweep engine with
+registered admission in the same journal; only the compiled passive RC fixture
+is eligible. Native-v3/sweep-v2 apply the explicit 10 GiB result ceiling without
+resetting existing counts or replay domains. Earlier dated counts are history.
+See [workflow](GENERIC_DESIGN_SWEEP_V2.md).
+
 ## Current client-independent registration, 2026-10-05
 
 The current server exposes 48 tools. Codex and Claude Desktop use the same
