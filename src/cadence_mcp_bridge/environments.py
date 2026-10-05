@@ -265,8 +265,15 @@ def qualify_observation(
     }
 
 
-def qualify_environment(path: Path) -> dict[str, object]:
+def qualify_environment(
+    path: Path, *, expected_profile_sha256: str | None = None
+) -> dict[str, object]:
     profile, data = load_environment(path)
+    if (
+        expected_profile_sha256 is not None
+        and hashlib.sha256(data).hexdigest() != expected_profile_sha256
+    ):
+        raise ValueError("environment profile changed before preflight")
     executable = shutil.which("ssh.exe")
     if executable is None:
         raise ValueError("Windows OpenSSH unavailable")

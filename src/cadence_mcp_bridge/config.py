@@ -36,6 +36,13 @@ class BridgeConfig(BaseSettings):
     max_poll_seconds: Annotated[int, Field(ge=10, le=1_800)] = 300
     submit_target_seconds: Annotated[float, Field(ge=1.0, le=60.0)] = 10.0
 
+    @field_validator("default_concurrency", mode="before")
+    @classmethod
+    def parse_fixed_concurrency(cls, value: object) -> object:
+        # Environment settings arrive as strings. Only the same fixed constant
+        # is accepted; no numeric coercion or alternate concurrency is allowed.
+        return 1 if isinstance(value, str) and value == "1" else value
+
     @field_validator("remote_root", "runner_path")
     @classmethod
     def validate_remote_path(cls, value: str) -> str:

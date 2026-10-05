@@ -41,7 +41,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
 | GENERIC-MEAS-01 | Measurements with established extraction evidence; keep specification evaluation separate | Planned |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
-| ONBOARD-CLI-01 | Complete operator registration/verification/client installation workflow using the current CLI and contracts | Planned |
+| ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
 | PUBLIC-RELEASE-01 | Review actual release history, interface compatibility and semver after onboarding works | Planned |
 
 These phases are not chained execution approval. Dependency review may adjust
@@ -94,3 +94,12 @@ FS structural circuit modification is activated. See
 See [environment operations](GENERIC_ENVIRONMENT_V1.md) and
 [phase result](GENERIC_ENV_01_RESULT_V1.md). Prior roadmap and WP histories remain
 dated reference material; this document does not rewrite them.
+
+## ONBOARD-CLI-01 activation and result
+
+The user selected this one phase after merged PR #108. Joined local contracts,
+explicit client configuration export and documented installation are implemented
+and verified; see [workflow](ONBOARDING_CLI_V1.md) and
+[result](ONBOARD_CLI_01_RESULT_V1.md). Other physical execution routes remain
+unqualified. PUBLIC-RELEASE-01 readiness is proposed, not activated; release/tag
+publication and broader generic execution are not implied by this phase.

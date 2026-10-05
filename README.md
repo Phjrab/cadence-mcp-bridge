@@ -8,6 +8,13 @@ protected. Feature changes go through a dedicated PR.
 
 ## Generic onboarding status
 
+ONBOARD-CLI-01 adds operator `verify` for joined environment/design/PDK contracts
+and `client-config` for exclusively created private Codex TOML or stdio MCP JSON
+fragments. Explicit registry/journal settings survive desktop-client startup;
+`doctor` also validates configured registries. See the complete
+[onboarding workflow](docs/ONBOARDING_CLI_V1.md). Local consistency and exported
+configuration do not qualify a new execution route.
+
 GENERIC-ENV-01 adds operator-owned environment descriptions and bounded
 preflight qualification. Another operator can describe their host without
 source edits. Existing MCP execution still uses the registered reference
@@ -60,10 +67,10 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 
 | Status | Scope |
 | --- | --- |
-| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial |
-| Supported by contract | Operator-only environment preflight, v1/v2/v3 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1/v2/v3 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
-| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and full public onboarding/release |
+| Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, generic measurements, native live cancellation and public release readiness |
 
 Arbitrary Cadence projects/PDKs, autonomous optimization, layout, DRC/LVS,
 statistical simulation/Monte Carlo and multidimensional sweep are not generally
