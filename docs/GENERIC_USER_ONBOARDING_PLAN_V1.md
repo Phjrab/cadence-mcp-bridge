@@ -1,5 +1,17 @@
 # Generic user onboarding program v1
 
+## SPEC-CONTRACT-01 continuation, 2026-10-06
+
+After merged ANALOG-MEAS-01 (#118), continuation selects one condition-bound
+specification phase at main `e3a3fb41d48a391a8c9667237a076dabeea3dda1`.
+Registry v7 adds operator goals and three read-only APIs over registered analog
+results. No reference target exists; partial/unqualified results never pass.
+Sweep/storage/analog phases remain completed history. No new simulation, deletion,
+optimization or release. Complete gates and one reviewed PR, then report and ask
+once before Release Readiness reassessment. Claude real-client and imported
+planning rights remain separate release qualifications. See
+[specifications](SPECIFICATION_CONTRACTS_V1.md).
+
 ## ANALOG-MEAS-01 continuation, 2026-10-06
 
 After merged STORAGE-MGMT-01 (#117), the user selects one registered analog

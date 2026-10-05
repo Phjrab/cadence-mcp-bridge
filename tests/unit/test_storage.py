@@ -258,7 +258,7 @@ async def test_actual_typed_mcp_storage_calls_and_malformed_boundary() -> None:
     server = create_server(CadenceService(backend))  # type: ignore[arg-type]
     async with Client(server) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 66
+        assert len(tools) == 69
         summary = await client.call_tool("cadence_storage_summary", {})
         assert not summary.is_error and summary.structured_content["snapshot_id"] == s.snapshot_id
         page = await client.call_tool(

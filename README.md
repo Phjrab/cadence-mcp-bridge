@@ -92,6 +92,14 @@ requirements; no numerical value is invented. No new simulation or PSF extractio
 is triggered, and specifications remain `not_evaluated`.
 See [analog definitions and workflow](docs/ANALOG_MEASUREMENTS_V1.md).
 
+SPEC-CONTRACT-01 adds operator registry v7 and three read-only specification
+tools. Goals bind exact measurement definitions, units and effective conditions.
+Only QUALIFIED results at matching conditions can yield PASS/FAIL; partial or
+unqualified measurements and mismatches remain explicit. **No reference numerical
+goal exists**, so the reference list is empty and `not_evaluated` remains intact.
+Targets and measurement facts cannot be supplied through MCP. See
+[specification contracts](docs/SPECIFICATION_CONTRACTS_V1.md).
+
 GENERIC-SWEEP-01 prepares registered 1D contracts and local plans with two
 read-only tools. It reuses v4 reviews/analyses/measurements, requires all fixed
 values explicitly and bounds exact decimal sequences to 16 points. Numeric
@@ -130,7 +138,7 @@ be deleted; historical results remain protected. See the
 | Status | Scope |
 | --- | --- |
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
-| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1–v6 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1–v7 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
 | Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, additional qualified measurements, native live cancellation and a new public release after remaining gates |
 
@@ -169,7 +177,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 66 typed tools; all previous 63 full schemas are preserved.
+The server has 69 typed tools; all previous 66 full schemas are preserved.
+Three additive read-only specification interfaces list, describe and evaluate
+operator-owned exact-condition goals. No goal is invented for the reference.
 Three new read-only analog interfaces expose operator-registered definitions and
 qualified 10 Hz gain / partial bandwidth estimates; other analog metrics stay unqualified.
 The five new storage interfaces have verified reference-host inventory/plan/dry-run

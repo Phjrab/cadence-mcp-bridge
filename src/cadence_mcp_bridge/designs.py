@@ -466,6 +466,10 @@ def load_design_registry(
             from cadence_mcp_bridge.analog_registry import DesignAnalogRegistry
 
             registry = DesignAnalogRegistry.model_validate_json(data)
+        elif version == 7:
+            from cadence_mcp_bridge.specification_registry import DesignSpecificationRegistry
+
+            registry = DesignSpecificationRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):

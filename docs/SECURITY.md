@@ -1,5 +1,17 @@
 # Security and Reliability Baseline
 
+## Registered specification evaluation, 2026-10-06
+
+Registry v7 adds operator-owned goals to unchanged execution contracts. Three
+read-only tools accept only logical IDs, current contract hash and an optional
+admitted UUID4. No caller target, fact, expression or path. Source identity,
+definition/unit and full conditions are checked before PASS/FAIL; partial results
+remain UNQUALIFIED. Unknown/stale/unadmitted/malformed/failed source requests
+remain errors. Empty reference goals stay NOT_EVALUATED. v7 revalidates the
+complete v6 then v5 execution projection for durable sweep identity. No new
+execution, mutation, accounting reset or deletion authority. See
+[specifications](SPECIFICATION_CONTRACTS_V1.md).
+
 ## Registered analog derivation, 2026-10-06
 
 Registry v6 validates all v5 execution contracts and adds operator-only derived

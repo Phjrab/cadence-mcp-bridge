@@ -64,7 +64,7 @@ async def verify(
     for name, path in paths.items():
         with path.open("xb") as stream:
             fixture = (
-                examples.parent / "design-registry-v6.fictional.json"
+                examples.parent / "design-registry-v7.fictional.json"
                 if name == "designs"
                 else examples / (name + ".json")
             )
@@ -138,9 +138,38 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 66 or not baseline_names.issubset(names):
+            if len(names) != 69 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
+            specifications = await client.call_tool(
+                "cadence_list_specifications", {"design_id": "example-amplifier"}
+            )
+            if (
+                specifications.is_error
+                or specifications.structured_content is None
+                or specifications.structured_content["target_status"] != "not_selected"
+                or len(specifications.structured_content["specifications"]) != 1
+            ):
+                raise ValueError("installed v7 specifications fabricated a target")
+            spec = specifications.structured_content["specifications"][0]
+            selection = {"design_id": "example-amplifier", "spec_id": spec["contract"]["spec_id"]}
+            described = await client.call_tool(
+                "cadence_describe_specification", {"request": selection}
+            )
+            evaluated = await client.call_tool(
+                "cadence_evaluate_specification",
+                {"request": {**selection, "expected_contract_sha256": spec["contract_sha256"]}},
+            )
+            if (
+                described.is_error
+                or described.structured_content != spec
+                or evaluated.is_error
+                or evaluated.structured_content is None
+                or evaluated.structured_content["status"] != "NOT_EVALUATED"
+                or evaluated.structured_content["measurement"] is not None
+                or journal.exists()
+            ):
+                raise ValueError("installed missing target must stay NOT_EVALUATED without IO")
             analog = await client.call_tool(
                 "cadence_list_analog_measurements", {"design_id": "example-amplifier"}
             )
@@ -274,6 +303,7 @@ async def verify(
         "unqualified_admission": "denied",
         "registered_measurements": "v4_list_and_unqualified_read_denial_verified",
         "registered_analog": "v6_six_definitions_unqualified_null_values_no_admission",
+        "registered_specifications": "v7_missing_target_NOT_EVALUATED_no_admission",
         "registered_sweep": "local_contract_plan_unqualified_NOT_RUN_no_admission",
         "remote_contact": False,
         "new_simulations": 0,

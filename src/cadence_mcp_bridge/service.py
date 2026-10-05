@@ -125,6 +125,14 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepSelection,
     RegisteredSweepPlanner,
 )
+from cadence_mcp_bridge.specification_service import SpecificationSupervisor
+from cadence_mcp_bridge.specifications import (
+    SpecificationDescription,
+    SpecificationEvaluation,
+    SpecificationList,
+    SpecificationQuery,
+    SpecificationSelection,
+)
 from cadence_mcp_bridge.storage import (
     CleanupOutcome,
     CleanupPlan,
@@ -250,6 +258,7 @@ class CadenceService:
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
         self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
+        self._specifications = SpecificationSupervisor(self._designs, self._analog_measurements)
         self._registered_sweeps = RegisteredSweepPlanner(
             self._designs, self._analyses, self._registered_measurements
         )
@@ -320,6 +329,17 @@ class CadenceService:
 
     async def list_analog_measurements(self, design_id: str) -> AnalogList:
         return self._analog_measurements.listing(design_id)
+
+    async def list_specifications(self, design_id: str) -> SpecificationList:
+        return self._specifications.listing(design_id)
+
+    async def describe_specification(
+        self, request: SpecificationSelection
+    ) -> SpecificationDescription:
+        return self._specifications.describe(request)
+
+    async def evaluate_specification(self, request: SpecificationQuery) -> SpecificationEvaluation:
+        return await self._specifications.result(request)
 
     async def describe_analog_measurement(self, request: AnalogSelection) -> AnalogDescription:
         return self._analog_measurements.describe(request)
