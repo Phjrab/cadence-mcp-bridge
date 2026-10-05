@@ -1,0 +1,1 @@
+{"campaign_id":"AUTO-PHASE-01","historical_delete_authority":false,"maximum_corrections_same_change":20,"parent_campaign_policy_sha256":"b29b2d7e87b76aebbbc9e1b0e1921392e9508368f1989b0fc8db247a9a25219a","preserve_consumed_corrections":true,"preserve_other_limits":true,"preserve_prior_policy_and_failure_evidence":true,"repository":"Phjrab/cadence-mcp-bridge","schema_version":5}

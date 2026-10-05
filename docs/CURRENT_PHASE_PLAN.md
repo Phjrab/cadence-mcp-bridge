@@ -1,5 +1,61 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## STORAGE-MGMT-01 final qualification overlay, 2026-10-06
+
+The user explicitly sets the repository same-change correction ceiling to 20;
+PHASE_CORRECTION_LIMIT_V5.json binds that overlay without resetting usage.
+Nine corrections are consumed. Immutable v6 retains old deployments, failed v1
+stage and the original control/spool/replay domain. Protected-group aggregation
+and bounded per-root traversal resolve the old coverage gap: all six registered
+roots SCANNED, 446 job identities, 14 protected groups and 9,470 observed nodes.
+Every fixed historical group's orphan active marker also blocks cleanup.
+Current [phase result](STORAGE_MGMT_01_RESULT_V1.md) supersedes the checkpoint
+below; earlier approvals/failures are preserved history. Final full unit
+(1,629 passed, four skipped, 57 warnings), security and distribution gates pass.
+Integration uses containing reviewed PR #117 with exact remote SHA verification
+retained privately after permitted merge; no state-sync-only PR is created.
+There is no actual user-selected deletion; remote delete remains NOT_RUN.
+Complete this phase, report exact qualification and ask once before ANALOG-MEAS-01.
+
+## STORAGE-MGMT-01 activation, 2026-10-06
+
+The user says continue after planning PR #116. Starting main is
+`2797d60cbd4c254cd753527b8542cdae27c1b10a`. Activate this one implementation phase;
+the scheduling-only language below is preserved history. Implement registered
+inventory/classification, summary/pagination, exact cleanup plan, dry-run and
+independently user-selected operator consent for one isolated intermediate leaf.
+All historical results default to replay/evidence protection; source/ADE/PDK,
+ledgers/admissions/journals and prior evidence remain protected. No actual historical
+or synthetic reference-host deletion is currently selected by the user.
+
+Reuse locks, budgets and transport; keep 10 GiB/500 counters and removed elapsed
+ceiling. Verify static/full/security/dependency/distribution/protocol gates and
+bounded real-host inventory/plan/dry-run, preserving old schemas/results and
+fingerprints. Record absent deletion E2E honestly. Integrate one feature PR under
+existing delegation and ask once before ANALOG-MEAS-01. Workflow:
+[simulation storage](SIMULATION_STORAGE_V1.md). Advanced compaction stays deferred.
+
+Current checkpoint: [STORAGE_MGMT_01_CHECKPOINT_V1.md](STORAGE_MGMT_01_CHECKPOINT_V1.md).
+Later fourth-correction qualification supersedes the pending-deployment checkpoint
+below: immutable v2 deploy, actual SDK inventory/plan/dry-run, prior-result and
+protection regression pass. Final full-unit gate has 1,622 passes/four OS skips;
+static/security/dependency/distribution gates pass. Actual inventory reaches the
+64-artifact limit before later registered groups: coverage is PARTIAL and all
+bytes are lower bounds. A fifth correction for bounded group aggregation is
+requested and pending. Draft PR #117 preserves the reviewed checkpoint; do not
+merge until that acceptance gap is resolved. Actual deletion remains NOT_RUN.
+
+Earlier pre-fourth-correction observations, retained for failure provenance:
+Local full-unit verification completed with 1,621 passes and one existing backend
+method-inventory expectation needing the two new typed methods. Initial curated
+distribution/install verification passed. Exact old schemas/results and protected
+evidence regression passed. Deployment stopped before activation because guest
+worker/shell bytes had CRLF; the failed stage and transcripts remain preserved.
+The original three corrections are consumed. A separately requested fourth
+correction is pending explicit user approval; general continuation does not reset
+that limit. No completed-phase, real inventory or real deletion PASS is claimed.
+
+
 ## Storage-management scheduling directive, 2026-10-05
 
 GENERIC-SWEEP-INTEGRATION-01 is complete and merged as #115 at main

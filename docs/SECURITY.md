@@ -378,3 +378,18 @@ vulnerabilities.
 - PDK, shared library, Cadence installation, or CentOS system modification
 - credential, license value, circuit data, raw PSF, or unrestricted log return
 - automatic destructive remote cleanup, direct `main` push, or force-push
+
+## Registered storage-management boundary
+
+STORAGE-MGMT-01 adds path-free metadata and exact hash-bound cleanup interfaces.
+Historical native/fixture/PVT/qualification results remain replay/evidence protected.
+Only separately reviewed isolated regular intermediate leaves can be candidates;
+source/ADE/PDK, active work, credentials, deployments, ledgers and durable admissions
+are never targets. Model calls cannot register artifacts, change retention or mint
+approval. Explicit selected items are bound in an independent operator record.
+Linux dirfds/no-follow traversal, mode/owner checks, atomic private quarantine and
+inode/content revalidation prevent path substitution from becoming an arbitrary
+unlink. Destructive operations retain durable intent/outcomes; unknown states cannot
+blind-retry. Read-only scope/byte/response limits and actual qualification status
+are documented in [storage workflow](SIMULATION_STORAGE_V1.md). This extends the
+historical dry-run planner with a reviewed mechanism; it does not weaken its rules.

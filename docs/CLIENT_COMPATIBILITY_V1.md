@@ -1,5 +1,16 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current STORAGE-MGMT-01 overlay
+
+The current interface has 63 tools. The five path-free storage interfaces
+preserve all preceding 58 full schemas, including registered sweep lifecycle.
+Both exported client settings pass actual SDK stdio inventory/plan/dry-run and
+preserved native/RC results/restart regression against the same server/guards.
+All six registered result groups are observed; real-host deletion is NOT_RUN.
+Use 63 tools for future manual qualification. The 48/51/53-tool overlays below
+remain dated history. CLAUDE_REAL_CLIENT_UNVERIFIED and fresh Codex application
+NOT_TESTED are unchanged. See [storage evidence](STORAGE_MGMT_01_RESULT_V1.md).
+
 ## Current GENERIC-SWEEP-01 preparation overlay
 
 Current inventory is 53 tools: two local registered 1D description/planning

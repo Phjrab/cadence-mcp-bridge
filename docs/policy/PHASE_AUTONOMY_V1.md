@@ -67,7 +67,8 @@ rules remain independent boundaries.
 ## Campaign ceilings
 
 One active EDA job; 500 cumulative Spectre attempts, 20 DRC,
-20 LVS, 10 PEX; three modifications of the same code change; two communication
+20 LVS, 10 PEX; twenty modifications of the same code change under the active
+2026-10-06 correction overlay; two communication
 retries per fixed read; 5 GiB new results; managed disk free space at least the
 greater of 2 GiB and ten percent. Paid resources: zero. Usage accumulates across
 phases and resumes. The user explicitly removed the elapsed-time ceiling on
@@ -95,3 +96,13 @@ and job/reservation identities, retain 500 cumulative Spectre attempts and all
 disk/lock/replay/protection rules. The earlier 5 GiB statements describe prior
 versioned contracts; historical deployments and counters are not rewritten.
 No new simulation is required to verify this transition.
+
+## Active correction ceiling overlay, 2026-10-06
+
+The user explicitly changes the repository's same-change correction ceiling to
+20 through `PHASE_CORRECTION_LIMIT_V5.json`. The original three-correction rule,
+earlier scoped extensions and every consumed correction
+remain immutable history. This changes the active ceiling without resetting
+usage. Bind the overlay to explicit private user delegation before an operator
+path uses it; a checked-out policy alone is not authority. All other resource,
+replay, protection, Git and selected-deletion boundaries remain binding.

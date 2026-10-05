@@ -32,6 +32,14 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 
 ## Bounded implementation decomposition
 
+STORAGE-MGMT-01 implementation is active after merged planning PR #116, starting
+main `2797d60cbd4c254cd753527b8542cdae27c1b10a`. It precedes ANALOG-MEAS-01 and
+SPEC-CONTRACT-01. Local contracts and actual guest inventory/plan/dry-run are
+verified; registered-group aggregation resolves the initial coverage blocker.
+The user sets the active correction ceiling to 20, retaining prior usage.
+See [phase evidence](STORAGE_MGMT_01_RESULT_V1.md). No historical deletion
+authority follows from this program or from measurement availability.
+
 | Phase | Deliverable and acceptance boundary | State |
 | --- | --- | --- |
 | GENERIC-ENV-01 | Operator-owned versioned environment description, local doctor/schema/validation/preparation, one fixed read-only qualification probe; no execution activation | Implemented; see result report |
@@ -189,7 +197,7 @@ Merged #115 completes the registered RC sweep lifecycle and actual 10 GiB guard
 transition; keep its history and 58-tool regression foundation. The new user
 storage directive schedules STORAGE-MGMT-01 next, ahead of ANALOG-MEAS-01 and
 SPEC-CONTRACT-01. See [source audit and concrete plan](STORAGE_MANAGEMENT_PLAN_V1.md).
-The capability is PLANNED, not an implemented/supported MCP storage API. One
+At this dated scheduling checkpoint the capability was PLANNED. One
 normal boundary choice activates the implementation; routine phase development
 then remains autonomous. No previous phase is restarted.
 

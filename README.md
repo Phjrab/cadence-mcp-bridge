@@ -104,6 +104,19 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
 [phase evidence](docs/GENERIC_ENV_01_RESULT_V1.md).
 
+STORAGE-MGMT-01 adds five typed storage tools for registered-group inventory,
+classification, exact cleanup plans and default dry-run. Reference-host SDK
+stdio verifies all six registered groups: protected history is aggregated by
+analysis/retention, with snapshot-bound pages and descriptions. This reports
+managed result roots, not whole-VM storage. Unsafe or over-limit inventories
+remain partial lower bounds and cannot authorize deletion.
+Historical replay/evidence results remain protected. Actual deletion requires
+explicit human selection and a separate operator record; real-host deletion
+has not been tested. Only separately reviewed isolated intermediate leaves can
+be deleted; historical results remain protected. See the
+[storage workflow](docs/SIMULATION_STORAGE_V1.md) and
+[phase evidence](docs/STORAGE_MGMT_01_RESULT_V1.md).
+
 | Status | Scope |
 | --- | --- |
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
@@ -146,7 +159,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 58 typed tools, preserving all previous 53 schemas.
+The server has 63 typed tools; all previous 58 full schemas are preserved.
+The five new storage interfaces have verified reference-host inventory/plan/dry-run
+behavior; actual Linux deletion is unverified. All clients receive the same guards.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
 contract/planning preparation only. Registered
 `cadence_list_measurements`, `cadence_describe_measurement` and

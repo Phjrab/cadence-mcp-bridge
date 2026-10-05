@@ -528,6 +528,8 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
         "lookup_sweep_reservation",
         "effective_sweep_values",
         "submit_smoke",
+        "storage_snapshot",
+        "storage_cleanup",
     }
     assert "profile" not in inspect.signature(backend.submit_smoke).parameters
 

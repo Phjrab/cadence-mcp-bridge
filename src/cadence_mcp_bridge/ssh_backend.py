@@ -57,6 +57,7 @@ from cadence_mcp_bridge.native_diagnostics import (
 )
 from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
+from cadence_mcp_bridge.storage import CleanupOutcome, CleanupRequest, StorageSnapshot
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
     DesignWriteValidationResult,
@@ -158,6 +159,27 @@ class OpenSshBackend:
         if executable is None:
             raise BackendUnavailableError("Windows OpenSSH ssh.exe is unavailable")
         self._ssh_executable = executable
+
+    async def storage_snapshot(self) -> StorageSnapshot:
+        output = await self._storage_request("inventory", {})
+        return self._validate(StorageSnapshot, json.loads(output))
+
+    async def storage_cleanup(self, request: CleanupRequest) -> CleanupOutcome:
+        output = await self._storage_request("cleanup", request.model_dump(mode="json"))
+        return self._validate(CleanupOutcome, json.loads(output))
+
+    async def _storage_request(
+        self, action: Literal["inventory", "cleanup"], request: dict[str, Any]
+    ) -> str:
+        if self._config.remote_root != "/home/buet/cds_work/.cadence_mcp":
+            raise InvalidInputError("storage requires the reviewed managed root")
+        raw = json.dumps(request, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+            "ascii"
+        )
+        if len(raw) > 8192:
+            raise InvalidInputError("storage request bound exceeded")
+        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
+        return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
 
     async def health(self) -> HealthReport:
         payload = await self._invoke_json(_RunnerCommand.HEALTH)

@@ -117,6 +117,19 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepSelection,
     RegisteredSweepPlanner,
 )
+from cadence_mcp_bridge.storage import (
+    CleanupOutcome,
+    CleanupPlan,
+    CleanupRequest,
+    StorageArtifact,
+    StorageArtifactRequest,
+    StorageBackend,
+    StoragePage,
+    StoragePageRequest,
+    StorageSelection,
+    StorageSummary,
+    StorageSupervisor,
+)
 from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
 from cadence_mcp_bridge.sweeps import (
     SweepPlan,
@@ -222,6 +235,7 @@ class CadenceService:
         pdks: PdkRegistry | None = None,
     ) -> None:
         self._backend = backend
+        self._storage = StorageSupervisor(cast(StorageBackend, backend))
         self._designs = reference_measurement_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
         self._pdks = reference_pdk_registry() if pdks is None else pdks
@@ -242,6 +256,21 @@ class CadenceService:
             self._sweeps,
             self._pdks,
         )
+
+    async def storage_summary(self) -> StorageSummary:
+        return await self._storage.summary()
+
+    async def list_storage_artifacts(self, request: StoragePageRequest) -> StoragePage:
+        return await self._storage.page(request)
+
+    async def describe_storage_artifact(self, request: StorageArtifactRequest) -> StorageArtifact:
+        return await self._storage.describe(request)
+
+    async def plan_storage_cleanup(self, request: StorageSelection) -> CleanupPlan:
+        return await self._storage.plan(request)
+
+    async def execute_storage_cleanup(self, request: CleanupRequest) -> CleanupOutcome:
+        return await self._storage.execute(request)
 
     async def list_designs(self) -> DesignList:
         return self._designs.listing()
