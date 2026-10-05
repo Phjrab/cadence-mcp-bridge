@@ -8,7 +8,13 @@ Branch: `feat/generic-var-01`. This one phase covers implementation, tests,
 documentation, bounded verification and permitted feature PR integration.
 FS improvement work remains paused. No prior WP or major phase is repeated.
 
-Feature integration is through this report's containing PR. Exact PR/head/main
+Feature PR: [#106](https://github.com/Phjrab/cadence-mcp-bridge/pull/106).
+Initial reviewed head: `ae0d38521b1aa6094a456950c653dc04c072b7f0`.
+The public scope is 19 files. GitHub inspection reported CLEAN/MERGEABLE,
+no check runs, submitted reviews, comments or effective main branch rules.
+Local gates and exact diff review supply verification; no GitHub CI success
+is claimed. Final head and rules are rechecked before permitted integration.
+Exact PR/head/main
 and tree equality are recorded in the private final checkpoint and completion
 report. No state-sync PR, main push, force push or protection bypass is used.
 The repository remains public; package version and published v1.0.0/tag history
