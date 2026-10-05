@@ -1,5 +1,20 @@
 # Security and Reliability Baseline
 
+## Registered 1D sweep preparation, 2026-10-05
+
+Two local read-only tools bind existing startup registry v4 numeric reviews,
+analysis, same-analysis measurements and PDK metadata by exact hashes. Plans
+accept logical IDs, bounded decimal strings/units and exactly all non-axis values;
+no scripts/paths/netlists/targets/defaults or registration. At most 16 unique
+exact explicit/linear points; fixed checks are shared once to bound output.
+Reference bias ranges remain unqualified and VDD=1 V remains fixed.
+Local numeric matching grants no parameterized execution. All points NOT_RUN;
+no reservation, admission, job identity, remote contact, circuit write or new
+journal is introduced. Existing fixture submission rejects these plans and
+keeps its original guards. Later physical execution must independently qualify
+effective inputs, cumulative resources, durable resume/replay and cancellation.
+See [sweep preparation](GENERIC_DESIGN_SWEEP_V1.md).
+
 ## Registered measurement boundary, 2026-10-05
 
 GENERIC-MEAS-01 adds three read-only tools (51 total) and registry v4 definitions

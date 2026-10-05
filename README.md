@@ -82,6 +82,13 @@ simulation or extraction is triggered. Old registry versions remain valid.
 Specifications stay `not_evaluated`; bandwidth, phase margin, power and OP
 definitions are not added. See [measurement workflow](docs/GENERIC_MEASUREMENTS_V1.md).
 
+GENERIC-SWEEP-01 prepares registered 1D contracts and local plans with two
+read-only tools. It reuses v4 reviews/analyses/measurements, requires all fixed
+values explicitly and bounds exact decimal sequences to 16 points. Numeric
+eligibility is separate from execution: every point is NOT_RUN and all
+parameterized physical execution remains unqualified. Reference bias ranges
+remain unqualified. See [sweep preparation](docs/GENERIC_DESIGN_SWEEP_V1.md).
+
 See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [fictional profile](docs/examples/environment-v1.fictional.json),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
@@ -129,7 +136,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 51 typed tools, preserving all previous 48 schemas. Registered
+The server has 53 typed tools, preserving all previous 51 schemas.
+`cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
+contract/planning preparation only. Registered
 `cadence_list_measurements`, `cadence_describe_measurement` and
 `cadence_measurement_result` are read-only. `cadence_list_designs` and
 `cadence_describe_design(design_id)` add read-only local introspection; every

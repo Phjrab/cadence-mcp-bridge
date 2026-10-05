@@ -1,5 +1,16 @@
 # Public release readiness v1
 
+## Current registered sweep preparation overlay, 2026-10-05
+
+GENERIC-SWEEP-01 prepares local 1D contracts/plans with two read-only interfaces
+(53 total). The preceding 51 schemas, old registry schemas and existing
+analysis/measurement/fixture identities are preserved. This is planning only;
+physical parameterized execution, reviewed amplifier ranges, effective-input
+verification, durable resume/reservation/cancellation remain separate prerequisites.
+The package gate checks installed planning denial without Cadence execution.
+Licensing/imported rights, actual desktop qualification and publication gates
+remain. See [sweep preparation](GENERIC_DESIGN_SWEEP_V1.md).
+
 ## Current measurement overlay, 2026-10-05
 
 GENERIC-MEAS-01 adds registry v4 measurement definitions and three read-only

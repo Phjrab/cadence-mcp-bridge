@@ -278,6 +278,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         "cadence_list_measurements",
         "cadence_describe_measurement",
         "cadence_measurement_result",
+        "cadence_describe_design_sweep",
+        "cadence_plan_design_sweep",
         "cadence_list_pdk_adapters",
         "cadence_describe_pdk_adapter",
         "cadence_design_pdk_status",
@@ -371,6 +373,8 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.read_only_hint
     }
     assert read_only == {
+        "cadence_describe_design_sweep",
+        "cadence_plan_design_sweep",
         "cadence_list_measurements",
         "cadence_describe_measurement",
         "cadence_measurement_result",

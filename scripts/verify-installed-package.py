@@ -138,7 +138,7 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 51 or not baseline_names.issubset(names):
+            if len(names) != 53 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
             listing = await client.call_tool("cadence_list_designs")
@@ -169,6 +169,38 @@ async def verify(
             )
             if not denied_measurement.is_error or journal.exists():
                 raise ValueError("unqualified installed measurement bypassed admission")
+            selection = {
+                "design_id": "example-amplifier",
+                "analysis_id": "example-dc",
+                "variable_id": "bias-n",
+                "measurement_ids": ["dc-output"],
+            }
+            described = await client.call_tool(
+                "cadence_describe_design_sweep", {"request": selection}
+            )
+            if described.is_error or described.structured_content is None:
+                raise ValueError("installed registered sweep description failed")
+            planned = await client.call_tool(
+                "cadence_plan_design_sweep",
+                {
+                    "request": {
+                        **selection,
+                        "expected_contract_sha256": described.structured_content["contract_sha256"],
+                        "unit": "V",
+                        "values": ["0.1"],
+                        "fixed": {"bias-p": {"value": "0.2", "unit": "V"}},
+                    }
+                },
+            )
+            if (
+                planned.is_error
+                or planned.structured_content is None
+                or planned.structured_content["execution_authorized"]
+                or planned.structured_content["locally_admissible"]
+                or planned.structured_content["points"][0]["state"] != "NOT_RUN"
+                or journal.exists()
+            ):
+                raise ValueError("unqualified registered sweep gained execution/admission")
             plan = await client.call_tool(
                 "cadence_plan_analysis",
                 {
@@ -211,6 +243,7 @@ async def verify(
         "legacy_tools_preserved": len(baseline_names),
         "unqualified_admission": "denied",
         "registered_measurements": "v4_list_and_unqualified_read_denial_verified",
+        "registered_sweep": "local_contract_plan_unqualified_NOT_RUN_no_admission",
         "remote_contact": False,
         "new_simulations": 0,
     }

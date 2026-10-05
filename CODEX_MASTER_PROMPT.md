@@ -1,5 +1,15 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-05 sweep preparation overlay:** After merged #113, the user
+> selects GENERIC-SWEEP-01 registered 1D contract/planning preparation. Reuse
+> registry v4, exact numeric reviews, analysis and measurement contracts. Add
+> local description/hash-bound plans only; keep all parameterized physical
+> execution unqualified. No guessed voltage range, execution/admission/reservation,
+> deployment or new simulation is activated. Preserve old schemas, tools, journals,
+> cumulative budgets, prior evidence and the removed elapsed ceiling. Complete
+> gates, preserved-result regression and one reviewed feature PR; report and ask
+> once before another phase. See docs/GENERIC_DESIGN_SWEEP_V1.md.
+
 > **Active 2026-10-05 measurement overlay:** The user explicitly selects
 > GENERIC-MEAS-01 after merged #112. Implement one registered measurement phase
 > over qualified bounded native results, keeping existing analysis/admission

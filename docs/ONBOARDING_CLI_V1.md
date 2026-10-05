@@ -152,7 +152,10 @@ Start with `cadence_list_designs`, `cadence_describe_design`,
 `cadence_design_pdk_status`, `cadence_list_analyses` and `cadence_plan_analysis`.
 GENERIC-MEAS-01 extends the same registry to v4 with hash-bound measurements
 and read-only `cadence_list_measurements`, `cadence_describe_measurement` and
-`cadence_measurement_result` (51 total tools). Follow the
+`cadence_measurement_result`. GENERIC-SWEEP-01 adds local
+`cadence_describe_design_sweep` and `cadence_plan_design_sweep` (53 total tools).
+They reuse this registry and report numeric denials without execution/admission.
+See [sweep preparation](GENERIC_DESIGN_SWEEP_V1.md). Follow the
 [v4 workflow](GENERIC_MEASUREMENTS_V1.md) for explicit operator migration;
 old registries do not gain implicit readers. No model-facing registration/path/script fields exist.
 Unqualified designs and PDKs cannot dispatch. Only the exact existing reference

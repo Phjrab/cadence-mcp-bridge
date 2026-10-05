@@ -89,6 +89,12 @@ from cadence_mcp_bridge.registered_measurements import (
     MeasurementResult,
     MeasurementSelection,
 )
+from cadence_mcp_bridge.registered_sweeps import (
+    DesignSweepDescription,
+    DesignSweepPlan,
+    DesignSweepRequest,
+    DesignSweepSelection,
+)
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.sweeps import (
@@ -270,6 +276,8 @@ class DesignContractServer(MCPServer):
                 "cadence_list_measurements",
                 "cadence_describe_measurement",
                 "cadence_measurement_result",
+                "cadence_describe_design_sweep",
+                "cadence_plan_design_sweep",
             }:
                 tool.input_schema = {**tool.input_schema, "additionalProperties": False}
         return tools
@@ -306,6 +314,8 @@ class DesignContractServer(MCPServer):
             "cadence_cancel_analysis": "request",
             "cadence_describe_measurement": "request",
             "cadence_measurement_result": "request",
+            "cadence_describe_design_sweep": "request",
+            "cadence_plan_design_sweep": "request",
         }.get(name)
         if argument is not None and (
             set(arguments) != {argument} or type(arguments[argument]) is not dict
@@ -328,6 +338,33 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_describe_design_sweep",
+        annotations=_READ_ONLY,
+        description="Describe a registered design/analysis/variable and same-analysis measurement "
+        "IDs for local 1D sweep planning. Returns contract hash, fixed-value requirements and "
+        "blockers; no execution, defaults, range qualification or transport.",
+        structured_output=True,
+    )
+    async def cadence_describe_design_sweep(
+        request: DesignSweepSelection,
+    ) -> Annotated[CallToolResult, DesignSweepDescription]:
+        return await _stable_result(service.describe_design_sweep(request))
+
+    @server.tool(
+        name="cadence_plan_design_sweep",
+        annotations=_READ_ONLY,
+        description="Plan at most 16 registered 1D points using the described contract hash, "
+        "decimal strings/units and every non-axis fixed value. Use explicit values or exact "
+        "linear start/stop/step. Reports numeric denials; all points NOT_RUN, no simulation, "
+        "reservation or durable admission. Parameterized execution is unqualified.",
+        structured_output=True,
+    )
+    async def cadence_plan_design_sweep(
+        request: DesignSweepRequest,
+    ) -> Annotated[CallToolResult, DesignSweepPlan]:
+        return await _stable_result(service.plan_design_sweep(request))
 
     @server.tool(
         name="cadence_list_measurements",

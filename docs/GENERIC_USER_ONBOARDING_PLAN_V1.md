@@ -38,7 +38,7 @@ remain binding. Runtime environment descriptions cannot replace those guards.
 | GENERIC-DESIGN-01 | Operator registry and logical design introspection with environment/technology references, source/copy policy and declared allowlists; preserve fixed/native compatibility; generic execution stays unqualified | Implemented; user selected this one phase |
 | GENERIC-VAR-01 | Logical/Cadence bindings, exact units/types/defaults and separate bound numeric reviews; unqualified ranges reject values, generic execution stays disabled | Implemented; see variable workflow/result |
 | GENERIC-SIM-01 | Registered DC/AC/TRAN lifecycle, durable UUID admission and bounded native results; fixed reference compatibility adapter, other designs blocked; native live cancellation unsupported | Implemented; see analysis workflow/result |
-| GENERIC-SWEEP-01 | Qualified real-design 1D variable sweeps with effective inputs, durable resume, reservation and cancellation | Planned |
+| GENERIC-SWEEP-01 | Registered local 1D description/hash-bound planning; physical execution needs qualified numeric ranges, adapter, effective inputs, durable resume, reservation and cancellation | Preparation implemented; execution remains unqualified |
 | GENERIC-MEAS-01 | Registry v4 hash-bound definitions and admitted-result readers for validated native DC/AC/TRAN; keep specification evaluation separate | Implemented; see measurement workflow/result |
 | PDK-ADAPTER-01 | Runtime logical registry and exact gpdk090 regression adapter; other PDK execution unqualified | Implemented and verified; see PDK workflow/result |
 | ONBOARD-CLI-01 | Joined local registration/verification and reviewable client configuration export using existing contracts; other installations remain unqualified | Implemented; see onboarding workflow/result |
@@ -157,3 +157,16 @@ stay unqualified. See [workflow](GENERIC_MEASUREMENTS_V1.md) and
 [result](GENERIC_MEAS_01_RESULT_V1.md). Complete one reviewed feature PR and
 report, then ask once. Licensing uncertainty and desktop qualification remain
 separate public-release prerequisites.
+
+## GENERIC-SWEEP-01 preparation activation
+
+The user proceeds after merged #113 from main
+`13e17f8f8604737a901aeaa5c6d907efc1996a63`. Execute the selected local registered
+1D contract/planning preparation phase, not the full physical sweep program.
+Reuse v4 and distinguish numeric matching from parameterized execution, which
+remains unqualified even for reviewed fixture numbers. No reservation, job,
+durable execution resume/cancellation, simulation, deployment, FS work or new
+range is activated. Preserve legacy fixture/native/measurement regression and
+protected/accounting evidence. Integrate one reviewed feature PR and ask once
+at completion. See [workflow](GENERIC_DESIGN_SWEEP_V1.md) and
+[result](GENERIC_SWEEP_01_RESULT_V1.md).
