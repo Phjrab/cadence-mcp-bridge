@@ -22,10 +22,19 @@ associations when established, classification, dependencies and fingerprints.
 Creation and last-use times stay null when unavailable; file mtime is not used to
 invent these facts. No oldest-candidate claim is made without reliable timestamps.
 Logical totals partition by retention and analysis. The largest list is limited to
-five; pages to 20; each snapshot to 64 groups/artifacts, 8,192 tree nodes and depth
-16. Traversal skips no unsafe object silently: unsupported/link/corrupt/bounded
+five; pages to 20; each snapshot to 64 groups/artifacts. Historical artifacts are
+aggregated by registered root, analysis and retention, with protected membership
+fingerprints and job counts; they are never individual cleanup candidates.
+Isolated disposable leaves retain individual IDs. Each of the six fixed roots
+has an 8,192-node and depth-16 limit, so a snapshot visits at most 49,152 nodes.
+STORAGE_SCAN_V2.json binds this scan contract; the original global-node policy
+and its partial-coverage evidence remain historical. Traversal skips no unsafe
+object silently: unsupported/link/corrupt/bounded
 work becomes protected/partial. Payload hashing is bounded to 64 MiB per snapshot.
 Incomplete totals are lower bounds and cannot authorize cleanup.
+The snapshot/summary reports `scan_nodes` and closed `group_coverage_reason`
+codes. A group description reports aggregate bytes/dependencies/counts without
+expanding thousands of protected job records or returning their paths.
 
 Filesystem-free telemetry is separate from snapshot identity because unrelated
 free-space changes are not artifact identity changes. Artifact, dependency, active
@@ -132,3 +141,9 @@ Cumulative reserved bytes are history, not current disk occupation. Cleanup
 max(2 GiB, 10%) free-space floor. The elapsed ceiling remains removed. Read-only
 storage qualification requires no Spectre run. STORAGE-COMPACT-01, compression,
 cloud archival, migration and automatic cleanup remain deferred.
+
+The active repository correction ceiling is 20 through
+PHASE_CORRECTION_LIMIT_V5.json and explicit private user delegation. Consumed
+corrections and older extensions are preserved; the policy alone grants no
+remote operation or deletion authority. The current immutable reference helper
+is storage-mgmt-v6, retaining the original control/spool/operation identity domain.

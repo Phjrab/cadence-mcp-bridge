@@ -280,8 +280,9 @@ def active_eda(root):
     if any(line.strip() in (b"spectre", b"ocean", b"virtuoso") for line in out.splitlines()):
         return True
     return any(
-        os.path.lexists(root + "/" + group + "/active")
-        for group in ("native-mcp-v1-jobs", "sim-mcp-v2-jobs")
+        os.path.lexists(root + "/" + relative + "/active")
+        for group, relative, _retention in GROUPS
+        if group != "disposable"
     )
 
 
@@ -314,24 +315,55 @@ def registration(io, root, name, fingerprint, content_hash):
         os.close(control)
 
 
+def append_artifact(artifacts, aggregates, item):
+    if item["storage_group_id"] == "disposable":
+        artifacts.append(item)
+        return
+    # Historical job trees are protected groups, never individual delete targets.
+    key = (item["storage_group_id"], item["analysis_type"], item["retention_class"])
+    if key not in aggregates:
+        value = dict(item)
+        value.update(
+            artifact_id="sa-" + digest(["protected-group-v1"] + list(key)),
+            job_id=None,
+            size_bytes=0,
+            allocated_bytes=0,
+            job_count=0,
+        )
+        aggregates[key] = (value, [])
+    value, frames = aggregates[key]
+    value["size_bytes"] += item["size_bytes"]
+    value["allocated_bytes"] += item["allocated_bytes"]
+    value["job_count"] += item["job_count"]
+    frames.append([item["artifact_id"], item["fingerprint"]])
+
+
 def snapshot(io, root, is_active):
     artifacts, coverage = [], {}
+    reasons = {}
+    aggregates = {}
     complete = True
-    budget = [0]
+    scanned = 0
     hash_budget = [0]
     for group, relative, retention in GROUPS:
+        budget = [0]
         try:
             parent = io.open(root, relative, directory=True)
         except OSError as exc:
             coverage[group] = "MISSING" if exc.errno == errno.ENOENT else "BLOCKED"
+            reasons[group] = "missing" if exc.errno == errno.ENOENT else "io_unavailable"
             if exc.errno != errno.ENOENT:
                 complete = False
             continue
         try:
             coverage[group] = "SCANNED"
+            reasons[group] = "none"
             for name in io.names(parent):
-                if len(artifacts) >= MAX_ITEMS:
+                if budget[0] >= MAX_NODES or (
+                    group == "disposable" and len(artifacts) + len(aggregates) >= MAX_ITEMS
+                ):
                     coverage[group], complete = "PARTIAL", False
+                    reasons[group] = "scan_limit" if budget[0] >= MAX_NODES else "artifact_limit"
                     break
                 identity = "sa-" + digest([group, name])
                 disposition = retention
@@ -354,7 +386,7 @@ def snapshot(io, root, is_active):
                             disposition = "DELETE_CANDIDATE"
                         finally:
                             os.close(leaf)
-                    elif group == "native" and UUID.match(name):
+                    elif group in ("native", "diagnostic", "pvt", "headroom") and UUID.match(name):
                         leaf = io.open(parent, name, directory=True)
                         try:
                             request = read_json(io, leaf, "request.json", 2048)
@@ -381,11 +413,16 @@ def snapshot(io, root, is_active):
                                 )
                         finally:
                             os.close(leaf)
-                except (OSError, ValueError, KeyError, TypeError):
+                except (OSError, ValueError, KeyError, TypeError) as exc:
                     disposition = "PROTECTED_OR_UNKNOWN"
                     # Incomplete traversal cannot yield a trustworthy aggregate/candidate.
                     if fingerprint is None:
                         coverage[group], complete = "PARTIAL", False
+                        reasons[group] = (
+                            "scan_limit"
+                            if str(exc) == "inventory traversal bound"
+                            else "unsafe_or_unavailable_object"
+                        )
                         fingerprint = digest([group, name, "uninspected"])
                 if is_active:
                     disposition = "ACTIVE"
@@ -396,7 +433,9 @@ def snapshot(io, root, is_active):
                     "PROTECTED_OR_UNKNOWN": "dependency_unknown",
                     "DELETE_CANDIDATE": "reviewed_disposable_intermediate",
                 }[disposition]
-                artifacts.append(
+                append_artifact(
+                    artifacts,
+                    aggregates,
                     dict(
                         artifact_id=identity,
                         storage_group_id=group,
@@ -404,6 +443,7 @@ def snapshot(io, root, is_active):
                         if group == "disposable"
                         else "job_group",
                         job_id=name if group != "disposable" and UUID.match(name) else None,
+                        job_count=1 if group != "disposable" and UUID.match(name) else 0,
                         analysis_type=analysis,
                         design_id=None,
                         created_at=None,
@@ -421,12 +461,20 @@ def snapshot(io, root, is_active):
                         deletion_reason=reason,
                         fingerprint=fingerprint,
                         provenance="registered_metadata_snapshot_v1",
-                    )
+                    ),
                 )
         except (OSError, ValueError):
             coverage[group], complete = "PARTIAL", False
+            reasons[group] = "directory_unavailable_or_bounded"
         finally:
             os.close(parent)
+            scanned += budget[0]
+    for key in sorted(aggregates):
+        item, frames = aggregates[key]
+        item["fingerprint"] = digest(frames)
+        artifacts.append(item)
+    if len(artifacts) > MAX_ITEMS:
+        raise ValueError("storage group response bound")
     counter_root = io.open(root, "sim-mcp-v2-jobs", directory=True)
     try:
         counter = read_json(io, counter_root, "counter.json", 2048)
@@ -448,6 +496,8 @@ def snapshot(io, root, is_active):
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,
+        group_coverage_reason=reasons,
+        scan_nodes=scanned,
         excluded_scope="source_ADE_PDK_vendor_local_state_and_unregistered_roots",
         filesystem_free_bytes=disk.f_bavail * disk.f_frsize,
         filesystem_total_bytes=disk.f_blocks * disk.f_frsize,

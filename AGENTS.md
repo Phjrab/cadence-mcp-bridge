@@ -30,6 +30,9 @@ Consumed attempts and result reservations are retained. The later explicit 2026-
 10 GiB through `PHASE_RESULT_LIMIT_V4.json`, preserving consumed reservations.
 Historical versioned limits remain immutable. The other
 resource limits and all prior correction histories remain binding.
+The user's 2026-10-06 instruction sets the active same-change correction ceiling
+to 20 through `PHASE_CORRECTION_LIMIT_V5.json`, without resetting consumed
+corrections or rewriting historical versioned policy files.
 The old single-use authorization paths and records are unchanged. A new operation
 must pass its own policy, identity, integrity, budget, and replay checks; a policy
 file alone is not proof of user delegation. GitHub protections and platform access

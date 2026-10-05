@@ -413,3 +413,68 @@ def test_worker_rejects_malformed_and_artifact_substitution(
     ):
         with pytest.raises(ValueError):
             w.cleanup(io, root, changed, False)
+
+
+def test_historical_groups_over_64_preserve_all_roots_and_plan_identity(
+    store: tuple[TestIO, int, Path],
+) -> None:
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = store
+    for _ in range(70):
+        job = path / "jobs" / str(uuid4())
+        job.mkdir()
+        (job / "status.json").write_bytes(w.canonical({"state": "succeeded"}))
+        (job / "output.bin").write_bytes(b"keep")
+    for group in ("native-mcp-v1-jobs", "ade-pvt-qual-v1-jobs", "bias-headroom-v1-jobs"):
+        job = path / group / str(uuid4())
+        job.mkdir(parents=True)
+        (job / "request.json").write_bytes(w.canonical({"analysis": "ac"}))
+    job = path / "sim-mcp-v2-jobs" / str(uuid4())
+    job.mkdir()
+    (job / "request.json").write_bytes(w.canonical({"analysis": "dc"}))
+    disposable = register(store)
+    s = w.snapshot(io, root, False)
+    assert s["coverage_complete"] and set(s["group_coverage"].values()) == {"SCANNED"}
+    assert len(s["artifacts"]) < 20 and sum(a["job_count"] for a in s["artifacts"]) == 74
+    assert s["snapshot_id"] == snapshot_digest(StorageSnapshot.model_validate(s))
+    for group in ("legacy", "native", "diagnostic", "pvt", "headroom"):
+        items = [a for a in s["artifacts"] if a["storage_group_id"] == group]
+        assert items and all(a["deletion_status"] == "PROTECTED_OR_UNKNOWN" for a in items)
+        assert all(a["job_id"] is None for a in items)
+    expected = sum(
+        p.stat().st_size for g in w.GROUPS for p in (path / g[1]).rglob("*") if p.is_file()
+    )
+    assert sum(a["size_bytes"] for a in s["artifacts"]) == expected
+    # A hidden member change invalidates a plan for an unrelated disposable leaf.
+    request = request_for(store, disposable)
+    next((path / "jobs").iterdir()).joinpath("output.bin").write_bytes(b"changed")
+    with pytest.raises(ValueError, match="stale"):
+        w.cleanup(io, root, request, False)
+
+
+def test_grouped_inventory_budget_exhaustion_stays_partial(
+    store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    io, root, path = store
+    for _ in range(5):
+        job = path / "jobs" / str(uuid4())
+        job.mkdir()
+        (job / "status.json").write_bytes(w.canonical({"state": "succeeded"}))
+    monkeypatch.setattr(w, "MAX_NODES", 4)
+    s = w.snapshot(io, root, False)
+    assert not s["coverage_complete"] and s["group_coverage"]["legacy"] == "PARTIAL"
+    assert len(s["artifacts"]) <= 64
+
+
+@pytest.mark.parametrize("group", [g[1] for g in w.GROUPS if g[0] != "disposable"])
+def test_orphan_active_marker_in_every_historical_group_blocks_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, group: str
+) -> None:
+    process = SimpleNamespace(returncode=0, communicate=lambda: (b"python\n", b""))
+    monkeypatch.setattr(w.subprocess, "Popen", lambda *args, **kwargs: process)
+    assert not w.active_eda(str(tmp_path))
+    marker = tmp_path / group / "active"
+    marker.parent.mkdir()
+    marker.write_bytes(b"unresolved queued operation")
+    assert w.active_eda(str(tmp_path))

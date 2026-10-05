@@ -1,6 +1,10 @@
 # STORAGE-MGMT-01 implementation checkpoint
 
-Status: **IN_PROGRESS / INVENTORY_COVERAGE_CORRECTION_APPROVAL_PENDING**, 2026-10-06.
+Status: **HISTORICAL CHECKPOINT / SUPERSEDED BY GROUPED INVENTORY**, 2026-10-06.
+Current result: [STORAGE_MGMT_01_RESULT_V1.md](STORAGE_MGMT_01_RESULT_V1.md).
+The user later set the repository correction ceiling to 20; nine corrections
+retain every earlier failure. All six groups now scan successfully. The observations
+below remain the earlier checkpoint, not current blockers.
 This is a resume checkpoint, not a phase completion or release acceptance report.
 
 ## Fourth correction and actual partial inventory

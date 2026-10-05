@@ -30,6 +30,7 @@ class StorageArtifact(ContractModel):
     storage_group_id: Literal["legacy", "native", "diagnostic", "pvt", "headroom", "disposable"]
     artifact_type: Literal["job_group", "registered_intermediate"]
     job_id: Annotated[str, Field(pattern=r"^[0-9a-f-]{36}$")] | None
+    job_count: Bytes = 0
     analysis_type: Analysis
     design_id: str | None = None
     created_at: None = None
@@ -73,6 +74,19 @@ class StorageSnapshot(ContractModel):
     artifacts: Annotated[tuple[StorageArtifact, ...], Field(max_length=64)]
     coverage_complete: bool
     group_coverage: dict[str, Literal["SCANNED", "MISSING", "BLOCKED", "PARTIAL"]]
+    group_coverage_reason: dict[
+        str,
+        Literal[
+            "none",
+            "missing",
+            "io_unavailable",
+            "scan_limit",
+            "artifact_limit",
+            "unsafe_or_unavailable_object",
+            "directory_unavailable_or_bounded",
+        ],
+    ] = Field(default_factory=dict)
+    scan_nodes: Annotated[int, Field(strict=True, ge=0, le=49152)] = 0
     excluded_scope: Literal["source_ADE_PDK_vendor_local_state_and_unregistered_roots"] = (
         "source_ADE_PDK_vendor_local_state_and_unregistered_roots"
     )
@@ -211,6 +225,8 @@ class StorageSummary(ContractModel):
     disk_floor_status: Literal["OK", "LOW_STORAGE"]
     coverage_complete: bool
     group_coverage: dict[str, str]
+    group_coverage_reason: dict[str, str]
+    scan_nodes: int
     excluded_scope: str
     platform_delete_primitives: bool
 
@@ -311,7 +327,7 @@ class StorageSupervisor:
             if s.coverage_complete
             else 0,
             artifact_count=len(s.artifacts),
-            job_count=len({a.job_id for a in s.artifacts if a.job_id}),
+            job_count=sum(a.job_count for a in s.artifacts),
             largest_artifacts=tuple(
                 sorted(s.artifacts, key=lambda a: (-a.size_bytes, a.artifact_id))[:5]
             ),
@@ -322,6 +338,8 @@ class StorageSupervisor:
             disk_floor_status="OK" if s.filesystem_free_bytes >= floor else "LOW_STORAGE",
             coverage_complete=s.coverage_complete,
             group_coverage={k: str(v) for k, v in s.group_coverage.items()},
+            group_coverage_reason={k: str(v) for k, v in s.group_coverage_reason.items()},
+            scan_nodes=s.scan_nodes,
             excluded_scope=s.excluded_scope,
             platform_delete_primitives=s.platform_delete_primitives,
         )

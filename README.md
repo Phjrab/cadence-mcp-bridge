@@ -104,16 +104,18 @@ See [environment workflow](docs/GENERIC_ENVIRONMENT_V1.md),
 [program plan](docs/GENERIC_USER_ONBOARDING_PLAN_V1.md) and
 [phase evidence](docs/GENERIC_ENV_01_RESULT_V1.md).
 
-STORAGE-MGMT-01 is in progress on its feature branch. Five typed storage tools
-implement bounded inventory, classification, exact cleanup plans and dry-run/
-selected cleanup contracts. Local tests and installed-package checks are verified;
-reference-host inventory/plan/dry-run protocol is verified, but the initial
-64-artifact bound gives partial coverage. Reported bytes are a lower bound;
-cleanup remains blocked until complete coverage is established.
+STORAGE-MGMT-01 adds five typed storage tools for registered-group inventory,
+classification, exact cleanup plans and default dry-run. Reference-host SDK
+stdio verifies all six registered groups: protected history is aggregated by
+analysis/retention, with snapshot-bound pages and descriptions. This reports
+managed result roots, not whole-VM storage. Unsafe or over-limit inventories
+remain partial lower bounds and cannot authorize deletion.
 Historical replay/evidence results remain protected. Actual deletion requires
 explicit human selection and a separate operator record; real-host deletion
-has not been tested. See the [storage workflow](docs/SIMULATION_STORAGE_V1.md)
-and [current checkpoint](docs/STORAGE_MGMT_01_CHECKPOINT_V1.md).
+has not been tested. Only separately reviewed isolated intermediate leaves can
+be deleted; historical results remain protected. See the
+[storage workflow](docs/SIMULATION_STORAGE_V1.md) and
+[phase evidence](docs/STORAGE_MGMT_01_RESULT_V1.md).
 
 | Status | Scope |
 | --- | --- |
@@ -157,9 +159,9 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-This feature branch has 63 typed tools; all previous 58 full schemas are preserved.
-The five new storage interfaces have verified reference-host read/dry-run behavior;
-complete inventory coverage remains pending.
+The server has 63 typed tools; all previous 58 full schemas are preserved.
+The five new storage interfaces have verified reference-host inventory/plan/dry-run
+behavior; actual Linux deletion is unverified. All clients receive the same guards.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local
 contract/planning preparation only. Registered
 `cadence_list_measurements`, `cadence_describe_measurement` and

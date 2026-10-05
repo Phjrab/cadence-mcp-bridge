@@ -178,7 +178,7 @@ class OpenSshBackend:
         )
         if len(raw) > 8192:
             raise InvalidInputError("storage request bound exceeded")
-        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v2/run.sh"
+        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
         return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
 
     async def health(self) -> HealthReport:

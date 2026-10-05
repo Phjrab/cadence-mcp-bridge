@@ -1,5 +1,22 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## STORAGE-MGMT-01 final qualification overlay, 2026-10-06
+
+The user explicitly sets the repository same-change correction ceiling to 20;
+PHASE_CORRECTION_LIMIT_V5.json binds that overlay without resetting usage.
+Nine corrections are consumed. Immutable v6 retains old deployments, failed v1
+stage and the original control/spool/replay domain. Protected-group aggregation
+and bounded per-root traversal resolve the old coverage gap: all six registered
+roots SCANNED, 446 job identities, 14 protected groups and 9,470 observed nodes.
+Every fixed historical group's orphan active marker also blocks cleanup.
+Current [phase result](STORAGE_MGMT_01_RESULT_V1.md) supersedes the checkpoint
+below; earlier approvals/failures are preserved history. Final full unit
+(1,629 passed, four skipped, 57 warnings), security and distribution gates pass.
+Integration uses containing reviewed PR #117 with exact remote SHA verification
+retained privately after permitted merge; no state-sync-only PR is created.
+There is no actual user-selected deletion; remote delete remains NOT_RUN.
+Complete this phase, report exact qualification and ask once before ANALOG-MEAS-01.
+
 ## STORAGE-MGMT-01 activation, 2026-10-06
 
 The user says continue after planning PR #116. Starting main is
