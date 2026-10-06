@@ -18,9 +18,22 @@ Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the seven additions in the live app remain unverified.
+schema/version/lifecycle and the eight additions in the live app remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
+
+## Reference step diagnostics
+
+`cadence_slew_study_result` reads a fixed admitted reference step study. It reports
+separate signed rise/fall20--80% secants, conditions, provenance and timestep/input
+edge agreement. The unloaded open-loop output transition is nonlinear and reaches
+saturated endpoints: it is PARTIALLY_QUALIFIED diagnostic evidence. Conventional
+slew remains UNQUALIFIED; no specification PASS/FAIL or other-load/PVT claim follows.
+It accepts registered IDs, an existing admission and its contract hash, with no
+caller waveform/stimulus/path/script or simulation route. See the
+[definition and read boundary](docs/ANALOG_SLEW_V1.md) and
+[actual result](docs/ANALOG_SLEW_01_RESULT_V1.md). Current source exposes77 tools,
+with all prior76 schemas preserved; the live app catalog is a separate checkpoint.
 
 ## Running-server configuration
 

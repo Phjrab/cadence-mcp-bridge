@@ -242,7 +242,7 @@ async def test_logical_resolution_and_mcp_closed_projection(tmp_path: Path) -> N
     assert registry.resolve("example", REFERENCE_ID, "example-lab").status == "environment_mismatch"
     async with Client(create_server(svc)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 76
+        assert len(tools) == 77
         for name in (
             "cadence_list_pdk_adapters",
             "cadence_describe_pdk_adapter",
