@@ -1,9 +1,45 @@
 # CLIENT-REAL-QUAL-01: Claude Desktop actual tool calls (run 20261006T0407Z)
 
-Observed: 2026-10-06, 04:07–04:20 UTC (13:07–13:20 KST), from the local clock.
+Observed: 2026-10-06, 04:07–04:25 UTC (13:07–13:25 KST), from the local clock.
 
-**Status:** pre-restart. Existing-result reads are verified; restart is pending.
-RESULTS.json and EVIDENCE_INDEX.json describe the latest state.
+**Status:** existing-result reads and app restart are verified. The sweep read is
+blocked by configuration. RESULTS.json and EVIDENCE_INDEX.json describe the
+latest state.
+
+## Update 04:24–04:25 UTC: C14 after Claude Desktop restart
+
+**Restart evidence.** The user reported a normal quit and relaunch. A local
+process query showed the following:
+
+- Every Claude Desktop process and Code-agent process started between 04:24:02
+  and 04:24:29 UTC. That is after pre-restart observation ended at 04:20 UTC.
+- New bridge server processes started at 04:24:09 and 04:24:11 UTC. Their parent
+  is the Desktop main process.
+- Bridge processes owned by another client have a different parent and earlier
+  start times. They were not touched.
+
+**Re-reads.** With the same configuration and IDs, these calls were made again:
+
+- `runtime_info_v2`
+- `list_designs`
+- `describe_design`
+- DC/AC/TRAN `analysis_result`
+- DC `power_measurement_result`
+
+All 13 compared fields equal the private pre-restart checkpoint (direct string
+comparison):
+
+- registry semantic hashes
+- analysis/sweep journal selections
+- DC/AC/TRAN measurement-frame hashes
+- DC PSF and native-result hashes
+- TRAN point count
+- power extraction/frame hashes and value
+
+**C14: PASS** for app restart plus re-read stability. The previous bridge
+process exit was not observed directly, so stderr/EOF stays NOT_TESTED. The
+restarted server loads the same unreviewed local working tree. The host still
+lists `cadence_bandwidth_study_result`, which remains uncalled.
 
 [RESULTS.json](RESULTS.json) holds the machine-readable results.
 [EVIDENCE_INDEX.json](EVIDENCE_INDEX.json) holds the evidence map.
@@ -145,8 +181,11 @@ local file outside the repository.
 
 The first checkpoint recorded `CLAUDE_DESKTOP_CODE_TAB_LOCAL_READS_PARTIAL`.
 
-The current status is `CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_VERIFIED_RESTART_PENDING`.
-Claude Desktop (Code tab) verified the following:
+The 04:20 UTC update recorded `CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_VERIFIED_RESTART_PENDING`.
+
+The current status is `CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_AND_RESTART_VERIFIED`.
+Claude Desktop (Code tab) verified the following, including equal re-reads after
+an app restart (C14):
 
 - design discovery and catalog
 - existing native DC/AC/TRAN reads
@@ -160,8 +199,7 @@ Claude Desktop (Code tab) verified the following:
 
 The sweep read is BLOCKED by the configuration. The following remain NOT_TESTED:
 
-- restart
-- full schema and protocol
+- full schema, protocol and stderr/EOF
 - new job lifecycle
 - Desktop chat mode
 
@@ -170,8 +208,7 @@ The tested server was an unreviewed local working tree. The repository-level
 
 ## Follow-up
 
-1. Quit and relaunch Claude Desktop, then repeat runtime/design/native/power
-   reads with the same IDs for C14. Append the results to this report with a date.
+1. Done 04:24–04:25 UTC: C14 restart and re-read.
 2. Repeat against a reviewed build, either main or an installed wheel with an
    attested digest.
 3. For C10, the operator sets an explicit historical sweep journal in the Claude

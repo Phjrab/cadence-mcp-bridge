@@ -2,14 +2,15 @@
   "schema_version": 1,
   "run_id": "20261006T0407Z",
   "task": "CLIENT-REAL-QUAL-01 / Claude Desktop actual tool-call verification",
-  "phase": "pre_restart_checkpoint_with_existing_result_reads",
+  "phase": "post_restart_complete",
   "observed_window": {
     "start": "2026-10-06T04:07:22Z",
-    "end": "2026-10-06T04:20:40Z",
+    "end": "2026-10-06T04:25:29Z",
     "source": "local system clock read through the host shell tool",
     "segments": [
       "04:07-04:13Z local/catalog/storage reads (checkpoint commit cc0b661)",
-      "04:13-04:20Z existing result reads with user-supplied admitted IDs"
+      "04:13-04:20Z existing result reads with user-supplied admitted IDs (commit 1e339ed)",
+      "04:24-04:25Z post-restart re-reads (C14)"
     ]
   },
   "operation_id_source": "User supplied existing completed DC/AC/TRAN operation IDs and one completed sweep ID in chat; none were generated, guessed or enumerated. Real IDs are private (aliases DC_OP_1, AC_OP_1, TRAN_OP_1, SWEEP_OP_1).",
@@ -197,12 +198,13 @@
     {
       "case_id": "C14",
       "title": "Desktop restart and re-read",
-      "status": "NOT_TESTED",
-      "evidence_origin": "NOT_OBSERVED",
-      "tools_called": [],
-      "observed": "RESTART_NOT_VERIFIED. Awaiting a human quit and relaunch of Claude Desktop.",
-      "expected_vs_actual": null,
-      "not_verified": "Post-restart runtime/design/native/power reads."
+      "status": "PASS",
+      "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
+      "supporting_evidence_origin": ["OPERATOR_ATTESTATION", "CLAUDE_DESKTOP_UI_OBSERVATION"],
+      "tools_called": ["cadence_runtime_info_v2", "cadence_list_designs", "cadence_describe_design", "cadence_analysis_result", "cadence_power_measurement_result"],
+      "observed": "The user reported a normal quit and relaunch of Claude Desktop. A local process query at 04:24:40Z showed every Claude Desktop and Code-agent process started between 04:24:02 and 04:24:29Z, after the 04:20Z end of pre-restart observation. New bridge server processes, parented by the Desktop main process, started at 04:24:09Z and 04:24:11Z. After the restart, runtime_info_v2, list_designs, describe_design, the DC/AC/TRAN analysis_result reads and the DC power_measurement_result were called again. Every value compared against the private pre-restart checkpoint matched by direct string comparison: registry semantic hashes, journal selections, DC/AC/TRAN measurement-frame hashes, DC PSF and native-result hashes, the TRAN point count, and the power extraction/frame hashes and value.",
+      "expected_vs_actual": "Same configuration and same preserved results across an app-owned restart. Bridge server processes belonging to another client (different parent, earlier start) were left untouched.",
+      "not_verified": "App-owned shutdown of the previous bridge process (its exit was not observed directly); stderr/EOF behaviour. The restarted server still loads the same unreviewed local working tree; its source digest was not re-attested."
     }
   ],
   "resources": {
@@ -213,6 +215,6 @@
     "remote_contact": "Storage summary/list and the existing-result reads (analysis status/result, measurement, analog and power results) contact the configured host to read preserved results; catalog/design/runtime calls are local per their contracts",
     "management_side_effects": "Normal logs or inventory snapshots may have been produced by read calls; filesystem writes are not claimed to be zero"
   },
-  "summary": "Claude Desktop (Code tab) verified design discovery, catalog, existing native DC/AC/TRAN reads, registered measurements, analog gain/bandwidth states, dedicated DC power reader, targetless v2 specification, storage reads, repeated reads and bounded rejection/recovery. Sweep read BLOCKED by the default sweep journal selection. Restart NOT_TESTED; full schema, protocol and new job lifecycle NOT_TESTED. Desktop chat mode not exercised.",
-  "compatibility_status": "CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_VERIFIED_RESTART_PENDING"
+  "summary": "Claude Desktop (Code tab) verified design discovery, catalog, existing native DC/AC/TRAN reads, registered measurements, analog gain/bandwidth states, dedicated DC power reader, targetless v2 specification, storage reads, repeated reads and bounded rejection/recovery, and equal re-reads after an app restart. Sweep read BLOCKED by the default sweep journal selection. Full schema, protocol, stderr/EOF and new job lifecycle NOT_TESTED. Desktop chat mode not exercised. Tested server is an unreviewed local working tree.",
+  "compatibility_status": "CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_AND_RESTART_VERIFIED"
 }

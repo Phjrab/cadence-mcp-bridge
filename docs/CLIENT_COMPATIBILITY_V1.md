@@ -17,14 +17,14 @@ in the Desktop configuration) verified the following:
 - storage summary/list
 - repeated reads
 - two bounded unregistered-ID rejections followed by recovery
+- equal re-reads after a Claude Desktop restart (process start times observed)
 
 The sweep read was BLOCKED by the default sweep-journal selection; the
 configuration was left unchanged.
 
 Not tested:
 
-- restart
-- full schema and protocol
+- full schema, protocol and stderr/EOF
 - the Desktop chat surface
 
 The tested server was an unreviewed local working tree with one tool outside the
