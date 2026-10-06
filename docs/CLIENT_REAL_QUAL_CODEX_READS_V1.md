@@ -3,6 +3,8 @@
 Observed: 2026-10-06, 09:43 KST. Starting main:
 `434e5efd7fc8ad940d921d5e82c5cd25bd818d7f` (checkpoint #121).
 Branch: `feat/client-real-qual-codex-reads`.
+Integration: [PR #122](https://github.com/Phjrab/cadence-mcp-bridge/pull/122),
+with resulting remote SHA/tree retained privately after permitted merge.
 **Partial application qualification; the major phase remains incomplete.**
 
 ## Direct application evidence
