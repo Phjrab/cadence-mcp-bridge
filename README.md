@@ -352,6 +352,12 @@ path, script, variable range or raw waveform is accepted. See
 
 ## Development and verification
 
+Reference Phase Margin applicability has been audited against the actual pinned
+circuit and installed STB help. The current open-loop testbench has no defined
+application feedback loop, so Phase Margin remains UNQUALIFIED/null. The fixed
+operator audit preserves this distinction; it adds no MCP execution route. See
+[reference loop assessment and future qualification](docs/ANALOG_PHASE_MARGIN_V1.md).
+
 ```powershell
 uv sync --all-groups
 uv run ruff check src scripts tests

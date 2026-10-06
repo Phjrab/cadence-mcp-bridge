@@ -1,5 +1,44 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ANALOG-PM-01 activation, 2026-10-06
+
+User confirmation after merged BANDWIDTH-QUAL-02 (#128) activates this phase only.
+Starting main854bc0c44b23efc6e4296579e7948e83f9cd9bbb, branch feat/analog-pm-01.
+Inspect the exact admitted reference circuit/analysis and available installed
+Spectre STB/probes through bounded fixed operator reads. Identify differential
+and common-mode feedback, return paths and any candidate probe point before
+deciding applicability. No arbitrary expressions, files, scripts or waveforms
+are exposed. The first discovery step consumes no simulator attempt/reservation.
+No loop-gain measurement is assumed from AC output phase or a help entry.
+
+Only a scientifically defined loop in an authorized owned copy may justify a
+later fixed simulation: establish DC and loading preservation, sign, unity-loop
+crossing selection, multiple crossings, conditions and provenance first. If no
+applicable/qualified loop exists, preserve UNQUALIFIED/null and report the exact
+reason and a future qualification path; do not invent an application feedback
+network to obtain a number. Preserve all76 schemas/v1-v8 contracts and protected
+material/replay/budgets;500 attempts/10 GiB cumulative reservation/20 same-change
+corrections, no elapsed ceiling. Current baseline64/7,383,023,616 remains history.
+Complete applicable gates, actual discovery and unchanged MCP regression, docs/
+state, reviewed feature PR/permitted merge/remote SHA-tree verification. No
+deletion, optimization, target, version/tag/release or other-environment request.
+Report and ask once before ANALOG-SLEW-01.
+
+Final qualification checkpoint: actual pinned reference audit finds no defined
+application feedback loop; numeric PM remains UNQUALIFIED/null. STB/iprobe help
+documented only; diffstbprobe unknown-topic warning despite exit0. No licensed
+STB/probe/sign/crossing run. Operator35/combined99, full1,929 PASS/four OS symlink
+SKIP/56 warnings519.73s, canonical Ruff/mypy52/contracts76/v1-v8/security18/locked
+audit/886-file scan/package wheel60-sdist61/isolated76-tool three SDK formats/CLI/
+uninstall PASS. Current-source v8 SDK PM null/restart is equal. Actual Codex
+69-name surface returns an empty analog list and denied PM description; global
+configuration stays exact. Three of20 conservative corrections; zero new
+simulation/reservation/deployment/result/deletion. Ledger64/7,383,023,616 and
+source/ADE/PDK/jobs/replay/1,452 prior private hashes remain unchanged. Exact
+containing-PR review and remote SHA/tree integration are recorded privately.
+See [result](ANALOG_PM_01_RESULT_V1.md). Ask once before independent ANALOG-SLEW-01;
+no next phase is activated. Numerical PM needs a separately defined loop fixture.
+
 ## BANDWIDTH-QUAL-02 activation, 2026-10-06
 
 User confirmation after merged MEAS-CONTRACT-02 (#126) activates this phase only.

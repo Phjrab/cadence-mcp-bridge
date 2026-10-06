@@ -1,5 +1,25 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active ANALOG-PM-01 overlay:** User confirmation after merged #128 activates
+> one reference-loop applicability and qualification phase from854bc0c. Audit
+> the pinned admitted circuit, existing feedback and preserved results, and the
+> installed STB/probe capabilities before choosing a scientific method. Ordinary
+> output AC phase is never loop gain. Preserve original/ADE/PDK, old76 full MCP
+> schemas, v1-v8 registries, jobs/replay and cumulative64 attempts/7,383,023,616
+> reserved bytes. Read-only discovery is active first; no new simulation is
+> justified until a specific loop, loading, DC preservation and sign are proven.
+> No invented feedback application, target, deletion or release. Finish one
+> reviewed feature PR, report exact qualification or blockers, and ask once
+> before ANALOG-SLEW-01. Claude/other environments remain deferred.
+
+> **ANALOG-PM-01 checkpoint:** Actual loop applicability audit complete; numeric
+> PM stays UNQUALIFIED/null because the present reference is open-loop. Installed
+> STB/iprobe help is documented, not executed; diffstbprobe topic unrecognized
+> despite exit0. Full1,929 PASS/four OS skips and current gates pass; actual Codex
+> analog registry is empty while current-source SDK null/restart passes. All76
+> schemas/v1-v8/budgets/protected evidence remain unchanged, three corrections.
+> Finish containing-PR integration and report; ask once before ANALOG-SLEW-01.
+
 > **Active BANDWIDTH-QUAL-02 overlay:** User continuation after merged #126
 > activates one fixed reference AC refinement phase from d97d993. Preserve the
 > original 10 Hz differential gain / first -3.0 dB crossing and partial status.
