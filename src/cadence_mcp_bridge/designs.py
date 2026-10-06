@@ -470,6 +470,10 @@ def load_design_registry(
             from cadence_mcp_bridge.specification_registry import DesignSpecificationRegistry
 
             registry = DesignSpecificationRegistry.model_validate_json(data)
+        elif version == 8:
+            from cadence_mcp_bridge.measurement_bindings import DesignPowerSpecificationRegistry
+
+            registry = DesignPowerSpecificationRegistry.model_validate_json(data)
         else:
             raise ValueError("unsupported registry version")
     except (OSError, ValueError, RecursionError):

@@ -1,5 +1,11 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active MEAS-CONTRACT-02 overlay:** User continuation selects the bounded
+> power discovery and versioned specification binding phase from merged #124.
+> Follow the current plan; preserve old contracts/readers/definitions/budgets.
+> No new simulation, target, deployment, deletion or publication. Complete one
+> reviewed PR and ask once before another phase.
+
 > **Active AGENT-PLAN-EXPORT-BOUNDARY-01 overlay, 2026-10-06:** The user
 > selects completion of existing draft PR #124 after completed power PR #125.
 > Continue its original branch, preserve imported files/hashes/history and all

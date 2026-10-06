@@ -32,7 +32,8 @@ def fixture(tmp_path: Path) -> Path:
         "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json",
         "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json",
         "docs/contracts/MCP_POWER_V1_SNAPSHOT.json",
-        *(f"docs/schemas/design-registry-v{i}.schema.json" for i in range(1, 8)),
+        "docs/contracts/MCP_MEAS_CONTRACT_V2_SNAPSHOT.json",
+        *(f"docs/schemas/design-registry-v{i}.schema.json" for i in range(1, 9)),
     ]
     for name in names:
         target = tmp_path / name
@@ -51,7 +52,7 @@ def update(path: Path, key: str, value: Any) -> None:
 async def test_current_contract_audit_does_not_claim_app_legal_or_publication() -> None:
     result = audit.inspect(ROOT, await audit.inventory())
     assert result["technical_contract_audit"] == "PASS"
-    assert result["mcp_tools"] == 72 and result["legacy_declarations_preserved"] == 22
+    assert result["mcp_tools"] == 75 and result["legacy_declarations_preserved"] == 22
     assert result["registry_schemas_preserved"] == 7
     assert not result["publication_authorized"] and not result["remote_contact"]
     assert result["runtime_service_calls"] == result["new_simulations"] == 0
@@ -78,6 +79,8 @@ async def test_current_contract_audit_does_not_claim_app_legal_or_publication() 
         ("MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json", "schema_version", True),
         ("MCP_POWER_V1_SNAPSHOT.json", "tools", {}),
         ("MCP_POWER_V1_SNAPSHOT.json", "schema_version", True),
+        ("MCP_MEAS_CONTRACT_V2_SNAPSHOT.json", "tools", {}),
+        ("MCP_MEAS_CONTRACT_V2_SNAPSHOT.json", "schema_version", True),
     ],
 )
 async def test_empty_substituted_and_bad_baselines_rejected(

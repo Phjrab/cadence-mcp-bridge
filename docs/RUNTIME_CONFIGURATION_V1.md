@@ -1,5 +1,12 @@
 # RUNTIME-CONFIG-01: connected-server configuration observation
 
+Current additive extension: `cadence_runtime_info_v2` reports observation
+version 2 and loaded catalog versions 1-8. The original observation schema
+remains exact for v1-v7; a v8 process rejects the original observation with a
+bounded instruction to use v2. It never clamps the loaded version. All privacy
+and no-remote-I/O properties below apply to both versions. See
+[measurement integration](MEASUREMENT_BINDINGS_V2.md).
+
 ## Contract
 
 `cadence_runtime_info()` takes no arguments and returns a bounded typed local

@@ -9,6 +9,7 @@ from pydantic import Field, field_validator, model_validator
 from cadence_mcp_bridge.analog_measurements import AnalogResult, definition
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
+from cadence_mcp_bridge.registered_measurements import MeasurementProvenance
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
     LogicalId,
@@ -154,11 +155,21 @@ def evaluate(c: SpecificationContract, measurement: AnalogResult) -> EvaluationS
         or measurement.definition.unit != c.unit
     ):
         raise ValueError("specification source identity differs")
+    return evaluate_fact(c, measurement.status, measurement.value, measurement.provenance)
+
+
+def evaluate_fact(
+    c: SpecificationContract,
+    status: str,
+    value: float | None,
+    provenance: MeasurementProvenance | None,
+) -> EvaluationStatus:
+    """Shared conditions/comparator after the caller validates its versioned binding."""
     if c.target is None:
         return "NOT_EVALUATED"
-    if measurement.status != "QUALIFIED" or measurement.value is None:
+    if status != "QUALIFIED" or value is None:
         return "UNQUALIFIED"
-    p = measurement.provenance
+    p = provenance
     if p is None:
         return "UNQUALIFIED"
     s, expected = p.settings, c.conditions
@@ -175,16 +186,16 @@ def evaluate(c: SpecificationContract, measurement: AnalogResult) -> EvaluationS
     ):
         return "CONDITION_MISMATCH"
     # Keep the source float's shortest round-trip decimal; do not round to display precision.
-    value, target = Decimal(str(measurement.value)), Decimal(c.target)
+    observed, target = Decimal(str(value)), Decimal(c.target)
     if c.comparison == "range":
         assert c.upper_target is not None
-        matched = target <= value <= Decimal(c.upper_target)
+        matched = target <= observed <= Decimal(c.upper_target)
     elif c.comparison == ">=":
-        matched = value >= target
+        matched = observed >= target
     elif c.comparison == "<=":
-        matched = value <= target
+        matched = observed <= target
     elif c.comparison == ">":
-        matched = value > target
+        matched = observed > target
     else:
-        matched = value < target
+        matched = observed < target
     return "PASS" if matched else "FAIL"

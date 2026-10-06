@@ -34,3 +34,13 @@ class RuntimeInfo(ContractModel):
     remote_contact: Literal[False] = False
     execution_authority_assessed: Literal[False] = False
     environment_qualification_assessed: Literal[False] = False
+
+
+class LoadedCatalogV2(LoadedCatalog):
+    schema_version: Annotated[int, Field(ge=1, le=8)]
+
+
+class RuntimeInfoV2(RuntimeInfo):
+    schema_version: Literal[2] = 2  # type: ignore[assignment]
+    designs: LoadedCatalogV2
+    pdks: LoadedCatalogV2

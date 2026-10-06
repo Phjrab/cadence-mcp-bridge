@@ -52,6 +52,7 @@ from cadence_mcp_bridge.designs import (
     load_design_registry,
 )
 from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
+from cadence_mcp_bridge.measurement_bindings import MeasurementCatalog, SpecificationEvaluationV2
 from cadence_mcp_bridge.measurement_models import (
     AdcMeasurementContract,
     CornerComparison,
@@ -114,7 +115,7 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepRequest,
     DesignSweepSelection,
 )
-from cadence_mcp_bridge.runtime_info import RuntimeInfo
+from cadence_mcp_bridge.runtime_info import RuntimeInfo, RuntimeInfoV2
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
@@ -298,6 +299,9 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_measurement_catalog",
+                "cadence_evaluate_specification_v2",
+                "cadence_runtime_info_v2",
                 "cadence_runtime_info",
                 "cadence_describe_power_measurement",
                 "cadence_power_measurement_result",
@@ -345,10 +349,11 @@ class DesignContractServer(MCPServer):
         arguments: dict[str, Any],
         context: Context[Any, Any] | None = None,
     ) -> CallToolResult | InputRequiredResult:
-        if name == "cadence_runtime_info" and arguments:
+        if name in {"cadence_runtime_info", "cadence_runtime_info_v2"} and arguments:
             raise ToolError("Runtime information accepts no arguments")
         if (
-            name in {
+            name
+            in {
                 "cadence_list_designs",
                 "cadence_list_pdk_adapters",
                 "cadence_storage_summary",
@@ -364,6 +369,7 @@ class DesignContractServer(MCPServer):
             "cadence_list_measurements",
             "cadence_list_analog_measurements",
             "cadence_list_specifications",
+            "cadence_measurement_catalog",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_describe_pdk_adapter" and (
@@ -375,6 +381,7 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_evaluate_specification_v2": "request",
             "cadence_describe_power_measurement": "request",
             "cadence_power_measurement_result": "request",
             "cadence_describe_specification": "request",
@@ -585,6 +592,46 @@ def create_server(service: CadenceService) -> MCPServer:
         request: DesignSweepQuery,
     ) -> Annotated[CallToolResult, DesignSweepExecutionResult]:
         return await _stable_result(service.cancel_design_sweep(request))
+
+    @server.tool(
+        name="cadence_runtime_info_v2",
+        annotations=_READ_ONLY,
+        description="Observe loaded local catalog versions (including v8), semantic hashes and "
+        "journal selection. No paths, health assessment, remote contact or execution authority.",
+        structured_output=True,
+    )
+    async def cadence_runtime_info_v2() -> Annotated[CallToolResult, RuntimeInfoV2]:
+        return await _stable_result(service.runtime_info_v2())
+
+    @server.tool(
+        name="cadence_measurement_catalog",
+        annotations=_READ_ONLY,
+        description="Discover at most six registered analog definitions, one separate signed "
+        "DC power reader and 32 versioned operator specifications for a registered design. "
+        "Each reader has its own definition and contract hash; use its named result tool. "
+        "Includes complete goal descriptions for v2 evaluation. Eligibility does not establish "
+        "artifact availability or qualification. No registration, targets or simulation grant.",
+        structured_output=True,
+    )
+    async def cadence_measurement_catalog(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, MeasurementCatalog]:
+        return await _stable_result(service.measurement_catalog(design_id))
+
+    @server.tool(
+        name="cadence_evaluate_specification_v2",
+        annotations=_READ_ONLY,
+        description="Evaluate one described operator specification by exact contract hash "
+        "and optional admitted UUID4. Routes legacy goals to the original engine and v2 "
+        "power goals to the existing signed-current reader. No target: NOT_EVALUATED without "
+        "source read; only qualified facts with exact conditions yield PASS/FAIL. Source errors "
+        "remain errors. No caller facts, formulas, paths, targets or simulation.",
+        structured_output=True,
+    )
+    async def cadence_evaluate_specification_v2(
+        request: SpecificationQuery,
+    ) -> Annotated[CallToolResult, SpecificationEvaluationV2]:
+        return await _stable_result(service.evaluate_specification_v2(request))
 
     @server.tool(
         name="cadence_list_specifications",

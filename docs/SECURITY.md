@@ -1,5 +1,18 @@
 # Security and Reliability Baseline
 
+## Versioned measurement/goal binding, 2026-10-06
+
+Local bounded catalog discovery and v2 goal evaluation add no execution route.
+Operator v8 validates exact signed-power definition/reader/DC hashes, unique
+goal IDs and combined limits; old goals and execution identities are retained.
+Qualified power facts pass through the existing admission/PDK/native/pinned
+extraction reader and shared exact conditions/Decimal comparator. Missing target
+does not read artifacts. Caller paths/scripts/facts/targets are denied. Source
+errors never become specification FAIL. Versioned runtime observation reports v8
+without altering or misreporting the original v1-v7 response. No counter refund,
+cleanup authority, protected-source change or new simulation follows.
+See [binding](MEASUREMENT_BINDINGS_V2.md).
+
 ## Fixed power artifact reads, 2026-10-06
 
 Two additional read-only tools reference registered power IDs and the existing

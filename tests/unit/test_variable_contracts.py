@@ -367,7 +367,7 @@ async def test_mcp_local_validation_is_bounded_closed_and_private() -> None:
     service = CadenceService(cast(CadenceBackend, NoRemote()), registry())
     async with Client(create_server(service)) as client:
         tools = {tool.name: tool for tool in (await client.list_tools()).tools}
-        assert len(tools) == 72
+        assert len(tools) == 75
         for name in ("cadence_list_design_variables", "cadence_check_variable_values"):
             assert tools[name].input_schema["additionalProperties"] is False
             assert tools[name].annotations is not None and tools[name].annotations.read_only_hint
