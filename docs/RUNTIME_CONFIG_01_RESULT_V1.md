@@ -4,7 +4,8 @@
 
 Starting main: `b015b7151239e5613f8960fa896b8422b0b680aa`, merged #122.
 Branch: `feat/runtime-contract-status`.
-Containing reviewed PR and resulting remote SHA/tree are recorded at integration;
+Containing reviewed [PR #123](https://github.com/Phjrab/cadence-mcp-bridge/pull/123);
+resulting remote SHA/tree are recorded privately at integration;
 no state-sync-only PR is required.
 
 The user defers Claude actual-app qualification and authorizes next development.
