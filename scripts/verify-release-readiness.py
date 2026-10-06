@@ -106,6 +106,15 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     addition = read_json(project / "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json")
     power_addition = read_json(project / "docs/contracts/MCP_POWER_V1_SNAPSHOT.json")
     binding_addition = read_json(project / "docs/contracts/MCP_MEAS_CONTRACT_V2_SNAPSHOT.json")
+    bandwidth_addition = read_json(project / "docs/contracts/MCP_BANDWIDTH_STUDY_V1_SNAPSHOT.json")
+    if (
+        type(bandwidth_addition.get("schema_version")) is not int
+        or bandwidth_addition.get("schema_version") != 1
+        or bandwidth_addition.get("source_main") != "d97d9934341d382c1131ee1f5d61ab8cc75ace38"
+        or set(bandwidth_addition.get("tools", {})) != {"cadence_bandwidth_study_result"}
+        or any(schemas.get(n) != t for n, t in bandwidth_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed bandwidth study schema drift")
     if (
         type(binding_addition.get("schema_version")) is not int
         or binding_addition.get("schema_version") != 1
@@ -158,6 +167,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(addition["tools"])
             | set(power_addition["tools"])
             | set(binding_addition["tools"])
+            | set(bandwidth_addition["tools"])
         )
         or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
     ):

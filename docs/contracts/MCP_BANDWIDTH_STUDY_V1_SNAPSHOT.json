@@ -1,0 +1,1127 @@
+{
+  "schema_version": 1,
+  "source_main": "d97d9934341d382c1131ee1f5d61ab8cc75ace38",
+  "tools": {
+    "cadence_bandwidth_study_result": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Read the fixed two-grid bandwidth study for the preserved admitted native AC operation using registered bandwidth IDs and its original analog contract hash. Reports sampled 10 Hz reference flatness, first -3.0 dB crossing brackets and empirical grid convergence. Remains PARTIALLY_QUALIFIED without an absolute error bound. No simulation, caller frequency/grid/path/expression, raw vectors or target evaluation.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "AnalogQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "expected_contract_sha256",
+              "operation_id"
+            ],
+            "title": "AnalogQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AnalogQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_bandwidth_study_resultArguments",
+        "type": "object"
+      },
+      "name": "cadence_bandwidth_study_result",
+      "outputSchema": {
+        "$defs": {
+          "AnalogDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "evidence_class": {
+                "enum": [
+                  "IMPLEMENTABLE_FROM_EXISTING_EVIDENCE",
+                  "REQUIRES_EXTRACTION_WORK",
+                  "REQUIRES_STIMULUS_CHANGE",
+                  "REQUIRES_USER_SCIENTIFIC_INPUT",
+                  "UNQUALIFIED"
+                ],
+                "title": "Evidence Class",
+                "type": "string"
+              },
+              "meaning": {
+                "maxLength": 320,
+                "title": "Meaning",
+                "type": "string"
+              },
+              "method": {
+                "maxLength": 320,
+                "title": "Method",
+                "type": "string"
+              },
+              "metric": {
+                "enum": [
+                  "gain",
+                  "bandwidth",
+                  "phase-margin",
+                  "power",
+                  "offset",
+                  "slew-rate"
+                ],
+                "title": "Metric",
+                "type": "string"
+              },
+              "qualification_requirement": {
+                "maxLength": 320,
+                "title": "Qualification Requirement",
+                "type": "string"
+              },
+              "source_output_id": {
+                "anyOf": [
+                  {
+                    "const": "ac-differential-spectrum-v1",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Output Id"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "unit",
+              "meaning",
+              "method",
+              "source_output_id",
+              "evidence_class",
+              "blocking_reason",
+              "qualification_requirement"
+            ],
+            "title": "AnalogDefinition",
+            "type": "object"
+          },
+          "AnalogResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "crossing_bracket_hz": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Crossing Bracket Hz"
+              },
+              "definition": {
+                "$ref": "#/$defs/AnalogDefinition"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "provenance": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MeasurementProvenance"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "reference_frequency_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Frequency Hz"
+              },
+              "reference_gain_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Gain Db"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "source_result_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Result Sha256"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "QUALIFIED",
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "operation_id",
+              "definition",
+              "status",
+              "value",
+              "reason",
+              "source_measurement_id"
+            ],
+            "title": "AnalogResult",
+            "type": "object"
+          },
+          "GridSummary": {
+            "additionalProperties": false,
+            "properties": {
+              "crossing_bracket_hz": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Crossing Bracket Hz"
+              },
+              "crossing_bracket_relative_width": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Crossing Bracket Relative Width"
+              },
+              "crossing_status": {
+                "enum": [
+                  "FIRST_CROSSING",
+                  "MULTIPLE_DOWNWARD_CROSSINGS",
+                  "NO_CROSSING",
+                  "INSUFFICIENT_DATA"
+                ],
+                "title": "Crossing Status",
+                "type": "string"
+              },
+              "downward_crossing_count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Downward Crossing Count",
+                "type": "integer"
+              },
+              "estimate_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Estimate Hz"
+              },
+              "flat_window_point_count": {
+                "maximum": 201,
+                "minimum": 0,
+                "title": "Flat Window Point Count",
+                "type": "integer"
+              },
+              "peaking_above_reference_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Peaking Above Reference Db"
+              },
+              "point_count": {
+                "maximum": 501,
+                "minimum": 3,
+                "title": "Point Count",
+                "type": "integer"
+              },
+              "points_per_decade": {
+                "enum": [
+                  10,
+                  50,
+                  100
+                ],
+                "title": "Points Per Decade",
+                "type": "integer"
+              },
+              "reference_gain_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reference Gain Db"
+              },
+              "sampled_flat_window_hz": {
+                "default": [
+                  10,
+                  1000
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "const": 10,
+                    "type": "integer"
+                  },
+                  {
+                    "const": 1000,
+                    "type": "integer"
+                  }
+                ],
+                "title": "Sampled Flat Window Hz",
+                "type": "array"
+              },
+              "sampled_gain_span_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sampled Gain Span Db"
+              },
+              "start_hz": {
+                "title": "Start Hz",
+                "type": "number"
+              },
+              "stop_hz": {
+                "title": "Stop Hz",
+                "type": "number"
+              }
+            },
+            "required": [
+              "points_per_decade",
+              "point_count",
+              "start_hz",
+              "stop_hz",
+              "reference_gain_db",
+              "flat_window_point_count",
+              "sampled_gain_span_db",
+              "peaking_above_reference_db",
+              "downward_crossing_count",
+              "crossing_status",
+              "estimate_hz",
+              "crossing_bracket_hz",
+              "crossing_bracket_relative_width"
+            ],
+            "title": "GridSummary",
+            "type": "object"
+          },
+          "MeasurementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Contract Sha256",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "circuit_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Circuit Sha256",
+                "type": "string"
+              },
+              "copy_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Copy Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "measurement_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Frame Sha256",
+                "type": "string"
+              },
+              "model_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Model Sha256",
+                "type": "string"
+              },
+              "native_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Native Result Sha256",
+                "type": "string"
+              },
+              "notices": {
+                "const": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "owned_variables_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Owned Variables Sha256",
+                "type": "string"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "reader": {
+                "const": "native-bounded-result-v1",
+                "default": "native-bounded-result-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/NativeSettings"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Sha256",
+                "type": "string"
+              },
+              "state_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "State Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "analysis_plan_hash",
+              "analysis_contract_sha256",
+              "definition_sha256",
+              "revision_id",
+              "operating_point_id",
+              "settings",
+              "source_sha256",
+              "copy_sha256",
+              "state_sha256",
+              "model_sha256",
+              "circuit_sha256",
+              "input_sha256",
+              "owned_variables_sha256",
+              "psf_sha256",
+              "measurement_frame_sha256",
+              "native_result_sha256",
+              "warnings",
+              "notices"
+            ],
+            "title": "MeasurementProvenance",
+            "type": "object"
+          },
+          "NativeSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "ac_points_per_decade": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Points Per Decade",
+                "type": "integer"
+              },
+              "ac_start_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Start Hz",
+                "type": "integer"
+              },
+              "ac_stop_hz": {
+                "const": 100000000,
+                "default": 100000000,
+                "title": "Ac Stop Hz",
+                "type": "integer"
+              },
+              "applied_bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "saved_enabled_analyses": {
+                "default": [
+                  "dc"
+                ],
+                "maxItems": 1,
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "const": "dc",
+                    "type": "string"
+                  }
+                ],
+                "title": "Saved Enabled Analyses",
+                "type": "array"
+              },
+              "stimulus": {
+                "const": "existing_opposed_1khz_50mv_peak_inputs",
+                "default": "existing_opposed_1khz_50mv_peak_inputs",
+                "title": "Stimulus",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "tran_maxstep_s": {
+                "default": 1e-05,
+                "maximum": 1e-05,
+                "minimum": 1e-05,
+                "title": "Tran Maxstep S",
+                "type": "number"
+              },
+              "tran_method": {
+                "const": "trap",
+                "default": "trap",
+                "title": "Tran Method",
+                "type": "string"
+              },
+              "tran_stop_s": {
+                "default": 0.004,
+                "maximum": 0.004,
+                "minimum": 0.004,
+                "title": "Tran Stop S",
+                "type": "number"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1.0,
+                "minimum": 1.0,
+                "title": "Vdd V",
+                "type": "number"
+              }
+            },
+            "title": "NativeSettings",
+            "type": "object"
+          },
+          "PowerCounter": {
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": {
+                "const": "AUTO-PHASE-01",
+                "title": "Campaign Id",
+                "type": "string"
+              },
+              "count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Count",
+                "type": "integer"
+              },
+              "result_reserved_bytes": {
+                "maximum": 10737418240,
+                "minimum": 0,
+                "title": "Result Reserved Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "campaign_id",
+              "count",
+              "result_reserved_bytes"
+            ],
+            "title": "PowerCounter",
+            "type": "object"
+          },
+          "RefinementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "counter": {
+                "$ref": "#/$defs/PowerCounter"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "grid": {
+                "enum": [
+                  50,
+                  100
+                ],
+                "title": "Grid",
+                "type": "integer"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "notices": {
+                "maximum": 100,
+                "minimum": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "grid",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "warnings",
+              "notices",
+              "counter"
+            ],
+            "title": "RefinementProvenance",
+            "type": "object"
+          },
+          "StudyDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "absolute_error_bound": {
+                "const": null,
+                "default": null,
+                "title": "Absolute Error Bound",
+                "type": "null"
+              },
+              "crossing": {
+                "const": "first_downward_no_extrapolation",
+                "default": "first_downward_no_extrapolation",
+                "title": "Crossing",
+                "type": "string"
+              },
+              "drop_db": {
+                "default": 3.0,
+                "maximum": 3.0,
+                "minimum": 3.0,
+                "title": "Drop Db",
+                "type": "number"
+              },
+              "empirical_successive_relative_change_criterion": {
+                "default": 0.001,
+                "maximum": 0.001,
+                "minimum": 0.001,
+                "title": "Empirical Successive Relative Change Criterion",
+                "type": "number"
+              },
+              "flatness_observation_window_hz": {
+                "default": [
+                  10,
+                  1000
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "const": 10,
+                    "type": "integer"
+                  },
+                  {
+                    "const": 1000,
+                    "type": "integer"
+                  }
+                ],
+                "title": "Flatness Observation Window Hz",
+                "type": "array"
+              },
+              "grids_points_per_decade": {
+                "default": [
+                  10,
+                  50,
+                  100
+                ],
+                "maxItems": 3,
+                "minItems": 3,
+                "prefixItems": [
+                  {
+                    "const": 10,
+                    "type": "integer"
+                  },
+                  {
+                    "const": 50,
+                    "type": "integer"
+                  },
+                  {
+                    "const": 100,
+                    "type": "integer"
+                  }
+                ],
+                "title": "Grids Points Per Decade",
+                "type": "array"
+              },
+              "interpolation": {
+                "const": "linear_dB_vs_log10_frequency",
+                "default": "linear_dB_vs_log10_frequency",
+                "title": "Interpolation",
+                "type": "string"
+              },
+              "peaking_flag_threshold_db": {
+                "default": 0.05,
+                "maximum": 0.05,
+                "minimum": 0.05,
+                "title": "Peaking Flag Threshold Db",
+                "type": "number"
+              },
+              "reference_gain_agreement_criterion_db": {
+                "default": 0.001,
+                "maximum": 0.001,
+                "minimum": 0.001,
+                "title": "Reference Gain Agreement Criterion Db",
+                "type": "number"
+              },
+              "reference_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Reference Hz",
+                "type": "integer"
+              },
+              "refinement_stop_hz": {
+                "const": 1000000,
+                "default": 1000000,
+                "title": "Refinement Stop Hz",
+                "type": "integer"
+              },
+              "sampled_flatness_criterion_db": {
+                "default": 0.05,
+                "maximum": 0.05,
+                "minimum": 0.05,
+                "title": "Sampled Flatness Criterion Db",
+                "type": "number"
+              },
+              "status": {
+                "const": "PARTIALLY_QUALIFIED",
+                "default": "PARTIALLY_QUALIFIED",
+                "title": "Status",
+                "type": "string"
+              },
+              "study_id": {
+                "const": "bandwidth-grid-study-v1",
+                "default": "bandwidth-grid-study-v1",
+                "title": "Study Id",
+                "type": "string"
+              }
+            },
+            "title": "StudyDefinition",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "absolute_error_bound_hz": {
+            "const": null,
+            "default": null,
+            "title": "Absolute Error Bound Hz",
+            "type": "null"
+          },
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "convergence": {
+            "enum": [
+              "OBSERVED_WITHIN_0_1_PERCENT",
+              "NOT_CONVERGED",
+              "NOT_ASSESSED"
+            ],
+            "title": "Convergence",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/$defs/StudyDefinition"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "extraction_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Extraction Sha256",
+            "type": "string"
+          },
+          "grids": {
+            "items": {
+              "$ref": "#/$defs/GridSummary"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Grids",
+            "type": "array"
+          },
+          "qualification_scope": {
+            "const": "same_reference_circuit_NN_27C_VDD1V_bias320_702mV_fixed_grids_only",
+            "default": "same_reference_circuit_NN_27C_VDD1V_bias320_702mV_fixed_grids_only",
+            "title": "Qualification Scope",
+            "type": "string"
+          },
+          "raw_vectors_included": {
+            "const": false,
+            "default": false,
+            "title": "Raw Vectors Included",
+            "type": "boolean"
+          },
+          "reference_gain_max_difference_db": {
+            "title": "Reference Gain Max Difference Db",
+            "type": "number"
+          },
+          "reference_result": {
+            "$ref": "#/$defs/AnalogResult"
+          },
+          "refinements": {
+            "items": {
+              "$ref": "#/$defs/RefinementProvenance"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Refinements",
+            "type": "array"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          },
+          "status": {
+            "const": "PARTIALLY_QUALIFIED",
+            "default": "PARTIALLY_QUALIFIED",
+            "title": "Status",
+            "type": "string"
+          },
+          "study_definition_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Study Definition Sha256",
+            "type": "string"
+          },
+          "study_id": {
+            "const": "bandwidth-grid-study-v1",
+            "default": "bandwidth-grid-study-v1",
+            "title": "Study Id",
+            "type": "string"
+          },
+          "successive_relative_changes": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            ],
+            "title": "Successive Relative Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reference_result",
+          "extraction_sha256",
+          "study_definition_sha256",
+          "grids",
+          "refinements",
+          "successive_relative_changes",
+          "reference_gain_max_difference_db",
+          "convergence"
+        ],
+        "title": "BandwidthStudyResult",
+        "type": "object"
+      },
+      "title": null
+    }
+  }
+}

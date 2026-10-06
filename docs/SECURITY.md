@@ -1,5 +1,20 @@
 # Security and Reliability Baseline
 
+## Fixed bandwidth study, 2026-10-06
+
+One supplementary read accepts existing registered bandwidth IDs/admitted AC UUID4/
+contract hash. Its pinned two-grid extraction must match the source and complete
+receipt; no path/grid/frequency/formula/raw-vector/execution input is added.
+Original75 schemas/registry versions and partial bandwidth/goal semantics stay
+exact. Fixed operator execution uses two new owned input copies with only the
+AC line changed and exact reverse-hash verification. Shared EDA/ledger/disk/
+exclusive admission, bounded frames/processes and immutable source/result guards
+remain authoritative. New evidence stays protected/unknown to cleanup. The old
+sizing conservation check's later-phase failure is preserved; separate completion
+verification reconciles the exact two new reservations and unchanged historical
+fingerprints without modifying its guard. See
+[study boundary](BANDWIDTH_QUALIFICATION_V1.md).
+
 ## Versioned measurement/goal binding, 2026-10-06
 
 Local bounded catalog discovery and v2 goal evaluation add no execution route.

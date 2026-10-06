@@ -23,6 +23,7 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.bandwidth_study import RefinementExtraction
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import (
     AuthenticationError,
@@ -472,6 +473,22 @@ class OpenSshBackend:
             return PowerExtraction.model_validate_json(output)
         except ValueError:
             raise RemoteFailureError("Remote power extraction failed closed validation") from None
+
+    async def bandwidth_refinement_result(self, operation_id: str) -> RefinementExtraction:
+        from cadence_mcp_bridge.bandwidth_study import REFERENCE_OPERATION as BANDWIDTH_OPERATION
+
+        if (operation_id != BANDWIDTH_OPERATION
+                or self._config.remote_root != "/home/buet/cds_work/.cadence_mcp"):
+            raise InvalidInputError("No reviewed bandwidth study for this operation or root")
+        runner = self._config.remote_root + "/phase-campaign/bandwidth-qual-v1/run.sh"
+        try:
+            output = await asyncio.to_thread(self._invoke_at_path, runner, "result")
+        except BridgeError as exc:
+            raise type(exc)("Bandwidth study could not be read safely") from None
+        try:
+            return RefinementExtraction.model_validate_json(output)
+        except ValueError:
+            raise RemoteFailureError("Remote bandwidth study failed closed validation") from None
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)

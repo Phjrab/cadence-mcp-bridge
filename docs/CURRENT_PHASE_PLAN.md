@@ -1,5 +1,59 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## BANDWIDTH-QUAL-02 activation, 2026-10-06
+
+User confirmation after merged MEAS-CONTRACT-02 (#126) activates this phase only.
+Starting main `d97d9934341d382c1131ee1f5d61ab8cc75ace38`, branch
+`feat/bandwidth-qual-02`. The prior 71-point AC evidence is 10 Hz–100 MHz,
+10 points/decade, first -3.0 dB crossing relative to 10 Hz differential gain.
+Preserve its definition, schema, result and PARTIALLY_QUALIFIED status.
+
+Before new results are observed, fix two refinements: 10 Hz–1 MHz at 50 and 100
+points/decade (251/501 samples), same circuit/model/options/stimulus/conditions.
+No new netlister or state mutation: reconstruct the exact pinned native input
+from each owned copy by reversing its single AC-line change. Installed Spectre
+AC decimal-grid control and prior input/result identity must be checked first.
+Maximum two new attempts, two 128 MiB cumulative reservations; no refund/reset.
+Use the same EDA lock, ledger, native protection guards, disk floor, exact private
+delegation, durable exclusive admissions, result fingerprints and no blind retry.
+New raw PSF/jobs are phase evidence, protected/unknown to cleanup.
+
+Report sampled 10–1,000 Hz span, observed peaking, downward-crossing count,
+containing bracket and first-crossing interpolation. Empirical convergence uses
+successive relative change <=0.1%, decreasing change and brackets, reference gain
+agreement <=0.001 dB, sampled span/peaking <=0.05 dB. These are study diagnostics,
+not user specifications or electrical limits. Record nonconvergence, missing or
+multiple crossings explicitly. No absolute error bound or continuum flatness is
+established. Even an observed grid convergence remains PARTIALLY_QUALIFIED.
+
+Add one bounded read-only supplementary study tool through existing registered
+bandwidth/source/PDK/admission checks. No caller frequency/grid/formula/path,
+raw vector, execution route or goal evaluation. Preserve old 75 full schemas,
+v1-v8 registry versions and all protected/private/replay material. Limits500/10GiB/
+20 corrections, no elapsed ceiling. Complete focused/full/static/security/
+dependency/contract/build/install/SDK and justified real reference verification,
+docs/state and one reviewed feature PR/permitted merge/remote SHA/tree check.
+Actual new app tool calls are separate from SDK stdio. Claude/other versions/PDKs/
+hosts remain deferred. No optimization, deletion, version/tag/release or numerical
+target. Apache original-code/export boundaries, LEGAL_REVIEW_REQUIRED and
+PUBLICATION_NOT_AUTHORIZED remain. Report and ask once before ANALOG-PM-01.
+
+Final qualification:1,894 full unit PASS/four OS symlink SKIP/56 warnings in539.63s;
+focused112 and server/SSH/science/operator121 PASS, Ruff/mypy52 and exact76-tool/
+old75/v1-v8 contract audit PASS. Security18 PASS, locked audit no known vulnerabilities,
+881-file secret scan and wheel60/sdist61 isolated76-tool/three SDK formats/CLI/uninstall
+PASS. Real two-grid AC and current-source SDK preserved reads/restart PASS; new actual
+app calls NOT_RUN. Both prior failed full runs and historical sizing-domain FAIL
+are preserved alongside the strict composed verification PASS. Twelve of20 corrections;
+64/500 attempts and7,383,023,616/10,737,418,240 cumulative reservation, no refund/reset.
+Protected source/ADE/PDK, prior jobs/replay/admission and1,370 prior private hashes
+remain exact. Containing reviewed feature-PR integration/remote SHA/tree are recorded
+privately. See [result](BANDWIDTH_QUAL_02_RESULT_V1.md). No next phase is activated.
+
+MEAS-CONTRACT-02 is complete at merged #126 main d97d993; its prior qualification
+and resource counts below remain historical evidence, not active restrictions on
+this separately user-approved study.
+
 ## MEAS-CONTRACT-02 activation, 2026-10-06
 
 User continuation after merged #124 selects one power-contract integration phase.

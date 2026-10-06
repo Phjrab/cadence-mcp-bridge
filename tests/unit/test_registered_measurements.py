@@ -288,7 +288,7 @@ async def test_mcp_closed_schema_projection_and_useful_errors(tmp_path: Path) ->
     request = await query(svc, "ac-spectrum", operation)
     async with Client(create_server(svc)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 75
+        assert len(tools) == 76
         for name in (
             "cadence_list_measurements",
             "cadence_describe_measurement",
