@@ -37,10 +37,11 @@ DC/AC/TRAN and RC sweep results. This is SDK/subprocess evidence, not actual
 current application qualification. Claude real app remains DEFERRED_BY_USER /
 CLAUDE_REAL_CLIENT_UNVERIFIED; its adapter remains present.
 
-Eight corrections of the active twenty are consumed: investigation helper name,
+Nine corrections of the active twenty are consumed: investigation helper name,
 local quoting, initial style/type binding, snapshot loader, gate fixture/style,
 backend method allowlist, read-only exhausted-budget boundary and final Git
-deployment-file inclusion/LF preservation. Failed gates
+deployment-file inclusion/LF preservation and exact preflight-count reporting.
+Failed gates
 and first drafts remain private. Environment failures are also retained: missing
 Git safe-directory configuration, UTF-8 dependency-audit decoding and two long
 Windows fixture path failures. The latter reproduce with long paths and pass
@@ -93,5 +94,6 @@ Recommend **MEAS-CONTRACT-02**: versioned integration of the qualified power
 definition with generic measurement discovery and specification binding,
 preserving old goal/schema identities and inventing no numerical targets.
 This phase does not activate it. Integrate through one containing reviewed
-feature PR; final remote SHA/tree and exact-head review are retained privately.
+feature [PR #125](https://github.com/Phjrab/cadence-mcp-bridge/pull/125); final
+remote SHA/tree and exact-head review are retained privately after permitted merge.
 No state-sync-only PR is created.

@@ -24,18 +24,19 @@ Correction ceiling 20 with failures and prior histories retained. Report at this
 phase boundary and ask once before further work.
 
 Final gates: **1,772 passes/four OS symlink skips/56 warnings/739.32 seconds**;
-79 focused passes; Ruff/mypy48, final secret preflight862, 18 security tests and
+79 focused passes; Ruff/mypy48, final secret preflight857, 18 security tests and
 locked dependency audit pass. Final wheel56/sdist57 includes canonical Apache
 notices with no unexpected/protected findings; isolated 72-tool/three-format
 CLI/stdio/uninstall passes. Exported Codex SDK stdio qualifies signed reference
 power and preserves all 70 schemas/native DC/AC/TRAN/sweep/restart results.
 Independent OP current/power, installed sign/unit help and actual guest Python2.6
 exhausted-read budget boundaries pass. Original analog v1 power/goals stay exact.
-Eight corrections of20; prior failures retained. Zero new Spectre/reservation/
+Nine corrections of20; prior failures retained. Zero new Spectre/reservation/
 deletion. New owned extraction/crosscheck/v1-v2 deployment footprint **39,314 B**
 fits the existing source-job reservation. Source/ADE/PDK/jobs/counters/admission
 and1,224 prior private records unchanged. See [result](ANALOG_POWER_01_RESULT_V1.md).
-Integrate one containing reviewed PR, verify resulting remote SHA/tree privately,
+Integration uses containing reviewed [PR #125](https://github.com/Phjrab/cadence-mcp-bridge/pull/125),
+with resulting remote SHA/tree verified privately,
 then report. Recommend MEAS-CONTRACT-02; no next phase is automatically activated.
 
 ## RUNTIME-CONFIG-01 activation, 2026-10-06
