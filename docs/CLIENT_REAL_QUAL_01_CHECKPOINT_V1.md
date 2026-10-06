@@ -1,5 +1,9 @@
 # CLIENT-REAL-QUAL-01: actual application qualification checkpoint
 
+Later [actual Codex read evidence](CLIENT_REAL_QUAL_CODEX_READS_V1.md) supersedes
+this dated missing-bridge observation for Codex. Claude and full application
+qualification remain pending; the checkpoint below is preserved history.
+
 Date: 2026-10-06. Starting main:
 `3432d580994bd825e5d650dd284d110342ac01e3` (merged #120).
 Branch: `feat/client-real-qual-01`. **Phase status: BLOCKED, not complete.**

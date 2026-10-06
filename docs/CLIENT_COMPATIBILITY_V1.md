@@ -1,5 +1,14 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Actual Codex read-only evidence, 2026-10-06
+
+[Direct application calls](CLIENT_REAL_QUAL_CODEX_READS_V1.md) now verify design
+list/describe/PDK and preserved native DC status/result through the active Codex
+host. Its 69 exposed names match the reviewed names. This supersedes the missing
+bridge tool observation below for Codex only. Full application schema dump,
+app version/negotiation/lifecycle and Claude remain unverified; SDK rows below
+stay separately scoped. No new simulation or generic execution qualification.
+
 ## CLIENT-REAL-QUAL-01 current application checkpoint
 
 See [actual availability and human handoff](CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md).

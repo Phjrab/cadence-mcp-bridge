@@ -1,5 +1,12 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **CLIENT-REAL-QUAL-01 actual Codex evidence, 2026-10-06:** After the human
+> registration handoff, the active Codex agent's actual bridge tools perform
+> design/PDK discovery and preserved native DC status/result reads. Five calls
+> and exposed 69 catalog names verified; no simulation or SDK substitution.
+> Full app schemas/version/lifecycle and Claude remain unverified. Preserve
+> historical checkpoint below; phase incomplete, no new execution or publication.
+
 > **Active 2026-10-06 CLIENT-REAL-QUAL-01 overlay:** User continuation selects
 > actual app qualification after merged #120. Fresh native app inventory exists,
 > but current ChatGPT-branded Codex UI automation is prohibited by the applicable
