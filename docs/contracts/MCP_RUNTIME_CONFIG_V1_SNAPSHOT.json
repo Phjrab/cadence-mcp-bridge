@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "phase": "RUNTIME-CONFIG-01",
+  "source_main": "b015b7151239e5613f8960fa896b8422b0b680aa",
+  "tools": {
+    "cadence_runtime_info": {
+      "name": "cadence_runtime_info",
+      "title": null,
+      "description": "Inspect the running bridge version, loaded design/PDK catalog versions, counts and semantic hashes, and default/operator journal selection. Local only; no paths, contents, remote contact or writes. Does not assess journal health, environment qualification or execution authority. Takes no arguments.",
+      "inputSchema": {
+        "properties": {},
+        "title": "cadence_runtime_infoArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "JournalSelection": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "enum": [
+                  "platform_default",
+                  "operator_supplied"
+                ],
+                "title": "Analysis",
+                "type": "string"
+              },
+              "sweep": {
+                "enum": [
+                  "package_relative_default",
+                  "operator_supplied"
+                ],
+                "title": "Sweep",
+                "type": "string"
+              },
+              "health_assessed": {
+                "const": false,
+                "default": false,
+                "title": "Health Assessed",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "analysis",
+              "sweep"
+            ],
+            "title": "JournalSelection",
+            "type": "object"
+          },
+          "LoadedCatalog": {
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "enum": [
+                  "builtin_reference",
+                  "operator_supplied"
+                ],
+                "title": "Source",
+                "type": "string"
+              },
+              "schema_version": {
+                "maximum": 7,
+                "minimum": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "entry_count": {
+                "maximum": 16,
+                "minimum": 0,
+                "title": "Entry Count",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "schema_version",
+              "entry_count",
+              "semantic_sha256"
+            ],
+            "title": "LoadedCatalog",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "bridge_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Bridge Version",
+            "type": "string"
+          },
+          "transport": {
+            "const": "stdio",
+            "default": "stdio",
+            "title": "Transport",
+            "type": "string"
+          },
+          "observation_scope": {
+            "const": "loaded_local_configuration",
+            "default": "loaded_local_configuration",
+            "title": "Observation Scope",
+            "type": "string"
+          },
+          "designs": {
+            "$ref": "#/$defs/LoadedCatalog"
+          },
+          "pdks": {
+            "$ref": "#/$defs/LoadedCatalog"
+          },
+          "journals": {
+            "$ref": "#/$defs/JournalSelection"
+          },
+          "remote_contact": {
+            "const": false,
+            "default": false,
+            "title": "Remote Contact",
+            "type": "boolean"
+          },
+          "execution_authority_assessed": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authority Assessed",
+            "type": "boolean"
+          },
+          "environment_qualification_assessed": {
+            "const": false,
+            "default": false,
+            "title": "Environment Qualification Assessed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bridge_version",
+          "designs",
+          "pdks",
+          "journals"
+        ],
+        "title": "RuntimeInfo",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

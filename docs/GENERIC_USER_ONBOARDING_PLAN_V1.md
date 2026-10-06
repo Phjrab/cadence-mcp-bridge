@@ -1,5 +1,14 @@
 # Generic user onboarding program v1
 
+## RUNTIME-CONFIG-01 continuation, 2026-10-06
+
+After merged #122, the user defers Claude actual-client testing and authorizes
+next development. Select path-free running-server configuration visibility
+before further live onboarding. All completed foundations remain complete;
+CLIENT-REAL-QUAL-01 remains partial. No Claude code is removed or qualification
+invented. Release retains exact-candidate/publication and imported-rights gates.
+See [runtime observation](RUNTIME_CONFIGURATION_V1.md).
+
 ## SPEC-CONTRACT-01 continuation, 2026-10-06
 
 After merged ANALOG-MEAS-01 (#118), continuation selects one condition-bound

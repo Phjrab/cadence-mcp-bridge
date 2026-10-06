@@ -27,6 +27,7 @@ from cadence_mcp_bridge.sweep_registry import DesignSweepRegistry
 ROOT = Path(__file__).resolve().parents[1]
 TAG_COMMIT = "8a0d44fab90e2095cc39322baef60fc09d741cd6"
 SNAPSHOT_COMMIT = "4ea17e2641f316ec0899c9c91f8bea97c6b4086f"
+RUNTIME_CONFIG_COMMIT = "b015b7151239e5613f8960fa896b8422b0b680aa"
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
 
 
@@ -101,6 +102,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     """Check current contracts, not live app/remote/legal or publication authority."""
     legacy = read_json(project / "docs/contracts/MCP_V1_COMPATIBILITY_SNAPSHOT.json")
     snapshot = read_json(project / "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json")
+    addition = read_json(project / "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json")
     if (
         type(legacy.get("schema_version")) is not int
         or legacy["schema_version"] != 1
@@ -116,10 +118,19 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or snapshot.get("source_main") != SNAPSHOT_COMMIT
         or not isinstance(snapshot.get("tools"), dict)
         or len(snapshot["tools"]) != 69
-        or len(schemas) != 69
-        or snapshot["tools"] != schemas
+        or any(schemas.get(name) != tool for name, tool in snapshot["tools"].items())
     ):
         raise ValueError("current full tool schema inventory differs from reviewed snapshot")
+    if (
+        type(addition.get("schema_version")) is not int
+        or addition["schema_version"] != 1
+        or addition.get("source_main") != RUNTIME_CONFIG_COMMIT
+        or not isinstance(addition.get("tools"), dict)
+        or set(addition["tools"]) != {"cadence_runtime_info"}
+        or set(schemas) != set(snapshot["tools"]) | set(addition["tools"])
+        or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
+    ):
+        raise ValueError("unreviewed additive tool or runtime metadata schema drift")
     source = (project / "src/cadence_mcp_bridge/server.py").read_text(encoding="utf-8")
     current = declarations(source)
     if set(current) != set(schemas) or any(current.get(n) != d for n, d in legacy["tools"].items()):
@@ -191,7 +202,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         "unverified_external_gates": [
             "exact_release_candidate_and_version_qualification",
             "CLAUDE_REAL_CLIENT_UNVERIFIED",
-            "fresh_Codex_application_NOT_TESTED",
+            "full_Codex_application_schema_version_lifecycle_NOT_TESTED",
             "imported_planning_LEGAL_REVIEW_REQUIRED_for_repository_bundle",
             "explicit_exact_publication_authority",
         ],

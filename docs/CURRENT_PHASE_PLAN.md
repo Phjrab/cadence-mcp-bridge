@@ -1,5 +1,39 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## RUNTIME-CONFIG-01 activation, 2026-10-06
+
+Starting main `b015b7151239e5613f8960fa896b8422b0b680aa`, merged #122.
+The latest user instruction defers Claude actual-client qualification and selects
+next development. Existing Sweep/Storage/Analog/Specification and release reassessment
+are complete. Real Codex has five verified reads; complete app lifecycle remains
+unverified. No phase history is restarted or promoted.
+
+Select a small onboarding foundation: clients cannot presently identify the
+running server's loaded registry version or whether journals use default/operator
+selection. `cadence_health` is remote health; CLI `doctor` checks a different local
+process. Add `cadence_runtime_info`, a local no-input observation of actual service
+startup snapshots. Do not reread paths/files or change settings. Preserve all 69
+prior schemas and add a separate reviewed schema snapshot. Verify defaults,
+v1-v7 loading, explicit/mixed journal choices, rejected arguments, bounded privacy,
+repeated/concurrent/restarted stdio reads and isolated installed-wheel behavior.
+Run static/full-unit/security/dependency/package and justified preserved-result
+regression. No simulation/deployment/deletion or version/tag/release. Claude
+adapter remains present; its actual-app gate is DEFERRED_BY_USER and
+CLAUDE_REAL_CLIENT_UNVERIFIED. Report and ask once before another phase.
+See [runtime observation](RUNTIME_CONFIGURATION_V1.md).
+
+Final gates: 1,731 full unit passes/four OS symlink skips/56 warnings; focused
+49 passes; Ruff/mypy 46 modules; security/dependency and final wheel54/sdist55,
+isolated installed 70-tool stdio/CLI/uninstall pass. Old 69 schemas and 74
+service methods remain exact. Preserved native DC/AC/TRAN and RC sweep/restart
+are equal; fresh fixed postflight verifies source/ADE/PDK/jobs/counters unchanged.
+All 1,191 prior private records equal. Three corrections of 20 consumed; failed
+and environment-misconfigured runs are retained as NOT_PASS. Zero new simulation,
+reservation, deployment, deletion or publication. Integrate one containing reviewed
+feature PR with exact remote SHA/tree recorded privately. Recommend ANALOG-POWER-01
+at the normal boundary; no automatic next phase. See
+[phase result](RUNTIME_CONFIG_01_RESULT_V1.md).
+
 ## CLIENT-REAL-QUAL-01 actual Codex read evidence, 2026-10-06
 
 Starting main `434e5efd7fc8ad940d921d5e82c5cd25bd818d7f`, after #121.

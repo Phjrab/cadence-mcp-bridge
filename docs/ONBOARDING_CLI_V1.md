@@ -1,5 +1,14 @@
 # Operator onboarding CLI v1
 
+## Connected-server observation, RUNTIME-CONFIG-01
+
+After registering/restarting the client, call `cadence_runtime_info` to check
+which catalog snapshot and journal selection the running process loaded.
+CLI validation of another process is insufficient for that observation.
+Use [the runtime guide](RUNTIME_CONFIGURATION_V1.md) to interpret defaults,
+semantic hashes and limitations. Explicit settings still come from the existing
+operator-owned configuration; there is no MCP setter or second config system.
+
 CLIENT-COMPAT-01 adds `--format claude-desktop` as an alias of the same MCP JSON
 export and optional `--sweep-journal` / `CADENCE_MCP_SWEEP_JOURNAL_PATH` for
 operator-owned local storage. Existing journals are never moved/reset by export.

@@ -16,9 +16,23 @@ initialization, typed schemas, calls/errors, concurrent read requests,
 stdout integrity and EOF shutdown. This is `SERVER_PROTOCOL_QUALIFIED`.
 Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
-Codex adapter passes protocol regression; a fresh Codex application E2E is
-also not claimed. See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
+Codex adapter passes protocol regression. Actual Codex discovery and preserved
+native DC reads are verified for the earlier 69-tool server; full app
+schema/version/lifecycle and the new tool in the live app remain unverified. See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
+
+## Running-server configuration
+
+`cadence_runtime_info` reports the connected bridge version, loaded design/PDK
+catalog versions/counts/semantic hashes and default/operator journal selection.
+It is local and accepts no inputs; it returns no private paths or file contents.
+Use it after client registration to detect a default v4 catalog instead of an
+intended operator v7 catalog. It does not check journal health, license entitlement,
+environment qualification or execution authority. See the
+[runtime observation guide](docs/RUNTIME_CONFIGURATION_V1.md).
+
+Claude actual-app testing is deferred by the user and remains
+`CLAUDE_REAL_CLIENT_UNVERIFIED`; its existing configuration adapter is preserved.
 
 ## Generic onboarding status
 
@@ -185,7 +199,8 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 69 typed tools; all previous 66 full schemas are preserved.
+The server has 70 typed tools; all previous 69 full schemas are preserved.
+One additive local `cadence_runtime_info` interface inspects loaded configuration.
 Three additive read-only specification interfaces list, describe and evaluate
 operator-owned exact-condition goals. No goal is invented for the reference.
 Three new read-only analog interfaces expose operator-registered definitions and

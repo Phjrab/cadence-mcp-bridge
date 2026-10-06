@@ -83,7 +83,7 @@ def test_wire_protocol_without_sdk_or_client_context(tmp_path: Path, identity: s
         send("notifications/initialized", {}, None)
         send("tools/list", {}, 2)
         listing = receive()["result"]["tools"]
-        assert len(listing) == 69 and len({t["name"] for t in listing}) == 69
+        assert len(listing) == 70 and len({t["name"] for t in listing}) == 70
         for tool in listing:
             assert tool["description"] and "codex" not in json.dumps(tool).lower()
             assert tool["inputSchema"]["type"] == "object"
@@ -107,6 +107,20 @@ def test_wire_protocol_without_sdk_or_client_context(tmp_path: Path, identity: s
         assert receive()["error"]["code"] == -32601
         send("ping", {}, 8)
         assert receive()["result"] == {}
+        send("tools/call", {"name": "cadence_runtime_info", "arguments": {}}, 9)
+        send("tools/call", {"name": "cadence_runtime_info", "arguments": {}}, 10)
+        runtime_results = {m["id"]: m["result"] for m in (receive(), receive())}
+        assert runtime_results[9] == runtime_results[10]
+        runtime = runtime_results[9]["structuredContent"]
+        assert runtime["bridge_version"] == init["serverInfo"]["version"]
+        assert runtime["designs"]["source"] == "operator_supplied"
+        assert runtime["designs"]["schema_version"] == 3
+        assert runtime["journals"]["sweep"] == "operator_supplied"
+        assert not runtime["remote_contact"] and not runtime["journals"]["health_assessed"]
+        assert str(tmp_path) not in json.dumps(runtime) and len(json.dumps(runtime)) < 2048
+        assert json.loads(runtime_results[9]["content"][0]["text"]) == runtime
+        send("tools/call", {"name": "cadence_runtime_info", "arguments": {"path": "../x"}}, 11)
+        assert receive()["result"]["isError"] is True
         process.stdin.close()
         assert process.wait(timeout=20) == 0
         for reader in readers:

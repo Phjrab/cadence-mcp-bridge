@@ -1,5 +1,16 @@
 # Operations
 
+## Check the connected process's settings
+
+Use `cadence_runtime_info` after client registration/restart to observe the
+running package version, loaded design/PDK catalog versions/counts/semantic
+digests and default/operator journal selection. It accepts no input and performs
+no remote contact or new filesystem IO. A default v4 design registry is distinct
+from explicitly loaded v7; tool availability alone cannot establish that v7 was
+configured. This does not assess journal health or grant execution authority.
+See [runtime interpretation and private troubleshooting](RUNTIME_CONFIGURATION_V1.md).
+Claude actual-app qualification is deferred by the user, not promoted to PASS.
+
 ## Registered specification operations
 
 Use the existing operator design schema/validate/register flow with registry v7.
