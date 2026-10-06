@@ -1,11 +1,25 @@
 # Release readiness reassessment v2
 
+## REAL-AMPLIFIER-SWEEP-01 assessment
+
+The existing durable engine now connects the explicit finite319/320/321mV
+operator registry to bounded DC/AC execution and signed rail power/10Hz gain.
+Six actual point simulations passed; SDK same-ID/restart and preserved-read
+evidence is separate from actual new app E2E, which remains NOT_RUN. Source83
+preserves old78 full schemas and v1-v8. Cancellation is pending-only; active
+termination, continuous ranges, ratings, other conditions and optimization are
+unqualified. Targets are absent, NOT_EVALUATED. Shared ledger82/9,798,942,720;
+no counters refunded. No version/tag/release approval follows. The strict six-slot
+activation requires a later reviewed extension before additional experiments.
+See [adapter scope](REAL_AMPLIFIER_SWEEP_V1.md) and
+[phase evidence](REAL_AMPLIFIER_SWEEP_01_RESULT_V1.md).
+
 ## BIAS-RANGE-QUAL-01 assessment
 
 Finite319/320/321 mV nominal bias-grid evidence is implemented using four actual
 owned endpoint DC/AC runs and reused admitted center results. The separate
 operator registry v2 qualifies grid numeric checks only; built-in/v1–v8 and78
-MCP schemas remain exact. Parameterized adapter, continuous range, ratings and
+MCP schemas remain exact. At that checkpoint, parameterized adapter, continuous range, ratings and
 user target evaluation remain unavailable. No version/tag/publication or client
 qualification follows. See [scope](BIAS_RANGE_QUALIFICATION_V1.md).
 

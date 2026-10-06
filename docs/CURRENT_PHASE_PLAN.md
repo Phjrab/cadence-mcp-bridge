@@ -1,5 +1,34 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## REAL-AMPLIFIER-SWEEP-01 qualification checkpoint
+
+Six actual fixed-grid DC/AC point runs and gain/signed-rail-power facts PASS.
+SDK same-ID/restart/old78 schema/read/admission regression PASS; active pending
+cancel/crash/partial-failure semantics remain synthetic evidence only. Full2194
+PASS/four OS skips/56 warnings/static/security PASS. Ledger82/9,798,942,720;
+six jobs1,105,799 logical/1,511,424 allocated bytes,10/20 corrections retained.
+Original/ADE/PDK/prior jobs/replay/1810 private hashes preserved. Complete final
+package/exact reviewed feature PR/remote, then continue already approved
+SPEC-REAL-EVAL-01 without a question. No target/new simulation/deletion/release.
+
+## REAL-AMPLIFIER-SWEEP-01 active plan
+
+Start from reviewed Bias PR132/main a809b5e under continuous user delegation.
+Reuse the existing SweepStore/SweepSupervisor lifecycle via explicitly versioned
+compiled plan/point codecs and one closed amplifier adapter, preserving every
+old78 MCP schema/v1–v8/RC plan identity. Operator-owned finite-grid contract only:
+VBIASN319/320/321mV, VBIASP702mV/VDD1V/VCM0.5V,NN27C,no added external load.
+One1D DC then one1D AC actual three-point sweep; at most six128MiB reservations
+under the same ledger/EDA/disk/replay guards, baseline76/8,993,636,352.
+Signed-power point definition is separately versioned; gain is differential at10Hz.
+No caller script/path/rawPSF/netlist, optimization/expansion/deletion/publication.
+Cancellation can stop unstarted points only; active simulator termination remains
+unqualified and must not be claimed. Freeze typed policy/delegation before deploy/
+actual execution; prove effective input, exact receipts, restart/same-ID/resume,
+partial failure, budgets and protected Bias/Offset/history. No invented target.
+Finish current gates/reviewed feature PR/remote, report and continue the next
+already approved SPEC-REAL-EVAL-01 without a transition question.
+
 ## BIAS-RANGE-QUAL-01 activation
 
 Qualification checkpoint: four actual endpoint DC/AC runs and reused center

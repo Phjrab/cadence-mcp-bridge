@@ -20,6 +20,14 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.amplifier_sweeps import (
+    AmplifierPrepared,
+    AmplifierQuery,
+    AmplifierStatus,
+    AmplifierSubmission,
+    AmplifierSweepRequest,
+    AmplifierSweepResult,
+)
 from cadence_mcp_bridge.analog_measurements import (
     AnalogDescription,
     AnalogList,
@@ -302,6 +310,11 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_prepare_amplifier_sweep",
+                "cadence_submit_amplifier_sweep",
+                "cadence_amplifier_sweep_status",
+                "cadence_amplifier_sweep_result",
+                "cadence_cancel_amplifier_sweep",
                 "cadence_measurement_catalog",
                 "cadence_evaluate_specification_v2",
                 "cadence_runtime_info_v2",
@@ -387,6 +400,11 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_prepare_amplifier_sweep": "request",
+            "cadence_submit_amplifier_sweep": "submission",
+            "cadence_amplifier_sweep_status": "request",
+            "cadence_amplifier_sweep_result": "request",
+            "cadence_cancel_amplifier_sweep": "request",
             "cadence_evaluate_specification_v2": "request",
             "cadence_describe_power_measurement": "request",
             "cadence_power_measurement_result": "request",
@@ -1393,6 +1411,58 @@ def create_server(service: CadenceService) -> MCPServer:
         confirmation: WriteConfirmation,
     ) -> Annotated[CallToolResult, DesignWriteValidationResult]:
         return await _stable_result(service.execute_design_write_validation(confirmation))
+
+    @server.tool(
+        name="cadence_prepare_amplifier_sweep", annotations=_READ_ONLY, structured_output=True,
+        description="Prepare a compiled 1D finite reference amplifier grid with registered "
+        "variable/analysis/measurement/definition hashes. Requires the reviewed operator numeric "
+        "registry. Local only; no reservation, range expansion or source change.",
+    )
+    async def cadence_prepare_amplifier_sweep(
+        request: AmplifierSweepRequest,
+    ) -> Annotated[CallToolResult, AmplifierPrepared]:
+        return await _stable_result(service.prepare_amplifier_sweep(request))
+
+    @server.tool(
+        name="cadence_submit_amplifier_sweep", annotations=_SUBMIT, structured_output=True,
+        description="Submit/resume the exact prepared finite 1D amplifier grid using the existing "
+        "durable sweep engine and shared EDA/resource guards. "
+        "Same experiment UUID is lookup/resume; "
+        "uncertain children never resubmit. No script/path/netlist or optimization input.",
+    )
+    async def cadence_submit_amplifier_sweep(
+        submission: AmplifierSubmission,
+    ) -> Annotated[CallToolResult, AmplifierStatus]:
+        return await _stable_result(service.submit_amplifier_sweep(submission))
+
+    @server.tool(
+        name="cadence_amplifier_sweep_status", annotations=_READ_ONLY, structured_output=True,
+        description="Read the registered amplifier sweep journal and deterministic point states.",
+    )
+    async def cadence_amplifier_sweep_status(
+        request: AmplifierQuery,
+    ) -> Annotated[CallToolResult, AmplifierStatus]:
+        return await _stable_result(service.amplifier_sweep_status(request))
+
+    @server.tool(
+        name="cadence_amplifier_sweep_result", annotations=_READ_ONLY, structured_output=True,
+        description="Read bounded qualified per-point10Hz differential gain or signed DC supply "
+        "power with effective conditions and provenance. No raw PSF or target PASS/FAIL.",
+    )
+    async def cadence_amplifier_sweep_result(
+        request: AmplifierQuery,
+    ) -> Annotated[CallToolResult, AmplifierSweepResult]:
+        return await _stable_result(service.amplifier_sweep_result(request))
+
+    @server.tool(
+        name="cadence_cancel_amplifier_sweep", annotations=_CANCEL, structured_output=True,
+        description="Durably cancel unstarted amplifier sweep points only. Active simulator "
+        "continues; no process termination or active cancellation qualification.",
+    )
+    async def cadence_cancel_amplifier_sweep(
+        request: AmplifierQuery,
+    ) -> Annotated[CallToolResult, AmplifierStatus]:
+        return await _stable_result(service.cancel_amplifier_sweep(request))
 
     return server
 

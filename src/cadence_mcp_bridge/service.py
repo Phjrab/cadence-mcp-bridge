@@ -19,6 +19,18 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.amplifier_sweeps import (
+    AmplifierChild,
+    AmplifierPrepared,
+    AmplifierQuery,
+    AmplifierStatus,
+    AmplifierSubmission,
+    AmplifierSupervisor,
+    AmplifierSweepRequest,
+    AmplifierSweepResult,
+    AmplifierTransport,
+    Mode,
+)
 from cadence_mcp_bridge.analog_measurements import (
     AnalogDescription,
     AnalogList,
@@ -190,6 +202,14 @@ from cadence_mcp_bridge.write_models import (
 
 
 class CadenceBackend(Protocol):
+    async def amplifier_reserve(
+        self, child: UUID, mode: Mode, value: str, plan_hash: str
+    ) -> None: ...
+    async def amplifier_lookup_reservation(self, child: UUID) -> bool: ...
+    async def amplifier_submit(self, child: UUID) -> JobStatus: ...
+    async def amplifier_status(self, child: UUID) -> JobStatus: ...
+    async def amplifier_result(self, child: UUID) -> AmplifierChild: ...
+    async def amplifier_effective_values(self, child: UUID) -> dict[str, str]: ...
     async def health(self) -> HealthReport: ...
 
     async def submit_smoke(self, job_id: UUID) -> JobStatus: ...
@@ -325,6 +345,24 @@ class CadenceService:
             self._sweeps,
             self._pdks,
         )
+        self._amplifier_sweeps = AmplifierSupervisor(
+            self._designs, self._pdks, cast(AmplifierTransport, backend), self._sweeps.store.path
+        )
+
+    async def prepare_amplifier_sweep(self, request: AmplifierSweepRequest) -> AmplifierPrepared:
+        return self._amplifier_sweeps.prepare(request)
+
+    async def submit_amplifier_sweep(self, request: AmplifierSubmission) -> AmplifierStatus:
+        return await self._amplifier_sweeps.submit(request)
+
+    async def amplifier_sweep_status(self, request: AmplifierQuery) -> AmplifierStatus:
+        return await self._amplifier_sweeps.status(request)
+
+    async def amplifier_sweep_result(self, request: AmplifierQuery) -> AmplifierSweepResult:
+        return await self._amplifier_sweeps.result(request)
+
+    async def cancel_amplifier_sweep(self, request: AmplifierQuery) -> AmplifierStatus:
+        return await self._amplifier_sweeps.cancel(request)
 
     async def runtime_info(self) -> RuntimeInfo:
         if self._runtime_info.designs.schema_version > 7:

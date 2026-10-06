@@ -5,7 +5,7 @@ import json
 import subprocess
 from typing import Any, cast
 from unittest.mock import Mock
-from uuid import uuid4
+from uuid import uuid4, uuid5
 
 import pytest
 
@@ -22,6 +22,39 @@ from cadence_mcp_bridge.models import NoProfileVariables, RcTransientVariables
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 SSH_EXE = r"C:\Windows\System32\OpenSSH\ssh.exe"
+
+
+@pytest.mark.parametrize("action,args", [
+    ("shell", ()), ("reserve", ("tran", "0.32", "a" * 64)),
+    ("reserve", ("dc", "0.3195", "a" * 64)),
+    ("reserve", ("dc", "0.32", "$(cmd)")), ("result", ("/tmp/x",)),
+])
+async def test_amplifier_fixed_transport_refuses_injection_before_ssh(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch,
+    action: Any, args: tuple[str, ...],
+) -> None:
+    invoked = Mock(side_effect=AssertionError("transport must not run"))
+    monkeypatch.setattr(backend, "_invoke_at_path", invoked)
+    with pytest.raises(InvalidInputError):
+        await backend._amplifier_call(action, uuid5(uuid4(), "child"), *args)
+    invoked.assert_not_called()
+
+
+async def test_amplifier_transport_same_identity_and_strict_ssh(
+    backend: OpenSshBackend, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job = uuid5(uuid4(), "child")
+    reply = json.dumps({"job_id": str(job), "reserved": True}).encode()
+    invoke = Mock(return_value=completed(reply))
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.subprocess.run", invoke)
+    await backend.amplifier_reserve(job, "dc", "0.32", "a" * 64)
+    argv = invoke.call_args.args[0]
+    assert argv[-5:] == ["reserve", str(job), "dc", "0.32", "a" * 64]
+    assert argv[-6].endswith("/phase-campaign/amplifier-sweep-v1/run.sh")
+    assert "BatchMode=yes" in argv and "StrictHostKeyChecking=yes" in argv
+    assert invoke.call_args.kwargs["shell"] is False
+    with pytest.raises(InvalidInputError):
+        await backend.amplifier_lookup_reservation(uuid4())
 
 
 @pytest.fixture
@@ -507,6 +540,12 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
     public_methods = {name for name in dir(backend) if not name.startswith("_")}
 
     assert public_methods == {
+        "amplifier_reserve",
+        "amplifier_lookup_reservation",
+        "amplifier_submit",
+        "amplifier_status",
+        "amplifier_result",
+        "amplifier_effective_values",
         "power_extraction_result",
         "bandwidth_refinement_result",
         "slew_step_result",

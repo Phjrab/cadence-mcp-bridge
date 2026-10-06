@@ -13,7 +13,7 @@ import subprocess
 import sys
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Any, Literal, TypeVar
+from typing import Annotated, Any, Literal, TypeVar, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -23,6 +23,7 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.amplifier_sweeps import GRID, PROFILE, AmplifierChild, Mode
 from cadence_mcp_bridge.bandwidth_study import RefinementExtraction
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import (
@@ -527,6 +528,83 @@ class OpenSshBackend:
             return StepExtraction.model_validate_json(output)
         except ValueError:
             raise RemoteFailureError("Step study failed closed validation") from None
+
+    async def _amplifier_call(
+        self, action: Literal["reserve", "lookup", "submit", "status", "result", "effective"],
+        child: UUID, *arguments: str,
+    ) -> dict[str, Any]:
+        if (not isinstance(child, UUID) or child.version != 5
+            or self._config.remote_root != "/home/buet/cds_work/.cadence_mcp"):
+            raise InvalidInputError("Closed amplifier deterministic child/root required")
+        if action not in ("reserve", "lookup", "submit", "status", "result", "effective"):
+            raise InvalidInputError("Closed amplifier action required")
+        if action == "reserve":
+            if (len(arguments) != 3 or arguments[0] not in ("dc", "ac")
+                or arguments[1] not in GRID or re.fullmatch(r"[0-9a-f]{64}", arguments[2]) is None):
+                raise InvalidInputError("Closed amplifier point/admission required")
+        elif arguments:
+            raise InvalidInputError("Amplifier reads accept deterministic ID only")
+        runner = self._config.remote_root + "/phase-campaign/amplifier-sweep-v1/run.sh"
+        try:
+            output = await asyncio.to_thread(
+                self._invoke_at_path, runner, action, str(child), *arguments
+            )
+            payload = json.loads(output)
+            if not isinstance(payload, dict):
+                raise ValueError("bounded object required")
+            return payload
+        except BridgeError as exc:
+            raise type(exc)("Amplifier operation could not be performed safely") from None
+        except ValueError:
+            raise RemoteFailureError("Amplifier operation returned invalid bounded data") from None
+
+    async def amplifier_reserve(
+        self, child: UUID, mode: Mode, value: str, plan_hash: str
+    ) -> None:
+        data = await self._amplifier_call("reserve", child, mode, value, plan_hash)
+        if data != {"job_id": str(child), "reserved": True}:
+            raise RemoteFailureError("Amplifier reservation identity mismatch")
+
+    async def amplifier_lookup_reservation(self, child: UUID) -> bool:
+        data = await self._amplifier_call("lookup", child)
+        if (set(data) != {"job_id", "reserved"} or data["job_id"] != str(child)
+            or type(data["reserved"]) is not bool):
+            raise RemoteFailureError("Amplifier reservation lookup identity mismatch")
+        return data["reserved"]
+
+    async def amplifier_submit(self, child: UUID) -> JobStatus:
+        return self._amplifier_status(child, await self._amplifier_call("submit", child))
+
+    async def amplifier_status(self, child: UUID) -> JobStatus:
+        return self._amplifier_status(child, await self._amplifier_call("status", child))
+
+    @staticmethod
+    def _amplifier_status(child: UUID, data: dict[str, Any]) -> JobStatus:
+        try:
+            status = JobStatus.model_validate(data)
+            if status.job_id != child or status.profile != PROFILE:
+                raise ValueError("status binding")
+            return status
+        except ValueError:
+            raise RemoteFailureError("Amplifier status failed closed validation") from None
+
+    async def amplifier_result(self, child: UUID) -> AmplifierChild:
+        try:
+            result = AmplifierChild.model_validate(await self._amplifier_call("result", child))
+            if result.job_id != child:
+                raise ValueError("result binding")
+            return result
+        except ValueError:
+            raise RemoteFailureError("Amplifier result failed closed validation") from None
+
+    async def amplifier_effective_values(self, child: UUID) -> dict[str, str]:
+        data = await self._amplifier_call("effective", child)
+        if (set(data) != {"job_id", "values"} or data["job_id"] != str(child)
+            or type(data["values"]) is not dict or set(data["values"]) != {"vbiasn","vbiasp","vdd"}
+            or data["values"]["vbiasn"] not in GRID
+            or data["values"]["vbiasp"] != "0.702" or data["values"]["vdd"] != "1"):
+            raise RemoteFailureError("Amplifier effective input validation")
+        return cast(dict[str, str], data["values"])
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)

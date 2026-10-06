@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any, ClassVar, Literal, cast
 from uuid import UUID, uuid5
 
 from pydantic import Field, model_validator
@@ -241,6 +241,16 @@ def now() -> str:
 class SweepStore:
     """Private SQLite journal; a corrupt checkpoint fails closed."""
 
+    # Compiled internal codecs keep the original schema/identity as the default.
+    # A client cannot supply these classes or a plan factory.
+    PLAN_MODEL: ClassVar[type[SweepPlan]] = SweepPlan
+    REQUEST_MODEL: ClassVar[type[SweepRequest]] = SweepRequest
+    POINT_MODEL: ClassVar[type[SweepPoint]] = SweepPoint
+
+    @staticmethod
+    def plan_for(request: SweepRequest) -> SweepPlan:
+        return make_plan(request)
+
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -259,7 +269,7 @@ class SweepStore:
         return connection
 
     def create_or_get(self, submission: SweepSubmission) -> dict[str, Any]:
-        expected = make_plan(submission.plan.request)
+        expected = self.plan_for(submission.plan.request)
         if expected != submission.plan:
             raise InvalidInputError("sweep plan was modified after planning")
         parent = sweep_id(expected.plan_hash, submission.experiment_key)
@@ -325,17 +335,17 @@ class SweepStore:
             if cursor.rowcount != 1:
                 raise InvalidInputError("sweep journal identity changed")
 
-    @staticmethod
-    def _parse(raw: str) -> dict[str, Any]:
+    @classmethod
+    def _parse(cls, raw: str) -> dict[str, Any]:
         try:
             document = json.loads(raw)
-            expected = make_plan(SweepRequest.model_validate(document["plan"]["request"]))
+            expected = cls.plan_for(cls.REQUEST_MODEL.model_validate(document["plan"]["request"]))
             parent = sweep_id(expected.plan_hash, UUID(document["experiment_key"]))
             if (
                 document["sweep_id"] != str(parent)
                 or document["plan_hash"] != expected.plan_hash
                 or type(document["cancel_requested"]) is not bool
-                or SweepPlan.model_validate(document["plan"]) != expected
+                or cls.PLAN_MODEL.model_validate(document["plan"]) != expected
                 or len(document["points"]) != expected.point_count
             ):
                 raise ValueError("identity mismatch")
@@ -348,7 +358,7 @@ class SweepStore:
                     or point["unit"] != expected.request.unit
                 ):
                     raise ValueError("point mismatch")
-                validated = SweepPoint.model_validate(point)
+                validated = cls.POINT_MODEL.model_validate(point)
                 if validated.state == PointState.SUCCEEDED:
                     applied = validated.applied_fixed
                     if applied is None or set(applied) != set(expected.canonical_fixed):

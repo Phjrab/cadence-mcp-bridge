@@ -22,7 +22,7 @@ retained for the complete qualification gate. Configuration and SDK tests alone
 do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the eight additions in the live app remain unverified.
+schema/version/lifecycle and the later additions in the live app remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
@@ -31,9 +31,15 @@ Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 The operator-reviewed VBIASN319/320/321 mV grid has actual bounded DC/AC evidence
 at fixed NN/27 C/VDD1 V/VBIASP702 mV. Existing variable tools can describe/check
 an explicitly selected operator registry v2; numeric matching grants no execution.
-Continuous ranges and device ratings remain unqualified, and parameterized
-amplifier submission requires the next adapter phase. See
+The separately qualified compiled Sweep adapter now executes only this finite
+grid through the existing engine, with signed DC supply-rail power and10 Hz AC
+gain. It requires explicit operator registry selection and shared budget guards.
+Continuous ranges and device ratings remain unqualified. See
 [grid scope and measured results](docs/BIAS_RANGE_QUALIFICATION_V1.md).
+The [Sweep guide](docs/REAL_AMPLIFIER_SWEEP_V1.md) documents the five additive tools,
+replay, pending-only cancellation and exact configuration boundary. Source83
+preserves old78 full schemas; current-source SDK execution is distinct from live
+app qualification. No optimization, new target, deletion or publication follows.
 
 ## Reference step diagnostics
 
@@ -45,7 +51,7 @@ slew remains UNQUALIFIED; no specification PASS/FAIL or other-load/PVT claim fol
 It accepts registered IDs, an existing admission and its contract hash, with no
 caller waveform/stimulus/path/script or simulation route. See the
 [definition and read boundary](docs/ANALOG_SLEW_V1.md) and
-[actual result](docs/ANALOG_SLEW_01_RESULT_V1.md). Current source exposes77 tools,
+[actual result](docs/ANALOG_SLEW_01_RESULT_V1.md). The step-phase checkpoint exposed77 tools,
 with all prior76 schemas preserved; the live app catalog is a separate checkpoint.
 
 ## Running-server configuration
@@ -101,7 +107,8 @@ See [design workflow](docs/GENERIC_DESIGN_V1.md).
 GENERIC-VAR-01 extends that registry to v2 with private variable bindings,
 exact units/types, mutation policy and separately reviewed numeric contracts.
 Two local read-only tools inspect contracts and check explicit decimal values.
-Reference bias ranges remain unqualified; VDD=1 V remains a fixed constraint.
+Built-in reference ranges remain unqualified; the separate reviewed finite grid
+is documented above. VDD=1 V remains a fixed constraint.
 Numeric matching grants no execution or electrical safety certification.
 See [variable workflow](docs/GENERIC_VARIABLES_V1.md).
 
@@ -169,12 +176,13 @@ GENERIC-SWEEP-01 prepares registered 1D contracts and local plans with two
 read-only tools. It reuses v4 reviews/analyses/measurements, requires all fixed
 values explicitly and bounds exact decimal sequences to 16 points. Numeric
 eligibility is separate from execution: every point is NOT_RUN and all
-parameterized physical execution remains unqualified. Reference bias ranges
-remain unqualified. See [sweep preparation](docs/GENERIC_DESIGN_SWEEP_V1.md).
+parameterized physical execution is not authorized by that preparation contract.
+Built-in continuous bias ranges remain unqualified. See
+[sweep preparation](docs/GENERIC_DESIGN_SWEEP_V1.md) and the separate finite adapter above.
 
 GENERIC-SWEEP-INTEGRATION-01 adds registry v5 and five lifecycle tools around the
 existing engine: prepare, submit/resume, status, result and cancel. The only
-parameterized adapter is the already reviewed passive RC fixture; explicit
+parameterized adapter in that interface is the reviewed passive RC fixture; explicit
 registered contracts and numeric reviews cannot redirect it. Durable registered
 admission uses the same operator journal and deterministic engine identities.
 Real-design ranges remain unqualified. The explicit active cumulative result
@@ -352,8 +360,8 @@ SWEEP-MCP-01 adds `cadence_plan_sweep`, `cadence_submit_sweep`,
 This first 1D version supports the registered RC fixture's numeric axes, up
 to 16 points, a durable same-key resume, per-point effective-input checks,
 and a cumulative Spectre/result budget guard. Its measurement is simulation
-completion, not an analog scalar. An actual-circuit bias sweep is unavailable
-until a single-axis binding and bounded voltage range are reviewed. The
+completion, not an analog scalar. That legacy interface cannot run amplifier
+bias sweeps; the separately versioned finite adapter above provides that binding. The
 historical three bias pairs vary two variables together. See
 [`docs/SWEEP_MCP_01_RESULT_V1.md`](docs/SWEEP_MCP_01_RESULT_V1.md).
 

@@ -93,3 +93,4 @@ remote/phase-campaign/bandwidth-qual-v1/*.ocn text eol=lf
 remote/phase-campaign/slew-qual-v*/*.ocn text eol=lf
 remote/phase-campaign/offset-qual-v*/*.ocn text eol=lf
 remote/phase-campaign/bias-range-qual-v*/*.ocn text eol=lf
+remote/phase-campaign/amplifier-sweep-v*/*.ocn text eol=lf

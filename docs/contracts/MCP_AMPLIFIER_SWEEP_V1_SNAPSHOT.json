@@ -1,0 +1,2187 @@
+{
+  "schema_version": 1,
+  "source_main": "a809b5e19a61eadd747a8beca0da3ae2ee67a023",
+  "tools": {
+    "cadence_amplifier_sweep_result": {
+      "name": "cadence_amplifier_sweep_result",
+      "title": null,
+      "description": "Read bounded qualified per-point10Hz differential gain or signed DC supply power with effective conditions and provenance. No raw PSF or target PASS/FAIL.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "sweep_id"
+            ],
+            "title": "AmplifierQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AmplifierQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_amplifier_sweep_resultArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "default": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "grid_v": {
+                "default": [
+                  "0.319",
+                  "0.32",
+                  "0.321"
+                ],
+                "items": {
+                  "enum": [
+                    "0.319",
+                    "0.32",
+                    "0.321"
+                  ],
+                  "type": "string"
+                },
+                "title": "Grid V",
+                "type": "array"
+              },
+              "registry_sha256": {
+                "default": "101901f99990e481ce54b93d65d161893b50504cee428169fee569eb6c849a1f",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Registry Sha256",
+                "type": "string"
+              },
+              "fixed_vbiasp_v": {
+                "const": "0.702",
+                "default": "0.702",
+                "title": "Fixed Vbiasp V",
+                "type": "string"
+              },
+              "vdd_v": {
+                "const": "1",
+                "default": "1",
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "vcm_v": {
+                "const": "0.5",
+                "default": "0.5",
+                "title": "Vcm V",
+                "type": "string"
+              },
+              "corner": {
+                "const": "nn",
+                "default": "nn",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "gain_definition": {
+                "const": "differential-voltage-gain-at-10hz-grid-v1",
+                "default": "differential-voltage-gain-at-10hz-grid-v1",
+                "title": "Gain Definition",
+                "type": "string"
+              },
+              "power_definition": {
+                "const": "signed-dc-supply-rail-power-grid-v2",
+                "default": "signed-dc-supply-rail-power-grid-v2",
+                "title": "Power Definition",
+                "type": "string"
+              },
+              "power_sign": {
+                "const": "minus_terminal_voltage_times_positive_into_source_current",
+                "default": "minus_terminal_voltage_times_positive_into_source_current",
+                "title": "Power Sign",
+                "type": "string"
+              },
+              "power_scope": {
+                "const": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "default": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "title": "Power Scope",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "finite_nominal_simulation_grid_only",
+                "default": "finite_nominal_simulation_grid_only",
+                "title": "Qualification",
+                "type": "string"
+              },
+              "phase_margin": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Phase Margin",
+                "type": "string"
+              },
+              "offset": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Offset",
+                "type": "string"
+              },
+              "cancellation": {
+                "const": "pending_points_only_active_job_not_terminated",
+                "default": "pending_points_only_active_job_not_terminated",
+                "title": "Cancellation",
+                "type": "string"
+              }
+            },
+            "title": "AmplifierDefinition",
+            "type": "object"
+          },
+          "AmplifierEngineResult": {
+            "additionalProperties": false,
+            "properties": {
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              },
+              "plan_hash": {
+                "title": "Plan Hash",
+                "type": "string"
+              },
+              "experiment_key": {
+                "format": "uuid",
+                "title": "Experiment Key",
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "RUNNING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "CANCELLED",
+                  "UNKNOWN"
+                ],
+                "title": "State",
+                "type": "string"
+              },
+              "points": {
+                "items": {
+                  "$ref": "#/$defs/AmplifierPoint"
+                },
+                "title": "Points",
+                "type": "array"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "title": "Updated At",
+                "type": "string"
+              },
+              "initial_condition": {
+                "const": "independent",
+                "default": "independent",
+                "title": "Initial Condition",
+                "type": "string"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              },
+              "profile_id": {
+                "const": "reference-amplifier-finite-grid-v1",
+                "default": "reference-amplifier-finite-grid-v1",
+                "title": "Profile Id",
+                "type": "string"
+              },
+              "axis": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Axis",
+                "type": "string"
+              },
+              "unit": {
+                "const": "V",
+                "default": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Fixed",
+                "type": "object"
+              },
+              "contract_version": {
+                "const": 2,
+                "default": 2,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "cancellation_semantics": {
+                "const": "pending_only_active_job_continues",
+                "default": "pending_only_active_job_continues",
+                "title": "Cancellation Semantics",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "plan_hash",
+              "experiment_key",
+              "state",
+              "points",
+              "updated_at",
+              "fixed"
+            ],
+            "title": "AmplifierEngineResult",
+            "type": "object"
+          },
+          "AmplifierMetric": {
+            "additionalProperties": false,
+            "properties": {
+              "job_id": {
+                "format": "uuid",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "requested_vbiasn_v": {
+                "title": "Requested Vbiasn V",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "status": {
+                "const": "QUALIFIED",
+                "default": "QUALIFIED",
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "title": "Value",
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "W",
+                  "dB"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "bias_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bias Source Power W"
+              },
+              "input_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Input Source Power W"
+              },
+              "all_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "All Source Power W"
+              },
+              "signed_sources": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/SignedSource"
+                },
+                "title": "Signed Sources",
+                "type": "array"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "source_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Result Sha256",
+                "type": "string"
+              },
+              "counter": {
+                "$ref": "#/$defs/PowerCounter"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id",
+              "requested_vbiasn_v",
+              "measurement_id",
+              "value",
+              "unit",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "source_result_sha256",
+              "counter"
+            ],
+            "title": "AmplifierMetric",
+            "type": "object"
+          },
+          "AmplifierPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "point_id": {
+                "format": "uuid",
+                "title": "Point Id",
+                "type": "string"
+              },
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "operation_key": {
+                "format": "uuid",
+                "title": "Operation Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$defs/PointState"
+              },
+              "requested_value": {
+                "title": "Requested Value",
+                "type": "string"
+              },
+              "applied_value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Value"
+              },
+              "applied_fixed": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Fixed"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "measurement_id": {
+                "const": "simulation_completion",
+                "default": "simulation_completion",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_value": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Value"
+              },
+              "measurement_unit": {
+                "const": "1",
+                "default": "1",
+                "title": "Measurement Unit",
+                "type": "string"
+              },
+              "quality": {
+                "default": "not_available",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "not_available"
+                ],
+                "title": "Quality",
+                "type": "string"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Error"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "provenance": {
+                "default": "not_run",
+                "enum": [
+                  "remote_spectre_profile",
+                  "not_run"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "phase": {
+                "default": "not_run",
+                "enum": [
+                  "not_run",
+                  "reserving",
+                  "reserved",
+                  "sending",
+                  "running",
+                  "complete",
+                  "cancelled"
+                ],
+                "title": "Phase",
+                "type": "string"
+              }
+            },
+            "required": [
+              "point_id",
+              "child_job_id",
+              "operation_key",
+              "state",
+              "requested_value",
+              "unit"
+            ],
+            "title": "AmplifierPoint",
+            "type": "object"
+          },
+          "PointState": {
+            "enum": [
+              "NOT_RUN",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "PointState",
+            "type": "string"
+          },
+          "PowerCounter": {
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": {
+                "const": "AUTO-PHASE-01",
+                "title": "Campaign Id",
+                "type": "string"
+              },
+              "count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Count",
+                "type": "integer"
+              },
+              "result_reserved_bytes": {
+                "maximum": 10737418240,
+                "minimum": 0,
+                "title": "Result Reserved Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "campaign_id",
+              "count",
+              "result_reserved_bytes"
+            ],
+            "title": "PowerCounter",
+            "type": "object"
+          },
+          "SignedSource": {
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "enum": [
+                  "vdd",
+                  "vss",
+                  "bias-n",
+                  "bias-p",
+                  "input-p",
+                  "input-m"
+                ],
+                "title": "Source Id",
+                "type": "string"
+              },
+              "role": {
+                "enum": [
+                  "supply",
+                  "bias",
+                  "stimulus"
+                ],
+                "title": "Role",
+                "type": "string"
+              },
+              "voltage_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Voltage V"
+              },
+              "current_a": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Current A"
+              }
+            },
+            "required": [
+              "source_id",
+              "role",
+              "voltage_v",
+              "current_a"
+            ],
+            "title": "SignedSource",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "definition": {
+            "$ref": "#/$defs/AmplifierDefinition"
+          },
+          "definition_sha256": {
+            "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Definition Sha256",
+            "type": "string"
+          },
+          "engine": {
+            "$ref": "#/$defs/AmplifierEngineResult"
+          },
+          "measurements": {
+            "items": {
+              "$ref": "#/$defs/AmplifierMetric"
+            },
+            "maxItems": 3,
+            "title": "Measurements",
+            "type": "array"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "measurements"
+        ],
+        "title": "AmplifierSweepResult",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_amplifier_sweep_status": {
+      "name": "cadence_amplifier_sweep_status",
+      "title": null,
+      "description": "Read the registered amplifier sweep journal and deterministic point states.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "sweep_id"
+            ],
+            "title": "AmplifierQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AmplifierQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_amplifier_sweep_statusArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "point_id": {
+                "format": "uuid",
+                "title": "Point Id",
+                "type": "string"
+              },
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "operation_key": {
+                "format": "uuid",
+                "title": "Operation Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$defs/PointState"
+              },
+              "requested_value": {
+                "title": "Requested Value",
+                "type": "string"
+              },
+              "applied_value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Value"
+              },
+              "applied_fixed": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Fixed"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "measurement_id": {
+                "const": "simulation_completion",
+                "default": "simulation_completion",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_value": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Value"
+              },
+              "measurement_unit": {
+                "const": "1",
+                "default": "1",
+                "title": "Measurement Unit",
+                "type": "string"
+              },
+              "quality": {
+                "default": "not_available",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "not_available"
+                ],
+                "title": "Quality",
+                "type": "string"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Error"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "provenance": {
+                "default": "not_run",
+                "enum": [
+                  "remote_spectre_profile",
+                  "not_run"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "phase": {
+                "default": "not_run",
+                "enum": [
+                  "not_run",
+                  "reserving",
+                  "reserved",
+                  "sending",
+                  "running",
+                  "complete",
+                  "cancelled"
+                ],
+                "title": "Phase",
+                "type": "string"
+              }
+            },
+            "required": [
+              "point_id",
+              "child_job_id",
+              "operation_key",
+              "state",
+              "requested_value",
+              "unit"
+            ],
+            "title": "AmplifierPoint",
+            "type": "object"
+          },
+          "PointState": {
+            "enum": [
+              "NOT_RUN",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "PointState",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "sweep_id": {
+            "format": "uuid",
+            "title": "Sweep Id",
+            "type": "string"
+          },
+          "plan_hash": {
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "experiment_key": {
+            "format": "uuid",
+            "title": "Experiment Key",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AmplifierPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "initial_condition": {
+            "const": "independent",
+            "default": "independent",
+            "title": "Initial Condition",
+            "type": "string"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "cancellation_semantics": {
+            "const": "pending_only_active_job_continues",
+            "default": "pending_only_active_job_continues",
+            "title": "Cancellation Semantics",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_hash",
+          "experiment_key",
+          "state",
+          "points",
+          "updated_at"
+        ],
+        "title": "AmplifierStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_cancel_amplifier_sweep": {
+      "name": "cadence_cancel_amplifier_sweep",
+      "title": null,
+      "description": "Durably cancel unstarted amplifier sweep points only. Active simulator continues; no process termination or active cancellation qualification.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "sweep_id"
+            ],
+            "title": "AmplifierQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AmplifierQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_cancel_amplifier_sweepArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "point_id": {
+                "format": "uuid",
+                "title": "Point Id",
+                "type": "string"
+              },
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "operation_key": {
+                "format": "uuid",
+                "title": "Operation Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$defs/PointState"
+              },
+              "requested_value": {
+                "title": "Requested Value",
+                "type": "string"
+              },
+              "applied_value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Value"
+              },
+              "applied_fixed": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Fixed"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "measurement_id": {
+                "const": "simulation_completion",
+                "default": "simulation_completion",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_value": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Value"
+              },
+              "measurement_unit": {
+                "const": "1",
+                "default": "1",
+                "title": "Measurement Unit",
+                "type": "string"
+              },
+              "quality": {
+                "default": "not_available",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "not_available"
+                ],
+                "title": "Quality",
+                "type": "string"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Error"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "provenance": {
+                "default": "not_run",
+                "enum": [
+                  "remote_spectre_profile",
+                  "not_run"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "phase": {
+                "default": "not_run",
+                "enum": [
+                  "not_run",
+                  "reserving",
+                  "reserved",
+                  "sending",
+                  "running",
+                  "complete",
+                  "cancelled"
+                ],
+                "title": "Phase",
+                "type": "string"
+              }
+            },
+            "required": [
+              "point_id",
+              "child_job_id",
+              "operation_key",
+              "state",
+              "requested_value",
+              "unit"
+            ],
+            "title": "AmplifierPoint",
+            "type": "object"
+          },
+          "PointState": {
+            "enum": [
+              "NOT_RUN",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "PointState",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "sweep_id": {
+            "format": "uuid",
+            "title": "Sweep Id",
+            "type": "string"
+          },
+          "plan_hash": {
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "experiment_key": {
+            "format": "uuid",
+            "title": "Experiment Key",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AmplifierPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "initial_condition": {
+            "const": "independent",
+            "default": "independent",
+            "title": "Initial Condition",
+            "type": "string"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "cancellation_semantics": {
+            "const": "pending_only_active_job_continues",
+            "default": "pending_only_active_job_continues",
+            "title": "Cancellation Semantics",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_hash",
+          "experiment_key",
+          "state",
+          "points",
+          "updated_at"
+        ],
+        "title": "AmplifierStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_prepare_amplifier_sweep": {
+      "name": "cadence_prepare_amplifier_sweep",
+      "title": null,
+      "description": "Prepare a compiled 1D finite reference amplifier grid with registered variable/analysis/measurement/definition hashes. Requires the reviewed operator numeric registry. Local only; no reservation, range expansion or source change.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "enum": [
+                  "grid-dc-v1",
+                  "grid-ac-v1"
+                ],
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "enum": [
+                    "vbiasp",
+                    "vdd"
+                  ]
+                },
+                "title": "Fixed",
+                "type": "object"
+              }
+            },
+            "required": [
+              "design_id",
+              "variable_id",
+              "analysis_id",
+              "measurement_id",
+              "values",
+              "unit",
+              "fixed"
+            ],
+            "title": "AmplifierSweepRequest",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AmplifierSweepRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_prepare_amplifier_sweepArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "default": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "grid_v": {
+                "default": [
+                  "0.319",
+                  "0.32",
+                  "0.321"
+                ],
+                "items": {
+                  "enum": [
+                    "0.319",
+                    "0.32",
+                    "0.321"
+                  ],
+                  "type": "string"
+                },
+                "title": "Grid V",
+                "type": "array"
+              },
+              "registry_sha256": {
+                "default": "101901f99990e481ce54b93d65d161893b50504cee428169fee569eb6c849a1f",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Registry Sha256",
+                "type": "string"
+              },
+              "fixed_vbiasp_v": {
+                "const": "0.702",
+                "default": "0.702",
+                "title": "Fixed Vbiasp V",
+                "type": "string"
+              },
+              "vdd_v": {
+                "const": "1",
+                "default": "1",
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "vcm_v": {
+                "const": "0.5",
+                "default": "0.5",
+                "title": "Vcm V",
+                "type": "string"
+              },
+              "corner": {
+                "const": "nn",
+                "default": "nn",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "gain_definition": {
+                "const": "differential-voltage-gain-at-10hz-grid-v1",
+                "default": "differential-voltage-gain-at-10hz-grid-v1",
+                "title": "Gain Definition",
+                "type": "string"
+              },
+              "power_definition": {
+                "const": "signed-dc-supply-rail-power-grid-v2",
+                "default": "signed-dc-supply-rail-power-grid-v2",
+                "title": "Power Definition",
+                "type": "string"
+              },
+              "power_sign": {
+                "const": "minus_terminal_voltage_times_positive_into_source_current",
+                "default": "minus_terminal_voltage_times_positive_into_source_current",
+                "title": "Power Sign",
+                "type": "string"
+              },
+              "power_scope": {
+                "const": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "default": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "title": "Power Scope",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "finite_nominal_simulation_grid_only",
+                "default": "finite_nominal_simulation_grid_only",
+                "title": "Qualification",
+                "type": "string"
+              },
+              "phase_margin": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Phase Margin",
+                "type": "string"
+              },
+              "offset": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Offset",
+                "type": "string"
+              },
+              "cancellation": {
+                "const": "pending_points_only_active_job_not_terminated",
+                "default": "pending_points_only_active_job_not_terminated",
+                "title": "Cancellation",
+                "type": "string"
+              }
+            },
+            "title": "AmplifierDefinition",
+            "type": "object"
+          },
+          "AmplifierEnginePlan": {
+            "additionalProperties": false,
+            "properties": {
+              "plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Hash",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/AmplifierEngineRequest"
+              },
+              "canonical_values": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Canonical Values",
+                "type": "array"
+              },
+              "canonical_fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Canonical Fixed",
+                "type": "object"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "point_count": {
+                "maximum": 16,
+                "minimum": 1,
+                "title": "Point Count",
+                "type": "integer"
+              },
+              "classification": {
+                "const": "finite_1d_reference_amplifier",
+                "default": "finite_1d_reference_amplifier",
+                "title": "Classification",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 2,
+                "default": 2,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "definition_sha256": {
+                "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "plan_hash",
+              "request",
+              "canonical_values",
+              "canonical_fixed",
+              "point_count"
+            ],
+            "title": "AmplifierEnginePlan",
+            "type": "object"
+          },
+          "AmplifierEngineRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "profile_id": {
+                "const": "reference-amplifier-finite-grid-v1",
+                "default": "reference-amplifier-finite-grid-v1",
+                "title": "Profile Id",
+                "type": "string"
+              },
+              "corner": {
+                "const": "nn",
+                "default": "nn",
+                "title": "Corner",
+                "type": "string"
+              },
+              "axis": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Axis",
+                "type": "string"
+              },
+              "unit": {
+                "const": "V",
+                "default": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "values": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 16,
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Values"
+              },
+              "linear": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LinearValues"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "enum": [
+                    "vbiasp",
+                    "vdd"
+                  ]
+                },
+                "title": "Fixed",
+                "type": "object"
+              },
+              "measurements": {
+                "default": [
+                  "simulation_completion"
+                ],
+                "items": {
+                  "const": "simulation_completion",
+                  "type": "string"
+                },
+                "title": "Measurements",
+                "type": "array"
+              },
+              "initial_condition": {
+                "const": "independent",
+                "default": "independent",
+                "title": "Initial Condition",
+                "type": "string"
+              },
+              "binding": {
+                "$ref": "#/$defs/AmplifierSweepRequest"
+              }
+            },
+            "required": [
+              "fixed",
+              "binding"
+            ],
+            "title": "AmplifierEngineRequest",
+            "type": "object"
+          },
+          "AmplifierSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "enum": [
+                  "grid-dc-v1",
+                  "grid-ac-v1"
+                ],
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "enum": [
+                    "vbiasp",
+                    "vdd"
+                  ]
+                },
+                "title": "Fixed",
+                "type": "object"
+              }
+            },
+            "required": [
+              "design_id",
+              "variable_id",
+              "analysis_id",
+              "measurement_id",
+              "values",
+              "unit",
+              "fixed"
+            ],
+            "title": "AmplifierSweepRequest",
+            "type": "object"
+          },
+          "LinearValues": {
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "title": "Start",
+                "type": "string"
+              },
+              "stop": {
+                "title": "Stop",
+                "type": "string"
+              },
+              "step": {
+                "title": "Step",
+                "type": "string"
+              }
+            },
+            "required": [
+              "start",
+              "stop",
+              "step"
+            ],
+            "title": "LinearValues",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "definition": {
+            "$ref": "#/$defs/AmplifierDefinition"
+          },
+          "definition_sha256": {
+            "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Definition Sha256",
+            "type": "string"
+          },
+          "engine_plan": {
+            "$ref": "#/$defs/AmplifierEnginePlan"
+          },
+          "execution_eligible": {
+            "const": true,
+            "default": true,
+            "title": "Execution Eligible",
+            "type": "boolean"
+          },
+          "runtime_guards_required": {
+            "const": true,
+            "default": true,
+            "title": "Runtime Guards Required",
+            "type": "boolean"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine_plan"
+        ],
+        "title": "AmplifierPrepared",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_submit_amplifier_sweep": {
+      "name": "cadence_submit_amplifier_sweep",
+      "title": null,
+      "description": "Submit/resume the exact prepared finite 1D amplifier grid using the existing durable sweep engine and shared EDA/resource guards. Same experiment UUID is lookup/resume; uncertain children never resubmit. No script/path/netlist or optimization input.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierSubmission": {
+            "additionalProperties": false,
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/AmplifierSweepRequest"
+              },
+              "expected_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Hash",
+                "type": "string"
+              },
+              "experiment_key": {
+                "format": "uuid",
+                "title": "Experiment Key",
+                "type": "string"
+              }
+            },
+            "required": [
+              "request",
+              "expected_plan_hash",
+              "experiment_key"
+            ],
+            "title": "AmplifierSubmission",
+            "type": "object"
+          },
+          "AmplifierSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "enum": [
+                  "grid-dc-v1",
+                  "grid-ac-v1"
+                ],
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "enum": [
+                    "vbiasp",
+                    "vdd"
+                  ]
+                },
+                "title": "Fixed",
+                "type": "object"
+              }
+            },
+            "required": [
+              "design_id",
+              "variable_id",
+              "analysis_id",
+              "measurement_id",
+              "values",
+              "unit",
+              "fixed"
+            ],
+            "title": "AmplifierSweepRequest",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "submission": {
+            "$ref": "#/$defs/AmplifierSubmission"
+          }
+        },
+        "required": [
+          "submission"
+        ],
+        "title": "cadence_submit_amplifier_sweepArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "point_id": {
+                "format": "uuid",
+                "title": "Point Id",
+                "type": "string"
+              },
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "operation_key": {
+                "format": "uuid",
+                "title": "Operation Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$defs/PointState"
+              },
+              "requested_value": {
+                "title": "Requested Value",
+                "type": "string"
+              },
+              "applied_value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Value"
+              },
+              "applied_fixed": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Fixed"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "measurement_id": {
+                "const": "simulation_completion",
+                "default": "simulation_completion",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_value": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Value"
+              },
+              "measurement_unit": {
+                "const": "1",
+                "default": "1",
+                "title": "Measurement Unit",
+                "type": "string"
+              },
+              "quality": {
+                "default": "not_available",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "not_available"
+                ],
+                "title": "Quality",
+                "type": "string"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Error"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "provenance": {
+                "default": "not_run",
+                "enum": [
+                  "remote_spectre_profile",
+                  "not_run"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "phase": {
+                "default": "not_run",
+                "enum": [
+                  "not_run",
+                  "reserving",
+                  "reserved",
+                  "sending",
+                  "running",
+                  "complete",
+                  "cancelled"
+                ],
+                "title": "Phase",
+                "type": "string"
+              }
+            },
+            "required": [
+              "point_id",
+              "child_job_id",
+              "operation_key",
+              "state",
+              "requested_value",
+              "unit"
+            ],
+            "title": "AmplifierPoint",
+            "type": "object"
+          },
+          "PointState": {
+            "enum": [
+              "NOT_RUN",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "PointState",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "sweep_id": {
+            "format": "uuid",
+            "title": "Sweep Id",
+            "type": "string"
+          },
+          "plan_hash": {
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "experiment_key": {
+            "format": "uuid",
+            "title": "Experiment Key",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AmplifierPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "initial_condition": {
+            "const": "independent",
+            "default": "independent",
+            "title": "Initial Condition",
+            "type": "string"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "cancellation_semantics": {
+            "const": "pending_only_active_job_continues",
+            "default": "pending_only_active_job_continues",
+            "title": "Cancellation Semantics",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_hash",
+          "experiment_key",
+          "state",
+          "points",
+          "updated_at"
+        ],
+        "title": "AmplifierStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}
