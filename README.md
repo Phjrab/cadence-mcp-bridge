@@ -18,7 +18,7 @@ Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the six additions in the live app remain unverified.
+schema/version/lifecycle and the seven additions in the live app remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
@@ -251,7 +251,14 @@ operator checkout.
 
 ## Current MCP interface
 
-The server has 75 typed tools; all previous 72 full schemas are preserved.
+The server has 76 typed tools; all previous 75 full schemas are preserved.
+`cadence_bandwidth_study_result` adds an admission-bound, read-only fixed-reference
+grid study. Actual 50/100 points-per-decade refinements observe a final estimate
+of489.007 kHz and successive change0.02475%; the original10 Hz/3.0 dB definition
+and PARTIALLY_QUALIFIED status remain. This is empirical convergence without an
+absolute error bound or specification PASS. See
+[scope and API](docs/BANDWIDTH_QUALIFICATION_V1.md) and
+[reference evidence](docs/BANDWIDTH_QUAL_02_RESULT_V1.md).
 Three additions provide measurement discovery, v2 specification evaluation and
 v2 runtime observation. The separate power readers retain their original schemas.
 One additive local `cadence_runtime_info` interface inspects loaded configuration.

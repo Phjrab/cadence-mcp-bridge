@@ -1,5 +1,23 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active BANDWIDTH-QUAL-02 overlay:** User continuation after merged #126
+> activates one fixed reference AC refinement phase from d97d993. Preserve the
+> original 10 Hz differential gain / first -3.0 dB crossing and partial status.
+> Reuse the exact admitted AC input in separate owned copies with only the fixed
+> AC line changed: 10 Hz–1 MHz, 50 then 100 points/decade; at most two attempts
+> and two 128 MiB reservations under the shared ledger, lock and disk floor.
+> No range expansion, original/ADE/PDK mutation, deletion, target or publication.
+> Explicit private delegation binds the new immutable operator workflow before
+> execution. Preserve all old 75 schemas, v1-v8 registries and private evidence.
+> Finish one reviewed PR, verify remote main, report and ask once before ANALOG-PM-01.
+
+> **BANDWIDTH-QUAL-02 qualification checkpoint:** Final full unit gate1,894 PASS,
+> four OS skips/56 warnings; static/security/contract/package/SDK and real two-grid
+> AC checks pass. Empirical convergence remains PARTIALLY_QUALIFIED. Twelve of20
+> corrections and64/500 attempts,7,383,023,616/10 GiB cumulative reservation.
+> Exact containing-PR integration is recorded privately. ANALOG-PM-01 is not
+> activated; report and ask once at this boundary.
+
 > **Active MEAS-CONTRACT-02 overlay:** User continuation selects the bounded
 > power discovery and versioned specification binding phase from merged #124.
 > Follow the current plan; preserve old contracts/readers/definitions/budgets.

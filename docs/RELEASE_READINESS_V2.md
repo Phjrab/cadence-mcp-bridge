@@ -1,5 +1,19 @@
 # Release readiness reassessment v2
 
+## BANDWIDTH-QUAL-02 current assessment, 2026-10-06
+
+Starting main d97d993 after merged #126.76 typed tools include one supplementary
+read-only fixed-reference bandwidth study; all old75 schemas and registry v1-v8
+versions remain exact. Two actual AC refinements observe empirical convergence,
+with original definition/result and PARTIALLY_QUALIFIED status preserved. No
+absolute-error/PVT/specification qualification follows. Current actual Desktop
+app schema/lifecycle evidence remains incomplete; SDK protocol/configuration/
+installed package checks do not replace it. Claude and other environments remain
+deferred. Package1.0.0, Apache/external license and imported export boundaries are
+unchanged; exact future release candidate, version/scope, LEGAL_REVIEW_REQUIRED
+and PUBLICATION_NOT_AUTHORIZED remain separate. No release/tag is activated.
+See [phase evidence](BANDWIDTH_QUAL_02_RESULT_V1.md).
+
 ## MEAS-CONTRACT-02 current assessment, 2026-10-06
 
 Starting main `0e85a12804d550279a9da0c5ebe9f92acabcc62e`, after merged #124.
