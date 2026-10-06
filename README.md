@@ -186,7 +186,9 @@ original bridge code; see the licensing boundary below. An exact candidate and
 publication scope remain owner decisions; imported planning rights need review.
 The curated original-code package is **CONDITIONALLY_READY**. A new significant
 GitHub release at current main is **NOT_READY**: real client qualification and
-whole-tree imported rights remain unresolved. A local contract PASS never grants
+full application and exact distribution/candidate gates remain unresolved. Imported
+rights remain under review for clone/history material. See the archive boundary
+below. A local contract PASS never grants
 publication; run `uv run python scripts/verify-release-readiness.py` from a reviewed checkout.
 Actual Codex discovery and a preserved native DC result read are now
 [verified](docs/CLIENT_REAL_QUAL_CODEX_READS_V1.md). Claude and full application
@@ -207,6 +209,33 @@ and `LEGAL_REVIEW_REQUIRED` for imported `docs/agent_plan/` material. Root
 LICENSE does not relicense that material. Audited package distributions exclude
 it; a blanket Apache claim for a full repository bundle is not approved.
 See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
+
+## Source archives and preserved planning
+
+New Git archives at commits containing `docs/.gitattributes` exclude
+`docs/agent_plan/`. Exact local and GitHub snapshots require member/content
+inspection before `IMPORT_EXCLUDED_VERIFIED` is claimed; see the
+[export boundary and evidence](docs/AGENT_PLAN_EXPORT_BOUNDARY_V1.md).
+This does not remove the directory from web browsing, clone, fork, Git bundle,
+old commits or existing downloads. Its rights remain `LEGAL_REVIEW_REQUIRED`;
+a new tag/release remains `PUBLICATION_NOT_AUTHORIZED`.
+
+To install from an inspected source ZIP/tar.gz, unpack it into a new directory,
+then run `uv sync --all-groups`, `uv run cadence-mcp-bridge doctor` and the
+[onboarding workflow](docs/ONBOARDING_CLI_V1.md). Bridge installation supplies
+no Cadence, PDK, licenses or execution qualification. The archive retains
+source, dependency lock, examples, schemas, tests and package verification.
+`scripts/verify-package.ps1` checks the build/distribution and isolated installed
+CLI/stdio without the imported planning helper. See its distinct archive
+installation evidence in the export-boundary document.
+
+Historical imported-package checks and ICF planning require a reviewed clone
+and their exact preserved inputs. The old `docs/agent_plan/tools/verify_package.py`
+is deliberately absent from source archives; it is not an installation step.
+Do not skip its missing-input failure or call it PASS. The Git-based secret
+preflight also requires a checkout: run it there before export, then compare
+archive contents to that exact commit. A ZIP directory is not a full Git
+operator checkout.
 
 ## Current MCP interface
 

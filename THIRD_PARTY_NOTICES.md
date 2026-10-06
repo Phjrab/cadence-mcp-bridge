@@ -53,6 +53,14 @@ history; no historical deletion/rewrite is performed. This uncertainty blocks
 a blanket Apache claim for the whole repository, not the separately audited
 original-code wheel/source package, which excludes this directory.
 
+New Git archives at commits containing the reviewed `docs/.gitattributes`
+exclude this directory. `IMPORT_EXCLUDED_VERIFIED` applies only to inspected
+exact-commit artifacts; it is not rights clearance or publication authorization.
+Web browsing, clones, forks, bundles, older commits and existing downloads retain
+their separate scope. External references and decision adaptations outside the
+directory are recorded in [the boundary audit](docs/AGENT_PLAN_EXPORT_BOUNDARY_V1.md);
+path exclusion is not a blanket statement about all derived content.
+
 `archive/LEGACY_INPUTS.zip` is referenced by that import record but was excluded
 from Git and remains absent. No rights or redistribution claim is made for it.
 

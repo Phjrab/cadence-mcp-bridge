@@ -1,5 +1,25 @@
 # Release readiness reassessment v2
 
+## AGENT-PLAN-EXPORT-BOUNDARY-01 current assessment, 2026-10-06
+
+Existing #124 is continued from completed power #125 at
+`20726ead871ffda18a937938fed7c4a6426d5b5d`. New exact-commit Git archives
+exclude the imported directory through reviewed export-ignore rules. Local
+ZIP/TAR and actual hosted ZIP/tar.gz must each pass complete blob comparison.
+See [candidate-specific evidence and installation](AGENT_PLAN_EXPORT_BOUNDARY_V1.md).
+Archive exclusion, original import rights and publication authority are distinct:
+IMPORT_EXCLUDED_VERIFIED / LEGAL_REVIEW_REQUIRED / PUBLICATION_NOT_AUTHORIZED.
+The import remains in clone/history scope and is not relicensed. External
+references/adaptations need their own scope review; no blanket legal clearance.
+No MCP/runtime/API/package-version/remote behavior change; 72 tool schemas and
+v1-v7 registry schemas are preserved. Existing power qualification and all other
+scientific limits remain. Current-client evidence, exact release/version/scope
+and publication remain open. Claude/other environment qualification is deferred.
+The dated tables below retain prior observations where explicitly identified.
+No future analog measurement is automatically a prerequisite for a release
+limited to already validated functionality. No tag/release is activated.
+
+
 ## ANALOG-POWER-01 continuation, 2026-10-06
 
 The additive reference DC power readers bring the current catalog to 72 tools.
@@ -40,8 +60,9 @@ are separate operations. This phase selects no release commit or version update.
 | --- | --- | --- |
 | Current reviewed original-code wheel and curated package-source sdist | CONDITIONALLY_READY | Build/license/install/contract evidence is verified; new-version candidate and publication authority remain separate |
 | New significant public release claiming both Codex and Claude Desktop | BLOCKED_PENDING_QUALIFICATION | Exported config/SDK protocol tests do not establish actual Desktop app qualification |
-| Full repository bundle or blanket Apache-2.0 repository claim | BLOCKED_LEGAL_REVIEW_REQUIRED | Imported planning ownership/redistribution terms remain unresolved |
-| New GitHub release at current main | NOT_READY | Source archives represent the whole tagged tree, including imported planning; curated asset exclusion does not clear those archives. Client, exact-candidate/version and publication gates also remain |
+| Full clone/history bundle or blanket Apache-2.0 repository claim | BLOCKED_LEGAL_REVIEW_REQUIRED | Preserved imported planning rights remain unresolved; archive exclusion does not alter this scope |
+| Specifically inspected new Git ZIP/TAR snapshots | Candidate-specific IMPORT_EXCLUDED_VERIFIED only after inspection | Omission is distribution evidence, not rights clearance for referenced/derived material or release permission |
+| New GitHub release at current main | NOT_READY / PUBLICATION_NOT_AUTHORIZED | Reviewed export-ignore changes new source snapshots; actual exact-candidate archives, client/scope/version and publication gates remain separate |
 | Another user describing/registering/inspecting private contracts | VERIFIED within documented local workflow | Does not qualify a new physical execution route |
 | Arbitrary new Cadence project/PDK execution | UNQUALIFIED | Only compiled reviewed bindings execute; new profiles do not grant arbitrary routing |
 
@@ -161,9 +182,11 @@ Private baselines retain prior failures/checkpoints and immutable evidence.
 1. **CLIENT-REAL-QUAL-01:** record direct Codex/Claude app version, registration,
    actual inventory/calls and lifecycle against the same bridge/guard configuration.
    SDK/config preparation never upgrades the application matrix by itself.
-2. **Imported rights:** human review must establish author/rights/terms for the
-   imported planning package before a whole-tree source archive/blanket Apache
-   claim. No speculative legal conclusion or historical deletion is substituted.
+2. **Distribution and imported rights:** inspect the exact future release ZIP
+   and tar.gz with the committed export rules. A verified exclusion does not
+   clear preserved clone/history import rights or external derivatives; human
+   review is required for those scopes and a blanket Apache claim. No speculative
+   legal conclusion or historical deletion is substituted.
 3. **Exact candidate/version:** after prerequisite decisions, select a reviewed
    candidate, apply consistent version metadata in its separately activated phase
    and run candidate-specific gates. This audit commit is not an approved release

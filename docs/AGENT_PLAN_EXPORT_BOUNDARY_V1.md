@@ -1,8 +1,9 @@
 # Agent-plan export boundary v1
 
 Date: 2026-10-06. Baseline: `8009060edc076ccacb371c45d8f8fb3a335b150f`
-(merged PR #123). Status: **IMPLEMENTED_IN_REVIEW_BRANCH**; repository-wide
-acceptance, exact GitHub archive verification and integration remain pending.
+(merged PR #123). Preparation status: **IMPLEMENTED_IN_REVIEW_BRANCH** at the original draft.
+The completion audit below supersedes that preparation checkpoint; its original
+synthetic evidence and limitations remain historical.
 This is a bounded distribution-engineering change, not legal clearance, a new
 execution policy or release authorization.
 
@@ -117,3 +118,106 @@ rewriting history or treating archival evidence as disposable.
 
 The underlying rights uncertainty is not a finding of infringement. No legal
 conclusion is made about the imported package beyond the existing audit evidence.
+
+
+## Completion audit on the continued PR #124
+
+Current starting main is `20726ead871ffda18a937938fed7c4a6426d5b5d`, merged
+ANALOG-POWER-01 #125. The same `chore/agent-plan-export-boundary-01` branch
+is continued with a normal main merge. No duplicate implementation PR is made.
+Current scope is distribution engineering only; power extraction is already
+complete, while generic power discovery/specification binding remains pending.
+
+### Dependence, copies and rights
+
+The continued checkout has 181 tracked files under `docs/agent_plan`: the
+178 imported package files plus three integration records. They and their
+Git blob identities remain unchanged. The 178/177 figures in the import manifest
+are historical import counts, not a count of every current file in the folder.
+No runtime, build, deployment or product unit test imports the planning helper.
+The archive verifier/new synthetic tests mention the exclusion, and distribution
+rejection tests deliberately use fictional import paths; these are original tests.
+
+External references remain in AGENTS/root execution policy, PROJECT_STATE,
+current/historical planning and licensing documentation, and the two
+`docs/decisions/WP14_VBIAS_DECISION_*` records. Those decision records cite
+historical planning assumptions; they do not supply runtime inputs. Root
+execution policy also documents its prior integration/adaptation of the imported
+planning constraints. These references and adaptations are not relabeled as
+independently licensed import content. No complete normalized-byte duplicate or
+identical paragraph of at least 250 normalized characters was found outside
+the directory in the current tracked-file comparison. That limited comparison
+cannot establish authorship or absence of paraphrased derivatives. Rights review
+must include the preserved import and any affected external adaptations;
+`LEGAL_REVIEW_REQUIRED` remains. No infringement conclusion is made.
+
+`docs/archive/CODEX_MASTER_PROMPT_pre_PKG-INTEGRATE-01.md` is the project's
+pre-integration root contract preserved by the manifest. Other root/archive
+prompts and prior phase reports remain historical evidence; export-ignore does
+not grant them new rights or erase them. No imported material is copied out to
+make an archive self-contained. No license, original, history or past result is
+modified. The current boundary proves omission of the named import subtree only,
+not legal clearance for every retained document.
+
+### Historical package checks versus product installation
+
+The imported `tools/verify_package.py` checks its historical manifest, checksums,
+planning/catalog/link graph and `archive/LEGACY_INPUTS.zip`. That original ZIP
+was intentionally never committed. Its actual invocation in the full reviewed
+checkout is recorded separately; missing required historical inputs remain a
+failure, never a waived check or current product-installation PASS. Do not add
+that ZIP or weaken its integrity validator for this phase.
+
+For a source-archive user:
+
+1. Choose an exact inspected commit ZIP/tar.gz and unpack into a fresh directory.
+2. Run `uv sync --all-groups`, then `uv run cadence-mcp-bridge doctor` and the
+   [local onboarding guide](ONBOARDING_CLI_V1.md). Doctor validates local bridge
+   requirements; SSH/Cadence qualification and execution need their own contracts.
+3. Run `pwsh -NoProfile -File scripts/verify-package.ps1` for the curated build,
+   distribution audit, isolated installed CLI/stdio and uninstall gate. It does
+   not require the imported historical helper or `.git`.
+4. Development lint/type/unit commands remain available. On Windows, use
+   `uv run python -m pytest tests/unit` so project-root `scripts` imports resolve.
+   The initial console-script invocation's collection failure is preserved;
+   no test is removed to achieve a PASS.
+5. Historical ICF/package-integrity work and the Git-enumerated secret preflight
+   require the reviewed checkout and preserved inputs. Their absence in a ZIP
+   is not an installation error, a passed historical audit, or permission to
+   bypass a fail-closed gate. The export audit compares all retained Git blobs
+   after checkout secret verification; curated distribution scanning is separate.
+
+### Repeatable exact-candidate archive inspection
+
+`scripts/verify-git-archive.py` is an operator-only read-only audit, not an MCP
+API. It requires an exact 40-character commit and locally downloaded/generated
+archive files, rejects unsafe paths/links/duplicates/expansion, and reads without
+extraction. It requires every candidate regular file outside the imported
+subtree, exact blob-content identity, original source, dependency metadata and
+LICENSE/NOTICE/THIRD_PARTY_NOTICES. Unexpected omissions/additions fail. It
+makes no network, Cadence, execution, rights or publication assertion.
+
+```powershell
+git archive --format=zip --output=candidate-local.zip EXACT_COMMIT
+git archive --format=tar --output=candidate-local.tar EXACT_COMMIT
+# Separately download GitHub-generated zipball/tarball at that same commit.
+uv run python scripts/verify-git-archive.py --commit EXACT_COMMIT --archives candidate-local.zip candidate-local.tar candidate-github.zip candidate-github.tar.gz
+```
+
+Store downloads/evidence outside tracked release payloads. Hosted archive bytes
+may change compression independently; retained candidate blobs must still match.
+Exact hashes, commit, URLs and verification outcomes are preserved privately.
+Future tags/candidates must be inspected again. Old snapshots do not inherit
+the new attributes. Tests/builds of an actual hosted snapshot are distinct from
+synthetic Git fixtures and from SDK subprocess or actual app/Cadence evidence.
+
+### Completion evidence
+
+Final local gates, exact hosted snapshots and integration outcomes are recorded
+in the containing reviewed PR #124 and new private phase records. At this
+checkpoint archive qualification is pending; only observed checks may update it.
+Publication remains `PUBLICATION_NOT_AUTHORIZED`. No simulation, reservation,
+remote deployment/contact, result deletion, client-config write or tag/release
+is part of this phase. Existing power/AC/TRAN/sweep evidence can be reused only
+because source/remote/contracts remain identical; this phase makes no new
+scientific measurement or actual Desktop-app claim.

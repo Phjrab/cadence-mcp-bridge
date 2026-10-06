@@ -1,5 +1,22 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## AGENT-PLAN-EXPORT-BOUNDARY-01 activation, 2026-10-06
+
+Starting main `20726ead871ffda18a937938fed7c4a6426d5b5d`, completed #125.
+The user selects existing draft #124 on `chore/agent-plan-export-boundary-01`.
+Merge current main into that branch without rewriting history. Preserve all
+181 currently tracked imported/integration files, source/remote bytes, contracts,
+private evidence and cumulative resources. Audit external references/copies,
+run current local gates and inspect exact candidate local ZIP/TAR plus actual
+GitHub ZIP/tar.gz. Compare every retained member with its candidate Git blob.
+Document installation without the omitted historical planning helper, whose
+missing inputs must still fail. Imported rights and publication remain separate.
+Correction ceiling20; no remote contact, simulation/reservation/deletion/release.
+Finish one reviewed PR, verify remote SHA/tree and report once. See
+[export boundary](AGENT_PLAN_EXPORT_BOUNDARY_V1.md). Power extraction is complete;
+its generic measurement/specification binding remains pending. The next phase
+recommendation must account for that gap before further analog qualification.
+
 ## ANALOG-POWER-01 activation, 2026-10-06
 
 User continuation activates one power extraction phase from

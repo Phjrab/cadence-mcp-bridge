@@ -4,15 +4,23 @@ These tests verify local Git behavior only. Exact-candidate GitHub ZIP/tarball
 inspection, existing repository gates and rights review remain separate.
 """
 
+import hashlib
+import importlib.util
 import io
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 RULES_FILE = Path(__file__).resolve().parents[2] / "docs" / ".gitattributes"
+AUDIT_FILE = RULES_FILE.parents[1] / "scripts" / "verify-git-archive.py"
+SPEC = importlib.util.spec_from_file_location("git_archive_audit", AUDIT_FILE)
+assert SPEC is not None and SPEC.loader is not None
+AUDIT = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(AUDIT)
 
 
 @unittest.skipUnless(shutil.which("git"), "git is required for archive-boundary tests")
@@ -74,8 +82,6 @@ class AgentPlanExportBoundaryTests(unittest.TestCase):
         self.assertEqual(self.tar_files(), self.expected())
 
     def test_zip_excludes_only_imported_tree(self) -> None:
-        import zipfile
-
         archive = self.git("archive", "--format=zip", "HEAD")
         with zipfile.ZipFile(io.BytesIO(archive)) as stream:
             contents = {
@@ -101,6 +107,96 @@ class AgentPlanExportBoundaryTests(unittest.TestCase):
         self.git("commit", "--quiet", "-m", "remove synthetic export rules")
         self.assertIn("docs/agent_plan/README.md", self.tar_files())
         self.assertIn("docs/agent_plan/archive/nested/old.md", self.tar_files())
+
+
+class ExactArchiveAuditTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory(prefix="exact-archive-test-")
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / "snapshot.zip"
+        self.files = {
+            "LICENSE": b"synthetic license\n",
+            "NOTICE": b"synthetic notice\n",
+            "THIRD_PARTY_NOTICES.md": b"synthetic scope\n",
+            "README.md": b"synthetic guide\n",
+            "pyproject.toml": b"synthetic metadata\n",
+            "src/bridge.py": b"# synthetic original\n",
+        }
+        self.blobs = {}
+        for name, data in {**self.files, "docs/agent_plan/import.md": b"synthetic import"}.items():
+            self.blobs[name] = hashlib.sha1(
+                b"blob " + str(len(data)).encode() + b"\0" + data
+            ).hexdigest()
+
+    def write_zip(self, prefix: str = "", extras: dict[str, bytes] | None = None) -> None:
+        with zipfile.ZipFile(self.path, "w") as archive:
+            for name, data in {**self.files, **(extras or {})}.items():
+                archive.writestr(prefix + name, data)
+
+    def test_local_and_hosted_prefix_exact_content(self) -> None:
+        for prefix in ("", "repository-candidate/"):
+            self.write_zip(prefix)
+            result = AUDIT.inspect(self.path, self.blobs)
+            self.assertEqual(result["status"], "IMPORT_EXCLUDED_VERIFIED")
+            self.assertEqual(result["rights_status"], "LEGAL_REVIEW_REQUIRED")
+            self.assertEqual(result["publication_status"], "PUBLICATION_NOT_AUTHORIZED")
+            self.assertEqual(result["imported_files_excluded"], 1)
+
+    def test_import_file_or_empty_directory_rejected(self) -> None:
+        for name in ("docs/agent_plan/import.md", "docs/agent_plan/"):
+            self.write_zip("repository-candidate/", {name: b""})
+            with self.assertRaises(ValueError):
+                AUDIT.inspect(self.path, self.blobs)
+
+    def test_missing_modified_extra_and_unsafe_content_rejected(self) -> None:
+        for extra in ({"NOTICE": b"altered"}, {"extra.txt": b"x"}, {"../escape": b"x"}):
+            self.write_zip(extras=extra)
+            with self.assertRaises(ValueError):
+                AUDIT.inspect(self.path, self.blobs)
+        del self.files["NOTICE"]
+        self.write_zip()
+        with self.assertRaises(ValueError):
+            AUDIT.inspect(self.path, self.blobs)
+
+    def test_duplicate_link_and_mixed_root_rejected(self) -> None:
+        self.write_zip()
+        with zipfile.ZipFile(self.path, "a") as archive:
+            archive.writestr("other/LICENSE", b"duplicate license")
+        with self.assertRaises(ValueError):
+            AUDIT.inspect(self.path, self.blobs)
+        self.write_zip()
+        with zipfile.ZipFile(self.path, "a") as archive:
+            entry = zipfile.ZipInfo("symlink")
+            entry.create_system = 3
+            entry.external_attr = 0o120777 << 16
+            archive.writestr(entry, "target")
+        with self.assertRaises(ValueError):
+            AUDIT.inspect(self.path, self.blobs)
+        self.write_zip("repository-candidate/")
+        with zipfile.ZipFile(self.path, "a") as archive:
+            archive.writestr("unprefixed", b"x")
+        with self.assertRaises(ValueError):
+            AUDIT.inspect(self.path, self.blobs)
+
+    def test_tar_link_rejected(self) -> None:
+        path = self.path.with_suffix(".tar")
+        with tarfile.open(path, "w") as archive:
+            member = tarfile.TarInfo("link")
+            member.type = tarfile.SYMTYPE
+            member.linkname = "../escape"
+            archive.addfile(member)
+        with self.assertRaises(ValueError):
+            AUDIT.read_members(path)
+
+    def test_expansion_limit_rejected(self) -> None:
+        self.write_zip()
+        old_limit = AUDIT.MAX_EXPANDED_BYTES
+        try:
+            AUDIT.MAX_EXPANDED_BYTES = 1
+            with self.assertRaises(ValueError):
+                AUDIT.inspect(self.path, self.blobs)
+        finally:
+            AUDIT.MAX_EXPANDED_BYTES = old_limit
 
 
 if __name__ == "__main__":
