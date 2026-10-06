@@ -26,10 +26,17 @@ Not tested:
 
 - full schema, protocol and stderr/EOF
 - the Desktop chat surface
+- new job lifecycle
 
 The tested server was an unreviewed local working tree with one tool outside the
 reviewed 75-name inventory. See [run report](validation/claude-desktop/20261006T0407Z/REPORT.md).
 `CLAUDE_REAL_CLIENT_UNVERIFIED` is narrowed only for these reads, not cleared.
+The dated sections below preserve the earlier deferral and qualification history;
+the Code-tab evidence above supersedes their blanket deferral for this run only.
+The public originating-agent report is reviewed independently by Codex; its
+private tool cards and exact tested working tree are not independently replayed
+or attested by that review. Current main has77 source tools, which is distinct
+from this historical76-name app observation.
 
 ## ANALOG-POWER-01 continuation, 2026-10-06
 

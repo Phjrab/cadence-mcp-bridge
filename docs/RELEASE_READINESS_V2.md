@@ -1,5 +1,19 @@
 # Release readiness reassessment v2
 
+## Claude actual Code-tab read evidence, PR127 integration
+
+The historical deferral was lifted for run20261006T0407Z. The Claude-authored
+report records actual Desktop Code-tab existing DC/AC/TRAN/measurement/power
+reads, bounded discovery/spec/storage/error calls, and matching re-reads after
+an app restart. This is actual-app evidence reported by the originating agent,
+separate from SDK verification; Codex reviews the public report and repository
+consistency without independently replaying its private tool cards.
+The tested working-tree digest is UNKNOWN. Sweep is BLOCKED by journal selection;
+Desktop chat/full schema/protocol/stderr/EOF/new lifecycle remain NOT_TESTED.
+CLAUDE_REAL_CLIENT_UNVERIFIED remains for complete release qualification against
+an exact reviewed build. No release or additional app run is authorized by this
+documentation integration. See the [report](validation/claude-desktop/20261006T0407Z/REPORT.md).
+
 ## ANALOG-SLEW-01 assessment, 2026-10-06
 
 Starting main b49d826 after merged #129.77 typed tools include one supplemental

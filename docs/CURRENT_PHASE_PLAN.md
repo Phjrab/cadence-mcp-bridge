@@ -1,5 +1,21 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## Claude PR127 review and integration, 2026-10-06
+
+The user explicitly requests review and merge of the completed Claude-authored
+read/restart report on its existing branch. Preserve its historical observations
+and unknown tested source identity. Integrate latest main without rewriting the
+branch; review public JSON, evidence references, links and secret boundaries.
+Record Code-tab existing reads/restart separately from Desktop chat, full
+schema/protocol, new lifecycle and the blocked sweep journal. No blanket
+CLAUDE_REAL_CLIENT_UNVERIFIED clearance, new simulation, deployment, configuration
+change, deletion or release. Reuse exact unchanged runtime/test evidence; run
+current contract/security/client and updated distribution/documentation checks.
+Complete reviewed PR127 integration and verify remote SHA/tree privately.
+ANALOG-SLEW-01 is already merged as PR130; this review activates no next analog
+phase. ANALOG-OFFSET-01 still requires one user confirmation. See the
+[Claude run report](validation/claude-desktop/20261006T0407Z/REPORT.md).
+
 ## ANALOG-SLEW-01 activation, 2026-10-06
 
 User confirmation after merged PM PR129 at b49d826448c1ddab2a2b3d4e176d07db3462412d

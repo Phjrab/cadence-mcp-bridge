@@ -214,3 +214,31 @@ The tested server was an unreviewed local working tree. The repository-level
 3. For C10, the operator sets an explicit historical sweep journal in the Claude
    registration, then restarts and re-reads. No ledger is migrated, reset or
    replaced.
+
+## Codex repository review for PR127 integration
+
+Review baseline: main `fea971da31e3420b95fe8de28a0a40fe4d1f41c9` (merged
+PR130), with77 source tools. The original observation sections and evidence
+index remain dated records from the originating Claude conversation. Their
+private tool cards/checkpoint are not available to this repository review, so
+no independent replay or exact tested-server attestation is claimed. The report
+is accepted as bounded originating-app evidence, not complete qualification.
+
+The extra bandwidth reader is now part of reviewed main via PR128. Its absence
+from reviewed remote branches at the observation time remains historical; this
+later merge cannot establish the identity of the originally tested working tree.
+The64-attempt/7,383,023,616-byte observation agrees with the subsequently recorded
+BANDWIDTH-QUAL-02 ledger checkpoint (two AC attempts/two128MiB reservations).
+That reconciles the recorded accounting values without claiming the Claude read
+session caused those simulations. Current main records68 attempts and
+7,919,894,528 reserved bytes after ANALOG-SLEW-01; neither historical counter is
+reset or substituted. Reported waveform/spectrum counts remain observations of
+the originating app; their private frames are not independently rechecked here.
+
+Review/integration adds no execution route, registry, schema, target, license
+grant, configuration write, simulation, result deletion or publication. Exact
+candidate review, applicable local gates and remote integration are recorded
+privately. Full-unit/static/security evidence is reused only after verifying
+unchanged source/test/toolchain inputs against reviewed main; updated README
+distribution inputs and current client/contract/security/documentation checks
+are verified separately. Failed or absent checks are never counted as PASS.
