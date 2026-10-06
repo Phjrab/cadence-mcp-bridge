@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "run_id": "20261006T0407Z",
+  "evidence_reference_note": "The host did not expose tool-event IDs. Evidence references are the tool call/result cards in the originating Claude Desktop Code-tab conversation, in call order. No file paths, hashes or event IDs are invented.",
+  "private_store": {
+    "exists": true,
+    "kind": "local operator workstation file outside the repository",
+    "published": false,
+    "contains": "aliases to real logical IDs, registry semantic hashes, contract hashes, storage snapshot telemetry, tested-checkout identity"
+  },
+  "items": [
+    {"case_id": "C01", "alias": "EV-C01-runtime", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_runtime_info (error), cadence_runtime_info_v2", "public": "summary only"},
+    {"case_id": "C02", "alias": "EV-C02-design", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_list_designs, cadence_describe_design, cadence_design_pdk_status", "public": "summary only"},
+    {"case_id": "C03", "alias": "EV-C03-catalog", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_list_analyses, cadence_list_measurements, cadence_describe_measurement, cadence_list_analog_measurements, cadence_list_specifications, cadence_measurement_catalog, cadence_list_native_diagnostics", "public": "summary only"},
+    {"case_id": "C04", "alias": null, "kind": "NOT_OBSERVED", "present": false, "reference": null, "public": "n/a"},
+    {"case_id": "C05", "alias": null, "kind": "NOT_OBSERVED", "present": false, "reference": null, "public": "n/a"},
+    {"case_id": "C06", "alias": "EV-C06-measurement-defs", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_list_measurements, cadence_describe_measurement", "public": "summary only"},
+    {"case_id": "C07", "alias": "EV-C07-analog-defs", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_list_analog_measurements, cadence_describe_analog_measurement x2", "public": "summary only"},
+    {"case_id": "C08", "alias": "EV-C08-power-describe", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_describe_power_measurement, cadence_measurement_catalog", "public": "summary only; contract hash withheld"},
+    {"case_id": "C08", "alias": "EV-C08-power-source-review", "kind": "REPOSITORY_REFERENCE", "present": true, "reference": "src/cadence_mcp_bridge/power_service.py at d97d9934341d382c1131ee1f5d61ab8cc75ace38", "public": "public repository source"},
+    {"case_id": "C09", "alias": "EV-C09-spec", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_list_specifications, cadence_describe_specification (error), cadence_evaluate_specification_v2", "public": "summary only"},
+    {"case_id": "C10", "alias": null, "kind": "NOT_OBSERVED", "present": false, "reference": null, "public": "n/a"},
+    {"case_id": "C11", "alias": "EV-C11-storage", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_storage_summary, cadence_list_storage_artifacts", "public": "aggregate counters only; snapshot/artifact IDs and free space withheld"},
+    {"case_id": "C12", "alias": "EV-C12-reject-recover", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "conversation tool cards: cadence_describe_design (error), cadence_describe_measurement (error), cadence_runtime_info_v2, cadence_list_designs", "public": "summary only"},
+    {"case_id": "C13", "alias": "EV-C13-repeat", "kind": "CLAUDE_DESKTOP_TOOL_EVENT", "present": true, "reference": "second cadence_runtime_info_v2 and cadence_list_designs cards", "public": "equality result only"},
+    {"case_id": "C14", "alias": null, "kind": "NOT_OBSERVED", "present": false, "reference": null, "public": "n/a"},
+    {"case_id": "INVENTORY", "alias": "EV-INV-names", "kind": "CLAUDE_DESKTOP_UI_OBSERVATION", "present": true, "reference": "host deferred-tool name list in the same conversation, compared to the four repository snapshots", "public": "counts and the one extra name"},
+    {"case_id": "CLIENT", "alias": "EV-CLIENT-identity", "kind": "CLAUDE_DESKTOP_UI_OBSERVATION", "present": true, "reference": "local Appx package/process version query and configuration key-name inspection (values and paths not read out)", "public": "app/package version and registration source only"}
+  ],
+  "excluded_from_publication": [
+    "raw tool arguments and results",
+    "registry semantic hashes and contract hashes",
+    "storage snapshot ID, artifact IDs/fingerprints, filesystem free bytes",
+    "real design/PDK logical IDs (aliased)",
+    "configuration paths, SSH alias, remote root, environment values",
+    "tested checkout location"
+  ]
+}

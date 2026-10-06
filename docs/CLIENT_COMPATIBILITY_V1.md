@@ -1,5 +1,30 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Actual Claude Desktop (Code tab) reads, 2026-10-06
+
+The user lifted the Claude deferral for this run only. Direct tool calls from the
+Claude Desktop app's Code tab (package 2.19675.1.0, using the bridge registered
+in the Desktop configuration) verified the following:
+
+- runtime v2 observation
+- design list/describe/PDK status
+- catalog and analog/power definitions
+- targetless v2 specification evaluation (NOT_EVALUATED)
+- storage summary/list
+- two bounded unregistered-ID rejections followed by recovery
+
+Not tested:
+
+- existing native DC/AC/TRAN, power and sweep result reads (no admitted ID was
+  available)
+- restart
+- full schema and protocol
+- the Desktop chat surface
+
+The tested server was an unreviewed local working tree with one tool outside the
+reviewed 75-name inventory. See [run report](validation/claude-desktop/20261006T0407Z/REPORT.md).
+`CLAUDE_REAL_CLIENT_UNVERIFIED` is narrowed only for these reads, not cleared.
+
 ## ANALOG-POWER-01 continuation, 2026-10-06
 
 Current server has 72 tools; the two additional power readers preserve all 70
