@@ -1,5 +1,14 @@
 # Release readiness reassessment v2
 
+## BIAS-RANGE-QUAL-01 assessment
+
+Finite319/320/321 mV nominal bias-grid evidence is implemented using four actual
+owned endpoint DC/AC runs and reused admitted center results. The separate
+operator registry v2 qualifies grid numeric checks only; built-in/v1–v8 and78
+MCP schemas remain exact. Parameterized adapter, continuous range, ratings and
+user target evaluation remain unavailable. No version/tag/publication or client
+qualification follows. See [scope](BIAS_RANGE_QUALIFICATION_V1.md).
+
 ## ANALOG-OFFSET-01 assessment, 2026-10-06
 
 78 source tools preserve all old77 schemas/v1-v8. Four owned nominal DC runs

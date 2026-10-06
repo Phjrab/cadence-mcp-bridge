@@ -1,5 +1,19 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **BIAS-RANGE-QUAL-01 checkpoint:** Actual four endpoint runs plus reused center
+> qualify only finite319/320/321mV nominal simulation grid.2,127 full PASS/four OS
+> skips/static/security/package/SDK PASS;8/20 conservative corrections. Ledger76/
+>8,993,636,352, old78/v1-v8/protected evidence exact. Complete reviewed containing
+> PR/remote verification, then continue already approved real Sweep integration.
+
+> **Active BIAS-RANGE-QUAL-01:** Start from merged Offset5e89fd0 under explicit
+> continuous delegation. VBIASN finite319/320/321mV grid, VBIASP702mV/VDD1V/VCM0.5V
+> NN27C fixed. Reuse center evidence; at most four owned endpoint DC/AC runs,
+> shared72/8,456,765,440 baseline ledger/lock/disk/20 corrections. No continuous
+> or electrical-rating claim/expansion. Preserve old78/v1-v8 and Offset evidence.
+> Qualified numeric grid is separate from parameterized execution adapter.
+> Complete exact gates/reviewed PR/remote then next approved real Sweep phase.
+
 > **Final Offset gate:**2,073 PASS/four OS skips; current static/security/package/SDK
 > gates pass. Supplemental study remains partial; reviewed containing-PR/main
 > verification recorded privately. Continue approved BIAS phase at this boundary.

@@ -26,6 +26,15 @@ schema/version/lifecycle and the eight additions in the live app remain unverifi
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
+## Finite reference bias qualification
+
+The operator-reviewed VBIASN319/320/321 mV grid has actual bounded DC/AC evidence
+at fixed NN/27 C/VDD1 V/VBIASP702 mV. Existing variable tools can describe/check
+an explicitly selected operator registry v2; numeric matching grants no execution.
+Continuous ranges and device ratings remain unqualified, and parameterized
+amplifier submission requires the next adapter phase. See
+[grid scope and measured results](docs/BIAS_RANGE_QUALIFICATION_V1.md).
+
 ## Reference step diagnostics
 
 `cadence_slew_study_result` reads a fixed admitted reference step study. It reports

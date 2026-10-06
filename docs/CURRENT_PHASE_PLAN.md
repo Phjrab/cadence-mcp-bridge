@@ -1,5 +1,29 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## BIAS-RANGE-QUAL-01 activation
+
+Qualification checkpoint: four actual endpoint DC/AC runs and reused center
+PASS; finite grid only.2,127 full PASS/four OS skips, current static/security/
+contract/package/SDK gates PASS,8/20 conservative corrections. Ledger76/
+8,993,636,352, four jobs732,166 logical/958,464 allocated bytes; old78/v1-v8 and
+all original/ADE/PDK/prior jobs/replay/1,746 private hashes preserved. Reviewed
+containing-PR integration is recorded privately. Continue the next already
+approved REAL-AMPLIFIER-SWEEP-01; no transition question inside this sequence.
+
+From merged Offset5e89fd0; branch feat/bias-range-qual-01, user continuous delegation.
+Finite one-axis VBIASN319/320/321mV; fixed VBIASP702mV/VDD1V/VCM0.5V/NN27C,
+original topology/no added load. Reuse exact admitted center DC/AC/power; four
+new owned endpoint DC/AC jobs maximum. Stop first unexpected guard, identity,
+effective input, simulation or missing-extraction failure; no expansion.
+Shared ledger72/8,456,765,440,500/10GiB/20 corrections, no elapsed ceiling.
+Preserve original/ADE/PDK, all prior jobs/Offset/private evidence and78/v1-v8.
+Before registering numeric grid require complete signed sources, DC rail/common
+mode/bias, valid bounded10Hz gain and exact reversed source hashes/receipts.
+This qualifies only the finite nominal simulation grid, not continuum, MOS-region
+proof, electrical ratings, reliability, performance targets or optimization.
+Parameterized submission remains denied until the next reviewed adapter phase.
+Finish gates/reviewed feature PR/remote; continue next already approved phase.
+
 ## Final Offset gate
 
 2,073 PASS/four OS symlink skips; static/security/package/SDK and strict composed
