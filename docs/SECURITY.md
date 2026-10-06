@@ -1,5 +1,19 @@
 # Security and Reliability Baseline
 
+## Phase Margin reference applicability audit, 2026-10-06
+
+ANALOG-PM-01 adds only a fixed operator read audit. Exact private delegation and
+policy/script/source hashes precede one durable exclusive intent; manifests,
+the existing no-follow/nonblocking EDA lock, active-worker checks and protected
+pre/post jobs/ledger prevent an audit from changing execution scope. Three fixed
+installed help topics have bounded processes/output. Exit0 with an unknown-topic
+warning is not support evidence. Raw circuit/help remain private; public output
+is a closed path-free assessment with hashes and no margin. Existing76 MCP
+schemas, registry v1-v8, UNQUALIFIED PM, specification, admission and replay
+semantics are unchanged. No simulator execution, probe/source change, deployment,
+reservation, deletion or vendor content publication. See
+[boundary](ANALOG_PHASE_MARGIN_V1.md).
+
 ## Fixed bandwidth study, 2026-10-06
 
 One supplementary read accepts existing registered bandwidth IDs/admitted AC UUID4/

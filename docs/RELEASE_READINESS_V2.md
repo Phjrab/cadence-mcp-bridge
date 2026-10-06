@@ -1,5 +1,19 @@
 # Release readiness reassessment v2
 
+## ANALOG-PM-01 assessment, 2026-10-06
+
+Pinned actual reference-loop and installed STB/probe help audit is implemented
+without runtime/API additions:76 schemas/v1-v8 and package1.0.0 stay exact.
+No application feedback loop is defined in the present open-loop reference;
+Phase Margin is UNQUALIFIED/null, with no scientific or licensed STB execution
+claim. Installed STB/iprobe help is evidence of documentation only; diffstbprobe
+returns an unknown-topic warning despite exit0. Current-source SDK passes the
+safe null/restart route, while actual Codex analog inventory is empty and PM
+description is denied by its loaded registry. Client configuration was not
+changed. This does not force every future analog feature into a limited release
+scope; exact candidate/version/client/licensing/publication gates remain separate.
+No publication authority follows. See [evidence](ANALOG_PM_01_RESULT_V1.md).
+
 ## BANDWIDTH-QUAL-02 current assessment, 2026-10-06
 
 Starting main d97d993 after merged #126.76 typed tools include one supplementary
