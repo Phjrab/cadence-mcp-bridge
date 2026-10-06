@@ -96,22 +96,26 @@ class BiasEndpoint(ContractModel):
         else:
             if self.scalars or self.sources or not 70 <= len(self.spectrum) <= 72:
                 raise ValueError("bounded AC frame required")
-            if abs(self.spectrum[0].frequency_hz - 10) > 1e-4 or abs(
-                self.spectrum[-1].frequency_hz - 1e8
-            ) > 100:
-                raise ValueError("qualified AC endpoints required")
-            for a, b in zip(self.spectrum, self.spectrum[1:], strict=False):
-                if b.frequency_hz <= a.frequency_hz or b.frequency_hz / a.frequency_hz > 1.4:
-                    raise ValueError("AC frequency progression")
-            for point in self.spectrum:
-                expected_db = (20 * math.log10(point.gain_v_per_v)
-                               if point.gain_v_per_v else None)
-                if (expected_db is None) != (point.gain_db is None) or (
-                    expected_db is not None and point.gain_db is not None
-                    and abs(expected_db - point.gain_db) > 1e-9
-                ):
-                    raise ValueError("AC differential gain unit arithmetic")
+            validate_grid_ac(self.spectrum)
         return self
+
+
+def validate_grid_ac(spectrum: tuple[SpectrumPoint, ...]) -> None:
+    """Shared scientific validator; no alteration of case/admission provenance."""
+    if not 70 <= len(spectrum) <= 72:
+        raise ValueError("bounded AC frame required")
+    if abs(spectrum[0].frequency_hz - 10) > 1e-4 or abs(spectrum[-1].frequency_hz - 1e8) > 100:
+        raise ValueError("qualified AC endpoints required")
+    for a, b in zip(spectrum, spectrum[1:], strict=False):
+        if b.frequency_hz <= a.frequency_hz or b.frequency_hz / a.frequency_hz > 1.4:
+            raise ValueError("AC frequency progression")
+    for point in spectrum:
+        expected_db = 20 * math.log10(point.gain_v_per_v) if point.gain_v_per_v else None
+        if (expected_db is None) != (point.gain_db is None) or (
+            expected_db is not None and point.gain_db is not None
+            and abs(expected_db - point.gain_db) > 1e-9
+        ):
+            raise ValueError("AC differential gain unit arithmetic")
 
 
 class BiasExtraction(ContractModel):

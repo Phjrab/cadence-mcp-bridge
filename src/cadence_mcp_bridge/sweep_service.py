@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Literal, Protocol, cast
+from typing import Any, ClassVar, Literal, Protocol, cast
 from uuid import UUID
 
 from cadence_mcp_bridge.errors import BridgeError, InvalidInputError, RemoteFailureError
@@ -13,7 +13,6 @@ from cadence_mcp_bridge.models import JobResult, JobState, JobStatus, RcTransien
 from cadence_mcp_bridge.sweeps import (
     PointState,
     SweepPlan,
-    SweepPoint,
     SweepRequest,
     SweepResult,
     SweepStatus,
@@ -37,9 +36,14 @@ class SweepBackend(Protocol):
 
 
 class SweepSupervisor:
+    STORE_TYPE: ClassVar[type[SweepStore]] = SweepStore
+    STATUS_MODEL: ClassVar[type[SweepStatus]] = SweepStatus
+    RESULT_MODEL: ClassVar[type[SweepResult]] = SweepResult
+    STOP_ACTIVE_ON_CANCEL: ClassVar[bool] = True
+
     def __init__(self, backend: SweepBackend, journal: Path) -> None:
         self.backend = backend
-        self.store = SweepStore(journal)
+        self.store = self.STORE_TYPE(journal)
         self.tasks: dict[UUID, asyncio.Task[None]] = {}
         self.locks: dict[UUID, asyncio.Lock] = {}
 
@@ -60,8 +64,8 @@ class SweepSupervisor:
 
     async def result(self, sweep_id: UUID) -> SweepResult:
         document = self.store.get(sweep_id)
-        plan = SweepPlan.model_validate(document["plan"])
-        return SweepResult(
+        plan = self.store.PLAN_MODEL.model_validate(document["plan"])
+        return self.RESULT_MODEL(
             **self._status(document).model_dump(),
             profile_id=plan.request.profile_id,
             axis=plan.request.axis,
@@ -88,7 +92,7 @@ class SweepSupervisor:
                 for point in document["points"]
                 if point["state"] == PointState.RUNNING or point.get("phase") == "sending"
             ]
-            plan = SweepPlan.model_validate(document["plan"])
+            plan = self.store.PLAN_MODEL.model_validate(document["plan"])
         for point in active:
             try:
                 observed = await self.backend.status(UUID(point["child_job_id"]))
@@ -151,11 +155,14 @@ class SweepSupervisor:
 
     async def _run(self, parent: UUID) -> None:
         document = self.store.get(parent)
-        plan = SweepPlan.model_validate(document["plan"])
+        plan = self.store.PLAN_MODEL.model_validate(document["plan"])
         for index in range(plan.point_count):
             document = self.store.get(parent)
             point = document["points"][index]
-            if document["cancel_requested"] or point["state"] in (
+            if (
+                document["cancel_requested"]
+                and (self.STOP_ACTIVE_ON_CANCEL or point.get("phase") not in ("sending", "running"))
+            ) or point["state"] in (
                 PointState.SUCCEEDED,
                 PointState.FAILED,
                 PointState.CANCELLED,
@@ -212,7 +219,7 @@ class SweepSupervisor:
             elif phase == "not_run":
                 self._update_point(parent, point["point_id"], phase="reserving")
                 try:
-                    await self.backend.reserve_sweep_attempt(child)
+                    await self._reserve_child(child, plan, point)
                 except BridgeError:
                     self._update_point(
                         parent,
@@ -250,15 +257,8 @@ class SweepSupervisor:
                     )
                     continue
                 self._update_point(parent, point["point_id"], phase="sending")
-                variables = dict(plan.canonical_fixed)
-                variables[plan.request.axis] = point["requested_value"]
                 try:
-                    remote = await self.backend.submit_profile(
-                        child,
-                        plan.request.profile_id,
-                        plan.request.corner,
-                        RcTransientVariables(**{k: float(v) for k, v in variables.items()}),
-                    )
+                    remote = await self._submit_child(child, plan, point)
                 except BridgeError:
                     # Query the exact deterministic child. Absence does not authorize retry.
                     try:
@@ -299,7 +299,7 @@ class SweepSupervisor:
                     provenance="remote_spectre_profile",
                 )
             for _ in range(600):
-                if self.store.get(parent)["cancel_requested"]:
+                if self.STOP_ACTIVE_ON_CANCEL and self.store.get(parent)["cancel_requested"]:
                     break
                 try:
                     remote = await self.backend.status(child)
@@ -335,7 +335,7 @@ class SweepSupervisor:
                     error="bounded status polling ended",
                 )
                 return
-            if self.store.get(parent)["cancel_requested"]:
+            if self.STOP_ACTIVE_ON_CANCEL and self.store.get(parent)["cancel_requested"]:
                 return
             if remote.state == JobState.SUCCEEDED:
                 try:
@@ -387,6 +387,21 @@ class SweepSupervisor:
         point.update(fields)
         self.store.put(document)
 
+    async def _reserve_child(
+        self, child: UUID, plan: SweepPlan, point: dict[str, Any]
+    ) -> None:
+        await self.backend.reserve_sweep_attempt(child)
+
+    async def _submit_child(
+        self, child: UUID, plan: SweepPlan, point: dict[str, Any]
+    ) -> JobStatus:
+        variables = dict(plan.canonical_fixed)
+        variables[plan.request.axis] = point["requested_value"]
+        return await self.backend.submit_profile(
+            child, plan.request.profile_id, plan.request.corner,
+            RcTransientVariables(**{k: float(v) for k, v in variables.items()}),
+        )
+
     async def _check_effective(
         self, child: UUID, plan: SweepPlan, point: dict[str, object]
     ) -> tuple[str, dict[str, str]]:
@@ -403,9 +418,9 @@ class SweepSupervisor:
             raise RemoteFailureError("effective variable values mismatch")
         return applied[plan.request.axis], {name: applied[name] for name in plan.canonical_fixed}
 
-    @staticmethod
-    def _status(document: dict[str, Any]) -> SweepStatus:
-        points = tuple(SweepPoint.model_validate(point) for point in document["points"])
+    @classmethod
+    def _status(cls, document: dict[str, Any]) -> SweepStatus:
+        points = tuple(cls.STORE_TYPE.POINT_MODEL.model_validate(p) for p in document["points"])
         if any(point.state == PointState.UNKNOWN for point in points):
             state = "UNKNOWN"
         elif any(point.state == PointState.FAILED for point in points):
@@ -416,7 +431,7 @@ class SweepSupervisor:
             state = "SUCCEEDED"
         else:
             state = "RUNNING"
-        return SweepStatus(
+        return cls.STATUS_MODEL(
             sweep_id=UUID(document["sweep_id"]),
             plan_hash=document["plan_hash"],
             experiment_key=UUID(document["experiment_key"]),

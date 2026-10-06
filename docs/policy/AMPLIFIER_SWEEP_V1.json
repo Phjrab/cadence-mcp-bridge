@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "phase": "REAL-AMPLIFIER-SWEEP-01",
+  "parent_policy_sha256": "1f363673a2e9d7dcc1b0630e7478c46e0cd43e107f8c54b18932c3a7b8d8f7a8",
+  "grid_v": [
+    "0.319",
+    "0.32",
+    "0.321"
+  ],
+  "fixed": {
+    "vbiasp": "0.702",
+    "vdd": "1",
+    "vcm": "0.5",
+    "corner": "NN",
+    "temperature_c": 27
+  },
+  "definition_sha256": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+  "registry_sha256": "101901f99990e481ce54b93d65d161893b50504cee428169fee569eb6c849a1f",
+  "baseline_counter": {
+    "campaign_id": "AUTO-PHASE-01",
+    "count": 76,
+    "result_reserved_bytes": 8993636352
+  },
+  "max_new_attempts": 6,
+  "reservation_bytes_per_job": 134217728,
+  "max_new_reserved_bytes": 805306368,
+  "correction_ceiling": 20,
+  "delete_authority": false,
+  "publication_authority": false,
+  "cancellation": "pending_points_only_active_job_not_terminated",
+  "qualification_scope": "finite_nominal_simulation_grid_only",
+  "files": {
+    "helper.py": "1ebf9bf4a9915dbc7a5660f057ca7d27b387c98cb3a1209d08a63ee2f77b47ea",
+    "run.sh": "bd2897e85c00a6f0c689c5ad826c50f0ef5cbf0505280cb325a3e631dd40d432",
+    "extract-dc.ocn": "01fef266c52755e942647f3395cf13b7295b862a6f7fffed93a8c39898fb63f9",
+    "extract-ac.ocn": "4d28761990655d6d333879c39f73f37fa821d511da09339a6c426a07daa963a4"
+  }
+}

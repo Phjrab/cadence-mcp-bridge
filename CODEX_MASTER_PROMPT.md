@@ -1,5 +1,22 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **REAL-AMPLIFIER-SWEEP-01 qualification checkpoint:** Six actual finite-grid
+> DC/AC points and signed rail power/10Hz gain PASS, SDK same-ID/restart/old reads
+> PASS, full2194 PASS/four OS skips/static/security PASS. Ledger82/9,798,942,720;
+> phase6/805,306,368. Old78/v1-v8/RC/protected prior1810 hashes exact. Conservative
+>10/20 corrections retained. Finish package/exact review/feature-PR integration,
+> then continue already approved SPEC-REAL-EVAL-01 with no new target/simulation.
+> Actual Codex observes builtinv4, not new83 execution; full app/Claude unverified.
+
+> **Active REAL-AMPLIFIER-SWEEP-01:** From Bias PR132/a809b5e, existing sweep
+> lifecycle/journal with explicit compiled amplifier codec/adapter. Fixed finite
+>319/320/321mV grid, fixed702mV/VDD1/VCM0.5/NN27C/no added load. At most six
+> newDC/AC point attempts and six128MiB reservations, baseline76/8,993,636,352;
+> shared500/10GiB/20 correction guards. Preserve old78/v1–v8/RC identities and
+> all protected Bias/Offset/prior evidence. No active kill, expansion, target,
+> optimization, deletion or release. Complete reviewed PR/remote and continue
+> already approved SPEC-REAL-EVAL-01. Prior checkpoints remain immutable history.
+
 > **BIAS-RANGE-QUAL-01 checkpoint:** Actual four endpoint runs plus reused center
 > qualify only finite319/320/321mV nominal simulation grid.2,127 full PASS/four OS
 > skips/static/security/package/SDK PASS;8/20 conservative corrections. Ledger76/
