@@ -248,7 +248,7 @@ async def test_mcp_closed_readonly_schema_and_qualified_read(tmp_path: Path) -> 
     query = await request(svc, "gain", op)
     async with Client(create_server(svc)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 75
+        assert len(tools) == 77
         for name in (
             "cadence_list_analog_measurements",
             "cadence_describe_analog_measurement",

@@ -37,6 +37,7 @@ from cadence_mcp_bridge.analyses import (
     AnalysisStatus,
     AnalysisSubmission,
 )
+from cadence_mcp_bridge.bandwidth_study import BandwidthStudyResult
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.design_sweep_service import (
     DesignSweepExecutionPlan,
@@ -117,6 +118,7 @@ from cadence_mcp_bridge.registered_sweeps import (
 )
 from cadence_mcp_bridge.runtime_info import RuntimeInfo, RuntimeInfoV2
 from cadence_mcp_bridge.service import CadenceService
+from cadence_mcp_bridge.slew_study import SlewStudyResult
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
     SpecificationEvaluation,
@@ -305,6 +307,8 @@ class DesignContractServer(MCPServer):
                 "cadence_runtime_info",
                 "cadence_describe_power_measurement",
                 "cadence_power_measurement_result",
+                "cadence_bandwidth_study_result",
+                "cadence_slew_study_result",
                 "cadence_list_specifications",
                 "cadence_describe_specification",
                 "cadence_evaluate_specification",
@@ -384,6 +388,8 @@ class DesignContractServer(MCPServer):
             "cadence_evaluate_specification_v2": "request",
             "cadence_describe_power_measurement": "request",
             "cadence_power_measurement_result": "request",
+            "cadence_bandwidth_study_result": "request",
+            "cadence_slew_study_result": "request",
             "cadence_describe_specification": "request",
             "cadence_evaluate_specification": "request",
             "cadence_describe_analog_measurement": "request",
@@ -710,6 +716,36 @@ def create_server(service: CadenceService) -> MCPServer:
         request: AnalogQuery,
     ) -> Annotated[CallToolResult, AnalogResult]:
         return await _stable_result(service.analog_measurement_result(request))
+
+    @server.tool(
+        name="cadence_bandwidth_study_result",
+        annotations=_READ_ONLY,
+        description="Read the fixed two-grid bandwidth study for the preserved admitted native AC "
+        "operation using registered bandwidth IDs and its original analog contract hash. "
+        "Reports sampled 10 Hz reference flatness, first -3.0 dB crossing brackets and empirical "
+        "grid convergence. Remains PARTIALLY_QUALIFIED without an absolute error bound. "
+        "No simulation, caller frequency/grid/path/expression, raw vectors or target evaluation.",
+        structured_output=True,
+    )
+    async def cadence_bandwidth_study_result(
+        request: AnalogQuery,
+    ) -> Annotated[CallToolResult, BandwidthStudyResult]:
+        return await _stable_result(service.bandwidth_study_result(request))
+
+    @server.tool(
+        name="cadence_slew_study_result",
+        annotations=_READ_ONLY,
+        description="Read fixed reference open-loop differential step diagnostics using the "
+        "registered slew contract hash and preserved admitted TRAN operation. Reports signed "
+        "20--80% rise/fall secants, timestep and faster-edge agreement, nonlinear transition "
+        "and saturated endpoints. Conventional slew remains UNQUALIFIED. No simulation, "
+        "caller path/signal/stimulus/expression, raw vectors or specification evaluation.",
+        structured_output=True,
+    )
+    async def cadence_slew_study_result(
+        request: AnalogQuery,
+    ) -> Annotated[CallToolResult, SlewStudyResult]:
+        return await _stable_result(service.slew_study_result(request))
 
     @server.tool(
         name="cadence_describe_power_measurement",

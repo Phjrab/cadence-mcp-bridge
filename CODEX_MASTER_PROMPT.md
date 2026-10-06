@@ -1,5 +1,64 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active ANALOG-SLEW-01 overlay:** User confirmation after merged PM PR129
+> activates one bounded reference step study from b49d826. Reuse pinned admitted
+> native TRAN in four owned copies, fixed opposite pulse endpoints and three
+> timestep settings plus a faster-edge control. Preserve old76 schemas/v1-v8,
+> original/ADE/PDK/jobs/replay and 64 attempts/7,383,023,616 baseline reservation.
+> At most four new attempts/four128MiB reservations, shared EDA/ledger/disk guards.
+> Preselect plateau/20--80%/sample/ringing/linearity/convergence diagnostics before
+> execution; defined open-loop transition rate is not a general slew guarantee.
+> No deletion, target, optimization or publication. Finish reviewed feature PR,
+> report and ask once before ANALOG-OFFSET-01; Claude/other environments deferred.
+
+> **ANALOG-SLEW-01 checkpoint:** Four actual bounded step runs, fixed finer
+> controls after insufficient coarse brackets, signed differential20--80% rates
+> and <1% two-resolution/faster-edge agreement are verified. Nonlinear saturated
+> open-loop response remains PARTIALLY_QUALIFIED; conventional generic slew null
+> stays UNQUALIFIED and specifications exact. SDK77/v8 preserved reads/restart
+> differs from live Codex69 empty analog registry. Ledger68/7,919,894,528 and all
+> protected/replay/1,487 old private hashes verified; nine conservative corrections.
+> Complete final gates and reviewed feature-PR integration, report and ask once
+> before ANALOG-OFFSET-01. No next phase, publication or deletion is activated.
+
+> **Active ANALOG-PM-01 overlay:** User confirmation after merged #128 activates
+> one reference-loop applicability and qualification phase from854bc0c. Audit
+> the pinned admitted circuit, existing feedback and preserved results, and the
+> installed STB/probe capabilities before choosing a scientific method. Ordinary
+> output AC phase is never loop gain. Preserve original/ADE/PDK, old76 full MCP
+> schemas, v1-v8 registries, jobs/replay and cumulative64 attempts/7,383,023,616
+> reserved bytes. Read-only discovery is active first; no new simulation is
+> justified until a specific loop, loading, DC preservation and sign are proven.
+> No invented feedback application, target, deletion or release. Finish one
+> reviewed feature PR, report exact qualification or blockers, and ask once
+> before ANALOG-SLEW-01. Claude/other environments remain deferred.
+
+> **ANALOG-PM-01 checkpoint:** Actual loop applicability audit complete; numeric
+> PM stays UNQUALIFIED/null because the present reference is open-loop. Installed
+> STB/iprobe help is documented, not executed; diffstbprobe topic unrecognized
+> despite exit0. Full1,929 PASS/four OS skips and current gates pass; actual Codex
+> analog registry is empty while current-source SDK null/restart passes. All76
+> schemas/v1-v8/budgets/protected evidence remain unchanged, three corrections.
+> Finish containing-PR integration and report; ask once before ANALOG-SLEW-01.
+
+> **Active BANDWIDTH-QUAL-02 overlay:** User continuation after merged #126
+> activates one fixed reference AC refinement phase from d97d993. Preserve the
+> original 10 Hz differential gain / first -3.0 dB crossing and partial status.
+> Reuse the exact admitted AC input in separate owned copies with only the fixed
+> AC line changed: 10 Hz–1 MHz, 50 then 100 points/decade; at most two attempts
+> and two 128 MiB reservations under the shared ledger, lock and disk floor.
+> No range expansion, original/ADE/PDK mutation, deletion, target or publication.
+> Explicit private delegation binds the new immutable operator workflow before
+> execution. Preserve all old 75 schemas, v1-v8 registries and private evidence.
+> Finish one reviewed PR, verify remote main, report and ask once before ANALOG-PM-01.
+
+> **BANDWIDTH-QUAL-02 qualification checkpoint:** Final full unit gate1,894 PASS,
+> four OS skips/56 warnings; static/security/contract/package/SDK and real two-grid
+> AC checks pass. Empirical convergence remains PARTIALLY_QUALIFIED. Twelve of20
+> corrections and64/500 attempts,7,383,023,616/10 GiB cumulative reservation.
+> Exact containing-PR integration is recorded privately. ANALOG-PM-01 is not
+> activated; report and ask once at this boundary.
+
 > **Active MEAS-CONTRACT-02 overlay:** User continuation selects the bounded
 > power discovery and versioned specification binding phase from merged #124.
 > Follow the current plan; preserve old contracts/readers/definitions/budgets.

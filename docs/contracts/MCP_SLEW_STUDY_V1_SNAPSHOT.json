@@ -1,0 +1,1344 @@
+{
+  "schema_version": 1,
+  "source_main": "b49d826448c1ddab2a2b3d4e176d07db3462412d",
+  "tools": {
+    "cadence_slew_study_result": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Read fixed reference open-loop differential step diagnostics using the registered slew contract hash and preserved admitted TRAN operation. Reports signed 20--80% rise/fall secants, timestep and faster-edge agreement, nonlinear transition and saturated endpoints. Conventional slew remains UNQUALIFIED. No simulation, caller path/signal/stimulus/expression, raw vectors or specification evaluation.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "AnalogQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "expected_contract_sha256",
+              "operation_id"
+            ],
+            "title": "AnalogQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AnalogQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_slew_study_resultArguments",
+        "type": "object"
+      },
+      "name": "cadence_slew_study_result",
+      "outputSchema": {
+        "$defs": {
+          "AnalogDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "evidence_class": {
+                "enum": [
+                  "IMPLEMENTABLE_FROM_EXISTING_EVIDENCE",
+                  "REQUIRES_EXTRACTION_WORK",
+                  "REQUIRES_STIMULUS_CHANGE",
+                  "REQUIRES_USER_SCIENTIFIC_INPUT",
+                  "UNQUALIFIED"
+                ],
+                "title": "Evidence Class",
+                "type": "string"
+              },
+              "meaning": {
+                "maxLength": 320,
+                "title": "Meaning",
+                "type": "string"
+              },
+              "method": {
+                "maxLength": 320,
+                "title": "Method",
+                "type": "string"
+              },
+              "metric": {
+                "enum": [
+                  "gain",
+                  "bandwidth",
+                  "phase-margin",
+                  "power",
+                  "offset",
+                  "slew-rate"
+                ],
+                "title": "Metric",
+                "type": "string"
+              },
+              "qualification_requirement": {
+                "maxLength": 320,
+                "title": "Qualification Requirement",
+                "type": "string"
+              },
+              "source_output_id": {
+                "anyOf": [
+                  {
+                    "const": "ac-differential-spectrum-v1",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Output Id"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "unit",
+              "meaning",
+              "method",
+              "source_output_id",
+              "evidence_class",
+              "blocking_reason",
+              "qualification_requirement"
+            ],
+            "title": "AnalogDefinition",
+            "type": "object"
+          },
+          "AnalogResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "crossing_bracket_hz": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Crossing Bracket Hz"
+              },
+              "definition": {
+                "$ref": "#/$defs/AnalogDefinition"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "provenance": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MeasurementProvenance"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "reference_frequency_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Frequency Hz"
+              },
+              "reference_gain_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Gain Db"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "source_result_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Result Sha256"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "QUALIFIED",
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "operation_id",
+              "definition",
+              "status",
+              "value",
+              "reason",
+              "source_measurement_id"
+            ],
+            "title": "AnalogResult",
+            "type": "object"
+          },
+          "DirectionStudy": {
+            "additionalProperties": false,
+            "properties": {
+              "constant_slope": {
+                "enum": [
+                  "OBSERVED_WITHIN_RATIO_1_2",
+                  "NONLINEAR",
+                  "NOT_ASSESSED"
+                ],
+                "title": "Constant Slope",
+                "type": "string"
+              },
+              "direction": {
+                "enum": [
+                  "rise",
+                  "fall"
+                ],
+                "title": "Direction",
+                "type": "string"
+              },
+              "faster_edge_relative_change": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Faster Edge Relative Change"
+              },
+              "fine_magnitude_v_per_us": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Fine Magnitude V Per Us"
+              },
+              "fine_signed_rate_v_per_s": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Fine Signed Rate V Per S"
+              },
+              "input_edge_agreement": {
+                "enum": [
+                  "OBSERVED_WITHIN_1_PERCENT",
+                  "NOT_CONVERGED",
+                  "NOT_ASSESSED"
+                ],
+                "title": "Input Edge Agreement",
+                "type": "string"
+              },
+              "refinement_relative_change": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Refinement Relative Change"
+              },
+              "resolution_agreement": {
+                "enum": [
+                  "OBSERVED_WITHIN_1_PERCENT",
+                  "NOT_CONVERGED",
+                  "NOT_ASSESSED"
+                ],
+                "title": "Resolution Agreement",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              }
+            },
+            "required": [
+              "direction",
+              "fine_signed_rate_v_per_s",
+              "fine_magnitude_v_per_us",
+              "refinement_relative_change",
+              "faster_edge_relative_change",
+              "resolution_agreement",
+              "input_edge_agreement",
+              "constant_slope",
+              "status"
+            ],
+            "title": "DirectionStudy",
+            "type": "object"
+          },
+          "MeasurementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Contract Sha256",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "circuit_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Circuit Sha256",
+                "type": "string"
+              },
+              "copy_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Copy Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "measurement_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Frame Sha256",
+                "type": "string"
+              },
+              "model_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Model Sha256",
+                "type": "string"
+              },
+              "native_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Native Result Sha256",
+                "type": "string"
+              },
+              "notices": {
+                "const": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "owned_variables_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Owned Variables Sha256",
+                "type": "string"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "reader": {
+                "const": "native-bounded-result-v1",
+                "default": "native-bounded-result-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/NativeSettings"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Sha256",
+                "type": "string"
+              },
+              "state_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "State Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "analysis_plan_hash",
+              "analysis_contract_sha256",
+              "definition_sha256",
+              "revision_id",
+              "operating_point_id",
+              "settings",
+              "source_sha256",
+              "copy_sha256",
+              "state_sha256",
+              "model_sha256",
+              "circuit_sha256",
+              "input_sha256",
+              "owned_variables_sha256",
+              "psf_sha256",
+              "measurement_frame_sha256",
+              "native_result_sha256",
+              "warnings",
+              "notices"
+            ],
+            "title": "MeasurementProvenance",
+            "type": "object"
+          },
+          "NativeSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "ac_points_per_decade": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Points Per Decade",
+                "type": "integer"
+              },
+              "ac_start_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Start Hz",
+                "type": "integer"
+              },
+              "ac_stop_hz": {
+                "const": 100000000,
+                "default": 100000000,
+                "title": "Ac Stop Hz",
+                "type": "integer"
+              },
+              "applied_bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "saved_enabled_analyses": {
+                "default": [
+                  "dc"
+                ],
+                "maxItems": 1,
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "const": "dc",
+                    "type": "string"
+                  }
+                ],
+                "title": "Saved Enabled Analyses",
+                "type": "array"
+              },
+              "stimulus": {
+                "const": "existing_opposed_1khz_50mv_peak_inputs",
+                "default": "existing_opposed_1khz_50mv_peak_inputs",
+                "title": "Stimulus",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "tran_maxstep_s": {
+                "default": 1e-05,
+                "maximum": 1e-05,
+                "minimum": 1e-05,
+                "title": "Tran Maxstep S",
+                "type": "number"
+              },
+              "tran_method": {
+                "const": "trap",
+                "default": "trap",
+                "title": "Tran Method",
+                "type": "string"
+              },
+              "tran_stop_s": {
+                "default": 0.004,
+                "maximum": 0.004,
+                "minimum": 0.004,
+                "title": "Tran Stop S",
+                "type": "number"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1.0,
+                "minimum": 1.0,
+                "title": "Vdd V",
+                "type": "number"
+              }
+            },
+            "title": "NativeSettings",
+            "type": "object"
+          },
+          "PowerCounter": {
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": {
+                "const": "AUTO-PHASE-01",
+                "title": "Campaign Id",
+                "type": "string"
+              },
+              "count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Count",
+                "type": "integer"
+              },
+              "result_reserved_bytes": {
+                "maximum": 10737418240,
+                "minimum": 0,
+                "title": "Result Reserved Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "campaign_id",
+              "count",
+              "result_reserved_bytes"
+            ],
+            "title": "PowerCounter",
+            "type": "object"
+          },
+          "StepDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "absolute_error_bound": {
+                "const": null,
+                "default": null,
+                "title": "Absolute Error Bound",
+                "type": "null"
+              },
+              "conditions": {
+                "const": "NN_27C_VDD1V_bias320_702mV_inputVCM0_5V",
+                "default": "NN_27C_VDD1V_bias320_702mV_inputVCM0_5V",
+                "title": "Conditions",
+                "type": "string"
+              },
+              "constant_slope_ratio_ceiling": {
+                "default": 1.2,
+                "title": "Constant Slope Ratio Ceiling",
+                "type": "number"
+              },
+              "definition_id": {
+                "const": "open-loop-differential-step-20-80-v1",
+                "default": "open-loop-differential-step-20-80-v1",
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "empirical_relative_change_ceiling": {
+                "default": 0.01,
+                "title": "Empirical Relative Change Ceiling",
+                "type": "number"
+              },
+              "input": {
+                "const": "differential_minus0_1_to_plus0_1V_at2us_return6us_stop10us",
+                "default": "differential_minus0_1_to_plus0_1V_at2us_return6us_stop10us",
+                "title": "Input",
+                "type": "string"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "loop": {
+                "const": "open_loop",
+                "default": "open_loop",
+                "title": "Loop",
+                "type": "string"
+              },
+              "method": {
+                "const": "signed_endpoint_20_80_secant_bracketed_native_linear_time_interpolation",
+                "default": "signed_endpoint_20_80_secant_bracketed_native_linear_time_interpolation",
+                "title": "Method",
+                "type": "string"
+              },
+              "output": {
+                "const": "Vop_minus_Vom",
+                "default": "Vop_minus_Vom",
+                "title": "Output",
+                "type": "string"
+              },
+              "plateau_windows_s": {
+                "default": [
+                  [
+                    1e-06,
+                    1.5e-06
+                  ],
+                  [
+                    5e-06,
+                    5.5e-06
+                  ],
+                  [
+                    9e-06,
+                    9.5e-06
+                  ]
+                ],
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "title": "Plateau Windows S",
+                "type": "array"
+              },
+              "reader": {
+                "const": "native-step-summary-v1",
+                "default": "native-step-summary-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "unit": {
+                "const": "V/s",
+                "default": "V/s",
+                "title": "Unit",
+                "type": "string"
+              }
+            },
+            "title": "StepDefinition",
+            "type": "object"
+          },
+          "StepRun": {
+            "additionalProperties": false,
+            "properties": {
+              "counter": {
+                "$ref": "#/$defs/PowerCounter"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "notices": {
+                "maximum": 100,
+                "minimum": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "source_input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Input Sha256",
+                "type": "string"
+              },
+              "source_job_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Source Job Id",
+                "type": "string"
+              },
+              "source_psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Psf Sha256",
+                "type": "string"
+              },
+              "summary": {
+                "$ref": "#/$defs/StepSummary"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "schema_version",
+              "source_job_id",
+              "source_input_sha256",
+              "source_psf_sha256",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "summary",
+              "counter",
+              "warnings",
+              "notices",
+              "protected_unchanged"
+            ],
+            "title": "StepRun",
+            "type": "object"
+          },
+          "StepSummary": {
+            "additionalProperties": false,
+            "properties": {
+              "case": {
+                "enum": [
+                  "coarse",
+                  "medium",
+                  "fine",
+                  "fast"
+                ],
+                "title": "Case",
+                "type": "string"
+              },
+              "input_edge_s": {
+                "exclusiveMinimum": 0,
+                "maximum": 1e-09,
+                "title": "Input Edge S",
+                "type": "number"
+              },
+              "max_observed_step_s": {
+                "exclusiveMinimum": 0,
+                "title": "Max Observed Step S",
+                "type": "number"
+              },
+              "maxstep_s": {
+                "exclusiveMinimum": 0,
+                "maximum": 1e-08,
+                "title": "Maxstep S",
+                "type": "number"
+              },
+              "native_point_count": {
+                "maximum": 160000,
+                "minimum": 1001,
+                "title": "Native Point Count",
+                "type": "integer"
+              },
+              "output_differential_max_v": {
+                "title": "Output Differential Max V",
+                "type": "number"
+              },
+              "output_differential_min_v": {
+                "title": "Output Differential Min V",
+                "type": "number"
+              },
+              "transitions": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/StepTransition"
+                  },
+                  {
+                    "$ref": "#/$defs/StepTransition"
+                  }
+                ],
+                "title": "Transitions",
+                "type": "array"
+              }
+            },
+            "required": [
+              "case",
+              "maxstep_s",
+              "input_edge_s",
+              "native_point_count",
+              "max_observed_step_s",
+              "output_differential_min_v",
+              "output_differential_max_v",
+              "transitions"
+            ],
+            "title": "StepSummary",
+            "type": "object"
+          },
+          "StepTransition": {
+            "additionalProperties": false,
+            "properties": {
+              "brackets_s": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ],
+                        "type": "array"
+                      },
+                      {
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ],
+                        "type": "array"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Brackets S"
+              },
+              "crossings_s": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Crossings S"
+              },
+              "direction": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "rise",
+                      "fall"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Direction"
+              },
+              "end_level_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "End Level V"
+              },
+              "input_edge_overlap": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Input Edge Overlap"
+              },
+              "overshoot_fraction": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Overshoot Fraction"
+              },
+              "plateau_span_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Plateau Span V"
+              },
+              "rate_v_per_s": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Rate V Per S"
+              },
+              "start_level_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Start Level V"
+              },
+              "status": {
+                "enum": [
+                  "INSUFFICIENT_DATA",
+                  "NO_LARGE_TRANSITION",
+                  "MULTIPLE_CROSSINGS",
+                  "NO_CROSSING",
+                  "UNSETTLED",
+                  "RINGING_OR_OVERSHOOT",
+                  "INSUFFICIENT_WINDOW_SAMPLES",
+                  "COARSE_CROSSING_BRACKET",
+                  "DEFINED_TRANSITION"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "subwindow_rate_ratio": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Subwindow Rate Ratio"
+              },
+              "window_sample_count": {
+                "maximum": 160000,
+                "minimum": 0,
+                "title": "Window Sample Count",
+                "type": "integer"
+              },
+              "window_v": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Window V"
+              }
+            },
+            "required": [
+              "status",
+              "direction",
+              "rate_v_per_s",
+              "start_level_v",
+              "end_level_v",
+              "plateau_span_v",
+              "window_v",
+              "crossings_s",
+              "brackets_s",
+              "window_sample_count",
+              "overshoot_fraction",
+              "subwindow_rate_ratio",
+              "input_edge_overlap"
+            ],
+            "title": "StepTransition",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "conventional_slew_qualification": {
+            "const": "UNQUALIFIED",
+            "default": "UNQUALIFIED",
+            "title": "Conventional Slew Qualification",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/$defs/StepDefinition"
+          },
+          "directions": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/DirectionStudy"
+              },
+              {
+                "$ref": "#/$defs/DirectionStudy"
+              }
+            ],
+            "title": "Directions",
+            "type": "array"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "extraction_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Extraction Sha256",
+            "type": "string"
+          },
+          "raw_vectors_included": {
+            "const": false,
+            "default": false,
+            "title": "Raw Vectors Included",
+            "type": "boolean"
+          },
+          "reference_result": {
+            "$ref": "#/$defs/AnalogResult"
+          },
+          "runs": {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/StepRun"
+              },
+              {
+                "$ref": "#/$defs/StepRun"
+              },
+              {
+                "$ref": "#/$defs/StepRun"
+              },
+              {
+                "$ref": "#/$defs/StepRun"
+              }
+            ],
+            "title": "Runs",
+            "type": "array"
+          },
+          "source_result_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Result Sha256",
+            "type": "string"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PARTIALLY_QUALIFIED",
+              "UNQUALIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "study_definition_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Study Definition Sha256",
+            "type": "string"
+          },
+          "study_id": {
+            "const": "reference-open-loop-step-study-v1",
+            "default": "reference-open-loop-step-study-v1",
+            "title": "Study Id",
+            "type": "string"
+          },
+          "warning": {
+            "const": "open_loop_saturated_endpoints_no_added_load_no_general_slew_guarantee",
+            "default": "open_loop_saturated_endpoints_no_added_load_no_general_slew_guarantee",
+            "title": "Warning",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference_result",
+          "source_result_sha256",
+          "extraction_sha256",
+          "study_definition_sha256",
+          "runs",
+          "directions",
+          "status"
+        ],
+        "title": "SlewStudyResult",
+        "type": "object"
+      },
+      "title": null
+    }
+  }
+}

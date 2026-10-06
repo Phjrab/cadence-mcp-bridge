@@ -1,5 +1,48 @@
 # Security and Reliability Baseline
 
+## Fixed step study and durable read, 2026-10-06
+
+ANALOG-SLEW-01 uses four owned pulse-input copies, exact reverse source-input
+hashes, shared EDA/ledger/disk controls and immutable admission/completion receipts.
+A separate path-free scalar read requires the registered slew contract, original
+admitted TRAN and pinned source/PSF/four-case digest. It exposes no stimulus,
+waveform, script, expression or path input and cannot execute extraction. Current
+source has77 tools; old76/v1-v8 remain exact. The timeless reader preserves every
+old job while validated later IDs and bounded cumulative counters may advance;
+the strict phase conservation guard is separately retained. No reservation refund,
+result deletion, generic slew/spec qualification, source/ADE/PDK mutation or
+publication follows. All raw phase results/failures remain protected. See
+[step boundary](ANALOG_SLEW_V1.md).
+
+## Phase Margin reference applicability audit, 2026-10-06
+
+ANALOG-PM-01 adds only a fixed operator read audit. Exact private delegation and
+policy/script/source hashes precede one durable exclusive intent; manifests,
+the existing no-follow/nonblocking EDA lock, active-worker checks and protected
+pre/post jobs/ledger prevent an audit from changing execution scope. Three fixed
+installed help topics have bounded processes/output. Exit0 with an unknown-topic
+warning is not support evidence. Raw circuit/help remain private; public output
+is a closed path-free assessment with hashes and no margin. Existing76 MCP
+schemas, registry v1-v8, UNQUALIFIED PM, specification, admission and replay
+semantics are unchanged. No simulator execution, probe/source change, deployment,
+reservation, deletion or vendor content publication. See
+[boundary](ANALOG_PHASE_MARGIN_V1.md).
+
+## Fixed bandwidth study, 2026-10-06
+
+One supplementary read accepts existing registered bandwidth IDs/admitted AC UUID4/
+contract hash. Its pinned two-grid extraction must match the source and complete
+receipt; no path/grid/frequency/formula/raw-vector/execution input is added.
+Original75 schemas/registry versions and partial bandwidth/goal semantics stay
+exact. Fixed operator execution uses two new owned input copies with only the
+AC line changed and exact reverse-hash verification. Shared EDA/ledger/disk/
+exclusive admission, bounded frames/processes and immutable source/result guards
+remain authoritative. New evidence stays protected/unknown to cleanup. The old
+sizing conservation check's later-phase failure is preserved; separate completion
+verification reconciles the exact two new reservations and unchanged historical
+fingerprints without modifying its guard. See
+[study boundary](BANDWIDTH_QUALIFICATION_V1.md).
+
 ## Versioned measurement/goal binding, 2026-10-06
 
 Local bounded catalog discovery and v2 goal evaluation add no execution route.

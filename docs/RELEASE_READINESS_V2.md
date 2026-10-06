@@ -1,5 +1,49 @@
 # Release readiness reassessment v2
 
+## ANALOG-SLEW-01 assessment, 2026-10-06
+
+Starting main b49d826 after merged #129.77 typed tools include one supplemental
+registered/admitted reference step-study reader; old76 schemas/v1-v8 remain exact.
+Four actual owned-copy step runs produce endpoint20--80% rise/fall diagnostics
+and two-resolution/faster-edge agreement. Saturated endpoints and nonlinear
+subwindow rates prevent a conventional slew claim; generic slew remains
+UNQUALIFIED/null and specifications unchanged. The diagnostic study is
+PARTIALLY_QUALIFIED only in NN27C/VDD1V/bias320/702mV/unloaded-open-loop scope.
+Current-source SDK77/v8 preserved reads/restart differs from live Codex69/empty
+analog catalog; actual new app tool is NOT_EXPOSED/NOT_RUN. Claude/other
+environments remain user-deferred. Exact future version/candidate/client/license
+and publication decisions remain separate; package1.0.0 and Apache/export
+boundaries are retained. No tag/release is authorized. See
+[phase evidence](ANALOG_SLEW_01_RESULT_V1.md).
+
+## ANALOG-PM-01 assessment, 2026-10-06
+
+Pinned actual reference-loop and installed STB/probe help audit is implemented
+without runtime/API additions:76 schemas/v1-v8 and package1.0.0 stay exact.
+No application feedback loop is defined in the present open-loop reference;
+Phase Margin is UNQUALIFIED/null, with no scientific or licensed STB execution
+claim. Installed STB/iprobe help is evidence of documentation only; diffstbprobe
+returns an unknown-topic warning despite exit0. Current-source SDK passes the
+safe null/restart route, while actual Codex analog inventory is empty and PM
+description is denied by its loaded registry. Client configuration was not
+changed. This does not force every future analog feature into a limited release
+scope; exact candidate/version/client/licensing/publication gates remain separate.
+No publication authority follows. See [evidence](ANALOG_PM_01_RESULT_V1.md).
+
+## BANDWIDTH-QUAL-02 current assessment, 2026-10-06
+
+Starting main d97d993 after merged #126.76 typed tools include one supplementary
+read-only fixed-reference bandwidth study; all old75 schemas and registry v1-v8
+versions remain exact. Two actual AC refinements observe empirical convergence,
+with original definition/result and PARTIALLY_QUALIFIED status preserved. No
+absolute-error/PVT/specification qualification follows. Current actual Desktop
+app schema/lifecycle evidence remains incomplete; SDK protocol/configuration/
+installed package checks do not replace it. Claude and other environments remain
+deferred. Package1.0.0, Apache/external license and imported export boundaries are
+unchanged; exact future release candidate, version/scope, LEGAL_REVIEW_REQUIRED
+and PUBLICATION_NOT_AUTHORIZED remain separate. No release/tag is activated.
+See [phase evidence](BANDWIDTH_QUAL_02_RESULT_V1.md).
+
 ## MEAS-CONTRACT-02 current assessment, 2026-10-06
 
 Starting main `0e85a12804d550279a9da0c5ebe9f92acabcc62e`, after merged #124.

@@ -508,6 +508,8 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
 
     assert public_methods == {
         "power_extraction_result",
+        "bandwidth_refinement_result",
+        "slew_step_result",
         "submit_native_diagnostic",
         "native_diagnostic_status",
         "native_diagnostic_result",

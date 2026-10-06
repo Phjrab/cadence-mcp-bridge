@@ -1,5 +1,131 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ANALOG-SLEW-01 activation, 2026-10-06
+
+User confirmation after merged PM PR129 at b49d826448c1ddab2a2b3d4e176d07db3462412d
+activates feat/analog-slew-01. Fixed discovery pins native TRAN and installed
+pulse/TRAN controls. See [step study](ANALOG_SLEW_V1.md). Four owned copies only:
+10/5/2.5 ns maxstep at1 ns input edge, then2.5 ns/0.5 ns. Stop10 us, differential
+input -0.1 to+0.1 V at2 us then back at6 us; VCM0.5 V. Fixed NN27C/VDD1V/bias
+320/702mV, original topology/no added load. Preserve source/ADE/PDK/all prior
+evidence/replay/contracts/76 schemas. Maximum four128MiB reservations, shared
+500 attempts/10GiB/20 correction limits; no elapsed limit. Evaluate fixed plateau
+windows,20--80% secants, bracket density, ringing, subwindow linearity and1%
+empirical timestep/edge agreement before any qualification. Original analog
+slew stays UNQUALIFIED; supplemental versioned study cannot evaluate goals.
+Complete applicable gates/real study/SDK/protection and reviewed PR integration.
+No deletion/publication/optimization/other-environment request. Report and ask
+once before ANALOG-OFFSET-01.
+
+Qualification checkpoint: four actual owned step runs and bounded summary extraction
+complete; supplemental20--80% rise/fall is PARTIALLY_QUALIFIED and nonlinear,
+conventional generic slew stays UNQUALIFIED/null. Initial coarse bracket is
+insufficient; remaining controls fixed to200/100/100 ps before new observations,
+within max4 attempts. Original5/2.5ns plan remains NOT_RUN. Two-resolution and
+faster-edge differences <1%, no absolute error bound or three-level convergence.
+Current-source SDK77/v8 preserves old76 schemas/DC/AC/TRAN/power/bandwidth/sweep
+and restart; live Codex69 analog catalog remains empty/new tool NOT_EXPOSED.
+Ledger68/7,919,894,528; phase4/536,870,912, no refund/reset/deletion. Nine of20
+corrections and all initial failures/immutable deployments retained; strict
+composed conservation protects original/ADE/PDK/jobs/replay/1,487 old private
+hashes. Final full2,002 PASS/four OS skips/static/security/package gates PASS;
+containing reviewed PR integration recorded privately and
+in [result](ANALOG_SLEW_01_RESULT_V1.md). Report and ask once before
+ANALOG-OFFSET-01; no next phase is activated.
+
+## ANALOG-PM-01 activation, 2026-10-06
+
+User confirmation after merged BANDWIDTH-QUAL-02 (#128) activates this phase only.
+Starting main854bc0c44b23efc6e4296579e7948e83f9cd9bbb, branch feat/analog-pm-01.
+Inspect the exact admitted reference circuit/analysis and available installed
+Spectre STB/probes through bounded fixed operator reads. Identify differential
+and common-mode feedback, return paths and any candidate probe point before
+deciding applicability. No arbitrary expressions, files, scripts or waveforms
+are exposed. The first discovery step consumes no simulator attempt/reservation.
+No loop-gain measurement is assumed from AC output phase or a help entry.
+
+Only a scientifically defined loop in an authorized owned copy may justify a
+later fixed simulation: establish DC and loading preservation, sign, unity-loop
+crossing selection, multiple crossings, conditions and provenance first. If no
+applicable/qualified loop exists, preserve UNQUALIFIED/null and report the exact
+reason and a future qualification path; do not invent an application feedback
+network to obtain a number. Preserve all76 schemas/v1-v8 contracts and protected
+material/replay/budgets;500 attempts/10 GiB cumulative reservation/20 same-change
+corrections, no elapsed ceiling. Current baseline64/7,383,023,616 remains history.
+Complete applicable gates, actual discovery and unchanged MCP regression, docs/
+state, reviewed feature PR/permitted merge/remote SHA-tree verification. No
+deletion, optimization, target, version/tag/release or other-environment request.
+Report and ask once before ANALOG-SLEW-01.
+
+Final qualification checkpoint: actual pinned reference audit finds no defined
+application feedback loop; numeric PM remains UNQUALIFIED/null. STB/iprobe help
+documented only; diffstbprobe unknown-topic warning despite exit0. No licensed
+STB/probe/sign/crossing run. Operator35/combined99, full1,929 PASS/four OS symlink
+SKIP/56 warnings519.73s, canonical Ruff/mypy52/contracts76/v1-v8/security18/locked
+audit/886-file scan/package wheel60-sdist61/isolated76-tool three SDK formats/CLI/
+uninstall PASS. Current-source v8 SDK PM null/restart is equal. Actual Codex
+69-name surface returns an empty analog list and denied PM description; global
+configuration stays exact. Three of20 conservative corrections; zero new
+simulation/reservation/deployment/result/deletion. Ledger64/7,383,023,616 and
+source/ADE/PDK/jobs/replay/1,452 prior private hashes remain unchanged. Exact
+containing-PR review and remote SHA/tree integration are recorded privately.
+See [result](ANALOG_PM_01_RESULT_V1.md). Ask once before independent ANALOG-SLEW-01;
+no next phase is activated. Numerical PM needs a separately defined loop fixture.
+
+## BANDWIDTH-QUAL-02 activation, 2026-10-06
+
+User confirmation after merged MEAS-CONTRACT-02 (#126) activates this phase only.
+Starting main `d97d9934341d382c1131ee1f5d61ab8cc75ace38`, branch
+`feat/bandwidth-qual-02`. The prior 71-point AC evidence is 10 Hz–100 MHz,
+10 points/decade, first -3.0 dB crossing relative to 10 Hz differential gain.
+Preserve its definition, schema, result and PARTIALLY_QUALIFIED status.
+
+Before new results are observed, fix two refinements: 10 Hz–1 MHz at 50 and 100
+points/decade (251/501 samples), same circuit/model/options/stimulus/conditions.
+No new netlister or state mutation: reconstruct the exact pinned native input
+from each owned copy by reversing its single AC-line change. Installed Spectre
+AC decimal-grid control and prior input/result identity must be checked first.
+Maximum two new attempts, two 128 MiB cumulative reservations; no refund/reset.
+Use the same EDA lock, ledger, native protection guards, disk floor, exact private
+delegation, durable exclusive admissions, result fingerprints and no blind retry.
+New raw PSF/jobs are phase evidence, protected/unknown to cleanup.
+
+Report sampled 10–1,000 Hz span, observed peaking, downward-crossing count,
+containing bracket and first-crossing interpolation. Empirical convergence uses
+successive relative change <=0.1%, decreasing change and brackets, reference gain
+agreement <=0.001 dB, sampled span/peaking <=0.05 dB. These are study diagnostics,
+not user specifications or electrical limits. Record nonconvergence, missing or
+multiple crossings explicitly. No absolute error bound or continuum flatness is
+established. Even an observed grid convergence remains PARTIALLY_QUALIFIED.
+
+Add one bounded read-only supplementary study tool through existing registered
+bandwidth/source/PDK/admission checks. No caller frequency/grid/formula/path,
+raw vector, execution route or goal evaluation. Preserve old 75 full schemas,
+v1-v8 registry versions and all protected/private/replay material. Limits500/10GiB/
+20 corrections, no elapsed ceiling. Complete focused/full/static/security/
+dependency/contract/build/install/SDK and justified real reference verification,
+docs/state and one reviewed feature PR/permitted merge/remote SHA/tree check.
+Actual new app tool calls are separate from SDK stdio. Claude/other versions/PDKs/
+hosts remain deferred. No optimization, deletion, version/tag/release or numerical
+target. Apache original-code/export boundaries, LEGAL_REVIEW_REQUIRED and
+PUBLICATION_NOT_AUTHORIZED remain. Report and ask once before ANALOG-PM-01.
+
+Final qualification:1,894 full unit PASS/four OS symlink SKIP/56 warnings in539.63s;
+focused112 and server/SSH/science/operator121 PASS, Ruff/mypy52 and exact76-tool/
+old75/v1-v8 contract audit PASS. Security18 PASS, locked audit no known vulnerabilities,
+881-file secret scan and wheel60/sdist61 isolated76-tool/three SDK formats/CLI/uninstall
+PASS. Real two-grid AC and current-source SDK preserved reads/restart PASS; new actual
+app calls NOT_RUN. Both prior failed full runs and historical sizing-domain FAIL
+are preserved alongside the strict composed verification PASS. Twelve of20 corrections;
+64/500 attempts and7,383,023,616/10,737,418,240 cumulative reservation, no refund/reset.
+Protected source/ADE/PDK, prior jobs/replay/admission and1,370 prior private hashes
+remain exact. Containing reviewed feature-PR integration/remote SHA/tree are recorded
+privately. See [result](BANDWIDTH_QUAL_02_RESULT_V1.md). No next phase is activated.
+
+MEAS-CONTRACT-02 is complete at merged #126 main d97d993; its prior qualification
+and resource counts below remain historical evidence, not active restrictions on
+this separately user-approved study.
+
 ## MEAS-CONTRACT-02 activation, 2026-10-06
 
 User continuation after merged #124 selects one power-contract integration phase.

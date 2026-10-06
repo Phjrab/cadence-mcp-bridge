@@ -18,9 +18,22 @@ Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the six additions in the live app remain unverified.
+schema/version/lifecycle and the eight additions in the live app remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
+
+## Reference step diagnostics
+
+`cadence_slew_study_result` reads a fixed admitted reference step study. It reports
+separate signed rise/fall20--80% secants, conditions, provenance and timestep/input
+edge agreement. The unloaded open-loop output transition is nonlinear and reaches
+saturated endpoints: it is PARTIALLY_QUALIFIED diagnostic evidence. Conventional
+slew remains UNQUALIFIED; no specification PASS/FAIL or other-load/PVT claim follows.
+It accepts registered IDs, an existing admission and its contract hash, with no
+caller waveform/stimulus/path/script or simulation route. See the
+[definition and read boundary](docs/ANALOG_SLEW_V1.md) and
+[actual result](docs/ANALOG_SLEW_01_RESULT_V1.md). Current source exposes77 tools,
+with all prior76 schemas preserved; the live app catalog is a separate checkpoint.
 
 ## Running-server configuration
 
@@ -251,7 +264,14 @@ operator checkout.
 
 ## Current MCP interface
 
-The server has 75 typed tools; all previous 72 full schemas are preserved.
+The server has 76 typed tools; all previous 75 full schemas are preserved.
+`cadence_bandwidth_study_result` adds an admission-bound, read-only fixed-reference
+grid study. Actual 50/100 points-per-decade refinements observe a final estimate
+of489.007 kHz and successive change0.02475%; the original10 Hz/3.0 dB definition
+and PARTIALLY_QUALIFIED status remain. This is empirical convergence without an
+absolute error bound or specification PASS. See
+[scope and API](docs/BANDWIDTH_QUALIFICATION_V1.md) and
+[reference evidence](docs/BANDWIDTH_QUAL_02_RESULT_V1.md).
 Three additions provide measurement discovery, v2 specification evaluation and
 v2 runtime observation. The separate power readers retain their original schemas.
 One additive local `cadence_runtime_info` interface inspects loaded configuration.
@@ -344,6 +364,12 @@ path, script, variable range or raw waveform is accepted. See
 [`docs/NATIVE_MCP_01_RESULT_V1.md`](docs/NATIVE_MCP_01_RESULT_V1.md).
 
 ## Development and verification
+
+Reference Phase Margin applicability has been audited against the actual pinned
+circuit and installed STB help. The current open-loop testbench has no defined
+application feedback loop, so Phase Margin remains UNQUALIFIED/null. The fixed
+operator audit preserves this distinction; it adds no MCP execution route. See
+[reference loop assessment and future qualification](docs/ANALOG_PHASE_MARGIN_V1.md).
 
 ```powershell
 uv sync --all-groups

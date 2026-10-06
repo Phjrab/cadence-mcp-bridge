@@ -38,6 +38,8 @@ from cadence_mcp_bridge.analyses import (
     AnalysisSubmission,
 )
 from cadence_mcp_bridge.analysis_service import AnalysisSupervisor
+from cadence_mcp_bridge.bandwidth_service import BandwidthBackend, BandwidthSupervisor
+from cadence_mcp_bridge.bandwidth_study import BandwidthStudyResult
 from cadence_mcp_bridge.design_sweep_service import (
     DesignSweepExecutionPlan,
     DesignSweepExecutionResult,
@@ -141,6 +143,8 @@ from cadence_mcp_bridge.runtime_info import (
     RuntimeInfo,
     RuntimeInfoV2,
 )
+from cadence_mcp_bridge.slew_service import SlewBackend, SlewSupervisor
+from cadence_mcp_bridge.slew_study import SlewStudyResult
 from cadence_mcp_bridge.specification_service import SpecificationSupervisor
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
@@ -295,6 +299,10 @@ class CadenceService:
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
         self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
         self._power = PowerSupervisor(self._analog_measurements, cast(PowerBackend, backend))
+        self._bandwidth = BandwidthSupervisor(
+            self._analog_measurements, cast(BandwidthBackend, backend)
+        )
+        self._slew = SlewSupervisor(self._analog_measurements, cast(SlewBackend, backend))
         self._specifications = SpecificationSupervisor(self._designs, self._analog_measurements)
         self._measurement_bindings = MeasurementBindingSupervisor(
             self._designs, self._analog_measurements, self._power, self._specifications
@@ -402,6 +410,12 @@ class CadenceService:
 
     async def analog_measurement_result(self, request: AnalogQuery) -> AnalogResult:
         return await self._analog_measurements.result(request)
+
+    async def bandwidth_study_result(self, request: AnalogQuery) -> BandwidthStudyResult:
+        return await self._bandwidth.result(request)
+
+    async def slew_study_result(self, request: AnalogQuery) -> SlewStudyResult:
+        return await self._slew.result(request)
 
     async def describe_power_measurement(self, request: PowerSelection) -> PowerDescription:
         return self._power.describe(request)
