@@ -1,0 +1,4 @@
+# Preserve imported planning history, but exclude it from new Git archives.
+# This is an export boundary, not a license grant or a history-removal mechanism.
+agent_plan export-ignore
+agent_plan/** export-ignore
