@@ -109,6 +109,17 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     bandwidth_addition = read_json(project / "docs/contracts/MCP_BANDWIDTH_STUDY_V1_SNAPSHOT.json")
     offset_addition = read_json(project / "docs/contracts/MCP_OFFSET_STUDY_V1_SNAPSHOT.json")
     amplifier_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json")
+    spec_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json")
+    if (
+        type(spec_addition.get("schema_version")) is not int
+        or spec_addition.get("schema_version") != 1
+        or spec_addition.get("source_main") != "f6206ced0a593104450663d6bfe05ce8a97983b9"
+        or set(spec_addition.get("tools", {})) != {
+            "cadence_amplifier_specification_catalog", "cadence_evaluate_amplifier_specifications",
+        }
+        or any(schemas.get(n) != t for n, t in spec_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed amplifier specification schema drift")
     if (
         type(amplifier_addition.get("schema_version")) is not int
         or amplifier_addition.get("schema_version") != 1
@@ -202,6 +213,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(slew_addition["tools"])
             | set(offset_addition["tools"])
             | set(amplifier_addition["tools"])
+            | set(spec_addition["tools"])
         )
         or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
     ):

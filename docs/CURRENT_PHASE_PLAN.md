@@ -1,5 +1,38 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## SPEC-REAL-EVAL-01 completion gate
+
+Actual six admitted finite-grid gain/power facts now bind to the reused exact
+specification comparator through versioned companion contracts. No real target:
+NOT_EVALUATED.85 tools preserve all old83 full schemas/v1–v8/RC/native definitions.
+Final2234 full PASS/five OS skips/56 warnings, static/security/package and SDK
+six facts/restart/nine preserved reads PASS. Initial full timeout-test failure
+retained; test-only budget/reserve correction, product10s checker unchanged.
+Conservative8/20 corrections; phase0 simulation/reservation/deployment/deletion,
+ledger82/9,798,942,720/1880 prior hashes/whole protected checkpoint exact.
+Exact candidate/review/containing PR/remote integration receipts govern final
+completion. Current85 live app NOT_RUN, full Claude UNVERIFIED, imported rights
+LEGAL_REVIEW_REQUIRED/publication unauthorized. Stop after normal reviewed PR
+integration: this completes the expressly approved four-phase sequence. Recommend
+release readiness reassessment; no further phase, target, experiment or release
+is activated. The prior active overlays below are preserved phase history.
+
+
+## SPEC-REAL-EVAL-01 active plan
+
+Start f6206ce after reviewed Sweep PR133 under explicit continuous delegation.
+Reuse existing specification condition/comparator with a typed versioned fact
+protocol, not fake old NativeSettings or relabeled preserved PowerDefinition.
+Bound actual gain/power point facts, source result/definition/unit/conditions/
+plan/catalog digests. Operator-owned companion catalog is empty by default;
+no user numerical targets, actual design status NOT_EVALUATED. Read-only bounded
+catalog/evaluation only; caller cannot provide target, value, script or path.
+Verify missing/unqualified/errors/condition/hash/revision/stale/unit distinctions
+and old83 full schemas/v1-v8. Zero new simulation/reservation/deployment/deletion.
+Ledger82/9,798,942,720 and existing protected results/private hashes remain exact.
+Complete full/static/security/package/actual-source SDK gates, reviewed feature PR,
+permitted merge and remote check. Stop after this last continuously approved phase.
+
 ## REAL-AMPLIFIER-SWEEP-01 qualification checkpoint
 
 Six actual fixed-grid DC/AC point runs and gain/signed-rail-power facts PASS.

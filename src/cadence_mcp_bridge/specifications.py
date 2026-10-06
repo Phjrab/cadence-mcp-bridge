@@ -2,14 +2,13 @@
 
 import json
 from decimal import Decimal
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 
 from pydantic import Field, field_validator, model_validator
 
 from cadence_mcp_bridge.analog_measurements import AnalogResult, definition
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.registered_measurements import MeasurementProvenance
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
     LogicalId,
@@ -23,6 +22,30 @@ Comparison = Literal[">=", "<=", ">", "<", "range"]
 EvaluationStatus = Literal[
     "PASS", "FAIL", "NOT_EVALUATED", "UNQUALIFIED", "MISSING_MEASUREMENT", "CONDITION_MISMATCH"
 ]
+
+
+class FactSettings(Protocol):
+    """Read-only comparison surface; each adapter validates its own versioned settings."""
+
+    @property
+    def corner(self) -> str: ...
+    @property
+    def temperature_c(self) -> int: ...
+    @property
+    def vdd_v(self) -> float: ...
+    @property
+    def applied_bias_values_v(self) -> tuple[float, float]: ...
+
+
+class FactProvenance(Protocol):
+    @property
+    def analysis_plan_hash(self) -> str: ...
+    @property
+    def revision_id(self) -> str: ...
+    @property
+    def operating_point_id(self) -> str: ...
+    @property
+    def settings(self) -> FactSettings: ...
 
 
 class SpecificationConditions(VariableModel):
@@ -162,7 +185,7 @@ def evaluate_fact(
     c: SpecificationContract,
     status: str,
     value: float | None,
-    provenance: MeasurementProvenance | None,
+    provenance: FactProvenance | None,
 ) -> EvaluationStatus:
     """Shared conditions/comparator after the caller validates its versioned binding."""
     if c.target is None:
@@ -173,6 +196,8 @@ def evaluate_fact(
     if p is None:
         return "UNQUALIFIED"
     s, expected = p.settings, c.conditions
+    if not isinstance(s, ContractModel):
+        return "UNQUALIFIED"
     if (
         p.analysis_plan_hash != expected.analysis_plan_hash
         or p.revision_id != expected.revision_id

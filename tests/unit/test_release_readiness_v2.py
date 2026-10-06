@@ -37,6 +37,7 @@ def fixture(tmp_path: Path) -> Path:
         "docs/contracts/MCP_SLEW_STUDY_V1_SNAPSHOT.json",
         "docs/contracts/MCP_OFFSET_STUDY_V1_SNAPSHOT.json",
         "docs/contracts/MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json",
+        "docs/contracts/MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json",
         *(f"docs/schemas/design-registry-v{i}.schema.json" for i in range(1, 9)),
     ]
     for name in names:
@@ -56,7 +57,7 @@ def update(path: Path, key: str, value: Any) -> None:
 async def test_current_contract_audit_does_not_claim_app_legal_or_publication() -> None:
     result = audit.inspect(ROOT, await audit.inventory())
     assert result["technical_contract_audit"] == "PASS"
-    assert result["mcp_tools"] == 83 and result["legacy_declarations_preserved"] == 22
+    assert result["mcp_tools"] == 85 and result["legacy_declarations_preserved"] == 22
     assert result["registry_schemas_preserved"] == 7
     assert not result["publication_authorized"] and not result["remote_contact"]
     assert result["runtime_service_calls"] == result["new_simulations"] == 0
@@ -71,6 +72,9 @@ async def test_current_contract_audit_does_not_claim_app_legal_or_publication() 
 @pytest.mark.parametrize(
     "baseline,key,value",
     [
+        ("MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json", "tools", {}),
+        ("MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json", "schema_version", True),
+        ("MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json", "source_main", "0" * 40),
         ("MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json", "tools", {}),
         ("MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json", "schema_version", True),
         ("MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json", "source_main", "0" * 40),

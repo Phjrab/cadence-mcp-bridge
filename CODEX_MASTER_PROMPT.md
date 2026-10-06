@@ -1,5 +1,33 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+## SPEC-REAL-EVAL-01 completion gate
+
+Actual six admitted finite-grid gain/power facts now bind to the reused exact
+specification comparator through versioned companion contracts. No real target:
+NOT_EVALUATED.85 tools preserve all old83 full schemas/v1–v8/RC/native definitions.
+Final2234 full PASS/five OS skips/56 warnings, static/security/package and SDK
+six facts/restart/nine preserved reads PASS. Initial full timeout-test failure
+retained; test-only budget/reserve correction, product10s checker unchanged.
+Conservative8/20 corrections; phase0 simulation/reservation/deployment/deletion,
+ledger82/9,798,942,720/1880 prior hashes/whole protected checkpoint exact.
+Exact candidate/review/containing PR/remote integration receipts govern final
+completion. Current85 live app NOT_RUN, full Claude UNVERIFIED, imported rights
+LEGAL_REVIEW_REQUIRED/publication unauthorized. Stop after normal reviewed PR
+integration: this completes the expressly approved four-phase sequence. Recommend
+release readiness reassessment; no further phase, target, experiment or release
+is activated. The prior active overlays below are preserved phase history.
+
+
+> **Active SPEC-REAL-EVAL-01:** From reviewed Sweep PR133/f6206ce, connect actual
+> finite-grid facts to the existing condition/comparison engine through explicitly
+> versioned settings/provenance/target contracts. Original NativeSettings and v1/v2
+> specification definitions are immutable. Operator-owned companion target catalog,
+> empty by default; no user numerical goal exists, so actual status NOT_EVALUATED.
+> Bind source result/definition/unit/plan/effective conditions and catalog digest.
+> No new simulator/reservation/deployment/deletion/optimization/release. Preserve
+> ledger82/9,798,942,720, old83 full MCP schemas/v1-v8/RC and all prior evidence.
+> Finish gates/reviewed feature PR/remote verification and stop after this phase.
+
 > **REAL-AMPLIFIER-SWEEP-01 qualification checkpoint:** Six actual finite-grid
 > DC/AC points and signed rail power/10Hz gain PASS, SDK same-ID/restart/old reads
 > PASS, full2194 PASS/four OS skips/static/security PASS. Ledger82/9,798,942,720;

@@ -20,6 +20,12 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.amplifier_specifications import (
+    AmplifierEvaluationQuery,
+    AmplifierSpecificationCatalog,
+    AmplifierSpecificationEvaluation,
+    load_amplifier_specifications,
+)
 from cadence_mcp_bridge.amplifier_sweeps import (
     AmplifierPrepared,
     AmplifierQuery,
@@ -60,7 +66,7 @@ from cadence_mcp_bridge.designs import (
     LogicalId,
     load_design_registry,
 )
-from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
+from cadence_mcp_bridge.errors import BridgeError, ConfigurationError, InvalidInputError
 from cadence_mcp_bridge.measurement_bindings import MeasurementCatalog, SpecificationEvaluationV2
 from cadence_mcp_bridge.measurement_models import (
     AdcMeasurementContract,
@@ -310,6 +316,8 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_amplifier_specification_catalog",
+                "cadence_evaluate_amplifier_specifications",
                 "cadence_prepare_amplifier_sweep",
                 "cadence_submit_amplifier_sweep",
                 "cadence_amplifier_sweep_status",
@@ -389,6 +397,7 @@ class DesignContractServer(MCPServer):
             "cadence_list_analog_measurements",
             "cadence_list_specifications",
             "cadence_measurement_catalog",
+            "cadence_amplifier_specification_catalog",
         } and (set(arguments) != {"design_id"} or type(arguments["design_id"]) is not str):
             raise ToolError("Design description accepts only one string design_id")
         if name == "cadence_describe_pdk_adapter" and (
@@ -400,6 +409,7 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_evaluate_amplifier_specifications": "request",
             "cadence_prepare_amplifier_sweep": "request",
             "cadence_submit_amplifier_sweep": "submission",
             "cadence_amplifier_sweep_status": "request",
@@ -1464,6 +1474,30 @@ def create_server(service: CadenceService) -> MCPServer:
     ) -> Annotated[CallToolResult, AmplifierStatus]:
         return await _stable_result(service.cancel_amplifier_sweep(request))
 
+    @server.tool(
+        name="cadence_amplifier_specification_catalog", annotations=_READ_ONLY,
+        structured_output=True,
+        description="Inspect at most16 operator-owned version3 gain/power goals and the target "
+        "catalog digest. Empty by default; no target registration or simulation from MCP.",
+    )
+    async def cadence_amplifier_specification_catalog(
+        design_id: LogicalId,
+    ) -> Annotated[CallToolResult, AmplifierSpecificationCatalog]:
+        return await _stable_result(service.amplifier_specification_catalog(design_id))
+
+    @server.tool(
+        name="cadence_evaluate_amplifier_specifications", annotations=_READ_ONLY,
+        structured_output=True,
+        description="Evaluate registered goals against exact admitted amplifier sweep point "
+        "facts using source/catalog digests and the existing comparator. Absent goal remains "
+        "NOT_EVALUATED. Exact conditions only; "
+        "no caller target/value/path/script or new execution.",
+    )
+    async def cadence_evaluate_amplifier_specifications(
+        request: AmplifierEvaluationQuery,
+    ) -> Annotated[CallToolResult, AmplifierSpecificationEvaluation]:
+        return await _stable_result(service.evaluate_amplifier_specifications(request))
+
     return server
 
 
@@ -1471,6 +1505,14 @@ def create_default_server() -> MCPServer:
     config = BridgeConfig()
     designs = None
     pdks = None
+    amplifier_specs = None
+    if config.amplifier_specification_registry_path is not None:
+        try:
+            amplifier_specs = load_amplifier_specifications(
+                config.amplifier_specification_registry_path
+            )
+        except InvalidInputError:
+            raise ConfigurationError("Configured amplifier target registry is invalid") from None
     if config.pdk_registry_path is not None:
         try:
             pdks, _ = load_pdk_registry(config.pdk_registry_path)
@@ -1488,6 +1530,7 @@ def create_default_server() -> MCPServer:
             analysis_journal=config.analysis_journal_path,
             sweep_journal=config.sweep_journal_path,
             pdks=pdks,
+            amplifier_specifications=amplifier_specs,
         )
     )
 

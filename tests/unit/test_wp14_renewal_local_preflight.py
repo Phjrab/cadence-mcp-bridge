@@ -463,8 +463,14 @@ def test_launch_delay_counts_against_deadline(monkeypatch):
         return child
 
     monkeypatch.setattr(module.subprocess, "Popen", launch)
-    monkeypatch.setattr(module, "MAX_SECONDS", 0.1)
+    # Expire the operation window during launch, while retaining the existing
+    # 0.75s reap reserve. A total 0.1s budget is smaller than that reserve and
+    # leaves a late Windows child only 1ms to terminate: it tests scheduling,
+    # rather than whether launch time is charged to the operation deadline.
+    monkeypatch.setattr(module, "MAX_SECONDS", 1)
+    started = time.monotonic()
     assert module._supervise() == "TIMEOUT"
+    assert time.monotonic() - started < 1.5
     assert len(children) == 1 and children[0].poll() is not None
 
 

@@ -1,0 +1,1450 @@
+{
+  "schema_version": 1,
+  "source_main": "f6206ced0a593104450663d6bfe05ce8a97983b9",
+  "tools": {
+    "cadence_amplifier_specification_catalog": {
+      "name": "cadence_amplifier_specification_catalog",
+      "title": null,
+      "description": "Inspect at most16 operator-owned version3 gain/power goals and the target catalog digest. Empty by default; no target registration or simulation from MCP.",
+      "inputSchema": {
+        "properties": {
+          "design_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Design Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "design_id"
+        ],
+        "title": "cadence_amplifier_specification_catalogArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierSpecificationContract": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 3,
+                "default": 3,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "default": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "comparison": {
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<",
+                  "range"
+                ],
+                "title": "Comparison",
+                "type": "string"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "W"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "goal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Goal Id"
+              },
+              "conditions": {
+                "$ref": "#/$defs/SpecificationConditions"
+              }
+            },
+            "required": [
+              "spec_id",
+              "measurement_id",
+              "measurement_contract_sha256",
+              "definition_sha256",
+              "comparison",
+              "target",
+              "unit",
+              "goal_id",
+              "conditions"
+            ],
+            "title": "AmplifierSpecificationContract",
+            "type": "object"
+          },
+          "SpecificationConditions": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "corner": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Temperature C",
+                "type": "string"
+              },
+              "vdd_v": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "applied_bias_values_v": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "effective_settings_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Effective Settings Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis_id",
+              "analysis_plan_hash",
+              "revision_id",
+              "operating_point_id",
+              "corner",
+              "temperature_c",
+              "vdd_v",
+              "applied_bias_values_v",
+              "effective_settings_sha256"
+            ],
+            "title": "SpecificationConditions",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "design_id": {
+            "const": "reference-differential-amplifier-tb2",
+            "default": "reference-differential-amplifier-tb2",
+            "title": "Design Id",
+            "type": "string"
+          },
+          "registry_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Registry Sha256",
+            "type": "string"
+          },
+          "specifications": {
+            "items": {
+              "$ref": "#/$defs/AmplifierSpecificationContract"
+            },
+            "maxItems": 16,
+            "title": "Specifications",
+            "type": "array"
+          },
+          "target_status": {
+            "enum": [
+              "not_registered",
+              "not_selected",
+              "registered"
+            ],
+            "title": "Target Status",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "registry_sha256",
+          "specifications",
+          "target_status"
+        ],
+        "title": "AmplifierSpecificationCatalog",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_evaluate_amplifier_specifications": {
+      "name": "cadence_evaluate_amplifier_specifications",
+      "title": null,
+      "description": "Evaluate registered goals against exact admitted amplifier sweep point facts using source/catalog digests and the existing comparator. Absent goal remains NOT_EVALUATED. Exact conditions only; no caller target/value/path/script or new execution.",
+      "inputSchema": {
+        "$defs": {
+          "AmplifierEvaluationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              },
+              "expected_sweep_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Sweep Result Sha256",
+                "type": "string"
+              },
+              "expected_specification_registry_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Specification Registry Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "sweep_id",
+              "expected_sweep_result_sha256",
+              "expected_specification_registry_sha256"
+            ],
+            "title": "AmplifierEvaluationQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AmplifierEvaluationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_evaluate_amplifier_specificationsArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AmplifierDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "const": "reference-differential-amplifier-tb2",
+                "default": "reference-differential-amplifier-tb2",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "variable_id": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Variable Id",
+                "type": "string"
+              },
+              "grid_v": {
+                "default": [
+                  "0.319",
+                  "0.32",
+                  "0.321"
+                ],
+                "items": {
+                  "enum": [
+                    "0.319",
+                    "0.32",
+                    "0.321"
+                  ],
+                  "type": "string"
+                },
+                "title": "Grid V",
+                "type": "array"
+              },
+              "registry_sha256": {
+                "default": "101901f99990e481ce54b93d65d161893b50504cee428169fee569eb6c849a1f",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Registry Sha256",
+                "type": "string"
+              },
+              "fixed_vbiasp_v": {
+                "const": "0.702",
+                "default": "0.702",
+                "title": "Fixed Vbiasp V",
+                "type": "string"
+              },
+              "vdd_v": {
+                "const": "1",
+                "default": "1",
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "vcm_v": {
+                "const": "0.5",
+                "default": "0.5",
+                "title": "Vcm V",
+                "type": "string"
+              },
+              "corner": {
+                "const": "nn",
+                "default": "nn",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "gain_definition": {
+                "const": "differential-voltage-gain-at-10hz-grid-v1",
+                "default": "differential-voltage-gain-at-10hz-grid-v1",
+                "title": "Gain Definition",
+                "type": "string"
+              },
+              "power_definition": {
+                "const": "signed-dc-supply-rail-power-grid-v2",
+                "default": "signed-dc-supply-rail-power-grid-v2",
+                "title": "Power Definition",
+                "type": "string"
+              },
+              "power_sign": {
+                "const": "minus_terminal_voltage_times_positive_into_source_current",
+                "default": "minus_terminal_voltage_times_positive_into_source_current",
+                "title": "Power Sign",
+                "type": "string"
+              },
+              "power_scope": {
+                "const": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "default": "supply_rails_with_bias_and_input_separate_not_transient_or_DUT_only",
+                "title": "Power Scope",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "finite_nominal_simulation_grid_only",
+                "default": "finite_nominal_simulation_grid_only",
+                "title": "Qualification",
+                "type": "string"
+              },
+              "phase_margin": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Phase Margin",
+                "type": "string"
+              },
+              "offset": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Offset",
+                "type": "string"
+              },
+              "cancellation": {
+                "const": "pending_points_only_active_job_not_terminated",
+                "default": "pending_points_only_active_job_not_terminated",
+                "title": "Cancellation",
+                "type": "string"
+              }
+            },
+            "title": "AmplifierDefinition",
+            "type": "object"
+          },
+          "AmplifierEngineResult": {
+            "additionalProperties": false,
+            "properties": {
+              "sweep_id": {
+                "format": "uuid",
+                "title": "Sweep Id",
+                "type": "string"
+              },
+              "plan_hash": {
+                "title": "Plan Hash",
+                "type": "string"
+              },
+              "experiment_key": {
+                "format": "uuid",
+                "title": "Experiment Key",
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "RUNNING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "CANCELLED",
+                  "UNKNOWN"
+                ],
+                "title": "State",
+                "type": "string"
+              },
+              "points": {
+                "items": {
+                  "$ref": "#/$defs/AmplifierPoint"
+                },
+                "title": "Points",
+                "type": "array"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "title": "Updated At",
+                "type": "string"
+              },
+              "initial_condition": {
+                "const": "independent",
+                "default": "independent",
+                "title": "Initial Condition",
+                "type": "string"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              },
+              "profile_id": {
+                "const": "reference-amplifier-finite-grid-v1",
+                "default": "reference-amplifier-finite-grid-v1",
+                "title": "Profile Id",
+                "type": "string"
+              },
+              "axis": {
+                "const": "vbiasn",
+                "default": "vbiasn",
+                "title": "Axis",
+                "type": "string"
+              },
+              "unit": {
+                "const": "V",
+                "default": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "fixed": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Fixed",
+                "type": "object"
+              },
+              "contract_version": {
+                "const": 2,
+                "default": 2,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "cancellation_semantics": {
+                "const": "pending_only_active_job_continues",
+                "default": "pending_only_active_job_continues",
+                "title": "Cancellation Semantics",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "plan_hash",
+              "experiment_key",
+              "state",
+              "points",
+              "updated_at",
+              "fixed"
+            ],
+            "title": "AmplifierEngineResult",
+            "type": "object"
+          },
+          "AmplifierFactProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "job_id": {
+                "format": "uuid",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "enum": [
+                  "bias-n-319mv-v1",
+                  "bias-n-320mv-v1",
+                  "bias-n-321mv-v1"
+                ],
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/AmplifierFactSettings"
+              },
+              "definition_sha256": {
+                "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "source_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Result Sha256",
+                "type": "string"
+              },
+              "measurement_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Result Sha256",
+                "type": "string"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "job_id",
+              "analysis_plan_hash",
+              "operating_point_id",
+              "settings",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "source_result_sha256",
+              "measurement_result_sha256"
+            ],
+            "title": "AmplifierFactProvenance",
+            "type": "object"
+          },
+          "AmplifierFactSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "analysis_id": {
+                "enum": [
+                  "grid-dc-v1",
+                  "grid-ac-v1"
+                ],
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1,
+                "minimum": 1,
+                "title": "Vdd V",
+                "type": "number"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "applied_bias_values_v": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "source_input_policy": {
+                "const": "only_owned_VBIASN_token_reversed_to_pinned_native_input",
+                "default": "only_owned_VBIASN_token_reversed_to_pinned_native_input",
+                "title": "Source Input Policy",
+                "type": "string"
+              },
+              "reader": {
+                "const": "signed_dc_six_sources_or_original_bounded_differential_AC_v2",
+                "default": "signed_dc_six_sources_or_original_bounded_differential_AC_v2",
+                "title": "Reader",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "finite_nominal_simulation_grid_only",
+                "default": "finite_nominal_simulation_grid_only",
+                "title": "Qualification",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis_id",
+              "applied_bias_values_v"
+            ],
+            "title": "AmplifierFactSettings",
+            "type": "object"
+          },
+          "AmplifierMetric": {
+            "additionalProperties": false,
+            "properties": {
+              "job_id": {
+                "format": "uuid",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "requested_vbiasn_v": {
+                "title": "Requested Vbiasn V",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "status": {
+                "const": "QUALIFIED",
+                "default": "QUALIFIED",
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "title": "Value",
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "W",
+                  "dB"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "bias_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bias Source Power W"
+              },
+              "input_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Input Source Power W"
+              },
+              "all_source_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "All Source Power W"
+              },
+              "signed_sources": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/SignedSource"
+                },
+                "title": "Signed Sources",
+                "type": "array"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "source_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Result Sha256",
+                "type": "string"
+              },
+              "counter": {
+                "$ref": "#/$defs/PowerCounter"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id",
+              "requested_vbiasn_v",
+              "measurement_id",
+              "value",
+              "unit",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "source_result_sha256",
+              "counter"
+            ],
+            "title": "AmplifierMetric",
+            "type": "object"
+          },
+          "AmplifierPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "point_id": {
+                "format": "uuid",
+                "title": "Point Id",
+                "type": "string"
+              },
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "operation_key": {
+                "format": "uuid",
+                "title": "Operation Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$defs/PointState"
+              },
+              "requested_value": {
+                "title": "Requested Value",
+                "type": "string"
+              },
+              "applied_value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Value"
+              },
+              "applied_fixed": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Applied Fixed"
+              },
+              "unit": {
+                "const": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "measurement_id": {
+                "const": "simulation_completion",
+                "default": "simulation_completion",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_value": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Value"
+              },
+              "measurement_unit": {
+                "const": "1",
+                "default": "1",
+                "title": "Measurement Unit",
+                "type": "string"
+              },
+              "quality": {
+                "default": "not_available",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "not_available"
+                ],
+                "title": "Quality",
+                "type": "string"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Error"
+              },
+              "revision_id": {
+                "const": "reference-amplifier-bias-grid-v1",
+                "default": "reference-amplifier-bias-grid-v1",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "provenance": {
+                "default": "not_run",
+                "enum": [
+                  "remote_spectre_profile",
+                  "not_run"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "phase": {
+                "default": "not_run",
+                "enum": [
+                  "not_run",
+                  "reserving",
+                  "reserved",
+                  "sending",
+                  "running",
+                  "complete",
+                  "cancelled"
+                ],
+                "title": "Phase",
+                "type": "string"
+              }
+            },
+            "required": [
+              "point_id",
+              "child_job_id",
+              "operation_key",
+              "state",
+              "requested_value",
+              "unit"
+            ],
+            "title": "AmplifierPoint",
+            "type": "object"
+          },
+          "AmplifierPointEvaluation": {
+            "additionalProperties": false,
+            "properties": {
+              "child_job_id": {
+                "format": "uuid",
+                "title": "Child Job Id",
+                "type": "string"
+              },
+              "requested_vbiasn_v": {
+                "title": "Requested Vbiasn V",
+                "type": "string"
+              },
+              "measurement_id": {
+                "enum": [
+                  "dc-supply-power-grid-v2",
+                  "gain-10hz-grid-v1"
+                ],
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "spec_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Spec Id"
+              },
+              "specification_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Specification Sha256"
+              },
+              "measurement_result_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Measurement Result Sha256"
+              },
+              "status": {
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "NOT_EVALUATED",
+                  "UNQUALIFIED",
+                  "MISSING_MEASUREMENT",
+                  "CONDITION_MISMATCH",
+                  "SIMULATION_ERROR",
+                  "SOURCE_UNAVAILABLE"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "reason": {
+                "enum": [
+                  "no_operator_target_registered",
+                  "target_not_selected",
+                  "target_met",
+                  "target_not_met",
+                  "measurement_unqualified",
+                  "measurement_conditions_differ",
+                  "source_not_completed",
+                  "source_cancelled",
+                  "simulator_failed",
+                  "source_outcome_uncertain"
+                ],
+                "title": "Reason",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "W",
+                  "dB"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "observed_value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Observed Value"
+              },
+              "comparison": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      ">=",
+                      "<=",
+                      ">",
+                      "<",
+                      "range"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Comparison"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              }
+            },
+            "required": [
+              "child_job_id",
+              "requested_vbiasn_v",
+              "measurement_id",
+              "status",
+              "reason",
+              "unit",
+              "observed_value"
+            ],
+            "title": "AmplifierPointEvaluation",
+            "type": "object"
+          },
+          "AmplifierSweepResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "definition": {
+                "$ref": "#/$defs/AmplifierDefinition"
+              },
+              "definition_sha256": {
+                "default": "edcd250c0a801539f6c62082b1021e4f010032b53b064098f2aca7f7355ceb12",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "engine": {
+                "$ref": "#/$defs/AmplifierEngineResult"
+              },
+              "measurements": {
+                "items": {
+                  "$ref": "#/$defs/AmplifierMetric"
+                },
+                "maxItems": 3,
+                "title": "Measurements",
+                "type": "array"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "engine",
+              "measurements"
+            ],
+            "title": "AmplifierSweepResult",
+            "type": "object"
+          },
+          "PointState": {
+            "enum": [
+              "NOT_RUN",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ],
+            "title": "PointState",
+            "type": "string"
+          },
+          "PowerCounter": {
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": {
+                "const": "AUTO-PHASE-01",
+                "title": "Campaign Id",
+                "type": "string"
+              },
+              "count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Count",
+                "type": "integer"
+              },
+              "result_reserved_bytes": {
+                "maximum": 10737418240,
+                "minimum": 0,
+                "title": "Result Reserved Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "campaign_id",
+              "count",
+              "result_reserved_bytes"
+            ],
+            "title": "PowerCounter",
+            "type": "object"
+          },
+          "SignedSource": {
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "enum": [
+                  "vdd",
+                  "vss",
+                  "bias-n",
+                  "bias-p",
+                  "input-p",
+                  "input-m"
+                ],
+                "title": "Source Id",
+                "type": "string"
+              },
+              "role": {
+                "enum": [
+                  "supply",
+                  "bias",
+                  "stimulus"
+                ],
+                "title": "Role",
+                "type": "string"
+              },
+              "voltage_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Voltage V"
+              },
+              "current_a": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Current A"
+              }
+            },
+            "required": [
+              "source_id",
+              "role",
+              "voltage_v",
+              "current_a"
+            ],
+            "title": "SignedSource",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/$defs/AmplifierSweepResult"
+          },
+          "source_result_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Result Sha256",
+            "type": "string"
+          },
+          "specification_registry_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Specification Registry Sha256",
+            "type": "string"
+          },
+          "target_status": {
+            "enum": [
+              "not_registered",
+              "not_selected",
+              "registered"
+            ],
+            "title": "Target Status",
+            "type": "string"
+          },
+          "provenance": {
+            "items": {
+              "$ref": "#/$defs/AmplifierFactProvenance"
+            },
+            "maxItems": 3,
+            "title": "Provenance",
+            "type": "array"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/$defs/AmplifierPointEvaluation"
+            },
+            "maxItems": 48,
+            "title": "Evaluations",
+            "type": "array"
+          },
+          "scope": {
+            "const": "per_point_exact_nominal_conditions_not_PVT_or_optimization",
+            "default": "per_point_exact_nominal_conditions_not_PVT_or_optimization",
+            "title": "Scope",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "source_result_sha256",
+          "specification_registry_sha256",
+          "target_status",
+          "provenance",
+          "evaluations"
+        ],
+        "title": "AmplifierSpecificationEvaluation",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

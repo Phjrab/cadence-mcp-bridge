@@ -19,6 +19,13 @@ from cadence_mcp_bridge.actual_diagnostics import (
     ActualDiagnosticResult,
     ActualDiagnosticStatus,
 )
+from cadence_mcp_bridge.amplifier_specifications import (
+    AmplifierEvaluationQuery,
+    AmplifierSpecificationCatalog,
+    AmplifierSpecificationEvaluation,
+    AmplifierSpecificationRegistry,
+    AmplifierSpecificationSupervisor,
+)
 from cadence_mcp_bridge.amplifier_sweeps import (
     AmplifierChild,
     AmplifierPrepared,
@@ -292,6 +299,7 @@ class CadenceService:
         analysis_journal: Path | None = None,
         sweep_journal: Path | None = None,
         pdks: PdkRegistry | None = None,
+        amplifier_specifications: AmplifierSpecificationRegistry | None = None,
     ) -> None:
         self._backend = backend
         self._storage = StorageSupervisor(cast(StorageBackend, backend))
@@ -348,6 +356,19 @@ class CadenceService:
         self._amplifier_sweeps = AmplifierSupervisor(
             self._designs, self._pdks, cast(AmplifierTransport, backend), self._sweeps.store.path
         )
+        self._amplifier_specifications = AmplifierSpecificationSupervisor(
+            self._amplifier_sweeps, amplifier_specifications or AmplifierSpecificationRegistry()
+        )
+
+    async def amplifier_specification_catalog(
+        self, design_id: str,
+    ) -> AmplifierSpecificationCatalog:
+        return self._amplifier_specifications.catalog(design_id)
+
+    async def evaluate_amplifier_specifications(
+        self, request: AmplifierEvaluationQuery,
+    ) -> AmplifierSpecificationEvaluation:
+        return await self._amplifier_specifications.result(request)
 
     async def prepare_amplifier_sweep(self, request: AmplifierSweepRequest) -> AmplifierPrepared:
         return self._amplifier_sweeps.prepare(request)
