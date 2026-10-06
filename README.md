@@ -18,7 +18,8 @@ Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the new tool in the live app remain unverified. See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
+schema/version/lifecycle and the three additions in the live app remain unverified.
+See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
 ## Running-server configuration
@@ -101,10 +102,20 @@ tools. It reuses registered, admitted native evidence and keeps every old schema
 and execution identity unchanged. Differential gain is measured at **10 Hz**;
 bandwidth is a **sampled-reference 3.0 dB crossing estimate** with its observed
 bracket and conditions. It is not a DC, unity-gain or closed-loop qualification.
-Phase margin, power, offset and slew rate remain **UNQUALIFIED** with explicit
+Phase margin, power, offset and slew rate in the original analog v1 remain
+**UNQUALIFIED** with explicit
 requirements; no numerical value is invented. No new simulation or PSF extraction
 is triggered, and specifications remain `not_evaluated`.
 See [analog definitions and workflow](docs/ANALOG_MEASUREMENTS_V1.md).
+
+ANALOG-POWER-01 adds two read-only interfaces with a separate `dc-supply-power-v1`
+definition. One preserved reference native DC result is **QUALIFIED** for signed
+VDD/VSS rail power; bias/input-source contributions are reported separately.
+Six-source inventory, effective voltage, signed current, independent OP-field
+comparison and source/frame provenance are verified. It reuses operator v6/v7
+registration and existing admission. MCP never initiates extraction or simulation.
+Other designs/jobs and v7 goal evaluation of this new definition remain unqualified.
+See [power scope and workflow](docs/ANALOG_POWER_V1.md).
 
 SPEC-CONTRACT-01 adds operator registry v7 and three read-only specification
 tools. Goals bind exact measurement definitions, units and effective conditions.
@@ -199,12 +210,14 @@ See the [licensing audit](docs/LICENSING_AUDIT_V1.md).
 
 ## Current MCP interface
 
-The server has 70 typed tools; all previous 69 full schemas are preserved.
+The server has 72 typed tools; all previous 70 full schemas are preserved.
+Two additive power interfaces describe and read the reviewed reference extraction.
 One additive local `cadence_runtime_info` interface inspects loaded configuration.
 Three additive read-only specification interfaces list, describe and evaluate
 operator-owned exact-condition goals. No goal is invented for the reference.
 Three new read-only analog interfaces expose operator-registered definitions and
-qualified 10 Hz gain / partial bandwidth estimates; other analog metrics stay unqualified.
+qualified 10 Hz gain / partial bandwidth estimates; the original other analog v1
+metrics stay unqualified.
 The five new storage interfaces have verified reference-host inventory/plan/dry-run
 behavior; actual Linux deletion is unverified. All clients receive the same guards.
 `cadence_describe_design_sweep` and `cadence_plan_design_sweep` are local

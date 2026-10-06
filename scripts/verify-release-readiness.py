@@ -103,6 +103,17 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     legacy = read_json(project / "docs/contracts/MCP_V1_COMPATIBILITY_SNAPSHOT.json")
     snapshot = read_json(project / "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json")
     addition = read_json(project / "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json")
+    power_addition = read_json(project / "docs/contracts/MCP_POWER_V1_SNAPSHOT.json")
+    if (
+        type(power_addition.get("schema_version")) is not int
+        or power_addition.get("schema_version") != 1
+        or power_addition.get("source_main") != "8009060edc076ccacb371c45d8f8fb3a335b150f"
+        or set(power_addition.get("tools", {})) != {
+            "cadence_describe_power_measurement", "cadence_power_measurement_result"
+        }
+        or any(schemas.get(n) != t for n, t in power_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed power schema drift")
     if (
         type(legacy.get("schema_version")) is not int
         or legacy["schema_version"] != 1
@@ -127,7 +138,8 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or addition.get("source_main") != RUNTIME_CONFIG_COMMIT
         or not isinstance(addition.get("tools"), dict)
         or set(addition["tools"]) != {"cadence_runtime_info"}
-        or set(schemas) != set(snapshot["tools"]) | set(addition["tools"])
+        or set(schemas)
+        != set(snapshot["tools"]) | set(addition["tools"]) | set(power_addition["tools"])
         or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
     ):
         raise ValueError("unreviewed additive tool or runtime metadata schema drift")

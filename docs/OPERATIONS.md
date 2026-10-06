@@ -1,5 +1,18 @@
 # Operations
 
+## Read qualified reference DC power
+
+Use the operator v6/v7 registry containing the registered power metric and its
+unique native DC source, plus the historical admission journal. Describe it
+with `cadence_describe_power_measurement`, then pass that power contract hash
+and the reviewed admitted operation UUID to `cadence_power_measurement_result`.
+MCP only reads an existing extracted artifact; missing/other operations are
+denied. Default v4 and example/other environments do not qualify a power reader.
+The W value covers VDD/VSS rails; bias/input contributions and all-source total
+are distinct. Original analog v1 power and v7 specification bindings remain
+unchanged. No extraction, simulation, cleanup or target is implied. See
+[exact qualification and operator workflow](ANALOG_POWER_V1.md).
+
 ## Check the connected process's settings
 
 Use `cadence_runtime_info` after client registration/restart to observe the

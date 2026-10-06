@@ -88,3 +88,4 @@ remote/config/design-write-v3-exact-conditional-rollback-plan.json -text
 remote/config/design-write-v4-plan.json -text
 remote/bin/cadence-runner text eol=lf
 remote/phase-campaign/native-mcp-v3/*.ocn text eol=lf
+remote/phase-campaign/analog-power-v1/*.ocn text eol=lf

@@ -1,5 +1,18 @@
 # Security and Reliability Baseline
 
+## Fixed power artifact reads, 2026-10-06
+
+Two additional read-only tools reference registered power IDs and the existing
+admitted native DC operation. They cannot initiate extraction or accept current,
+voltage, expressions, paths or scripts. Existing design/analysis/PDK admission
+precedes the fixed artifact read; exact input/PSF/frame and whole extraction
+receipt digests prevent substitution. Transport failures contain no helper
+traceback paths. Old analog/goal contracts and all 70 schemas stay exact.
+Operator extraction writes new bounded owned evidence only, under the existing
+EDA lock/disk floor and checked source-job reservation capacity. No source/ADE/
+PDK/result/ledger is modified or deleted. New evidence is protected/unknown to
+cleanup, never automatically disposable. See [power workflow](ANALOG_POWER_V1.md).
+
 ## Registered specification evaluation, 2026-10-06
 
 Registry v7 adds operator-owned goals to unchanged execution contracts. Three

@@ -1,5 +1,17 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## ANALOG-POWER-01 continuation, 2026-10-06
+
+Current server has 72 tools; the two additional power readers preserve all 70
+preceding complete schemas. Qualification uses Codex-exported SDK stdio settings
+with the same package, no separate client execution semantics. It is not actual
+application E2E for the new tools. Historical actual Codex 69-name/five-read
+evidence stays valid in its original scope; full current app schema/version/
+lifecycle remains unverified. Claude actual app remains DEFERRED_BY_USER /
+CLAUDE_REAL_CLIENT_UNVERIFIED; its adapter and previous evidence are preserved.
+See [power workflow](ANALOG_POWER_V1.md). Older overlays below retain their
+dated catalog counts as history.
+
 ## RUNTIME-CONFIG-01 / Claude deferral, 2026-10-06
 
 The user defers Claude actual-app work while development continues. Its status
@@ -212,7 +224,7 @@ the remote guards and durable admissions remain authoritative, not tool hints.
    journals. Record config digests privately; install the reviewed bridge entry
    using each application's registration UI/config without unrelated edits.
 3. Fully restart each application. Record app version, time, server version,
-   registration status and observed tool inventory. Verify **70** names and complete schemas
+   registration status and observed tool inventory. Verify **72** names and complete schemas
    against the preserved [69-tool snapshot](contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json)
    plus the [additive runtime schema](contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json). App UI availability alone is not tools/list.
 4. In each app request `cadence_list_designs`, then `cadence_describe_design`

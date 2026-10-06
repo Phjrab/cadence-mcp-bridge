@@ -138,7 +138,7 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 70 or not baseline_names.issubset(names):
+            if len(names) != 72 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
             runtime = await client.call_tool("cadence_runtime_info")
@@ -215,6 +215,37 @@ async def verify(
                 or journal.exists()
             ):
                 raise ValueError("installed analog fixture fabricated physical measurement")
+            power_metric = next(
+                d
+                for d in analog.structured_content["measurements"]
+                if d["definition"]["metric"] == "power"
+            )
+            power_selection = {
+                "design_id": "example-amplifier",
+                "measurement_id": power_metric["measurement_id"],
+            }
+            power = await client.call_tool(
+                "cadence_describe_power_measurement", {"request": power_selection}
+            )
+            if (
+                power.is_error
+                or power.structured_content is None
+                or power.structured_content["read_eligible"]
+                or power.structured_content["artifact_availability_assessed"]
+            ):
+                raise ValueError("installed example acquired a physical power reader")
+            denied = await client.call_tool(
+                "cadence_power_measurement_result",
+                {
+                    "request": {
+                        **power_selection,
+                        "operation_id": "00000000-0000-4000-8000-000000000000",
+                        "expected_contract_sha256": power.structured_content["contract_sha256"],
+                    }
+                },
+            )
+            if not denied.is_error or journal.exists():
+                raise ValueError("unqualified installed power request must deny without journal IO")
             listing = await client.call_tool("cadence_list_designs")
             if listing.is_error or listing.structured_content is None:
                 raise ValueError("installed registry inspection failed")
