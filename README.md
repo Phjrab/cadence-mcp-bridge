@@ -405,3 +405,7 @@ installation guidance is in [`docs/CODEX_DESKTOP.md`](docs/CODEX_DESKTOP.md).
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the transport and runner
 boundaries, and [`docs/ADC_MEASUREMENT_CONTRACTS.md`](docs/ADC_MEASUREMENT_CONTRACTS.md)
 for the separate synthetic ADC measurement contract.
+
+Nominal input-nulling Offset has a bounded supplemental diagnostic reader; it
+remains partially qualified and is not physical femtovolt accuracy or a
+specification result. See [Offset study](docs/ANALOG_OFFSET_V1.md).

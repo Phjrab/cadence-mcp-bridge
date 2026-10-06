@@ -107,6 +107,15 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     power_addition = read_json(project / "docs/contracts/MCP_POWER_V1_SNAPSHOT.json")
     binding_addition = read_json(project / "docs/contracts/MCP_MEAS_CONTRACT_V2_SNAPSHOT.json")
     bandwidth_addition = read_json(project / "docs/contracts/MCP_BANDWIDTH_STUDY_V1_SNAPSHOT.json")
+    offset_addition = read_json(project / "docs/contracts/MCP_OFFSET_STUDY_V1_SNAPSHOT.json")
+    if (
+        type(offset_addition.get("schema_version")) is not int
+        or offset_addition.get("schema_version") != 1
+        or offset_addition.get("source_main") != "09339c48c692f6e00e53b36adc725516b54b4daf"
+        or set(offset_addition.get("tools", {})) != {"cadence_offset_study_result"}
+        or any(schemas.get(n) != t for n, t in offset_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed offset study schema drift")
     slew_addition = read_json(project / "docs/contracts/MCP_SLEW_STUDY_V1_SNAPSHOT.json")
     if (
         type(slew_addition.get("schema_version")) is not int
@@ -178,6 +187,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(binding_addition["tools"])
             | set(bandwidth_addition["tools"])
             | set(slew_addition["tools"])
+            | set(offset_addition["tools"])
         )
         or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
     ):

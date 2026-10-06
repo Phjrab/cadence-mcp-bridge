@@ -90,6 +90,7 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.offset_study import OffsetStudyResult
 from cadence_mcp_bridge.pdk_adapters import (
     DesignPdkStatus,
     PdkDescription,
@@ -309,6 +310,7 @@ class DesignContractServer(MCPServer):
                 "cadence_power_measurement_result",
                 "cadence_bandwidth_study_result",
                 "cadence_slew_study_result",
+                "cadence_offset_study_result",
                 "cadence_list_specifications",
                 "cadence_describe_specification",
                 "cadence_evaluate_specification",
@@ -390,6 +392,7 @@ class DesignContractServer(MCPServer):
             "cadence_power_measurement_result": "request",
             "cadence_bandwidth_study_result": "request",
             "cadence_slew_study_result": "request",
+            "cadence_offset_study_result": "request",
             "cadence_describe_specification": "request",
             "cadence_evaluate_specification": "request",
             "cadence_describe_analog_measurement": "request",
@@ -731,6 +734,21 @@ def create_server(service: CadenceService) -> MCPServer:
         request: AnalogQuery,
     ) -> Annotated[CallToolResult, BandwidthStudyResult]:
         return await _stable_result(service.bandwidth_study_result(request))
+
+    @server.tool(
+        name="cadence_offset_study_result",
+        annotations=_READ_ONLY,
+        description="Read fixed nominal open-loop input-nulling diagnostics using the "
+        "registered offset contract hash and preserved admitted DC operation. Applied Vp−Vm "
+        "at Vop−Vom=0; five fixed scalar receipts, local bracket and refinement diagnostics. "
+        "Numerical residual is consistent with zero, not physical precision. Generic offset "
+        "remains UNQUALIFIED. No simulation, caller path/range/expression or goal evaluation.",
+        structured_output=True,
+    )
+    async def cadence_offset_study_result(
+        request: AnalogQuery,
+    ) -> Annotated[CallToolResult, OffsetStudyResult]:
+        return await _stable_result(service.offset_study_result(request))
 
     @server.tool(
         name="cadence_slew_study_result",

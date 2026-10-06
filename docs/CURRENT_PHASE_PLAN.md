@@ -1,5 +1,59 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## Final Offset gate
+
+2,073 PASS/four OS symlink skips; static/security/package/SDK and strict composed
+protection pass. Reviewed containing-PR/main verification recorded privately.
+Continue approved BIAS-RANGE-QUAL-01 at this boundary, without another question.
+
+## ANALOG-OFFSET-01 qualification checkpoint
+
+Selected input-nulling five-case actual study complete; supplemental
+PARTIALLY_QUALIFIED, numerical zero residual without physical precision. Generic
+offset remains UNQUALIFIED/null, goals absent. Read-only78-tool addition preserves
+old77/v1-v8. Ledger72/8,456,765,440; phase4/536,870,912. Preserve strict historical
+verifiers/protected evidence and finish current full gates/reviewed PR integration.
+Then continue the separately approved three phases without another question.
+
+## Four-phase continuous delegation, 2026-10-06
+
+The user explicitly authorizes ANALOG-OFFSET-01 followed by BIAS-RANGE-QUAL-01,
+REAL-AMPLIFIER-SWEEP-01 and SPEC-REAL-EVAL-01 continuously in this chat, without
+another phase-transition question inside that sequence. Report and verify each
+phase and its reviewed feature PR; preserve all security/resource/scientific
+selection gates. This supersedes older transition-confirmation text for these
+four phases only. No release, deletion, optimization, original mutation or
+unbounded execution is authorized. Stop and report after SPEC-REAL-EVAL-01.
+
+The user separately selects nominal open-loop input nulling for Offset: applied
+Vp−Vm where Vop−Vom=0, fixed VCM0.5V/NN27C/VDD1V/bias320/702mV. Existing admitted
+DC reports zero differential output, but is insufficient alone to qualify input
+offset. Fix four new DC points at−1,+1,−0.5,+0.5microV before observing results,
+plus high-precision extraction from existing zero-input PSF. At most four new
+128MiB reservations under the shared ledger; no range expansion or new zero
+simulation. Require effective input/common mode/rails, unique bracket, local
+output window and pair-refinement diagnostics. This limited nominal study is
+separate from mismatch statistics, electrical ratings, the generic offset-v1
+definition and goals. Keep unavailable/uncertain results fail closed.
+
+## Historical ANALOG-OFFSET-01 initial activation, 2026-10-06
+
+User confirmation after merged Claude PR127 activates feat/analog-offset-01
+from09339c48c692f6e00e53b36adc725516b54b4daf. Preserve original77 MCP schemas,
+registry v1-v8, native readers, source/ADE/PDK/jobs/replay and all prior evidence.
+Investigate current nominal open-loop reference and existing DC conditions.
+Prepare bounded input-nulling/output candidate definitions and extraction/tests;
+do not choose the user's scientific definition or register a target implicitly.
+Ask once at the necessary selection point, continue independent preparation,
+and keep actual experiments/readers gated until an answer. Baseline68 attempts /
+7,919,894,528 reserved bytes;500/10GiB/20 corrections, no elapsed ceiling.
+No range/point/reservation has been activated. Preserve failures and use existing
+engines/ledger/lock/disk protections for any later justified fixed experiment.
+No deletion/optimization/source edit/release or other-environment request.
+See [preparation checkpoint](ANALOG_OFFSET_V1.md). Phase is active and incomplete;
+no next phase is activated. Report only the scientific blocker if it requires
+user input; complete normal reviewed PR/main integration when the phase is done.
+
 ## Claude PR127 review and integration, 2026-10-06
 
 The user explicitly requests review and merge of the completed Claude-authored

@@ -268,7 +268,7 @@ async def test_mcp_closed_json_outputs_and_no_legacy_submission_bypass(tmp_path:
     query = await request(svc, True)
     async with Client(create_server(svc)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 77
+        assert len(tools) == 78
         for name in ("cadence_describe_design_sweep", "cadence_plan_design_sweep"):
             assert tools[name].input_schema["additionalProperties"] is False
             assert tools[name].annotations and tools[name].annotations.read_only_hint

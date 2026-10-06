@@ -1,5 +1,37 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Final Offset gate:**2,073 PASS/four OS skips; current static/security/package/SDK
+> gates pass. Supplemental study remains partial; reviewed containing-PR/main
+> verification recorded privately. Continue approved BIAS phase at this boundary.
+
+> **Current ANALOG-OFFSET-01 checkpoint:** Selected input-nulling five-case actual study complete; supplemental
+> PARTIALLY_QUALIFIED, numerical zero residual without physical precision. Generic
+> offset remains UNQUALIFIED/null, goals absent. Read-only78-tool addition preserves
+> old77/v1-v8. Ledger72/8,456,765,440; phase4/536,870,912. Preserve strict historical
+> verifiers/protected evidence and finish current full gates/reviewed PR integration.
+> Then continue the separately approved three phases without another question.
+
+> **Continuous four-phase user override, 2026-10-06:** Finish OFFSET, then
+> BIAS-RANGE-QUAL-01, REAL-AMPLIFIER-SWEEP-01, SPEC-REAL-EVAL-01 in this chat;
+> no repeated phase-transition confirmation within this explicit sequence.
+> All phase gates, feature PR/review/merge/remote checks and cumulative/protected
+> boundaries remain required. Input-nulling Offset is separately selected by the
+> user. Current plan pins four microvolt DC cases and preserved zero-PSF extraction.
+> No automatic range expansion, optimization, deletion, original change or release.
+> Stop after the final phase; old transition statements remain dated history.
+
+> **Historical ANALOG-OFFSET-01 initial preparation overlay:** User confirmation after Claude PR127
+> activates one offset phase from09339c4. Audit the present nominal open-loop
+> circuit and preserved DC evidence; prepare bounded definitions/extraction.
+> No user offset definition exists: ask once for input-nulling versus output
+> offset before actual scientific execution, and continue independent preparation.
+> Keep generic offset UNQUALIFIED/null and old77 schemas/v1-v8 exact. Baseline
+>68 attempts/7,919,894,528 reserved bytes;500/10GiB/20 corrections, no elapsed limit.
+> No experiment range/reservation, target, deletion, original/PDK mutation,
+> optimization or publication is activated by preparation. Preserve initial
+> failures and finish current gates/one reviewed PR/permitted merge when complete;
+> ask once before another major phase.
+
 > **Active ANALOG-SLEW-01 overlay:** User confirmation after merged PM PR129
 > activates one bounded reference step study from b49d826. Reuse pinned admitted
 > native TRAN in four owned copies, fixed opposite pulse endpoints and three
