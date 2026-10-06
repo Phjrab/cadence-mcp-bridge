@@ -1,5 +1,19 @@
 # Security and Reliability Baseline
 
+## Fixed step study and durable read, 2026-10-06
+
+ANALOG-SLEW-01 uses four owned pulse-input copies, exact reverse source-input
+hashes, shared EDA/ledger/disk controls and immutable admission/completion receipts.
+A separate path-free scalar read requires the registered slew contract, original
+admitted TRAN and pinned source/PSF/four-case digest. It exposes no stimulus,
+waveform, script, expression or path input and cannot execute extraction. Current
+source has77 tools; old76/v1-v8 remain exact. The timeless reader preserves every
+old job while validated later IDs and bounded cumulative counters may advance;
+the strict phase conservation guard is separately retained. No reservation refund,
+result deletion, generic slew/spec qualification, source/ADE/PDK mutation or
+publication follows. All raw phase results/failures remain protected. See
+[step boundary](ANALOG_SLEW_V1.md).
+
 ## Phase Margin reference applicability audit, 2026-10-06
 
 ANALOG-PM-01 adds only a fixed operator read audit. Exact private delegation and

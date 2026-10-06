@@ -1,5 +1,26 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active ANALOG-SLEW-01 overlay:** User confirmation after merged PM PR129
+> activates one bounded reference step study from b49d826. Reuse pinned admitted
+> native TRAN in four owned copies, fixed opposite pulse endpoints and three
+> timestep settings plus a faster-edge control. Preserve old76 schemas/v1-v8,
+> original/ADE/PDK/jobs/replay and 64 attempts/7,383,023,616 baseline reservation.
+> At most four new attempts/four128MiB reservations, shared EDA/ledger/disk guards.
+> Preselect plateau/20--80%/sample/ringing/linearity/convergence diagnostics before
+> execution; defined open-loop transition rate is not a general slew guarantee.
+> No deletion, target, optimization or publication. Finish reviewed feature PR,
+> report and ask once before ANALOG-OFFSET-01; Claude/other environments deferred.
+
+> **ANALOG-SLEW-01 checkpoint:** Four actual bounded step runs, fixed finer
+> controls after insufficient coarse brackets, signed differential20--80% rates
+> and <1% two-resolution/faster-edge agreement are verified. Nonlinear saturated
+> open-loop response remains PARTIALLY_QUALIFIED; conventional generic slew null
+> stays UNQUALIFIED and specifications exact. SDK77/v8 preserved reads/restart
+> differs from live Codex69 empty analog registry. Ledger68/7,919,894,528 and all
+> protected/replay/1,487 old private hashes verified; nine conservative corrections.
+> Complete final gates and reviewed feature-PR integration, report and ask once
+> before ANALOG-OFFSET-01. No next phase, publication or deletion is activated.
+
 > **Active ANALOG-PM-01 overlay:** User confirmation after merged #128 activates
 > one reference-loop applicability and qualification phase from854bc0c. Audit
 > the pinned admitted circuit, existing feedback and preserved results, and the

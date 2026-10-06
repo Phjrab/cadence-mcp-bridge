@@ -1,5 +1,21 @@
 # Release readiness reassessment v2
 
+## ANALOG-SLEW-01 assessment, 2026-10-06
+
+Starting main b49d826 after merged #129.77 typed tools include one supplemental
+registered/admitted reference step-study reader; old76 schemas/v1-v8 remain exact.
+Four actual owned-copy step runs produce endpoint20--80% rise/fall diagnostics
+and two-resolution/faster-edge agreement. Saturated endpoints and nonlinear
+subwindow rates prevent a conventional slew claim; generic slew remains
+UNQUALIFIED/null and specifications unchanged. The diagnostic study is
+PARTIALLY_QUALIFIED only in NN27C/VDD1V/bias320/702mV/unloaded-open-loop scope.
+Current-source SDK77/v8 preserved reads/restart differs from live Codex69/empty
+analog catalog; actual new app tool is NOT_EXPOSED/NOT_RUN. Claude/other
+environments remain user-deferred. Exact future version/candidate/client/license
+and publication decisions remain separate; package1.0.0 and Apache/export
+boundaries are retained. No tag/release is authorized. See
+[phase evidence](ANALOG_SLEW_01_RESULT_V1.md).
+
 ## ANALOG-PM-01 assessment, 2026-10-06
 
 Pinned actual reference-loop and installed STB/probe help audit is implemented

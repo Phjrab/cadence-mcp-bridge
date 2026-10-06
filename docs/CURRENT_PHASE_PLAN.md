@@ -1,5 +1,38 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## ANALOG-SLEW-01 activation, 2026-10-06
+
+User confirmation after merged PM PR129 at b49d826448c1ddab2a2b3d4e176d07db3462412d
+activates feat/analog-slew-01. Fixed discovery pins native TRAN and installed
+pulse/TRAN controls. See [step study](ANALOG_SLEW_V1.md). Four owned copies only:
+10/5/2.5 ns maxstep at1 ns input edge, then2.5 ns/0.5 ns. Stop10 us, differential
+input -0.1 to+0.1 V at2 us then back at6 us; VCM0.5 V. Fixed NN27C/VDD1V/bias
+320/702mV, original topology/no added load. Preserve source/ADE/PDK/all prior
+evidence/replay/contracts/76 schemas. Maximum four128MiB reservations, shared
+500 attempts/10GiB/20 correction limits; no elapsed limit. Evaluate fixed plateau
+windows,20--80% secants, bracket density, ringing, subwindow linearity and1%
+empirical timestep/edge agreement before any qualification. Original analog
+slew stays UNQUALIFIED; supplemental versioned study cannot evaluate goals.
+Complete applicable gates/real study/SDK/protection and reviewed PR integration.
+No deletion/publication/optimization/other-environment request. Report and ask
+once before ANALOG-OFFSET-01.
+
+Qualification checkpoint: four actual owned step runs and bounded summary extraction
+complete; supplemental20--80% rise/fall is PARTIALLY_QUALIFIED and nonlinear,
+conventional generic slew stays UNQUALIFIED/null. Initial coarse bracket is
+insufficient; remaining controls fixed to200/100/100 ps before new observations,
+within max4 attempts. Original5/2.5ns plan remains NOT_RUN. Two-resolution and
+faster-edge differences <1%, no absolute error bound or three-level convergence.
+Current-source SDK77/v8 preserves old76 schemas/DC/AC/TRAN/power/bandwidth/sweep
+and restart; live Codex69 analog catalog remains empty/new tool NOT_EXPOSED.
+Ledger68/7,919,894,528; phase4/536,870,912, no refund/reset/deletion. Nine of20
+corrections and all initial failures/immutable deployments retained; strict
+composed conservation protects original/ADE/PDK/jobs/replay/1,487 old private
+hashes. Final full2,002 PASS/four OS skips/static/security/package gates PASS;
+containing reviewed PR integration recorded privately and
+in [result](ANALOG_SLEW_01_RESULT_V1.md). Report and ask once before
+ANALOG-OFFSET-01; no next phase is activated.
+
 ## ANALOG-PM-01 activation, 2026-10-06
 
 User confirmation after merged BANDWIDTH-QUAL-02 (#128) activates this phase only.
