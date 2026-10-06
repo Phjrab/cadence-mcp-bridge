@@ -1,5 +1,18 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## CLIENT-REAL-QUAL-01 actual Codex read evidence, 2026-10-06
+
+Starting main `434e5efd7fc8ad940d921d5e82c5cd25bd818d7f`, after #121.
+The active Codex host now exposes the bridge's 69 names, matching the reviewed
+names. Actual design list/describe/PDK and preserved native DC status/result
+calls succeed through its MCP tools; no SDK substitute or new simulation.
+The preserved DC frame hash matches prior evidence. Record
+[partial actual-app qualification](CLIENT_REAL_QUAL_CODEX_READS_V1.md) through
+a reviewed documentation PR. No runtime/API/profile/journal changes. Earlier
+missing-tool blocker is superseded for Codex; UI control restriction remains.
+Full app schema/version/lifecycle and Claude are still NOT_TESTED/unverified;
+phase incomplete. No automatic next phase or release.
+
 ## CLIENT-REAL-QUAL-01 activation/checkpoint, 2026-10-06
 
 User continuation activates actual app qualification after #120 at
