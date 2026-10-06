@@ -37,9 +37,10 @@ DC/AC/TRAN and RC sweep results. This is SDK/subprocess evidence, not actual
 current application qualification. Claude real app remains DEFERRED_BY_USER /
 CLAUDE_REAL_CLIENT_UNVERIFIED; its adapter remains present.
 
-Seven corrections of the active twenty are consumed: investigation helper name,
+Eight corrections of the active twenty are consumed: investigation helper name,
 local quoting, initial style/type binding, snapshot loader, gate fixture/style,
-backend method allowlist and read-only exhausted-budget boundary. Failed gates
+backend method allowlist, read-only exhausted-budget boundary and final Git
+deployment-file inclusion/LF preservation. Failed gates
 and first drafts remain private. Environment failures are also retained: missing
 Git safe-directory configuration, UTF-8 dependency-audit decoding and two long
 Windows fixture path failures. The latter reproduce with long paths and pass
