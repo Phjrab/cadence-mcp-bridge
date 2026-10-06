@@ -14,8 +14,12 @@ Codex TOML and Claude `mcpServers` JSON configuration are prepared and tested
 through actual subprocess protocol clients. Independent JSON-RPC tests verify
 initialization, typed schemas, calls/errors, concurrent read requests,
 stdout integrity and EOF shutdown. This is `SERVER_PROTOCOL_QUALIFIED`.
-Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
-configuration and SDK tests do not prove real desktop execution. The current
+Claude Desktop Code-tab actual calls verified existing-result reads and matching
+re-reads after an app restart in the recorded 2026-10-06 run. The tested source
+tree digest remains unknown; Desktop chat, full schemas/protocol, new jobs and
+the blocked sweep read remain unverified. `CLAUDE_REAL_CLIENT_UNVERIFIED` is
+retained for the complete qualification gate. Configuration and SDK tests alone
+do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
 schema/version/lifecycle and the eight additions in the live app remain unverified.
@@ -49,8 +53,10 @@ Operator registry v8 uses `cadence_runtime_info_v2` (observation version 2).
 The original observation retains its v1-v7 schema and returns a bounded v2
 handoff for v8; it never reports a false catalog version.
 
-Claude actual-app testing is deferred by the user and remains
-`CLAUDE_REAL_CLIENT_UNVERIFIED`; its existing configuration adapter is preserved.
+The historical Claude deferral was lifted for the documented Code-tab read and
+restart run. Its limited evidence is preserved in the
+[Claude report](docs/validation/claude-desktop/20261006T0407Z/REPORT.md);
+`CLAUDE_REAL_CLIENT_UNVERIFIED` remains for the untested scope.
 
 ## Generic onboarding status
 

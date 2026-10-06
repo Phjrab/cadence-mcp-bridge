@@ -1,5 +1,43 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Actual Claude Desktop (Code tab) reads, 2026-10-06
+
+The user lifted the Claude deferral for this run only. Direct tool calls from the
+Claude Desktop app's Code tab (package 2.19675.1.0, using the bridge registered
+in the Desktop configuration) verified the following:
+
+- runtime v2 observation
+- design list/describe/PDK status
+- catalog and analog/power definitions
+- reads of existing user-supplied admitted native DC/AC/TRAN results
+- registered measurement results
+- analog gain (QUALIFIED, 10 Hz) and bandwidth (PARTIALLY_QUALIFIED)
+- the dedicated DC power reader (QUALIFIED; legacy analog power v1 stays UNQUALIFIED)
+- targetless v2 specification evaluation (NOT_EVALUATED)
+- storage summary/list
+- repeated reads
+- two bounded unregistered-ID rejections followed by recovery
+- equal re-reads after a Claude Desktop restart (process start times observed)
+
+The sweep read was BLOCKED by the default sweep-journal selection; the
+configuration was left unchanged.
+
+Not tested:
+
+- full schema, protocol and stderr/EOF
+- the Desktop chat surface
+- new job lifecycle
+
+The tested server was an unreviewed local working tree with one tool outside the
+reviewed 75-name inventory. See [run report](validation/claude-desktop/20261006T0407Z/REPORT.md).
+`CLAUDE_REAL_CLIENT_UNVERIFIED` is narrowed only for these reads, not cleared.
+The dated sections below preserve the earlier deferral and qualification history;
+the Code-tab evidence above supersedes their blanket deferral for this run only.
+The public originating-agent report is reviewed independently by Codex; its
+private tool cards and exact tested working tree are not independently replayed
+or attested by that review. Current main has77 source tools, which is distinct
+from this historical76-name app observation.
+
 ## ANALOG-POWER-01 continuation, 2026-10-06
 
 Current server has 72 tools; the two additional power readers preserve all 70
