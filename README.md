@@ -41,6 +41,15 @@ replay, pending-only cancellation and exact configuration boundary. Source83
 preserves old78 full schemas; current-source SDK execution is distinct from live
 app qualification. No optimization, new target, deletion or publication follows.
 
+## Real point specification evaluation
+
+The [read-only specification adapter](docs/SPEC_REAL_EVALUATION_V1.md) binds
+existing finite-grid gain/power results to the reused condition/comparison engine.
+Its operator companion target catalog is empty: all six actual point facts remain
+NOT_EVALUATED, with exact definitions, hashes and effective conditions preserved.
+No target, value, script or path can be registered from MCP. Source85 preserves
+all earlier83 full schemas; SDK qualification remains distinct from real app E2E.
+
 ## Reference step diagnostics
 
 `cadence_slew_study_result` reads a fixed admitted reference step study. It reports

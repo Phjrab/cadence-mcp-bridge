@@ -1,5 +1,17 @@
 # Release readiness reassessment v2
 
+## SPEC-REAL-EVAL-01 assessment
+
+The additive read-only version3 companion evaluation reuses the existing comparator
+for admitted finite-grid gain/power facts with exact source/definition/catalog/
+unit/condition hashes. Source85 preserves old83 full schemas and registryv1–v8.
+No actual numerical targets exist; real status NOT_EVALUATED. No new simulation,
+reservation, deployment or deletion follows. SDK subprocess qualification does
+not qualify the current live app. Full Claude gate remains
+CLAUDE_REAL_CLIENT_UNVERIFIED; imported rights LEGAL_REVIEW_REQUIRED and
+PUBLICATION_NOT_AUTHORIZED remain. No version/tag/release is created.
+See [contract](SPEC_REAL_EVALUATION_V1.md).
+
 ## REAL-AMPLIFIER-SWEEP-01 assessment
 
 The existing durable engine now connects the explicit finite319/320/321mV
