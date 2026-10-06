@@ -7,6 +7,15 @@ reference is Windows to the registered `cadence-vm` environment. The active oper
 the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
+## Release scope
+
+The [current release readiness assessment](docs/RELEASE_READINESS_V3.md) separates
+original-code wheel/sdist preparation, exact Git source archives, client evidence
+and imported planning rights. Package metadata remains1.0.0; v1.1.0 is a conditional
+recommendation only. Current85-tool SDK/protocol verification does not establish
+complete latest desktop app qualification. No new tag/release/index publication
+is authorized by passing local gates.
+
 ## MCP clients
 
 Codex and Claude Desktop launch the same server package over local stdio.

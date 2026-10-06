@@ -1,5 +1,8 @@
 # Release readiness reassessment v2
 
+Current conclusions are superseded by [v3 assessment](RELEASE_READINESS_V3.md).
+The dated observations below remain historical evidence.
+
 ## SPEC-REAL-EVAL-01 assessment
 
 The additive read-only version3 companion evaluation reuses the existing comparator
