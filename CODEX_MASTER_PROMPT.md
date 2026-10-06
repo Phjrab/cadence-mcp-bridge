@@ -1,5 +1,17 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active AGENT-PLAN-EXPORT-BOUNDARY-01 overlay, 2026-10-06:** The user
+> selects completion of existing draft PR #124 after completed power PR #125.
+> Continue its original branch, preserve imported files/hashes/history and all
+> runtime/evidence/budgets. Verify exact candidate local ZIP/TAR and actual GitHub
+> ZIP/tar.gz; retain LEGAL_REVIEW_REQUIRED for the preserved import and distinguish
+> IMPORT_EXCLUDED_VERIFIED from PUBLICATION_NOT_AUTHORIZED. Separate historical
+> package-integrity checks from current archive installation; never waive missing
+> inputs. Complete current gates, reviewed PR merge and remote verification.
+> No Cadence contact, simulation, deletion, relicensing, tag or release. Report
+> once and ask before another phase; completed power extraction is not restarted.
+
+
 > **Active 2026-10-06 ANALOG-POWER-01 overlay:** User continuation activates
 > one preserved-native-DC power extraction phase after #123. The bounded current
 > plan governs it. Complete source inventory, effective voltage, current sign/unit

@@ -1,5 +1,50 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## AGENT-PLAN-EXPORT-BOUNDARY-01 activation, 2026-10-06
+
+Starting main `20726ead871ffda18a937938fed7c4a6426d5b5d`, completed #125.
+The user selects existing draft #124 on `chore/agent-plan-export-boundary-01`.
+Merge current main into that branch without rewriting history. Preserve all
+181 currently tracked imported/integration files, source/remote bytes, contracts,
+private evidence and cumulative resources. Audit external references/copies,
+run current local gates and inspect exact candidate local ZIP/TAR plus actual
+GitHub ZIP/tar.gz. Compare every retained member with its candidate Git blob.
+Document installation without the omitted historical planning helper, whose
+missing inputs must still fail. Imported rights and publication remain separate.
+Correction ceiling20; no remote contact, simulation/reservation/deletion/release.
+Finish one reviewed PR, verify remote SHA/tree and report once. See
+[export boundary](AGENT_PLAN_EXPORT_BOUNDARY_V1.md). Power extraction is complete;
+its generic measurement/specification binding remains pending. Recommend a
+bounded MEAS-CONTRACT-02 continuation to finish that part of the expanded
+ANALOG-POWER-01 objective, then BANDWIDTH-QUAL-02, ANALOG-PM-01, ANALOG-SLEW-01,
+ANALOG-OFFSET-01, BIAS-RANGE-QUAL-01, REAL-AMPLIFIER-SWEEP-01 and SPEC-REAL-EVAL-01
+at separately confirmed phase boundaries. This sequence is future program scope,
+not continuous execution authority. Preserve old measurement definitions; do not
+invent numerical goals or reinterpret point observations as qualified ranges.
+Other Cadence/PDK/host and Claude actual-app qualification remain deferred.
+Storage actual deletion requires separately selected disposable plan/items and
+independent operator consent; raw-result compaction remains a separate phase.
+
+
+Final full gate: 1,783 passed, four OS symlink skips, 56 warnings in616.85s.
+Initial console-script collection failed on a project-root import; corrected
+`uv run python -m pytest` runs every test. Ruff/mypy48, contract72/legacy22/v1-v7,
+861-file secret preflight, 18 security tests and locked dependency audit pass.
+Both checkout and actual hosted ZIP build/install gates pass: wheel56/sdist57,
+three installed SDK stdio formats/72 tools, local doctor/CLI and uninstall.
+Actual hosted snapshot additionally passes64 archive/distribution/contract tests.
+Four inspected archives exclude181 import/integration files and retain680 exact
+candidate blobs. Windows auto-CRLF first caused243 text mismatches; canonical
+Git export resolves them without changing the verifier or original data. Two
+bounded verification corrections of20; first failures remain private. Historical
+imported helper is NOT_PASS because its original ZIP is absent; no waiver/skip.
+No runtime/API/remote/source/import/evidence/budget change or new simulation,
+reservation, deployment, result deletion, version/tag/release. Rights review and
+publication remain distinct; prior private1304 records are rechecked before merge.
+Continue existing reviewed PR124; exact final-head hosted/local archives,
+installation, review and remote SHA/tree outcomes remain private. Report once
+and ask before MEAS-CONTRACT-02; do not restart completed power extraction.
+
 ## ANALOG-POWER-01 activation, 2026-10-06
 
 User continuation activates one power extraction phase from
