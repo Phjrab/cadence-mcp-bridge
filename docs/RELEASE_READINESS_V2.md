@@ -18,6 +18,12 @@ and publication remain open. Claude/other environment qualification is deferred.
 The dated tables below retain prior observations where explicitly identified.
 No future analog measurement is automatically a prerequisite for a release
 limited to already validated functionality. No tag/release is activated.
+At inspected checkpoint `6c185dc6ebcb77041e7d5b03ade4fa929f789c06`, all four
+source formats exclude181 import files with680 retained blobs identical. The
+actual hosted ZIP installs/builds/verifies without the planning helper or .git.
+Final-head artifacts are rechecked before integration; see the boundary report.
+Full1783/four OS skips, static/security/contract/package gates pass. Rights review
+for preserved import/external adaptations and publication authority remain open.
 
 
 ## ANALOG-POWER-01 continuation, 2026-10-06
@@ -71,7 +77,7 @@ the imported package; this reassessment does not delete it, rewrite history or
 interpret its presence as permission to redistribute it. Curated wheel/sdist
 exclude `docs/agent_plan`, and are distinct from GitHub's repository source archives.
 
-## Actual repository, release and license state
+## Historical RELEASE-READINESS-02 repository/release observations (#119)
 
 | Item | Observed state |
 | --- | --- |
@@ -133,7 +139,8 @@ future candidate; do not mechanically apply the recommendation to later changes.
 | Storage | Reference inventory/classification/plan/dry-run verified; selected deletion has contract/fixture tests, real reference-host deletion NOT_RUN; no automatic deletion/compaction |
 | Differential gain | QUALIFIED at 10 Hz, pinned native conditions only |
 | Bandwidth | PARTIALLY_QUALIFIED sampled-reference 3.0 dB crossing estimate; no DC plateau/interpolation-error/unity-gain/closed-loop qualification |
-| Phase margin/power/offset/slew | UNQUALIFIED; missing scientific/extraction requirements recorded |
+| Phase margin/offset/slew and original analog-v1 power | UNQUALIFIED; scientific/extraction limitations retained |
+| Separate dc-supply-power-v1 power reader | QUALIFIED for one admitted reference native DC NN/27 C/1 V/320-702 mV result only; original v1/goals unchanged |
 | Specifications | Registered exact-condition comparator contracts tested; actual reference has no selected numerical goal and stays NOT_EVALUATED |
 | New project/PDK physical execution, other Cadence versions/PDKs | UNQUALIFIED/DEFERRED; no additional equipment is requested by this reassessment |
 | Optimization, multidimensional sweeps, automatic range/candidate/circuit changes, layout/DRC/LVS/PEX and statistics/Monte Carlo | PLANNED/UNQUALIFIED in public product scope; existing narrow diagnostics are not universal support |

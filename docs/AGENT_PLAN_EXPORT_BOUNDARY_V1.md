@@ -145,7 +145,7 @@ historical planning assumptions; they do not supply runtime inputs. Root
 execution policy also documents its prior integration/adaptation of the imported
 planning constraints. These references and adaptations are not relabeled as
 independently licensed import content. No complete normalized-byte duplicate or
-identical paragraph of at least 250 normalized characters was found outside
+identical paragraph of at least 250 normalized UTF-8 bytes was found outside
 the directory in the current tracked-file comparison. That limited comparison
 cannot establish authorship or absence of paraphrased derivatives. Rights review
 must include the preserved import and any affected external adaptations;
@@ -198,13 +198,17 @@ LICENSE/NOTICE/THIRD_PARTY_NOTICES. Unexpected omissions/additions fail. It
 makes no network, Cadence, execution, rights or publication assertion.
 
 ```powershell
-git archive --format=zip --output=candidate-local.zip EXACT_COMMIT
-git archive --format=tar --output=candidate-local.tar EXACT_COMMIT
+git -c core.autocrlf=false -c core.eol=lf archive --format=zip --output=candidate-local.zip EXACT_COMMIT
+git -c core.autocrlf=false -c core.eol=lf archive --format=tar --output=candidate-local.tar EXACT_COMMIT
 # Separately download GitHub-generated zipball/tarball at that same commit.
 uv run python scripts/verify-git-archive.py --commit EXACT_COMMIT --archives candidate-local.zip candidate-local.tar candidate-github.zip candidate-github.tar.gz
 ```
 
-Store downloads/evidence outside tracked release payloads. Hosted archive bytes
+Store downloads/evidence outside tracked release payloads. Windows auto-CRLF settings must be disabled for canonical local snapshots;
+otherwise Git export may convert retained text bytes. The first real local
+archives failed exact blob comparison on 243 CRLF-only files; both failed
+artifacts are preserved, and the canonical commands above passed without
+weakening the verifier. Hosted archive bytes
 may change compression independently; retained candidate blobs must still match.
 Exact hashes, commit, URLs and verification outcomes are preserved privately.
 Future tags/candidates must be inspected again. Old snapshots do not inherit
@@ -213,11 +217,67 @@ synthetic Git fixtures and from SDK subprocess or actual app/Cadence evidence.
 
 ### Completion evidence
 
-Final local gates, exact hosted snapshots and integration outcomes are recorded
-in the containing reviewed PR #124 and new private phase records. At this
-checkpoint archive qualification is pending; only observed checks may update it.
+At inspection checkpoint `6c185dc6ebcb77041e7d5b03ade4fa929f789c06`, all four
+canonical local ZIP/TAR and actual GitHub ZIP/tar.gz snapshots pass complete
+member/blob comparison: 181 import files excluded, 680 retained files identical,
+5,468,915 retained file bytes. Original source/lock/schemas/examples/tests and
+canonical LICENSE/NOTICE/third-party notices remain. This is
+`IMPORT_EXCLUDED_VERIFIED` for those inspected snapshots only. Final reviewed
+head snapshots are inspected again and recorded privately before integration.
+
+An actual GitHub ZIP was unpacked outside the checkout, with no `.git` or
+`docs/agent_plan`. Its dependency sync, local doctor, contract audit, 64 focused
+archive/distribution/contract tests and full canonical package gate pass. The
+latter builds/audits wheel and sdist, verifies three exported installed stdio
+formats with 72 tools, unqualified execution denial, CLI and uninstall. These
+are synthetic/config/SDK subprocess checks, not new actual-app or Cadence E2E.
+Both checkout and hosted-source builds have 56 wheel / 57 sdist members, expected
+Apache notices and zero unexpected/protected-pattern findings. Final reviewed
+archive installation is checked against that same candidate after completion
+documentation. Whole-repository full gate completion and exact integration are
+recorded in the containing PR #124 and new private phase records.
 Publication remains `PUBLICATION_NOT_AUTHORIZED`. No simulation, reservation,
 remote deployment/contact, result deletion, client-config write or tag/release
 is part of this phase. Existing power/AC/TRAN/sweep evidence can be reused only
 because source/remote/contracts remain identical; this phase makes no new
 scientific measurement or actual Desktop-app claim.
+
+
+Final checkout gates: **1,783 passed / four OS symlink skips / 56 warnings /
+616.85 seconds**; new archive tests11; Ruff PASS; mypy48 source modules PASS;
+contract audit72 schemas/22 legacy declarations/v1-v7 schemas PASS; secret
+preflight861 files PASS; security18 PASS; locked audit no known vulnerabilities.
+Two bounded verification corrections are counted against the active20 ceiling:
+console-entrypoint import handling and Windows local archive line endings.
+The initial collection ERROR and initial local archive FAIL remain private;
+canonical verification does not turn them into a historical PASS. Existing
+historical package checker remains **NOT_PASS** for its missing required ZIP.
+No product or security test is skipped because the planning directory is omitted.
+Four existing symlink tests remain OS SKIP and are not counted as passed.
+Changed current Markdown visible links/fences pass; historical imported graph
+and license ownership are separate, uncompleted checks.
+
+Source/remote/import, policies/contracts and all1,304 prior top-level private
+records retain their baseline identity. Current limits remain500 attempts/10 GiB/
+20 corrections with removed elapsed ceiling and prior usage histories intact.
+This phase consumes zero Spectre, reservations or remote storage and makes no
+Cadence contact; last verified counters62/500 and7,114,588,160/10,737,418,240 bytes
+are reused, not represented as a new whole-VM disk measurement. Local archive,
+fixture/build and audit bytes are distinct from simulation-result reservations.
+All historical source/ADE/PDK/native/replay evidence stays protected; no result
+is deleted or reclassified. No fresh real-app or scientific measurement is made.
+
+Complete integration through existing PR124 with a manual exact-head scope,
+security/contract/diff review and actual GitHub check/review-state inspection.
+No configured CI is not a CI PASS. Verify final archive/install outcomes and
+main SHA/tree privately; no follow-up state-only PR is needed. Archive exclusion
+is **IMPORT_EXCLUDED_VERIFIED**, preserved rights **LEGAL_REVIEW_REQUIRED**, new
+publication **PUBLICATION_NOT_AUTHORIZED**. Other products retain their terms.
+
+Next recommendation: finish the remaining expanded ANALOG-POWER-01 objective
+through **MEAS-CONTRACT-02**, binding the already qualified dc-supply-power-v1
+result into versioned generic measurement/specification paths while preserving
+old definitions/goals and targetless NOT_EVALUATED behavior. This is not a repeat
+of completed current extraction, and it is not activated by this report. Then
+consider the separately confirmed bandwidth/PM/slew/offset/range/real-sweep/spec
+roadmap. Other Cadence/PDK/host and actual Claude testing stay deferred.
