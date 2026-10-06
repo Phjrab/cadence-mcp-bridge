@@ -106,6 +106,13 @@ from cadence_mcp_bridge.native_diagnostics import (
 )
 from cadence_mcp_bridge.pdk_adapters import DesignPdkStatus, PdkDescription, PdkList, PdkRegistry
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
+from cadence_mcp_bridge.power_measurements import (
+    PowerDescription,
+    PowerQuery,
+    PowerResult,
+    PowerSelection,
+)
+from cadence_mcp_bridge.power_service import PowerBackend, PowerSupervisor
 from cadence_mcp_bridge.profiles import (
     get_profile,
     list_profiles,
@@ -280,6 +287,7 @@ class CadenceService:
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
         self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
+        self._power = PowerSupervisor(self._analog_measurements, cast(PowerBackend, backend))
         self._specifications = SpecificationSupervisor(self._designs, self._analog_measurements)
         self._registered_sweeps = RegisteredSweepPlanner(
             self._designs, self._analyses, self._registered_measurements
@@ -371,6 +379,12 @@ class CadenceService:
 
     async def analog_measurement_result(self, request: AnalogQuery) -> AnalogResult:
         return await self._analog_measurements.result(request)
+
+    async def describe_power_measurement(self, request: PowerSelection) -> PowerDescription:
+        return self._power.describe(request)
+
+    async def power_measurement_result(self, request: PowerQuery) -> PowerResult:
+        return await self._power.result(request)
 
     async def submit_analysis(self, submission: AnalysisSubmission) -> AnalysisStatus:
         return await self._analyses.submit(submission)

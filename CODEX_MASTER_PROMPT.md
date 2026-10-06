@@ -1,5 +1,14 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 ANALOG-POWER-01 overlay:** User continuation activates
+> one preserved-native-DC power extraction phase after #123. The bounded current
+> plan governs it. Complete source inventory, effective voltage, current sign/unit
+> and provenance are prerequisites for any value. Supply rails and bias/input
+> sources remain distinct. Fixed owned extraction only; zero new simulation,
+> deletion, target, optimization or release. Preserve all prior contracts/evidence.
+> Claude real app stays deferred. Finish one reviewed PR, verify remote SHA/tree,
+> report and ask once before another phase.
+
 > **Active 2026-10-06 RUNTIME-CONFIG-01 overlay:** The user defers Claude
 > actual-client qualification and authorizes next development after merged #122.
 > Preserve partial Codex direct-call evidence; CLIENT-REAL-QUAL-01 stays incomplete.

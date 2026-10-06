@@ -1,5 +1,9 @@
 # Registered analog measurements v1
 
+Current continuation: [ANALOG-POWER-01](ANALOG_POWER_V1.md) separately qualifies
+one preserved DC supply-power reader. This historical analog v1 contract and
+its UNQUALIFIED power result are unchanged; current v7 goals still bind v1.
+
 ANALOG-MEAS-01 extends the existing measurement architecture with local derived
 definitions. Registry v6 adds `analog_contracts` to v5; unchanged design profiles,
 variable/analysis/source-measurement hashes and fixture sweep contracts remain
