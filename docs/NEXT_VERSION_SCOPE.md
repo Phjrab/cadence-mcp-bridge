@@ -1,5 +1,15 @@
 # Next Version Scope
 
+## ANALOG-POWER-01 continuation, 2026-10-06
+
+Two separately versioned read-only power interfaces reuse operator registry
+v6/v7, native admission and an immutable reference DC extraction. Existing
+analog/goal contracts stay exact. Signed rail power is qualified for that
+operation only; goal binding to the new power definition is a recommended future
+phase. PM/offset/slew, other PDK/version execution and optimization are not
+qualified. Current catalog is 72; no release/version/tag or target is created.
+Apache-2.0 and imported planning LEGAL_REVIEW_REQUIRED boundaries remain.
+
 ## Public readiness overlay, 2026-10-05
 
 ONBOARD-CLI-01 completed through merged PR #109. PUBLIC-RELEASE-01 is now the

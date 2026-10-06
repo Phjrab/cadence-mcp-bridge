@@ -1,0 +1,840 @@
+{
+  "schema_version": 1,
+  "source_main": "8009060edc076ccacb371c45d8f8fb3a335b150f",
+  "tools": {
+    "cadence_describe_power_measurement": {
+      "name": "cadence_describe_power_measurement",
+      "title": null,
+      "description": "Describe the separate dc-supply-power-v1 reader for a registered power metric and its unique qualified native DC source (registry v6/v7). Supply-rail power excludes bias/input sources, which are reported separately. Returns the required contract hash; no artifact availability check, extraction or simulation permission.",
+      "inputSchema": {
+        "$defs": {
+          "PowerSelection": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id"
+            ],
+            "title": "PowerSelection",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/PowerSelection"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_describe_power_measurementArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "PowerDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "definition_id": {
+                "const": "dc-supply-power-v1",
+                "default": "dc-supply-power-v1",
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "unit": {
+                "const": "W",
+                "default": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "analysis": {
+                "const": "dc",
+                "default": "dc",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "meaning": {
+                "const": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "default": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "title": "Meaning",
+                "type": "string"
+              },
+              "current_convention": {
+                "const": "positive_into_source_positive_terminal_A",
+                "default": "positive_into_source_positive_terminal_A",
+                "title": "Current Convention",
+                "type": "string"
+              },
+              "voltage_convention": {
+                "const": "positive_minus_negative_terminal_V",
+                "default": "positive_minus_negative_terminal_V",
+                "title": "Voltage Convention",
+                "type": "string"
+              },
+              "method": {
+                "const": "sum_minus_voltage_times_signed_current_no_abs",
+                "default": "sum_minus_voltage_times_signed_current_no_abs",
+                "title": "Method",
+                "type": "string"
+              },
+              "scope": {
+                "const": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "default": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "title": "Scope",
+                "type": "string"
+              },
+              "qualification_scope": {
+                "const": "preserved_reference_native_dc_only",
+                "default": "preserved_reference_native_dc_only",
+                "title": "Qualification Scope",
+                "type": "string"
+              }
+            },
+            "title": "PowerDefinition",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "design_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Design Id",
+            "type": "string"
+          },
+          "measurement_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Measurement Id",
+            "type": "string"
+          },
+          "contract_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contract Sha256",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/$defs/PowerDefinition"
+          },
+          "source_measurement_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Measurement Id"
+          },
+          "read_eligible": {
+            "title": "Read Eligible",
+            "type": "boolean"
+          },
+          "blocking_reason": {
+            "anyOf": [
+              {
+                "const": "registered_native_dc_source_unavailable",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason"
+          },
+          "artifact_availability_assessed": {
+            "const": false,
+            "default": false,
+            "title": "Artifact Availability Assessed",
+            "type": "boolean"
+          },
+          "extraction_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Extraction Authorized",
+            "type": "boolean"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "design_id",
+          "measurement_id",
+          "contract_sha256",
+          "source_measurement_id",
+          "read_eligible",
+          "blocking_reason"
+        ],
+        "title": "PowerDescription",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_power_measurement_result": {
+      "name": "cadence_power_measurement_result",
+      "title": null,
+      "description": "Read operator-extracted signed currents for the preserved admitted native DC operation using the described power contract hash and registered power metric ID. Reports W as sum(-V*I) for VDD/VSS, separate bias/input contributions, six-source inventory and provenance. Only the reviewed reference extraction exists; other operations fail closed. No new extraction, simulation, paths, formulas or target PASS.",
+      "inputSchema": {
+        "$defs": {
+          "PowerQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "operation_id",
+              "expected_contract_sha256"
+            ],
+            "title": "PowerQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/PowerQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_power_measurement_resultArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "MeasurementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "analysis_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "reader": {
+                "const": "native-bounded-result-v1",
+                "default": "native-bounded-result-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/NativeSettings"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Sha256",
+                "type": "string"
+              },
+              "copy_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Copy Sha256",
+                "type": "string"
+              },
+              "state_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "State Sha256",
+                "type": "string"
+              },
+              "model_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Model Sha256",
+                "type": "string"
+              },
+              "circuit_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Circuit Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "owned_variables_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Owned Variables Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "measurement_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Frame Sha256",
+                "type": "string"
+              },
+              "native_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Native Result Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              },
+              "notices": {
+                "const": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "analysis_plan_hash",
+              "analysis_contract_sha256",
+              "definition_sha256",
+              "revision_id",
+              "operating_point_id",
+              "settings",
+              "source_sha256",
+              "copy_sha256",
+              "state_sha256",
+              "model_sha256",
+              "circuit_sha256",
+              "input_sha256",
+              "owned_variables_sha256",
+              "psf_sha256",
+              "measurement_frame_sha256",
+              "native_result_sha256",
+              "warnings",
+              "notices"
+            ],
+            "title": "MeasurementProvenance",
+            "type": "object"
+          },
+          "NativeSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1.0,
+                "minimum": 1.0,
+                "title": "Vdd V",
+                "type": "number"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "applied_bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "saved_enabled_analyses": {
+                "default": [
+                  "dc"
+                ],
+                "maxItems": 1,
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "const": "dc",
+                    "type": "string"
+                  }
+                ],
+                "title": "Saved Enabled Analyses",
+                "type": "array"
+              },
+              "ac_start_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Start Hz",
+                "type": "integer"
+              },
+              "ac_stop_hz": {
+                "const": 100000000,
+                "default": 100000000,
+                "title": "Ac Stop Hz",
+                "type": "integer"
+              },
+              "ac_points_per_decade": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Points Per Decade",
+                "type": "integer"
+              },
+              "tran_stop_s": {
+                "default": 0.004,
+                "maximum": 0.004,
+                "minimum": 0.004,
+                "title": "Tran Stop S",
+                "type": "number"
+              },
+              "tran_maxstep_s": {
+                "default": 1e-05,
+                "maximum": 1e-05,
+                "minimum": 1e-05,
+                "title": "Tran Maxstep S",
+                "type": "number"
+              },
+              "tran_method": {
+                "const": "trap",
+                "default": "trap",
+                "title": "Tran Method",
+                "type": "string"
+              },
+              "stimulus": {
+                "const": "existing_opposed_1khz_50mv_peak_inputs",
+                "default": "existing_opposed_1khz_50mv_peak_inputs",
+                "title": "Stimulus",
+                "type": "string"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              }
+            },
+            "title": "NativeSettings",
+            "type": "object"
+          },
+          "PowerDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "definition_id": {
+                "const": "dc-supply-power-v1",
+                "default": "dc-supply-power-v1",
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "unit": {
+                "const": "W",
+                "default": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "analysis": {
+                "const": "dc",
+                "default": "dc",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "meaning": {
+                "const": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "default": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "title": "Meaning",
+                "type": "string"
+              },
+              "current_convention": {
+                "const": "positive_into_source_positive_terminal_A",
+                "default": "positive_into_source_positive_terminal_A",
+                "title": "Current Convention",
+                "type": "string"
+              },
+              "voltage_convention": {
+                "const": "positive_minus_negative_terminal_V",
+                "default": "positive_minus_negative_terminal_V",
+                "title": "Voltage Convention",
+                "type": "string"
+              },
+              "method": {
+                "const": "sum_minus_voltage_times_signed_current_no_abs",
+                "default": "sum_minus_voltage_times_signed_current_no_abs",
+                "title": "Method",
+                "type": "string"
+              },
+              "scope": {
+                "const": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "default": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "title": "Scope",
+                "type": "string"
+              },
+              "qualification_scope": {
+                "const": "preserved_reference_native_dc_only",
+                "default": "preserved_reference_native_dc_only",
+                "title": "Qualification Scope",
+                "type": "string"
+              }
+            },
+            "title": "PowerDefinition",
+            "type": "object"
+          },
+          "SignedSource": {
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "enum": [
+                  "vdd",
+                  "vss",
+                  "bias-n",
+                  "bias-p",
+                  "input-p",
+                  "input-m"
+                ],
+                "title": "Source Id",
+                "type": "string"
+              },
+              "role": {
+                "enum": [
+                  "supply",
+                  "bias",
+                  "stimulus"
+                ],
+                "title": "Role",
+                "type": "string"
+              },
+              "voltage_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Voltage V"
+              },
+              "current_a": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Current A"
+              }
+            },
+            "required": [
+              "source_id",
+              "role",
+              "voltage_v",
+              "current_a"
+            ],
+            "title": "SignedSource",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "design_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Design Id",
+            "type": "string"
+          },
+          "measurement_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Measurement Id",
+            "type": "string"
+          },
+          "operation_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "contract_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contract Sha256",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/$defs/PowerDefinition"
+          },
+          "status": {
+            "enum": [
+              "QUALIFIED",
+              "UNQUALIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "signed_branch_current_unavailable",
+                  "reader_error"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "bias_source_delivered_power_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bias Source Delivered Power W"
+          },
+          "input_source_delivered_power_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Source Delivered Power W"
+          },
+          "all_sources_delivered_power_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Sources Delivered Power W"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/$defs/SignedSource"
+            },
+            "maxItems": 6,
+            "minItems": 6,
+            "title": "Sources",
+            "type": "array"
+          },
+          "source_measurement_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Source Measurement Id",
+            "type": "string"
+          },
+          "source_result_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Result Sha256",
+            "type": "string"
+          },
+          "extraction_result_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Extraction Result Sha256",
+            "type": "string"
+          },
+          "power_frame_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Power Frame Sha256",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/$defs/MeasurementProvenance"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "design_id",
+          "measurement_id",
+          "operation_id",
+          "contract_sha256",
+          "status",
+          "reason",
+          "value",
+          "bias_source_delivered_power_w",
+          "input_source_delivered_power_w",
+          "all_sources_delivered_power_w",
+          "sources",
+          "source_measurement_id",
+          "source_result_sha256",
+          "extraction_result_sha256",
+          "power_frame_sha256",
+          "provenance"
+        ],
+        "title": "PowerResult",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

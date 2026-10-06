@@ -507,6 +507,7 @@ def test_backend_has_no_public_raw_command_method(backend: OpenSshBackend) -> No
     public_methods = {name for name in dir(backend) if not name.startswith("_")}
 
     assert public_methods == {
+        "power_extraction_result",
         "submit_native_diagnostic",
         "native_diagnostic_status",
         "native_diagnostic_result",

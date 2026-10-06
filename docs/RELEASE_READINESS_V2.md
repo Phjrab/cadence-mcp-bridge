@@ -1,5 +1,15 @@
 # Release readiness reassessment v2
 
+## ANALOG-POWER-01 continuation, 2026-10-06
+
+The additive reference DC power readers bring the current catalog to 72 tools.
+The gate requires their exact separate schema snapshot and preserves all 70
+prior schemas, v1-v7 registry schemas and package version 1.0.0. This scientific
+qualification applies only to a preserved fixed-reference DC operation, with
+no simulation. Actual current-client and publication gates remain open; Claude
+is deferred by the user. Imported planning LEGAL_REVIEW_REQUIRED remains.
+No release/version/tag is activated. See [power scope](ANALOG_POWER_V1.md).
+
 ## RUNTIME-CONFIG-01 continuation overlay, 2026-10-06
 
 After #122, the user defers Claude actual-client work and authorizes next

@@ -95,6 +95,12 @@ from cadence_mcp_bridge.pdk_adapters import (
     PdkRejected,
     load_pdk_registry,
 )
+from cadence_mcp_bridge.power_measurements import (
+    PowerDescription,
+    PowerQuery,
+    PowerResult,
+    PowerSelection,
+)
 from cadence_mcp_bridge.registered_measurements import (
     MeasurementDescription,
     MeasurementList,
@@ -293,6 +299,8 @@ class DesignContractServer(MCPServer):
         for tool in tools:
             if tool.name in {
                 "cadence_runtime_info",
+                "cadence_describe_power_measurement",
+                "cadence_power_measurement_result",
                 "cadence_list_specifications",
                 "cadence_describe_specification",
                 "cadence_evaluate_specification",
@@ -367,6 +375,8 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_describe_power_measurement": "request",
+            "cadence_power_measurement_result": "request",
             "cadence_describe_specification": "request",
             "cadence_evaluate_specification": "request",
             "cadence_describe_analog_measurement": "request",
@@ -653,6 +663,35 @@ def create_server(service: CadenceService) -> MCPServer:
         request: AnalogQuery,
     ) -> Annotated[CallToolResult, AnalogResult]:
         return await _stable_result(service.analog_measurement_result(request))
+
+    @server.tool(
+        name="cadence_describe_power_measurement",
+        annotations=_READ_ONLY,
+        description="Describe the separate dc-supply-power-v1 reader for a registered power "
+        "metric and its unique qualified native DC source (registry v6/v7). Supply-rail power "
+        "excludes bias/input sources, which are reported separately. Returns the required "
+        "contract hash; no artifact availability check, extraction or simulation permission.",
+        structured_output=True,
+    )
+    async def cadence_describe_power_measurement(
+        request: PowerSelection,
+    ) -> Annotated[CallToolResult, PowerDescription]:
+        return await _stable_result(service.describe_power_measurement(request))
+
+    @server.tool(
+        name="cadence_power_measurement_result",
+        annotations=_READ_ONLY,
+        description="Read operator-extracted signed currents for the preserved admitted native "
+        "DC operation using the described power contract hash and registered power metric ID. "
+        "Reports W as sum(-V*I) for VDD/VSS, separate bias/input contributions, six-source "
+        "inventory and provenance. Only the reviewed reference extraction exists; other "
+        "operations fail closed. No new extraction, simulation, paths, formulas or target PASS.",
+        structured_output=True,
+    )
+    async def cadence_power_measurement_result(
+        request: PowerQuery,
+    ) -> Annotated[CallToolResult, PowerResult]:
+        return await _stable_result(service.power_measurement_result(request))
 
     @server.tool(
         name="cadence_list_measurements",

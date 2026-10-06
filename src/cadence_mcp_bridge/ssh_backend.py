@@ -27,6 +27,7 @@ from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import (
     AuthenticationError,
     BackendUnavailableError,
+    BridgeError,
     HostKeyError,
     InvalidInputError,
     OperationTimeoutError,
@@ -55,6 +56,7 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.power_measurements import REFERENCE_OPERATION, PowerExtraction
 from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
 from cadence_mcp_bridge.storage import CleanupOutcome, CleanupRequest, StorageSnapshot
@@ -454,6 +456,22 @@ class OpenSshBackend:
         if not isinstance(payload, dict):
             raise RemoteFailureError("Remote native diagnostic returned invalid data")
         return payload
+
+    async def power_extraction_result(self, operation_id: str) -> PowerExtraction:
+        if (operation_id != REFERENCE_OPERATION
+                or self._config.remote_root != "/home/buet/cds_work/.cadence_mcp"):
+            raise InvalidInputError("No reviewed power extraction for this operation or root")
+        runner = self._config.remote_root + "/phase-campaign/analog-power-v2/run.sh"
+        try:
+            output = await asyncio.to_thread(self._invoke_at_path, runner, "result")
+        except BridgeError as exc:
+            # Preserve the stable transport category, never send private helper
+            # traceback/path/license output through this measurement interface.
+            raise type(exc)("Power extraction result could not be read safely") from None
+        try:
+            return PowerExtraction.model_validate_json(output)
+        except ValueError:
+            raise RemoteFailureError("Remote power extraction failed closed validation") from None
 
     async def _invoke_json(self, command: _RunnerCommand, *arguments: str) -> dict[str, Any]:
         output = await asyncio.to_thread(self._invoke, command, *arguments)
