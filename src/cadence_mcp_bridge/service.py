@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal, Protocol, TypeVar, cast
 from uuid import RFC_4122, UUID, uuid4
 
+from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.actual_diagnostics import (
     COPY_SHA256,
     NETLIST_SHA256,
@@ -125,6 +126,7 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepSelection,
     RegisteredSweepPlanner,
 )
+from cadence_mcp_bridge.runtime_info import JournalSelection, LoadedCatalog, RuntimeInfo
 from cadence_mcp_bridge.specification_service import SpecificationSupervisor
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
@@ -158,6 +160,7 @@ from cadence_mcp_bridge.variable_contracts import (
     VariableList,
     VariableValuesRequest,
     VariableValuesResult,
+    canonical_digest,
 )
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
@@ -255,6 +258,25 @@ class CadenceService:
         self._designs = reference_measurement_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
         self._pdks = reference_pdk_registry() if pdks is None else pdks
+        self._runtime_info = RuntimeInfo(
+            bridge_version=__version__,
+            designs=LoadedCatalog(
+                source="builtin_reference" if designs is None else "operator_supplied",
+                schema_version=self._designs.schema_version,
+                entry_count=len(self._designs.designs),
+                semantic_sha256=canonical_digest(self._designs),
+            ),
+            pdks=LoadedCatalog(
+                source="builtin_reference" if pdks is None else "operator_supplied",
+                schema_version=self._pdks.schema_version,
+                entry_count=len(self._pdks.adapters),
+                semantic_sha256=canonical_digest(self._pdks),
+            ),
+            journals=JournalSelection(
+                analysis="platform_default" if analysis_journal is None else "operator_supplied",
+                sweep="package_relative_default" if sweep_journal is None else "operator_supplied",
+            ),
+        )
         self._analyses = AnalysisSupervisor(self, self._designs, analysis_journal, self._pdks)
         self._registered_measurements = MeasurementSupervisor(self._designs, self._analyses)
         self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
@@ -274,6 +296,9 @@ class CadenceService:
             self._sweeps,
             self._pdks,
         )
+
+    async def runtime_info(self) -> RuntimeInfo:
+        return self._runtime_info
 
     async def storage_summary(self) -> StorageSummary:
         return await self._storage.summary()

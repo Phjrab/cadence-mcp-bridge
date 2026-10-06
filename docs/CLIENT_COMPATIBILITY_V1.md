@@ -1,5 +1,17 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## RUNTIME-CONFIG-01 / Claude deferral, 2026-10-06
+
+The user defers Claude actual-app work while development continues. Its status
+remains **CLAUDE_REAL_CLIENT_UNVERIFIED / DEFERRED_BY_USER**. Existing adapter and
+historical SDK/config evidence remain intact. No installation or human Claude
+action is required for this phase. Current server has 70 tools: one local runtime
+observation preserves all 69 prior schemas. Historical actual Codex evidence
+covers the preceding 69 names and five reads; it does not yet prove actual app
+exposure of the new tool. Full Codex app schema/version/lifecycle remains pending.
+Local SDK/installed protocol checks are separately scoped. See
+[runtime metadata](RUNTIME_CONFIGURATION_V1.md).
+
 ## Actual Codex read-only evidence, 2026-10-06
 
 [Direct application calls](CLIENT_REAL_QUAL_CODEX_READS_V1.md) now verify design
@@ -200,8 +212,9 @@ the remote guards and durable admissions remain authoritative, not tool hints.
    journals. Record config digests privately; install the reviewed bridge entry
    using each application's registration UI/config without unrelated edits.
 3. Fully restart each application. Record app version, time, server version,
-   registration status and observed tool inventory. Verify **69** names and complete schemas
-   against the [current reviewed snapshot](contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json). App UI availability alone is not tools/list.
+   registration status and observed tool inventory. Verify **70** names and complete schemas
+   against the preserved [69-tool snapshot](contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json)
+   plus the [additive runtime schema](contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json). App UI availability alone is not tools/list.
 4. In each app request `cadence_list_designs`, then `cadence_describe_design`
    for a listed ID and `cadence_design_pdk_status` for that ID. Compare structured
    results for the same configuration; they must not grant execution. Ask for

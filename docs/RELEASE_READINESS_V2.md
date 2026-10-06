@@ -1,5 +1,18 @@
 # Release readiness reassessment v2
 
+## RUNTIME-CONFIG-01 continuation overlay, 2026-10-06
+
+After #122, the user defers Claude actual-client work and authorizes next
+development. The current catalog has 70 tools; one local runtime observation
+preserves all 69 schemas qualified below. The historical readiness snapshot
+and gate evidence remain unchanged. The local contract gate now additionally
+requires the exact new runtime schema snapshot; it does not permit arbitrary
+extra tools. Actual Codex five-read/69-name evidence is preserved separately
+from SDK evidence and does not cover app exposure of the new tool. Claude stays
+DEFERRED_BY_USER / CLAUDE_REAL_CLIENT_UNVERIFIED. Candidate/version/publication
+and imported planning LEGAL_REVIEW_REQUIRED gates remain; no release is issued.
+See [runtime observation](RUNTIME_CONFIGURATION_V1.md).
+
 Current application follow-up: [CLIENT-REAL-QUAL-01 checkpoint](CLIENT_REAL_QUAL_01_CHECKPOINT_V1.md)
 records a callable Windows helper but prohibited control of the returned
 ChatGPT-branded Codex UI and no targetable Claude app. The phase is BLOCKED;

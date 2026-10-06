@@ -1,5 +1,14 @@
 # Architecture
 
+## Connected-server configuration observation
+
+RUNTIME-CONFIG-01 adds one local read-only tool, `cadence_runtime_info` (70 tools
+total, all preceding 69 schemas exact). It observes frozen service-startup
+catalogs and default/operator journal selection without filesystem or backend
+calls. It neither loads an environment execution selector nor changes any
+execution/admission/replay route. CLI `doctor` and remote `cadence_health` retain
+their separate roles. See [runtime contract](RUNTIME_CONFIGURATION_V1.md).
+
 ## Specification layer, 2026-10-06
 
 Operator registry v7 adds goal contracts around registered analog results.

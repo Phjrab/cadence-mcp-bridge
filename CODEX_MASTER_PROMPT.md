@@ -1,5 +1,15 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+> **Active 2026-10-06 RUNTIME-CONFIG-01 overlay:** The user defers Claude
+> actual-client qualification and authorizes next development after merged #122.
+> Preserve partial Codex direct-call evidence; CLIENT-REAL-QUAL-01 stays incomplete.
+> Add one path-free local runtime-info tool showing the loaded catalog versions,
+> counts/semantic digests and journal selection. No new transport/execution route,
+> environment qualification, journal-health assertion, configuration write,
+> simulation, deployment, deletion, optimization or publication. Preserve old
+> 69 full schemas, v1-v7 contracts, prior private evidence and consumed budgets.
+> Complete one reviewed feature PR and verify main; report once at the boundary.
+
 > **CLIENT-REAL-QUAL-01 actual Codex evidence, 2026-10-06:** After the human
 > registration handoff, the active Codex agent's actual bridge tools perform
 > design/PDK discovery and preserved native DC status/result reads. Five calls

@@ -138,9 +138,24 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 69 or not baseline_names.issubset(names):
+            if len(names) != 70 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
+            runtime = await client.call_tool("cadence_runtime_info")
+            if (
+                runtime.is_error
+                or runtime.structured_content is None
+                or runtime.structured_content["bridge_version"] != expected_version
+                or runtime.structured_content["designs"]["source"] != "operator_supplied"
+                or runtime.structured_content["designs"]["schema_version"] != 7
+                or runtime.structured_content["pdks"]["source"] != "operator_supplied"
+                or runtime.structured_content["journals"]["analysis"] != "operator_supplied"
+                or runtime.structured_content["journals"]["health_assessed"]
+                or runtime.structured_content["remote_contact"]
+                or journal.exists()
+                or str(workspace) in json.dumps(runtime.structured_content)
+            ):
+                raise ValueError("installed runtime metadata leaked paths or misreported loading")
             specifications = await client.call_tool(
                 "cadence_list_specifications", {"design_id": "example-amplifier"}
             )

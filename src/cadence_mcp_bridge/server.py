@@ -108,6 +108,7 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepRequest,
     DesignSweepSelection,
 )
+from cadence_mcp_bridge.runtime_info import RuntimeInfo
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
@@ -291,6 +292,7 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in {
+                "cadence_runtime_info",
                 "cadence_list_specifications",
                 "cadence_describe_specification",
                 "cadence_evaluate_specification",
@@ -335,8 +337,14 @@ class DesignContractServer(MCPServer):
         arguments: dict[str, Any],
         context: Context[Any, Any] | None = None,
     ) -> CallToolResult | InputRequiredResult:
+        if name == "cadence_runtime_info" and arguments:
+            raise ToolError("Runtime information accepts no arguments")
         if (
-            name in {"cadence_list_designs", "cadence_list_pdk_adapters", "cadence_storage_summary"}
+            name in {
+                "cadence_list_designs",
+                "cadence_list_pdk_adapters",
+                "cadence_storage_summary",
+            }
             and arguments
         ):
             raise ToolError("Design listing accepts no arguments")
@@ -403,6 +411,18 @@ def create_server(service: CadenceService) -> MCPServer:
         version=__version__,
         log_level="WARNING",
     )
+
+    @server.tool(
+        name="cadence_runtime_info",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Inspect the running bridge version, loaded design/PDK catalog versions, "
+        "counts and semantic hashes, and default/operator journal selection. Local only; "
+        "no paths, contents, remote contact or writes. Does not assess journal health, "
+        "environment qualification or execution authority. Takes no arguments.",
+    )
+    async def cadence_runtime_info() -> Annotated[CallToolResult, RuntimeInfo]:
+        return await _stable_result(service.runtime_info())
 
     @server.tool(
         name="cadence_storage_summary",

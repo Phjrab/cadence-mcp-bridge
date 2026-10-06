@@ -275,6 +275,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
 
     tools = {tool.name: tool for tool in listing.tools}
     assert set(tools) == {
+        "cadence_runtime_info",
         "cadence_list_specifications",
         "cadence_describe_specification",
         "cadence_evaluate_specification",
@@ -389,6 +390,7 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.read_only_hint
     }
     assert read_only == {
+        "cadence_runtime_info",
         "cadence_list_specifications",
         "cadence_describe_specification",
         "cadence_evaluate_specification",
