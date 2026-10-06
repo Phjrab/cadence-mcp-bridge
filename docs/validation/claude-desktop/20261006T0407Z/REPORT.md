@@ -1,9 +1,42 @@
 # CLIENT-REAL-QUAL-01: Claude Desktop actual tool calls (run 20261006T0407Z)
 
-Observed: 2026-10-06, 04:07–04:13 UTC (13:07–13:13 KST), from the local clock.
-Status: **pre-restart checkpoint, partial.** Machine-readable results are in
-[RESULTS.json](RESULTS.json) and the evidence map is in
-[EVIDENCE_INDEX.json](EVIDENCE_INDEX.json).
+Observed: 2026-10-06, 04:07–04:20 UTC (13:07–13:20 KST), from the local clock.
+
+**Status:** pre-restart. Existing-result reads are verified; restart is pending.
+RESULTS.json and EVIDENCE_INDEX.json describe the latest state.
+
+[RESULTS.json](RESULTS.json) holds the machine-readable results.
+[EVIDENCE_INDEX.json](EVIDENCE_INDEX.json) holds the evidence map.
+
+## Update 04:13–04:20 UTC: existing admitted result reads
+
+The user supplied existing completed operation IDs in chat (aliases DC_OP_1,
+AC_OP_1, TRAN_OP_1) and one completed sweep ID (SWEEP_OP_1). Nothing was
+generated or enumerated. The supplied note asked to load an earlier admission
+journal; that was **not** done, because changing the live configuration is
+outside this run's scope. The analysis journal already resolved all three
+operations.
+
+| Case | Status | Verified scope |
+| --- | --- | --- |
+| C04 native DC | PASS | Succeeded, quality valid, fixed NN/27 C/VDD 1 V/applied bias conditions, 7 V scalars, per-result protected flag true, `not_evaluated` |
+| C05 native AC/TRAN | PASS | Both valid. AC has a 72-point differential spectrum (10 Hz–100 MHz). TRAN has a bounded 754-point summary with verified stimulus. Design identity is shared across the three analyses |
+| C06 measurements | PASS | dc-scalars / ac-spectrum / tran-summary results via contract hashes, full provenance, frames equal to the analysis reads |
+| C07 analog | PASS | Gain QUALIFIED at **10 Hz** (not DC/max). Bandwidth **PARTIALLY_QUALIFIED** (no error bound). Phase margin and legacy analog-power v1 UNQUALIFIED with reasons, value null |
+| C08 power | PASS | `dc-supply-power-v1` QUALIFIED. Six signed sources; rail power separate from bias/input. Value equal to the repository-recorded preserved reference. Same DC identity as C04 |
+| C10 sweep | BLOCKED | `Unknown registered sweep admission`. The live registration uses the package-relative default sweep journal. Configuration was not changed |
+| C13 repeat | PASS (reads) | Repeat DC result and power result identical (returned hash strings equal). Counter invariance not measured |
+
+The new power reader and the legacy analog-power v1 give **different, documented**
+answers for the same DC operation: QUALIFIED versus UNQUALIFIED. This is the
+intended contract split. The tool outside the reviewed inventory,
+`cadence_bandwidth_study_result`, was still not called. No measurement values,
+spectra, currents or result hashes are published here.
+
+## Initial checkpoint (04:07–04:13 UTC, preserved)
+
+The section below is the first checkpoint (commit `cc0b661`), kept unchanged.
+Its C04–C08, C10 and C13 rows are superseded by the update above.
 
 ## Client and execution mode
 
@@ -110,27 +143,37 @@ local file outside the repository.
 
 ## Compatibility status
 
-`CLAUDE_DESKTOP_CODE_TAB_LOCAL_READS_PARTIAL`: Claude Desktop (Code tab) verified
-design discovery, the catalog, the power-reader description, targetless v2
-specification evaluation, storage reads and bounded rejection/recovery.
-The following remain NOT_TESTED:
+The first checkpoint recorded `CLAUDE_DESKTOP_CODE_TAB_LOCAL_READS_PARTIAL`.
 
-- existing native DC/AC/TRAN, power and sweep result reads
+The current status is `CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_VERIFIED_RESTART_PENDING`.
+Claude Desktop (Code tab) verified the following:
+
+- design discovery and catalog
+- existing native DC/AC/TRAN reads
+- registered measurement reads
+- analog gain/bandwidth/unqualified states
+- the dedicated DC power reader
+- targetless v2 specification evaluation
+- storage reads
+- repeated reads
+- bounded rejection and recovery
+
+The sweep read is BLOCKED by the configuration. The following remain NOT_TESTED:
+
 - restart
 - full schema and protocol
 - new job lifecycle
 - Desktop chat mode
 
-The repository-level `CLAUDE_REAL_CLIENT_UNVERIFIED` gate is narrowed for the
-verified reads only. It is not cleared.
+The tested server was an unreviewed local working tree. The repository-level
+`CLAUDE_REAL_CLIENT_UNVERIFIED` gate is narrowed for these reads only, not cleared.
 
 ## Follow-up
 
-1. Provide existing admitted completed DC/AC/TRAN (and optional sweep) operation
-   IDs from private evidence. Then rerun C04–C08, C10 and C13 as reads only.
-2. Quit and relaunch Claude Desktop, then repeat runtime/design/native/power
-   reads with the same IDs for C14.
-3. Repeat against a reviewed build, either main or an installed wheel with an
-   attested digest. The current run used an unreviewed local working tree.
-4. Optionally set an explicit sweep journal in the Claude registration, without
-   migrating or resetting any ledger.
+1. Quit and relaunch Claude Desktop, then repeat runtime/design/native/power
+   reads with the same IDs for C14. Append the results to this report with a date.
+2. Repeat against a reviewed build, either main or an installed wheel with an
+   attested digest.
+3. For C10, the operator sets an explicit historical sweep journal in the Claude
+   registration, then restarts and re-reads. No ledger is migrated, reset or
+   replaced.

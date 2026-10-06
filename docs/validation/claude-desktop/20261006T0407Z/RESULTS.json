@@ -2,12 +2,17 @@
   "schema_version": 1,
   "run_id": "20261006T0407Z",
   "task": "CLIENT-REAL-QUAL-01 / Claude Desktop actual tool-call verification",
-  "phase": "pre_restart_checkpoint",
+  "phase": "pre_restart_checkpoint_with_existing_result_reads",
   "observed_window": {
     "start": "2026-10-06T04:07:22Z",
-    "end": "2026-10-06T04:13:13Z",
-    "source": "local system clock read through the host shell tool"
+    "end": "2026-10-06T04:20:40Z",
+    "source": "local system clock read through the host shell tool",
+    "segments": [
+      "04:07-04:13Z local/catalog/storage reads (checkpoint commit cc0b661)",
+      "04:13-04:20Z existing result reads with user-supplied admitted IDs"
+    ]
   },
+  "operation_id_source": "User supplied existing completed DC/AC/TRAN operation IDs and one completed sweep ID in chat; none were generated, guessed or enumerated. Real IDs are private (aliases DC_OP_1, AC_OP_1, TRAN_OP_1, SWEEP_OP_1).",
   "client": {
     "app_name": "Claude Desktop",
     "app_package_version": "2.19675.1.0",
@@ -92,52 +97,52 @@
     {
       "case_id": "C04",
       "title": "Existing native DC read",
-      "status": "NOT_TESTED",
-      "evidence_origin": "NOT_OBSERVED",
-      "tools_called": [],
-      "observed": "No admitted operation ID available: no connected read tool returns existing operation UUIDs (storage inventory job_id fields are null) and none was supplied for this run.",
-      "expected_vs_actual": "IDs were not generated, guessed or enumerated; no submission was made.",
-      "not_verified": "Remote native DC status/result through the app."
+      "status": "PASS",
+      "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
+      "tools_called": ["cadence_analysis_status", "cadence_analysis_result"],
+      "observed": "DC_OP_1 is found in the live analysis journal. state/stage/simulator/extraction are succeeded and the last update is 2026-09-30. The bounded result has quality valid, the fixed NN / 27 C / VDD 1 V / applied bias 0.32/0.702 V settings, 7 scalar records in V, protected_unchanged=true, source-copy signature equal, 2 historical warnings, 0 notices and spec_evaluation not_evaluated.",
+      "expected_vs_actual": "Units and fixed conditions match the registered native-dc contract. The returned plan hash equals the hash from list_analyses. No baseline result hash was supplied, so equality with earlier private evidence is not claimed beyond the power value check in C08.",
+      "not_verified": "Equality with an independently held baseline frame hash; a fresh blanket guest fingerprint check (the protected flag is per-result)."
     },
     {
       "case_id": "C05",
       "title": "Existing native AC / TRAN reads",
-      "status": "NOT_TESTED",
-      "evidence_origin": "NOT_OBSERVED",
-      "tools_called": [],
-      "observed": "Same blocker as C04.",
-      "expected_vs_actual": null,
-      "not_verified": "Remote native AC and TRAN reads."
+      "status": "PASS",
+      "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
+      "tools_called": ["cadence_analysis_status", "cadence_analysis_result"],
+      "observed": "AC_OP_1 and TRAN_OP_1 both succeeded with quality valid and the same fixed settings. AC returned a 72-point differential spectrum from 10 Hz to 100 MHz in Hz, V/V, dB and deg. TRAN returned a bounded summary: 754 adaptive points over 0-4 ms, stimulus_verified=true, no FFT. Source, model and circuit identities are the same across DC/AC/TRAN, while input, PSF and frame identities are analysis-specific.",
+      "expected_vs_actual": "Matches the registered AC/TRAN contracts. Raw values are not published.",
+      "not_verified": "Equality with independently held baseline hashes."
     },
     {
       "case_id": "C06",
       "title": "Registered measurement reads",
-      "status": "PARTIAL",
+      "status": "PASS",
       "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
-      "tools_called": ["cadence_list_measurements", "cadence_describe_measurement"],
-      "observed": "Definitions, units, source analysis binding, admitted-completed-only source policy and read eligibility observed.",
-      "expected_vs_actual": null,
-      "not_verified": "cadence_measurement_result against an admitted operation (no operation ID)."
+      "tools_called": ["cadence_measurement_result"],
+      "observed": "dc-scalars on DC_OP_1, ac-spectrum on AC_OP_1 and tran-summary on TRAN_OP_1 each returned quality valid with full provenance: plan, contract and definition hashes, reader native-bounded-result-v1 and per-result protected_unchanged=true. Measurement frames equal those of the corresponding analysis_result reads.",
+      "expected_vs_actual": "Every read used the described contract hash; no new extraction occurred.",
+      "not_verified": "Local SDK comparison (none run)."
     },
     {
       "case_id": "C07",
       "title": "Analog gain / bandwidth / missing metrics",
-      "status": "PARTIAL",
+      "status": "PASS",
       "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
-      "tools_called": ["cadence_list_analog_measurements", "cadence_describe_analog_measurement"],
-      "observed": "Gain is defined as differential gain at the first measured AC frequency (10 Hz), explicitly not DC, maximum or closed-loop gain. Bandwidth is a bracketed sampled-reference estimate without DC-plateau or interpolation-error qualification. Phase margin, offset, slew rate and legacy analog power are not read-eligible, each with a stated blocking reason.",
-      "expected_vs_actual": "Definitions preserve the documented scope; no metric is relabelled. No numeric target exists, so no design PASS/FAIL is produced.",
-      "not_verified": "cadence_analog_measurement_result values; the extra cadence_bandwidth_study_result is exposed but untested and outside the reviewed inventory."
+      "tools_called": ["cadence_describe_analog_measurement", "cadence_analog_measurement_result"],
+      "observed": "analog-gain on AC_OP_1 is QUALIFIED at reference_frequency 10 Hz, unit dB, and is not relabelled as DC or maximum gain. analog-bandwidth on AC_OP_1 is PARTIALLY_QUALIFIED (sampled_reference_log_frequency_interpolation_no_error_bound) with a finite crossing bracket. analog-phase-margin is UNQUALIFIED (qualified_loop_gain_measurement_unavailable) and legacy analog-power v1 on DC_OP_1 is UNQUALIFIED (qualified_signed_supply_current_set_unavailable). Both return value null.",
+      "expected_vs_actual": "Contract-compliant states. UNQUALIFIED does not mean the quantity is measurable. No target exists, so no design PASS/FAIL is produced.",
+      "not_verified": "Offset and slew rate results (definitions already non-eligible). The extra cadence_bandwidth_study_result was not called because it is outside the reviewed inventory."
     },
     {
       "case_id": "C08",
       "title": "Dedicated power path",
-      "status": "PARTIAL",
+      "status": "PASS",
       "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
-      "tools_called": ["cadence_describe_power_measurement", "cadence_measurement_catalog"],
-      "observed": "Signed DC power reader dc-supply-power-v1 (unit W, supply rails only, bias/input reported separately, preserved reference native DC only) is bound to the dc-scalars source and carries its own contract hash, distinct from the legacy analog-power v1 hash, which remains read_eligible=false. artifact_availability_assessed, extraction_authorized and execution_authorized are false. Repository source at main reads only a pinned preserved extraction and fails closed for other operations.",
-      "expected_vs_actual": "Separation between the new power reader and legacy analog power v1 matches the documented contract and is not a compatibility failure.",
-      "not_verified": "cadence_power_measurement_result against the preserved admitted DC operation (no operation ID)."
+      "tools_called": ["cadence_describe_power_measurement", "cadence_measurement_catalog", "cadence_power_measurement_result"],
+      "observed": "The dc-supply-power-v1 reader was called on DC_OP_1 with its own described contract hash. It returned QUALIFIED in W with all six signed sources (2 supply, 2 bias, 2 stimulus), supply-rail power separate from the bias/input contributions, and extraction, frame and provenance hashes. Its provenance plan, source and frame identities equal the C04 DC result.",
+      "expected_vs_actual": "The supply-rail value equals the repository-recorded preserved reference value for this operating point (docs/MEASUREMENT_BINDINGS_V2.md). The legacy analog-power v1 stays UNQUALIFIED on the same operation (C07). This split is the documented contract, not a failure.",
+      "not_verified": "Any other operation or condition; the reader is qualified for the preserved reference DC only."
     },
     {
       "case_id": "C09",
@@ -152,12 +157,12 @@
     {
       "case_id": "C10",
       "title": "Preserved sweep read",
-      "status": "NOT_TESTED",
-      "evidence_origin": "NOT_OBSERVED",
-      "tools_called": [],
-      "observed": "No admitted sweep identity available.",
-      "expected_vs_actual": null,
-      "not_verified": "Sweep status/result."
+      "status": "BLOCKED",
+      "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
+      "tools_called": ["cadence_design_sweep_status"],
+      "observed": "For the user-supplied completed SWEEP_OP_1 on DESIGN_B, the server returned bounded invalid_input 'Unknown registered sweep admission'. The live registration selects the package-relative default sweep journal (C01), not an explicitly configured historical sweep journal.",
+      "expected_vs_actual": "This is consistent with a configuration mismatch, not a server failure. The journal setting was not changed, replaced or reloaded, because that is outside this run's scope. No other sweep IDs or tools were tried.",
+      "not_verified": "Sweep status/result content. It requires an operator-approved explicit sweep journal in the Claude registration plus a restart."
     },
     {
       "case_id": "C11",
@@ -184,10 +189,10 @@
       "title": "Repeated read",
       "status": "PARTIAL",
       "evidence_origin": "CLAUDE_DESKTOP_TOOL_EVENT",
-      "tools_called": ["cadence_runtime_info_v2", "cadence_list_designs"],
-      "observed": "Repeated local runtime and design reads returned identical content, including semantic hash strings (direct string comparison of returned values).",
-      "expected_vs_actual": null,
-      "not_verified": "Repeat of an existing remote result read (no operation ID); counter invariance across reads (storage summary taken once)."
+      "tools_called": ["cadence_runtime_info_v2", "cadence_list_designs", "cadence_analysis_result", "cadence_power_measurement_result"],
+      "observed": "Repeated local runtime/design reads and repeated remote DC_OP_1 analysis_result and power_measurement_result calls returned identical content. This was a direct string comparison of the returned values, including frame, native-result and extraction hashes.",
+      "expected_vs_actual": "Stable results across repeat; no hash was computed by the agent.",
+      "not_verified": "Counter invariance across reads (storage summary taken once, before the result reads)."
     },
     {
       "case_id": "C14",
@@ -205,9 +210,9 @@
     "new_admission_or_target_registration": 0,
     "extraction_deployment_cleanup_deletion": 0,
     "write_tools_called": 0,
-    "remote_contact": "Storage summary/list read registered result roots on the configured host; other calls were local per their contracts",
+    "remote_contact": "Storage summary/list and the existing-result reads (analysis status/result, measurement, analog and power results) contact the configured host to read preserved results; catalog/design/runtime calls are local per their contracts",
     "management_side_effects": "Normal logs or inventory snapshots may have been produced by read calls; filesystem writes are not claimed to be zero"
   },
-  "summary": "Claude Desktop (Code tab) verified design discovery, catalog, power-reader description, targetless v2 specification, storage reads and bounded rejection/recovery. Existing native DC/AC/TRAN/power/sweep result reads NOT_TESTED (no admitted operation ID). Restart NOT_TESTED; full schema, protocol and new job lifecycle NOT_TESTED. Desktop chat mode not exercised.",
-  "compatibility_status": "CLAUDE_DESKTOP_CODE_TAB_LOCAL_READS_PARTIAL"
+  "summary": "Claude Desktop (Code tab) verified design discovery, catalog, existing native DC/AC/TRAN reads, registered measurements, analog gain/bandwidth states, dedicated DC power reader, targetless v2 specification, storage reads, repeated reads and bounded rejection/recovery. Sweep read BLOCKED by the default sweep journal selection. Restart NOT_TESTED; full schema, protocol and new job lifecycle NOT_TESTED. Desktop chat mode not exercised.",
+  "compatibility_status": "CLAUDE_DESKTOP_CODE_TAB_EXISTING_READS_VERIFIED_RESTART_PENDING"
 }

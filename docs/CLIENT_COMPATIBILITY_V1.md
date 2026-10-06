@@ -9,14 +9,20 @@ in the Desktop configuration) verified the following:
 - runtime v2 observation
 - design list/describe/PDK status
 - catalog and analog/power definitions
+- reads of existing user-supplied admitted native DC/AC/TRAN results
+- registered measurement results
+- analog gain (QUALIFIED, 10 Hz) and bandwidth (PARTIALLY_QUALIFIED)
+- the dedicated DC power reader (QUALIFIED; legacy analog power v1 stays UNQUALIFIED)
 - targetless v2 specification evaluation (NOT_EVALUATED)
 - storage summary/list
+- repeated reads
 - two bounded unregistered-ID rejections followed by recovery
+
+The sweep read was BLOCKED by the default sweep-journal selection; the
+configuration was left unchanged.
 
 Not tested:
 
-- existing native DC/AC/TRAN, power and sweep result reads (no admitted ID was
-  available)
 - restart
 - full schema and protocol
 - the Desktop chat surface
