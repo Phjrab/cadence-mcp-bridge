@@ -1,5 +1,30 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## RELEASE-READINESS-03 completion gate
+
+Current assessment/result v3 records scope-specific conditional/blocked states.
+Full 2,234 PASS / 5 OS skips / 56 warnings, static/security/contract85/package
+gates PASS; exact candidate archive/install/review/remote integration receipts
+are required before completion. No simulation/reservation/deployment/deletion
+or publication; shared ledger and protected evidence remain exact. Report and
+stop after normal reviewed PR integration; ask once before the next phase.
+
+## Active RELEASE-READINESS-03
+
+User continuation after reviewed SPEC PR134 activates one scoped release
+reassessment from61e7b1f. Audit current85 schemas/v1–v8/version/scientific/client/
+license boundaries, actual curated builds/install and exact local/hosted archives.
+Runtime/MCP/remote code and all historical policy/ledger/protected evidence stay
+identical. No new simulation/reservation/deployment/deletion/app config/target,
+version bump/tag/release/index/MCPB or old release-body edit. Claude/other hosts/
+versions/PDKs deferred. Scope-specific CONDITIONAL/BLOCKED states, imported rights
+LEGAL_REVIEW_REQUIRED and PUBLICATION_NOT_AUTHORIZED remain explicit. Preserve
+whole live checkpoint82/9,798,942,720,1920 prior private hashes and local changes.
+Complete canonical gates, exact candidate review/normal feature PR merge/remote
+verification, report and stop; ask once before another major phase. Prior phase
+completion/activation overlays below are preserved history.
+
+
 ## SPEC-REAL-EVAL-01 completion gate
 
 Actual six admitted finite-grid gain/power facts now bind to the reused exact
