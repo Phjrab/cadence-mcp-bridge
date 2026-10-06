@@ -18,7 +18,7 @@ Claude Desktop is `CLAUDE_CONFIG_PREPARED` / `CLAUDE_REAL_CLIENT_UNVERIFIED`;
 configuration and SDK tests do not prove real desktop execution. The current
 Codex adapter passes protocol regression. Actual Codex discovery and preserved
 native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the three additions in the live app remain unverified.
+schema/version/lifecycle and the six additions in the live app remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 
@@ -31,6 +31,10 @@ Use it after client registration to detect a default v4 catalog instead of an
 intended operator v7 catalog. It does not check journal health, license entitlement,
 environment qualification or execution authority. See the
 [runtime observation guide](docs/RUNTIME_CONFIGURATION_V1.md).
+
+Operator registry v8 uses `cadence_runtime_info_v2` (observation version 2).
+The original observation retains its v1-v7 schema and returns a bounded v2
+handoff for v8; it never reports a false catalog version.
 
 Claude actual-app testing is deferred by the user and remains
 `CLAUDE_REAL_CLIENT_UNVERIFIED`; its existing configuration adapter is preserved.
@@ -114,8 +118,16 @@ VDD/VSS rail power; bias/input-source contributions are reported separately.
 Six-source inventory, effective voltage, signed current, independent OP-field
 comparison and source/frame provenance are verified. It reuses operator v6/v7
 registration and existing admission. MCP never initiates extraction or simulation.
-Other designs/jobs and v7 goal evaluation of this new definition remain unqualified.
+Other designs/jobs remain unqualified; original v7 goals keep their original bindings.
 See [power scope and workflow](docs/ANALOG_POWER_V1.md).
+
+MEAS-CONTRACT-02 connects that existing power reader to a bounded
+`cadence_measurement_catalog` and operator registry v8 power goals.
+`cadence_evaluate_specification_v2` reuses the existing conditions/comparator
+and returns the versioned signed-power result without changing old definitions.
+The reference has no numerical target and remains NOT_EVALUATED. No additional
+simulation or wider scientific qualification follows. See
+[measurement binding workflow](docs/MEASUREMENT_BINDINGS_V2.md).
 
 SPEC-CONTRACT-01 adds operator registry v7 and three read-only specification
 tools. Goals bind exact measurement definitions, units and effective conditions.
@@ -163,7 +175,7 @@ be deleted; historical results remain protected. See the
 | Status | Scope |
 | --- | --- |
 | Validated | Registered reference MCP lifecycle/native DC/AC/TRAN, fixed candidate, PVT and diagnostics; bounded fixture sweep; environment contract/CLI tests and actual permission rejection; design/variable introspection and numeric checking; registered fixed-native results/replay across stdio restart; v1/v2 compatibility; PDK catalog inspection/resolution and missing-adapter denial; joined onboarding contracts, exported TOML/JSON and actual stdio from those settings; registered native measurement values/provenance/restart; registered RC fixture lifecycle/replay/restart through the existing engine |
-| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1–v7 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
+| Supported by contract | Operator-only environment preflight, joined local verification/client export, v1–v8 design registration and logical PDK registry v2; bound numeric reviews; exact compiled reference and durable admission; bounded inputs and protected source; unqualified designs/PDKs cannot execute |
 | Experimental | Successful preflight on other approved installations; positive observation paths have fixtures, but no second Cadence installation is qualified |
 | Planned | Execution of newly onboarded environments/designs/PDKs through qualified physical bindings; parameterized real-design sweep, additional qualified measurements, native live cancellation and a new public release after remaining gates |
 
@@ -239,8 +251,9 @@ operator checkout.
 
 ## Current MCP interface
 
-The server has 72 typed tools; all previous 70 full schemas are preserved.
-Two additive power interfaces describe and read the reviewed reference extraction.
+The server has 75 typed tools; all previous 72 full schemas are preserved.
+Three additions provide measurement discovery, v2 specification evaluation and
+v2 runtime observation. The separate power readers retain their original schemas.
 One additive local `cadence_runtime_info` interface inspects loaded configuration.
 Three additive read-only specification interfaces list, describe and evaluate
 operator-owned exact-condition goals. No goal is invented for the reference.

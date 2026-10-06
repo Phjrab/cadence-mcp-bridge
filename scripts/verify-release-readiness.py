@@ -19,6 +19,7 @@ from cadence_mcp_bridge.designs import (
     DesignMeasurementRegistry,
     DesignRegistry,
 )
+from cadence_mcp_bridge.measurement_bindings import DesignPowerSpecificationRegistry
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.specification_registry import DesignSpecificationRegistry
@@ -104,13 +105,26 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     snapshot = read_json(project / "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json")
     addition = read_json(project / "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json")
     power_addition = read_json(project / "docs/contracts/MCP_POWER_V1_SNAPSHOT.json")
+    binding_addition = read_json(project / "docs/contracts/MCP_MEAS_CONTRACT_V2_SNAPSHOT.json")
+    if (
+        type(binding_addition.get("schema_version")) is not int
+        or binding_addition.get("schema_version") != 1
+        or binding_addition.get("source_main") != "0e85a12804d550279a9da0c5ebe9f92acabcc62e"
+        or set(binding_addition.get("tools", {}))
+        != {
+            "cadence_measurement_catalog",
+            "cadence_evaluate_specification_v2",
+            "cadence_runtime_info_v2",
+        }
+        or any(schemas.get(n) != t for n, t in binding_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed versioned measurement binding schema drift")
     if (
         type(power_addition.get("schema_version")) is not int
         or power_addition.get("schema_version") != 1
         or power_addition.get("source_main") != "8009060edc076ccacb371c45d8f8fb3a335b150f"
-        or set(power_addition.get("tools", {})) != {
-            "cadence_describe_power_measurement", "cadence_power_measurement_result"
-        }
+        or set(power_addition.get("tools", {}))
+        != {"cadence_describe_power_measurement", "cadence_power_measurement_result"}
         or any(schemas.get(n) != t for n, t in power_addition["tools"].items())
     ):
         raise ValueError("unreviewed power schema drift")
@@ -139,7 +153,12 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or not isinstance(addition.get("tools"), dict)
         or set(addition["tools"]) != {"cadence_runtime_info"}
         or set(schemas)
-        != set(snapshot["tools"]) | set(addition["tools"]) | set(power_addition["tools"])
+        != (
+            set(snapshot["tools"])
+            | set(addition["tools"])
+            | set(power_addition["tools"])
+            | set(binding_addition["tools"])
+        )
         or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
     ):
         raise ValueError("unreviewed additive tool or runtime metadata schema drift")
@@ -165,6 +184,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         DesignSweepRegistry,
         DesignAnalogRegistry,
         DesignSpecificationRegistry,
+        DesignPowerSpecificationRegistry,
     )
     for version, model in enumerate(registry_models, 1):
         if read_json(project / f"docs/schemas/design-registry-v{version}.schema.json") != (
@@ -206,6 +226,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         "legacy_declarations_preserved": 22,
         "legacy_models_preserved": 2,
         "registry_schemas_preserved": 7,
+        "registry_schemas": 8,
         "package_version": __version__,
         "license": "Apache-2.0",
         "conditional_semver_recommendation": "v1.1.0",

@@ -1,0 +1,2381 @@
+{
+  "schema_version": 1,
+  "source_main": "0e85a12804d550279a9da0c5ebe9f92acabcc62e",
+  "tools": {
+    "cadence_runtime_info_v2": {
+      "name": "cadence_runtime_info_v2",
+      "title": null,
+      "description": "Observe loaded local catalog versions (including v8), semantic hashes and journal selection. No paths, health assessment, remote contact or execution authority.",
+      "inputSchema": {
+        "properties": {},
+        "title": "cadence_runtime_info_v2Arguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "JournalSelection": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "enum": [
+                  "platform_default",
+                  "operator_supplied"
+                ],
+                "title": "Analysis",
+                "type": "string"
+              },
+              "sweep": {
+                "enum": [
+                  "package_relative_default",
+                  "operator_supplied"
+                ],
+                "title": "Sweep",
+                "type": "string"
+              },
+              "health_assessed": {
+                "const": false,
+                "default": false,
+                "title": "Health Assessed",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "analysis",
+              "sweep"
+            ],
+            "title": "JournalSelection",
+            "type": "object"
+          },
+          "LoadedCatalogV2": {
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "enum": [
+                  "builtin_reference",
+                  "operator_supplied"
+                ],
+                "title": "Source",
+                "type": "string"
+              },
+              "schema_version": {
+                "maximum": 8,
+                "minimum": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "entry_count": {
+                "maximum": 16,
+                "minimum": 0,
+                "title": "Entry Count",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "schema_version",
+              "entry_count",
+              "semantic_sha256"
+            ],
+            "title": "LoadedCatalogV2",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "bridge_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Bridge Version",
+            "type": "string"
+          },
+          "transport": {
+            "const": "stdio",
+            "default": "stdio",
+            "title": "Transport",
+            "type": "string"
+          },
+          "observation_scope": {
+            "const": "loaded_local_configuration",
+            "default": "loaded_local_configuration",
+            "title": "Observation Scope",
+            "type": "string"
+          },
+          "designs": {
+            "$ref": "#/$defs/LoadedCatalogV2"
+          },
+          "pdks": {
+            "$ref": "#/$defs/LoadedCatalogV2"
+          },
+          "journals": {
+            "$ref": "#/$defs/JournalSelection"
+          },
+          "remote_contact": {
+            "const": false,
+            "default": false,
+            "title": "Remote Contact",
+            "type": "boolean"
+          },
+          "execution_authority_assessed": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authority Assessed",
+            "type": "boolean"
+          },
+          "environment_qualification_assessed": {
+            "const": false,
+            "default": false,
+            "title": "Environment Qualification Assessed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bridge_version",
+          "designs",
+          "pdks",
+          "journals"
+        ],
+        "title": "RuntimeInfoV2",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_measurement_catalog": {
+      "name": "cadence_measurement_catalog",
+      "title": null,
+      "description": "Discover at most six registered analog definitions, one separate signed DC power reader and 32 versioned operator specifications for a registered design. Each reader has its own definition and contract hash; use its named result tool. Includes complete goal descriptions for v2 evaluation. Eligibility does not establish artifact availability or qualification. No registration, targets or simulation grant.",
+      "inputSchema": {
+        "properties": {
+          "design_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Design Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "design_id"
+        ],
+        "title": "cadence_measurement_catalogArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AnalogDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "metric": {
+                "enum": [
+                  "gain",
+                  "bandwidth",
+                  "phase-margin",
+                  "power",
+                  "offset",
+                  "slew-rate"
+                ],
+                "title": "Metric",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "meaning": {
+                "maxLength": 320,
+                "title": "Meaning",
+                "type": "string"
+              },
+              "method": {
+                "maxLength": 320,
+                "title": "Method",
+                "type": "string"
+              },
+              "source_output_id": {
+                "anyOf": [
+                  {
+                    "const": "ac-differential-spectrum-v1",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Output Id"
+              },
+              "evidence_class": {
+                "enum": [
+                  "IMPLEMENTABLE_FROM_EXISTING_EVIDENCE",
+                  "REQUIRES_EXTRACTION_WORK",
+                  "REQUIRES_STIMULUS_CHANGE",
+                  "REQUIRES_USER_SCIENTIFIC_INPUT",
+                  "UNQUALIFIED"
+                ],
+                "title": "Evidence Class",
+                "type": "string"
+              },
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "qualification_requirement": {
+                "maxLength": 320,
+                "title": "Qualification Requirement",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "unit",
+              "meaning",
+              "method",
+              "source_output_id",
+              "evidence_class",
+              "blocking_reason",
+              "qualification_requirement"
+            ],
+            "title": "AnalogDefinition",
+            "type": "object"
+          },
+          "AnalogDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "definition": {
+                "$ref": "#/$defs/AnalogDefinition"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "read_eligible": {
+                "title": "Read Eligible",
+                "type": "boolean"
+              },
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "definition",
+              "source_measurement_id",
+              "read_eligible",
+              "blocking_reason"
+            ],
+            "title": "AnalogDescription",
+            "type": "object"
+          },
+          "PowerDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "definition_id": {
+                "const": "dc-supply-power-v1",
+                "default": "dc-supply-power-v1",
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "unit": {
+                "const": "W",
+                "default": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "analysis": {
+                "const": "dc",
+                "default": "dc",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "meaning": {
+                "const": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "default": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "title": "Meaning",
+                "type": "string"
+              },
+              "current_convention": {
+                "const": "positive_into_source_positive_terminal_A",
+                "default": "positive_into_source_positive_terminal_A",
+                "title": "Current Convention",
+                "type": "string"
+              },
+              "voltage_convention": {
+                "const": "positive_minus_negative_terminal_V",
+                "default": "positive_minus_negative_terminal_V",
+                "title": "Voltage Convention",
+                "type": "string"
+              },
+              "method": {
+                "const": "sum_minus_voltage_times_signed_current_no_abs",
+                "default": "sum_minus_voltage_times_signed_current_no_abs",
+                "title": "Method",
+                "type": "string"
+              },
+              "scope": {
+                "const": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "default": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "title": "Scope",
+                "type": "string"
+              },
+              "qualification_scope": {
+                "const": "preserved_reference_native_dc_only",
+                "default": "preserved_reference_native_dc_only",
+                "title": "Qualification Scope",
+                "type": "string"
+              }
+            },
+            "title": "PowerDefinition",
+            "type": "object"
+          },
+          "PowerDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "definition": {
+                "$ref": "#/$defs/PowerDefinition"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "read_eligible": {
+                "title": "Read Eligible",
+                "type": "boolean"
+              },
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "const": "registered_native_dc_source_unavailable",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "artifact_availability_assessed": {
+                "const": false,
+                "default": false,
+                "title": "Artifact Availability Assessed",
+                "type": "boolean"
+              },
+              "extraction_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Extraction Authorized",
+                "type": "boolean"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "source_measurement_id",
+              "read_eligible",
+              "blocking_reason"
+            ],
+            "title": "PowerDescription",
+            "type": "object"
+          },
+          "PowerSpecificationContract": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 2,
+                "default": 2,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "comparison": {
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<",
+                  "range"
+                ],
+                "title": "Comparison",
+                "type": "string"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              },
+              "unit": {
+                "const": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "goal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Goal Id"
+              },
+              "conditions": {
+                "$ref": "#/$defs/SpecificationConditions"
+              }
+            },
+            "required": [
+              "spec_id",
+              "design_id",
+              "measurement_id",
+              "measurement_contract_sha256",
+              "definition_sha256",
+              "comparison",
+              "target",
+              "unit",
+              "goal_id",
+              "conditions"
+            ],
+            "title": "PowerSpecificationContract",
+            "type": "object"
+          },
+          "PowerSpecificationDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "contract": {
+                "$ref": "#/$defs/PowerSpecificationContract"
+              },
+              "contract_sha256": {
+                "pattern": "^[a-f0-9]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "target_status": {
+                "enum": [
+                  "registered",
+                  "not_selected"
+                ],
+                "title": "Target Status",
+                "type": "string"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contract",
+              "contract_sha256",
+              "target_status"
+            ],
+            "title": "PowerSpecificationDescription",
+            "type": "object"
+          },
+          "SpecificationConditions": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "corner": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Temperature C",
+                "type": "string"
+              },
+              "vdd_v": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "applied_bias_values_v": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "effective_settings_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Effective Settings Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis_id",
+              "analysis_plan_hash",
+              "revision_id",
+              "operating_point_id",
+              "corner",
+              "temperature_c",
+              "vdd_v",
+              "applied_bias_values_v",
+              "effective_settings_sha256"
+            ],
+            "title": "SpecificationConditions",
+            "type": "object"
+          },
+          "SpecificationContract": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "comparison": {
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<",
+                  "range"
+                ],
+                "title": "Comparison",
+                "type": "string"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "goal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Goal Id"
+              },
+              "conditions": {
+                "$ref": "#/$defs/SpecificationConditions"
+              }
+            },
+            "required": [
+              "spec_id",
+              "design_id",
+              "measurement_id",
+              "measurement_contract_sha256",
+              "definition_sha256",
+              "comparison",
+              "target",
+              "unit",
+              "goal_id",
+              "conditions"
+            ],
+            "title": "SpecificationContract",
+            "type": "object"
+          },
+          "SpecificationDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "contract": {
+                "$ref": "#/$defs/SpecificationContract"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "target_status": {
+                "enum": [
+                  "registered",
+                  "not_selected"
+                ],
+                "title": "Target Status",
+                "type": "string"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contract",
+              "contract_sha256",
+              "target_status"
+            ],
+            "title": "SpecificationDescription",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "design_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Design Id",
+            "type": "string"
+          },
+          "analog": {
+            "items": {
+              "$ref": "#/$defs/AnalogDescription"
+            },
+            "maxItems": 6,
+            "title": "Analog",
+            "type": "array"
+          },
+          "signed_dc_power": {
+            "items": {
+              "$ref": "#/$defs/PowerDescription"
+            },
+            "maxItems": 1,
+            "title": "Signed Dc Power",
+            "type": "array"
+          },
+          "specifications": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpecificationDescription"
+                },
+                {
+                  "$ref": "#/$defs/PowerSpecificationDescription"
+                }
+              ]
+            },
+            "maxItems": 32,
+            "title": "Specifications",
+            "type": "array"
+          },
+          "analog_result_tool": {
+            "const": "cadence_analog_measurement_result",
+            "default": "cadence_analog_measurement_result",
+            "title": "Analog Result Tool",
+            "type": "string"
+          },
+          "signed_dc_power_result_tool": {
+            "const": "cadence_power_measurement_result",
+            "default": "cadence_power_measurement_result",
+            "title": "Signed Dc Power Result Tool",
+            "type": "string"
+          },
+          "specification_result_tool": {
+            "const": "cadence_evaluate_specification_v2",
+            "default": "cadence_evaluate_specification_v2",
+            "title": "Specification Result Tool",
+            "type": "string"
+          },
+          "target_status": {
+            "enum": [
+              "registered",
+              "not_selected"
+            ],
+            "title": "Target Status",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "design_id",
+          "analog",
+          "signed_dc_power",
+          "specifications",
+          "target_status"
+        ],
+        "title": "MeasurementCatalog",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_evaluate_specification_v2": {
+      "name": "cadence_evaluate_specification_v2",
+      "title": null,
+      "description": "Evaluate one described operator specification by exact contract hash and optional admitted UUID4. Routes legacy goals to the original engine and v2 power goals to the existing signed-current reader. No target: NOT_EVALUATED without source read; only qualified facts with exact conditions yield PASS/FAIL. Source errors remain errors. No caller facts, formulas, paths, targets or simulation.",
+      "inputSchema": {
+        "$defs": {
+          "SpecificationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Operation Id"
+              }
+            },
+            "required": [
+              "design_id",
+              "spec_id",
+              "expected_contract_sha256"
+            ],
+            "title": "SpecificationQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/SpecificationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_evaluate_specification_v2Arguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AnalogDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "metric": {
+                "enum": [
+                  "gain",
+                  "bandwidth",
+                  "phase-margin",
+                  "power",
+                  "offset",
+                  "slew-rate"
+                ],
+                "title": "Metric",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "meaning": {
+                "maxLength": 320,
+                "title": "Meaning",
+                "type": "string"
+              },
+              "method": {
+                "maxLength": 320,
+                "title": "Method",
+                "type": "string"
+              },
+              "source_output_id": {
+                "anyOf": [
+                  {
+                    "const": "ac-differential-spectrum-v1",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Output Id"
+              },
+              "evidence_class": {
+                "enum": [
+                  "IMPLEMENTABLE_FROM_EXISTING_EVIDENCE",
+                  "REQUIRES_EXTRACTION_WORK",
+                  "REQUIRES_STIMULUS_CHANGE",
+                  "REQUIRES_USER_SCIENTIFIC_INPUT",
+                  "UNQUALIFIED"
+                ],
+                "title": "Evidence Class",
+                "type": "string"
+              },
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "qualification_requirement": {
+                "maxLength": 320,
+                "title": "Qualification Requirement",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "unit",
+              "meaning",
+              "method",
+              "source_output_id",
+              "evidence_class",
+              "blocking_reason",
+              "qualification_requirement"
+            ],
+            "title": "AnalogDefinition",
+            "type": "object"
+          },
+          "AnalogResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "definition": {
+                "$ref": "#/$defs/AnalogDefinition"
+              },
+              "status": {
+                "enum": [
+                  "QUALIFIED",
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "reference_frequency_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Frequency Hz"
+              },
+              "reference_gain_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Gain Db"
+              },
+              "crossing_bracket_hz": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Crossing Bracket Hz"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "source_result_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Result Sha256"
+              },
+              "provenance": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MeasurementProvenance"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "operation_id",
+              "definition",
+              "status",
+              "value",
+              "reason",
+              "source_measurement_id"
+            ],
+            "title": "AnalogResult",
+            "type": "object"
+          },
+          "MeasurementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "analysis_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "reader": {
+                "const": "native-bounded-result-v1",
+                "default": "native-bounded-result-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/NativeSettings"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Sha256",
+                "type": "string"
+              },
+              "copy_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Copy Sha256",
+                "type": "string"
+              },
+              "state_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "State Sha256",
+                "type": "string"
+              },
+              "model_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Model Sha256",
+                "type": "string"
+              },
+              "circuit_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Circuit Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "owned_variables_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Owned Variables Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "measurement_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Frame Sha256",
+                "type": "string"
+              },
+              "native_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Native Result Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              },
+              "notices": {
+                "const": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "analysis_plan_hash",
+              "analysis_contract_sha256",
+              "definition_sha256",
+              "revision_id",
+              "operating_point_id",
+              "settings",
+              "source_sha256",
+              "copy_sha256",
+              "state_sha256",
+              "model_sha256",
+              "circuit_sha256",
+              "input_sha256",
+              "owned_variables_sha256",
+              "psf_sha256",
+              "measurement_frame_sha256",
+              "native_result_sha256",
+              "warnings",
+              "notices"
+            ],
+            "title": "MeasurementProvenance",
+            "type": "object"
+          },
+          "NativeSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1.0,
+                "minimum": 1.0,
+                "title": "Vdd V",
+                "type": "number"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "applied_bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "saved_enabled_analyses": {
+                "default": [
+                  "dc"
+                ],
+                "maxItems": 1,
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "const": "dc",
+                    "type": "string"
+                  }
+                ],
+                "title": "Saved Enabled Analyses",
+                "type": "array"
+              },
+              "ac_start_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Start Hz",
+                "type": "integer"
+              },
+              "ac_stop_hz": {
+                "const": 100000000,
+                "default": 100000000,
+                "title": "Ac Stop Hz",
+                "type": "integer"
+              },
+              "ac_points_per_decade": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Points Per Decade",
+                "type": "integer"
+              },
+              "tran_stop_s": {
+                "default": 0.004,
+                "maximum": 0.004,
+                "minimum": 0.004,
+                "title": "Tran Stop S",
+                "type": "number"
+              },
+              "tran_maxstep_s": {
+                "default": 1e-05,
+                "maximum": 1e-05,
+                "minimum": 1e-05,
+                "title": "Tran Maxstep S",
+                "type": "number"
+              },
+              "tran_method": {
+                "const": "trap",
+                "default": "trap",
+                "title": "Tran Method",
+                "type": "string"
+              },
+              "stimulus": {
+                "const": "existing_opposed_1khz_50mv_peak_inputs",
+                "default": "existing_opposed_1khz_50mv_peak_inputs",
+                "title": "Stimulus",
+                "type": "string"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              }
+            },
+            "title": "NativeSettings",
+            "type": "object"
+          },
+          "PowerDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "definition_id": {
+                "const": "dc-supply-power-v1",
+                "default": "dc-supply-power-v1",
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "unit": {
+                "const": "W",
+                "default": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "analysis": {
+                "const": "dc",
+                "default": "dc",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "meaning": {
+                "const": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "default": "DC power delivered by the VDD/VSS supply rails at the preserved reference operating point.",
+                "title": "Meaning",
+                "type": "string"
+              },
+              "current_convention": {
+                "const": "positive_into_source_positive_terminal_A",
+                "default": "positive_into_source_positive_terminal_A",
+                "title": "Current Convention",
+                "type": "string"
+              },
+              "voltage_convention": {
+                "const": "positive_minus_negative_terminal_V",
+                "default": "positive_minus_negative_terminal_V",
+                "title": "Voltage Convention",
+                "type": "string"
+              },
+              "method": {
+                "const": "sum_minus_voltage_times_signed_current_no_abs",
+                "default": "sum_minus_voltage_times_signed_current_no_abs",
+                "title": "Method",
+                "type": "string"
+              },
+              "scope": {
+                "const": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "default": "two_supply_rails_bias_and_input_contributions_reported_separately",
+                "title": "Scope",
+                "type": "string"
+              },
+              "qualification_scope": {
+                "const": "preserved_reference_native_dc_only",
+                "default": "preserved_reference_native_dc_only",
+                "title": "Qualification Scope",
+                "type": "string"
+              }
+            },
+            "title": "PowerDefinition",
+            "type": "object"
+          },
+          "PowerResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "definition": {
+                "$ref": "#/$defs/PowerDefinition"
+              },
+              "status": {
+                "enum": [
+                  "QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "signed_branch_current_unavailable",
+                      "reader_error"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "bias_source_delivered_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Bias Source Delivered Power W"
+              },
+              "input_source_delivered_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Input Source Delivered Power W"
+              },
+              "all_sources_delivered_power_w": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "All Sources Delivered Power W"
+              },
+              "sources": {
+                "items": {
+                  "$ref": "#/$defs/SignedSource"
+                },
+                "maxItems": 6,
+                "minItems": 6,
+                "title": "Sources",
+                "type": "array"
+              },
+              "source_measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Source Measurement Id",
+                "type": "string"
+              },
+              "source_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Result Sha256",
+                "type": "string"
+              },
+              "extraction_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Extraction Result Sha256",
+                "type": "string"
+              },
+              "power_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Power Frame Sha256",
+                "type": "string"
+              },
+              "provenance": {
+                "$ref": "#/$defs/MeasurementProvenance"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "operation_id",
+              "contract_sha256",
+              "status",
+              "reason",
+              "value",
+              "bias_source_delivered_power_w",
+              "input_source_delivered_power_w",
+              "all_sources_delivered_power_w",
+              "sources",
+              "source_measurement_id",
+              "source_result_sha256",
+              "extraction_result_sha256",
+              "power_frame_sha256",
+              "provenance"
+            ],
+            "title": "PowerResult",
+            "type": "object"
+          },
+          "PowerSpecificationContract": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 2,
+                "default": 2,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "comparison": {
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<",
+                  "range"
+                ],
+                "title": "Comparison",
+                "type": "string"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              },
+              "unit": {
+                "const": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "goal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Goal Id"
+              },
+              "conditions": {
+                "$ref": "#/$defs/SpecificationConditions"
+              }
+            },
+            "required": [
+              "spec_id",
+              "design_id",
+              "measurement_id",
+              "measurement_contract_sha256",
+              "definition_sha256",
+              "comparison",
+              "target",
+              "unit",
+              "goal_id",
+              "conditions"
+            ],
+            "title": "PowerSpecificationContract",
+            "type": "object"
+          },
+          "PowerSpecificationDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "contract": {
+                "$ref": "#/$defs/PowerSpecificationContract"
+              },
+              "contract_sha256": {
+                "pattern": "^[a-f0-9]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "target_status": {
+                "enum": [
+                  "registered",
+                  "not_selected"
+                ],
+                "title": "Target Status",
+                "type": "string"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contract",
+              "contract_sha256",
+              "target_status"
+            ],
+            "title": "PowerSpecificationDescription",
+            "type": "object"
+          },
+          "SignedSource": {
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "enum": [
+                  "vdd",
+                  "vss",
+                  "bias-n",
+                  "bias-p",
+                  "input-p",
+                  "input-m"
+                ],
+                "title": "Source Id",
+                "type": "string"
+              },
+              "role": {
+                "enum": [
+                  "supply",
+                  "bias",
+                  "stimulus"
+                ],
+                "title": "Role",
+                "type": "string"
+              },
+              "voltage_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Voltage V"
+              },
+              "current_a": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Current A"
+              }
+            },
+            "required": [
+              "source_id",
+              "role",
+              "voltage_v",
+              "current_a"
+            ],
+            "title": "SignedSource",
+            "type": "object"
+          },
+          "SpecificationConditions": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "corner": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Temperature C",
+                "type": "string"
+              },
+              "vdd_v": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Vdd V",
+                "type": "string"
+              },
+              "applied_bias_values_v": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "effective_settings_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Effective Settings Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis_id",
+              "analysis_plan_hash",
+              "revision_id",
+              "operating_point_id",
+              "corner",
+              "temperature_c",
+              "vdd_v",
+              "applied_bias_values_v",
+              "effective_settings_sha256"
+            ],
+            "title": "SpecificationConditions",
+            "type": "object"
+          },
+          "SpecificationContract": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "measurement_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "comparison": {
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<",
+                  "range"
+                ],
+                "title": "Comparison",
+                "type": "string"
+              },
+              "target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Target"
+              },
+              "upper_target": {
+                "anyOf": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Upper Target"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "goal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Goal Id"
+              },
+              "conditions": {
+                "$ref": "#/$defs/SpecificationConditions"
+              }
+            },
+            "required": [
+              "spec_id",
+              "design_id",
+              "measurement_id",
+              "measurement_contract_sha256",
+              "definition_sha256",
+              "comparison",
+              "target",
+              "unit",
+              "goal_id",
+              "conditions"
+            ],
+            "title": "SpecificationContract",
+            "type": "object"
+          },
+          "SpecificationDescription": {
+            "additionalProperties": false,
+            "properties": {
+              "contract": {
+                "$ref": "#/$defs/SpecificationContract"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "target_status": {
+                "enum": [
+                  "registered",
+                  "not_selected"
+                ],
+                "title": "Target Status",
+                "type": "string"
+              },
+              "execution_authorized": {
+                "const": false,
+                "default": false,
+                "title": "Execution Authorized",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contract",
+              "contract_sha256",
+              "target_status"
+            ],
+            "title": "SpecificationDescription",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "specification": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SpecificationDescription"
+              },
+              {
+                "$ref": "#/$defs/PowerSpecificationDescription"
+              }
+            ],
+            "title": "Specification"
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Id"
+          },
+          "status": {
+            "enum": [
+              "PASS",
+              "FAIL",
+              "NOT_EVALUATED",
+              "UNQUALIFIED",
+              "MISSING_MEASUREMENT",
+              "CONDITION_MISMATCH"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "target_not_selected",
+              "measurement_not_selected",
+              "measurement_unqualified",
+              "measurement_conditions_differ",
+              "target_met",
+              "target_not_met"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/AnalogResult"
+              },
+              {
+                "$ref": "#/$defs/PowerResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Measurement"
+          },
+          "measurement_result_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Measurement Result Sha256"
+          },
+          "scope": {
+            "const": "one_operation_exact_registered_conditions",
+            "default": "one_operation_exact_registered_conditions",
+            "title": "Scope",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "specification",
+          "operation_id",
+          "status",
+          "reason"
+        ],
+        "title": "SpecificationEvaluationV2",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

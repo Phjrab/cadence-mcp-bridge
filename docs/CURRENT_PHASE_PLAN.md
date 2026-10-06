@@ -1,5 +1,38 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## MEAS-CONTRACT-02 activation, 2026-10-06
+
+User continuation after merged #124 selects one power-contract integration phase.
+Starting main `0e85a12804d550279a9da0c5ebe9f92acabcc62e`; branch
+`feat/power-measurement-contract-binding`. Reuse qualified `dc-supply-power-v1`
+and its exact admitted reference DC operation. Add bounded combined discovery,
+operator registry v8 with version-2 power goals, and evaluation through existing
+signed-current reader and shared condition/comparison engine. All old 72 tool
+schemas and v1-v7 registries remain exact; old analog power stays UNQUALIFIED.
+A version-2 runtime observation describes v8 honestly; the old version remains
+exact for v1-v7 and rejects v8 with a versioned-tool handoff. No numerical reference
+goal exists: NOT_EVALUATED. No new simulation/reservation, remote deployment,
+source/ADE/PDK change, deletion, optimization or publication. Preserve counters,
+replay identity, private evidence and Apache/export/legal boundaries. Limits:
+500 attempts,10 GiB cumulative reservation,20 corrections; no elapsed ceiling.
+Run full/static/security/dependency/contract/build/install/stdio and justified
+preserved-power read regression, then reviewed feature PR/permitted merge/remote
+verification. Report and ask once before BANDWIDTH-QUAL-02. Claude/other
+Cadence/PDK/host qualification stays deferred.
+
+Final qualification:1,813 full unit passes/four OS symlink skips/56 warnings
+in481.33s; focused147, Ruff/mypy50, exact old72/v1-v7 and new75/v8 schema audit,
+18 security tests/dependency audit and wheel58/sdist59 isolated75-tool CLI/stdio
+acceptance pass. New v8 preserved-power/DC/AC/TRAN/sweep/restart SDK regression
+equals earlier real evidence; power82.42816 microW and targetless NOT_EVALUATED.
+New actual-app tools are NOT_RUN. Five conservative correction events retained;
+all1,342 prior private records and source/ADE/PDK/jobs/counters/admissions equal.
+Zero new simulation/reservation/deployment/deletion/owned remote bytes. Integrate
+one containing reviewed PR with exact remote SHA/tree recorded privately, report
+and ask once before BANDWIDTH-QUAL-02. See
+[result](MEAS_CONTRACT_02_RESULT_V1.md). No next phase is activated.
+
+
 ## AGENT-PLAN-EXPORT-BOUNDARY-01 activation, 2026-10-06
 
 Starting main `20726ead871ffda18a937938fed7c4a6426d5b5d`, completed #125.

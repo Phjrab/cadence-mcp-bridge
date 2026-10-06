@@ -1,5 +1,13 @@
 # ANALOG-POWER-01: preserved native DC supply power
 
+## Current contract integration
+
+MEAS-CONTRACT-02 adds bounded combined discovery and operator v8/version-2
+power specifications using this unchanged reader/definition. Original v7 goals
+and analog v1 power remain unchanged. Reference goals are still absent;
+NOT_EVALUATED is not PASS. See [versioned binding](MEASUREMENT_BINDINGS_V2.md).
+The sections below preserve the original power-phase architecture/evidence.
+
 ## Definition and qualification scope
 
 `dc-supply-power-v1` measures **DC power delivered by the reference VDD/VSS

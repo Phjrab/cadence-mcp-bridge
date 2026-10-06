@@ -1,5 +1,21 @@
 # Release readiness reassessment v2
 
+## MEAS-CONTRACT-02 current assessment, 2026-10-06
+
+Starting main `0e85a12804d550279a9da0c5ebe9f92acabcc62e`, after merged #124.
+The current catalog has75 tools: three versioned read-only additions with all
+old72 schemas/v1-v7 schemas preserved. Operator v8 adds exact signed-power goal
+bindings; original definitions, source admission and comparator are unchanged.
+The reused reference power remains82.42816 microW in its original NN/27 C/VDD1 V
+scope, with no numerical goal and NOT_EVALUATED. SDK installed/stdio qualification
+and real preserved Cadence reads do not establish current desktop app E2E.
+Claude remains deferred. Package version1.0.0 is unchanged; release candidate,
+version/scope, LEGAL_REVIEW_REQUIRED and PUBLICATION_NOT_AUTHORIZED remain open.
+The archive-boundary evidence below belongs to its inspected candidate; current
+source artifacts retain that exclusion through unchanged attributes. No tag,
+release or broader scientific qualification follows. See
+[binding scope](MEASUREMENT_BINDINGS_V2.md).
+
 ## AGENT-PLAN-EXPORT-BOUNDARY-01 current assessment, 2026-10-06
 
 Existing #124 is continued from completed power #125 at

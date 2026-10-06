@@ -84,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     schema = design_actions.add_parser(
         "schema", help="Print the versioned design registry JSON schema."
     )
-    schema.add_argument("--schema-version", type=int, choices=(1, 2, 3, 4, 5, 6, 7), default=1)
+    schema.add_argument("--schema-version", type=int, choices=(1, 2, 3, 4, 5, 6, 7, 8), default=1)
     for action in ("validate", "register"):
         command = design_actions.add_parser(action)
         command.add_argument("--registry", type=Path, required=True)
@@ -216,6 +216,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             if arguments.design_action == "schema":
                 from cadence_mcp_bridge.analog_registry import DesignAnalogRegistry
+                from cadence_mcp_bridge.measurement_bindings import DesignPowerSpecificationRegistry
                 from cadence_mcp_bridge.specification_registry import DesignSpecificationRegistry
                 from cadence_mcp_bridge.sweep_registry import DesignSweepRegistry
 
@@ -227,6 +228,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     5: DesignSweepRegistry,
                     6: DesignAnalogRegistry,
                     7: DesignSpecificationRegistry,
+                    8: DesignPowerSpecificationRegistry,
                 }
                 design_result = registry_models[arguments.schema_version].model_json_schema()
             elif arguments.design_action == "register":

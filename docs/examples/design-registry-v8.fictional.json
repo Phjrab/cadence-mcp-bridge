@@ -1,0 +1,210 @@
+{
+  "schema_version": 8,
+  "designs": [
+    {
+      "schema_version": 1,
+      "design_id": "example-amplifier",
+      "environment_id": "example-lab-01",
+      "pdk_adapter_id": "example-pdk-v1",
+      "binding": {
+        "library": "ExampleLib",
+        "cell": "ExampleAmplifier",
+        "view": "schematic",
+        "ade": {
+          "kind": "ade_l",
+          "state": "exampleState"
+        }
+      },
+      "allowed_analyses": [
+        "dc",
+        "ac",
+        "tran"
+      ],
+      "allowed_variables": [
+        "bias-n",
+        "bias-p"
+      ],
+      "allowed_measurements": [
+        "dc-output",
+        "ac-gain"
+      ],
+      "allowed_corners": [
+        "nominal"
+      ],
+      "protected_source": true,
+      "work_copy_policy": "read_only"
+    }
+  ],
+  "variable_sets": [
+    {
+      "design_id": "example-amplifier",
+      "design_profile_sha256": "64bea7c378b7e7460012f78a590390fcf59172a05654191f6b275a4d248a7d5f",
+      "variables": [
+        {
+          "logical_id": "bias-n",
+          "cadence_binding": "ExampleBiasN",
+          "unit": "V",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "read_only",
+          "range_status": "unqualified",
+          "minimum": null,
+          "maximum": null,
+          "step_policy": "unqualified",
+          "step": null,
+          "fixed_value": null,
+          "review_id": null
+        },
+        {
+          "logical_id": "bias-p",
+          "cadence_binding": "ExampleBiasP",
+          "unit": "V",
+          "value_type": "real",
+          "default": null,
+          "mutation_policy": "read_only",
+          "range_status": "unqualified",
+          "minimum": null,
+          "maximum": null,
+          "step_policy": "unqualified",
+          "step": null,
+          "fixed_value": null,
+          "review_id": null
+        }
+      ]
+    }
+  ],
+  "range_reviews": [],
+  "analysis_contracts": [
+    {
+      "design_id": "example-amplifier",
+      "analysis_id": "example-dc",
+      "analysis": "dc",
+      "design_profile_sha256": "64bea7c378b7e7460012f78a590390fcf59172a05654191f6b275a4d248a7d5f",
+      "variable_set_sha256": "18bb1c726fa0852d0e5b8ec5cbf502c126d6a610d4b8011e6186e9a3b63e0253",
+      "adapter_kind": "unqualified",
+      "adapter_contract_sha256": null,
+      "input_policy": "unqualified"
+    },
+    {
+      "design_id": "example-amplifier",
+      "analysis_id": "example-ac",
+      "analysis": "ac",
+      "design_profile_sha256": "64bea7c378b7e7460012f78a590390fcf59172a05654191f6b275a4d248a7d5f",
+      "variable_set_sha256": "18bb1c726fa0852d0e5b8ec5cbf502c126d6a610d4b8011e6186e9a3b63e0253",
+      "adapter_kind": "unqualified",
+      "adapter_contract_sha256": null,
+      "input_policy": "unqualified"
+    },
+    {
+      "design_id": "example-amplifier",
+      "analysis_id": "example-tran",
+      "analysis": "tran",
+      "design_profile_sha256": "64bea7c378b7e7460012f78a590390fcf59172a05654191f6b275a4d248a7d5f",
+      "variable_set_sha256": "18bb1c726fa0852d0e5b8ec5cbf502c126d6a610d4b8011e6186e9a3b63e0253",
+      "adapter_kind": "unqualified",
+      "adapter_contract_sha256": null,
+      "input_policy": "unqualified"
+    }
+  ],
+  "measurement_contracts": [
+    {
+      "contract_version": 1,
+      "design_id": "example-amplifier",
+      "measurement_id": "dc-output",
+      "analysis_id": "example-dc",
+      "analysis_contract_sha256": "22156694911762aefc72f21144ea779236e389e07253260370b4adbd0db81995",
+      "reader": "unqualified",
+      "output_id": null,
+      "definition_sha256": null
+    },
+    {
+      "contract_version": 1,
+      "design_id": "example-amplifier",
+      "measurement_id": "ac-gain",
+      "analysis_id": "example-ac",
+      "analysis_contract_sha256": "8a9df986ecf751e82f2e493fd4327c742021e922e4d9bca1512c27ccef4f7212",
+      "reader": "unqualified",
+      "output_id": null,
+      "definition_sha256": null
+    }
+  ],
+  "analog_contracts": [
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-gain",
+      "metric": "gain",
+      "definition_sha256": "0ed1ebb6387e9b5de82651438a7b057bdab415cbae490d739e7b91379ef57d0d",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    },
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-bandwidth",
+      "metric": "bandwidth",
+      "definition_sha256": "34f8bad51c7e757733db930ca867ef6959ea903ebb88ea363a5c16be474d7f30",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    },
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-phase-margin",
+      "metric": "phase-margin",
+      "definition_sha256": "1f7781f2a8f9d58d7971fed9ad43d2f702ad162cd7f189540545dcbc0c1d2ee2",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    },
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-power",
+      "metric": "power",
+      "definition_sha256": "1235b4a82b07db8e712e85e57755eed1ff503376d92dde6204bd221cb2cd881a",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    },
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-offset",
+      "metric": "offset",
+      "definition_sha256": "6e02266497fe87176cec2be90d8d3601e41c45bf166cc6d39f0665ab8a546a16",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    },
+    {
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-slew-rate",
+      "metric": "slew-rate",
+      "definition_sha256": "6cfbb6b5c3234b26404f7f56b68d154aaaed4e0746bd9d2ad0fabfd4d18a6434",
+      "source_measurement_id": null,
+      "source_contract_sha256": null
+    }
+  ],
+  "specification_contracts": [
+    {
+      "contract_version": 1,
+      "spec_id": "example-unselected-goal",
+      "design_id": "example-amplifier",
+      "measurement_id": "analog-gain",
+      "measurement_contract_sha256": "195e5132b7c2e379a10e38f0d569d88a1c0f8918a2b74373f6945ca01d1a1e95",
+      "definition_sha256": "0ed1ebb6387e9b5de82651438a7b057bdab415cbae490d739e7b91379ef57d0d",
+      "comparison": ">=",
+      "target": null,
+      "goal_id": null,
+      "unit": "dB",
+      "conditions": {
+        "analysis_id": "example-ac",
+        "analysis_plan_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "revision_id": "example-revision",
+        "operating_point_id": "example-op",
+        "corner": "nominal",
+        "temperature_c": "27",
+        "vdd_v": "1",
+        "applied_bias_values_v": [
+          "0.3",
+          "0.65"
+        ],
+        "effective_settings_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "power_specification_contracts": []
+}

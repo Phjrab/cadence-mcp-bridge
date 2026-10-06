@@ -316,7 +316,7 @@ async def test_mcp_closed_readonly_contract_and_concurrent_calls(tmp_path: Path)
     await admitted(svc, tmp_path / "db", query.operation_id)
     async with Client(create_server(svc)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert len(tools) == 72
+        assert len(tools) == 75
         for name in (
             "cadence_list_specifications",
             "cadence_describe_specification",

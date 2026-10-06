@@ -59,6 +59,8 @@ from cadence_mcp_bridge.errors import (
     OperationTimeoutError,
     RemoteFailureError,
 )
+from cadence_mcp_bridge.measurement_binding_service import MeasurementBindingSupervisor
+from cadence_mcp_bridge.measurement_bindings import MeasurementCatalog, SpecificationEvaluationV2
 from cadence_mcp_bridge.measurement_models import (
     AdcMeasurementContract,
     CornerComparison,
@@ -133,7 +135,12 @@ from cadence_mcp_bridge.registered_sweeps import (
     DesignSweepSelection,
     RegisteredSweepPlanner,
 )
-from cadence_mcp_bridge.runtime_info import JournalSelection, LoadedCatalog, RuntimeInfo
+from cadence_mcp_bridge.runtime_info import (
+    JournalSelection,
+    LoadedCatalogV2,
+    RuntimeInfo,
+    RuntimeInfoV2,
+)
 from cadence_mcp_bridge.specification_service import SpecificationSupervisor
 from cadence_mcp_bridge.specifications import (
     SpecificationDescription,
@@ -265,15 +272,15 @@ class CadenceService:
         self._designs = reference_measurement_registry() if designs is None else designs
         self._owned_job_ids: set[UUID] = set()
         self._pdks = reference_pdk_registry() if pdks is None else pdks
-        self._runtime_info = RuntimeInfo(
+        self._runtime_info = RuntimeInfoV2(
             bridge_version=__version__,
-            designs=LoadedCatalog(
+            designs=LoadedCatalogV2(
                 source="builtin_reference" if designs is None else "operator_supplied",
                 schema_version=self._designs.schema_version,
                 entry_count=len(self._designs.designs),
                 semantic_sha256=canonical_digest(self._designs),
             ),
-            pdks=LoadedCatalog(
+            pdks=LoadedCatalogV2(
                 source="builtin_reference" if pdks is None else "operator_supplied",
                 schema_version=self._pdks.schema_version,
                 entry_count=len(self._pdks.adapters),
@@ -289,6 +296,9 @@ class CadenceService:
         self._analog_measurements = AnalogSupervisor(self._designs, self._registered_measurements)
         self._power = PowerSupervisor(self._analog_measurements, cast(PowerBackend, backend))
         self._specifications = SpecificationSupervisor(self._designs, self._analog_measurements)
+        self._measurement_bindings = MeasurementBindingSupervisor(
+            self._designs, self._analog_measurements, self._power, self._specifications
+        )
         self._registered_sweeps = RegisteredSweepPlanner(
             self._designs, self._analyses, self._registered_measurements
         )
@@ -306,7 +316,20 @@ class CadenceService:
         )
 
     async def runtime_info(self) -> RuntimeInfo:
+        if self._runtime_info.designs.schema_version > 7:
+            raise InvalidInputError("Registry v8 requires cadence_runtime_info_v2")
+        return RuntimeInfo.model_validate({**self._runtime_info.model_dump(), "schema_version": 1})
+
+    async def runtime_info_v2(self) -> RuntimeInfoV2:
         return self._runtime_info
+
+    async def measurement_catalog(self, design_id: str) -> MeasurementCatalog:
+        return self._measurement_bindings.catalog(design_id)
+
+    async def evaluate_specification_v2(
+        self, request: SpecificationQuery
+    ) -> SpecificationEvaluationV2:
+        return await self._measurement_bindings.result(request)
 
     async def storage_summary(self) -> StorageSummary:
         return await self._storage.summary()

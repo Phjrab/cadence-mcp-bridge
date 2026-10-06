@@ -1,5 +1,11 @@
 # Registered specification contracts v1
 
+Current additive extension: [MEAS-CONTRACT-02](MEASUREMENT_BINDINGS_V2.md)
+connects the separately qualified signed DC power reader through operator v8
+and evaluation version 2. This original v7/analog-only schema and its goals
+remain exact. Both versions share the original comparator/condition engine;
+no reference numerical target is selected.
+
 SPEC-CONTRACT-01 connects operator-owned goals to registered analog measurements.
 Measurement facts and specification intent remain separate. A measured gain alone
 does not establish a design PASS; no reference numerical goal has been selected.

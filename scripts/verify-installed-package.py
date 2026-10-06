@@ -64,7 +64,7 @@ async def verify(
     for name, path in paths.items():
         with path.open("xb") as stream:
             fixture = (
-                examples.parent / "design-registry-v7.fictional.json"
+                examples.parent / "design-registry-v8.fictional.json"
                 if name == "designs"
                 else examples / (name + ".json")
             )
@@ -138,16 +138,16 @@ async def verify(
         async with Client(parameters) as client:
             tools = await client.list_tools()
             names = {tool.name for tool in tools.tools}
-            if len(names) != 72 or not baseline_names.issubset(names):
+            if len(names) != 75 or not baseline_names.issubset(names):
                 raise ValueError("installed MCP tool inventory incompatible")
             counts[format] = len(names)
-            runtime = await client.call_tool("cadence_runtime_info")
+            runtime = await client.call_tool("cadence_runtime_info_v2")
             if (
                 runtime.is_error
                 or runtime.structured_content is None
                 or runtime.structured_content["bridge_version"] != expected_version
                 or runtime.structured_content["designs"]["source"] != "operator_supplied"
-                or runtime.structured_content["designs"]["schema_version"] != 7
+                or runtime.structured_content["designs"]["schema_version"] != 8
                 or runtime.structured_content["pdks"]["source"] != "operator_supplied"
                 or runtime.structured_content["journals"]["analysis"] != "operator_supplied"
                 or runtime.structured_content["journals"]["health_assessed"]
@@ -167,6 +167,18 @@ async def verify(
             ):
                 raise ValueError("installed v7 specifications fabricated a target")
             spec = specifications.structured_content["specifications"][0]
+            catalog = await client.call_tool(
+                "cadence_measurement_catalog", {"design_id": "example-amplifier"}
+            )
+            if (
+                catalog.is_error
+                or catalog.structured_content is None
+                or len(catalog.structured_content["analog"]) != 6
+                or len(catalog.structured_content["signed_dc_power"]) != 1
+                or catalog.structured_content["signed_dc_power"][0]["read_eligible"]
+                or catalog.structured_content["specifications"] != [spec]
+            ):
+                raise ValueError("installed combined measurement catalog differs")
             selection = {"design_id": "example-amplifier", "spec_id": spec["contract"]["spec_id"]}
             described = await client.call_tool(
                 "cadence_describe_specification", {"request": selection}
@@ -185,6 +197,19 @@ async def verify(
                 or journal.exists()
             ):
                 raise ValueError("installed missing target must stay NOT_EVALUATED without IO")
+            versioned = await client.call_tool(
+                "cadence_evaluate_specification_v2",
+                {"request": {**selection, "expected_contract_sha256": spec["contract_sha256"]}},
+            )
+            if (
+                versioned.is_error
+                or versioned.structured_content is None
+                or versioned.structured_content["contract_version"] != 2
+                or versioned.structured_content["status"] != "NOT_EVALUATED"
+                or versioned.structured_content["measurement"] is not None
+                or journal.exists()
+            ):
+                raise ValueError("installed versioned evaluation fabricated a target or fact")
             analog = await client.call_tool(
                 "cadence_list_analog_measurements", {"design_id": "example-amplifier"}
             )
@@ -350,6 +375,7 @@ async def verify(
         "registered_measurements": "v4_list_and_unqualified_read_denial_verified",
         "registered_analog": "v6_six_definitions_unqualified_null_values_no_admission",
         "registered_specifications": "v7_missing_target_NOT_EVALUATED_no_admission",
+        "versioned_measurement_bindings": "v8_catalog_v2_evaluation_NOT_EVALUATED_no_admission",
         "registered_sweep": "local_contract_plan_unqualified_NOT_RUN_no_admission",
         "remote_contact": False,
         "new_simulations": 0,
