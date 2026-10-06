@@ -90,3 +90,5 @@ remote/bin/cadence-runner text eol=lf
 remote/phase-campaign/native-mcp-v3/*.ocn text eol=lf
 remote/phase-campaign/analog-power-v1/*.ocn text eol=lf
 remote/phase-campaign/bandwidth-qual-v1/*.ocn text eol=lf
+remote/phase-campaign/slew-qual-v*/*.ocn text eol=lf
+remote/phase-campaign/offset-qual-v*/*.ocn text eol=lf

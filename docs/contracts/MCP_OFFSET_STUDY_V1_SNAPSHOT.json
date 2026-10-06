@@ -1,0 +1,1234 @@
+{
+  "schema_version": 1,
+  "source_main": "09339c48c692f6e00e53b36adc725516b54b4daf",
+  "tools": {
+    "cadence_offset_study_result": {
+      "name": "cadence_offset_study_result",
+      "title": null,
+      "description": "Read fixed nominal open-loop input-nulling diagnostics using the registered offset contract hash and preserved admitted DC operation. Applied Vp\u2212Vm at Vop\u2212Vom=0; five fixed scalar receipts, local bracket and refinement diagnostics. Numerical residual is consistent with zero, not physical precision. Generic offset remains UNQUALIFIED. No simulation, caller path/range/expression or goal evaluation.",
+      "inputSchema": {
+        "$defs": {
+          "AnalogQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "expected_contract_sha256",
+              "operation_id"
+            ],
+            "title": "AnalogQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/AnalogQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_offset_study_resultArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AnalogDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "metric": {
+                "enum": [
+                  "gain",
+                  "bandwidth",
+                  "phase-margin",
+                  "power",
+                  "offset",
+                  "slew-rate"
+                ],
+                "title": "Metric",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "dB",
+                  "Hz",
+                  "deg",
+                  "W",
+                  "V",
+                  "V/s"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "meaning": {
+                "maxLength": 320,
+                "title": "Meaning",
+                "type": "string"
+              },
+              "method": {
+                "maxLength": 320,
+                "title": "Method",
+                "type": "string"
+              },
+              "source_output_id": {
+                "anyOf": [
+                  {
+                    "const": "ac-differential-spectrum-v1",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Output Id"
+              },
+              "evidence_class": {
+                "enum": [
+                  "IMPLEMENTABLE_FROM_EXISTING_EVIDENCE",
+                  "REQUIRES_EXTRACTION_WORK",
+                  "REQUIRES_STIMULUS_CHANGE",
+                  "REQUIRES_USER_SCIENTIFIC_INPUT",
+                  "UNQUALIFIED"
+                ],
+                "title": "Evidence Class",
+                "type": "string"
+              },
+              "blocking_reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Blocking Reason"
+              },
+              "qualification_requirement": {
+                "maxLength": 320,
+                "title": "Qualification Requirement",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "unit",
+              "meaning",
+              "method",
+              "source_output_id",
+              "evidence_class",
+              "blocking_reason",
+              "qualification_requirement"
+            ],
+            "title": "AnalogDefinition",
+            "type": "object"
+          },
+          "AnalogResult": {
+            "additionalProperties": false,
+            "properties": {
+              "contract_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Contract Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Contract Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "definition": {
+                "$ref": "#/$defs/AnalogDefinition"
+              },
+              "status": {
+                "enum": [
+                  "QUALIFIED",
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "reference_frequency_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Frequency Hz"
+              },
+              "reference_gain_db": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reference Gain Db"
+              },
+              "crossing_bracket_hz": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Crossing Bracket Hz"
+              },
+              "source_measurement_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Source Measurement Id"
+              },
+              "source_result_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Result Sha256"
+              },
+              "provenance": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MeasurementProvenance"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "design_id",
+              "measurement_id",
+              "contract_sha256",
+              "operation_id",
+              "definition",
+              "status",
+              "value",
+              "reason",
+              "source_measurement_id"
+            ],
+            "title": "AnalogResult",
+            "type": "object"
+          },
+          "MeasurementProvenance": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_plan_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Plan Hash",
+                "type": "string"
+              },
+              "analysis_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Analysis Contract Sha256",
+                "type": "string"
+              },
+              "definition_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Definition Sha256",
+                "type": "string"
+              },
+              "reader": {
+                "const": "native-bounded-result-v1",
+                "default": "native-bounded-result-v1",
+                "title": "Reader",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "operating_point_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Operating Point Id",
+                "type": "string"
+              },
+              "settings": {
+                "$ref": "#/$defs/NativeSettings"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Sha256",
+                "type": "string"
+              },
+              "copy_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Copy Sha256",
+                "type": "string"
+              },
+              "state_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "State Sha256",
+                "type": "string"
+              },
+              "model_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Model Sha256",
+                "type": "string"
+              },
+              "circuit_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Circuit Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "owned_variables_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Owned Variables Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "measurement_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Measurement Frame Sha256",
+                "type": "string"
+              },
+              "native_result_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Native Result Sha256",
+                "type": "string"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              },
+              "notices": {
+                "const": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "default": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "analysis_plan_hash",
+              "analysis_contract_sha256",
+              "definition_sha256",
+              "revision_id",
+              "operating_point_id",
+              "settings",
+              "source_sha256",
+              "copy_sha256",
+              "state_sha256",
+              "model_sha256",
+              "circuit_sha256",
+              "input_sha256",
+              "owned_variables_sha256",
+              "psf_sha256",
+              "measurement_frame_sha256",
+              "native_result_sha256",
+              "warnings",
+              "notices"
+            ],
+            "title": "MeasurementProvenance",
+            "type": "object"
+          },
+          "NativeSettings": {
+            "additionalProperties": false,
+            "properties": {
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1.0,
+                "minimum": 1.0,
+                "title": "Vdd V",
+                "type": "number"
+              },
+              "input_vcm_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Vcm V",
+                "type": "number"
+              },
+              "saved_bias_values_v": {
+                "default": [
+                  0.3,
+                  0.65
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.3,
+                    "minimum": 0.3,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.65,
+                    "minimum": 0.65,
+                    "type": "number"
+                  }
+                ],
+                "title": "Saved Bias Values V",
+                "type": "array"
+              },
+              "applied_bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Applied Bias Values V",
+                "type": "array"
+              },
+              "saved_enabled_analyses": {
+                "default": [
+                  "dc"
+                ],
+                "maxItems": 1,
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "const": "dc",
+                    "type": "string"
+                  }
+                ],
+                "title": "Saved Enabled Analyses",
+                "type": "array"
+              },
+              "ac_start_hz": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Start Hz",
+                "type": "integer"
+              },
+              "ac_stop_hz": {
+                "const": 100000000,
+                "default": 100000000,
+                "title": "Ac Stop Hz",
+                "type": "integer"
+              },
+              "ac_points_per_decade": {
+                "const": 10,
+                "default": 10,
+                "title": "Ac Points Per Decade",
+                "type": "integer"
+              },
+              "tran_stop_s": {
+                "default": 0.004,
+                "maximum": 0.004,
+                "minimum": 0.004,
+                "title": "Tran Stop S",
+                "type": "number"
+              },
+              "tran_maxstep_s": {
+                "default": 1e-05,
+                "maximum": 1e-05,
+                "minimum": 1e-05,
+                "title": "Tran Maxstep S",
+                "type": "number"
+              },
+              "tran_method": {
+                "const": "trap",
+                "default": "trap",
+                "title": "Tran Method",
+                "type": "string"
+              },
+              "stimulus": {
+                "const": "existing_opposed_1khz_50mv_peak_inputs",
+                "default": "existing_opposed_1khz_50mv_peak_inputs",
+                "title": "Stimulus",
+                "type": "string"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              }
+            },
+            "title": "NativeSettings",
+            "type": "object"
+          },
+          "OffsetDefinition": {
+            "additionalProperties": false,
+            "description": "Scientific choices remain operator owned; no default chooses a user intent.",
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "definition_id": {
+                "enum": [
+                  "nominal-open-loop-input-nulling-v1",
+                  "nominal-open-loop-output-v1"
+                ],
+                "title": "Definition Id",
+                "type": "string"
+              },
+              "loop_condition": {
+                "const": "open_loop",
+                "default": "open_loop",
+                "title": "Loop Condition",
+                "type": "string"
+              },
+              "input_definition": {
+                "const": "Vp_minus_Vm",
+                "default": "Vp_minus_Vm",
+                "title": "Input Definition",
+                "type": "string"
+              },
+              "output_definition": {
+                "const": "Vop_minus_Vom",
+                "default": "Vop_minus_Vom",
+                "title": "Output Definition",
+                "type": "string"
+              },
+              "corner": {
+                "const": "NN",
+                "default": "NN",
+                "title": "Corner",
+                "type": "string"
+              },
+              "temperature_c": {
+                "const": 27,
+                "default": 27,
+                "title": "Temperature C",
+                "type": "integer"
+              },
+              "vdd_v": {
+                "default": 1.0,
+                "maximum": 1,
+                "minimum": 1,
+                "title": "Vdd V",
+                "type": "number"
+              },
+              "input_common_mode_v": {
+                "default": 0.5,
+                "maximum": 0.5,
+                "minimum": 0.5,
+                "title": "Input Common Mode V",
+                "type": "number"
+              },
+              "bias_values_v": {
+                "default": [
+                  0.32,
+                  0.702
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "maximum": 0.32,
+                    "minimum": 0.32,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 0.702,
+                    "minimum": 0.702,
+                    "type": "number"
+                  }
+                ],
+                "title": "Bias Values V",
+                "type": "array"
+              },
+              "load": {
+                "const": "existing_topology_no_added_external_load",
+                "default": "existing_topology_no_added_external_load",
+                "title": "Load",
+                "type": "string"
+              },
+              "mismatch": {
+                "const": "not_simulated",
+                "default": "not_simulated",
+                "title": "Mismatch",
+                "type": "string"
+              },
+              "ideal_differential_output_reference_v": {
+                "default": 0.0,
+                "maximum": 0,
+                "minimum": 0,
+                "title": "Ideal Differential Output Reference V",
+                "type": "number"
+              },
+              "nulling_sign": {
+                "const": "applied_Vp_minus_Vm_at_zero_output_not_negated",
+                "default": "applied_Vp_minus_Vm_at_zero_output_not_negated",
+                "title": "Nulling Sign",
+                "type": "string"
+              },
+              "source_binding": {
+                "const": "requires_reviewed_admitted_DC_and_effective_input",
+                "default": "requires_reviewed_admitted_DC_and_effective_input",
+                "title": "Source Binding",
+                "type": "string"
+              },
+              "specification": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Specification",
+                "type": "string"
+              }
+            },
+            "required": [
+              "definition_id"
+            ],
+            "title": "OffsetDefinition",
+            "type": "object"
+          },
+          "OffsetDiagnostics": {
+            "additionalProperties": false,
+            "properties": {
+              "coarse": {
+                "$ref": "#/$defs/OffsetEstimate"
+              },
+              "fine": {
+                "$ref": "#/$defs/OffsetEstimate"
+              },
+              "root_pair_difference_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Root Pair Difference V"
+              },
+              "gain_pair_relative_difference": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Gain Pair Relative Difference"
+              },
+              "local_output_window_review": {
+                "title": "Local Output Window Review",
+                "type": "boolean"
+              },
+              "fixed_input_verified": {
+                "title": "Fixed Input Verified",
+                "type": "boolean"
+              },
+              "observed_refinement_agreement": {
+                "title": "Observed Refinement Agreement",
+                "type": "boolean"
+              },
+              "status": {
+                "enum": [
+                  "PARTIALLY_QUALIFIED",
+                  "UNQUALIFIED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "value_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value V"
+              },
+              "unit": {
+                "const": "V",
+                "default": "V",
+                "title": "Unit",
+                "type": "string"
+              },
+              "reason": {
+                "enum": [
+                  "nominal_observed_nulling_no_absolute_error_or_mismatch_qualification",
+                  "fixed_input_local_window_or_refinement_not_qualified"
+                ],
+                "title": "Reason",
+                "type": "string"
+              }
+            },
+            "required": [
+              "coarse",
+              "fine",
+              "root_pair_difference_v",
+              "gain_pair_relative_difference",
+              "local_output_window_review",
+              "fixed_input_verified",
+              "observed_refinement_agreement",
+              "status",
+              "value_v",
+              "reason"
+            ],
+            "title": "OffsetDiagnostics",
+            "type": "object"
+          },
+          "OffsetEstimate": {
+            "additionalProperties": false,
+            "description": "A numerical extraction is separate from real-source qualification.",
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "status": {
+                "enum": [
+                  "INSUFFICIENT_POINTS",
+                  "UNQUALIFIED_POINTS",
+                  "BRACKET_OUTSIDE_LOCAL_OUTPUT_WINDOW",
+                  "FLAT_ZERO_INTERVAL",
+                  "ENDPOINT_ONLY_ZERO",
+                  "NO_CROSSING",
+                  "MULTIPLE_CROSSINGS",
+                  "NON_MONOTONIC",
+                  "EXACT_SAMPLED_ZERO",
+                  "BRACKETED_ZERO"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "nulling_input_v": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Nulling Input V"
+              },
+              "input_bracket_v": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Input Bracket V"
+              },
+              "local_gain_v_per_v": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Local Gain V Per V"
+              },
+              "point_count": {
+                "maximum": 17,
+                "minimum": 0,
+                "title": "Point Count",
+                "type": "integer"
+              },
+              "extraction": {
+                "const": "bounded_observed_zero_or_linear_bracket_no_extrapolation",
+                "default": "bounded_observed_zero_or_linear_bracket_no_extrapolation",
+                "title": "Extraction",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "UNQUALIFIED",
+                "default": "UNQUALIFIED",
+                "title": "Qualification",
+                "type": "string"
+              },
+              "qualification_reason": {
+                "const": "scientific_selection_and_real_source_qualification_required",
+                "default": "scientific_selection_and_real_source_qualification_required",
+                "title": "Qualification Reason",
+                "type": "string"
+              },
+              "spec_evaluation": {
+                "const": "not_evaluated",
+                "default": "not_evaluated",
+                "title": "Spec Evaluation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "point_count"
+            ],
+            "title": "OffsetEstimate",
+            "type": "object"
+          },
+          "OffsetRun": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "case": {
+                "enum": [
+                  "zero",
+                  "minus1",
+                  "plus1",
+                  "minus05",
+                  "plus05"
+                ],
+                "title": "Case",
+                "type": "string"
+              },
+              "source_job_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Source Job Id",
+                "type": "string"
+              },
+              "source_input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Input Sha256",
+                "type": "string"
+              },
+              "source_psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Psf Sha256",
+                "type": "string"
+              },
+              "input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Input Sha256",
+                "type": "string"
+              },
+              "psf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Psf Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "scalars": {
+                "$ref": "#/$defs/OffsetScalars"
+              },
+              "counter": {
+                "$ref": "#/$defs/PowerCounter"
+              },
+              "new_simulation": {
+                "title": "New Simulation",
+                "type": "boolean"
+              },
+              "warnings": {
+                "maximum": 2,
+                "minimum": 0,
+                "title": "Warnings",
+                "type": "integer"
+              },
+              "notices": {
+                "maximum": 16,
+                "minimum": 0,
+                "title": "Notices",
+                "type": "integer"
+              },
+              "protected_unchanged": {
+                "const": true,
+                "title": "Protected Unchanged",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "schema_version",
+              "case",
+              "source_job_id",
+              "source_input_sha256",
+              "source_psf_sha256",
+              "input_sha256",
+              "psf_sha256",
+              "frame_sha256",
+              "scalars",
+              "counter",
+              "new_simulation",
+              "warnings",
+              "notices",
+              "protected_unchanged"
+            ],
+            "title": "OffsetRun",
+            "type": "object"
+          },
+          "OffsetScalars": {
+            "additionalProperties": false,
+            "properties": {
+              "Vop": {
+                "title": "Vop",
+                "type": "number"
+              },
+              "Vom": {
+                "title": "Vom",
+                "type": "number"
+              },
+              "Vp": {
+                "title": "Vp",
+                "type": "number"
+              },
+              "Vm": {
+                "title": "Vm",
+                "type": "number"
+              },
+              "VDD": {
+                "title": "Vdd",
+                "type": "number"
+              }
+            },
+            "required": [
+              "Vop",
+              "Vom",
+              "Vp",
+              "Vm",
+              "VDD"
+            ],
+            "title": "OffsetScalars",
+            "type": "object"
+          },
+          "PowerCounter": {
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": {
+                "const": "AUTO-PHASE-01",
+                "title": "Campaign Id",
+                "type": "string"
+              },
+              "count": {
+                "maximum": 500,
+                "minimum": 0,
+                "title": "Count",
+                "type": "integer"
+              },
+              "result_reserved_bytes": {
+                "maximum": 10737418240,
+                "minimum": 0,
+                "title": "Result Reserved Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "campaign_id",
+              "count",
+              "result_reserved_bytes"
+            ],
+            "title": "PowerCounter",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "study_id": {
+            "const": "reference-nominal-input-nulling-study-v1",
+            "default": "reference-nominal-input-nulling-study-v1",
+            "title": "Study Id",
+            "type": "string"
+          },
+          "reference_result": {
+            "$ref": "#/$defs/AnalogResult"
+          },
+          "source_result_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Result Sha256",
+            "type": "string"
+          },
+          "extraction_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Extraction Sha256",
+            "type": "string"
+          },
+          "study_definition_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Study Definition Sha256",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/$defs/OffsetDefinition"
+          },
+          "runs": {
+            "maxItems": 5,
+            "minItems": 5,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/OffsetRun"
+              },
+              {
+                "$ref": "#/$defs/OffsetRun"
+              },
+              {
+                "$ref": "#/$defs/OffsetRun"
+              },
+              {
+                "$ref": "#/$defs/OffsetRun"
+              },
+              {
+                "$ref": "#/$defs/OffsetRun"
+              }
+            ],
+            "title": "Runs",
+            "type": "array"
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/OffsetDiagnostics"
+          },
+          "generic_offset_qualification": {
+            "const": "UNQUALIFIED",
+            "default": "UNQUALIFIED",
+            "title": "Generic Offset Qualification",
+            "type": "string"
+          },
+          "warning": {
+            "const": "numerical_residual_consistent_with_nominal_zero_not_physical_precision",
+            "default": "numerical_residual_consistent_with_nominal_zero_not_physical_precision",
+            "title": "Warning",
+            "type": "string"
+          },
+          "operating_region_warning": {
+            "const": "local_output_window_is_not_MOS_region_or_rating_proof",
+            "default": "local_output_window_is_not_MOS_region_or_rating_proof",
+            "title": "Operating Region Warning",
+            "type": "string"
+          },
+          "absolute_error_bound_v": {
+            "const": null,
+            "default": null,
+            "title": "Absolute Error Bound V",
+            "type": "null"
+          },
+          "mismatch_qualification": {
+            "const": "not_simulated",
+            "default": "not_simulated",
+            "title": "Mismatch Qualification",
+            "type": "string"
+          },
+          "raw_vectors_included": {
+            "const": false,
+            "default": false,
+            "title": "Raw Vectors Included",
+            "type": "boolean"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "spec_evaluation": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Spec Evaluation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference_result",
+          "source_result_sha256",
+          "extraction_sha256",
+          "study_definition_sha256",
+          "definition",
+          "runs",
+          "diagnostics"
+        ],
+        "title": "OffsetStudyResult",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

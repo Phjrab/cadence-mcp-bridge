@@ -57,6 +57,7 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.offset_study import OffsetExtraction
 from cadence_mcp_bridge.power_measurements import REFERENCE_OPERATION, PowerExtraction
 from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
@@ -490,6 +491,24 @@ class OpenSshBackend:
             return RefinementExtraction.model_validate_json(output)
         except ValueError:
             raise RemoteFailureError("Remote bandwidth study failed closed validation") from None
+
+    async def offset_study_result(self, operation_id: str) -> OffsetExtraction:
+        from cadence_mcp_bridge.offset_study import REFERENCE_OPERATION as OFFSET_OPERATION
+
+        if (
+            operation_id != OFFSET_OPERATION
+            or self._config.remote_root != "/home/buet/cds_work/.cadence_mcp"
+        ):
+            raise InvalidInputError("No reviewed offset study for this operation or root")
+        runner = self._config.remote_root + "/phase-campaign/offset-read-v1/run.sh"
+        try:
+            output = await asyncio.to_thread(self._invoke_at_path, runner, "result")
+        except BridgeError as exc:
+            raise type(exc)("Offset study could not be read safely") from None
+        try:
+            return OffsetExtraction.model_validate_json(output)
+        except ValueError:
+            raise RemoteFailureError("Offset study failed closed validation") from None
 
     async def slew_step_result(self, operation_id: str) -> StepExtraction:
         from cadence_mcp_bridge.slew_study import REFERENCE_OPERATION as STEP_OPERATION

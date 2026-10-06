@@ -1,5 +1,16 @@
 # Release readiness reassessment v2
 
+## ANALOG-OFFSET-01 assessment, 2026-10-06
+
+78 source tools preserve all old77 schemas/v1-v8. Four owned nominal DC runs
+and preserved-zero extraction produce supplemental input-nulling diagnostics
+only, PARTIALLY_QUALIFIED. Generic offset remains UNQUALIFIED/null; no physical
+femtovolt accuracy, mismatch/PVT or target evaluation. Current-source SDK
+new/preserved reads/restart pass; active Codex runtime registryv4 differs from
+SDKv8 and the new tool is not exposed. Actual new app E2E is NOT_RUN. Package
+1.0.0 and Apache/external/imported legal boundaries remain; no release authority.
+See [Offset evidence](ANALOG_OFFSET_V1.md).
+
 ## Claude actual Code-tab read evidence, PR127 integration
 
 The historical deferral was lifted for run20261006T0407Z. The Claude-authored

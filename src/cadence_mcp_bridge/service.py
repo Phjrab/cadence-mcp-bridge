@@ -108,6 +108,8 @@ from cadence_mcp_bridge.native_diagnostics import (
     NativeDiagnosticResult,
     NativeDiagnosticStatus,
 )
+from cadence_mcp_bridge.offset_service import OffsetBackend, OffsetSupervisor
+from cadence_mcp_bridge.offset_study import OffsetStudyResult
 from cadence_mcp_bridge.pdk_adapters import DesignPdkStatus, PdkDescription, PdkList, PdkRegistry
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 from cadence_mcp_bridge.power_measurements import (
@@ -302,6 +304,7 @@ class CadenceService:
         self._bandwidth = BandwidthSupervisor(
             self._analog_measurements, cast(BandwidthBackend, backend)
         )
+        self._offset = OffsetSupervisor(self._analog_measurements, cast(OffsetBackend, backend))
         self._slew = SlewSupervisor(self._analog_measurements, cast(SlewBackend, backend))
         self._specifications = SpecificationSupervisor(self._designs, self._analog_measurements)
         self._measurement_bindings = MeasurementBindingSupervisor(
@@ -413,6 +416,9 @@ class CadenceService:
 
     async def bandwidth_study_result(self, request: AnalogQuery) -> BandwidthStudyResult:
         return await self._bandwidth.result(request)
+
+    async def offset_study_result(self, request: AnalogQuery) -> OffsetStudyResult:
+        return await self._offset.result(request)
 
     async def slew_study_result(self, request: AnalogQuery) -> SlewStudyResult:
         return await self._slew.result(request)

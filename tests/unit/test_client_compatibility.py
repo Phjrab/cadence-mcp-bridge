@@ -83,7 +83,7 @@ def test_wire_protocol_without_sdk_or_client_context(tmp_path: Path, identity: s
         send("notifications/initialized", {}, None)
         send("tools/list", {}, 2)
         listing = receive()["result"]["tools"]
-        assert len(listing) == 77 and len({t["name"] for t in listing}) == 77
+        assert len(listing) == 78 and len({t["name"] for t in listing}) == 78
         for tool in listing:
             assert tool["description"] and "codex" not in json.dumps(tool).lower()
             assert tool["inputSchema"]["type"] == "object"
