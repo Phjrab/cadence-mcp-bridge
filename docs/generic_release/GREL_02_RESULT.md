@@ -50,9 +50,21 @@ Generic ADE/native templates are a later GREL-04 requirement, not claimed here.
   repetition/append-only deactivation tested synthetically.
 - Transport stdout/stderr flood/deadline cases PASS after correcting readiness
   handling; the two intermediate synthetic failures are retained.
-- Interim installed wheel: exact85 schema/2 context1→2→1 restart PASS. Exact final
-  candidate package verification and full suite are recorded below when complete.
-- Full final source suite: PENDING_FINAL_GREL02_UNIT.
+- Exact final installed wheel: three SDK configuration formats/all85 schemas,
+  two operator contexts1→2→1 and setup-required/default isolation PASS. Fixed
+  bundle/export/install/repeat/verify/activate/deactivate/staging/fault acceptance
+  PASS using only installed assets. Same-version reinstall and uninstall retained
+  exact19 synthetic operator-state file hashes; package import absent afterward.
+  Bootstrap preservation verifier is subsequent GREL07 independent test tooling,
+  not an additional GREL02 runtime dependency. This is not semver/native upgrade.
+- Security18 PASS and strict locked dependency audit: no known vulnerabilities.
+- Interim suite:2317 PASS/7 OS skips/56 warnings, before exact preflight additions.
+- Exact suite initially2317 PASS/2 FAIL/7 OS skips; long explicit pytest base
+  caused per-item synthetic audit path271 characters (Windows file-open rejection).
+  A separate renamed-handle fixture improvement passed25 tests/one OS skip, but
+  did not resolve this long-path invocation. Both failures and diagnostic retained.
+  Corrected short exclusive system-temp full invocation is currently running;
+  PENDING_FINAL_GREL02_UNIT. No production storage protection was weakened.
 - Final curated wheel/sdist: d0fdab1fc4eed13f7b09f61693618fa01eeaac5c7deecd28316ed14070d8b7ae /
   18764aebd63918a72a6ad9b9eedf8347d015142d5b1c190d4e345bf3b29855eb;
  74/75 members, Apache-2.0/notices/source match, no unexpected/protected patterns.
