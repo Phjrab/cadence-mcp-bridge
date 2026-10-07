@@ -18,10 +18,15 @@ is authorized by passing local gates.
 
 ## MCP clients
 
-[Current Codex read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_CURRENT_02.md):
-85 actual app-visible tool names after a user-reported restart, stable preserved
-native DC reads, and explicit operator registry/journal limitations. Full schemas
-and current measurement/Sweep/Specification app reads remain unqualified.
+[Current Codex operator read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md):
+22 explicitly filtered read tools from the85-tool server; actual operator-v8
+Gain/Power/DC/AC/TRAN and no-target specification reads match preserved results.
+Separate finite-grid runtime, two preserved Sweeps and six no-target evaluation
+facts also match historical results; the final profile selects this context.
+The two operator contexts remain distinct. Full app schemas,
+build identity and new lifecycle remain unverified. The previous
+[default-registry85-name checkpoint](docs/CLIENT_REAL_QUAL_CODEX_CURRENT_02.md)
+remains dated evidence.
 Claude Desktop Code-tab reads and restart are already verified in the dated
 [PR127 report](docs/validation/claude-desktop/20261006T0407Z/REPORT.md).
 
