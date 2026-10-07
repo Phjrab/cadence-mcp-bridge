@@ -1,0 +1,25 @@
+{
+  "automatic_retry": false,
+  "contract_version": 1,
+  "correction_ceiling": 20,
+  "delete_authority": false,
+  "disk_floor_bytes": 2147483648,
+  "disk_floor_percent": 10,
+  "extraction": "synthetic-byte-count-and-sha256-not-analog-measurement",
+  "fixtures": [
+    {
+      "artifact_uuid": "c63a8b3b-cc0b-4b14-9eac-9a1890ce4869",
+      "label": "A",
+      "size_bytes": 8192
+    },
+    {
+      "artifact_uuid": "e6610b58-7bcf-476b-8e8d-e118bb00e60a",
+      "label": "B",
+      "size_bytes": 12288
+    }
+  ],
+  "max_new_payload_bytes": 20480,
+  "max_new_reserved_bytes": 0,
+  "max_new_simulations": 0,
+  "phase": "STORAGE-REAL-QUAL-01"
+}

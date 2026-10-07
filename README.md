@@ -429,7 +429,7 @@ operator audit preserves this distinction; it adds no MCP execution route. See
 uv sync --all-groups
 uv run ruff check src scripts tests
 uv run mypy src
-uv run pytest tests/unit
+uv run python -m pytest tests/unit
 uv run python -m cadence_mcp_bridge serve
 ```
 
@@ -457,3 +457,12 @@ for the separate synthetic ADC measurement contract.
 Nominal input-nulling Offset has a bounded supplemental diagnostic reader; it
 remains partially qualified and is not physical femtovolt accuracy or a
 specification result. See [Offset study](docs/ANALOG_OFFSET_V1.md).
+
+### Native Storage qualification preparation
+
+The existing Storage interface has a bounded native preparation checkpoint:
+two new synthetic byte fixtures, inventory, exact cleanup plan and dry-run.
+Actual deletion remains unverified and requires exact user-selected items plus
+independent operator consent. Historical results remain protected. SDK stdio
+verification is separate from actual Codex-app Storage verification.
+See [STORAGE-REAL-QUAL-01](docs/STORAGE_REAL_QUAL_01.md).
