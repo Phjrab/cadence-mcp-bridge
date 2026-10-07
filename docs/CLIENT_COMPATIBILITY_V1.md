@@ -1,5 +1,15 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Current actual Codex checkpoint, 2026-10-07
+
+[Current report](CLIENT_REAL_QUAL_CODEX_CURRENT_02.md) observes85 names after
+the user restart and stable native DC reads. Built-inv4/default journals remain;
+new operator-bound amplifier catalog correctly rejects this configuration.
+Names-only and bounded-read evidence does not establish full schema, exact
+loaded source identity, app version, shutdown/protocol or new lifecycle.
+PR127 Claude Code-tab reads/restart below remain verified in their dated scope.
+
+
 ## Actual Claude Desktop (Code tab) reads, 2026-10-06
 
 The user lifted the Claude deferral for this run only. Direct tool calls from the

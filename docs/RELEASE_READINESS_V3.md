@@ -45,6 +45,15 @@ remain user-deferred; this phase does not request new equipment or app work.
 
 ## Client evidence
 
+Update 2026-10-07: [current Codex checkpoint](CLIENT_REAL_QUAL_CODEX_CURRENT_02.md)
+verifies85 actual app-visible names after the user restart and preserved native
+DC re-reads. Full schemas, source/build identity, app version and new lifecycle
+remain unverified; operator-bound current measurement/sweep/specification reads
+remain blocked by unselected catalogs/journals. Earlier observations below
+remain dated history. PR127 Claude Code-tab reads/restart are verified in that
+limited scope; full-current Claude qualification remains separate.
+
+
 Actual Codex historical discovery/native DC reads and runtime observation are
 retained. The recorded runtime selected builtin registryv4/default journals,
 distinct from current-source SDK finite-grid registry/journal qualification.

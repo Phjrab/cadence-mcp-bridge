@@ -18,6 +18,14 @@ is authorized by passing local gates.
 
 ## MCP clients
 
+[Current Codex read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_CURRENT_02.md):
+85 actual app-visible tool names after a user-reported restart, stable preserved
+native DC reads, and explicit operator registry/journal limitations. Full schemas
+and current measurement/Sweep/Specification app reads remain unqualified.
+Claude Desktop Code-tab reads and restart are already verified in the dated
+[PR127 report](docs/validation/claude-desktop/20261006T0407Z/REPORT.md).
+
+
 Codex and Claude Desktop launch the same server package over local stdio.
 Codex TOML and Claude `mcpServers` JSON configuration are prepared and tested
 through actual subprocess protocol clients. Independent JSON-RPC tests verify
