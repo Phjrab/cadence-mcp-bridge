@@ -50,3 +50,14 @@ remain explicit blocking reasons. Pending cancellation, active termination,
 extraction-only recovery, renewable authority and two real batches are not
 implemented on the generic path at this checkpoint. The form's allowed-action
 field describes intended scope and does not enable those capabilities.
+
+
+Each numeric_regions entry requires design_id plus logical_id. Regions are unique
+within a design and their design_id must belong to the grant design_ids. A request
+uses exactly its design's regions; another authorized design's variables do not
+satisfy or obstruct that scope. Thus a zero-variable circuit and a parameterized
+circuit can share one local grant. Same-named variables on different designs can
+have distinct unit/range constraints. The total bounded region count remains32.
+This unreleased draft schema requires explicit design_id; older unscoped draft
+forms are rejected and must be regenerated/reviewed by their operator. No grant
+is automatically rewritten or reauthorized.

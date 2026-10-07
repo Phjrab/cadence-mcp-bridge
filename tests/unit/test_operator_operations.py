@@ -81,7 +81,13 @@ def operator(tmp_path):
                 analyses=["dc", "ac", "tran"],
                 actions=["submit", "cancel_pending"],
                 numeric_regions=[
-                    dict(logical_id=name, unit="V", minimum="1", maximum="1")
+                    dict(
+                        design_id="example-amplifier",
+                        logical_id=name,
+                        unit="V",
+                        minimum="1",
+                        maximum="1",
+                    )
                     for name in ("bias-n", "bias-p")
                 ],
                 attempt_limit=6,
@@ -245,3 +251,111 @@ def test_cli_local_plan_does_not_issue_authority(operator, tmp_path, capsys):
     request_path.write_text('{"script":"secret-private-content"}', encoding="utf-8")
     assert main(["operation", "plan", *common, "--request", str(request_path)]) == 1
     assert "secret-private-content" not in capsys.readouterr().out
+
+
+@pytest.fixture
+def multiple_designs(operator):
+    from copy import deepcopy
+
+    context, grant, request, settings = operator
+    registry = json.loads(context.binding.design_registry.read_bytes())
+    original = deepcopy(registry["designs"][0])
+    for design_id, fixed in (("synthetic-rc", None), ("synthetic-other", "2")):
+        profile = deepcopy(original)
+        profile.update(design_id=design_id)
+        profile["binding"]["cell"] = design_id.replace("-", "_")
+        if fixed is None:
+            profile["allowed_variables"] = []
+        profile_hash = canonical_digest(DesignProfile.model_validate_json(json.dumps(profile)))
+        registry["designs"].append(profile)
+        variable_hash = None
+        if fixed is not None:
+            variables = deepcopy(registry["variable_sets"][0])
+            variables.update(design_id=design_id, design_profile_sha256=profile_hash)
+            for variable in variables["variables"]:
+                variable.update(default=fixed, fixed_value=fixed)
+            variable_hash = canonical_digest(
+                DesignVariables.model_validate_json(json.dumps(variables))
+            )
+            registry["variable_sets"].append(variables)
+        contract = deepcopy(registry["analysis_contracts"][0])
+        contract.update(
+            design_id=design_id,
+            analysis_id=design_id + "-dc",
+            design_profile_sha256=profile_hash,
+            variable_set_sha256=variable_hash,
+        )
+        registry["analysis_contracts"].append(contract)
+    context.binding.design_registry.write_text(json.dumps(registry), encoding="utf-8")
+    binding = json.loads(settings.read_bytes())
+    binding["contexts"][0]["design_sha256"] = hashlib.sha256(
+        context.binding.design_registry.read_bytes()
+    ).hexdigest()
+    settings.write_text(json.dumps(binding), encoding="utf-8")
+    context = load_runtime(settings)[0]
+    payload = grant.model_dump(mode="json")
+    payload.update(
+        design_sha256=context.binding.design_sha256,
+        design_ids=["example-amplifier", "synthetic-rc", "synthetic-other"],
+    )
+    payload["numeric_regions"] += [
+        dict(design_id="synthetic-other", logical_id=name, unit="V", minimum="2", maximum="2")
+        for name in ("bias-n", "bias-p")
+    ]
+    return context, OperatorGrant.model_validate_json(json.dumps(payload)), request
+
+
+@pytest.mark.parametrize("design_id", ["example-amplifier", "synthetic-rc", "synthetic-other"])
+def test_one_grant_plans_different_design_variable_sets(multiple_designs, design_id):
+    context, grant, original = multiple_designs
+    request = original.model_dump(mode="json")
+    request["design_id"] = design_id
+    if design_id != "example-amplifier":
+        request["analysis_id"] = design_id + "-dc"
+    if design_id == "synthetic-rc":
+        request["values"] = []
+    elif design_id == "synthetic-other":
+        for value in request["values"]:
+            value["value"] = "2"
+    request = OperationRequest.model_validate_json(json.dumps(request))
+    first = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    assert first.request.design_id == design_id
+    assert (
+        first.plan_sha256
+        == prepare_plan(context, grant, "c" * 64, request, int(time.time())).plan_sha256
+    )
+    assert not context.binding.analysis_journal.exists()
+    assert not context.lock_path.exists()
+
+
+def test_other_design_regions_cannot_satisfy_current_values(multiple_designs):
+    context, grant, request = multiple_designs
+    other_only = grant.model_copy(
+        update={
+            "numeric_regions": tuple(
+                r for r in grant.numeric_regions if r.design_id == "synthetic-other"
+            )
+        }
+    )
+    with pytest.raises(OperationRejected) as error:
+        prepare_plan(context, other_only, "c" * 64, request, int(time.time()))
+    assert error.value.reason == "authority_numeric_scope_mismatch"
+
+
+@pytest.mark.parametrize("fault", ["duplicate", "outside", "unscoped"])
+def test_region_scope_is_closed_and_unique_within_design(operator, fault):
+    _, grant, _, _ = operator
+    payload = grant.model_dump(mode="json")
+    if fault == "duplicate":
+        payload["numeric_regions"].append(payload["numeric_regions"][0])
+    elif fault == "outside":
+        payload["numeric_regions"][0]["design_id"] = "not-authorized"
+    else:
+        del payload["numeric_regions"][0]["design_id"]
+    expected = {
+        "duplicate": "duplicate authority identifier",
+        "outside": "numeric region design outside authority",
+        "unscoped": "design_id",
+    }
+    with pytest.raises(ValidationError, match=expected[fault]):
+        OperatorGrant.model_validate_json(json.dumps(payload))

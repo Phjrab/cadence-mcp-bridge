@@ -9,12 +9,13 @@ import os
 import subprocess
 import sys
 import time
+from copy import deepcopy
 from pathlib import Path
 
 import cadence_mcp_bridge
 from cadence_mcp_bridge.designs import DesignProfile
 from cadence_mcp_bridge.runtime_context import load_runtime
-from cadence_mcp_bridge.variable_contracts import canonical_digest
+from cadence_mcp_bridge.variable_contracts import DesignVariables, canonical_digest
 
 
 def verify(workspace: Path, examples: Path) -> dict[str, object]:
@@ -24,12 +25,34 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     environment = json.loads((examples / "environment.json").read_bytes())
     environment["limits"].update(spectre_attempts=6, result_reserved_bytes=805306368)
     registry = json.loads((examples / "designs.json").read_bytes())
+    parameterized = deepcopy(registry["designs"][0])
+    parameterized["design_id"] = "synthetic-parameterized"
+    parameterized["binding"]["cell"] = "SyntheticParameterized"
+    parameterized["work_copy_policy"] = "owned_copy_only"
+    variables = deepcopy(registry["variable_sets"][0])
     profile = registry["designs"][0]
     profile["allowed_variables"] = []
     registry["variable_sets"] = []
     digest = canonical_digest(DesignProfile.model_validate_json(json.dumps(profile)))
     for contract in registry["analysis_contracts"]:
         contract.update(design_profile_sha256=digest, variable_set_sha256=None)
+    parameterized_hash = canonical_digest(
+        DesignProfile.model_validate_json(json.dumps(parameterized))
+    )
+    variables.update(design_id="synthetic-parameterized", design_profile_sha256=parameterized_hash)
+    for variable in variables["variables"]:
+        variable.update(mutation_policy="fixed", default="1", fixed_value="1", step_policy="fixed")
+    variable_hash = canonical_digest(DesignVariables.model_validate_json(json.dumps(variables)))
+    registry["designs"].append(parameterized)
+    registry["variable_sets"].append(variables)
+    contract = deepcopy(registry["analysis_contracts"][0])
+    contract.update(
+        design_id="synthetic-parameterized",
+        analysis_id="synthetic-parameterized-dc",
+        design_profile_sha256=parameterized_hash,
+        variable_set_sha256=variable_hash,
+    )
+    registry["analysis_contracts"].append(contract)
     pdk = json.loads((examples / "pdks.json").read_bytes())
     paths = [workspace / (name + ".json") for name in ("environment", "design", "pdk")]
     for path, payload in zip(paths, (environment, registry, pdk), strict=True):
@@ -67,10 +90,19 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 environment_sha256=binding["environment_sha256"],
                 design_sha256=binding["design_sha256"],
                 pdk_sha256=binding["pdk_sha256"],
-                design_ids=["example-amplifier"],
+                design_ids=["example-amplifier", "synthetic-parameterized"],
                 analyses=["dc"],
                 actions=["submit"],
-                numeric_regions=[],
+                numeric_regions=[
+                    dict(
+                        design_id="synthetic-parameterized",
+                        logical_id=name,
+                        unit="V",
+                        minimum="1",
+                        maximum="1",
+                    )
+                    for name in parameterized["allowed_variables"]
+                ],
                 attempt_limit=6,
                 result_reserved_bytes_limit=805306368,
                 valid_from_unix=1,
@@ -110,7 +142,24 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         hashlib.sha256(grant.read_bytes()).hexdigest(),
     ]
     plans = []
-    for action in ("check-authority", "plan", "plan"):
+    for action in ("check-authority", "plan", "plan", "parameterized-plan", "parameterized-plan"):
+        if action == "parameterized-plan":
+            request.write_text(
+                json.dumps(
+                    dict(
+                        schema_version=1,
+                        design_id="synthetic-parameterized",
+                        analysis_id="synthetic-parameterized-dc",
+                        values=[
+                            dict(logical_id=name, unit="V", value="1")
+                            for name in parameterized["allowed_variables"]
+                        ],
+                        result_reservation_bytes=134217728,
+                    )
+                ),
+                encoding="utf-8",
+            )
+            action = "plan"
         args = arguments + (["--request", str(request)] if action == "plan" else [])
         result = subprocess.run(
             [
@@ -136,7 +185,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         if action == "plan":
             assert not report["dispatch_eligible"] and not report["admission_created"]
             plans.append(report["plan_sha256"])
-    assert plans[0] == plans[1]
+    assert plans[0] == plans[1] and plans[2] == plans[3] and plans[0] != plans[2]
     assert not list(workspace.glob("*.sqlite3")) and not list(workspace.glob("*.lock"))
     return {
         "status": "PASS",
@@ -144,6 +193,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "durable_admission": "NOT_RUN",
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
+        "same_grant_distinct_design_variable_sets": 2,
         "execution_authorized": False,
         "remote_contact": False,
     }

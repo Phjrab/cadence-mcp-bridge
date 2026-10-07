@@ -1,4 +1,4 @@
-# Current local receipt and native boundary, 2026-10-08
+# Historical0ee2c17 receipt and native boundary, 2026-10-08
 
 Tested source0ee2c17ba68cced8423d279b64d011319b60ef9a.271 source/test/script
 inputs unchanged after checks and documentation-only parent merge. Fresh94
@@ -13,7 +13,7 @@ Current local wheel5bdba4e85d085b18f2d4df88d97aade1edf8f7fc0206d75463c013356c0b4
 sdistf7a27cf40c6b972b40c2e982085752e8e6fa5aa5af6a4e45452b4dc1dfd8c3e2;
 75/76 curated members, exact source/license/notices, protected/unexpected content0.
 Precedingfe22a3a full2357/7 OS skips and hosted2364 passes are historical.
-Current full CI receipt is below; automated PR144 review is pending.
+Current full CI receipt is below; PR144 independent review found the design-region issue recorded below.
 
 Fresh native environment qualification again reports blocked/executable_permissions/
 execution_authorized=false. No protected repair or trust exception is applied.
@@ -136,3 +136,25 @@ independent P1 findings were fixed, with a bot+1 afterward as recorded in its
 report. Later documentation-only merge/receipt heads are not the cited0ee2c17 CI
 head;271 checked Python source/test/script inputs remain byte-identical. Any new
 head workflow is reported separately, never inferred PASS. Main553276d unchanged.
+
+
+## Independent PR144 review correction
+
+Independent review of0ee2c17 found P2: globally keyed numeric regions prevented
+one grant from planning both a zero-variable design and a parameterized design.
+Each region now requires design_id. Uniqueness is scoped to(design_id,logical_id),
+region designs must belong to the grant and planning selects only request.design_id.
+Exact registered-variable completeness and unit/range denials remain. Missing
+unscoped draft forms are rejected; no operator grant is rewritten or renewed.
+
+Fresh26 operation tests PASS; combined legacy analysis/operation65 PASS, Ruff/
+mypy67 PASS. New tests cover zero-variable and two parameterized designs sharing
+one grant, same logical variable names with different numeric ranges, irrelevant
+other-design regions, same-design duplicates, unknown design and missing scope.
+No journal/lock/admission is created. Installed verification now checks both
+zero-variable and parameterized requests and stable distinct plan identities.
+An initial synthetic fixture incorrectly used strict Python validation of JSON
+lists:22 PASS/4 fixture errors plus lint line-length findings. JSON entry-point
+validation and formatting corrected the fixtures; historical evidence retained.
+Previous0ee2c17 CI2366 and artifacts above are historical after this source change.
+New exact package/hosted checks are pending; native trust remains BLOCKED.

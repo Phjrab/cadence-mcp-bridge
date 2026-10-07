@@ -39,6 +39,7 @@ class OperationRejected(ValueError):
 
 
 class NumericRegion(VariableModel):
+    design_id: LogicalId
     logical_id: LogicalId
     unit: Unit
     minimum: NumberText
@@ -92,10 +93,12 @@ class OperatorGrant(VariableModel):
             self.design_ids,
             self.analyses,
             self.actions,
-            tuple(r.logical_id for r in self.numeric_regions),
+            tuple((r.design_id, r.logical_id) for r in self.numeric_regions),
         ):
             if len(values) != len(set(values)):
                 raise ValueError("duplicate authority identifier")
+        if any(r.design_id not in self.design_ids for r in self.numeric_regions):
+            raise ValueError("numeric region design outside authority")
         if self.valid_from_unix >= self.valid_until_unix:
             raise ValueError("positive authority lifetime required")
         return self
@@ -227,7 +230,7 @@ def prepare_plan(
         )
         if not checked.locally_admissible:
             raise OperationRejected("registered_numeric_contract_denied")
-    regions = {r.logical_id: r for r in grant.numeric_regions}
+    regions = {r.logical_id: r for r in grant.numeric_regions if r.design_id == request.design_id}
     if set(regions) != set(supplied):
         raise OperationRejected("authority_numeric_scope_mismatch")
     for logical_id, value in supplied.items():
