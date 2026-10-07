@@ -1,3 +1,25 @@
+## Combined durable lifecycle corrections, 2026-10-08
+
+Two independent P2 findings fixed: atomic admission/intent and restart-safe
+provider tombstones; disk floor includes existing in-flight commitments. Primary
+review also closes SQLite sidecar hardlinks/nonregular leaves and junction parents.
+Affected153 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source/package/hosted
+receipts pending; previous sources remain historical. Native provider/authority/
+trust/generic ADE/new measurements/Sweep/actual clean client remain incomplete.
+02–07/895MiB authorization persists; no native side effects/merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
+## In-flight floor review correction, 2026-10-08
+
+Independent PR144 disk-floor finding corrected: physical free must cover existing
+in-flight commitments plus the new reservation above the configured floor.
+Affected149 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source CI/package/
+security receipts pending; previous source receipts remain history. Atomic
+admission/intent and safe absent-intent cancellation remain implemented. Production
+provider/native trust/generic ADE/new measurements/Sweep/clean client remain
+incomplete/blocked; no native side effects.02–07/895MiB authorization persists;
+merge/GREL08/publication excluded. See current generic_release reports/continuation.
+
 ## Durable lifecycle review correction, 2026-10-08
 
 PR144 independent pre-send crash finding corrected: admission/intent commit

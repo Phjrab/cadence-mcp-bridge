@@ -94,3 +94,10 @@ absence alone proves neither no execution nor cancellation permission. Once the
 provider has confirmed remote UNKNOWN_OUTCOME, ordinary cancellation is denied.
 Cancellation cannot resend an analysis, refund capacity or reset identity. This
 mechanism is tested only with a synthetic provider; the native route is disabled.
+
+Disk-floor admission reserves room for both existing in-flight commitments and the
+new request above the configured byte/percentage floor. It uses the full in-flight
+reservation as a conservative upper bound and never subtracts historical cumulative
+reservation history from free space. Physical free already reflects materialized
+occupancy; aggregate logical/allocated counts do not establish remaining per-job
+commitments. Native provider acceptance must repeat the check atomically.

@@ -80,7 +80,12 @@ class ProviderAccounting(VariableModel):
         )
         if (
             self.filesystem_free_bytes > self.filesystem_total_bytes
-            or self.filesystem_free_bytes - plan.request.result_reservation_bytes < floor
+            or (
+                self.filesystem_free_bytes
+                - self.in_flight_reserved_bytes
+                - plan.request.result_reservation_bytes
+                < floor
+            )
         ):
             raise OperationRejected("authoritative_disk_floor_denied")
 

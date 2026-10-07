@@ -41,7 +41,7 @@ class AnalysisStore:
         connection = None
         try:
             for component in (self.path, *self.path.parents):
-                if component.is_symlink():
+                if component.is_symlink() or component.is_junction():
                     raise ConfigurationError("Analysis journal is unavailable")
             if self.path.exists() and (
                 not self.path.is_file()
@@ -49,6 +49,16 @@ class AnalysisStore:
                 or self.path.stat().st_nlink != 1
             ):
                 raise ConfigurationError("Analysis journal is unavailable")
+            for suffix in ("-journal", "-wal", "-shm"):
+                sidecar = self.path.with_name(self.path.name + suffix)
+                if (
+                    sidecar.is_symlink()
+                    or sidecar.is_junction()
+                    or (
+                        sidecar.exists() and (not sidecar.is_file() or sidecar.stat().st_nlink != 1)
+                    )
+                ):
+                    raise ConfigurationError("Analysis journal is unavailable")
             new = False
             if not self.path.exists():
                 if not create:
@@ -60,9 +70,6 @@ class AnalysisStore:
                     new = True
                 except FileExistsError:
                     pass
-            sidecar = self.path.with_name(self.path.name + "-journal")
-            if sidecar.is_symlink():
-                raise ConfigurationError("Analysis journal is unavailable")
             connection = sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True, timeout=5)
             connection.execute("PRAGMA synchronous=FULL")
             connection.execute("BEGIN IMMEDIATE")

@@ -557,9 +557,7 @@ async def test_crash_after_atomic_admission_before_send_can_be_tombstoned(lifecy
     restarted = OperatorLifecycle(
         coordinator.context, AnalysisStore(coordinator.store.path), provider
     )
-    assert (
-        await restarted.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
-    ) == record
+    assert (await restarted.submit(identity, grant, "c" * 64, request, plan.plan_sha256)) == record
     cancelled = await restarted.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
     assert cancelled.progress.phase == "CANCELLED" and provider.cancellations == 1
     assert (provider.attempts, provider.reserved) == (82, 9798942720)
@@ -590,7 +588,6 @@ async def test_absent_lookup_never_authorizes_cancel_of_actual_active_remote_job
     assert provider.calls == [identity] and provider.cancellations == 1
 
 
-
 def test_admission_and_intent_rollback_together_preserving_legacy_record(lifecycle, monkeypatch):
     coordinator, _, _, _, plan, _ = lifecycle
     legacy = str(uuid4())
@@ -611,3 +608,73 @@ def test_admission_and_intent_rollback_together_preserving_legacy_record(lifecyc
         coordinator.store.operation(identity)
     with sqlite3.connect(coordinator.store.path) as db:
         assert db.execute("SELECT COUNT(*) FROM admissions").fetchone()[0] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("extra_headroom", [0, 1])
+async def test_disk_floor_covers_inflight_and_new_reservation(lifecycle, extra_headroom):
+    coordinator, provider, grant, request, plan, _ = lifecycle
+    limits = coordinator.context.contracts.environment.limits
+    total = 40 * 1024**3
+    floor = max(limits.disk_floor_bytes, (total * limits.disk_floor_percent + 99) // 100)
+    reservation = request.result_reservation_bytes
+    provider.gate_changes = dict(
+        filesystem_free_bytes=floor + (2 + extra_headroom) * reservation,
+        in_flight_reserved_bytes=2 * reservation,
+    )
+    identity = str(uuid4())
+    if extra_headroom == 0:
+        with pytest.raises(OperationRejected) as error:
+            await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        assert error.value.reason == "authoritative_disk_floor_denied"
+        assert not coordinator.store.path.exists() and not provider.calls
+        assert (provider.attempts, provider.reserved) == (82, 9798942720)
+    else:
+        assert (
+            await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        ).progress.phase == "RESERVED"
+        assert provider.calls == [identity]
+
+
+@pytest.mark.parametrize("suffix", ["-journal", "-wal", "-shm"])
+def test_hardlinked_sqlite_sidecar_cannot_mutate_unrelated_work(lifecycle, suffix):
+    coordinator, _, _, _, plan, _ = lifecycle
+    identity = str(uuid4())
+    coordinator.store.admit_operation(identity, plan)
+    before_db = coordinator.store.path.read_bytes()
+    protected = coordinator.store.path.with_name("other-work-evidence.bin")
+    protected.write_bytes(b"synthetic unrelated work must be preserved")
+    sidecar = coordinator.store.path.with_name(coordinator.store.path.name + suffix)
+    sidecar.hardlink_to(protected)
+    with pytest.raises(ConfigurationError):
+        coordinator.store.admit_operation(str(uuid4()), plan, dispatch_intent=True)
+    assert protected.read_bytes() == b"synthetic unrelated work must be preserved"
+    assert coordinator.store.path.read_bytes() == before_db and sidecar.exists()
+
+
+def test_junction_journal_parent_is_rejected_without_touching_target(lifecycle):
+    import os
+    import subprocess
+
+    if os.name != "nt":
+        pytest.skip("Windows junction semantics")
+    coordinator, _, _, _, plan, _ = lifecycle
+    identity = str(uuid4())
+    target = coordinator.store.path.parent / "isolated-journal-target"
+    target.mkdir()
+    original = AnalysisStore(target / "state.sqlite3")
+    original.admit_operation(identity, plan)
+    before = original.path.read_bytes()
+    link = coordinator.store.path.parent / "synthetic-junction"
+    result = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+        capture_output=True,
+        timeout=10,
+    )
+    if result.returncode:
+        pytest.skip("OS denies junction creation")
+    assert link.is_junction()
+    linked_store = AnalysisStore(link / original.path.name)
+    with pytest.raises(ConfigurationError):
+        linked_store.admit_operation(str(uuid4()), plan, dispatch_intent=True)
+    assert original.path.read_bytes() == before

@@ -1,3 +1,43 @@
+## Final combined local receipt
+
+153 related PASS/one local OS symlink skip; actual junction/hardlink cases PASS.
+Ruff/mypy68/security18/locked dependency/85 schemas PASS;273 input hashes unchanged.
+Exact combined wheelcd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b;
+sdist4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671.
+76/77 audited members; exact source/license/notices and protected/unexpected content0.
+Installed SDK85/contexts1-to-2-to-1/two designs/journal metadata/bootstrap and
+reinstall/uninstall19-state preservation PASS. Native jobs0.64227a2 hosted2417
+PASS/no skips/56 warnings/260.78s/run37702503567 is historical after these guards.
+Final combined hosted full CI and independent review are pending after push.
+
+## SQLite link preservation correction, 2026-10-08
+
+Primary source review additionally identified SQLite sidecars and Windows junction
+parents could reference unrelated work. AnalysisStore now rejects symlink/junction
+parents plus linked or nonregular journal/WAL/SHM sidecars before creating/opening
+the database. Actual synthetic hardlink tests preserve both unrelated evidence and
+DB bytes; a real Windows junction into a separate disposable target is rejected
+without target mutation. This is path preflight, not hostile same-account isolation
+or an unrestricted cross-platform TOCTOU guarantee. No sidecar is deleted/repaired.
+Fresh affected153 PASS/one local OS symlink skip; Ruff/mypy68 PASS. Final combined
+source package/security/hosted receipts pending. Native provider/authority/trust/
+generic ADE/new measurements/Sweep/clean app remain incomplete/blocked. Existing
+02–07/895MiB delegation persists; all native side effects0. Prior receipts history.
+
+## In-flight storage commitment correction, 2026-10-08
+
+Independent PR144 review on64227a2 found disk-floor admission ignored accepted
+jobs' in-flight commitments. It now subtracts both existing in-flight reserved
+bytes and the new reservation from current physical free space. This conservative
+upper bound does not subtract historical cumulative reservations or infer unused
+capacity from aggregate logical/allocated bytes. The provider must recheck the
+same accounting atomically at accept. Tests reject insufficient combined space
+without creating an admission and accept the exact floor boundary.
+Fresh affected149 PASS/one local OS symlink skip; Ruff/mypy68 PASS. Final source
+security/package/hosted receipts pending; preceding sources are historical. Native
+provider/operator confirmation/trust and real jobs remain absent/blocked. No budget
+reset/refund or native side effect is introduced. Earlier receipts below are history.
+
 ## Corrected local source/package receipt
 
 Review-corrected273 Python input hashes unchanged; affected147 PASS/one local OS

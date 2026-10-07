@@ -62,11 +62,11 @@
   },
   "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
   "local_validation": {
-    "affected_passed": 147,
+    "affected_passed": 153,
     "os_symlink_skips": 1,
     "source_typecheck_files": 68,
     "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
-    "final_security_package_ci": "CORRECTED_LOCAL_PASS_HOSTED_PENDING",
+    "final_security_package_ci": "COMBINED_CORRECTED_LOCAL_PASS_HOSTED_PENDING",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
@@ -77,9 +77,9 @@
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
-    "current_lifecycle": "P2_PRE_SEND_CRASH_FIXED_PENDING_CORRECTED_REVIEW"
+    "current_lifecycle": "TWO_P2_FIXED_PRIMARY_SQLITE_LINK_GUARDS_PENDING_CORRECTED_REVIEW"
   },
-  "local_input_snapshot_sha256": "4678b3cdb59468496ee29d7f18990af60c9af5250d540b21d256fb99616440e7",
+  "local_input_snapshot_sha256": "e68e1d23fda0ea1ba213a3744f9b440627169ef0f9a4a4b58e533405f343763a",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -143,5 +143,14 @@
     "unit_skipped": 0,
     "unit_warnings": 56,
     "unit_seconds": 189.08
+  },
+  "historical_64227a2_ci": {
+    "tested_source": "64227a2856778e6e8f0a49aa5a113916fad7e93b",
+    "run": 37702503567,
+    "conclusion": "PASS_HISTORICAL_AFTER_INFLIGHT_AND_LINK_GUARDS",
+    "unit_passed": 2417,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 260.78
   }
 }
