@@ -43,7 +43,7 @@
   },
   "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
   "hosted_ci": {
-    "conclusion": "PENDING_NEW_DURABLE_LIFECYCLE_SOURCE"
+    "conclusion": "PENDING_CORRECTED_SOURCE"
   },
   "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
   "live_resource_snapshot": {
@@ -60,13 +60,13 @@
     "files": 99964,
     "changed": 0
   },
-  "tested_source": null,
+  "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
   "local_validation": {
-    "affected_passed": 144,
+    "affected_passed": 147,
     "os_symlink_skips": 1,
     "source_typecheck_files": 68,
     "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
-    "final_security_package_ci": "LOCAL_PASS_HOSTED_PENDING",
+    "final_security_package_ci": "CORRECTED_LOCAL_PASS_HOSTED_PENDING",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
@@ -77,9 +77,9 @@
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
-    "current_lifecycle": "PENDING_AFTER_PUSH"
+    "current_lifecycle": "P2_PRE_SEND_CRASH_FIXED_PENDING_CORRECTED_REVIEW"
   },
-  "local_input_snapshot_sha256": "08562a2b25c239c14ac9c9fe4db63c95a9db2f8a57d39ed4cc653be19c98eb6f",
+  "local_input_snapshot_sha256": "4678b3cdb59468496ee29d7f18990af60c9af5250d540b21d256fb99616440e7",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -134,5 +134,14 @@
     "renewal": "NOT_IMPLEMENTED",
     "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
     "budget_reset_or_refund": false
+  },
+  "historical_d67df77_ci": {
+    "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
+    "run": 37701436071,
+    "conclusion": "PASS_HISTORICAL_AFTER_REVIEW_CORRECTION",
+    "unit_passed": 2414,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 189.08
   }
 }

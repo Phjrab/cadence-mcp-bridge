@@ -225,7 +225,9 @@ class AnalysisStore:
             ),
         )
 
-    def admit_operation(self, operation_id: str, plan: OperationPlan) -> bool:
+    def admit_operation(
+        self, operation_id: str, plan: OperationPlan, *, dispatch_intent: bool = False
+    ) -> bool:
         raw = plan.model_dump_json()
         if len(raw) > 32768:
             raise ConfigurationError("Analysis lifecycle plan exceeds capacity")
@@ -247,9 +249,17 @@ class AnalysisStore:
                 (operation_id, plan.request.design_id, plan.request.analysis_id, plan.plan_sha256),
             )
             connection.execute("INSERT INTO operator_plans_v1 VALUES (?,?)", (operation_id, raw))
-            self._append_progress(
-                connection, operation_id, 1, OperationProgress(phase="ADMITTED"), "0" * 64
-            )
+            admitted = OperationProgress(phase="ADMITTED")
+            self._append_progress(connection, operation_id, 1, admitted, "0" * 64)
+            if dispatch_intent:
+                previous = self._event_digest(operation_id, 1, admitted.model_dump_json(), "0" * 64)
+                self._append_progress(
+                    connection,
+                    operation_id,
+                    2,
+                    OperationProgress(phase="UNKNOWN_OUTCOME"),
+                    previous,
+                )
             return True
 
     def operation(self, operation_id: str) -> DurableOperation:

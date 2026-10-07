@@ -1,3 +1,34 @@
+## Corrected local source/package receipt
+
+Review-corrected273 Python input hashes unchanged; affected147 PASS/one local OS
+symlink skip; Ruff/mypy68/security18/locked dependency/85 schemas PASS. Exact
+corrected installed wheel and sdist source/license/notices audits76/77 members,
+SDK85/contexts/two plans/cached metadata/bootstrap/reinstall/uninstall19-state
+preservation PASS. Wheel747b683b89923a89f9f3c0b9a3a8b29e5f3ccfe2f741d6579815f43c9b325f53;
+sdist61ef73fe742606b3f23ae3fffe2223049d1018ae04b9b2e68e4b1d1bfa84c64f.
+Corrected full hosted CI and renewed independent review pending after push.
+
+## Independent review correction, 2026-10-08
+
+Independent automated PR144 review on d67df77 found a pre-send crash identity
+could stay lookup-only with no safe way to cancel. Dispatch admission and intent
+now commit in the same SQLite transaction. If intent insertion fails, the admission
+and additive tables roll back together without losing legacy records. An absent
+lookup still never authorizes resubmission. The provider's atomic cancellation may
+tombstone an absent dispatch-intent identity; it must recheck and deny active or
+unknown remote state even when lookup missed it. Thus pre-send crash/restart can
+be cancelled without a simulator run, reservation refund or identity reset.
+Remote unknown observations with a revision remain denied. No live termination.
+
+Fresh affected147 PASS/one local OS symlink skip and Ruff/mypy68 PASS. New tests
+inject crash immediately after the combined commit, restart lookup-only, durable
+remote tombstone/no future acceptance, missing lookup with actual active job, and
+rollback during intent insert. Previous d67df77 full hosted2414 PASS/0 skips/
+56 warnings/189.08s/run37701436071 and all gates are historical after this fix.
+Final corrected source/package/hosted receipt is pending. Production provider and
+actual operator confirmation/native trust remain absent or blocked; all program
+native side-effect counts stay0. No GREL08/merge/publication is authorized.
+
 ## Final local durable-source receipt
 
 273 Python source/test/script hashes unchanged after related tests and final

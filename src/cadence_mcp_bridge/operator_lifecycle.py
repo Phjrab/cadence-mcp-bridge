@@ -210,14 +210,11 @@ class OperatorLifecycle:
             accounting.check(self.context, grant, plan)
             # Recheck expiry immediately before durable admission; remote accept also rechecks it.
             match_grant(self.context, grant, int(time.time()))
-            first = self.store.admit_operation(operation_id, plan)
+            first = self.store.admit_operation(operation_id, plan, dispatch_intent=True)
             record = self.read(operation_id, expected_plan_sha256)
             if not first:
                 return await self._reconcile(record)
-            # Commit intention BEFORE sending. Any timeout/crash/cancellation stays lookup-only.
-            record = self.store.advance_operation(
-                operation_id, record.progress, OperationProgress(phase="UNKNOWN_OUTCOME")
-            )
+            # Admission and intent commit atomically before send. Ambiguity stays lookup-only.
             return self._observe(record, await provider.accept(operation_id, plan))
 
     async def cancel_pending(
@@ -252,12 +249,18 @@ class OperatorLifecycle:
             record = await self._reconcile(record)
             if record.progress.phase in TERMINAL_PHASES:
                 return record
-            if record.progress.phase not in ("ADMITTED", "RESERVED"):
+            absent_intent = (
+                record.progress.phase == "UNKNOWN_OUTCOME"
+                and record.progress.remote_revision is None
+            )
+            if record.progress.phase not in ("ADMITTED", "RESERVED") and not absent_intent:
                 raise OperationRejected("pending_state_unconfirmed_or_active")
             if record.progress.phase == "ADMITTED":
                 # Cancellation also crosses a remote boundary. Persist ambiguity first.
                 record = self.store.advance_operation(
                     operation_id, record.progress, OperationProgress(phase="UNKNOWN_OUTCOME")
                 )
-            # The provider must atomically reject an active identity or tombstone a pending one.
+            # An absent lookup is insufficient to resend, but an atomic cancellation may
+            # tombstone it. The provider must reject active/unknown remote state even if
+            # lookup missed it; this never dispatches or refunds a reservation.
             return self._observe(record, await provider.cancel_pending(operation_id, record.plan))

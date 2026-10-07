@@ -1,3 +1,14 @@
+## Durable lifecycle review correction, 2026-10-08
+
+PR144 independent pre-send crash finding corrected: admission/intent commit
+atomically; lookup absence permits only provider-verified atomic tombstone, never
+resend. Active/remote-unknown state remains denied. Affected147 PASS/one OS skip,
+Ruff/mypy68 PASS; final corrected package/hosted receipts pending. d67df77 full2414
+PASS is historical after correction. Native provider/operator attestation/generic
+ADE/new measurement/Sweep/actual clean client and trust remain incomplete/blocked.
+02–07/895MiB authorization persists; no native side effects, merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
 ## Durable operator lifecycle checkpoint, 2026-10-08
 
 GREL03 now extends the existing AnalysisStore with immutable plans and bounded

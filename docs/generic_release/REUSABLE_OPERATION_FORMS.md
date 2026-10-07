@@ -83,3 +83,14 @@ The coordinator is a Python implementation seam, not a configurable plugin hook.
 No caller JSON/MCP input injects provider code. The public native runtime retains
 its setup denial. SyntheticProvider exists only in tests; its fake counters are
 not evidence of physical-domain attestation or real atomic native accounting.
+
+
+Submission admission and dispatch intent are committed in one transaction. A crash
+before the network call remains UNKNOWN_OUTCOME and lookup-only, even if the
+provider has no record. To abandon it, pending cancellation asks the trusted
+provider to atomically tombstone the absent identity or cancel its pending record.
+The provider must independently reject active or uncertain remote state; lookup
+absence alone proves neither no execution nor cancellation permission. Once the
+provider has confirmed remote UNKNOWN_OUTCOME, ordinary cancellation is denied.
+Cancellation cannot resend an analysis, refund capacity or reset identity. This
+mechanism is tested only with a synthetic provider; the native route is disabled.

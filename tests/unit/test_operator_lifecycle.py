@@ -100,6 +100,12 @@ class SyntheticProvider:
 
     async def cancel_pending(self, operation_id, plan):
         self.cancellations += 1
+        existing = self.jobs.get(operation_id)
+        if existing is not None:
+            if existing.progress.phase == "CANCELLED":
+                return existing
+            if existing.progress.phase != "RESERVED":
+                raise OperationRejected("remote_pending_state_denied")
         result = self.observe(operation_id, plan, "CANCELLED", revision=2)
         self.jobs[operation_id] = result
         return result
@@ -529,3 +535,79 @@ def test_known_remote_progress_cannot_regress_to_unknown(lifecycle):
     with pytest.raises(OperationRejected):
         coordinator._observe(record, provider.observe(identity, plan, "UNKNOWN_OUTCOME", 2))
     assert coordinator.read(identity, plan.plan_sha256) == record
+
+
+@pytest.mark.asyncio
+async def test_crash_after_atomic_admission_before_send_can_be_tombstoned(lifecycle, monkeypatch):
+    coordinator, provider, grant, request, plan, _ = lifecycle
+    identity = str(uuid4())
+    real = coordinator.store.admit_operation
+
+    def committed_then_crashed(identity, plan, *, dispatch_intent=False):
+        result = real(identity, plan, dispatch_intent=dispatch_intent)
+        assert result and dispatch_intent
+        raise SystemExit("synthetic crash before provider call")
+
+    monkeypatch.setattr(coordinator.store, "admit_operation", committed_then_crashed)
+    with pytest.raises(SystemExit):
+        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    record = coordinator.read(identity, plan.plan_sha256)
+    assert record.progress.phase == "UNKNOWN_OUTCOME" and record.event_count == 2
+    assert not provider.calls and not provider.jobs
+    restarted = OperatorLifecycle(
+        coordinator.context, AnalysisStore(coordinator.store.path), provider
+    )
+    assert (
+        await restarted.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    ) == record
+    cancelled = await restarted.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+    assert cancelled.progress.phase == "CANCELLED" and provider.cancellations == 1
+    assert (provider.attempts, provider.reserved) == (82, 9798942720)
+    assert not provider.calls
+    # Remote identity tombstone also blocks future acceptance from a fresh local journal.
+    assert (await provider.accept(identity, plan)).progress.phase == "CANCELLED"
+    assert (provider.attempts, provider.reserved) == (82, 9798942720)
+
+
+@pytest.mark.asyncio
+async def test_absent_lookup_never_authorizes_cancel_of_actual_active_remote_job(lifecycle):
+    coordinator, provider, grant, request, plan, _ = lifecycle
+    identity = str(uuid4())
+    provider.loss = "after"
+    provider.phase = "RUNNING"
+    with pytest.raises(ConnectionError):
+        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+
+    async def missing(identity, plan):
+        return None
+
+    provider.lookup = missing
+    with pytest.raises(OperationRejected) as error:
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+    assert error.value.reason == "remote_pending_state_denied"
+    assert provider.jobs[identity].progress.phase == "RUNNING"
+    assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
+    assert provider.calls == [identity] and provider.cancellations == 1
+
+
+
+def test_admission_and_intent_rollback_together_preserving_legacy_record(lifecycle, monkeypatch):
+    coordinator, _, _, _, plan, _ = lifecycle
+    legacy = str(uuid4())
+    coordinator.store.admit(legacy, "legacy", "native-dc", "a" * 64)
+    real = AnalysisStore._append_progress
+
+    def fail_intent(connection, identity, sequence, progress, previous):
+        if sequence == 2:
+            raise ConfigurationError("synthetic intent commit failure")
+        return real(connection, identity, sequence, progress, previous)
+
+    monkeypatch.setattr(AnalysisStore, "_append_progress", staticmethod(fail_intent))
+    identity = str(uuid4())
+    with pytest.raises(ConfigurationError):
+        coordinator.store.admit_operation(identity, plan, dispatch_intent=True)
+    coordinator.store.require(legacy, "legacy", "native-dc", "a" * 64)
+    with pytest.raises(InvalidInputError):
+        coordinator.store.operation(identity)
+    with sqlite3.connect(coordinator.store.path) as db:
+        assert db.execute("SELECT COUNT(*) FROM admissions").fetchone()[0] == 1
