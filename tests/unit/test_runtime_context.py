@@ -519,3 +519,19 @@ def test_lock_rejects_hardlink_alias(settings: Path, tmp_path: Path) -> None:
     with pytest.raises(RuntimeRejected), resource_lock(context):
         pytest.fail("hardlinked protected leaf accepted")
     assert original.read_bytes() == b"protected"
+
+
+def test_explicit_legacy_launch_ignores_inherited_operator_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge import server
+
+    for key in list(os.environ):
+        if key.startswith("CADENCE_MCP_"):
+            monkeypatch.delenv(key)
+    monkeypatch.setenv("CADENCE_MCP_RUNTIME_MODE", "operator")
+    selected = []
+    factory = MagicMock(side_effect=lambda config: selected.append(config) or MagicMock())
+    monkeypatch.setattr(server, "OpenSshBackend", factory)
+    server.create_default_server()
+    assert selected[0].runtime_mode == "legacy_reference"

@@ -1502,7 +1502,7 @@ def create_server(service: CadenceService) -> MCPServer:
 
 
 def create_default_server(*, operator_mode: bool = False) -> MCPServer:
-    config = BridgeConfig(runtime_mode="operator") if operator_mode else BridgeConfig()
+    config = BridgeConfig(runtime_mode="operator" if operator_mode else "legacy_reference")
     if config.runtime_mode == "operator":
         from cadence_mcp_bridge.runtime_context import create_operator_service
 
