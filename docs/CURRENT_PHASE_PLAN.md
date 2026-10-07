@@ -1,5 +1,39 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## STORAGE-REAL-QUAL-01 preparation checkpoint — deletion gate pending
+
+Native Linux two fixed synthetic leaves8192/12288 bytes created/inspected; existing
+Storage inventory14 protected ->16 protected before registration ->two reviewed
+candidates/20480 bytes. Exact plan, both/A-only dry-run, SDK restart and bounded
+stale/hash/substitution/path rejection PASS. Storage5/MCP85 full schemas unchanged;
+SDK evidence is not actual Codex-app Storage E2E (current app22 filter excludes it).
+Fresh full2245 PASS/five OS symlink skips/57 warnings; fixture11/static59/security18/
+contract85/dependency/package67+68/install/three SDK profiles/uninstall PASS.
+Initial console collection/text-mode failures and external model/reasoning config
+change retained; MCP entries unchanged. Eight conservative corrections/20.
+2042 prior private hashes/whole original live checkpoint/original14 artifact records/
+ledger82/9,798,942,720/local stat-only change exact. New simulation/reservation/delete0;
+one helper deployed,20KiB new synthetic payload. No destructive consent produced.
+Complete exact-head review/normal checkpoint PR/remote verification, then request
+precise user item selection plus independent operator consent under Storage policy.
+Native deletion/audit/destructive replay/restart NOT_RUN; this phase is incomplete.
+No next major phase/publication/compaction is activated. Earlier overlays history.
+
+
+## Active STORAGE-REAL-QUAL-01 preparation
+
+User continuation after PR137/main971defcc activates bounded native Storage
+qualification preparation: two new disposable synthetic payloads8192/12288 bytes,
+one immutable closed fixture helper, existing registration/inventory/plan/dry-run.
+No simulator/reservation/historical deletion/config change/publication. Actual
+delete remains NOT_AUTHORIZED until exact user selection plus independent operator
+consent. Current app22 read-only amplifier tools exclude Storage; use SDK stdio
+and label it separately. Preserve2042 prior private hashes, whole live checkpoint,
+ledger82/9,798,942,720 and local stat-only extractor change. Complete concrete
+plan and applicable gates/reviewed feature PR checkpoint before requesting selection.
+Native deletion/replay/audit qualification remains pending; earlier overlays history.
+
+
 ## CLIENT-REAL-QUAL-CODEX-03 completion gate
 
 Scoped actual reads are verified: operator measurement-v8 Gain/Power/native
