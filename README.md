@@ -458,11 +458,12 @@ Nominal input-nulling Offset has a bounded supplemental diagnostic reader; it
 remains partially qualified and is not physical femtovolt accuracy or a
 specification result. See [Offset study](docs/ANALOG_OFFSET_V1.md).
 
-### Native Storage qualification preparation
+### Native Storage qualification
 
-The existing Storage interface has a bounded native preparation checkpoint:
-two new synthetic byte fixtures, inventory, exact cleanup plan and dry-run.
-Actual deletion remains unverified and requires exact user-selected items plus
-independent operator consent. Historical results remain protected. SDK stdio
-verification is separate from actual Codex-app Storage verification.
-See [STORAGE-REAL-QUAL-01](docs/STORAGE_REAL_QUAL_01.md).
+The existing Storage interface has a bounded native qualification: one newly
+generated8KiB synthetic payload was deleted only after exact user selection and
+separate operator consent. Inventory, plan/dry-run, direct audit, retained control
+and historical artifacts, same-operation replay and SDK server restart were verified.
+This does not qualify arbitrary historical result deletion or whole-VM cleanup.
+Actual Codex-app Storage E2E remains unverified; SDK/native evidence is separate.
+See [STORAGE-REAL-QUAL-01 result](docs/STORAGE_REAL_QUAL_01_RESULT_V1.md).

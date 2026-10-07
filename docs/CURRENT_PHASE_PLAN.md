@@ -1,5 +1,28 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## STORAGE-REAL-QUAL-01 native completion gate
+
+Separate direct human A selection and operator approval bind exact plan/request/
+operation. Native A-only payload deletion COMPLETE:8192 logical/unlinked bytes,
+observed free delta4096/actual attributable reclaim null; no reservation refund.
+B12288 bytes/original14 artifact records/whole original live checkpoint/2094 prior
+private hashes exact. A empty container/metadata retained, quarantine empty.
+Same-ID replay and fresh SDK server restart return identical durable COMPLETE;
+direct bounded native intent/item/result/consent/registration audit PASS.
+Storage5/MCP85/v1-v8/old engines unchanged. SDK evidence is not actual Codex-app
+Storage E2E; native fault/concurrency injection NOT_RUN. Source/test/toolchain/
+policy exact full2245 PASS/five OS skips/57 warnings reuse; fresh scoped/security/
+static/contract/package and exact review gates govern completion integration.
+Fresh123 scoped PASS/one OS symlink SKIP, security18/dependency/static59/contract85/
+package67+68/isolated install/three SDK stdio/uninstall PASS.
+Conservative10/20 corrections, initial failures preserved; phase0 simulator/0
+reservation/one8192-byte payload delete. Ledger82/9,798,942,720 preserved.
+Finish normal reviewed continuation PR/permitted merge/remote SHA-tree receipt;
+then report complete and ask once before CLIENT-STORAGE-QUAL-01 read-only actual
+app verification. No next phase/extra deletion/compaction/publication activated.
+Earlier overlays and preparation evidence remain dated history.
+
+
 ## STORAGE-REAL-QUAL-01 preparation checkpoint — deletion gate pending
 
 Native Linux two fixed synthetic leaves8192/12288 bytes created/inspected; existing
