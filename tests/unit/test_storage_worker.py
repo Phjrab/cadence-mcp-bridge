@@ -107,7 +107,14 @@ class TestIO:
         source = self.paths[parent] / name
         if self.rename_hook:
             self.rename_hook(source)
-        source.rename(self.paths[destination] / leaf)
+        target = self.paths[destination] / leaf
+        source.rename(target)
+        # POSIX open descriptors retain the renamed inode. Track that move so
+        # Windows emulation closes every handle before unlink, including the
+        # original fingerprint handle and the reopened quarantine handle.
+        for fd, path in self.paths.items():
+            if fd >= 0 and path == source:
+                self.paths[fd] = target
 
     def unlink(self, parent: int, name: str) -> None:
         if self.fail_unlink:
