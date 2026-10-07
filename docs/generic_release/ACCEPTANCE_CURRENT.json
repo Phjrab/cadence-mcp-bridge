@@ -1,0 +1,365 @@
+{
+  "schema_version": 1,
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "program": "GENERAL_RELEASE",
+  "assessment_kind": "IMPLEMENTATION_CHECKPOINT_NOT_RELEASE_CANDIDATE",
+  "candidate_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+  "version": "1.0.0",
+  "generic_release_gate": "BLOCKED",
+  "publication_authorized": false,
+  "grel08_authorized": false,
+  "gates": [
+    {
+      "id": "G01",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "shipped fixed bootstrap assets; native installation/positive trust blocked"
+      ]
+    },
+    {
+      "id": "G02",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "installed operator contracts/routing verified; native executable path unqualified"
+      ]
+    },
+    {
+      "id": "G03",
+      "status": "BLOCKED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual executable/dependency chain permissions rejected"
+      ]
+    },
+    {
+      "id": "G04",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "read-only local authority forms; authentic operator confirmation/provider absent"
+      ]
+    },
+    {
+      "id": "G05",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "two genuine new circuits not created or registered for native acceptance"
+      ]
+    },
+    {
+      "id": "G06",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "new MOS native DC/AC/TRAN execution absent"
+      ]
+    },
+    {
+      "id": "G07",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "generic effective native inputs and copy receipt absent"
+      ]
+    },
+    {
+      "id": "G08",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "automatic extraction of new generic job absent"
+      ]
+    },
+    {
+      "id": "G09",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "new registered-circuit native 1D Sweep absent"
+      ]
+    },
+    {
+      "id": "G10",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "second actual batch under reusable authority absent"
+      ]
+    },
+    {
+      "id": "G11",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "legacy identity/replay and local frozen plans tested; generic reconciliation absent"
+      ]
+    },
+    {
+      "id": "G12",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "declared local shared lock tested; attested remote shared domain/provider absent"
+      ]
+    },
+    {
+      "id": "G13",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "85 full schemas and legacy tests preserved; native new-path historical replay absent"
+      ]
+    },
+    {
+      "id": "G14",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "isolated synthetic operator install verified; actual fresh native context absent"
+      ]
+    },
+    {
+      "id": "G15",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual current Codex new generic job/restart absent"
+      ]
+    },
+    {
+      "id": "G16",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "hosted synthetic workflow and same-version state preservation; semver migration absent"
+      ]
+    },
+    {
+      "id": "G17",
+      "status": "PASS_SCOPED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "exact curated wheel/sdist source/license/notices and content audits pass; history rights separate"
+      ]
+    },
+    {
+      "id": "G18",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "shipped bootstrap/form instructions distinguish local match and execution; generic runbook pending"
+      ]
+    },
+    {
+      "id": "G19",
+      "status": "NOT_AUTHORIZED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "GREL08 final release candidate/version/publication are not authorized"
+      ]
+    },
+    {
+      "id": "C01",
+      "status": "DISABLED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "fresh operator deletion disabled; no exact consent or native delete qualification"
+      ]
+    },
+    {
+      "id": "C02",
+      "status": "UNSUPPORTED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "active native termination unsupported; generic pending cancellation absent"
+      ]
+    },
+    {
+      "id": "C03",
+      "status": "UNQUALIFIED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "historical qualified/partial measurement scopes preserved; generic PM/Offset/Slew absent"
+      ]
+    },
+    {
+      "id": "C04",
+      "status": "DEFERRED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual Claude complete qualification stays deferred"
+      ]
+    }
+  ],
+  "artifact_identities": {
+    "grel02_tested_source": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
+    "grel02_corrected_wheel_sha256": "caa017021a63c548ffbcbe18e38a55cce79c8f0c520a08383721b695ebe9f254",
+    "grel02_corrected_sdist_sha256": "6b1783ae5a58ef2a54980f6a64a5ed1d131f6a101584a72c8c4968f63e077f5d",
+    "grel03_tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+    "grel03_corrected_wheel_sha256": "5bdba4e85d085b18f2d4df88d97aade1edf8f7fc0206d75463c013356c0b4004",
+    "grel03_corrected_sdist_sha256": "f7a27cf40c6b972b40c2e982085752e8e6fa5aa5af6a4e45452b4dc1dfd8c3e2",
+    "grel03_hosted_wheel_sha256": "bcf81db757c25a6b22fc96ab07afd2b246f4fc5997ff14fc76981a48416faf8c",
+    "grel03_hosted_sdist_sha256": "aa3b7eef9921f1872f5bee853e7dbafdc39e467bcbf48f4e567a2c7eed220995"
+  },
+  "native_jobs_this_program": 0,
+  "new_reservations_this_program": 0,
+  "remote_deployments_this_program": 0,
+  "existing_resources": {
+    "attempts": 82,
+    "cumulative_reserved_bytes": 9798942720,
+    "ceiling_bytes": 10737418240,
+    "approved_remaining_bytes": 938475520,
+    "remaining_capacity_increase_authorized": false
+  },
+  "local_protected_selected_files": {
+    "count": 99964,
+    "changed": 0
+  },
+  "next_native_boundary": "NATIVE_RESUME_BOUNDARY.md",
+  "excluded_from_current_validation": [
+    "different Cadence versions",
+    "different PDKs",
+    "different physical hosts",
+    "fresh complete Claude application qualification"
+  ],
+  "local_validation": {
+    "affected_passed": 94,
+    "os_symlink_skips": 2,
+    "security_passed": 18,
+    "source_typecheck_files": 67,
+    "mcp_full_schemas": 85,
+    "preserved_synthetic_state_files": 19,
+    "input_files": 271,
+    "input_drift": 0,
+    "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+  },
+  "hosted_ci": {
+    "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+    "run": 37652706492,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
+    "conclusion": "PASS",
+    "unit_passed": 2366,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 177.28,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+  }
+}

@@ -10,10 +10,10 @@
     "GREL-07"
   ],
   "current_phase": "GREL-03/GREL-07",
-  "phase_status": "NATIVE_TRUST_BLOCKED_LIFECYCLE_CORRECTION_CHECKS_PENDING",
+  "phase_status": "PARTIAL_LOCAL_VALIDATED_NATIVE_TRUST_BLOCKED",
   "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
+  "parent_feature": "b0e2693",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -51,6 +51,17 @@
       "run": 37650489494,
       "conclusion": "PASS_HISTORICAL_AFTER_LIFECYCLE_FIX",
       "unit_passed": 2364
+    },
+    "current": {
+      "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+      "run": 37652706492,
+      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
+      "conclusion": "PASS",
+      "unit_passed": 2366,
+      "unit_skipped": 0,
+      "unit_warnings": 56,
+      "unit_seconds": 177.28,
+      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
     }
   },
   "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
@@ -67,5 +78,22 @@
   "selected_local_preservation": {
     "files": 99964,
     "changed": 0
-  }
+  },
+  "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+  "local_validation": {
+    "affected_passed": 94,
+    "os_symlink_skips": 2,
+    "security_passed": 18,
+    "source_typecheck_files": 67,
+    "mcp_full_schemas": 85,
+    "preserved_synthetic_state_files": 19,
+    "input_files": 271,
+    "input_drift": 0,
+    "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+  },
+  "independent_review": {
+    "pr144": "PENDING",
+    "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL"
+  },
+  "local_input_snapshot_sha256": "ca01a6e8442a9c32a0163febcd70d3887a6229c85d962066995961c2e2e06f62"
 }

@@ -8,7 +8,7 @@ plan forms only; no grant issuance/remote lifecycle/provider/ledger reset. GREL0
 adds hosted synthetic workflow and installed state-preservation tooling. Generic
 ADE execution/new measurements/Sweep/actual clean app remain NOT_IMPLEMENTED/
 NOT_RUN; do not call these phases complete. Source/test/package evidence and
-pending CI/review are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
+exact source-scoped CI/review receipts are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
 No simulations/reservations/deployments/deletions/permission/license changes.
 Installation-owner trust action is required before native acceptance. No protected
 chmod, budget increase, merge, GREL08 or publication is authorized. No phase-boundary
