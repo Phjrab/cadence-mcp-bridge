@@ -1,5 +1,16 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Actual Codex Storage reads, 2026-10-07
+
+[Storage app report](CLIENT_STORAGE_QUAL_01.md) verifies26 configured read names
+after user restart and actual summary/list/describe/plan calls. All16 complete
+artifact records and stable plan match SDK/native post-delete evidence.
+Stale/unknown/path/over-limit requests fail closed. Original22 tools and
+amplifier catalogs/journals remain selected; execute is excluded. No new
+simulation, consent or deletion. Full85 schemas remain SDK evidence; actual app
+source/build/version/full lifecycle remain unverified. Earlier reports below
+retain their dated scope.
+
 ## Operator-bound Codex read checkpoint, 2026-10-07
 
 [Operator report](CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md) verifies actual

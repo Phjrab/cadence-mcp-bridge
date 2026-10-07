@@ -18,6 +18,12 @@ is authorized by passing local gates.
 
 ## MCP clients
 
+[Current Codex Storage read qualification](docs/CLIENT_STORAGE_QUAL_01.md)
+verifies actual summary, paginated inventory, descriptions and read-only plans
+with26 filtered read tools (the prior22 plus four Storage reads). Existing
+amplifier registries/journals remain selected; cleanup execution is excluded.
+Full app schema/build/version/lifecycle qualification remains incomplete.
+
 [Current Codex operator read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md):
 22 explicitly filtered read tools from the85-tool server; actual operator-v8
 Gain/Power/DC/AC/TRAN and no-target specification reads match preserved results.
@@ -465,5 +471,7 @@ generated8KiB synthetic payload was deleted only after exact user selection and
 separate operator consent. Inventory, plan/dry-run, direct audit, retained control
 and historical artifacts, same-operation replay and SDK server restart were verified.
 This does not qualify arbitrary historical result deletion or whole-VM cleanup.
-Actual Codex-app Storage E2E remains unverified; SDK/native evidence is separate.
+Actual Codex-app summary/list/describe/plan reads are now
+[verified in their bounded scope](docs/CLIENT_STORAGE_QUAL_01.md).
+Actual app cleanup execution remains NOT_RUN; SDK/native evidence is separate.
 See [STORAGE-REAL-QUAL-01 result](docs/STORAGE_REAL_QUAL_01_RESULT_V1.md).

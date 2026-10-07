@@ -1,5 +1,26 @@
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
+## CLIENT-STORAGE-QUAL-01 completion gate
+
+Actual Codex reconnect exposes26 configured read names; summary, paginated16
+artifacts, A/B plus replay/evidence descriptions, exact plan/repeat and stale/
+unknown/path/limit rejection match the preserved SDK/native snapshot.
+A empty protected container/B retained12288-byte control/original14 records and
+whole live checkpoint/2122 prior private hashes remain exact. SDK full85 schemas
+are separate from actual app schema/build/version/lifecycle qualification.
+Fresh127 scoped PASS/one OS skip, security18/static59/contract85/dependency/
+package67+68/isolated CLI/three SDK profiles/uninstall PASS. Full2245 PASS/five OS
+skips/57 warnings reused only with exact tested-source/toolchain/policy equality.
+Phase0 simulation/reservation/deployment/deletion; ledger82/9,798,942,720 retained.
+Five conservative corrections/20; external non-Cadence transport config change
+preserved after investigation. Bridge config retains existing catalogs/journals
+and22 reads plus four Storage reads; cleanup execute remains excluded.
+Finish exact candidate review/feature PR/permitted merge/remote SHA-tree receipt,
+report scoped completion, then ask once before CLIENT-LIFECYCLE-QUAL-01.
+See docs/CLIENT_STORAGE_QUAL_01.md. No next phase or publication activated.
+Earlier overlays remain dated history.
+
+
 ## STORAGE-REAL-QUAL-01 native completion gate
 
 Separate direct human A selection and operator approval bind exact plan/request/

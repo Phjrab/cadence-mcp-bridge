@@ -39,11 +39,18 @@ remain user-deferred; this phase does not request new equipment or app work.
 | Slew | Supplemental opposite-step20–80% rise/fall secants and resolution/edge agreement, PARTIALLY_QUALIFIED in nonlinear saturated open-loop conditions. Generic conventional slew remains UNQUALIFIED/null. |
 | Offset | User-selected nominal open-loop input nulling `Vp−Vm` at `Vop−Vom=0`: supplemental PARTIALLY_QUALIFIED. Near-zero numerical residual is not femtovolt physical accuracy, mismatch statistics or PVT qualification. Generic Offset remains UNQUALIFIED/null. |
 | Specifications | Existing exact-condition comparator with originalv1/v2 and explicit companionv3 grid facts. Six actual gain/power facts retain NOT_EVALUATED because no authoritative numerical goals exist. Synthetic target PASS/FAIL is not real design acceptance. |
-| Storage | Registered inventory/classification/plans/dry-run and synthetic consent/delete/restart guards. Actual reference-host selected deletion NOT_RUN; no auto cleanup or raw-result compaction. |
+| Storage | Native one-synthetic-payload selected deletion/audit/replay/restart verified in STORAGE-REAL-QUAL-01. Actual Codex summary/list/describe/plan reads verified in CLIENT-STORAGE-QUAL-01; app deletion NOT_RUN. No general historical-result cleanup or compaction. |
 | New Cadence versions/PDKs/hosts | DEFERRED, no MULTI_CADENCE_VERSION_VERIFIED or MULTI_PDK_VERIFIED claim. |
 | Optimization, multidimensional search, automatic expansion/modification, Layout/DRC/LVS/PEX/Monte Carlo, public MCP endpoint | Outside the present product qualification; no automatic activation. |
 
 ## Client evidence
+
+Latest Storage checkpoint: [actual Codex Storage reads](CLIENT_STORAGE_QUAL_01.md)
+verify26 filtered names and complete inventory/description/plan payload equality
+with preserved evidence after reconnect. Execute is excluded; no extra deletion
+or simulation occurred. This scoped update does not satisfy full app schema,
+source/build/version or lifecycle qualification. Publication status above is
+unchanged. Earlier client observations below retain their dated scope.
 
 Latest operator checkpoint: [actual Codex reads](CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md)
 verify operator-v8 Gain/Power/DC/AC/TRAN and no-target evaluation with full
