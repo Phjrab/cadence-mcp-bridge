@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
@@ -22,6 +23,10 @@ class BridgeConfig(BaseSettings):
         frozen=True,
     )
 
+    # Legacy launch stays explicit through the original serve/export workflow.
+    runtime_mode: Literal["legacy_reference", "operator"] = "legacy_reference"
+    runtime_settings_path: Path | None = None
+    runtime_context_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")] | None = None
     ssh_alias: Literal["cadence-vm"] = "cadence-vm"
     design_registry_path: Path | None = None
     pdk_registry_path: Path | None = None
@@ -60,6 +65,26 @@ class BridgeConfig(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_relationships(self) -> Self:
+        if self.runtime_mode == "legacy_reference" and (
+            self.runtime_settings_path is not None or self.runtime_context_id is not None
+        ):
+            raise ValueError("operator context requires explicit operator mode")
+        if self.runtime_mode == "operator" and any(
+            value is not None
+            for value in (
+                self.design_registry_path,
+                self.pdk_registry_path,
+                self.analysis_journal_path,
+                self.sweep_journal_path,
+                self.amplifier_specification_registry_path,
+            )
+        ):
+            raise ValueError("operator context cannot inherit legacy catalog or journal overrides")
+        if self.runtime_mode == "operator" and (
+            self.remote_root != BridgeConfig.model_fields["remote_root"].default
+            or self.runner_path != BridgeConfig.model_fields["runner_path"].default
+        ):
+            raise ValueError("operator transport must resolve from its environment")
         expected_prefix = f"{self.remote_root}/bin/"
         if not self.runner_path.startswith(expected_prefix):
             raise ValueError("runner_path must be contained in remote_root/bin")
@@ -68,3 +93,15 @@ class BridgeConfig(BaseSettings):
         if self.max_poll_seconds <= self.poll_interval_seconds:
             raise ValueError("maximum poll time must exceed the polling interval")
         return self
+
+
+@dataclass(frozen=True)
+class OperatorTransport:
+    """Transport parameters resolved only from an immutable operator context."""
+
+    ssh_alias: str
+    remote_root: str
+    runner_path: str
+    connect_timeout_seconds: int = 10
+    operation_timeout_seconds: int = 120
+    max_output_bytes: int = 65_536

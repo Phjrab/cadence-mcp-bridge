@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Awaitable
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.context import Context
@@ -1501,8 +1501,12 @@ def create_server(service: CadenceService) -> MCPServer:
     return server
 
 
-def create_default_server() -> MCPServer:
-    config = BridgeConfig()
+def create_default_server(*, operator_mode: bool = False) -> MCPServer:
+    config = BridgeConfig(runtime_mode="operator") if operator_mode else BridgeConfig()
+    if config.runtime_mode == "operator":
+        from cadence_mcp_bridge.runtime_context import create_operator_service
+
+        return create_server(cast(CadenceService, create_operator_service(config)))
     designs = None
     pdks = None
     amplifier_specs = None
@@ -1535,8 +1539,8 @@ def create_default_server() -> MCPServer:
     )
 
 
-def run_stdio_server() -> None:
+def run_stdio_server(*, operator_mode: bool = False) -> None:
     """Run locally over stdio; all application logging is directed to stderr."""
 
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
-    create_default_server().run("stdio")
+    create_default_server(operator_mode=operator_mode).run("stdio")

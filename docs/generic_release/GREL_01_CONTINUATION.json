@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "program": "GENERAL_RELEASE",
+  "actual_current_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
+  "current_phase": "GREL-01",
+  "phase_status": "LOCAL_GATES_PASS_FEATURE_PR_PENDING",
+  "branch": "feat/grel-01-runtime-context",
+  "implementation_commit": null,
+  "head_sha": null,
+  "tested_input_manifest_sha256": "37b99af90a2dc8d41ded95b6402919b545de31322b0d18d8c9583134b7d62885",
+  "pr_url": null,
+  "completed_gates": [
+    "GREL01_LOCAL_ROUTING",
+    "GREL01_OPERATOR_CLI",
+    "GREL01_INSTALLED_SYNTHETIC_STDIO",
+    "G13_LOCAL_COMPATIBILITY",
+    "G17_CURATED_PACKAGE_ONLY"
+  ],
+  "failed_gates": [
+    "BROAD_FORMAT_CHECK_BASELINE_DEBT"
+  ],
+  "deferred_gates": [
+    "G03",
+    "G05",
+    "G06",
+    "G07",
+    "G08",
+    "G09",
+    "G10",
+    "G15",
+    "C03",
+    "C04",
+    "OTHER_VERSION_PDK_PC"
+  ],
+  "authorized_operations": [
+    "GREL01_LOCAL_IMPLEMENTATION_TEST_DOCUMENTATION_FEATURE_PR"
+  ],
+  "live_resource_snapshot": null,
+  "new_simulations": 0,
+  "new_reservations": 0,
+  "remote_writes": 0,
+  "next_phase_recommendation": "GREL-02",
+  "next_phase_authorized": false,
+  "merge_authorized": false,
+  "publication_authorized": false,
+  "generic_release_status": "BLOCKED",
+  "report": "GREL_01_RESULT.md",
+  "note": "Git HEAD/PR are the final head authority; no self-referential commit claim. Synthetic package evidence is not native Cadence qualification.",
+  "full_unit_result": {
+    "passed": 2298,
+    "skipped": 6,
+    "warnings": 56,
+    "seconds": 752.02
+  }
+}

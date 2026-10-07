@@ -1,5 +1,14 @@
 # Cadence MCP Bridge
 
+GREL-01 adds an explicit operator runtime foundation. A bare CLI launch or
+serve-operator with no settings returns SETUP_REQUIRED and cannot contact the
+historical VM. Hash-bound environment/design/PDK contexts select the backend and
+separate journals; unqualified operator execution remains blocked. Existing
+explicit serve client fragments retain legacy compatibility. See the
+[operator runtime workflow](docs/generic_release/RUNTIME_CONTEXT_V1.md).
+Runner bootstrap, new-circuit DC/AC/TRAN and repeatable Sweep are still required
+before general release; this phase does not lower that acceptance target.
+
 A safe, bounded, client-independent MCP server connecting MCP clients to
 registered Cadence Virtuoso/ADE/Spectre capabilities. The validated execution
 reference is Windows to the registered `cadence-vm` environment. The active operating policy is

@@ -29,6 +29,7 @@ from cadence_mcp_bridge.environments import (
     prepare_environment,
     qualify_environment,
 )
+from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
 from cadence_mcp_bridge.onboarding import (
     OnboardingRejected,
     configured_registries_valid,
@@ -52,8 +53,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers.add_parser(
         "serve",
-        help="Run the Cadence MCP server over stdio (the default).",
+        help="Run the explicit legacy compatibility stdio launch.",
     )
+    subparsers.add_parser(
+        "serve-operator", help="Serve an explicit operator context; no legacy fallback."
+    )
+    runtime = subparsers.add_parser(
+        "runtime", help="Operator-only local immutable context inspection."
+    )
+    runtime_actions = runtime.add_subparsers(dest="runtime_action", required=True)
+    runtime_actions.add_parser("schema")
+    for action in ("verify", "resolve"):
+        command = runtime_actions.add_parser(action)
+        command.add_argument("--settings", type=Path)
+        command.add_argument("--context")
+        if action == "resolve":
+            command.add_argument("--design-id", required=True)
     subparsers.add_parser("doctor", help="Inspect local prerequisites without remote contact.")
     for name in ("verify", "client-config"):
         onboarding = subparsers.add_parser(name, help="Operator-only integrated onboarding.")
@@ -63,6 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "verify":
             onboarding.add_argument("--remote-preflight", action="store_true")
         else:
+            onboarding.add_argument("--runtime-settings", type=Path)
+            onboarding.add_argument("--context")
             onboarding.add_argument("--journal", type=Path, required=True)
             onboarding.add_argument("--sweep-journal", type=Path)
             onboarding.add_argument("--output", type=Path, required=True)
@@ -104,6 +121,50 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "runtime":
+        from cadence_mcp_bridge.runtime_context import (
+            RuntimeRejected,
+            RuntimeSettings,
+            runtime_observation,
+            select_context,
+        )
+
+        try:
+            if arguments.runtime_action == "schema":
+                observation = RuntimeSettings.model_json_schema()
+            else:
+                config = BridgeConfig(
+                    **{
+                        k: f.default
+                        for k, f in BridgeConfig.model_fields.items()
+                        if k not in ("runtime_mode", "runtime_settings_path", "runtime_context_id")
+                    },
+                    runtime_mode="operator",
+                    runtime_settings_path=arguments.settings,
+                    runtime_context_id=arguments.context,
+                )
+                if arguments.runtime_action == "resolve":
+                    context = select_context(config)
+                    if context is None:
+                        raise RuntimeRejected("setup_required")
+                    context.resolve(arguments.design_id)
+                observation = runtime_observation(config)
+        except (OSError, ValueError, ConfigurationError, InvalidInputError) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "BLOCKED",
+                        "execution_authorized": False,
+                        "remote_contact": False,
+                        "reason": failure.reason
+                        if isinstance(failure, RuntimeRejected)
+                        else "runtime_invalid",
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(observation, sort_keys=True))
+        return 0
     if arguments.command in ("verify", "client-config"):
         try:
             paths = (arguments.profile, arguments.design_registry, arguments.pdk_registry)
@@ -118,9 +179,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.output,
                     format=arguments.format,
                     sweep_journal=arguments.sweep_journal,
+                    runtime_settings=arguments.runtime_settings,
+                    context_id=arguments.context,
                 )
         except (
             OSError,
+            ConfigurationError,
             ValueError,
             RecursionError,
             TimeoutError,
@@ -246,7 +310,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(design_result, sort_keys=True))
         return 0
     if arguments.command == "config-check":
-        config = BridgeConfig()
+        try:
+            config = BridgeConfig()
+            if config.runtime_mode == "operator":
+                from cadence_mcp_bridge.runtime_context import runtime_observation
+
+                print(json.dumps(runtime_observation(config), sort_keys=True))
+                return 0
+        except (ValueError, ConfigurationError):
+            print("configuration: invalid operator runtime")
+            return 1
         if config.pdk_registry_path is not None:
             try:
                 load_pdk_registry(config.pdk_registry_path)
@@ -262,7 +335,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("configuration: valid")
         return 0
 
-    run_stdio_server()
+    run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     return 0
 
 

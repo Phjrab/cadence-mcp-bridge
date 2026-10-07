@@ -1,5 +1,20 @@
 # Project State
 
+## GREL-01 active general-release scope, 2026-10-07
+
+The current user selects GREL-01 only, following an attached release pack and
+fresh main revalidation through PR141/553276d. Preserve completed client/storage
+qualification, all historical circuit work and unrelated local changes. Implement
+immutable operator routing, setup/consistency checks, local context observation,
+tests, documentation and one feature PR. No remote writes, new simulation,
+installation permission changes, global client changes or publication.
+Earlier continuous-phase delegations do not extend to the new program.
+Report this phase and ask once before GREL-02; do not auto-merge or start it.
+See [runtime contract](docs/generic_release/RUNTIME_CONTEXT_V1.md) and
+[phase result](docs/generic_release/GREL_01_RESULT.md).
+Earlier overlays below remain dated historical records.
+
+
 ## CLIENT-LIFECYCLE-QUAL-01 completion gate
 
 Actual app sessions03/04 captured initialize2025-06-18 and all85 normalized full
@@ -126,7 +141,7 @@ Native deletion/replay/audit qualification remains pending; earlier overlays his
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: CLIENT-LIFECYCLE-QUAL-01
+current_wp: GREL-01
 client_lifecycle_01_status: bounded_actual_schema_reconnect_verified_graceful_shutdown_unverified
 client_lifecycle_01_report: docs/CLIENT_LIFECYCLE_QUAL_01.md
 client_lifecycle_01_tools: raw85_filtered26_no_API_change
@@ -531,7 +546,7 @@ spec_contract_01_desktop: CLAUDE_REAL_CLIENT_UNVERIFIED_fresh_Codex_app_NOT_TEST
 spec_contract_01_spectre_reservations_deployments_deletions: 0_0_0_0_cumulative62_of500_and7114588160_of10737418240
 spec_contract_01_protection: source_ADE_PDK_saved_jobs_counters_admission_journal_and1063_prior_records_equal
 spec_contract_01_next_phase: Release_Readiness_reassessment_pending_one_boundary_choice_no_publication_or_optimization
-current_status: analog_pm_01_applicability_audit_complete_numeric_PM_UNQUALIFIED_current_Codex_analog_registry_empty_Claude_DEFERRED_publication_NOT_AUTHORIZED
+current_status: local_gates_pass_feature_PR_pending
 analog_meas_01_starting_main: e3fcfad30f35c68b1a90160d4d5f3a364436ab12
 analog_meas_01_workflow: docs/ANALOG_MEASUREMENTS_V1.md
 analog_meas_01_scope: registered_v6_local_derivation_admitted_native_evidence_no_new_extraction
@@ -955,8 +970,8 @@ auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_extracted
 auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_completed
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
-last_completed_wp: GENERIC-DESIGN-01
-next_wp: GENERIC-VAR-01_pending_one_user_choice
+last_completed_wp: CLIENT-LIFECYCLE-QUAL-01
+next_wp: GREL-02_pending_one_user_choice
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
@@ -1286,16 +1301,16 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: feat/generic-env-01
-base_main_commit: 407cc401e5027070a54da190537e1b7d91e80a11
-last_commit: recorded_in_private_feature_and_merge_checkpoint
+current_feature_branch: feat/grel-01-runtime-context
+base_main_commit: 553276d28c54d8e87092229d102bfd05ec98e74f
+last_commit: recorded_in_GREL_01_continuation_and_feature_PR
 last_push: null
 push_verification: feature_head_verified_final_sha_in_private_checkpoint_and_completion_report
-awaiting_user_merge: false
+awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
-last_e2e_result: generic_env_expected_permission_rejection_native_35_stdio_dc_ac_tran_result_replay_equal_no_new_simulations
-user_action_required: "At this major phase completion, choose once whether to start GENERIC-DESIGN-01. Generic qualification of the reference installation requires operator-managed Cadence executable permission hardening; this phase does not modify that installation."
+last_e2e_result: GREL01_installed_synthetic_two_context_restart_pass_actual_new_jobs_NOT_RUN
+user_action_required: "Review GREL-01 feature PR; choose once whether to proceed to GREL-02."
 ```
 
 ## GENERIC-DESIGN-01 checkpoint

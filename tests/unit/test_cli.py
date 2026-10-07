@@ -12,7 +12,8 @@ def test_config_check() -> None:
 def test_default_command_runs_stdio_server(monkeypatch: pytest.MonkeyPatch) -> None:
     called = False
 
-    def fake_run() -> None:
+    def fake_run(*, operator_mode: bool = False) -> None:
+        assert operator_mode is True
         nonlocal called
         called = True
 
