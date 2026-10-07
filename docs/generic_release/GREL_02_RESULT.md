@@ -117,3 +117,26 @@ again matches82/9,798,942,720 and snapshot1ff1794c7ff2d75b3aeed475d587a68e2d39bc
 filesystem free25690324992/floorOK, registered logical/allocated totals unchanged.
 The original checkout still contains only the preserved unrelated OCN edit.
 Generic positive-native bootstrap gate remains BLOCKED; local PASS does not close it.
+
+## Independent PR143 review correction
+
+Automated review of ad63410 found P1 installation-target binding: standalone
+install could accept a different owned TARGET. Native install now compares the
+normalized target with the hash-verified profile managed_root before any write;
+wrong-target tests prove an empty target stays empty. Windows CLI install is
+explicit LOCAL_CONTENT_STAGING_ONLY, not a Linux installation, and the standalone
+remote command offers no staging entry point. Staging helper refuses Linux.
+Primary additional review hardens launcher/preflight runner directory ancestors
+before reading/importing assets: directory type, current/root ownership and no
+group/other write. No permission is changed. Both assets check the full chain.
+
+Corrected focused runner/transport/context73 PASS/2 OS skips; Ruff/mypy66 PASS;
+actual Python2.6 grammar4 assets PASS. The prior2319 full and d0fdab/18764a
+artifacts above are historical tested candidates, not corrected-head receipts.
+Corrected full/artifact/installed acceptance: PENDING_GREL02_REVIEW_FINAL.
+Independent review of the corrected code remains pending. The initial P1 remains
+visible in PR143; no approval or merge is inferred from our own fix.
+
+Selected original private/history/local-change baseline:99964 files rehashed,
+changed0. Original unrelated OCN edit retains its exact baseline bytes. This is
+selected local preservation, not a complete scan of protected OA/PDK/remote VM.

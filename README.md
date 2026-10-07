@@ -552,3 +552,12 @@ The CLI binds the private profile, fixed package bytes, selected manifest and
 fresh nonce, and reuses the existing environment qualifier. Successful preflight
 is identity/runtime/binary/root/disk evidence; analysis, license entitlement,
 physical ledger provisioning and operation authority remain separate gates.
+
+
+Native standalone runner installation refuses a TARGET that differs from the
+hash-verified profile's paths.managed_root before creating any directory. A
+mistyped target cannot create a runtime tree in an original/source/vendor root.
+Windows runner install is local content staging only and reports
+WINDOWS_LOCAL_CONTENT_STAGING_ONLY/native_installation_verified=false. The
+standalone Linux installer has no staging command; Linux installation still
+requires the exact managed root and positive native trust is a separate gate.

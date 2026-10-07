@@ -4,7 +4,23 @@
 import hashlib
 import json
 import os
+import stat
 import sys
+
+
+def trusted_directory_chain(path):
+    if os.name == "nt":
+        return  # Windows staging is never native runner qualification.
+    current = os.path.abspath(path)
+    while True:
+        info = os.lstat(current)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, os.getuid())
+                or info.st_mode & 18):
+            raise ValueError("runner_directory_permissions")
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
 
 
 def main():
@@ -13,10 +29,9 @@ def main():
     directory = os.path.dirname(os.path.abspath(__file__))
     if os.path.realpath(directory) != directory or os.path.basename(directory) != sys.argv[2]:
         raise ValueError("runner_location")
+    trusted_directory_chain(directory)
     # The installed bootstrap verifier is intentionally kept outside the version
     # tree. Import only the hash-verified fixed probe from this private version.
-    import stat
-
     info = os.lstat(directory + "/manifest.json")
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         raise ValueError("runner_manifest_type")

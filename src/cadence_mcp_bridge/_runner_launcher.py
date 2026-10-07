@@ -10,12 +10,28 @@ import subprocess
 import sys
 
 
+def trusted_directory_chain(path):
+    if os.name == "nt":
+        return  # Windows staging is never native runner qualification.
+    current = os.path.abspath(path)
+    while True:
+        info = os.lstat(current)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, os.getuid())
+                or info.st_mode & 18):
+            raise ValueError("runner_directory_permissions")
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+
+
 def main():
     if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("identity", "preflight"):
         raise ValueError("unqualified_command")
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if os.path.realpath(root) != root:
         raise ValueError("linked_root")
+    trusted_directory_chain(root)
     path = root + "/active-runner.json"
     info = os.lstat(path)
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
@@ -38,6 +54,7 @@ def main():
     directory = root + "/runtime/" + digest
     if os.path.exists(root + "/runner-revoked.json") or os.path.realpath(directory) != directory:
         raise ValueError("runner_revoked_or_linked")
+    trusted_directory_chain(directory)
     stream = open(directory + "/manifest.json", "rb")
     try:
         raw = stream.read(262145)

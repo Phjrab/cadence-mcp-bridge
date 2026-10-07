@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -62,8 +63,9 @@ def export_installer(output: Path) -> dict[str, object]:
 
 
 def install(bundle_path: Path, target: Path, expected: str) -> dict[str, Any]:
+    entry = installer.stage_windows if os.name == "nt" else installer.install
     return dict(
-        installer.install(str(_local_path(bundle_path)), str(_local_path(target)), expected)  # type: ignore[no-untyped-call]
+        entry(str(_local_path(bundle_path)), str(_local_path(target)), expected)  # type: ignore[no-untyped-call]
     )
 
 
