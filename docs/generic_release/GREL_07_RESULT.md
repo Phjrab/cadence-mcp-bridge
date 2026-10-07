@@ -1,3 +1,54 @@
+# Final combined durable lifecycle checkpoint, 2026-10-08
+
+Tested sourcea7fcf455462a040b5ac1bb8ca789341a0217cdb3, stacked PR144 open/ready/
+unmerged. Hosted run37703731751/job113073056336 SUCCESS:2423 PASS/0 skips/
+56 warnings/192.12s. Lint/type68/security18/locked dependency/85 full schemas/
+curated artifacts/installed SDK/bootstrap/reinstall/uninstall preservation PASS.
+Local153 related PASS/one OS symlink skip; actual junction and hardlink cases PASS.
+273 Python source/test/script inputs unchanged. This is synthetic source/package
+validation, not native Cadence or actual clean-client new-job qualification.
+
+Existing AnalysisStore now stores canonical plans and bounded append-only progress
+without replacing legacy identity/version/admissions. Dispatch admission/intent
+commit together; ambiguous send outcomes/restart remain lookup-only. Atomic
+provider tombstones allow safe abandonment of a pre-send unknown identity and
+must reject actual active/unknown remote work. In-flight reservations plus new
+requests must fit above disk floor. Linked/nonregular SQLite sidecars and junction
+parents are rejected before open. Cached installed journal-status reads bounded
+metadata without grant, remote contact, mutation or an execution-authority claim.
+No new budget DB, worker, grant writer, reset/refund or live termination is added.
+
+Independent automated review found two P2s (pre-send crash recovery and in-flight
+floor). Both corrected. Bot+1 observed2026-10-07T23:46:04Z after corrected ready;
+this is not formal APPROVED review or permission to merge. Primary SQLite-link
+review is separately labelled. Failed/superseded tests/CI/artifacts remain historical.
+Local and hosted wheelcd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b;
+sdist4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671.
+76/77 audited members match source/license/notices; protected/unexpected content0.
+Generic lifecycle history and legacy/Sweep/sentinels19 files survive reinstall and
+uninstall. Same-version synthetic preservation is not semver/native migration proof.
+
+Fresh main553276d unchanged; registered VM storage snapshot unchanged.82 attempts/
+9,798,942,720 cumulative reserved/10GiB ceiling/895MiB remainder;18,030,073 logical/
+48,308,224 allocated/free25,689,919,488/floor6,238,251,418/OK. Registered roots only.
+Original unrelated OCN hash preserved; the prior99964-file preservation receipt is
+historical, not rerun wholesale. Native qualification was not rerun in this chunk;
+latest qualification rejects executable_permissions. No trust bypass or repair.
+
+Production provider, physical shared-ledger/operator attestation, authority renewal
+and extraction-only recovery remain NOT_IMPLEMENTED/UNQUALIFIED. Generic ADE/
+new DC/AC/TRAN/measurement/Sweep and actual clean-client runs remain absent.
+GREL02/03/07 are partial; GREL04/05/06 execution gates incomplete. General release
+BLOCKED. Next: finish trusted provider and operator-confirmed authority, generic
+ADE and automatic extraction/Sweep, then two new circuits/clean actual app and
+native operating quality. Installation owner must establish a trusted executable/
+dependency chain before any native execution.02–07/895MiB approval persists;
+no repeated phase approval. Native simulations/reservations/deployments/deletions/
+permission/license changes0. Merge/GREL08/publication remain excluded.
+
+All dated receipts below preserve their exact older source scopes. A later
+receipt-only documentation head is distinct from the tested source above.
+
 ## Final combined local receipt
 
 153 related PASS/one local OS symlink skip; actual junction/hardlink cases PASS.

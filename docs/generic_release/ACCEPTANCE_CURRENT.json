@@ -3,7 +3,7 @@
   "repository": "Phjrab/cadence-mcp-bridge",
   "program": "GENERAL_RELEASE",
   "assessment_kind": "IMPLEMENTATION_CHECKPOINT_NOT_RELEASE_CANDIDATE",
-  "candidate_source": "d67df772dd11e6af0237c36149248bd2fb556027",
+  "candidate_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "version": "1.0.0",
   "generic_release_gate": "BLOCKED",
   "publication_authorized": false,
@@ -335,7 +335,7 @@
     "os_symlink_skips": 1,
     "source_typecheck_files": 68,
     "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
-    "final_security_package_ci": "COMBINED_CORRECTED_LOCAL_PASS_HOSTED_PENDING",
+    "final_security_package_ci": "PASS_SCOPED_COMBINED_SOURCE",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
@@ -344,7 +344,16 @@
     "input_drift": 0
   },
   "hosted_ci": {
-    "conclusion": "PENDING_CORRECTED_SOURCE"
+    "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+    "run": 37703731751,
+    "job": 113073056336,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37703731751",
+    "conclusion": "PASS",
+    "unit_passed": 2423,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 192.12,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
   },
   "historical_hosted_ci": {
     "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
@@ -360,7 +369,9 @@
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "plus_one_observed_utc": "2026-10-07T16:46:55Z",
-    "current_lifecycle": "TWO_P2_FIXED_PRIMARY_SQLITE_LINK_GUARDS_PENDING_CORRECTED_REVIEW"
+    "current_lifecycle": "TWO_P2_FIXED_BOT_PLUS_ONE_AFTER_A7FCF45_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
+    "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED"
   },
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
@@ -406,12 +417,14 @@
     "grel03_hosted_sdist_sha256": "43edc5d6c62d59aaf983eb3f1d50f96235337e870021707eb277bcfdb80fd8bb"
   },
   "artifact_identities": {
-    "source": "COMBINED_CORRECTED_DURABLE_LIFECYCLE_INPUTS",
+    "source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
     "wheel_sha256": "cd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b",
     "sdist_sha256": "4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671",
     "wheel_members": 76,
     "sdist_members": 77,
-    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE"
+    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE",
+    "hosted_wheel_sha256": "cd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b",
+    "hosted_sdist_sha256": "4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671"
   },
   "local_input_snapshot_sha256": "e68e1d23fda0ea1ba213a3744f9b440627169ef0f9a4a4b58e533405f343763a",
   "historical_d67df77_ci": {
@@ -447,5 +460,6 @@
     "wheel_members": 76,
     "sdist_members": 77,
     "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE"
-  }
+  },
+  "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE"
 }

@@ -43,7 +43,16 @@
   },
   "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
   "hosted_ci": {
-    "conclusion": "PENDING_CORRECTED_SOURCE"
+    "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+    "run": 37703731751,
+    "job": 113073056336,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37703731751",
+    "conclusion": "PASS",
+    "unit_passed": 2423,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 192.12,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
   },
   "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
   "live_resource_snapshot": {
@@ -53,20 +62,22 @@
     "remaining_bytes": 938475520,
     "logical_bytes": 18030073,
     "allocated_bytes": 48308224,
-    "filesystem_free_bytes": 25689939968,
-    "disk_floor_status": "OK"
+    "filesystem_free_bytes": 25689919488,
+    "disk_floor_status": "OK",
+    "disk_floor_bytes": 6238251418,
+    "snapshot_sha256": "1ff1794c7ff2d75b3aeed475d587a68e2d39bc5157a8704107397cc7610b09e2"
   },
   "selected_local_preservation": {
     "files": 99964,
     "changed": 0
   },
-  "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
+  "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "local_validation": {
     "affected_passed": 153,
     "os_symlink_skips": 1,
     "source_typecheck_files": 68,
     "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
-    "final_security_package_ci": "COMBINED_CORRECTED_LOCAL_PASS_HOSTED_PENDING",
+    "final_security_package_ci": "PASS_SCOPED_COMBINED_SOURCE",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
@@ -77,7 +88,9 @@
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
-    "current_lifecycle": "TWO_P2_FIXED_PRIMARY_SQLITE_LINK_GUARDS_PENDING_CORRECTED_REVIEW"
+    "current_lifecycle": "TWO_P2_FIXED_BOT_PLUS_ONE_AFTER_A7FCF45_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
+    "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED"
   },
   "local_input_snapshot_sha256": "e68e1d23fda0ea1ba213a3744f9b440627169ef0f9a4a4b58e533405f343763a",
   "historical_validation_before_durable_lifecycle": {
@@ -152,5 +165,6 @@
     "unit_skipped": 0,
     "unit_warnings": 56,
     "unit_seconds": 260.78
-  }
+  },
+  "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE"
 }

@@ -1,3 +1,19 @@
+## Final durable lifecycle source checkpoint, 2026-10-08
+
+Tested sourcea7fcf45: hosted2423 PASS/no skips/56 warnings; local153 related PASS/
+one OS symlink skip; Ruff/mypy68/security18/dependency/85 schemas/package and
+installed19-state preservation PASS. Existing AnalysisStore durable lifecycle,
+atomic admission/intent, lookup-only retries/provider tombstones, in-flight floor,
+SQLite link guards and cached local journal-status are implemented. Two independent
+P2s fixed; bot+1 after corrected ready is not formal APPROVED. PR144 ready/unmerged,
+main553276d unchanged. Exact receipts in generic_release reports/continuation.
+Native provider/attestation/renewal/extraction recovery/generic ADE/new measurement/
+Sweep/clean actual client remain incomplete; latest trust rejects executable_permissions
+(not rerun in this chunk). Release BLOCKED. Native side effects0;02–07/895MiB
+approval persists. Merge/GREL08/publication/protected repairs remain excluded.
+Installation owner must provide a trusted chain before native execution. Prior
+source overlays and failures below remain history, not current PASS evidence.
+
 ## Combined durable lifecycle corrections, 2026-10-08
 
 Two independent P2 findings fixed: atomic admission/intent and restart-safe
