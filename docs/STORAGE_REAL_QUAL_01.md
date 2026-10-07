@@ -1,5 +1,8 @@
 # STORAGE-REAL-QUAL-01 — Native preparation checkpoint
 
+> Historical preparation checkpoint. The subsequently human-selected native
+> A-only deletion is recorded in [result v1](STORAGE_REAL_QUAL_01_RESULT_V1.md).
+
 ## Authority and status
 
 Start: 971defcc21372d6bf398015e8255383c9b4b3217 (merged PR137).
