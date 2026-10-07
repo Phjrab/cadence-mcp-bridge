@@ -12,6 +12,9 @@ imported planning rights remain separately unresolved and outside package artifa
 
 ## Added since the actual published v1.0.0 tag
 
+- Actual Codex initialize/full85-schema observation and restored26-tool read
+  context; graceful app shutdown and imported-memory identity remain unverified.
+  See [bounded lifecycle investigation](CLIENT_LIFECYCLE_QUAL_01.md).
 - Actual/native diagnostic MCP lifecycle and bounded DC/AC/trap TRAN results on
   the approved reference revision; preserved same-ID replay and restart lookup.
 - Bounded 1D RC fixture sweep with durable identity, accounting and cancellation.

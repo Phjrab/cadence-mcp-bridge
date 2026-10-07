@@ -291,7 +291,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         "unverified_external_gates": [
             "exact_release_candidate_and_version_qualification",
             "CLAUDE_REAL_CLIENT_UNVERIFIED",
-            "full_Codex_application_schema_version_lifecycle_NOT_TESTED",
+            "complete_Codex_loaded_identity_graceful_shutdown_new_lifecycle_NOT_VERIFIED",
             "imported_planning_LEGAL_REVIEW_REQUIRED_for_repository_bundle",
             "explicit_exact_publication_authority",
         ],

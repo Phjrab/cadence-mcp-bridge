@@ -18,13 +18,21 @@ is authorized by passing local gates.
 
 ## MCP clients
 
-[Current Codex Storage read qualification](docs/CLIENT_STORAGE_QUAL_01.md)
+[Actual Codex lifecycle investigation](docs/CLIENT_LIFECYCLE_QUAL_01.md) captured
+initialize and all85 full wire tool schemas, matching the preserved SDK schemas.
+Installed Codex product version26.1002.6548.0 and source files at child launch
+were observed. Imported-memory identity and graceful app shutdown remain
+unverified. The temporary observer was removed from configuration; direct launch
+and26 read tools are restored. Preserved results and no-target evaluations match
+after reconnect. No new simulation or deletion occurred.
+
+[Earlier Codex Storage read qualification](docs/CLIENT_STORAGE_QUAL_01.md)
 verifies actual summary, paginated inventory, descriptions and read-only plans
 with26 filtered read tools (the prior22 plus four Storage reads). Existing
 amplifier registries/journals remain selected; cleanup execution is excluded.
 Full app schema/build/version/lifecycle qualification remains incomplete.
 
-[Current Codex operator read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md):
+[Earlier Codex operator read checkpoint](docs/CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md):
 22 explicitly filtered read tools from the85-tool server; actual operator-v8
 Gain/Power/DC/AC/TRAN and no-target specification reads match preserved results.
 Separate finite-grid runtime, two preserved Sweeps and six no-target evaluation
@@ -48,9 +56,10 @@ tree digest remains unknown; Desktop chat, full schemas/protocol, new jobs and
 the blocked sweep read remain unverified. `CLAUDE_REAL_CLIENT_UNVERIFIED` is
 retained for the complete qualification gate. Configuration and SDK tests alone
 do not prove real desktop execution. The current
-Codex adapter passes protocol regression. Actual Codex discovery and preserved
-native DC reads are verified for the earlier 69-tool server; full app
-schema/version/lifecycle and the later additions in the live app remain unverified.
+Codex adapter passes protocol regression. Historical Codex discovery and preserved
+native DC reads were verified for the earlier69-tool server. The lifecycle report
+above records the latest full schemas and product version; imported-memory
+identity, graceful app shutdown and new execution remain unverified.
 See the [client matrix and exact manual procedure](docs/CLIENT_COMPATIBILITY_V1.md).
 Other MCP hosts are `NOT_TESTED`. No public endpoint is required or provided.
 

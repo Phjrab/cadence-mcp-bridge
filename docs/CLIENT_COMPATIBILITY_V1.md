@@ -1,5 +1,22 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Actual Codex protocol investigation, 2026-10-07
+
+[CLIENT-LIFECYCLE-QUAL-01](CLIENT_LIFECYCLE_QUAL_01.md) captured actual app
+initialize (protocol2025-06-18) and all85 complete wire schemas with exact
+normalized SDK equality. Installed Codex product26.1002.6548.0 is supported by
+its executable's AppxManifest; the Electron file version is separate. The fixed
+observer fingerprints61 public inputs at child launch, not imported memory.
+Actual app graceful EOF/child-exit remains NOT_VERIFIED: both app traces end at
+server_response. Recorded observer PIDs were absent at a later bounded check;
+absence does not prove graceful shutdown. Original direct launch and26 read tools
+are restored and preserved runtime/Sweep/no-target facts match after reconnect.
+SDK EOF and synthetic tests remain separate evidence. Complete client lifecycle,
+new execution and exact release-candidate qualification are still incomplete.
+Publication and imported-planning legal-review status are unchanged. Dated
+statements below describe their original checkpoints.
+
+
 ## Actual Codex Storage reads, 2026-10-07
 
 [Storage app report](CLIENT_STORAGE_QUAL_01.md) verifies26 configured read names

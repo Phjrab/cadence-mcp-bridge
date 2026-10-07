@@ -1,5 +1,49 @@
 # Project State
 
+## CLIENT-LIFECYCLE-QUAL-01 completion gate
+
+Actual app sessions03/04 captured initialize2025-06-18 and all85 normalized full
+wire schemas equal to SDK. Installed product OpenAI.Codex26.1002.6548.0 is
+supported by its observed executable AppxManifest.61 public source inputs were
+fingerprinted at child launch, not imported memory. Actual app graceful EOF/
+child_exit NOT_VERIFIED: both traces end at server_response, later PID absence
+is not graceful-shutdown proof. Four observer slots exhausted; temporary tool
+absence and initial failures preserved. Original direct launch/all other current
+config restored;26 reads and preserved runtime/DC/AC Sweep/six no-target facts
+match after reconnect. Stable Storage16/18,030,073 logical/48,308,224 allocated/
+12288 candidate; no execute.2143 prior hashes/whole live checkpoint/ledger82/
+9,798,942,720/local stat-only extractor change exact. Phase0 simulator/reservation/
+deployment/simulation deletion; conservative11/20 corrections. Initial local
+C: disk exhaustion gates preserved; only current synthetic pytest temp roots
+cleaned, private phase and simulation evidence untouched. Fresh full2261 PASS/five OS symlink SKIP/57 warnings; observer16/security18/
+static59/contract85/dependency/package67+68/install/three SDK profiles/uninstall
+PASS. Exact review/containing PR integration receipts govern completion; see
+[phase report](docs/CLIENT_LIFECYCLE_QUAL_01.md). Finish reviewed feature integration,
+remote SHA/tree verification, report scoped outcome and ask once before another
+phase. Complete client lifecycle/new execution remains unqualified; no publication.
+Earlier active overlays remain dated history.
+
+
+## Active CLIENT-LIFECYCLE-QUAL-01
+
+Explicit user continuation activates actual app protocol/lifecycle investigation.
+Preserve the existing amplifier-v2/26-read configuration, results and shared
+ledger82/9,798,942,720; no simulation, reservation, deletion, consent or publication.
+Prepare a fixed operator-only stdio observer with hash-bound private activation,
+bounded initialize/tools/list evidence, hashed call results, EOF/child-exit events
+and no payload/env/stderr/path audit copy. The child remains the existing bridge
+serve command; no MCP API is added. Preserve every prior private/live checkpoint.
+Observe actual app schemas/version and re-read preserved results around a
+server-only reconnect; keep SDK/synthetic/source-on-disk evidence distinct.
+Only an actual app connection restart can supply actual initialize/tools/list and
+manager shutdown evidence. No restart API is available here; request one bounded
+human server restart after preparation, then restore direct launch and request
+the final reconnect for EOF/termination/replay verification. Do not ask for a
+whole-app reboot. Source-at-launch hashes are not loaded-memory attestation.
+Finish applicable tests/build/security/reviewed feature PR/permitted merge/remote
+verification, report verified and unresolved scope, ask once before next phase.
+Earlier overlays and correction histories remain dated evidence.
+
 ## CLIENT-STORAGE-QUAL-01 completion gate
 
 Actual Codex reconnect exposes26 configured read names; summary, paginated16
@@ -82,7 +126,15 @@ Native deletion/replay/audit qualification remains pending; earlier overlays his
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: CLIENT-STORAGE-QUAL-01
+current_wp: CLIENT-LIFECYCLE-QUAL-01
+client_lifecycle_01_status: bounded_actual_schema_reconnect_verified_graceful_shutdown_unverified
+client_lifecycle_01_report: docs/CLIENT_LIFECYCLE_QUAL_01.md
+client_lifecycle_01_tools: raw85_filtered26_no_API_change
+client_lifecycle_01_source: on_disk_at_launch_not_imported_memory
+client_lifecycle_01_config: original_direct_launch_restored
+client_lifecycle_01_resources: zero_simulation_reservation_deployment_simulation_deletion
+client_lifecycle_01_corrections: conservative11_of20
+client_lifecycle_01_remaining: exact_review_feature_PR_merge_remote_verify_report_stop
 client_storage_01_status: actual_app_read_scope_verified_containing_PR_integration_receipts
 client_storage_01_report: docs/CLIENT_STORAGE_QUAL_01.md
 client_storage_01_resources: zero_new_simulation_reservation_deployment_deletion

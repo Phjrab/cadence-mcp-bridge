@@ -1,5 +1,22 @@
 # Release readiness reassessment v3
 
+## Codex lifecycle evidence update, 2026-10-07
+
+[CLIENT-LIFECYCLE-QUAL-01](CLIENT_LIFECYCLE_QUAL_01.md) captured actual app
+initialize (protocol2025-06-18) and all85 complete wire schemas with exact
+normalized SDK equality. Installed Codex product26.1002.6548.0 is supported by
+its executable's AppxManifest; the Electron file version is separate. The fixed
+observer fingerprints61 public inputs at child launch, not imported memory.
+Actual app graceful EOF/child-exit remains NOT_VERIFIED: both app traces end at
+server_response. Recorded observer PIDs were absent at a later bounded check;
+absence does not prove graceful shutdown. Original direct launch and26 read tools
+are restored and preserved runtime/Sweep/no-target facts match after reconnect.
+SDK EOF and synthetic tests remain separate evidence. Complete client lifecycle,
+new execution and exact release-candidate qualification are still incomplete.
+Publication and imported-planning legal-review status are unchanged. Dated
+statements below describe their original checkpoints.
+
+
 Phase: RELEASE-READINESS-03. Implementation baseline:
 `61e7b1fdaa0ac0d2415dd1eecacaaa9f506dde89`, merged specification PR134.
 The user's continuation activates this assessment only. Exact assessment
@@ -13,7 +30,7 @@ This assessment supersedes current conclusions in v2; dated evidence is preserve
 | Original bridge wheel and curated package-source sdist | CONDITIONALLY_READY | Candidate build/content/install gates, explicit version and exact publication authorization required. |
 | Inspected new Git ZIP/TAR snapshots | IMPORT_EXCLUDED_VERIFIED only for the exact inspected commit | Subtree omission is verified; retained external adaptations still require rights review. |
 | Whole repository, clone, fork, Git bundle/history, blanket Apache grant | BLOCKED / LEGAL_REVIEW_REQUIRED | Imported planning provenance does not establish redistribution rights. |
-| Release claiming latest complete Codex/Claude app qualification | BLOCKED_PENDING_QUALIFICATION | Current85-tool actual app schema/version/lifecycle is NOT_RUN; complete Claude gate unverified. |
+| Release claiming latest complete Codex/Claude app qualification | BLOCKED_PENDING_QUALIFICATION | Actual85-schema/product-version observation verified; loaded-memory identity, graceful shutdown and new lifecycle remain unresolved. Complete Claude gate unverified. |
 | Limited local-stdio/reference-environment release | CONDITIONALLY_READY for preparation | Declare only verified protocol/scientific scope and explicit app limitations; select exact version/candidate/assets before publication. |
 | New tag, GitHub Release, PyPI, MCPB or historical release-body edit | PUBLICATION_NOT_AUTHORIZED | Requires separate explicit authorization for the concrete reviewed target. |
 
