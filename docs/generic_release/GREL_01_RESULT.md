@@ -11,7 +11,10 @@ new operator circuits. GREL-02 is not authorized by this report.
   Fresh fetch/remote comparison confirmed this baseline before implementation and
   again during final verification on 2026-10-07 KST.
 - Feature branch: feat/grel-01-runtime-context; merge: NOT_RUN.
-  Exact feature head and PR are recorded by Git/GitHub and the phase continuation.
+  Implementation commit: 738b610d186aa6c62a68ee1591eb649dfca118d6.
+  [Feature PR #142](https://github.com/Phjrab/cadence-mcp-bridge/pull/142) is open for review.
+  Documentation receipts may advance the branch; final head is authoritative in
+  Git/GitHub. Implementation tree: 9d05b8f789eaabfff1daa5cf92f35909a9197767.
 - The original checkout remains on feat/client-lifecycle-qual-01, with its
   unrelated extract.ocn change preserved. Work uses a separate worktree.
 - Package version remains 1.0.0 for this phase's local candidate. It is not a
@@ -168,7 +171,7 @@ planning documents; this does not settle all Git history redistribution rights.
 
 ## Phase boundary
 
-Final phase status: LOCAL_GATES_PASS_FEATURE_PR_PENDING. Primary diff review covers routing,
+Final phase status: COMPLETE_FEATURE_PR_AWAITING_REVIEW. Primary diff review covers routing,
 validation, isolation, package evidence and documentation; independent review is
 NOT_RUN. Merge/publication and GREL-02 are not authorized by GREL-01 completion.
 Next recommended phase is GREL-02: installable fixed runner assets/bootstrap,

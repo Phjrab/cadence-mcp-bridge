@@ -12,6 +12,9 @@ Earlier continuous-phase delegations do not extend to the new program.
 Report this phase and ask once before GREL-02; do not auto-merge or start it.
 See [runtime contract](docs/generic_release/RUNTIME_CONTEXT_V1.md) and
 [phase result](docs/generic_release/GREL_01_RESULT.md).
+Local final gates PASS: 2298 unit tests, 6 OS symlink skips, exact85 schemas,
+Ruff/mypy, security/dependency and curated package/install/uninstall checks.
+PR #142 awaits review; no merge. Generic release BLOCKED; no new native jobs.
 Earlier overlays below remain dated historical records.
 
 
@@ -546,7 +549,7 @@ spec_contract_01_desktop: CLAUDE_REAL_CLIENT_UNVERIFIED_fresh_Codex_app_NOT_TEST
 spec_contract_01_spectre_reservations_deployments_deletions: 0_0_0_0_cumulative62_of500_and7114588160_of10737418240
 spec_contract_01_protection: source_ADE_PDK_saved_jobs_counters_admission_journal_and1063_prior_records_equal
 spec_contract_01_next_phase: Release_Readiness_reassessment_pending_one_boundary_choice_no_publication_or_optimization
-current_status: local_gates_pass_feature_PR_pending
+current_status: complete_feature_PR_142_awaiting_review
 analog_meas_01_starting_main: e3fcfad30f35c68b1a90160d4d5f3a364436ab12
 analog_meas_01_workflow: docs/ANALOG_MEASUREMENTS_V1.md
 analog_meas_01_scope: registered_v6_local_derivation_admitted_native_evidence_no_new_extraction
@@ -970,7 +973,7 @@ auto_phase_01_candidate_wideband_ac_status: copied_ac_completed_scalar_extracted
 auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagnostic_completed
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
-last_completed_wp: CLIENT-LIFECYCLE-QUAL-01
+last_completed_wp: GREL-01_local_foundation_feature_PR_142
 next_wp: GREL-02_pending_one_user_choice
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
@@ -1304,7 +1307,7 @@ wp16_wp14_blocker_carried: true
 current_feature_branch: feat/grel-01-runtime-context
 base_main_commit: 553276d28c54d8e87092229d102bfd05ec98e74f
 last_commit: recorded_in_GREL_01_continuation_and_feature_PR
-last_push: null
+last_push: verified_feature_implementation_738b610_PR142_final_head_in_GitHub
 push_verification: feature_head_verified_final_sha_in_private_checkpoint_and_completion_report
 awaiting_user_merge: true
 remote_runner_deployed: true
