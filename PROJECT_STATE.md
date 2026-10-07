@@ -1,3 +1,17 @@
+## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
+
+The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.
+Record each phase result and continue independent authorized work without a
+phase-boundary question. GREL-08 and publication are not authorized. Existing
+resource ceilings, original/PDK/history protection and external trust gates
+remain. Remote installs/experiments must use concrete reviewed plans and real
+operator authority; no self-created grants, permission weakening or budget reset.
+Budget increase, protected vendor chmod, old-result deletion and license changes
+remain excluded. PR142 remains unmerged; use feature branches/stacked PRs and
+preserve the original checkout's unrelated OCN edit. Do not silently relax its
+recorded merge boundary. Current phase: GREL-02 local runner bootstrap; native
+qualification awaits SSH connectivity and unchanged executable trust gates.
+
 # Project State
 
 ## GREL-01 active general-release scope, 2026-10-07
@@ -144,7 +158,7 @@ Native deletion/replay/audit qualification remains pending; earlier overlays his
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: GREL-01
+current_wp: GREL-02
 client_lifecycle_01_status: bounded_actual_schema_reconnect_verified_graceful_shutdown_unverified
 client_lifecycle_01_report: docs/CLIENT_LIFECYCLE_QUAL_01.md
 client_lifecycle_01_tools: raw85_filtered26_no_API_change
@@ -549,7 +563,7 @@ spec_contract_01_desktop: CLAUDE_REAL_CLIENT_UNVERIFIED_fresh_Codex_app_NOT_TEST
 spec_contract_01_spectre_reservations_deployments_deletions: 0_0_0_0_cumulative62_of500_and7114588160_of10737418240
 spec_contract_01_protection: source_ADE_PDK_saved_jobs_counters_admission_journal_and1063_prior_records_equal
 spec_contract_01_next_phase: Release_Readiness_reassessment_pending_one_boundary_choice_no_publication_or_optimization
-current_status: complete_feature_PR_142_awaiting_review
+current_status: implementing_runner_bootstrap_continuous_GREL02_to_07
 analog_meas_01_starting_main: e3fcfad30f35c68b1a90160d4d5f3a364436ab12
 analog_meas_01_workflow: docs/ANALOG_MEASUREMENTS_V1.md
 analog_meas_01_scope: registered_v6_local_derivation_admitted_native_evidence_no_new_extraction
@@ -974,7 +988,7 @@ auto_phase_01_candidate_differential_dc_status: fixed_job_local_symmetric_diagno
 auto_phase_01_differential_dc_scalar_status: fixed_read_only_symmetric_extraction_completed
 auto_phase_01_mos_cdf_status: fixed_read_only_inventory_completed
 last_completed_wp: GREL-01_local_foundation_feature_PR_142
-next_wp: GREL-02_pending_one_user_choice
+next_wp: GREL-03_already_authorized_through_GREL07
 release_baseline: v1.0.0
 development_track: autonomous-custom-ic-design
 implementation_status: wp14_renewal_collector_merged_pr_48_remote_not_authorized
@@ -1304,7 +1318,7 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: feat/grel-01-runtime-context
+current_feature_branch: feat/grel-02-runner-bootstrap
 base_main_commit: 553276d28c54d8e87092229d102bfd05ec98e74f
 last_commit: recorded_in_GREL_01_continuation_and_feature_PR
 last_push: verified_feature_implementation_738b610_PR142_final_head_in_GitHub

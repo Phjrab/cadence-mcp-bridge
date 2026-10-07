@@ -69,6 +69,27 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--context")
         if action == "resolve":
             command.add_argument("--design-id", required=True)
+    runner = subparsers.add_parser(
+        "runner", help="Fixed installed runner content workflow; no simulation."
+    )
+    actions = runner.add_subparsers(dest="runner_action", required=True)
+    trust = actions.add_parser("trust")
+    trust.add_argument("--profile", type=Path, required=True)
+    trust.add_argument("--output", type=Path, required=True)
+    prepare = actions.add_parser("bundle")
+    prepare.add_argument("--profile", type=Path, required=True)
+    prepare.add_argument("--output", type=Path, required=True)
+    export = actions.add_parser("export-installer")
+    export.add_argument("--output", type=Path, required=True)
+    preflight = actions.add_parser("preflight")
+    preflight.add_argument("--bundle", type=Path, required=True)
+    preflight.add_argument("--expected-plan-sha256", required=True)
+    for name in ("install", "verify"):
+        command = actions.add_parser(name)
+        command.add_argument("--target", type=Path, required=True)
+        command.add_argument("--expected-plan-sha256", required=True)
+        if name == "install":
+            command.add_argument("--bundle", type=Path, required=True)
     subparsers.add_parser("doctor", help="Inspect local prerequisites without remote contact.")
     for name in ("verify", "client-config"):
         onboarding = subparsers.add_parser(name, help="Operator-only integrated onboarding.")
@@ -121,6 +142,46 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "runner":
+        from cadence_mcp_bridge import bootstrap
+
+        try:
+            if arguments.runner_action == "trust":
+                report = bootstrap.diagnose_trust(arguments.profile, arguments.output)
+            elif arguments.runner_action == "bundle":
+                report = bootstrap.bundle(arguments.profile, arguments.output)
+            elif arguments.runner_action == "export-installer":
+                report = bootstrap.export_installer(arguments.output)
+            elif arguments.runner_action == "preflight":
+                report = bootstrap.preflight(arguments.bundle, arguments.expected_plan_sha256)
+            elif arguments.runner_action == "install":
+                report = bootstrap.install(
+                    arguments.bundle, arguments.target, arguments.expected_plan_sha256
+                )
+            else:
+                report = bootstrap.verify(arguments.target, arguments.expected_plan_sha256)
+        except (OSError, ValueError) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "RUNNER_INSTALL_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, EnvironmentRejected)
+                        else "runner_setup_invalid",
+                        "execution_authorized": False,
+                        "action": (
+                            "administrator must verify executable and dependency trust; "
+                            "no permission bypass"
+                        )
+                        if isinstance(failure, EnvironmentRejected)
+                        and failure.reason == "executable_permissions"
+                        else "verify reviewed hash, owner, paths and retained partial install",
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(report, sort_keys=True))
+        return 0
     if arguments.command == "runtime":
         from cadence_mcp_bridge.runtime_context import (
             RuntimeRejected,

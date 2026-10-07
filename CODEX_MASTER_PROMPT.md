@@ -1,3 +1,17 @@
+## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
+
+The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.
+Record each phase result and continue independent authorized work without a
+phase-boundary question. GREL-08 and publication are not authorized. Existing
+resource ceilings, original/PDK/history protection and external trust gates
+remain. Remote installs/experiments must use concrete reviewed plans and real
+operator authority; no self-created grants, permission weakening or budget reset.
+Budget increase, protected vendor chmod, old-result deletion and license changes
+remain excluded. PR142 remains unmerged; use feature branches/stacked PRs and
+preserve the original checkout's unrelated OCN edit. Do not silently relax its
+recorded merge boundary. Current phase: GREL-02 local runner bootstrap; native
+qualification awaits SSH connectivity and unchanged executable trust gates.
+
 # Codex Master Execution Prompt — Cadence MCP Bridge
 
 ## GREL-01 active general-release scope, 2026-10-07
