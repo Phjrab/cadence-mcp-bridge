@@ -133,10 +133,33 @@ group/other write. No permission is changed. Both assets check the full chain.
 Corrected focused runner/transport/context73 PASS/2 OS skips; Ruff/mypy66 PASS;
 actual Python2.6 grammar4 assets PASS. The prior2319 full and d0fdab/18764a
 artifacts above are historical tested candidates, not corrected-head receipts.
-Corrected full/artifact/installed acceptance: PENDING_GREL02_REVIEW_FINAL.
-Independent review of the corrected code remains pending. The initial P1 remains
+Corrected7e6db1b full/artifact/installed acceptance PASS; see later review correction.
+Independent review of7e6db1b found the further issue recorded below. The initial P1 remains
 visible in PR143; no approval or merge is inferred from our own fix.
 
 Selected original private/history/local-change baseline:99964 files rehashed,
 changed0. Original unrelated OCN edit retains its exact baseline bytes. This is
 selected local preservation, not a complete scan of protected OA/PDK/remote VM.
+
+
+## Second independent review correction
+
+Independent review of7e6db1b found a further P1: activate accepted copied/staged
+content under an unbound target. Activate and deactivate now validate the full
+manifest and exact profile managed_root before their first write. Exported-installer
+regression tests cover both commands with a hash-valid unbound tree, including a
+copied active pointer; every preexisting byte is preserved and no bin/revocation
+file is created. Positive lifecycle fixtures bind only disposable synthetic content;
+they are not Linux profiles or native trust qualification.
+
+Before this second change,7e6db1b full unit completed2334 PASS/7 OS symlink skips/
+56 warnings in828.48s. Its corrected package/installed preservation gates passed,
+wheel42fe3bb3ba4b6c081aa3fb8ce50a4d2ad6fd9acd2eb2f179a1ceff6ec04f68f0 /
+sdist21486d036e57fcb660d732d3ab28f97177b028da9cf3b006feba4a6abdbc69bd.
+These identities are historical after this second security correction.
+Fresh affected tests/grammar/package and subsequent stacked hosted CI govern the
+new candidate. Native trust remains BLOCKED. No remote write or simulation occurred.
+
+Fresh second-correction gate: runner/transport/context75 PASS/2 OS symlink skips;
+Ruff PASS; mypy66 PASS; actual Python2.6 grammar for4 fixed assets PASS. Grammar
+check executes only ast.parse and performs no remote installation or asset execution.

@@ -22,6 +22,25 @@ def prepared(tmp_path: Path):
     return source, target, report["manifest_sha256"]
 
 
+@pytest.fixture
+def prepared_bound(prepared):
+    # Hash-valid synthetic content bound to this disposable Windows directory.
+    # This is not a Linux environment profile or native qualification.
+    source, target, _ = prepared
+    profile = json.loads((source / "profile.json").read_bytes())
+    profile["paths"]["managed_root"] = str(target.resolve())
+    raw_profile = installer.canonical(profile)
+    (source / "profile.json").write_bytes(raw_profile)
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    manifest["profile_sha256"] = hashlib.sha256(raw_profile).hexdigest()
+    manifest["files"]["profile.json"] = {
+        "sha256": manifest["profile_sha256"], "bytes": len(raw_profile)
+    }
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    return source, target, hashlib.sha256(raw).hexdigest()
+
+
 def test_install_repeat_and_verify_content_only(prepared):
     source, target, digest = prepared
     first = bootstrap.install(source, target, digest)
@@ -70,8 +89,8 @@ def test_partial_install_is_retained_and_never_overwritten(prepared):
     assert partial.read_bytes() == b"partial"
 
 
-def test_existing_active_marker_and_update_are_rejected(prepared):
-    source, target, digest = prepared
+def test_existing_active_marker_and_update_are_rejected(prepared_bound):
+    source, target, digest = prepared_bound
     bootstrap.install(source, target, digest)
     marker = target / "execution.lock"
     marker.write_bytes(b"unknown")
@@ -136,8 +155,8 @@ def test_hardlinked_asset_rejected(prepared, tmp_path):
         bootstrap.install(source, target, digest)
 
 
-def test_launcher_collision_preserves_existing_reference(prepared):
-    source, target, digest = prepared
+def test_launcher_collision_preserves_existing_reference(prepared_bound):
+    source, target, digest = prepared_bound
     bootstrap.install(source, target, digest)
     binary = target / "bin"
     binary.mkdir()
@@ -149,8 +168,8 @@ def test_launcher_collision_preserves_existing_reference(prepared):
     assert not (target / "active-runner.json").exists()
 
 
-def test_deactivation_preserves_version_and_pointer(prepared):
-    source, target, digest = prepared
+def test_deactivation_preserves_version_and_pointer(prepared_bound):
+    source, target, digest = prepared_bound
     bootstrap.install(source, target, digest)
     installer.activation(str(target), digest, None)
     before = (target / "active-runner.json").read_bytes()
@@ -266,3 +285,35 @@ def test_native_runner_checks_complete_owned_or_root_ancestor_chain(asset, monke
     monkeypatch.setattr(module, "os", fake)
     module.trusted_directory_chain("C:/owned/runtime/digest")
     assert len(calls) == 4
+
+
+@pytest.mark.parametrize("command", ["activate", "deactivate"])
+def test_standalone_lifecycle_rejects_staged_wrong_target_without_writes(prepared, command):
+    import subprocess
+    import sys
+
+    source, target, digest = prepared
+    bootstrap.install(source, target, digest)
+    # Even a copied active pointer cannot authorize writes under another root.
+    if command == "deactivate":
+        (target / "active-runner.json").write_bytes(
+            installer.canonical({"schema_version": 1, "manifest_sha256": digest})
+        )
+    before = {
+        p.relative_to(target).as_posix(): p.read_bytes()
+        for p in target.rglob("*") if p.is_file()
+    }
+    exported = target.parent / "installer.py"
+    bootstrap.export_installer(exported)
+    result = subprocess.run(
+        [sys.executable, "-I", str(exported), command, str(target), digest],
+        capture_output=True, timeout=15
+    )
+    assert result.returncode == 1
+    assert b"RUNNER_INSTALL_REJECTED" in result.stderr
+    assert not (target / "bin").exists()
+    assert not (target / "runner-revoked.json").exists()
+    assert {
+        p.relative_to(target).as_posix(): p.read_bytes()
+        for p in target.rglob("*") if p.is_file()
+    } == before

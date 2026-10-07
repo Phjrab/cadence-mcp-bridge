@@ -602,3 +602,9 @@ Windows runner install is local content staging only and reports
 WINDOWS_LOCAL_CONTENT_STAGING_ONLY/native_installation_verified=false. The
 standalone Linux installer has no staging command; Linux installation still
 requires the exact managed root and positive native trust is a separate gate.
+
+
+Native install, activate and deactivate all require TARGET to equal the managed
+root in the hash-verified bundled profile before any write. A hash-valid copied
+runtime at another root cannot authorize activation or revocation there. Windows
+content staging does not permit standalone lifecycle activation of that tree.

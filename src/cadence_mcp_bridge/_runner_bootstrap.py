@@ -177,7 +177,8 @@ def _install_content(bundle, target, expected, staging):
 def activation(target, expected, previous):
     target = directory(target)
     version = os.path.join(target, "runtime", expected)
-    validate(version, expected)
+    manifest, contents, raw = validate(version, expected)
+    target_binding(manifest, contents, target)
     state = os.path.join(target, "active-runner.json")
     if os.path.exists(os.path.join(target, "execution.lock")):
         raise ValueError("active_or_unresolved_jobs")
@@ -207,6 +208,9 @@ def activation(target, expected, previous):
 
 def deactivate(target, expected):
     target = directory(target)
+    version = os.path.join(target, "runtime", expected)
+    manifest, contents, raw = validate(version, expected)
+    target_binding(manifest, contents, target)
     active = closed(regular(os.path.join(target, "active-runner.json")))
     if active != {"schema_version": 1, "manifest_sha256": expected}:
         raise ValueError("activation_previous_mismatch")
