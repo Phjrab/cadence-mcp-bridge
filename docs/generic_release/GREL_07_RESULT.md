@@ -1,3 +1,60 @@
+## Final local durable-source receipt
+
+273 Python source/test/script hashes unchanged after related tests and final
+package checks. Ruff/mypy68/security18/locked dependency audit/85 schemas PASS.
+Wheel3df95d15bcf28187a304dcc9237dfc5cfbb3d2f60d504425045938dcb3919537;
+sdista63b92a20328c5ac2c637a2e1bd41d2fbddcba6dea86b7c2acd193611eac6059.
+76/77 curated members; source/license/notices exact, protected/unexpected content0.
+Installed SDK85, contexts1-to-2-to-1, two design plans and cached journal read,
+bootstrap and reinstall/uninstall19 synthetic state hashes PASS. No native jobs.
+New hosted full CI and independent review remain pending until push.
+
+# Durable lifecycle implementation checkpoint, 2026-10-08
+
+The existing AnalysisStore now retains canonical operation plans and append-only
+hash-linked progress events alongside legacy admissions. Application ID and
+user_version1 are preserved. Transactional first admission and CAS transitions
+reject conflicting identity, revision regression, known-state regression, terminal
+mutation and corrupt or over-capacity history. A page limit applies before plan
+insertion; capacity failure rolls back without hiding prior records. Hardlinked
+journals are rejected. No new accounting database or worker is introduced.
+
+The existing supervisor exposes a provider-coordinated lifecycle facet. A trusted
+provider is required before journal or lock creation. Dispatch intent is committed
+before transmission; loss, crash/coroutine cancellation and restart are lookup-only,
+including a missing remote reply. Pending cancellation requires the provider to
+atomically tombstone absent/pending identity and reject active work across clients;
+no local cancellation can falsely hide another client's running job. Reservation
+history is never refunded. Authoritative counters, grant use, in-flight bytes,
+physical occupancy and free/disk floor remain separate observations. The provider
+must recheck them atomically during accept; a self-reported snapshot is not consent.
+
+Installed operation journal-status reads bounded last-observation metadata without
+grant or remote contact. It does not report fresh remote health, qualified result
+or execution permission. There is no production provider, public native dispatch,
+operator attestation, extraction-only recovery or renewal workflow yet. Generic
+ADE DC/AC/TRAN, new measurements/Sweep and actual clean client jobs remain absent.
+This local implementation does not close GREL03 or the general release gates.
+
+Fresh related tests144 PASS/one local OS symlink skip; Ruff and mypy68 PASS.
+Synthetic cases cover two batches, response loss before/after acceptance, multiple
+journals with one provider identity, shared lock during await, expiry/revocation,
+accounting/space/domain denials, cancellation ambiguity, corruption, page/event
+capacity and legacy preservation. Installed state includes generic lifecycle
+history; final exact source package/security/hosted receipts follow when observed.
+Earlier failed capacity, lock-error translation, stricter unknown transition and
+Unicode audit invocations are retained privately. UTF-8 fixes the local dependency
+audit invocation without changing policy. Primary review is not independent review.
+
+Main553276d remains unchanged; PR144 continues on its existing feature branch.
+Live registered storage observed82 attempts/9,798,942,720 reserved bytes/10GiB
+ceiling/895MiB remainder,18,030,073 logical/48,308,224 allocated/free25,689,939,968
+and floorOK. Snapshot unchanged; registered roots only, no full VM scan. Native
+trust rejection remains the latest qualification (not rerun in this checkpoint).
+Native simulations/reservations/deployments/deletions/permission/license changes0.
+ContinuousGREL02–07 and remaining-space approval persist; merge/GREL08/publication
+remain excluded. All older receipts below are historical source-scoped evidence.
+
 # Current design-scoped correction receipt, 2026-10-08
 
 Tested source233e27e2359e34772eecd62cbcf9af142507a555. Fresh65 legacy-analysis/

@@ -1,3 +1,22 @@
+## Durable operator lifecycle checkpoint, 2026-10-08
+
+GREL03 now extends the existing AnalysisStore with immutable plans and bounded
+append-only lifecycle events. Provider-coordinated submit/reconcile/pending cancel
+are implemented locally and tested synthetically; no production native provider
+or public dispatch route is installed. Network ambiguity is committed before send;
+retries only look up, and cancellation needs an atomic remote identity tombstone.
+Legacy admissions/application identity/version remain intact. No budget DB,
+parallel worker, refund, reset, grant writer or termination capability is added.
+Fresh affected144 PASS/one local OS symlink skip, Ruff/mypy68 PASS. Final exact
+source package/security/full hosted receipts are recorded in generic_release
+reports/continuation as they are observed; earlier233e27e receipts are historical.
+Main553276d unchanged. Continuous02–07 and existing895MiB approval persist.
+Native trust/execution, operator attestation, extraction recovery/renewal,
+generic ADE/new results/Sweep/actual clean client remain incomplete. No native
+simulations/reservations/deployments/deletions/permission/license changes.
+GREL08/merge/publication excluded; no repeated phase approval inside02–07.
+Prior overlays below remain dated history.
+
 ## Final corrected local/hosted checkpoint, 2026-10-08
 
 Tested source233e27e: independent hosted2373 PASS/no skips/56 warnings; fresh

@@ -187,6 +187,45 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             plans.append(report["plan_sha256"])
     assert plans[0] == plans[1] and plans[2] == plans[3] and plans[0] != plans[2]
     assert not list(workspace.glob("*.sqlite3")) and not list(workspace.glob("*.lock"))
+    from uuid import uuid4
+
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import OperationPlan
+
+    durable_plan = OperationPlan.model_validate_json(json.dumps(report["plan"]))
+    synthetic_id = str(uuid4())
+    store = AnalysisStore(context.binding.analysis_journal)
+    assert store.admit_operation(synthetic_id, durable_plan)
+    before = store.path.read_bytes()
+    observed = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-X",
+            "utf8",
+            "-m",
+            "cadence_mcp_bridge",
+            "operation",
+            "journal-status",
+            "--settings",
+            str(settings),
+            "--context",
+            "installed-operation",
+            "--operation-id",
+            synthetic_id,
+            "--expected-plan-sha256",
+            durable_plan.plan_sha256,
+        ],
+        cwd=workspace,
+        env=env,
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+    cached = json.loads(observed.stdout)
+    assert cached["progress"]["phase"] == "ADMITTED" and not cached["remote_contact"]
+    assert store.path.read_bytes() == before and str(workspace) not in observed.stdout.decode()
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
@@ -194,6 +233,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,
+        "cached_lifecycle_metadata": "LOCAL_SYNTHETIC_NOT_REMOTE_AUTHORITY",
         "execution_authorized": False,
         "remote_contact": False,
     }

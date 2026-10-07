@@ -1,7 +1,7 @@
 """Local reusable authority and immutable plans; remote admission remains gated.
 
 No ledger, grant writer, native dispatcher or parallel lifecycle engine is created.
-The existing AnalysisStore is used only by the existing qualified supervisor.
+Durable lifecycle extends the existing AnalysisStore without replacing legacy admissions.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Annotated, Literal, Self
 from pydantic import Field, field_validator, model_validator
 
 from cadence_mcp_bridge.environments import _closed_json
+from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.runtime_context import ExecutionContext
 from cadence_mcp_bridge.variable_contracts import (
@@ -296,3 +297,69 @@ def inspect_plan(
         "remote_contact": False,
         "admission_created": False,
     }
+
+
+OperationPhase = Literal[
+    "ADMITTED",
+    "UNKNOWN_OUTCOME",
+    "RESERVED",
+    "DISPATCHED",
+    "RUNNING",
+    "EXTRACTING",
+    "SUCCEEDED",
+    "FAILED",
+    "EXTRACTION_FAILED",
+    "CANCELLED",
+]
+TERMINAL_PHASES = frozenset(("SUCCEEDED", "FAILED", "CANCELLED"))
+
+
+class OperationProgress(VariableModel):
+    phase: OperationPhase
+    remote_revision: Annotated[int, Field(ge=0)] | None = None
+    provider_receipt_sha256: Digest | None = None
+
+    @model_validator(mode="after")
+    def receipt_pair(self) -> Self:
+        if (self.remote_revision is None) != (self.provider_receipt_sha256 is None):
+            raise ValueError("remote revision requires its receipt")
+        if (
+            self.phase not in ("ADMITTED", "UNKNOWN_OUTCOME", "CANCELLED")
+            and self.remote_revision is None
+        ):
+            raise ValueError("remote progress requires provider receipt")
+        return self
+
+
+class DurableOperation(VariableModel):
+    schema_version: Literal[1] = 1
+    operation_id: OperationId
+    plan: OperationPlan
+    progress: OperationProgress
+    event_count: Annotated[int, Field(ge=1, le=64)]
+
+
+def progress_transition(before: OperationProgress, after: OperationProgress) -> None:
+    if before == after:
+        return
+    if before.phase in TERMINAL_PHASES:
+        raise OperationRejected("terminal_operation_is_immutable")
+    if after.phase == "ADMITTED" or (
+        after.phase == "UNKNOWN_OUTCOME" and before.phase not in ("ADMITTED", "UNKNOWN_OUTCOME")
+    ):
+        raise OperationRejected("operation_progress_regression")
+    if before.phase == "ADMITTED" and after.phase not in ("UNKNOWN_OUTCOME", "CANCELLED"):
+        raise OperationRejected("dispatch_intent_required")
+    if before.remote_revision is not None and (
+        after.remote_revision is None or after.remote_revision <= before.remote_revision
+    ):
+        raise OperationRejected("provider_revision_regression")
+    rank = {"RESERVED": 1, "DISPATCHED": 2, "RUNNING": 3, "EXTRACTING": 4, "EXTRACTION_FAILED": 5}
+    if before.phase in rank and after.phase in rank and rank[after.phase] < rank[before.phase]:
+        raise OperationRejected("operation_progress_regression")
+    if after.phase == "CANCELLED" and before.phase not in (
+        "ADMITTED",
+        "UNKNOWN_OUTCOME",
+        "RESERVED",
+    ):
+        raise OperationRejected("active_cancellation_unsupported")

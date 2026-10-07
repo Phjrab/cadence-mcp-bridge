@@ -10,7 +10,7 @@
     "GREL-07"
   ],
   "current_phase": "GREL-03/GREL-07",
-  "phase_status": "PARTIAL_LOCAL_VALIDATED_NATIVE_TRUST_BLOCKED",
+  "phase_status": "PARTIAL_DURABLE_LOCAL_IMPLEMENTED_NATIVE_TRUST_BLOCKED",
   "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
   "parent_feature": "b0e2693",
@@ -43,37 +43,7 @@
   },
   "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
   "hosted_ci": {
-    "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
-    "historical_run": 37649117150,
-    "historical_conclusion": "PASS",
-    "corrected_candidate": {
-      "tested_source": "fe22a3a422451540e0079562862f15d953acf9c1",
-      "run": 37650489494,
-      "conclusion": "PASS_HISTORICAL_AFTER_LIFECYCLE_FIX",
-      "unit_passed": 2364
-    },
-    "current": {
-      "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
-      "run": 37654390528,
-      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
-      "conclusion": "PASS",
-      "unit_passed": 2373,
-      "unit_skipped": 0,
-      "unit_warnings": 56,
-      "unit_seconds": 258.88,
-      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
-    },
-    "historical_lifecycle_correction": {
-      "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
-      "run": 37652706492,
-      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
-      "conclusion": "PASS",
-      "unit_passed": 2366,
-      "unit_skipped": 0,
-      "unit_warnings": 56,
-      "unit_seconds": 177.28,
-      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
-    }
+    "conclusion": "PENDING_NEW_DURABLE_LIFECYCLE_SOURCE"
   },
   "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
   "live_resource_snapshot": {
@@ -83,28 +53,86 @@
     "remaining_bytes": 938475520,
     "logical_bytes": 18030073,
     "allocated_bytes": 48308224,
-    "filesystem_free_bytes": 25690238976,
+    "filesystem_free_bytes": 25689939968,
     "disk_floor_status": "OK"
   },
   "selected_local_preservation": {
     "files": 99964,
     "changed": 0
   },
-  "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+  "tested_source": null,
   "local_validation": {
-    "affected_passed": 65,
-    "os_symlink_skips": 0,
+    "affected_passed": 144,
+    "os_symlink_skips": 1,
+    "source_typecheck_files": 68,
+    "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
+    "final_security_package_ci": "LOCAL_PASS_HOSTED_PENDING",
     "security_passed": 18,
-    "source_typecheck_files": 67,
+    "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
     "preserved_synthetic_state_files": 19,
-    "input_files": 271,
-    "input_drift": 0,
-    "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    "input_files": 273,
+    "input_drift": 0
   },
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
-    "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL"
+    "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle": "PENDING_AFTER_PUSH"
   },
-  "local_input_snapshot_sha256": "94148c14c13becb59eb2e2e27a5d1ead267f084f8b686ae9fce856223402dccb"
+  "local_input_snapshot_sha256": "08562a2b25c239c14ac9c9fe4db63c95a9db2f8a57d39ed4cc653be19c98eb6f",
+  "historical_validation_before_durable_lifecycle": {
+    "hosted_ci": {
+      "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
+      "historical_run": 37649117150,
+      "historical_conclusion": "PASS",
+      "corrected_candidate": {
+        "tested_source": "fe22a3a422451540e0079562862f15d953acf9c1",
+        "run": 37650489494,
+        "conclusion": "PASS_HISTORICAL_AFTER_LIFECYCLE_FIX",
+        "unit_passed": 2364
+      },
+      "current": {
+        "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+        "run": 37654390528,
+        "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
+        "conclusion": "PASS",
+        "unit_passed": 2373,
+        "unit_skipped": 0,
+        "unit_warnings": 56,
+        "unit_seconds": 258.88,
+        "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+      },
+      "historical_lifecycle_correction": {
+        "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+        "run": 37652706492,
+        "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
+        "conclusion": "PASS",
+        "unit_passed": 2366,
+        "unit_skipped": 0,
+        "unit_warnings": 56,
+        "unit_seconds": 177.28,
+        "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+      }
+    },
+    "local_validation": {
+      "affected_passed": 65,
+      "os_symlink_skips": 0,
+      "security_passed": 18,
+      "source_typecheck_files": 67,
+      "mcp_full_schemas": 85,
+      "preserved_synthetic_state_files": 19,
+      "input_files": 271,
+      "input_drift": 0,
+      "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    }
+  },
+  "durable_lifecycle": {
+    "implementation": "EXISTING_ANALYSIS_STORE_PROVIDER_SEAM",
+    "production_provider": "NOT_IMPLEMENTED",
+    "public_dispatch": "DISABLED",
+    "extraction_recovery": "NOT_IMPLEMENTED",
+    "renewal": "NOT_IMPLEMENTED",
+    "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
+    "budget_reset_or_refund": false
+  }
 }

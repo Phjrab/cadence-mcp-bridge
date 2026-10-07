@@ -18,8 +18,10 @@ wrapper is insufficient. Rerun fresh environment qualification and fixed-runner
 preflight afterward; an old successful check or remaining-space approval does
 not satisfy that gate. Protected installation repair is outside this delegation.
 
-After trust passes, finish GREL-02 native bootstrap attestation and GREL-03 shared
-ledger/operator-confirmed reusable admission integration. Preserve the actual
+After trust passes, finish GREL-02 native bootstrap attestation and GREL-03 production
+shared-ledger/operator-confirmed provider integration. Its local durable lifecycle
+seam and synthetic replay/cancellation are implemented; they do not satisfy native
+trust, atomic remote accounting, operator authenticity or actual jobs. Preserve the actual
 82 consumed attempts and 9,798,942,720 reserved bytes baseline; read a fresh
 ledger before planning. No new independent ledger or grant is created now.
 

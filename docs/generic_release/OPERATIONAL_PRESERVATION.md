@@ -23,7 +23,7 @@ NOT_TESTED until actual distinct qualified version candidates exist.
 The package verifier installs a curated wheel in an isolated environment, runs
 three SDK configuration profiles and operator context 1-to-2-to-1 restart, then
 uses only installed fixed bootstrap assets. It creates synthetic original/replay,
-shared-ledger sentinel, durable analysis admission and SweepStore state outside
+shared-ledger sentinel, durable legacy and generic lifecycle analysis history and SweepStore state outside
 the package. Content repeat, staging, rejected activation, partial candidate
 preservation and deactivation are exercised. Exact file hashes survive a
 same-version reinstall and uninstall. These checks are synthetic and do not

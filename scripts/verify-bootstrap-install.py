@@ -39,6 +39,7 @@ def preserve(workspace: Path) -> dict[str, object]:
 def verify(workspace: Path, examples: Path) -> dict[str, object]:
     import cadence_mcp_bridge
     from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import OperationPlan, OperationProgress
     from cadence_mcp_bridge.sweeps import SweepStore
 
     if not Path(cadence_mcp_bridge.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()):
@@ -61,6 +62,43 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     assert not AnalysisStore(analysis_path).admit(
         identity, "synthetic-design", "synthetic-dc", "a" * 64
     )
+    # Generic state is added only to this disposable existing synthetic journal.
+    # No provider/remote authority or independent budget table is created.
+    lifecycle_id = str(uuid4())
+    frozen = OperationPlan.model_validate_json(
+        json.dumps(
+            dict(
+                resource_domain_sha256="a" * 64,
+                runner_sha256="b" * 64,
+                ledger_ref="synthetic-existing-ledger",
+                environment_sha256="c" * 64,
+                design_sha256="d" * 64,
+                pdk_sha256="e" * 64,
+                grant_sha256="f" * 64,
+                analysis="dc",
+                request=dict(
+                    schema_version=1,
+                    design_id="synthetic-design",
+                    analysis_id="synthetic-dc",
+                    values=[],
+                    result_reservation_bytes=134217728,
+                ),
+            )
+        )
+    )
+    assert analysis.admit_operation(lifecycle_id, frozen)
+    assert not AnalysisStore(analysis_path).admit_operation(lifecycle_id, frozen)
+    durable = analysis.operation(lifecycle_id)
+    durable = analysis.advance_operation(
+        lifecycle_id, durable.progress, OperationProgress(phase="UNKNOWN_OUTCOME")
+    )
+    durable = analysis.advance_operation(
+        lifecycle_id,
+        durable.progress,
+        OperationProgress(phase="SUCCEEDED", remote_revision=1, provider_receipt_sha256="a" * 64),
+    )
+    assert AnalysisStore(analysis_path).operation(lifecycle_id) == durable
+    analysis.require(identity, "synthetic-design", "synthetic-dc", "a" * 64)
     SweepStore(state / "sweep.sqlite3")
     before = snapshot(state)
     environment = {
@@ -102,10 +140,18 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     unbound = workspace / "unbound-managed"
     unbound.mkdir(mode=0o700)
     unbound_digest = str(report["manifest_sha256"])
-    command([
-        "runner", "install", "--bundle", str(workspace / "bundle"),
-        "--target", str(unbound), "--expected-plan-sha256", unbound_digest,
-    ])
+    command(
+        [
+            "runner",
+            "install",
+            "--bundle",
+            str(workspace / "bundle"),
+            "--target",
+            str(unbound),
+            "--expected-plan-sha256",
+            unbound_digest,
+        ]
+    )
     original = snapshot(unbound)
     command(["activate", str(unbound), unbound_digest], standalone=True, accepted=False)
     assert snapshot(unbound) == original and not (unbound / "bin").exists()
@@ -116,16 +162,18 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         profile_path = bundle / "profile.json"
         value = json.loads(profile_path.read_bytes())
         value["paths"]["managed_root"] = str(managed.resolve())
-        profile_data = json.dumps(value, sort_keys=True, separators=(",", ":"),
-                                  ensure_ascii=True).encode("ascii")
+        profile_data = json.dumps(
+            value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("ascii")
         profile_path.write_bytes(profile_data)
         manifest_path = bundle / "manifest.json"
         manifest = json.loads(manifest_path.read_bytes())
         profile_hash = hashlib.sha256(profile_data).hexdigest()
         manifest["profile_sha256"] = profile_hash
         manifest["files"]["profile.json"] = {"sha256": profile_hash, "bytes": len(profile_data)}
-        raw = json.dumps(manifest, sort_keys=True, separators=(",", ":"),
-                         ensure_ascii=True).encode("ascii")
+        raw = json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+            "ascii"
+        )
         manifest_path.write_bytes(raw)
         return hashlib.sha256(raw).hexdigest()
 
@@ -189,6 +237,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "semantic_version_upgrade": "NOT_TESTED",
         "live_migration": "UNSUPPORTED",
         "journal_replay_preserved": True,
+        "generic_append_only_lifecycle_preserved": "SYNTHETIC_WITHOUT_NATIVE_PROVIDER",
         "remote_contact": False,
         "new_simulations": 0,
         "execution_authorized": False,

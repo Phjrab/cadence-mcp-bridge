@@ -3,7 +3,7 @@
   "repository": "Phjrab/cadence-mcp-bridge",
   "program": "GENERAL_RELEASE",
   "assessment_kind": "IMPLEMENTATION_CHECKPOINT_NOT_RELEASE_CANDIDATE",
-  "candidate_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+  "candidate_source": null,
   "version": "1.0.0",
   "generic_release_gate": "BLOCKED",
   "publication_authorized": false,
@@ -149,7 +149,7 @@
         "GREL_07_RESULT.md"
       ],
       "limitations": [
-        "legacy identity/replay and local frozen plans tested; generic reconciliation absent"
+        "durable generic local reconciliation and failure tests implemented; production provider/native qualification absent"
       ]
     },
     {
@@ -279,7 +279,7 @@
         "GREL_07_RESULT.md"
       ],
       "limitations": [
-        "active native termination unsupported; generic pending cancellation absent"
+        "active native termination unsupported; pending cancellation tested only at synthetic provider seam"
       ]
     },
     {
@@ -309,16 +309,6 @@
       ]
     }
   ],
-  "artifact_identities": {
-    "grel02_tested_source": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
-    "grel02_corrected_wheel_sha256": "caa017021a63c548ffbcbe18e38a55cce79c8f0c520a08383721b695ebe9f254",
-    "grel02_corrected_sdist_sha256": "6b1783ae5a58ef2a54980f6a64a5ed1d131f6a101584a72c8c4968f63e077f5d",
-    "grel03_tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
-    "grel03_corrected_wheel_sha256": "c6b83193519f4db9e99b40fa8b65adb9e3d0afae6bab7d5d4b0be16414ce4312",
-    "grel03_corrected_sdist_sha256": "0ee63730ee6e9b542108be7e7d5f5455d1ec5e09e3e87bfe763a406a50e19218",
-    "grel03_hosted_wheel_sha256": "34d4b8f10dc3950925557dffc883027b55f60bc5b5d74177487da670e5bddcc2",
-    "grel03_hosted_sdist_sha256": "43edc5d6c62d59aaf983eb3f1d50f96235337e870021707eb277bcfdb80fd8bb"
-  },
   "native_jobs_this_program": 0,
   "new_reservations_this_program": 0,
   "remote_deployments_this_program": 0,
@@ -341,26 +331,20 @@
     "fresh complete Claude application qualification"
   ],
   "local_validation": {
-    "affected_passed": 65,
-    "os_symlink_skips": 0,
+    "affected_passed": 144,
+    "os_symlink_skips": 1,
+    "source_typecheck_files": 68,
+    "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
+    "final_security_package_ci": "LOCAL_PASS_HOSTED_PENDING",
     "security_passed": 18,
-    "source_typecheck_files": 67,
+    "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "mcp_full_schemas": 85,
     "preserved_synthetic_state_files": 19,
-    "input_files": 271,
-    "input_drift": 0,
-    "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    "input_files": 273,
+    "input_drift": 0
   },
   "hosted_ci": {
-    "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
-    "run": 37654390528,
-    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
-    "conclusion": "PASS",
-    "unit_passed": 2373,
-    "unit_skipped": 0,
-    "unit_warnings": 56,
-    "unit_seconds": 258.88,
-    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+    "conclusion": "PENDING_NEW_DURABLE_LIFECYCLE_SOURCE"
   },
   "historical_hosted_ci": {
     "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
@@ -376,5 +360,57 @@
   "independent_review": {
     "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "plus_one_observed_utc": "2026-10-07T16:46:55Z"
-  }
+  },
+  "historical_validation_before_durable_lifecycle": {
+    "hosted_ci": {
+      "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+      "run": 37654390528,
+      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
+      "conclusion": "PASS",
+      "unit_passed": 2373,
+      "unit_skipped": 0,
+      "unit_warnings": 56,
+      "unit_seconds": 258.88,
+      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+    },
+    "local_validation": {
+      "affected_passed": 65,
+      "os_symlink_skips": 0,
+      "security_passed": 18,
+      "source_typecheck_files": 67,
+      "mcp_full_schemas": 85,
+      "preserved_synthetic_state_files": 19,
+      "input_files": 271,
+      "input_drift": 0,
+      "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    }
+  },
+  "durable_lifecycle": {
+    "implementation": "EXISTING_ANALYSIS_STORE_PROVIDER_SEAM",
+    "production_provider": "NOT_IMPLEMENTED",
+    "public_dispatch": "DISABLED",
+    "extraction_recovery": "NOT_IMPLEMENTED",
+    "renewal": "NOT_IMPLEMENTED",
+    "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
+    "budget_reset_or_refund": false
+  },
+  "historical_artifact_identities": {
+    "grel02_tested_source": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
+    "grel02_corrected_wheel_sha256": "caa017021a63c548ffbcbe18e38a55cce79c8f0c520a08383721b695ebe9f254",
+    "grel02_corrected_sdist_sha256": "6b1783ae5a58ef2a54980f6a64a5ed1d131f6a101584a72c8c4968f63e077f5d",
+    "grel03_tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+    "grel03_corrected_wheel_sha256": "c6b83193519f4db9e99b40fa8b65adb9e3d0afae6bab7d5d4b0be16414ce4312",
+    "grel03_corrected_sdist_sha256": "0ee63730ee6e9b542108be7e7d5f5455d1ec5e09e3e87bfe763a406a50e19218",
+    "grel03_hosted_wheel_sha256": "34d4b8f10dc3950925557dffc883027b55f60bc5b5d74177487da670e5bddcc2",
+    "grel03_hosted_sdist_sha256": "43edc5d6c62d59aaf983eb3f1d50f96235337e870021707eb277bcfdb80fd8bb"
+  },
+  "artifact_identities": {
+    "source": "CURRENT_DURABLE_LIFECYCLE_INPUTS",
+    "wheel_sha256": "3df95d15bcf28187a304dcc9237dfc5cfbb3d2f60d504425045938dcb3919537",
+    "sdist_sha256": "a63b92a20328c5ac2c637a2e1bd41d2fbddcba6dea86b7c2acd193611eac6059",
+    "wheel_members": 76,
+    "sdist_members": 77,
+    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE"
+  },
+  "local_input_snapshot_sha256": "08562a2b25c239c14ac9c9fe4db63c95a9db2f8a57d39ed4cc653be19c98eb6f"
 }
