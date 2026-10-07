@@ -27,7 +27,7 @@ with source/test hashes unchanged. Hosted run then revealed two preexisting test
 environment dependencies: actual origin spelling and cold PowerShell startup.
 Only those synthetic tests/workflow temp selection are corrected; new negative
 origin cases retain strict production repository checks. Corrected full gate is
-PENDING_GREL03_FULL_UNIT; initial hosted failure2343 PASS/2 FAIL is preserved.
+PASS_ON_FE22A3A_HISTORICAL_AFTER_LIFECYCLE_FIX; initial hosted failure2343 PASS/2 FAIL is preserved.
 Installed locked wheel validation of local authority/plan repeat identity PASS;
 85 full schemas/three SDK formats/context1-to-2-to-1/bootstrap/preservation PASS.
 Candidate artifacts:wheel0c91fd00862c7b10245f464d9544d32020839d6b1552ffff3eea0659e58c6616,
@@ -56,3 +56,25 @@ package/hosted validation is PENDING; no old artifact hash is reused as this hea
 The in-progress test-only correction local invocation was superseded and stopped
 as its source changed. Failed/interrupted evidence is retained. Final source is
 frozen for new checks; no native deployment or permission change occurred.
+
+
+## Exact pre-lifecycle-correction receipt
+
+Sourcefe22a3a: local2357 PASS/7 OS symlink skips/56 warnings in808.40s;
+187 source/test file hashes unchanged at completion. Hosted PR run37650489494
+at that exact source passed2364 tests/56 warnings in230.45s, security18,
+strict dependency audit,85 full schemas and package/installed preservation.
+Local wheel5b64108d4363fb562d796c12e37d333eccc944281a9b5b37bdbf85309abf4e08 /
+sdist9cd2a44cab26252316b95e59b1e1c559c5bb7c80fc3ff501fbc6ca3747b64362.
+Hosted wheelc3d9385fa9beae7e5740dabd8912b9a28349fe1e50b85a61fa766090ce723cad /
+sdist4da01722e53d9feb7b4729af0d9c2a9cc1814082c68b333a83465acbcfe266a3.
+Each audit matched its own checkout bytes; local and hosted artifacts are distinct.
+
+Later independent PR143 review found activation target unbound. Parent69d3f43
+adds exact manifest/profile-root validation to activate and deactivate, with
+exported-command no-write regressions. The installed acceptance script now
+rejects the ordinary unbound Windows staged tree and tests positive lifecycle
+only with explicitly synthetic target-bound hash-valid content. No positive
+Linux installation or native qualification is inferred. Fresh affected94 PASS/
+2 OS symlink skips; Ruff/mypy67 PASS. New package and hosted full are pending.
+Earlier full/package/CI receipts are retained as historical evidence.

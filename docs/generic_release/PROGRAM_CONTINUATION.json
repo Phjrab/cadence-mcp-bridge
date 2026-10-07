@@ -10,10 +10,10 @@
     "GREL-07"
   ],
   "current_phase": "GREL-03/GREL-07",
-  "phase_status": "NATIVE_TRUST_BLOCKED_PARENT_SECURITY_FIX_FINAL_CHECKS_PENDING",
+  "phase_status": "NATIVE_TRUST_BLOCKED_LIFECYCLE_CORRECTION_CHECKS_PENDING",
   "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "7e6db1b",
+  "parent_feature": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -46,7 +46,12 @@
     "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
     "historical_run": 37649117150,
     "historical_conclusion": "PASS",
-    "corrected_candidate": "PENDING"
+    "corrected_candidate": {
+      "tested_source": "fe22a3a422451540e0079562862f15d953acf9c1",
+      "run": 37650489494,
+      "conclusion": "PASS_HISTORICAL_AFTER_LIFECYCLE_FIX",
+      "unit_passed": 2364
+    }
   },
   "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
   "live_resource_snapshot": {
@@ -56,7 +61,7 @@
     "remaining_bytes": 938475520,
     "logical_bytes": 18030073,
     "allocated_bytes": 48308224,
-    "filesystem_free_bytes": 25690324992,
+    "filesystem_free_bytes": 25690238976,
     "disk_floor_status": "OK"
   },
   "selected_local_preservation": {

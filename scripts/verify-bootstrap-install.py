@@ -98,7 +98,38 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             str(workspace / "bundle"),
         ]
     )
-    digest = str(report["manifest_sha256"])
+    # Exported native lifecycle must reject the ordinary Windows staged tree.
+    unbound = workspace / "unbound-managed"
+    unbound.mkdir(mode=0o700)
+    unbound_digest = str(report["manifest_sha256"])
+    command([
+        "runner", "install", "--bundle", str(workspace / "bundle"),
+        "--target", str(unbound), "--expected-plan-sha256", unbound_digest,
+    ])
+    original = snapshot(unbound)
+    command(["activate", str(unbound), unbound_digest], standalone=True, accepted=False)
+    assert snapshot(unbound) == original and not (unbound / "bin").exists()
+
+    def bind_synthetic_target(bundle: Path) -> str:
+        # Explicitly synthetic hash-valid fixture, not an operator Linux profile.
+        # Fixed installed runner/probe/launcher bytes remain untouched and unexecuted.
+        profile_path = bundle / "profile.json"
+        value = json.loads(profile_path.read_bytes())
+        value["paths"]["managed_root"] = str(managed.resolve())
+        profile_data = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                  ensure_ascii=True).encode("ascii")
+        profile_path.write_bytes(profile_data)
+        manifest_path = bundle / "manifest.json"
+        manifest = json.loads(manifest_path.read_bytes())
+        profile_hash = hashlib.sha256(profile_data).hexdigest()
+        manifest["profile_sha256"] = profile_hash
+        manifest["files"]["profile.json"] = {"sha256": profile_hash, "bytes": len(profile_data)}
+        raw = json.dumps(manifest, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=True).encode("ascii")
+        manifest_path.write_bytes(raw)
+        return hashlib.sha256(raw).hexdigest()
+
+    digest = bind_synthetic_target(workspace / "bundle")
     args = ["--target", str(managed), "--expected-plan-sha256", digest]
     command(["runner", "install", "--bundle", str(workspace / "bundle"), *args])
     assert command(["runner", "install", "--bundle", str(workspace / "bundle"), *args])[
@@ -109,11 +140,15 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     active = (managed / "active-runner.json").read_bytes()
     # Stage a distinct content candidate; no active-pointer replacement is available.
     profile = workspace / "next-profile.json"
-    profile.write_bytes((examples / "environment.json").read_bytes() + b"\n")
+    next_profile = json.loads((examples / "environment.json").read_bytes())
+    next_profile["environment_id"] = "synthetic-next-environment"
+    profile.write_text(json.dumps(next_profile), encoding="utf-8")
     next_report = command(
         ["runner", "bundle", "--profile", str(profile), "--output", str(workspace / "next-bundle")]
     )
-    candidate = str(next_report["manifest_sha256"])
+    assert next_report["execution_authorized"] is False
+    candidate = bind_synthetic_target(workspace / "next-bundle")
+    # A distinct candidate is simulated by differing profile identity.
     assert candidate != digest
     command(
         [
@@ -148,6 +183,8 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "evidence": "INSTALLED_FIXED_BOOTSTRAP_SYNTHETIC",
         "content_install_repeat_verify": True,
         "activation_deactivation": True,
+        "unbound_staged_activation_denied": True,
+        "positive_lifecycle_fixture": "HASH_VALID_SYNTHETIC_TARGET_NOT_NATIVE_PROFILE",
         "staged_candidate_preserves_active_pointer": True,
         "semantic_version_upgrade": "NOT_TESTED",
         "live_migration": "UNSUPPORTED",
