@@ -1,3 +1,22 @@
+# Current design-scoped correction receipt, 2026-10-08
+
+Tested source233e27e2359e34772eecd62cbcf9af142507a555. Fresh65 legacy-analysis/
+operation tests PASS, including26 operation tests; Ruff/mypy67/security18/strict
+dependency/85 full schemas PASS.271 Python source/test/script input hashes
+unchanged. Numeric regions require an authorized design_id; one local form now
+supports zero-variable and parameterized designs with independent same-name ranges.
+Installed two-design plans/repeats, SDK85/contexts/bootstrap/reinstall/uninstall
+preservation are locally verified. Current hosted CI PASS and review outcome are recorded below.
+
+Local wheelc6b83193519f4db9e99b40fa8b65adb9e3d0afae6bab7d5d4b0be16414ce4312 /
+sdist0ee63730ee6e9b542108be7e7d5f5455d1ec5e09e3e87bfe763a406a50e19218;
+75/76 curated members, no unexpected/protected content, exact source/license/notices.
+All earlier exact-head receipts below remain historical; general release BLOCKED.
+Native authority/provider/lifecycle, generic ADE/new-job extraction/Sweep and actual
+clean-client execution are incomplete. Trust remains blocked/executable_permissions.
+Existing895MiB approval persists; zero native simulations/reservations/deployments/
+deletions/license/permission changes. GREL08/publication/merge remain excluded.
+
 # Historical0ee2c17 receipt and native boundary, 2026-10-08
 
 Tested source0ee2c17ba68cced8423d279b64d011319b60ef9a.271 source/test/script
@@ -157,4 +176,41 @@ An initial synthetic fixture incorrectly used strict Python validation of JSON
 lists:22 PASS/4 fixture errors plus lint line-length findings. JSON entry-point
 validation and formatting corrected the fixtures; historical evidence retained.
 Previous0ee2c17 CI2366 and artifacts above are historical after this source change.
-New exact package/hosted checks are pending; native trust remains BLOCKED.
+New local package PASS; exact hosted full/review receipt is pending; native trust remains BLOCKED.
+
+
+PR144 review bot reacted+1 at2026-10-07T16:46:55Z after corrected233e27e ready
+transition. The automation supplied no further suggestions; no formal approval or
+new separately head-bound text review is inferred. Prior P2 and correction remain
+visible. Fresh installed package confirms two design scopes under one fictional
+grant, stable distinct plan identities,19 synthetic state files preserved after
+same-version reinstall/uninstall, and absence of import afterward. Native jobs0.
+
+
+## Final corrected independent receipt
+
+Exact source233e27e: hosted PR run37654390528/job112905827756 SUCCESS;
+2373 PASS/0 skips/56 warnings in258.88s. Lint/mypy67/security18/dependency/
+85-schema/package/installed two-design form/bootstrap/reinstall/uninstall gates
+PASS. Hosted wheel34d4b8f10dc3950925557dffc883027b55f60bc5b5d74177487da670e5bddcc2 /
+sdist43edc5d6c62d59aaf983eb3f1d50f96235337e870021707eb277bcfdb80fd8bb;
+75/76 curated members match that checkout/source/license/notices, protected and
+unexpected content0. Current local artifacts at the top are independently audited
+Windows workspace bytes; do not substitute either artifact identity for the other.
+
+271 local Python source/test/script inputs are unchanged after the checks. Later
+receipt commits alter only documentation and cite this tested source explicitly.
+New documentation-head workflows are not inferred PASS from this receipt. PR143/
+PR144 are ready/open/unmerged; no direct main write or merge. Three independent
+findings(two parent P1 and one P2 design scope) are corrected with regressions.
+Bot+1 signals after corrected ready transitions are distinct from formal approval.
+
+General release remains BLOCKED. GREL02 native positive trust/attestation, GREL03
+native shared ledger/admission/lifecycle/recovery/renewal, GREL04 actual generic
+ADE execution, GREL05 new-job extraction/Sweep, GREL06 clean actual Codex and
+GREL07 native operating/migration qualification remain incomplete. Existing02–07/
+895MiB permission persists; no approval/ledger/consumption reset. Zero program
+native simulation/reservation/deployment/deletion/permission/license changes.
+Installation-owner trusted executable/dependency chain is the first external gate;
+NATIVE_RESUME_BOUNDARY.md gives the ordered resume boundary. GREL08/publication
+are not authorized. No additional phase question is asked within02–07.

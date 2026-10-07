@@ -1,3 +1,19 @@
+## Final corrected local/hosted checkpoint, 2026-10-08
+
+Tested source233e27e: independent hosted2373 PASS/no skips/56 warnings; fresh
+local analysis/forms65 PASS, Ruff/mypy67/security18/dependency/85 schemas/package/
+installed two-design forms/reinstall/uninstall19-state preservation PASS. Three
+independent review findings are fixed; bot+1 after corrected ready transitions is
+recorded separately from formal approval. PR143/144 ready/unmerged; main553276d.
+Native trust blocked/executable_permissions; generic admission/ADE/new results/
+Sweep/actual clean client and native operating/migration qualification incomplete.
+Program0 simulations/reservations/deployments/deletions/permission/license changes;
+895MiB existing-remainder approval and continuous02–07 delegation persist.
+GREL08/merge/publication excluded. Exact source/artifact/CI/failure receipts:
+docs/generic_release/GREL_03_RESULT.md, GREL_07_RESULT.md, ACCEPTANCE_CURRENT.json.
+Installation owner must supply a trusted executable/dependency chain first; ordered
+resume is in NATIVE_RESUME_BOUNDARY.md. Prior overlays below remain history.
+
 ## GREL-03/GREL-07 independent checkpoint, 2026-10-08
 
 Explicit continuous GREL-02 through GREL-07 and existing895MiB remaining-space

@@ -53,6 +53,17 @@
       "unit_passed": 2364
     },
     "current": {
+      "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+      "run": 37654390528,
+      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
+      "conclusion": "PASS",
+      "unit_passed": 2373,
+      "unit_skipped": 0,
+      "unit_warnings": 56,
+      "unit_seconds": 258.88,
+      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+    },
+    "historical_lifecycle_correction": {
       "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
       "run": 37652706492,
       "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
@@ -79,10 +90,10 @@
     "files": 99964,
     "changed": 0
   },
-  "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+  "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
   "local_validation": {
-    "affected_passed": 94,
-    "os_symlink_skips": 2,
+    "affected_passed": 65,
+    "os_symlink_skips": 0,
     "security_passed": 18,
     "source_typecheck_files": 67,
     "mcp_full_schemas": 85,
@@ -92,8 +103,8 @@
     "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
   },
   "independent_review": {
-    "pr144": "PENDING",
+    "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
     "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL"
   },
-  "local_input_snapshot_sha256": "ca01a6e8442a9c32a0163febcd70d3887a6229c85d962066995961c2e2e06f62"
+  "local_input_snapshot_sha256": "94148c14c13becb59eb2e2e27a5d1ead267f084f8b686ae9fce856223402dccb"
 }
