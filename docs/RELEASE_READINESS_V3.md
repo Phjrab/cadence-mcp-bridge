@@ -45,6 +45,17 @@ remain user-deferred; this phase does not request new equipment or app work.
 
 ## Client evidence
 
+Latest operator checkpoint: [actual Codex reads](CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md)
+verify operator-v8 Gain/Power/DC/AC/TRAN and no-target evaluation with full
+historical equality under22 client-filtered read tools. Separately selected
+finite-grid runtime/two Sweep results/six no-target facts now match historical
+evidence, with sequential shared-lock reads and preserved concurrent failures.
+Full app schemas/source identity/version/new
+lifecycle remain unverified. Explicit global bridge configuration was changed
+only in this subsequent read qualification; the release reassessment itself
+made no configuration changes. Earlier updates below remain dated history.
+
+
 Update 2026-10-07: [current Codex checkpoint](CLIENT_REAL_QUAL_CODEX_CURRENT_02.md)
 verifies85 actual app-visible names after the user restart and preserved native
 DC re-reads. Full schemas, source/build identity, app version and new lifecycle

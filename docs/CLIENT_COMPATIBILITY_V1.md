@@ -1,5 +1,18 @@
 # CLIENT-COMPAT-01: MCP clients, protocol and qualification
 
+## Operator-bound Codex read checkpoint, 2026-10-07
+
+[Operator report](CLIENT_REAL_QUAL_CODEX_OPERATOR_03.md) verifies actual
+operator-v8 runtime and preserved Gain/Power/DC/AC/TRAN/no-target goal results
+through22 explicitly filtered read tools; full historical payload/repeat equality.
+Pinned finite-grid runtime, two complete Sweep payloads and six no-target facts
+also match historical evidence after reconnect propagation; the final installed
+profile selects that distinct context. Sequential shared-lock reads pass after
+three preserved concurrent-read failures. Full85 schemas/read annotations are
+SDK evidence, not app schema
+capture or new lifecycle qualification. Below are dated preceding observations.
+
+
 ## Current actual Codex checkpoint, 2026-10-07
 
 [Current report](CLIENT_REAL_QUAL_CODEX_CURRENT_02.md) observes85 names after

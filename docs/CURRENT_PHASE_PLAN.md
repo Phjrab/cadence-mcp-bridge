@@ -1,5 +1,50 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## CLIENT-REAL-QUAL-CODEX-03 completion gate
+
+Scoped actual reads are verified: operator measurement-v8 Gain/Power/native
+DC/AC/TRAN/no-target goal and pinned amplifier-v2 runtime/two complete Sweep
+payloads/six no-target facts match preserved data.22 filtered names in each
+context; final installed context amplifier. Initial reconnect propagation,
+external config change, three concurrent read failures and schema-projection
+verification failure are retained. Sequential shared-EDA-lock reads/repeats
+and stale/malformed rejection PASS. Nine conservative corrections/20.
+Fresh19/security18/static59/contract85/package PASS; full2234/five OS skips/56
+warnings reused by exact source/tests/toolchain/policy equality. Preserve1987
+private hashes/whole live checkpoint/ledger82/9,798,942,720/local stat-only change.
+No simulation/reservation/deployment/deletion/target/publication. Overall complete
+app schema/build/version/new lifecycle remains unverified. Finish exact gates,
+reviewed feature PR/permitted merge/remote verification; report and stop.
+Earlier active overlays remain dated history.
+
+
+## CLIENT-REAL-QUAL-CODEX-03 active operator read qualification
+
+Checkpoint: actual operator-v8 runtime/22 filtered names and preserved
+Gain/Power/DC/AC/TRAN/catalog/no-target goal/repeats match historical payloads;
+unknown/stale requests reject. Measurement context is verified. Grid profile is
+now applied with current unrelated settings byte-exact; a post-reboot external
+config change was observed and preserved after a correct stale guard failure.
+User reported Sweep reconnect, but first runtime observation remains v8.
+Actual grid reads pending correct runtime. Fresh19/security18/static59/contract85
+and SDK both profiles PASS; five conservative corrections, initial failures kept.
+Current phase remains active, no simulator/reservation/deletion/publication.
+
+User continuation after merged PR136/main15bcd9c authorizes applying the prepared
+read-only operator profiles and actual Codex preserved Gain/Power/Sweep/Specification
+reads. Measurement v8 and reviewed finite-grid v2 remain distinct contexts; use
+only existing PDK metadata/admission/sweep journals, with22 client-filtered read
+tools. Preserve all unrelated global settings with byte-exact backup/review;
+human reconnect may be necessary because this agent cannot restart its connection.
+No simulation/reservation/deployment/deletion/target/optimization/publication.
+Freeze prior private/live evidence, preserve82/9,798,942,720 shared counters and
+local stat-only change. Actual app observations are separate from SDK/source
+schema checks, and config application alone is not measurement qualification.
+Complete applicable gates, documentation/state, reviewed feature PR/permitted
+merge/remote verification; report and stop, ask once before another major phase.
+Earlier overlays are preserved dated history.
+
+
 ## CLIENT-REAL-QUAL-CODEX-02 completion gate
 
 Actual current85 names/native DC reads/repeated reads and bounded rejections
