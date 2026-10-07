@@ -1,3 +1,19 @@
+## GREL-03/GREL-07 independent checkpoint, 2026-10-08
+
+Explicit continuous GREL-02 through GREL-07 and existing895MiB remaining-space
+approval are active. Latest main553276d is unchanged. GREL02 fixed assets/local
+bootstrap are implemented in stacked PR143; positive native trust is BLOCKED by
+actual group/other-writable vendor chains. GREL03 adds local authority/immutable
+plan forms only; no grant issuance/remote lifecycle/provider/ledger reset. GREL07
+adds hosted synthetic workflow and installed state-preservation tooling. Generic
+ADE execution/new measurements/Sweep/actual clean app remain NOT_IMPLEMENTED/
+NOT_RUN; do not call these phases complete. Source/test/package evidence and
+pending CI/review are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
+No simulations/reservations/deployments/deletions/permission/license changes.
+Installation-owner trust action is required before native acceptance. No protected
+chmod, budget increase, merge, GREL08 or publication is authorized. No phase-boundary
+question inside02-through-07. Earlier overlays remain dated historical records.
+
 ## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
 
 The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.
@@ -158,7 +174,7 @@ Native deletion/replay/audit qualification remains pending; earlier overlays his
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: GREL-02
+current_wp: GREL-03-GREL-07-INDEPENDENT-CHECKPOINT
 client_lifecycle_01_status: bounded_actual_schema_reconnect_verified_graceful_shutdown_unverified
 client_lifecycle_01_report: docs/CLIENT_LIFECYCLE_QUAL_01.md
 client_lifecycle_01_tools: raw85_filtered26_no_API_change
@@ -563,7 +579,7 @@ spec_contract_01_desktop: CLAUDE_REAL_CLIENT_UNVERIFIED_fresh_Codex_app_NOT_TEST
 spec_contract_01_spectre_reservations_deployments_deletions: 0_0_0_0_cumulative62_of500_and7114588160_of10737418240
 spec_contract_01_protection: source_ADE_PDK_saved_jobs_counters_admission_journal_and1063_prior_records_equal
 spec_contract_01_next_phase: Release_Readiness_reassessment_pending_one_boundary_choice_no_publication_or_optimization
-current_status: implementing_runner_bootstrap_continuous_GREL02_to_07
+current_status: local_forms_and_public_verification_native_trust_blocked
 analog_meas_01_starting_main: e3fcfad30f35c68b1a90160d4d5f3a364436ab12
 analog_meas_01_workflow: docs/ANALOG_MEASUREMENTS_V1.md
 analog_meas_01_scope: registered_v6_local_derivation_admitted_native_evidence_no_new_extraction
@@ -1318,7 +1334,7 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: feat/grel-02-runner-bootstrap
+current_feature_branch: feat/grel-03-reusable-operations
 base_main_commit: 553276d28c54d8e87092229d102bfd05ec98e74f
 last_commit: recorded_in_GREL_01_continuation_and_feature_PR
 last_push: verified_feature_implementation_738b610_PR142_final_head_in_GitHub
@@ -1327,7 +1343,7 @@ awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: GREL01_installed_synthetic_two_context_restart_pass_actual_new_jobs_NOT_RUN
-user_action_required: "Review GREL-01 feature PR; choose once whether to proceed to GREL-02."
+user_action_required: "Installation owner must establish trusted executable/dependency chain; continuous GREL02-07 approval persists."
 ```
 
 ## GENERIC-DESIGN-01 checkpoint

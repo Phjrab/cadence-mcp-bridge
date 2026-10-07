@@ -1,0 +1,47 @@
+name: Public synthetic verification
+on:
+  pull_request:
+  push:
+    branches: [main, "feat/grel-**"]
+permissions:
+  contents: read
+concurrency:
+  group: public-synthetic-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows-python312:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+      UV_NO_PROGRESS: "1"
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout reviewed event commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          submodules: false
+          set-safe-directory: false
+      - name: Install fixed uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.12.6"
+          checksum: "df7cb9f243eae1621400d4fcf5b1b3d90f20e264ece91b64deb3b0078abca6ef"
+          enable-cache: false
+      - name: Install locked public dependencies
+        run: uv sync --locked --all-groups --python 3.12.10
+      - name: Lint
+        run: .venv/Scripts/python.exe -m ruff check src scripts tests
+      - name: Type check
+        run: .venv/Scripts/python.exe -m mypy src
+      - name: Synthetic unit tests
+        run: .venv/Scripts/python.exe -m pytest tests/unit -q
+      - name: Security and locked dependency audit
+        run: ./scripts/verify-security.ps1
+      - name: Published contract compatibility
+        run: .venv/Scripts/python.exe -I -X utf8 scripts/verify-release-readiness.py
+      - name: Curated artifacts, installed protocol, bootstrap and state preservation
+        run: ./scripts/verify-package.ps1

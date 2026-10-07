@@ -9,11 +9,11 @@
     "GREL-06",
     "GREL-07"
   ],
-  "current_phase": "GREL-02",
-  "phase_status": "LOCAL_FOUNDATION_VALIDATION_PENDING_NATIVE_TRUST_BLOCKED",
-  "branch": "feat/grel-02-runner-bootstrap",
+  "current_phase": "GREL-03/GREL-07",
+  "phase_status": "LOCAL_IMPLEMENTATION_PENDING_FINAL_CHECKS_NATIVE_TRUST_BLOCKED",
+  "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "3a1fdaaadc4af511ae056c025728add128be83ec",
+  "parent_feature": "0e46141bd6de430775e1d917bc1c87a39ce74ae4",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -24,8 +24,24 @@
   "grel08_authorized": false,
   "native_blocker": "executable_permissions_actual_group_or_other_writable_vendor_chain",
   "remote_deployments": 0,
-  "report": "GREL_02_RESULT.md",
+  "report": "GREL_03_RESULT.md",
   "next_phase_authorized": true,
-  "next_phase": "GREL-03",
-  "pr_url": null
+  "next_phase": "GREL-03-native-admission-then-GREL04-06",
+  "pr_url": null,
+  "reports": [
+    "GREL_02_RESULT.md",
+    "GREL_03_RESULT.md",
+    "GREL_07_RESULT.md"
+  ],
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
+  "blocked_phases": {
+    "GREL-02": "positive_native_trust",
+    "GREL-03": "native_provider_and_operator_attestation_not_implemented",
+    "GREL-04": "generic_native_ADE_execution_not_implemented",
+    "GREL-05": "new_job_measurement_and_sweep_not_implemented",
+    "GREL-06": "clean_actual_app_new_job_not_run"
+  },
+  "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
+  "hosted_ci": "PENDING",
+  "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md"
 }

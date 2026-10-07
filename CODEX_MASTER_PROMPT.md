@@ -1,3 +1,19 @@
+## GREL-03/GREL-07 independent checkpoint, 2026-10-08
+
+Explicit continuous GREL-02 through GREL-07 and existing895MiB remaining-space
+approval are active. Latest main553276d is unchanged. GREL02 fixed assets/local
+bootstrap are implemented in stacked PR143; positive native trust is BLOCKED by
+actual group/other-writable vendor chains. GREL03 adds local authority/immutable
+plan forms only; no grant issuance/remote lifecycle/provider/ledger reset. GREL07
+adds hosted synthetic workflow and installed state-preservation tooling. Generic
+ADE execution/new measurements/Sweep/actual clean app remain NOT_IMPLEMENTED/
+NOT_RUN; do not call these phases complete. Source/test/package evidence and
+pending CI/review are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
+No simulations/reservations/deployments/deletions/permission/license changes.
+Installation-owner trust action is required before native acceptance. No protected
+chmod, budget increase, merge, GREL08 or publication is authorized. No phase-boundary
+question inside02-through-07. Earlier overlays remain dated historical records.
+
 ## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
 
 The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.

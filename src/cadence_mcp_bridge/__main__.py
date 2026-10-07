@@ -69,6 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--context")
         if action == "resolve":
             command.add_argument("--design-id", required=True)
+    operation = subparsers.add_parser("operation", help="Local authority and plan verification.")
+    operation_actions = operation.add_subparsers(dest="operation_action", required=True)
+    operation_actions.add_parser("grant-schema")
+    operation_actions.add_parser("request-schema")
+    for name in ("check-authority", "plan"):
+        command = operation_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        command.add_argument("--grant", type=Path, required=True)
+        command.add_argument("--expected-grant-sha256", required=True)
+        if name == "plan":
+            command.add_argument("--request", type=Path, required=True)
     runner = subparsers.add_parser(
         "runner", help="Fixed installed runner content workflow; no simulation."
     )
@@ -142,6 +154,55 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operation":
+        from cadence_mcp_bridge import operator_operations as operations
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.operation_action in ("grant-schema", "request-schema"):
+                model = (
+                    operations.OperatorGrant
+                    if arguments.operation_action == "grant-schema"
+                    else operations.OperationRequest
+                )
+                operation_result = model.model_json_schema()
+            else:
+                contexts = load_runtime(arguments.settings)
+                context = next(
+                    (c for c in contexts if c.binding.context_id == arguments.context), None
+                )
+                if context is None:
+                    raise operations.OperationRejected("unknown_context_id")
+                if arguments.operation_action == "plan":
+                    operation_result = operations.inspect_plan(
+                        context, arguments.grant, arguments.expected_grant_sha256, arguments.request
+                    )
+                else:
+                    operation_result = operations.inspect_authority(
+                        context, arguments.grant, arguments.expected_grant_sha256
+                    )
+        except (
+            OSError,
+            ValueError,
+            ConfigurationError,
+            InvalidInputError,
+            RecursionError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "OPERATOR_OPERATION_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, operations.OperationRejected)
+                        else "operator_document_invalid",
+                        "execution_authorized": False,
+                        "remote_contact": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(operation_result, sort_keys=True))
+        return 0
     if arguments.command == "runner":
         from cadence_mcp_bridge import bootstrap
 
