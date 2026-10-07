@@ -63,12 +63,15 @@ Generic ADE/native templates are a later GREL-04 requirement, not claimed here.
   caused per-item synthetic audit path271 characters (Windows file-open rejection).
   A separate renamed-handle fixture improvement passed25 tests/one OS skip, but
   did not resolve this long-path invocation. Both failures and diagnostic retained.
-  Corrected short exclusive system-temp full invocation is currently running;
-  PENDING_FINAL_GREL02_UNIT. No production storage protection was weakened.
+  Final short exclusive system-temp full invocation:2319 PASS/7 OS symlink
+  SKIP/56 warnings in790.75s. Exact source/unit input hashes unchanged before/after.
+  No production storage protection was weakened.
 - Final curated wheel/sdist: d0fdab1fc4eed13f7b09f61693618fa01eeaac5c7deecd28316ed14070d8b7ae /
   18764aebd63918a72a6ad9b9eedf8347d015142d5b1c190d4e345bf3b29855eb;
  74/75 members, Apache-2.0/notices/source match, no unexpected/protected patterns.
-- Independent review of GREL02 candidate/hosted CI: NOT_RUN at checkpoint.
+- Primary code/diff review completed; this is not independent review.
+  Independent automatic review pending at PR143 ready transition. GREL02 branch
+  has no hosted workflow; GREL07 subsequent branch supplies actual CI separately.
 
 ## Actual native blocker and resources
 
@@ -92,7 +95,7 @@ permission/license changes and result deletion. No approval/ledger was recreated
 
 ## Continuous program status
 
-GREL02: local runner/bootstrap foundation implemented; generic runner assets/
+GREL02: local runner/bootstrap foundation implemented and locally verified; generic runner assets/
 positive native trust gate not fully qualified (REMOTE_BLOCKED). G03 not complete.
 GREL03: reusable authority/lifecycle integration next; remote execution depends
 on the unchanged native trust gate and actual shared-ledger provisioning.
@@ -105,3 +108,12 @@ GREL08/publication: NOT_AUTHORIZED. General release remains BLOCKED.
 No next-phase approval is requested within the authorized02–07 range. Any actual
 protected install repair, additional budget or exact deletion is a separate user
 choice. The blocker is preserved while independently useful work continues.
+
+PR143 https://github.com/Phjrab/cadence-mcp-bridge/pull/143 is stacked on
+feat/grel-01-runtime-context/PR142; neither merged. Tested source+test commit142e1b4
+and later documentation receipts have equal source/test input snapshots.
+Candidate wheel/sdist retain the exact SHA256 values above. Fresh storage read
+again matches82/9,798,942,720 and snapshot1ff1794c7ff2d75b3aeed475d587a68e2d39bc5157a8704107397cc7610b09e2;
+filesystem free25690324992/floorOK, registered logical/allocated totals unchanged.
+The original checkout still contains only the preserved unrelated OCN edit.
+Generic positive-native bootstrap gate remains BLOCKED; local PASS does not close it.

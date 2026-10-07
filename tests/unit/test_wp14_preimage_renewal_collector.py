@@ -262,8 +262,7 @@ def _valid_remote_output(runtime: Runtime, absent_index: int | None = None) -> b
         digest = hashlib.sha256(repository_path.encode()).hexdigest()
         mode = "700" if index < 7 else "600"
         lines.append(
-            f"WP14_ASSET\t{index}\tfile\t{digest}\t{mode}\tbuet\t"
-            "regular_file\t1\tfalse\ttrue"
+            f"WP14_ASSET\t{index}\tfile\t{digest}\t{mode}\tbuet\tregular_file\t1\tfalse\ttrue"
         )
     lines.append("WP14_END")
     return ("\n".join(lines) + "\n").encode()
@@ -306,12 +305,9 @@ def test_production_collector_has_fixed_non_mcp_boundary() -> None:
     assert "ocean" not in text.lower()
     assert "unlink(" not in text and "rmtree(" not in text and "os.remove" not in text
     assert not (
-        ROOT
-        / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_RENEWAL_AUTHORIZATION_V1.json"
+        ROOT / "docs/approvals/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_RENEWAL_AUTHORIZATION_V1.json"
     ).exists()
-    assert not (
-        ROOT / "docs/evidence/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_V2.json"
-    ).exists()
+    assert not (ROOT / "docs/evidence/WP14_REMOTE_IDENTITY_PREIMAGE_EVIDENCE_V2.json").exists()
 
 
 def test_accepted_activation_holds_both_locks_and_consumes_before_transport(
@@ -451,9 +447,7 @@ def test_extra_or_duplicate_activation_key_is_rejected(
     assert _run_error(runtime) == "ACTIVATION_INVALID"
     assert calls == [] and not runtime.renewal_claim.exists()
 
-    runtime.activation.write_text(
-        '{"schema_version":2,"schema_version":2}', encoding="utf-8"
-    )
+    runtime.activation.write_text('{"schema_version":2,"schema_version":2}', encoding="utf-8")
     assert _run_error(runtime) == "ACTIVATION_INVALID"
     assert calls == [] and not runtime.renewal_claim.exists()
 
@@ -548,8 +542,7 @@ def test_claim_closed_schema_rejects_extra_or_duplicate_even_with_matching_diges
         runtime.collection_claim.write_text(
             text.replace(
                 '{"state":"consumed_before_transport",',
-                '{"state":"consumed_before_transport",'
-                '"state":"consumed_before_transport",',
+                '{"state":"consumed_before_transport","state":"consumed_before_transport",',
             ),
             encoding="utf-8",
         )
@@ -644,10 +637,13 @@ def test_lock_is_compatible_with_powershell_fileshare_none(runtime: Runtime) -> 
         shell=False,
     )
     try:
-        deadline = time.monotonic() + 5
-        while not ready.exists() and time.monotonic() < deadline:
+        # Cold PowerShell startup on a hosted Windows worker can exceed five
+        # seconds. Wait for its explicit ready signal before testing the lock;
+        # the production lock denial and retry behavior are unchanged.
+        deadline = time.monotonic() + 15
+        while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
             time.sleep(0.02)
-        assert ready.exists()
+        assert ready.exists(), "synthetic PowerShell lock holder did not signal readiness"
         with pytest.raises(runtime.module.CollectorError) as raised:
             runtime.module._open_exclusive_existing_lock(runtime.deployment_lock)
         assert raised.value.code == "LOCK_UNAVAILABLE"

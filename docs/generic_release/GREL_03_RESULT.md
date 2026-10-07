@@ -22,7 +22,12 @@ and form suite58 PASS. Includes stale binding/lifetime/ceilings, registered vs
 narrower numeric denials, duplicate/oversize JSON, immutable canonical values,
 private error redaction and no journal/lock side effects. Ruff PASS; mypy67 source
 files PASS; security18 PASS; locked dependency audit no known vulnerabilities.
-Full final source suite: PENDING_GREL03_FULL_UNIT (short exclusive system temp).
+Initial exact local full:2338 PASS/7 OS symlink skips/56 warnings in788.53s,
+with source/test hashes unchanged. Hosted run then revealed two preexisting test
+environment dependencies: actual origin spelling and cold PowerShell startup.
+Only those synthetic tests/workflow temp selection are corrected; new negative
+origin cases retain strict production repository checks. Corrected full gate is
+PENDING_GREL03_FULL_UNIT; initial hosted failure2343 PASS/2 FAIL is preserved.
 Installed locked wheel validation of local authority/plan repeat identity PASS;
 85 full schemas/three SDK formats/context1-to-2-to-1/bootstrap/preservation PASS.
 Candidate artifacts:wheel0c91fd00862c7b10245f464d9544d32020839d6b1552ffff3eea0659e58c6616,

@@ -38,7 +38,9 @@ jobs:
       - name: Type check
         run: .venv/Scripts/python.exe -m mypy src
       - name: Synthetic unit tests
-        run: .venv/Scripts/python.exe -m pytest tests/unit -q
+        run: |
+          $grelUnitTemp = Join-Path $env:RUNNER_TEMP ("grel-unit-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
+          .venv/Scripts/python.exe -m pytest tests/unit -q --basetemp $grelUnitTemp
       - name: Security and locked dependency audit
         run: ./scripts/verify-security.ps1
       - name: Published contract compatibility

@@ -23,8 +23,15 @@ Storage, deletion, cancellation and native result operations stay disabled. No
 old-result consent, deletion/refund, stale-lock removal or process termination.
 
 Local package/source-license/installed protocol/bootstrap/reinstall/uninstall PASS;
-Ruff/mypy67/security18/dependency/85-schema PASS. Full unit: PENDING_GREL03_FULL_UNIT.
-Actual GitHub-hosted workflow: PENDING_HOSTED_CI. Local green is not hosted green.
+Ruff/mypy67/security18/dependency/85-schema PASS. Initial exact local full:2338 PASS/7 OS skips/56 warnings in788.53s.
+Hosted first run37647459157:2343 PASS/2 FAIL, all privileged Windows symlink
+fixtures ran (no OS skips). Actual checkout-origin spelling dependency and cold
+PowerShell ready deadline caused failures. Synthetic origin inputs now include
+explicit reject cases and ready wait is15s; production guards are unchanged.
+Workflow uses short exclusive RUNNER_TEMP pytest base. Original failures retained.
+Corrected full: PENDING_GREL03_FULL_UNIT; corrected hosted: PENDING_HOSTED_CI.
+Local green is not hosted green. Node20 pinned actions are forced to Node24 by
+GitHub; setup/lint/type steps passed with a deprecation warning.
 Primary source review is not independent review; automatic PR review pending.
 Source wheel/sdist identities and native blocker are recorded in GREL_03_RESULT.md.
 No branch protection/administrator/publication setting was changed.
