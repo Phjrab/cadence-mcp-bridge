@@ -194,3 +194,75 @@ def test_preflight_selects_exact_manifest_and_preserves_permission_rejection(pre
     assert argv[-3] == "preflight" and argv[-2] == digest and len(argv[-1]) == 32
     assert "StrictHostKeyChecking=yes" in argv
     assert not list(source.glob("*.sqlite3"))
+
+
+@pytest.mark.parametrize(
+    "target", ["/srv/project", "/srv/project/source", "/srv/other/.cadence_mcp"]
+)
+def test_native_install_target_must_match_hash_verified_managed_root(prepared, target):
+    source, _, digest = prepared
+    manifest, contents, _ = installer.validate(str(source), digest)
+    with pytest.raises(ValueError, match="installation_target_binding"):
+        installer.target_binding(manifest, contents, target)
+    installer.target_binding(manifest, contents, "/srv/project/.cadence_mcp")
+
+
+def test_standalone_wrong_target_creates_nothing(prepared):
+    source, target, digest = prepared
+    with pytest.raises(ValueError, match="installation_target_binding"):
+        installer.install(str(source), str(target), digest)
+    assert not list(target.iterdir())
+
+
+def test_windows_local_content_scope_is_not_native_installation(prepared):
+    import os
+
+    if os.name != "nt":
+        pytest.skip("Windows local staging scope")
+    source, target, digest = prepared
+    result = bootstrap.install(source, target, digest)
+    assert result["installation_scope"] == "WINDOWS_LOCAL_CONTENT_STAGING_ONLY"
+    assert result["native_installation_verified"] is False
+    assert result["execution_authorized"] is False
+
+
+@pytest.mark.parametrize("asset", ["_runner_launcher", "_generic_runner"])
+@pytest.mark.parametrize(
+    "mode,owner", [(0o40777, 500), (0o40775, 0), (0o40700, 501), (0o100600, 500)]
+)
+def test_native_runner_refuses_unsafe_ancestor_before_import(asset, mode, owner, monkeypatch):
+    import importlib
+    import ntpath
+    from types import SimpleNamespace
+
+    module = importlib.import_module("cadence_mcp_bridge." + asset)
+    calls = []
+
+    def observed(path):
+        calls.append(path)
+        return SimpleNamespace(st_mode=mode, st_uid=owner)
+
+    fake = SimpleNamespace(name="posix", getuid=lambda: 500, path=ntpath, lstat=observed)
+    monkeypatch.setattr(module, "os", fake)
+    with pytest.raises(ValueError, match="runner_directory_permissions"):
+        module.trusted_directory_chain("C:/owned/runtime/digest")
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("asset", ["_runner_launcher", "_generic_runner"])
+def test_native_runner_checks_complete_owned_or_root_ancestor_chain(asset, monkeypatch):
+    import importlib
+    import ntpath
+    from types import SimpleNamespace
+
+    module = importlib.import_module("cadence_mcp_bridge." + asset)
+    calls = []
+
+    def observed(path):
+        calls.append(path)
+        return SimpleNamespace(st_mode=0o40755, st_uid=0 if path == "C:\\" else 500)
+
+    fake = SimpleNamespace(name="posix", getuid=lambda: 500, path=ntpath, lstat=observed)
+    monkeypatch.setattr(module, "os", fake)
+    module.trusted_directory_chain("C:/owned/runtime/digest")
+    assert len(calls) == 4

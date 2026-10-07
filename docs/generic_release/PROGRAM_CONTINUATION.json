@@ -10,10 +10,10 @@
     "GREL-07"
   ],
   "current_phase": "GREL-03/GREL-07",
-  "phase_status": "LOCAL_IMPLEMENTATION_PENDING_FINAL_CHECKS_NATIVE_TRUST_BLOCKED",
+  "phase_status": "NATIVE_TRUST_BLOCKED_PARENT_SECURITY_FIX_FINAL_CHECKS_PENDING",
   "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "0e46141bd6de430775e1d917bc1c87a39ce74ae4",
+  "parent_feature": "7e6db1b",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -27,7 +27,7 @@
   "report": "GREL_03_RESULT.md",
   "next_phase_authorized": true,
   "next_phase": "GREL-03-native-admission-then-GREL04-06",
-  "pr_url": null,
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/144",
   "reports": [
     "GREL_02_RESULT.md",
     "GREL_03_RESULT.md",
@@ -42,6 +42,25 @@
     "GREL-06": "clean_actual_app_new_job_not_run"
   },
   "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
-  "hosted_ci": "PENDING",
-  "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md"
+  "hosted_ci": {
+    "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
+    "historical_run": 37649117150,
+    "historical_conclusion": "PASS",
+    "corrected_candidate": "PENDING"
+  },
+  "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
+  "live_resource_snapshot": {
+    "attempts": 82,
+    "reserved_result_bytes": 9798942720,
+    "result_ceiling_bytes": 10737418240,
+    "remaining_bytes": 938475520,
+    "logical_bytes": 18030073,
+    "allocated_bytes": 48308224,
+    "filesystem_free_bytes": 25690324992,
+    "disk_floor_status": "OK"
+  },
+  "selected_local_preservation": {
+    "files": 99964,
+    "changed": 0
+  }
 }

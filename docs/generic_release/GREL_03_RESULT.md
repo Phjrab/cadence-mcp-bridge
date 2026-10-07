@@ -48,3 +48,11 @@ GREL04/05/06. GREL07 independent synthetic CI/preservation is included in this
 checkpoint. See REUSABLE_OPERATION_FORMS.md and NATIVE_RESUME_BOUNDARY.md for
 exact limits and the trusted-installation external blocker. GREL08/publication
 remain unauthorized. No next-phase approval is requested inside02-through-07.
+
+Parent PR143 independent P1 native-target binding and primary directory-ancestor
+security correction is integrated. Prior2338 local and hosted46c56a5 PASS are
+historical source receipts. Parent assets changed, so corrected candidate full/
+package/hosted validation is PENDING; no old artifact hash is reused as this head.
+The in-progress test-only correction local invocation was superseded and stopped
+as its source changed. Failed/interrupted evidence is retained. Final source is
+frozen for new checks; no native deployment or permission change occurred.

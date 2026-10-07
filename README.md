@@ -593,3 +593,12 @@ build/isolated SDK+bootstrap+preservation checks without Cadence/PDK/license/SSH
 secrets. Actual native acceptance and actual-app new execution remain distinct
 BLOCKED/NOT_RUN gates. See CONTRIBUTING.md for commands and SECURITY.md for
 sanitized reports. General release and publication remain blocked.
+
+
+Native standalone runner installation refuses a TARGET that differs from the
+hash-verified profile's paths.managed_root before creating any directory. A
+mistyped target cannot create a runtime tree in an original/source/vendor root.
+Windows runner install is local content staging only and reports
+WINDOWS_LOCAL_CONTENT_STAGING_ONLY/native_installation_verified=false. The
+standalone Linux installer has no staging command; Linux installation still
+requires the exact managed root and positive native trust is a separate gate.

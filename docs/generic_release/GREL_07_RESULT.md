@@ -41,3 +41,11 @@ still depend on GREL02-through-06. GREL07 PARTIAL; general release BLOCKED.
 GREL08/publication NOT_AUTHORIZED. Preserve continuous approval and complete the
 remaining actual gates after the installation owner supplies a trusted executable
 and dependency chain. See OPERATIONAL_PRESERVATION.md and NATIVE_RESUME_BOUNDARY.md.
+
+Parent PR143 independent P1 native-target binding and primary directory-ancestor
+security correction is integrated. Prior2338 local and hosted46c56a5 PASS are
+historical source receipts. Parent assets changed, so corrected candidate full/
+package/hosted validation is PENDING; no old artifact hash is reused as this head.
+The in-progress test-only correction local invocation was superseded and stopped
+as its source changed. Failed/interrupted evidence is retained. Final source is
+frozen for new checks; no native deployment or permission change occurred.

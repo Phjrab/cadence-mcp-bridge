@@ -114,9 +114,41 @@ def exclusive(path, content, mode=384):
         stream.close()
 
 
+def target_binding(manifest, contents, target):
+    profile = json.loads(contents["profile.json"].decode("utf-8"))
+    if (not isinstance(profile, dict)
+            or profile.get("environment_id") != manifest["environment_id"]
+            or not isinstance(profile.get("paths"), dict)
+            or profile["paths"].get("managed_root") != target):
+        raise ValueError("installation_target_binding")
+
+
 def install(bundle, target, expected):
+    # Native installation always binds to the hash-verified operator managed root.
+    manifest, contents, raw = validate(bundle, expected)
+    target_binding(manifest, contents, os.path.abspath(target))
+    return _install_content(bundle, target, expected, False)
+
+
+def stage_windows(bundle, target, expected):
+    # Windows cannot host this Linux runner. This is explicit local content staging,
+    # never exposed by the standalone command and never usable on a Linux target.
+    if os.name != "nt":
+        raise ValueError("windows_local_staging_only")
+    result = _install_content(bundle, target, expected, True)
+    result["installation_scope"] = "WINDOWS_LOCAL_CONTENT_STAGING_ONLY"
+    result["native_installation_verified"] = False
+    return result
+
+
+def _install_content(bundle, target, expected, staging):
     manifest, contents, raw = validate(bundle, expected)
     target = directory(target)
+    if staging:
+        if os.name != "nt":
+            raise ValueError("windows_local_staging_only")
+    else:
+        target_binding(manifest, contents, target)
     versions = os.path.join(target, "runtime")
     if not os.path.exists(versions):
         os.mkdir(versions, 448)
