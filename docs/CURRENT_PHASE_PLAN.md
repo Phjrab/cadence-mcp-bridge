@@ -1,5 +1,33 @@
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
+## CLIENT-REAL-QUAL-CODEX-02 completion gate
+
+Actual current85 names/native DC reads/repeated reads and bounded rejections
+PASS in loaded builtin4/default journals; operator-bound qualification remains
+incomplete. Fresh61 client/runtime/contract tests, static59/security18/contract85
+PASS; exact unchanged full2234 PASS/five OS skips/56 warnings reused. Current
+README package rebuild and exact review/remote integration receipts are required.
+Whole live checkpoint,1,955 prior private hashes and global registration match.
+Five conservative corrections/20; zero simulator/reservation/deployment/deletion.
+Prepared read-only contexts are not installed. After normal reviewed checkpoint
+PR integration, report and ask once before operator-bound qualification.
+
+## CLIENT-REAL-QUAL-CODEX-02 active checkpoint
+
+User continuation from PR135/main815321e activates actual Codex read-only
+qualification. User-reported restart refreshes host names77 to85; runtime stays
+builtin designv4/PDKv2/default journals. Existing native DC repeat/frame evidence
+PASS; generic admission and new amplifier catalog correctly deny missing operator
+bindings. No full schema/build/app-version/lifecycle qualification is claimed.
+Prepare private existing-registry/journal read-only handoff, do not install it.
+No simulation/reservation/deployment/config change/deletion/target/publication.
+Preserve ledger82/9,798,942,720,1,955 baseline private hashes, original/ADE/PDK/
+all results/replay and local stat-only change. Verify current contract/client/
+security/package/doc gates and unchanged full-unit reuse, reviewed normal PR,
+remote SHA/tree; report partial qualification and ask once before next scope.
+Actual Claude Code-tab reads/restart via PR127 remain verified in that scope.
+
+
 ## RELEASE-READINESS-03 completion gate
 
 Current assessment/result v3 records scope-specific conditional/blocked states.
