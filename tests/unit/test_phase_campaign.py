@@ -18,7 +18,21 @@ campaign = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(campaign)
 
 
-def test_exact_delegation_allows_only_versioned_policy(tmp_path: Path) -> None:
+def test_exact_delegation_allows_only_versioned_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Policy binding is a unit test; repository origin is a separately tested input.
+    # A hosted checkout may omit the .git suffix or belong to a contributing fork.
+    def repository_identity(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[bytes]:
+        assert argv == ["git", "-C", str(campaign.ROOT), "remote", "get-url", "origin"]
+        assert kwargs == {"capture_output": True, "check": False, "timeout": 5}
+        return subprocess.CompletedProcess(
+            argv, 0, b"https://github.com/Phjrab/cadence-mcp-bridge.git\n", b""
+        )
+
+    monkeypatch.setattr(campaign.subprocess, "run", repository_identity)
     policy = json.loads(campaign.POLICY.read_text(encoding="utf-8"))
     policy_path = tmp_path / "policy.json"
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
@@ -152,3 +166,26 @@ def test_fixed_transport_records_private_output_and_blocks_replay(
     with pytest.raises(campaign.CampaignError, match="already completed"):
         campaign.run("identity")
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "returncode,remote",
+    [
+        (1, b"https://github.com/Phjrab/cadence-mcp-bridge.git"),
+        (0, b"https://github.com/untrusted/cadence-mcp-bridge.git"),
+        (0, b"https://github.com/Phjrab/cadence-mcp-bridge"),
+        (0, b""),
+    ],
+)
+def test_repository_identity_failure_denies_before_authority_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, returncode: int, remote: bytes
+) -> None:
+    monkeypatch.setattr(
+        campaign.subprocess,
+        "run",
+        lambda argv, **kwargs: subprocess.CompletedProcess(argv, returncode, remote, b""),
+    )
+    unavailable = tmp_path / "absent.json"
+    with pytest.raises(campaign.CampaignError, match="repository remote mismatch"):
+        campaign._load_authority(unavailable, unavailable, unavailable, unavailable)
+    assert not list(tmp_path.iterdir())
