@@ -40,11 +40,20 @@ by the declared stop, including a partial final interval. Native Cadence API
 behavior for that grid remains unqualified; other sampling forms are unsupported.
 Grid points must stay strictly ordered after %.16g serialization. Projection
 prefers an exact float equality before trying a unique tolerant match, so narrow
-valid sweeps with close neighbors remain distinguishable. All registered waves must share an
+valid sweeps with close neighbors remain distinguishable. Before compilation,
+requested frequencies must match distinct samples in that serialized declared
+grid using the same exact-first/tolerance rules as projection; merely being
+inside the frequency interval is insufficient. All registered waves must share an
 increasing exact saved frequency axis. Each requested frequency must match one
 actual sample (relative tolerance1e-12); there is no interpolation. Division uses
 the measured complex differential input; zero input rejects. Zero output has
 null dB and phase. No universal10Hz/DC gain, bandwidth or phase-margin claim.
+
+TRAN compilation requires ceil(stop/maxstep)+1 to fit maximum_samples. The
+initial all-saved-points contract supports no thinning or strobe sampling; saved
+steps above the declared maxstep reject during projection. Additional adaptive
+points can still exceed capacity and reject without partial facts. This local
+consistency check does not attest solver behavior or PSF origin.
 
 TRAN uses all registered saved samples from0 to the compiled stop (relative
 endpoint tolerance1e-12), identical strictly increasing axes and real values.

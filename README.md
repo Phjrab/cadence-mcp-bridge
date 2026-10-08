@@ -70,7 +70,7 @@ ID to the exact selected analysis. Its reader must remain `unqualified`; this
 compiler cannot replace a qualified historical definition. Registry v3 allowlists
 alone are insufficient. `measurement_contract_sha256` binds the canonical
 registered contract. Selectors stay in operator artifacts; MCP has no path input.
-`maximum_samples` is2–256 per waveform, with1536 aggregate sample rows. The declared AC logarithmic grid (including both endpoints conservatively) and requested gain-frequency count must fit that limit before compilation. Frequencies must remain distinct as binary floats; complete declared AC grids and both endpoints are required within a relative tolerance of1e-12. Exact sample equality takes precedence over tolerant matching, and one saved sample cannot satisfy multiple requested frequencies; oversized, unsampled requested frequencies
+`maximum_samples` is2–256 per waveform, with1536 aggregate sample rows. The minimum TRAN sample count from stop/maxstep, the declared AC logarithmic grid (including both endpoints conservatively) and requested gain-frequency count must fit that limit before compilation. Frequencies must remain distinct as binary floats; complete declared AC grids and both endpoints are required within a relative tolerance of1e-12. Exact sample equality takes precedence over tolerant matching, and one saved sample cannot satisfy multiple requested frequencies; oversized, unsampled requested frequencies
 and unsupported selectors are refused. Native reader API/save inventory and
 power scope still require trusted provider qualification.
 

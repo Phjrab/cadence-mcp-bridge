@@ -210,7 +210,7 @@ def bind_reader(
         requested_samples = _ac_sample_count(ade.inputs)
         if requested_samples > reader.maximum_samples:
             raise OperationRejected("reader_ac_grid_exceeds_sample_limit")
-        _ac_axis(ade.inputs)
+        declared_axes = _ac_axis(ade.inputs)
         for frequency in reader.transfer.gain_frequencies_hz:
             if (
                 not Decimal(ade.inputs.start_hz)
@@ -218,6 +218,23 @@ def bind_reader(
                 <= Decimal(ade.inputs.stop_hz)
             ):
                 raise OperationRejected("reader_gain_frequency_outside_analysis")
+        _sample_indices(
+            reader.transfer.gain_frequencies_hz,
+            tuple(float(format(x, ".16g")) for x in declared_axes),
+        )
+    if ade.inputs.analysis == "tran":
+        with localcontext() as decimal_context:
+            decimal_context.prec = 128
+            minimum_samples = (
+                int(
+                    (Decimal(ade.inputs.stop_s) / Decimal(ade.inputs.maxstep_s)).to_integral_value(
+                        rounding=ROUND_CEILING
+                    )
+                )
+                + 1
+            )
+        if minimum_samples > reader.maximum_samples:
+            raise OperationRejected("reader_tran_grid_exceeds_sample_limit")
 
 
 def _header(
@@ -451,6 +468,24 @@ def _ac_axis(inputs: AcInputs) -> tuple[float, ...]:
     return axes
 
 
+def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tuple[int, ...]:
+    selected: list[int] = []
+    for text in frequencies:
+        freq = float(text)
+        matches = [i for i, x in enumerate(axes) if x == freq]
+        if not matches:
+            matches = [
+                i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)
+            ]
+        if len(matches) != 1:
+            raise OperationRejected("reader_gain_sample_unavailable")
+        index = matches[0]
+        if index in selected:
+            raise OperationRejected("reader_gain_sample_reused")
+        selected.append(index)
+    return tuple(selected)
+
+
 def _transfer(
     ade: AdeExecutionRegistration,
     reader: GenericReaderRegistration,
@@ -473,20 +508,7 @@ def _transfer(
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
-    selected: set[int] = set()
-    for text in transfer.gain_frequencies_hz:
-        freq = float(text)
-        matches = [i for i, x in enumerate(axes) if x == freq]
-        if not matches:
-            matches = [
-                i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)
-            ]
-        if len(matches) != 1:
-            raise OperationRejected("reader_gain_sample_unavailable")
-        i = matches[0]
-        if i in selected:
-            raise OperationRejected("reader_gain_sample_reused")
-        selected.add(i)
+    for i in _sample_indices(transfer.gain_frequencies_hz, axes):
 
         def differential(positive: str, negative: str | None, index: int) -> complex:
             return waves[positive][index][1] - (waves[negative][index][1] if negative else 0j)
@@ -529,6 +551,12 @@ def _transient(
         raise OperationRejected("reader_tran_interval_invalid")
     summaries = []
     steps = tuple(b - a for a, b in zip(axes, axes[1:], strict=False))
+    maximum_step = float(inputs.maxstep_s)
+    if any(
+        step > maximum_step and not math.isclose(step, maximum_step, rel_tol=1e-12, abs_tol=0)
+        for step in steps
+    ):
+        raise OperationRejected("reader_tran_saved_step_exceeds_declared_maxstep")
     for logical_id, wave in waves.items():
         if any(value.imag != 0 for _, value in wave):
             raise OperationRejected("reader_tran_complex_invalid")

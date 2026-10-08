@@ -84,6 +84,10 @@ def reader_for(operator, analysis="dc"):
                 )
             }
         )
+    if analysis == "tran":
+        ade = ade.model_copy(
+            update={"inputs": ade.inputs.model_copy(update={"maxstep_s": "0.004"})}
+        )
     reader = GenericReaderRegistration.model_validate_json(
         json.dumps(
             {
@@ -678,3 +682,71 @@ def test_ac_grid_must_remain_distinct_after_extractor_serialization(operator):
     with pytest.raises(OperationRejected) as exc:
         render_reader(context, plan, ade, reader, op, execution)
     assert exc.value.reason == "reader_ac_grid_float_resolution_invalid"
+
+
+@pytest.mark.parametrize(
+    "frequencies,reason",
+    [
+        ("1500", "reader_gain_sample_unavailable"),
+        ("1000.0000000005,1000.0000000006", "reader_gain_sample_reused"),
+    ],
+)
+def test_in_interval_frequencies_need_unique_declared_grid_samples_before_compile(
+    operator, frequencies, reason
+):
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    transfer = reader.transfer.model_copy(
+        update={"gain_frequencies_hz": tuple(frequencies.split(","))}
+    )
+    reader = reader.model_copy(update={"transfer": transfer})
+    with pytest.raises(OperationRejected) as exc:
+        render_reader(context, plan, ade, reader, op, execution)
+    assert exc.value.reason == reason
+    assert not context.binding.analysis_journal.exists()
+
+
+@pytest.mark.parametrize(
+    "stop,step,limit,allowed",
+    [
+        ("1", "0.001", 256, False),
+        ("0.003", "0.001", 3, False),
+        ("0.003", "0.001", 4, True),
+        ("0.0031", "0.001", 4, False),
+        ("0.0031", "0.001", 5, True),
+    ],
+)
+def test_tran_minimum_saved_grid_must_fit_reader_before_compile(
+    operator, stop, step, limit, allowed
+):
+    from cadence_mcp_bridge.generic_ade import TranInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "tran")
+    ade = ade.model_copy(
+        update={"inputs": TranInputs(analysis="tran", stop_s=stop, maxstep_s=step, method="trap")}
+    )
+    reader = reader.model_copy(
+        update={"ade_registration_sha256": canonical_digest(ade), "maximum_samples": limit}
+    )
+    if allowed:
+        assert render_reader(context, plan, ade, reader, op, execution)
+    else:
+        with pytest.raises(OperationRejected) as exc:
+            render_reader(context, plan, ade, reader, op, execution)
+        assert exc.value.reason == "reader_tran_grid_exceeds_sample_limit"
+    assert not context.binding.analysis_journal.exists()
+
+
+@pytest.mark.parametrize("axis", [("0", "0.004"), ("0", "0.0005", "0.001", "0.004")])
+def test_tran_saved_grid_cannot_have_gaps_above_the_declared_maxstep(operator, axis):
+    context, plan, ade, reader, op, execution = reader_for(operator, "tran")
+    ade = ade.model_copy(update={"inputs": ade.inputs.model_copy(update={"maxstep_s": "0.002"})})
+    reader = reader.model_copy(update={"ade_registration_sha256": canonical_digest(ade)})
+    args = (context, plan, ade, reader, op, execution)
+    body = "\n".join(
+        f"P|{node}|{i}|{x}|{value}|0"
+        for node, value in (("input", 2), ("output", 4))
+        for i, x in enumerate(axis)
+    )
+    with pytest.raises(OperationRejected) as exc:
+        project_frame(*args, frame_for(args, body))
+    assert exc.value.reason == "reader_tran_saved_step_exceeds_declared_maxstep"

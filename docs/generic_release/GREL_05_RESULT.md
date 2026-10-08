@@ -173,3 +173,22 @@ test-text replacement accidentally changed a1e11 float-collapse example and was
 corrected after its expected rejection failed;69 reader tests now pass. Final
 source-scoped related/package/CI/review receipts follow. Prior source evidence is
 retained without being promoted to this corrected source or native acceptance.
+
+
+## Analysis/reader feasibility review correction
+
+Independent c3f5ca5 review found two P2s: a requested AC frequency could lie inside
+the interval without matching the declared grid, and a TRAN stop/maxstep ratio
+could require more saved points than reader capacity. Binding now uses the same
+exact-first/tolerance/unique-index selector as projection on the serialized
+declared AC grid. TRAN requires ceil(stop/maxstep)+1 within maximum_samples.
+The initial all-saved-points contract supports no thinning/strobe; projection
+also rejects saved gaps larger than the declared maxstep. Additional adaptive
+points can still overflow and reject without partial facts; none of these local
+checks attest actual native sampling, units or provenance.
+
+Nine regression cases cover unavailable/duplicate AC grid samples, integer and
+partial TRAN sample bounds, and saved-time gaps despite valid endpoints/count.
+Analytical TRAN fixture maxstep is explicitly4ms to match its coarse saved grid.
+Corrected local/hosted/artifact/review receipts follow separately; c3f5ca5
+receipts remain historical after this correction. No native side effect occurred.
