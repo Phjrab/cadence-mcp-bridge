@@ -32,3 +32,18 @@ def test_timeout_kills_owned_child():
             dict(os.environ),
             timeout=0.1,
         )
+
+
+def test_bounded_large_package_transfer_does_not_expand_public_provider_limits():
+    request = b"x" * 524288
+    code, out, err = run_fixed(
+        [sys.executable, "-c", "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())"],
+        request,
+        dict(os.environ),
+        limit=1048576,
+    )
+    assert code == 0 and out == request and err == b""
+    with pytest.raises(ValueError, match="bounds"):
+        run_fixed(["unused"], request, dict(os.environ), limit=262144)
+    with pytest.raises(ValueError, match="bounds"):
+        run_fixed(["unused"], b"", dict(os.environ), limit=1048577)

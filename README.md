@@ -21,8 +21,9 @@ protected. Feature changes go through a dedicated PR.
 
 The current feature implements fixed authenticated admission and a common owned
 OA/ADE/netlist/Spectre/result worker. The native-runtime schema/bundle CLI exports
-a hash-bound runtime locally. Installation/activation and public operator-service
-injection are pending; new-circuit execution and general release remain incomplete.
+a hash-bound runtime locally. Explicit operator stage/activate/inspect/revoke
+CLI actions are implemented; actual native activation and public service injection
+are pending; new-circuit execution and general release remain incomplete.
 See [provider evidence and remaining gates](docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md).
 
 ## Coexisting operator runner

@@ -143,7 +143,9 @@ def activation(profile, expected):
         or type(pointer["schema_version"]) is not int
     ):
         raise ValueError("native_runtime_activation_mismatch")
-    if os.path.lexists(root + "/native-provider-revoked.json"):
+    if os.path.lexists(root + "/native-provider-revoked.json") or os.path.lexists(
+        root + "/native-provider-history/" + expected + ".revoked.json"
+    ):
         raise ValueError("native_runtime_revoked")
 
 

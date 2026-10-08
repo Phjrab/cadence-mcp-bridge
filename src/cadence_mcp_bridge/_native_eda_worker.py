@@ -55,15 +55,29 @@ class EdaWorker(object):
             )["binding"]
         )
 
+    def process_uid(self, pid):
+        stream = open("/proc/%d/status" % pid, "rb")
+        try:
+            raw = stream.read(16385).decode("latin1")
+        finally:
+            stream.close()
+        rows = [line.split()[1:] for line in raw.splitlines() if line.startswith("Uid:")]
+        if len(raw) > 16384 or len(rows) != 1 or len(rows[0]) != 4:
+            raise ValueError("native_worker_process_uid")
+        return tuple(int(value) for value in rows[0])
+
     def process_identity(self, pid):
         # Linux /proc is part of the qualified standard VM. Keep the Popen
         # leader unreaped (including its zombie) until its group is empty.
         path = "/proc/%d/stat" % pid
-        if os.stat(path).st_uid != os.getuid():
+        # /proc inode ownership can become root when the leader is a zombie.
+        # The actual task credentials remain available in status; require all
+        # real/effective/saved/fs UIDs to be our unchanged ordinary-user UID.
+        if self.process_uid(pid) != (os.getuid(),) * 4:
             raise ValueError("native_worker_process_owner")
         stream = open(path, "rb")
         try:
-            raw = stream.read(8193).decode("ascii")
+            raw = stream.read(8193).decode("latin1")
         finally:
             stream.close()
         fields = raw[raw.rfind(")") + 2 :].split()
@@ -79,7 +93,7 @@ class EdaWorker(object):
             if not name.isdigit():
                 continue
             try:
-                if os.stat("/proc/" + name + "/stat").st_uid != os.getuid():
+                if self.process_uid(int(name)) != (os.getuid(),) * 4:
                     continue
                 member = self.process_identity(int(name))
             except OSError as error:

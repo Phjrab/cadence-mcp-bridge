@@ -9,14 +9,17 @@ stops. No public shell/admin/grant writer, parallel ledger or transport resend.
 
 Fresh related local284 PASS/12 Windows POSIX skips; Ruff/mypy87, security18/audit,
 85 schemas and installed wheel/sdist/runtime-export/43+20-state preservation PASS.
-Linux exact-source hosted validation is pending. Actual retained normal-user
+84fd3d8 hosted Ubuntu found5 worker failures/80 PASS, caused by zombie /proc
+inode ownership being mistaken for task credentials. Corrected code checks task
+UIDs and retains start/PGID/SID identity; exact corrected Linux CI is pending. Actual retained normal-user
 preflight and seven protected-control metadata checks PASS; ledger82 /
 9,798,942,720, remaining938,475,520 (895MiB). Seven new assets pass actual
 Python2.6 grammar only. CRLF grammar and Windows audit encoding failures were
 corrected, with private failure evidence retained.
 
 The native runtime is not installed/activated or actual EDA-qualified; public MCP
-provider injection is pending. Separate staging/activation, independent route
+provider injection is pending. Operator-only separate staging/activation CLI is now implemented but unqualified;
+independent route
 validation, new RC/MOS OA/ADE/DC/AC/TRAN/extraction, Sweep/spec, clean actual Codex
 submit/retry/restart and GREL07 remain incomplete. General release/GREL03 are not
 complete. This continuation adds0 jobs/reservations/remote writes. Earlier helper

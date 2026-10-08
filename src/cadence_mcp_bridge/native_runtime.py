@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
+import shlex
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
+from cadence_mcp_bridge import _native_setup as setup
 from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge.authenticated_provider import NativeProviderBinding
 from cadence_mcp_bridge.domain_provisioning import _canonical
@@ -16,13 +20,16 @@ from cadence_mcp_bridge.environments import EnvironmentModel, load_environment
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, bind_inputs
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, bind_reader
 from cadence_mcp_bridge.onboarding import _local_path
+from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_operations import (
     OperationPlan,
     OperationRejected,
     OperationRequest,
     bounded_document,
 )
+from cadence_mcp_bridge.operator_transport import run_fixed
 from cadence_mcp_bridge.runtime_context import ExecutionContext
+from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.variable_contracts import BindingName, Digest
 
 RemotePath = Annotated[str, Field(pattern=r"^/[A-Za-z0-9_#./-]{1,511}$", max_length=512)]
@@ -208,3 +215,122 @@ def bundle(context: ExecutionContext, registration_path: Path, output: Path) -> 
         "execution_authorized": False,
         "remote_contact": False,
     }
+
+
+class NativeSetupRemoteRejected(OperationRejected):
+    remote_contact = True
+
+
+def setup_runtime(
+    local_bundle: Path, expected: str, action: str, operator_authority: str | None = None
+) -> dict[str, object]:
+    if action not in ("stage", "activate", "inspect", "revoke"):
+        raise OperationRejected("native_setup_fixed_action")
+    target = _local_path(local_bundle)
+    if not target.is_dir() or {p.name for p in target.iterdir()} != set(
+        setup.FILES + ("manifest.json",)
+    ):
+        raise OperationRejected("native_setup_bundle_inventory")
+    assets: dict[str, bytes] = {
+        name: installer.regular(str(_local_path(target / name)))  # type: ignore[no-untyped-call]
+        for name in (*setup.FILES, "manifest.json")
+    }
+    known = {
+        name: hashlib.sha256(files("cadence_mcp_bridge").joinpath(source).read_bytes()).hexdigest()
+        for name, source in SOURCES.items()
+    }
+    # All source assets must match this installed package before any contact.
+    manifest, profile, registration = setup.inventory(assets, expected, known)  # type: ignore[no-untyped-call]
+    environment, raw_profile = load_environment(target / "profile.json")
+    if raw_profile != assets["profile.json"]:
+        raise OperationRejected("native_setup_profile_drift")
+    if action == "inspect":
+        if operator_authority is not None:
+            raise OperationRejected("native_setup_inspection_authority")
+    else:
+        from cadence_mcp_bridge import _operator_confirmation
+
+        _operator_confirmation.authority_reference(operator_authority)  # type: ignore[no-untyped-call]
+    request = _canonical(
+        {
+            "schema_version": 1,
+            "action": action,
+            "manifest_sha256": expected,
+            "operator_authority": operator_authority,
+            "files": {name: base64.b64encode(raw).decode("ascii") for name, raw in assets.items()},
+        }
+    )
+    # The hash map is compiled from package resources, never caller JSON/code.
+    code = files("cadence_mcp_bridge").joinpath("_native_setup.py").read_text("utf-8")
+    code += "\nmain(" + repr(known) + ")\n"
+    argv = _ssh(environment) + ["-c", shlex.quote(code), expected]
+    try:
+        status, stdout, stderr = run_fixed(
+            argv,
+            request,
+            OpenSshBackend._ssh_environment(),
+            timeout=60,
+            limit=1048576,
+        )
+    except (ValueError, OSError):
+        raise NativeSetupRemoteRejected("native_setup_transport_ambiguous") from None
+    if status or stderr:
+        raise NativeSetupRemoteRejected("native_setup_remote_rejected")
+    from cadence_mcp_bridge.domain_provisioning import _closed_document
+
+    try:
+        _closed_document(stdout)
+        result = json.loads(stdout)
+    except ValueError:
+        raise NativeSetupRemoteRejected("native_setup_response_ambiguous") from None
+    if (
+        not isinstance(result, dict)
+        or set(result)
+        != {
+            "schema_version",
+            "status",
+            "manifest_sha256",
+            "identity_manifest_sha256",
+            "changed_files",
+            "active",
+            "counter",
+            "operator_uid",
+            "execution_authorized",
+            "new_reservations",
+            "new_simulations",
+        }
+        or (
+            type(result["schema_version"]) is not int
+            or result["schema_version"] != 1
+            or result["status"] != "NATIVE_RUNTIME_" + action.upper()
+            or result["manifest_sha256"] != expected
+            or result["identity_manifest_sha256"] != registration["identity_manifest_sha256"]
+            or type(result["changed_files"]) is not int
+            or not 0 <= result["changed_files"] <= len(setup.FILES) + 1
+            or type(result["active"]) is not bool
+            or type(result["operator_uid"]) is not int
+            or result["operator_uid"] <= 0
+            or result["execution_authorized"] is not False
+            or type(result["new_reservations"]) is not int
+            or result["new_reservations"] != 0
+            or type(result["new_simulations"]) is not int
+            or result["new_simulations"] != 0
+        )
+    ):
+        raise NativeSetupRemoteRejected("native_setup_receipt_binding")
+    counter = result["counter"]
+    if (
+        not isinstance(counter, dict)
+        or set(counter) != {"campaign_id", "count", "result_reserved_bytes"}
+        or not isinstance(counter["campaign_id"], str)
+        or not 1 <= len(counter["campaign_id"]) <= 64
+        or type(counter["count"]) is not int
+        or not 0 <= counter["count"] <= environment.limits.spectre_attempts
+        or type(counter["result_reserved_bytes"]) is not int
+        or not 0 <= counter["result_reserved_bytes"] <= environment.limits.result_reserved_bytes
+        or (action == "inspect" and result["changed_files"] != 0)
+        or (action == "activate" and not result["active"])
+        or (action == "revoke" and result["active"])
+    ):
+        raise NativeSetupRemoteRejected("native_setup_receipt_scope")
+    return {**result, "remote_contact": True}

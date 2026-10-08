@@ -144,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
         if name != "inspect":
             command.add_argument("--operator-authority", required=True)
     native = subparsers.add_parser(
-        "native-runtime", help="Local fixed native bundle construction; no installation or grant."
+        "native-runtime", help="Explicit operator fixed native runtime export/setup; no grant."
     )
     native_actions = native.add_subparsers(dest="native_action", required=True)
     native_actions.add_parser("schema")
@@ -152,6 +152,12 @@ def build_parser() -> argparse.ArgumentParser:
     for field in ("settings", "registration", "output"):
         native_bundle.add_argument("--" + field, type=Path, required=True)
     native_bundle.add_argument("--context", required=True)
+    for name in ("stage", "activate", "inspect", "revoke"):
+        command = native_actions.add_parser(name)
+        command.add_argument("--bundle", type=Path, required=True)
+        command.add_argument("--expected-manifest-sha256", required=True)
+        if name != "inspect":
+            command.add_argument("--operator-authority", required=True)
     ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
     ade_actions = ade.add_subparsers(dest="ade_action", required=True)
     ade_actions.add_parser("schema")
@@ -360,13 +366,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
         return 0
     if arguments.command == "native-runtime":
-        from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle
+        from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle, setup_runtime
         from cadence_mcp_bridge.operator_operations import OperationRejected
         from cadence_mcp_bridge.runtime_context import load_runtime
 
         try:
             if arguments.native_action == "schema":
                 native_result = NativeRegistration.model_json_schema()
+            elif arguments.native_action != "bundle":
+                native_result = setup_runtime(
+                    arguments.bundle,
+                    arguments.expected_manifest_sha256,
+                    arguments.native_action,
+                    getattr(arguments, "operator_authority", None),
+                )
             else:
                 context = next(
                     (
@@ -394,7 +407,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         if isinstance(failure, OperationRejected)
                         else "native_registration_invalid",
                         "execution_authorized": False,
-                        "remote_contact": False,
+                        "remote_contact": getattr(failure, "remote_contact", False),
                     }
                 )
             )

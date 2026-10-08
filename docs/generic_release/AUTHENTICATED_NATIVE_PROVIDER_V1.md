@@ -21,8 +21,24 @@ Export cannot confirm, install, activate or dispatch.
 
 Native execution requires the registered normal user, fixed Python with isolated
 startup/no bytecode, separate activation history/active pointer and no revocation.
-The preflight-only updater cannot install this worker. Native staging/activation
-CLI is pending: do not fabricate its records or edit the old launcher.
+The preflight-only updater cannot install this worker. Explicit native setup
+CLI actions are stage, activate, inspect and revoke. All require --bundle and
+--expected-manifest-sha256. Mutations also require --operator-authority naming
+the actual human instruction; inspect accepts no authority argument. Local
+code assets must match the installed package before any remote contact.
+A separate fixed setup helper receives only that compiled hash allowlist.
+
+Stage appends/reuses14 immutable files under the existing managed runtime root.
+Activate performs a fresh fixed probe and appends history then the pointer under
+the existing lock. A complete history with absent pointer is restartable; corrupt
+partial files are preserved/rejected. An identical activation changes0. A different
+already-active native runtime is rejected: replacement/upgrade is not implemented
+by this initial setup CLI. Legacy/preflight controls and accounting are untouched.
+Revoke appends a per-runtime history-bound record, retains the active pointer and
+prevents that runtime from new admission; completed lookup remains possible.
+This is operator provisioning, never an import/doctor/server side effect, MCP
+grant writer, simulation approval or root operation. Actual setup validation is
+still pending; do not fabricate records or use the preflight-only updater.
 
 ## Existing accounting and lifecycle
 
@@ -68,9 +84,8 @@ repairs remain historical cumulative evidence.
 
 ## Ordered remaining work
 
-Finish independent native route validation and Linux/package review. Implement
-separate immutable staging/activation with partial/repeat/revocation handling
-under existing lock. Inject the authenticated provider into explicit operator
+Finish independent native route validation and Linux/package review; qualify
+the separate immutable staging/activation on the actual VM. Inject the authenticated provider into explicit operator
 service without arbitrary paths/commands. Prepare two new owned RC/MOS sources
 and clean local operator settings, retaining the real remote home index/anchor/
 ledger and895MiB allowance.
@@ -81,3 +96,23 @@ same-ID retry/restart and actual Codex submission/query. GREL03/GREL07/general
 release remain incomplete. Continue authorized02–07 without phase reapproval.
 No merge/GREL08/publication, budget increase/reset/refund, original mutation or
 evidence deletion.
+
+
+## Subsequent setup/CI correction, 2026-10-08
+
+84fd3d8 Ubuntu provider suite found5 worker failures while80 passed: /proc inode
+owner is not the process UID after exit. The implementation now uses all real/
+effective/saved/fs UIDs from task status and keeps the exact start/PGID/SID guard;
+it does not permit root EDA or relax file ownership checks. Corrected-source
+hosted receipts are pending. Native setup CLI and additional partial/repeat tests
+are also new code pending Linux qualification. No actual activation/EDA/reservation.
+
+
+Latest additional setup/transport tests:8 PASS/9 Windows POSIX skips; combined
+provider/setup checks74 PASS/26 skips before the final standalone-module and
+large-transfer cases. Mypy88 and Ruff PASS. Exact current eight assets pass actual
+Python2.6 grammar; fixed memory modules and ordinary-user owned synthetic leader
+exit/signaling also PASS on the actual VM. These are not EDA or native setup
+activation receipts. Latest shared controls still match; ledger82/9,798,942,720,
+remainder895MiB. Installed package-v5 checks pass; final changed helper remains
+subject to exact-source hosted package verification.

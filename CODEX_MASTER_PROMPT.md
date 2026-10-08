@@ -1,3 +1,19 @@
+## Current confirmed native runtime continuation, 2026-10-08
+
+DraftPR152 continues on the same branch. Concrete admission/normal-user worker,
+local runtime export and explicit operator stage/activate/inspect/revoke CLI are
+implemented, but no actual native activation/new EDA occurred. Initial84fd3d8
+Windows CI passed; Ubuntu found5 process-owner failures. Corrected task-UID/start/
+PGID/SID code and setup tests await final Linux CI. Actual current Python2.6
+grammar/memory-helper/owned synthetic-process checks and retained preflight PASS;
+ledger82/9,798,942,720, remainder895MiB, seven controls unchanged. Public service
+injection, route qualification, two actual new circuits/DCACTRAN/extraction,
+Sweep/spec and clean actual Codex remain incomplete. Continue authorizedGREL02–07
+and minimum current-VM administrator delegation; no reapproval, merge/GREL08/
+publication, original mutation, evidence deletion or budget increase/reset/refund.
+See docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md. Prior overlays are
+historical; no older administrator exclusion cancels the user's current delegation.
+
 ## Active operator runner coexistence, 2026-10-08
 
 The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
