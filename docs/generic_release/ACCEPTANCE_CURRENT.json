@@ -15,10 +15,11 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "ADMIN_REPAIR_V1.md"
       ],
       "limitations": [
-        "shipped fixed bootstrap assets; native installation/positive trust blocked"
+        "installed immutable native runner content and direct preflight passed; coexisting activation and fresh-domain/provider bootstrap remain incomplete"
       ]
     },
     {
@@ -28,23 +29,25 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "ADMIN_REPAIR_V1.md"
       ],
       "limitations": [
-        "installed operator contracts/routing verified; native executable path unqualified"
+        "operator routing and current VM binaries/roots qualified; new circuit/native provider remains unqualified"
       ]
     },
     {
       "id": "G03",
-      "status": "BLOCKED",
+      "status": "PARTIAL",
       "required": true,
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "ADMIN_REPAIR_V1.md"
       ],
       "limitations": [
-        "actual executable/dependency chain permissions rejected"
+        "current executable_permissions repaired under explicit administrator delegation; general-user environment/direct immutable runner preflight passed; legacy launcher coexistence and full dynamic runtime attestation remain incomplete"
       ]
     },
     {
@@ -862,5 +865,7 @@
     "new_job_or_restart_qualification": "NOT_RUN",
     "global_config_modified": false
   },
-  "native_trust_observation_freshness": "LAST_OBSERVED_REJECTION_NOT_REFRESHED_IN_THIS_CHECKPOINT"
+  "native_trust_observation_freshness": "LAST_OBSERVED_REJECTION_NOT_REFRESHED_IN_THIS_CHECKPOINT",
+  "current_administrator_scope": "explicit human 2026-10-08 current managed VM minimum reversible metadata repair; historical restrictions superseded only within that scope",
+  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation with existing PDK, per-user VMware and operator configuration; other hosts/versions/PDKs deferred"
 }

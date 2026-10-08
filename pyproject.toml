@@ -63,6 +63,8 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 "src/cadence_mcp_bridge/_runner_trust.py" = ["UP", "I", "SIM", "B"]
 "src/cadence_mcp_bridge/_storage_worker.py" = ["UP", "I", "SIM", "B", "F821"]
 
+"src/cadence_mcp_bridge/_installation_repair.py" = ["UP", "I", "SIM", "B", "F821"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

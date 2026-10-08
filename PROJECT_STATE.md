@@ -1,3 +1,39 @@
+## Current standard-VM administrator delegation and repair, 2026-10-08
+
+The user's latest direct instruction fixes release support to the professor-provided
+CentOS/Cadence VM (or an equivalent reproduced installation), existing PDK and
+individual VMware use. Address/SSH keys/account/workspace/circuit/ADE/results/
+registries/journals/limits remain operator data. No developer private checkpoint
+is a fresh-install prerequisite; existing installations retain their real ledger.
+Other OS/Cadence/PDK/physical-host qualification is deferred.
+
+The user explicitly delegates minimum reversible administrator repair on the
+current managed VM. This supersedes earlier administrator/permission exclusions
+for this bounded repair only; historical statements below remain prior evidence.
+Do not request phase/per-path approval again inside the existing GREL02–07 and
+895 MiB delegation. Human authentication input is required only if actually needed.
+No GREL08/publication/merge, budget increase/reset/refund, license/content changes,
+original OA/ADE/PDK/result/journal deletion, security disabling or root MCP/EDA.
+
+Actual repair removed shared write bits from331 installation-code/ancestor items
+and one workspace ancestor (332 total). All289 file contents/owners/groups and
+331 recorded installation SELinux contexts were preserved. No chown or root
+execution was needed. Exact plans, links, ACLs, hashes, partial/repeat/rollback
+receipts are private. Root helper-only verification later changed0;
+MCP/EDA remained ordinary-user. Reapplication changed0. General-user OCEAN startup passed.
+Environment preflight passed; installed immutable version preflight passed at
+04:49:03Z, with the legacy launcher preserved. This is not new circuit execution,
+full dependency attestation, license entitlement or production-provider authority.
+The old launcher name collides with initial generic activation; coexistence must
+be implemented without overwriting it. Latest shared ledger remains82 attempts /
+9,798,942,720 reserved bytes; zero new simulation reservations in this repair.
+
+Continue coexisting bootstrap, authentic existing-domain provider/migration,
+owned new RC/MOS ADE inputs, DC/AC/TRAN/extraction, generic Sweep/spec facts and
+actual clean Codex retry/restart within GREL02–07. Release remains BLOCKED until
+those actual gates pass. See [repair boundary](docs/generic_release/ADMIN_REPAIR_V1.md)
+and [native continuation](docs/generic_release/NATIVE_RESUME_BOUNDARY.md).
+
 ## GREL-05 feasible-reader exact-source receipt, 2026-10-08
 
 Tested source f5a1de2 in ready/unmerged PR147: local247 related PASS/no skips;
