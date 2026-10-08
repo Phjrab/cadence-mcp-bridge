@@ -234,6 +234,20 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     )
     (managed / "sim-mcp-v2-jobs").mkdir(mode=0o700)
     (managed / accounting.JOBS).mkdir(mode=0o700)
+    (managed / accounting.REGISTRY).mkdir(mode=0o700)
+    migration = {
+        "schema_version": 1,
+        "root_sha256": accounting.digest(str(managed.resolve()).encode("utf-8")),
+        "resource_domain_sha256": "a" * 64,
+        "ledger_ref": accounting.LEDGER,
+        "baseline": {
+            "campaign_id": "AUTO-PHASE-01",
+            "count": 82,
+            "result_reserved_bytes": 9798942720,
+        },
+        "legacy_operation_ids": [],
+    }
+    accounting.write_new(str(managed / accounting.REGISTRY / "manifest.json"), migration)
     (managed / "run.lock").write_bytes(b"")
     os.chmod(managed / "run.lock", 0o600)
     accounting.write_new(
@@ -248,6 +262,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "runner_sha256": "c" * 64,
         "plan_sha256": "d" * 64,
         "execution_input_sha256": "1" * 64,
+        "identity_manifest_sha256": accounting.digest(accounting.canonical(migration)),
         "expires_at": int(time.time()) + 600,
         "max_attempts": 2,
         "max_reserved_bytes": 33554432,

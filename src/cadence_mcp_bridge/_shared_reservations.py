@@ -25,6 +25,7 @@ except NameError:
 
 LEDGER = "sim-mcp-v2-jobs/counter.json"
 JOBS = "native-mcp-v1-jobs"
+REGISTRY = "reservation-identity"
 CEILING_COUNT = 500
 CEILING_BYTES = 10737418240
 LEGACY_BASE_COUNT = 21
@@ -41,6 +42,7 @@ BINDING = (
     "runner_sha256",
     "plan_sha256",
     "execution_input_sha256",
+    "identity_manifest_sha256",
     "expires_at",
     "max_attempts",
     "max_reserved_bytes",
@@ -70,12 +72,12 @@ def matches(pattern, value):
 def check_binding(root, value):
     if not isinstance(value, dict) or set(value) != set(BINDING):
         raise ValueError("reservation_binding_shape")
-    for key in BINDING[:7]:
+    for key in BINDING[:8]:
         if key != "ledger_ref" and not matches(HASH, value[key]):
             raise ValueError("reservation_binding_hash")
     if value["ledger_ref"] != LEDGER or value["root_sha256"] != digest(root.encode("utf-8")):
         raise ValueError("reservation_domain_binding")
-    for key in BINDING[7:]:
+    for key in BINDING[8:]:
         if type(value[key]) not in INTEGER_TYPES:
             raise ValueError("reservation_binding_integer")
     if not (
@@ -191,7 +193,7 @@ def open_lock(root):
             if next_parent == parent:
                 break
             parent = next_parent
-    for name in ("sim-mcp-v2-jobs", JOBS):
+    for name in ("sim-mcp-v2-jobs", JOBS, REGISTRY):
         safe(os.path.join(root, name), True)
     path = os.path.join(root, "run.lock")
     before = safe(path)
@@ -278,9 +280,50 @@ def receipt_for(intent):
     }
 
 
-def audit(root, counter):
+def identity_manifest(root, binding):
+    # Operator-provisioned immutable migration anchor, never created by this asset.
+    value = read(os.path.join(root, REGISTRY, "manifest.json"))
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != set(
+            (
+                "schema_version",
+                "root_sha256",
+                "resource_domain_sha256",
+                "ledger_ref",
+                "baseline",
+                "legacy_operation_ids",
+            )
+        )
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 1
+        or value["root_sha256"] != binding["root_sha256"]
+        or value["resource_domain_sha256"] != binding["resource_domain_sha256"]
+        or value["ledger_ref"] != LEDGER
+        or digest(canonical(value)) != binding["identity_manifest_sha256"]
+    ):
+        raise ValueError("reservation_identity_manifest_binding")
+    counter_shape(value["baseline"])
+    if value["baseline"]["result_reserved_bytes"] != expected_bytes(value["baseline"]["count"], []):
+        raise ValueError("reservation_migration_baseline")
+    ids = value["legacy_operation_ids"]
+    if (
+        not isinstance(ids, list)
+        or len(ids) > 16
+        or any(not matches(ID, op) for op in ids)
+        or sorted(set(ids)) != ids
+    ):
+        raise ValueError("reservation_legacy_identity_allowlist")
+    return value
+
+
+def audit(root, counter, manifest, manifest_sha):
+
     records = []
     markers = []
+    marker_ids = {}
+    by_id = {}
     jobs = os.path.join(root, JOBS)
     names = os.listdir(jobs)
     if len(names) > 2048:
@@ -302,6 +345,7 @@ def audit(root, counter):
             value = read(marker)
             marker_shape(value)
             markers.append(value)
+            marker_ids[name] = value
             if (
                 value["count"] > counter["count"]
                 or value["result_reserved_bytes"] > counter["result_reserved_bytes"]
@@ -310,6 +354,40 @@ def audit(root, counter):
         item = transaction(work, root, name, counter)
         if item is not None:
             records.append(item)
+            by_id[name] = item[0]
+    registry = os.path.join(root, REGISTRY)
+    entries = os.listdir(registry)
+    if len(entries) > 501:
+        raise ValueError("reservation_identity_inventory_limit")
+    indexed = {}
+    for entry in entries:
+        if entry == "manifest.json":
+            continue
+        op = entry[:-5] if entry.endswith(".json") else ""
+        if not matches(ID, op):
+            raise ValueError("reservation_identity_inventory")
+        intent = read(os.path.join(registry, entry))
+        if op not in by_id or canonical(intent) != canonical(by_id[op]):
+            raise ValueError("reservation_identity_record_missing_or_changed")
+        if (
+            intent["binding"]["identity_manifest_sha256"] != manifest_sha
+            or intent["after"]["count"] <= manifest["baseline"]["count"]
+        ):
+            raise ValueError("reservation_identity_migration_drift")
+        indexed[op] = intent
+    if set(indexed) != set(by_id):
+        raise ValueError("reservation_identity_seal_missing")
+    legacy_ids = set(manifest["legacy_operation_ids"])
+    if set(indexed).intersection(legacy_ids):
+        raise ValueError("reservation_identity_class_conflict")
+    covered = set()
+    for op, value in marker_ids.items():
+        if value["count"] > manifest["baseline"]["count"]:
+            if op not in indexed and op not in legacy_ids:
+                raise ValueError("reservation_post_migration_identity_missing")
+            covered.add(value["count"])
+    if covered != set(range(manifest["baseline"]["count"] + 1, counter["count"] + 1)):
+        raise ValueError("reservation_post_migration_slot_missing")
     counts = [value["count"] for value in markers]
     if len(set(counts)) != len(counts):
         raise ValueError("reservation_duplicate_counter_slot")
@@ -336,13 +414,19 @@ def expected_bytes(count, records):
     return total
 
 
-def state(root):
+def state(root, binding):
+    manifest = identity_manifest(root, binding)
     counter_path = os.path.join(root, LEDGER)
     if os.path.lexists(counter_path + ".ade-tmp"):
         raise ValueError("reservation_ambiguous_barrier")
     counter = read(counter_path)
     counter_shape(counter)
-    return counter, audit(root, counter)
+    if (
+        counter["count"] < manifest["baseline"]["count"]
+        or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
+    ):
+        raise ValueError("reservation_migration_rollback")
+    return counter, audit(root, counter, manifest, binding["identity_manifest_sha256"])
 
 
 def lookup(root, operation_id, binding):
@@ -352,7 +436,7 @@ def lookup(root, operation_id, binding):
     fd = open_lock(root)
     try:
         work = paths(root, operation_id)
-        counter, records = state(root)
+        counter, records = state(root, binding)
         item = transaction(work, root, operation_id, counter)
         if item is None:
             return None
@@ -379,7 +463,9 @@ def reserve(root, operation_id, binding):
     fd = open_lock(root)
     try:
         work = paths(root, operation_id)
-        counter, records = state(root)
+        if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
+            raise ValueError("reservation_identity_class_conflict")
+        counter, records = state(root, binding)
         existing = transaction(work, root, operation_id, counter)
         if existing is not None:
             if existing[0]["binding"] != binding:
@@ -431,6 +517,7 @@ def reserve(root, operation_id, binding):
         # Legacy adapter recognizes this same barrier. It must precede intent/
         # marker writes so a crash cannot be overtaken by legacy reservation.
         write_new(counter_path + ".ade-tmp", after)
+        write_new(os.path.join(root, REGISTRY, operation_id + ".json"), intent)
         write_new(os.path.join(work, "reservation-intent.json"), intent)
         write_new(os.path.join(work, "attempt-reserved"), after)
         safe(counter_path)

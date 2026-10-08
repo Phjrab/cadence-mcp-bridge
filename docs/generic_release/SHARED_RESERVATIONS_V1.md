@@ -9,6 +9,15 @@ calling it. Model-authored bindings are not authority.
 
 ## Physical domain and compatibility
 
+The required operator-provisioned migration anchor is
+reservation-identity/manifest.json under the same managed root. It freezes the
+observed legacy baseline and up to16 separately reviewed future legacy UUIDs,
+and binds root/domain/ledger. Grants and own intents bind its canonical SHA256.
+No production migration writer or manifest replacement is implemented. Operator
+authenticity/provisioning remains an external provider requirement, not supplied
+by these hashes or a model-written JSON file. A new client must reuse this same
+anchor/index/counter/lock, never create another epoch or domain.
+
 The module opens the existing managed root's run.lock without creation or
 truncation, using nonblocking POSIX flock. It requires the existing
 sim-mcp-v2-jobs/counter.json and native-mcp-v1-jobs directories and already
@@ -20,6 +29,18 @@ The compiled AUTO-PHASE-01 ceiling is500 attempts /10GiB; consumption is never
 reset or refunded. This adapter cannot initialize a genuine new installation
 or raise limits. A separately authorized append-only migration and physical
 domain attestation will be required for that capability.
+
+An additive immutable identity index in reservation-identity/UUID.json mirrors
+each own intent outside its job directory. It has no mutable budget total:
+counter.json remains the only cumulative resource ledger, under the same run.lock.
+Missing either copy or the anchor is an integrity error; nothing is reinitialized.
+Post-migration counter slots require an indexed own UUID or an explicitly
+predeclared legacy UUID/marker. Unknown increments need reviewed reconciliation.
+This preserves usage/in-flight accounting when128MiB records disappear or
+different missing adjustments cancel. A lost whole index cannot fall back to
+implicit legacy increments because the frozen boundary still requires slot coverage.
+Same-grant/alias/new-client requests cannot redefine the migration hash; existing
+index records retain it. No live migration or legacy UUID renewal is qualified.
 
 New files in the existing job's work directory are reservation-intent.json,
 legacy-compatible attempt-reserved, and reservation-receipt.json. Bindings
@@ -43,8 +64,8 @@ Under the existing physical EDA lock:
    expiry, active legacy marker and capacity.
 2. Create/fsync the legacy-recognized counter .ade-tmp barrier containing the
    after-counter. Fsync its directory BEFORE writing an intent.
-3. Exclusively create/fsync the immutable intent and legacy marker, with directory
-   fsync after each creation.
+3. Exclusively create/fsync the independent identity seal first, then the same
+   job intent and legacy marker, with directory fsync after each creation.
 4. Atomically rename the barrier onto the counter; fsync its directory.
 5. Exclusively create/fsync the receipt and its directory.
 
@@ -97,7 +118,8 @@ missing/corrupt state, grant exhaustion/drift and physical floor. Ubuntu CI
 exercises actual flock interoperability with an independent holder and real
 group-writable components. Windows skips four POSIX-only checks.
 
-Installed-wheel verification uses disposable accounting only and preserves
+Installed-wheel verification provisions a fictional migration anchor and uses
+only disposable accounting and preserves
 its records through same-version reinstall/uninstall. Actual VM Python2.6
 parses source without asset execution or remote writes. Production provider,
 OS operator authenticity, native provisioning, terminal reconciliation, renewal,

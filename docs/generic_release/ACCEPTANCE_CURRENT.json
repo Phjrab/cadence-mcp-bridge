@@ -478,17 +478,19 @@
     "native_qualified": false,
     "public_dispatch": false,
     "bootstrap_schema": 2,
-    "tested_source": "PENDING_CONSERVATION_COMMIT",
-    "local_passed": 220,
+    "tested_source": "PENDING_IDENTITY_SEAL_COMMIT",
+    "local_passed": 230,
     "skipped": 5,
-    "package_security": "PENDING_CONSERVATION_SOURCE",
+    "package_security": "PENDING_IDENTITY_SEAL_SOURCE",
     "preserved_synthetic_files": 29,
-    "hosted_ci": "PENDING_CONSERVATION_SOURCE",
-    "independent_review": "P1_TWO_P2_FIXED_PENDING",
+    "hosted_ci": "PENDING_IDENTITY_SEAL_SOURCE",
+    "independent_review": "TWO_P1_TWO_P2_FIXED_PENDING",
     "hosted_windows_passed": 2527,
     "hosted_posix_skipped_in_windows": 4,
     "hosted_posix_passed": 56,
     "artifact_bytes_match_local": "PENDING_CURRENT_SOURCE",
-    "legacy_variable_conservation": true
+    "legacy_variable_conservation": true,
+    "immutable_identity_index": true,
+    "migration_provisioning": "NOT_IMPLEMENTED"
   }
 }

@@ -147,3 +147,22 @@ The first conservation test run had one stale fixture incorrectly using16MiB
 for a legacy increment; it was corrected to the source-defined128MiB. Initial
 failure log/test-temp evidence is retained. No historical guards or policy changed.
 Earlier sourcee2eb709 evidence is historical after this correction.
+
+
+## Independent identity-loss correction
+
+Reviewe1a6437 found P1: disappearing128MiB own jobs (or cancelling variable
+adjustments) could look like implicit legacy increments and lose grant/in-flight
+usage. The same domain now requires a hash-bound operator migration anchor and
+immutable per-UUID identity seals outside job folders. It retains the existing
+counter/physical lock, introduces no mutable budget total, and denies missing
+seals/jobs/anchor or uncovered post-migration slots without reinitialization.
+Future legacy UUIDs must be explicitly predeclared; generic IDs cannot reuse them.
+Unlisted legacy increments are not silently accepted. Provider authenticity,
+real migration provisioning and supported renewal remain incomplete.
+
+Tests delete disposable job records/seals for exact128MiB and64+192MiB cases,
+check missing anchors, migration rebind, predeclared legacy identity conflicts,
+unlisted increments and every durable write (now including the identity seal).
+No real native migration, grant, deployment or reservation was created.
+Earlier sourcee1a6437 package/CI evidence is historical after this correction.

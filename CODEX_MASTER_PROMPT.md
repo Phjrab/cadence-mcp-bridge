@@ -1,3 +1,16 @@
+## GREL-03 immutable reservation identity correction, 2026-10-08
+
+Second independent P1 corrected with an immutable identity index and mandatory
+hash-bound operator migration anchor, under the same existing counter/domain/lock.
+No separate mutable budget total, worker, counter initialization/reset or migration
+writer. Lost128MiB/cancelling records, missing seals/anchors, class conflicts and
+unlisted post-migration increments fail closed. Related230 PASS/five skips/47.04s,
+Ruff/mypy70 and actual Python2.6 grammar-only PASS. Final exact-source package/CI/
+review pending in PR146; older receipts below remain history. Production provider/
+real migration/renewal/native trust/jobs/extraction/Sweep/clean client incomplete.
+No native side effects/protected repairs/budget increases/merge/GREL08/publication.
+Continuous02–07/895MiB persists. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
 ## GREL-03 shared-counter conservation correction, 2026-10-08
 
 Independent P1 and two P2 marker findings corrected: retain valid old22–24

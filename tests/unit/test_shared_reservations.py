@@ -50,6 +50,18 @@ def root(tmp_path):
     root.mkdir(mode=0o700)
     (root / "sim-mcp-v2-jobs").mkdir(mode=0o700)
     (root / ledger.JOBS).mkdir(mode=0o700)
+    (root / ledger.REGISTRY).mkdir(mode=0o700)
+    ledger.write_new(
+        str(root / ledger.REGISTRY / "manifest.json"),
+        {
+            "schema_version": 1,
+            "root_sha256": ledger.digest(str(root.resolve()).encode("utf-8")),
+            "resource_domain_sha256": "a" * 64,
+            "ledger_ref": ledger.LEDGER,
+            "baseline": SEED,
+            "legacy_operation_ids": [],
+        },
+    )
     (root / "run.lock").write_bytes(b"")  # Only disposable fixtures provision state.
     os.chmod(root / "run.lock", 0o600)
     ledger.write_new(str(root / ledger.LEDGER), SEED)
@@ -65,6 +77,9 @@ def binding(root, **updates):
         "runner_sha256": "c" * 64,
         "plan_sha256": "d" * 64,
         "execution_input_sha256": "1" * 64,
+        "identity_manifest_sha256": ledger.digest(
+            ledger.canonical(ledger.read(str(root / ledger.REGISTRY / "manifest.json")))
+        ),
         "expires_at": int(time.time()) + 600,
         "max_attempts": 8,
         "max_reserved_bytes": 8 * AMOUNT,
@@ -81,6 +96,19 @@ def job(root):
     record.mkdir(mode=0o700)
     (record / "work").mkdir(mode=0o700)
     return op
+
+
+def allow_legacy(root, op):
+    # Fixture-only operator migration authoring, never a production authorization.
+    path = root / ledger.REGISTRY / "manifest.json"
+    value = ledger.read(str(path))
+    value["legacy_operation_ids"] = sorted(value["legacy_operation_ids"] + [op])
+    path.write_bytes(ledger.canonical(value))
+
+
+def legacy_marker(root, op, value):
+    ledger.write_new(str(root / ledger.JOBS / op / "work/attempt-reserved"), value)
+    (root / ledger.LEDGER).write_bytes(ledger.canonical(value))
 
 
 def snapshot(root):
@@ -176,15 +204,15 @@ def test_two_clients_compete_for_last_grant_slot(root):
     assert ledger.read(str(root / ledger.LEDGER))["count"] == 83
 
 
-@pytest.mark.parametrize("stage", ["write1", "write2", "write3", "rename", "write4"])
+@pytest.mark.parametrize("stage", ["write1", "write2", "write3", "write4", "rename", "write5"])
 def test_process_death_never_blind_retries_or_refunds(root, stage):
     op, permit = job(root), binding(root)
     code, _ = finish(child(root, op, permit, stage))
     assert code == 91
     before = snapshot(root)
     count = ledger.read(str(root / ledger.LEDGER))["count"]
-    assert count == (83 if stage in ("rename", "write4") else 82)
-    if stage.startswith("write") and stage != "write4":
+    assert count == (83 if stage in ("rename", "write5") else 82)
+    if stage.startswith("write") and stage != "write5":
         assert (root / (ledger.LEDGER + ".ade-tmp")).exists()
         for action in (lookup, reserve):
             with pytest.raises(ValueError, match="ambiguous_barrier"):
@@ -202,6 +230,8 @@ def test_process_death_never_blind_retries_or_refunds(root, stage):
 
 
 def test_later_legacy_advancement_does_not_prove_missing_receipt(root):
+    old_op = job(root)
+    allow_legacy(root, old_op)
     op, permit = job(root), binding(root)
     assert finish(child(root, op, permit, "rename"))[0] == 91
     # Emulate legitimate legacy advancement under the same domain after our rename.
@@ -210,7 +240,7 @@ def test_later_legacy_advancement_does_not_prove_missing_receipt(root):
         count=84,
         result_reserved_bytes=SEED["result_reserved_bytes"] + AMOUNT + ledger.LEGACY_RESERVATION,
     )
-    (root / ledger.LEDGER).write_bytes(ledger.canonical(advanced))
+    legacy_marker(root, old_op, advanced)
     before = snapshot(root)
     assert lookup(root, op, permit)["status"] == "UNKNOWN_OUTCOME"
     with pytest.raises(ValueError, match="unresolved_intent"):
@@ -246,7 +276,7 @@ def test_conflicting_replay_is_preserved(root, change):
     op, permit = job(root), binding(root)
     reserve(root, op, permit)
     before = snapshot(root)
-    with pytest.raises(ValueError, match="replay_identity"):
+    with pytest.raises(ValueError, match="replay_identity|identity_manifest_binding"):
         reserve(root, op, {**permit, **change})
     assert snapshot(root) == before
 
@@ -265,7 +295,7 @@ def test_same_grant_policy_drift_cannot_reset_usage(root, change):
     permit = binding(root)
     reserve(root, job(root), permit)
     before = snapshot(root)
-    with pytest.raises(ValueError, match="grant_binding_drift"):
+    with pytest.raises(ValueError, match="grant_binding_drift|identity_manifest_binding"):
         reserve(root, job(root), {**permit, **change})
     assert snapshot(root) == before
 
@@ -343,6 +373,7 @@ def test_global_existing_consumption_still_limits_new_grants(root, limited):
                 "before": before_counter,
                 "after": after_counter,
             }
+            ledger.write_new(str(root / ledger.REGISTRY / (op + ".json")), intent)
             ledger.write_new(str(work / "reservation-intent.json"), intent)
             ledger.write_new(str(work / "attempt-reserved"), after_counter)
             ledger.write_new(str(work / "reservation-receipt.json"), ledger.receipt_for(intent))
@@ -421,18 +452,20 @@ def test_receipt_corruption_is_not_repaired(root, change):
 
 
 def test_lookup_of_durable_receipt_can_follow_later_legacy_counter(root):
+    old_op = job(root)
+    allow_legacy(root, old_op)
     op, permit = job(root), binding(root)
     receipt = reserve(root, op, permit)
-    (root / ledger.LEDGER).write_bytes(
-        ledger.canonical(
-            dict(
-                SEED,
-                count=84,
-                result_reserved_bytes=SEED["result_reserved_bytes"]
-                + AMOUNT
-                + ledger.LEGACY_RESERVATION,
-            )
-        )
+    legacy_marker(
+        root,
+        old_op,
+        dict(
+            SEED,
+            count=84,
+            result_reserved_bytes=SEED["result_reserved_bytes"]
+            + AMOUNT
+            + ledger.LEGACY_RESERVATION,
+        ),
     )
     before = snapshot(root)
     assert lookup(root, op, permit) == receipt
@@ -566,9 +599,9 @@ def test_impossible_legacy_marker_count_byte_pair_is_rejected(root, count, amoun
         },
     )
     before = snapshot(root)
-    with pytest.raises(ValueError, match="marker_conservation"):
+    with pytest.raises(ValueError, match="marker_conservation|identity_missing"):
         lookup(root, job(root), binding(root))
-    with pytest.raises(ValueError, match="marker_conservation"):
+    with pytest.raises(ValueError, match="marker_conservation|identity_missing"):
         reserve(root, job(root), binding(root))
     assert snapshot(root) == before
 
@@ -600,6 +633,8 @@ def test_duplicate_retained_legacy_counter_slot_is_rejected(root):
 
 
 def test_legacy_increment_after_variable_reservation_reconciles(root):
+    old_op = job(root)
+    allow_legacy(root, old_op)
     permit = binding(root)
     first = reserve(root, job(root), permit)
     value = {
@@ -608,7 +643,7 @@ def test_legacy_increment_after_variable_reservation_reconciles(root):
         "result_reserved_bytes": first["after"]["result_reserved_bytes"]
         + ledger.LEGACY_RESERVATION,
     }
-    marker = root / ledger.JOBS / job(root) / "work/attempt-reserved"
+    marker = root / ledger.JOBS / old_op / "work/attempt-reserved"
     ledger.write_new(str(marker), value)
     (root / ledger.LEDGER).write_bytes(ledger.canonical(value))
     before_marker = marker.read_bytes()
@@ -625,6 +660,86 @@ def test_missing_variable_reservation_records_cannot_reset_accounting(root):
     for leaf in ("reservation-intent.json", "reservation-receipt.json", "attempt-reserved"):
         (work / leaf).unlink()
     before = snapshot(root)
-    with pytest.raises(ValueError, match="counter_conservation"):
+    with pytest.raises(ValueError, match="identity_record_missing_or_changed"):
+        reserve(root, job(root), permit)
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("amounts", [(134217728,), (67108864, 201326592)])
+@pytest.mark.parametrize("drop_seals", [False, True])
+def test_lost_zero_adjustment_records_never_reset_grant_or_inflight(root, amounts, drop_seals):
+    permit = binding(
+        root, max_attempts=len(amounts), max_reserved_bytes=sum(amounts), reserve_bytes=amounts[0]
+    )
+    operations = []
+    for amount in amounts:
+        op = job(root)
+        reserve(root, op, {**permit, "reserve_bytes": amount})
+        operations.append(op)
+    for op in operations:
+        record = root / ledger.JOBS / op
+        assert record.resolve().is_relative_to(root.resolve())
+        work = record / "work"
+        for leaf in ("reservation-intent.json", "reservation-receipt.json", "attempt-reserved"):
+            (work / leaf).unlink()  # Disposable corruption fixture only.
+        work.rmdir()
+        record.rmdir()
+        if drop_seals:
+            (root / ledger.REGISTRY / (op + ".json")).unlink()
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="identity_record_missing|slot_missing"):
+        reserve(root, job(root), permit)
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("leaf", ["manifest", "seal"])
+def test_missing_identity_anchor_or_seal_is_never_recreated(root, leaf):
+    op, permit = job(root), binding(root)
+    reserve(root, op, permit)
+    path = root / ledger.REGISTRY / ("manifest.json" if leaf == "manifest" else op + ".json")
+    path.unlink()  # Disposable corruption fixture only.
+    before = snapshot(root)
+    with pytest.raises((ValueError, OSError)):
+        reserve(root, job(root), permit)
+    assert snapshot(root) == before and not path.exists()
+
+
+def test_migration_rebinding_cannot_create_a_fresh_epoch(root):
+    permit = binding(root)
+    reserve(root, job(root), permit)
+    allow_legacy(root, job(root))  # Fictional unauthorized migration replacement.
+    changed = binding(root, grant_sha256="e" * 64)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="migration_drift"):
+        reserve(root, job(root), changed)
+    assert snapshot(root) == before
+
+
+def test_predeclared_legacy_identity_cannot_become_generic(root):
+    op = job(root)
+    allow_legacy(root, op)
+    permit = binding(root)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="identity_class_conflict"):
+        reserve(root, op, permit)
+    assert snapshot(root) == before
+
+
+def test_unindexed_post_migration_legacy_increment_is_not_implicitly_accepted(root):
+    permit = binding(root)
+    reserve(root, job(root), permit)
+    legacy_marker(
+        root,
+        job(root),
+        dict(
+            SEED,
+            count=84,
+            result_reserved_bytes=SEED["result_reserved_bytes"]
+            + AMOUNT
+            + ledger.LEGACY_RESERVATION,
+        ),
+    )
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="post_migration_identity_missing"):
         reserve(root, job(root), permit)
     assert snapshot(root) == before

@@ -71,9 +71,9 @@
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
     "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
-    "shared_reservations": "P1_AND_TWO_P2_FIXED_FINAL_REVIEW_PENDING"
+    "shared_reservations": "TWO_P1_TWO_P2_CORRECTED_REVIEW_PENDING"
   },
-  "local_input_snapshot_sha256": "5e33bad0ba4dd711a16c24d84351cb4dba8d87dde4193830f2ecfee82ce5ef8c",
+  "local_input_snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -176,19 +176,19 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
-    "conclusion": "PENDING_CONSERVATION_SOURCE"
+    "conclusion": "PENDING_IDENTITY_SEAL_SOURCE"
   },
   "local_validation": {
-    "affected_passed": 220,
+    "affected_passed": 230,
     "skipped": 5,
-    "seconds": 38.77,
+    "seconds": 47.04,
     "source_typecheck_files": 70,
     "mcp_full_schemas": 85,
     "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
-    "final_package_security": "PENDING_CONSERVATION_SOURCE",
+    "final_package_security": "PENDING_IDENTITY_SEAL_SOURCE",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
-    "preserved_synthetic_state_files": 29,
+    "preserved_synthetic_state_files": "PENDING_EXPECTED_32",
     "input_files": 325,
     "unexpected_input_drift": 0,
     "wheel_sha256": null,
@@ -205,7 +205,7 @@
     "native_dispatch": "DISABLED"
   },
   "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "PENDING_CONSERVATION_COMMIT",
+  "tested_source": "PENDING_IDENTITY_SEAL_COMMIT",
   "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
@@ -256,7 +256,11 @@
     "public_dispatch": false,
     "bootstrap_schema": 2,
     "legacy_schema_one_verification": true,
-    "all_own_reservations_inflight": true
+    "all_own_reservations_inflight": true,
+    "immutable_identity_index": true,
+    "operator_provisioned_migration_anchor_required": true,
+    "migration_authority": "NOT_IMPLEMENTED",
+    "new_mutable_budget_total": false
   },
   "historical_shared_3928377": {
     "tested_source": "3928377ea52626011edcabc17a24c342e5f2fc29",
@@ -331,5 +335,20 @@
     "wheel_sha256": "49f0cb76f9d7cf4235546bd7a3389ff4b1b0790d0f9bc3443a4fd25e34833a73",
     "sdist_sha256": "16781d2cea8cae2731900318524ab82b96072a1925e608750b37405e83a09313",
     "independent_review": "P2_COUNT_BYTE_RELATION_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "historical_shared_e1a6437": {
+    "tested_source": "e1a64371fc834d520b5d127e0655fd068adadf9d",
+    "local_related_passed": 220,
+    "local_skipped": 5,
+    "local_seconds": 38.77,
+    "posix_passed": 63,
+    "posix_seconds": 2.13,
+    "posix_run": 37714270397,
+    "posix_job": 113107040363,
+    "package_security": "PASS_SOURCE_SCOPED",
+    "preserved_files": 29,
+    "wheel_sha256": "a781d7e5c4f9d169e298ccb83980a6f66f2b9e1b9b71e6d3279bf2a6e7302409",
+    "sdist_sha256": "c95b88fa2e4af881d64d9ceeccee33d5a7c2f85e9a5560ccbae5491c987261c8",
+    "independent_review": "P1_IDENTITY_LOSS_FOUND_CORRECTED_NEXT_SOURCE"
   }
 }
