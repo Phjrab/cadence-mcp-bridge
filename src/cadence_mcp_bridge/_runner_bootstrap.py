@@ -7,7 +7,8 @@ import os
 import stat
 import sys
 
-FILES = ("profile.json", "probe.py", "runner.py", "launcher.py")
+LEGACY_FILES = ("profile.json", "probe.py", "runner.py", "launcher.py")
+FILES = LEGACY_FILES + ("reservations.py",)
 LIMIT = 262144
 
 
@@ -82,14 +83,15 @@ def validate(bundle, expected):
     manifest = closed(raw)
     if set(manifest) != set(("schema_version", "files", "environment_id", "profile_sha256")):
         raise ValueError("manifest_shape")
-    if manifest["schema_version"] != 1 or type(manifest["schema_version"]) is not int:
+    if manifest["schema_version"] not in (1, 2) or type(manifest["schema_version"]) is not int:
         raise ValueError("manifest_version")
-    if set(manifest["files"]) != set(FILES) or set(os.listdir(bundle)) != set(
-        FILES + ("manifest.json",)
+    members = LEGACY_FILES if manifest["schema_version"] == 1 else FILES
+    if set(manifest["files"]) != set(members) or set(os.listdir(bundle)) != set(
+        members + ("manifest.json",)
     ):
         raise ValueError("bundle_inventory")
     contents = {}
-    for name in FILES:
+    for name in members:
         value = regular(os.path.join(bundle, name))
         entry = manifest["files"][name]
         if set(entry) != set(("sha256", "bytes")) or entry != {
@@ -116,10 +118,12 @@ def exclusive(path, content, mode=384):
 
 def target_binding(manifest, contents, target):
     profile = json.loads(contents["profile.json"].decode("utf-8"))
-    if (not isinstance(profile, dict)
-            or profile.get("environment_id") != manifest["environment_id"]
-            or not isinstance(profile.get("paths"), dict)
-            or profile["paths"].get("managed_root") != target):
+    if (
+        not isinstance(profile, dict)
+        or profile.get("environment_id") != manifest["environment_id"]
+        or not isinstance(profile.get("paths"), dict)
+        or profile["paths"].get("managed_root") != target
+    ):
         raise ValueError("installation_target_binding")
 
 
@@ -163,7 +167,7 @@ def _install_content(bundle, target, expected, staging):
         }
     os.mkdir(version, 448)
     # A crash leaves a visible incomplete exclusive directory. It is never overwritten/deleted.
-    for name in FILES:
+    for name in manifest["files"]:
         exclusive(os.path.join(version, name), contents[name])
     exclusive(os.path.join(version, "manifest.json"), raw)
     validate(version, expected)

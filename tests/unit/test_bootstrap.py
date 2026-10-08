@@ -34,7 +34,8 @@ def prepared_bound(prepared):
     manifest = json.loads((source / "manifest.json").read_bytes())
     manifest["profile_sha256"] = hashlib.sha256(raw_profile).hexdigest()
     manifest["files"]["profile.json"] = {
-        "sha256": manifest["profile_sha256"], "bytes": len(raw_profile)
+        "sha256": manifest["profile_sha256"],
+        "bytes": len(raw_profile),
     }
     raw = installer.canonical(manifest)
     (source / "manifest.json").write_bytes(raw)
@@ -138,7 +139,13 @@ def test_cli_errors_are_bounded(prepared, capsys):
 def test_content_hashes_and_private_asset_names(prepared):
     source, _, digest = prepared
     manifest = json.loads((source / "manifest.json").read_bytes())
-    assert set(manifest["files"]) == {"runner.py", "probe.py", "profile.json", "launcher.py"}
+    assert set(manifest["files"]) == {
+        "runner.py",
+        "probe.py",
+        "profile.json",
+        "launcher.py",
+        "reservations.py",
+    }
     assert hashlib.sha256((source / "manifest.json").read_bytes()).hexdigest() == digest
     assert "script" not in manifest
 
@@ -300,20 +307,41 @@ def test_standalone_lifecycle_rejects_staged_wrong_target_without_writes(prepare
             installer.canonical({"schema_version": 1, "manifest_sha256": digest})
         )
     before = {
-        p.relative_to(target).as_posix(): p.read_bytes()
-        for p in target.rglob("*") if p.is_file()
+        p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()
     }
     exported = target.parent / "installer.py"
     bootstrap.export_installer(exported)
     result = subprocess.run(
         [sys.executable, "-I", str(exported), command, str(target), digest],
-        capture_output=True, timeout=15
+        capture_output=True,
+        timeout=15,
     )
     assert result.returncode == 1
     assert b"RUNNER_INSTALL_REJECTED" in result.stderr
     assert not (target / "bin").exists()
     assert not (target / "runner-revoked.json").exists()
     assert {
-        p.relative_to(target).as_posix(): p.read_bytes()
-        for p in target.rglob("*") if p.is_file()
+        p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()
     } == before
+
+
+def test_schema_one_history_remains_verifiable(prepared):
+    source, target, _ = prepared
+    (source / "reservations.py").unlink()  # Disposable bundle migration fixture only.
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    manifest["schema_version"] = 1
+    del manifest["files"]["reservations.py"]
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, digest)
+    assert bootstrap.verify(target, digest)["execution_authorized"] is False
+    assert set(installer.validate(str(source), digest)[1]) == set(installer.LEGACY_FILES)
+
+
+def test_reservation_asset_tamper_rejected(prepared):
+    source, target, digest = prepared
+    (source / "reservations.py").write_bytes(b"altered")
+    with pytest.raises(ValueError, match="asset_drift"):
+        bootstrap.install(source, target, digest)
+    assert not (target / "runtime").exists()

@@ -20,13 +20,16 @@ def bundle(profile: Path, output: Path) -> dict[str, object]:
     if output.exists() or not output.parent.is_dir():
         raise ValueError("exclusive_bundle_parent_required")
     contents = {
+        "reservations.py": files("cadence_mcp_bridge")
+        .joinpath("_shared_reservations.py")
+        .read_bytes(),
         "profile.json": data,
         "probe.py": probe_bytes(),
         "runner.py": files("cadence_mcp_bridge").joinpath("_generic_runner.py").read_bytes(),
         "launcher.py": files("cadence_mcp_bridge").joinpath("_runner_launcher.py").read_bytes(),
     }
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "environment_id": environment.environment_id,
         "profile_sha256": hashlib.sha256(data).hexdigest(),
         "files": {
@@ -169,6 +172,7 @@ def preflight(bundle_path: Path, expected: str) -> dict[str, object]:
         ("runner.py", "_generic_runner.py"),
         ("launcher.py", "_runner_launcher.py"),
         ("probe.py", "_environment_probe.py"),
+        ("reservations.py", "_shared_reservations.py"),
     ):
         trusted = files("cadence_mcp_bridge").joinpath(source).read_bytes()
         if contents[name] != trusted:

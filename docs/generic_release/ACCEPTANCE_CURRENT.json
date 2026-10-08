@@ -54,7 +54,8 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
         "read-only local authority forms; authentic operator confirmation/provider absent"
@@ -133,7 +134,8 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
         "second actual batch under reusable authority absent"
@@ -146,10 +148,11 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
-        "durable generic local reconciliation and failure tests implemented; production provider/native qualification absent"
+        "durable lifecycle and disposable shared-counter crash/replay tests; authentic production provider/native qualification absent"
       ]
     },
     {
@@ -159,10 +162,11 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
-        "declared local shared lock tested; attested remote shared domain/provider absent"
+        "internal existing physical lock adapter/process tests; native installation/domain/operator attestation absent"
       ]
     },
     {
@@ -185,7 +189,8 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
         "isolated synthetic operator install verified; actual fresh native context absent"
@@ -211,7 +216,8 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
         "hosted synthetic workflow and same-version state preservation; semver migration absent"
@@ -237,7 +243,8 @@
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
       ],
       "limitations": [
         "shipped bootstrap/form instructions distinguish local match and execution; generic runbook pending"
@@ -464,5 +471,12 @@
   "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE",
   "historical_grel03_candidate_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
-  "grel04_local_inputs": "PARTIAL_LOCAL_IMPLEMENTED_NATIVE_UNQUALIFIED"
+  "grel04_local_inputs": "PARTIAL_LOCAL_IMPLEMENTED_NATIVE_UNQUALIFIED",
+  "shared_reservations": {
+    "status": "PARTIAL_INTERNAL_ACCOUNTING_ONLY",
+    "report": "GREL_03_SHARED_RESERVATIONS_RESULT.md",
+    "native_qualified": false,
+    "public_dispatch": false,
+    "bootstrap_schema": 2
+  }
 }
