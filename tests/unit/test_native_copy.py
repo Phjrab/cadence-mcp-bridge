@@ -173,3 +173,28 @@ def test_owned_ade_project_injection_denied(value):
         native.remap_ade_info(
             b"", ("Source", "Cell", "schematic"), ("Owned", "Copy", "schematic"), value
         )
+
+
+def test_dependency_observation_retains_lock_hardlinks_but_never_copies(trees):
+    source, target = trees
+    lock = os.path.join(source, "schematic", "sch.oa.cdslck")
+    with open(lock, "wb") as stream:
+        stream.write(b"retained lock owner evidence")
+    os.link(lock, lock + ".host.123")
+    before = native.dependency_snapshot(source)
+    assert before["schema_version"] == 2
+    with pytest.raises(ValueError, match="active_or_recovery"):
+        native.copy_owned(source, target, before["tree_sha256"])
+    assert not os.path.lexists(target)
+    assert native.dependency_snapshot(source) == before
+    with open(lock, "wb") as stream:
+        stream.write(b"changed lock owner")
+    assert native.dependency_snapshot(source)["tree_sha256"] != before["tree_sha256"]
+
+
+def test_dependency_observation_still_rejects_oa_hardlinks(trees):
+    source, _ = trees
+    original = os.path.join(source, "schematic", "sch.oa")
+    os.link(original, original + ".alias")
+    with pytest.raises(ValueError, match="link_bound"):
+        native.dependency_snapshot(source)

@@ -45,6 +45,7 @@ SOURCES = {
     "installer.py": "_runner_bootstrap.py",
     "probe.py": "_environment_probe.py",
     "storage.py": "_storage_worker.py",
+    "modeltrust.py": "_installation_repair.py",
 }
 KIND = "STANDARD_VM_CONFIRMED_NATIVE_RUNTIME"
 
@@ -52,6 +53,7 @@ KIND = "STANDARD_VM_CONFIRMED_NATIVE_RUNTIME"
 class NativeLibrary(EnvironmentModel):
     name: BindingName
     path: RemotePath
+    tree_sha256: Digest
 
     @model_validator(mode="after")
     def canonical(self) -> Self:
@@ -62,6 +64,17 @@ class NativeLibrary(EnvironmentModel):
         return self
 
 
+class NativeModelFile(EnvironmentModel):
+    path: RemotePath
+    file_sha256: Digest
+
+    @model_validator(mode="after")
+    def canonical(self) -> Self:
+        if str(PurePosixPath(self.path)) != self.path or ".." in PurePosixPath(self.path).parts:
+            raise ValueError("canonical model dependency path required")
+        return self
+
+
 class NativeRoute(EnvironmentModel):
     # Explicit local values validate compiler binding only; never a dispatch.
     validation_request: OperationRequest
@@ -69,6 +82,7 @@ class NativeRoute(EnvironmentModel):
     reader: GenericReaderRegistration
     source_cell: RemotePath
     source_state: RemotePath
+    model_files: Annotated[tuple[NativeModelFile, ...], Field(max_length=128)] = ()
     libraries: Annotated[tuple[NativeLibrary, ...], Field(min_length=1, max_length=32)]
 
     @model_validator(mode="after")
@@ -76,6 +90,14 @@ class NativeRoute(EnvironmentModel):
         for source in (self.source_cell, self.source_state):
             if str(PurePosixPath(source)) != source or ".." in PurePosixPath(source).parts:
                 raise ValueError("canonical source path required")
+        paths = [model.path for model in self.model_files]
+        if paths != sorted(set(paths)):
+            raise ValueError("model dependency inventory must be sorted and unique")
+        hashes = {model.path: model.file_sha256 for model in self.model_files}
+        if bool(self.ade.model_includes) != bool(hashes) or any(
+            hashes.get(model.path) != model.file_sha256 for model in self.ade.model_includes
+        ):
+            raise ValueError("registered model includes require their full dependency inventory")
         if len({lib.name for lib in self.libraries}) != len(self.libraries):
             raise ValueError("duplicate library name")
         return self
@@ -144,6 +166,12 @@ def projection(context: ExecutionContext, registration: NativeRegistration) -> d
                 )
             ) or PurePosixPath(library.path).is_relative_to(environment.paths.managed_root):
                 raise OperationRejected("native_runtime_library_outside_registered_roots")
+        for model in route.model_files:
+            if not any(
+                PurePosixPath(model.path).is_relative_to(root)
+                for root in environment.paths.protected_roots
+            ):
+                raise OperationRejected("native_runtime_model_dependency_outside_protected_roots")
         variable_set = context.contracts.designs.variable_set(profile.design_id)
         routes.append(
             {
@@ -156,6 +184,7 @@ def projection(context: ExecutionContext, registration: NativeRegistration) -> d
                 else [v.model_dump(mode="json") for v in variable_set.variables],
                 "source_cell": route.source_cell,
                 "source_state": route.source_state,
+                "model_files": [model.model_dump(mode="json") for model in route.model_files],
                 "libraries": [lib.model_dump(mode="json") for lib in route.libraries],
                 "ade": route.ade.model_dump(mode="json"),
                 "reader": route.reader.model_dump(mode="json"),

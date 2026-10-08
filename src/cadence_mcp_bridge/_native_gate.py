@@ -27,9 +27,18 @@ BINDINGS = ("environment_sha256", "design_sha256", "pdk_sha256")
 
 class ConfirmedGate(object):
     def __init__(
-        self, profile, profile_raw, registration, runtime_sha, probe_sha, modules, activation=None
+        self,
+        profile,
+        profile_raw,
+        registration,
+        runtime_sha,
+        probe_sha,
+        modules,
+        activation=None,
+        modeltrust=None,
     ):
         # modules is supplied only by the verified runtime loader, not JSON.
+        self.modeltrust = modeltrust
         self.profile, self.profile_raw = profile, profile_raw
         self.registration, self.runtime_sha = registration, runtime_sha
         self.probe_sha = probe_sha
@@ -189,6 +198,42 @@ class ConfirmedGate(object):
         finally:
             os.close(parent)
 
+    def library_binding(self, route):
+        libraries = route.get("libraries", [])
+        if not libraries:
+            raise ValueError("native_gate_library_inventory_required")
+        for library in libraries:
+            if (
+                "tree_sha256" not in library
+                or self.copying.dependency_snapshot(library["path"])["tree_sha256"]
+                != library["tree_sha256"]
+            ):
+                raise ValueError("native_gate_library_registration_drift")
+
+    def model_binding(self, route):
+        includes = route["ade"]["model_includes"]
+        records = route.get("model_files", [])
+        expected = dict((item["path"], item["file_sha256"]) for item in records)
+        if len(expected) != len(records) or bool(includes) != bool(expected):
+            raise ValueError("native_gate_model_inventory_required")
+        if not includes:
+            return
+        modeltrust = self.modeltrust
+        if modeltrust is None:
+            if not __package__:
+                raise ValueError("native_gate_fixed_modeltrust_required")
+            from cadence_mcp_bridge import _installation_repair as modeltrust
+        observed = {}
+        for model in includes:
+            graph = modeltrust.trusted_model_graph(model["path"], model["section"])
+            if graph.get(model["path"]) != model["file_sha256"]:
+                raise ValueError("native_gate_model_registration_drift")
+            if any(path in observed and observed[path] != sha for path, sha in graph.items()):
+                raise ValueError("native_gate_model_closure_drift")
+            observed.update(graph)
+        if observed != expected:
+            raise ValueError("native_gate_model_closure_drift")
+
     def check(self, session, plan, action):
         if type(session) is not self.accounting.ReservationSession or session.root != self.root:
             raise ValueError("native_gate_owned_session")
@@ -212,9 +257,8 @@ class ConfirmedGate(object):
             observed_source = self.copying.snapshot(route[key])
             if observed_source["tree_sha256"] != route["ade"][expected]:
                 raise ValueError("native_gate_source_registration_drift")
-        for model in route["ade"]["model_includes"]:
-            if self.probe.digest_file(model["path"]) != model["file_sha256"]:
-                raise ValueError("native_gate_model_registration_drift")
+        self.library_binding(route)
+        self.model_binding(route)
         observation = self.probe.observe(
             self.profile,
             self.registration["environment_sha256"],

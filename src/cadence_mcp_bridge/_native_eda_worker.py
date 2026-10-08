@@ -279,9 +279,8 @@ class EdaWorker(object):
             current = self.copying.snapshot(route[key])
             if current != before[key] or current["tree_sha256"] != route["ade"][registration_key]:
                 raise ValueError("native_worker_original_drift")
-        for model in route["ade"]["model_includes"]:
-            if self.gate.probe.digest_file(model["path"]) != model["file_sha256"]:
-                raise ValueError("native_worker_model_drift")
+        self.gate.library_binding(route)
+        self.gate.model_binding(route)
 
     def find_input(self, project):
         selected, nodes = [], 0

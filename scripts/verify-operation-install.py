@@ -455,7 +455,11 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                             + profile_model.binding.cell,
                             "source_state": remote_workspace + "/fictional-state",
                             "libraries": [
-                                {"name": library, "path": remote_workspace + "/" + library}
+                                {
+                                    "name": library,
+                                    "path": remote_workspace + "/" + library,
+                                    "tree_sha256": "b" * 64,
+                                }
                             ],
                         }
                     ],
@@ -493,7 +497,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         native_manifest_raw = (native_output / "manifest.json").read_bytes()
         native_manifest = json.loads(native_manifest_raw)
         assert native_receipt["manifest_sha256"] == hashlib.sha256(native_manifest_raw).hexdigest()
-        assert native_receipt["asset_count"] == len(_native_dispatch.FILES) == 13
+        assert native_receipt["asset_count"] == len(_native_dispatch.FILES)
         assert not native_receipt["execution_authorized"] and not native_receipt["remote_contact"]
         assert set(native_manifest["files"]) == set(_native_dispatch.FILES)
         from importlib.resources import files

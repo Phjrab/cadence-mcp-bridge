@@ -76,7 +76,7 @@ def test_stage_activate_repeat_inspect_revoke_preserves_existing_controls(prepar
     root, request, expected, known = prepared
     before = snapshot(root)
     first = setup.apply(request, expected, known)
-    assert first["changed_files"] == 14 and not first["active"]
+    assert first["changed_files"] == len(setup.FILES) + 1 and not first["active"]
     assert setup.apply(request, expected, known)["changed_files"] == 0
     active = dict(request, action="activate")
     assert setup.apply(active, expected, known)["changed_files"] == 2
@@ -135,7 +135,7 @@ def test_partial_setup_restarts_without_overwrite_or_new_ledger(prepared, monkey
         original,
     )
     result = setup.apply(dict(request, action=phase), expected, known)
-    assert result["changed_files"] == (1 if phase == "activate" else 11)
+    assert result["changed_files"] == (1 if phase == "activate" else len(setup.FILES) - 2)
     for name, raw in after.items():
         assert snapshot(root)[name] == raw
     assert accounting.read(str(root / accounting.LEDGER))["count"] == 82

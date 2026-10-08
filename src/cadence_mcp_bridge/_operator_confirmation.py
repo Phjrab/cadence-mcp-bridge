@@ -187,7 +187,7 @@ def domain(profile, anchor):
     domain_sha = digest(
         canonical(
             {
-                "hostname": profile["host"]["hostname"],
+                "hostname": profile["host"]["hostname"].lower(),
                 "architecture": profile["host"]["architecture"],
             }
         )
@@ -218,13 +218,7 @@ def domain(profile, anchor):
         "identity_manifest_sha256": anchor,
     }
     actual = accounting.identity_manifest(root, binding)
-    policy = actual.get(
-        "policy",
-        {
-            "attempt_ceiling": accounting.CEILING_COUNT,
-            "result_ceiling_bytes": accounting.CEILING_BYTES,
-        },
-    )
+    policy = accounting.effective_policy(root, actual)
     if (profile["limits"]["spectre_attempts"], profile["limits"]["result_reserved_bytes"]) != (
         policy["attempt_ceiling"],
         policy["result_ceiling_bytes"],

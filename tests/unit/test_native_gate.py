@@ -61,6 +61,15 @@ def qualified(confirmed_domain, monkeypatch):
                 "variables": [],
                 "source_cell": str(source.resolve()),
                 "source_state": str(state.resolve()),
+                "libraries": [
+                    {
+                        "name": "SourceLib",
+                        "path": str(source_lib.resolve()),
+                        "tree_sha256": copying.dependency_snapshot(str(source_lib.resolve()))[
+                            "tree_sha256"
+                        ],
+                    }
+                ],
                 "ade": source_ade,
             }
         ],
@@ -291,4 +300,51 @@ def test_activation_is_rechecked_under_existing_lock_before_reserving(qualified,
     with pytest.raises(ValueError, match="revoked"):
         coordinator.accept(str(uuid4()), plan)
     assert calls == ([False] if point == "before_probe" else [True, False])
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("change", ["none", "missing", "extra", "content", "top", "inventory"])
+def test_full_model_closure_binding_is_checked_before_native_spend(change):
+    from types import SimpleNamespace
+
+    graph = {"/pdk/models/spectre/top.scs": "a" * 64, "/pdk/models/spectre/leaf.scs": "b" * 64}
+    gate = object.__new__(gate_module.ConfirmedGate)
+    gate.modeltrust = SimpleNamespace(trusted_model_graph=lambda *args: graph)
+    route = {
+        "ade": {
+            "model_includes": [
+                {"path": "/pdk/models/spectre/top.scs", "section": "NN", "file_sha256": "a" * 64}
+            ]
+        },
+        "model_files": [{"path": path, "file_sha256": sha} for path, sha in sorted(graph.items())],
+    }
+    if change == "missing":
+        route["model_files"].pop(0)
+    elif change == "extra":
+        route["model_files"].append({"path": "/pdk/extra.scs", "file_sha256": "c" * 64})
+    elif change == "content":
+        graph["/pdk/models/spectre/leaf.scs"] = "c" * 64
+    elif change == "top":
+        graph["/pdk/models/spectre/top.scs"] = "c" * 64
+    elif change == "inventory":
+        route["model_files"] = []
+    if change == "none":
+        gate.model_binding(route)
+    else:
+        with pytest.raises(ValueError, match="native_gate_model"):
+            gate.model_binding(route)
+
+
+def test_dependency_library_drift_denied_before_spend(qualified):
+    from pathlib import Path
+
+    root, gate, plan, _ = qualified
+    library = Path(gate.route(plan)["libraries"][0]["path"])
+    (library / "changed-subcell").write_bytes(b"different registered hierarchy")
+    before = snapshot(root)
+    with (
+        accounting.ReservationSession(str(root)) as session,
+        pytest.raises(ValueError, match="library_registration_drift"),
+    ):
+        gate.check(session, plan, "submit")
     assert snapshot(root) == before

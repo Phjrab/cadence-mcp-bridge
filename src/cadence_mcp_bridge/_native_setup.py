@@ -28,6 +28,7 @@ FILES = (
     "installer.py",
     "probe.py",
     "storage.py",
+    "modeltrust.py",
     "profile.json",
     "registration.json",
 )

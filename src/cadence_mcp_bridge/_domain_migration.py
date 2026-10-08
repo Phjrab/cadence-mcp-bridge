@@ -223,7 +223,7 @@ def anchor_for(value, root, current):
         "resource_domain_sha256": digest(
             canonical(
                 {
-                    "hostname": value["host"]["hostname"],
+                    "hostname": value["host"]["hostname"].lower(),
                     "architecture": value["host"]["architecture"],
                 }
             )
@@ -412,19 +412,172 @@ def apply(request, assets_sha256):
             os.close(fd)
 
 
+def result_limit_plan(value, assets_sha256):
+    """Fixed current-VM 10-to-16GiB transition, without a new ledger or grant."""
+    accounting, installer, probe = helpers()
+    root = profile(value)
+    fd = installer._operator_lock(root)
+    try:
+        current = snapshot(root)
+        index = accounting.read(os.path.expanduser("~/.cadence_mcp-domain/manifest.json"))
+        binding = {
+            "root_sha256": digest(root.encode("utf-8")),
+            "resource_domain_sha256": digest(
+                canonical(
+                    {
+                        "hostname": value["host"]["hostname"].lower(),
+                        "architecture": value["host"]["architecture"],
+                    }
+                )
+            ),
+            "ledger_ref": accounting.LEDGER,
+            "identity_manifest_sha256": index["identity_manifest_sha256"],
+        }
+        if (
+            index["root"] != root
+            or index["resource_domain_sha256"] != binding["resource_domain_sha256"]
+        ):
+            raise ValueError("result_limit_registered_domain")
+        anchor = accounting.identity_manifest(root, binding)
+        if anchor["schema_version"] != 1:
+            raise ValueError("result_limit_retained_domain_only")
+        accounting.state(root, binding)
+        value = {
+            "schema_version": 6,
+            "recipe_id": "retained-result-limit-16gib-v6",
+            "profile": value,
+            "profile_sha256": digest(canonical(value)),
+            "snapshot": current,
+            "anchor": anchor,
+            "authority": "PLAN_IS_NOT_OPERATOR_APPROVAL",
+            "helper_manifest_sha256": assets_sha256,
+            "policy_sha256": accounting.RESULT_POLICY_SHA,
+        }
+        return {
+            "plan": value,
+            "plan_sha256": digest(canonical(value)),
+            "execution_authorized": False,
+            "ledger_initialized": False,
+        }
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def apply_result_limit(request, assets_sha256):
+    accounting, installer, probe = helpers()
+    if (
+        not isinstance(request, dict)
+        or set(request) != set(("plan", "expected_plan_sha256", "operator_authority"))
+        or not isinstance(request["operator_authority"], accounting.STRING_TYPES)
+        or not 1 <= len(request["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in request["operator_authority"])
+    ):
+        raise ValueError("result_limit_operator_authority")
+    value = request["plan"]
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != set(
+            (
+                "schema_version",
+                "recipe_id",
+                "profile",
+                "profile_sha256",
+                "snapshot",
+                "anchor",
+                "authority",
+                "helper_manifest_sha256",
+                "policy_sha256",
+            )
+        )
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 6
+        or value["recipe_id"] != "retained-result-limit-16gib-v6"
+        or value["helper_manifest_sha256"] != assets_sha256
+        or value["policy_sha256"] != accounting.RESULT_POLICY_SHA
+        or value["authority"] != "PLAN_IS_NOT_OPERATOR_APPROVAL"
+        or digest(canonical(value)) != request["expected_plan_sha256"]
+        or digest(canonical(value["profile"])) != value["profile_sha256"]
+    ):
+        raise ValueError("result_limit_plan_binding")
+    root = profile(value["profile"])
+    fd = installer._operator_lock(root)
+    try:
+        current = snapshot(root)
+        if canonical(current) != canonical(value["snapshot"]):
+            raise ValueError("result_limit_snapshot_drift")
+        binding = dict(
+            (k, value["anchor"][k]) for k in ("root_sha256", "resource_domain_sha256", "ledger_ref")
+        )
+        binding["identity_manifest_sha256"] = digest(canonical(value["anchor"]))
+        anchor = accounting.identity_manifest(root, binding)
+        # Recheck the original home-domain registration, not caller-selected aliases.
+        index = accounting.read(os.path.expanduser("~/.cadence_mcp-domain/manifest.json"))
+        if (
+            index["root"] != root
+            or index["identity_manifest_sha256"] != binding["identity_manifest_sha256"]
+            or index["resource_domain_sha256"] != binding["resource_domain_sha256"]
+        ):
+            raise ValueError("result_limit_registered_domain")
+        accounting.state(root, binding)
+        document = {
+            "schema_version": 6,
+            "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_16GIB",
+            "root_sha256": anchor["root_sha256"],
+            "resource_domain_sha256": anchor["resource_domain_sha256"],
+            "identity_manifest_sha256": binding["identity_manifest_sha256"],
+            "policy_sha256": accounting.RESULT_POLICY_SHA,
+            "baseline": current["baseline"],
+            "plan_sha256": request["expected_plan_sha256"],
+            "operator_authority": request["operator_authority"],
+        }
+        path = root + "/" + accounting.REGISTRY + "/" + accounting.RESULT_POLICY_FILE
+        created = not os.path.lexists(path)
+        if created:
+            accounting.write_new(path, document)
+        elif canonical(accounting.read(path)) != canonical(document):
+            raise ValueError("result_limit_retained_conflict")
+        policy = accounting.effective_policy(root, anchor)
+        accounting.state(root, binding)
+        if canonical(snapshot(root)) != canonical(current):
+            raise ValueError("result_limit_post_snapshot_drift")
+        return {
+            "status": "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE",
+            "created": created,
+            "policy_sha256": accounting.RESULT_POLICY_SHA,
+            "plan_sha256": request["expected_plan_sha256"],
+            "ledger_sha256": current["ledger_sha256"],
+            "result_ceiling_bytes": policy["result_ceiling_bytes"],
+            "execution_authorized": False,
+            "ledger_modified": False,
+            "ledger_initialized": False,
+            "reservation_cost": 0,
+        }
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in (
         "inventory-existing",
         "apply-existing",
         "inventory-legacy-seal",
         "seal-existing",
+        "plan-result-limit-v6",
+        "apply-result-limit-v6",
     ):
         raise ValueError("fixed_existing_migration_command_required")
     if os.name != "posix":
         raise ValueError("native_linux_required")
     assets = validate_assets(sys.argv[2])
     data = closed(sys.stdin.read(LIMIT + 1).encode("ascii"))
-    if sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
+    if sys.argv[1] == "plan-result-limit-v6":
+        result = result_limit_plan(data, assets)
+    elif sys.argv[1] == "apply-result-limit-v6":
+        result = apply_result_limit(data, assets)
+    elif sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
         result = plan(data, assets, sys.argv[1] == "inventory-legacy-seal")
     else:
         if (data["plan"].get("recipe_id") == "repair-existing-legacy-classification-v1") != (

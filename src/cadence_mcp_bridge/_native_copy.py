@@ -65,7 +65,7 @@ def blocked(name):
     )
 
 
-def read_leaf(value, expected, limit):
+def read_leaf(value, expected, limit, observation_link=False):
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     fd = os.open(value, flags)
     stream = os.fdopen(fd, "rb")
@@ -74,19 +74,23 @@ def read_leaf(value, expected, limit):
         if (
             identity(before) != identity(expected)
             or not stat.S_ISREG(before.st_mode)
-            or before.st_nlink != 1
+            or before.st_nlink != (expected.st_nlink if observation_link else 1)
         ):
             raise ValueError("native_copy_file_identity")
         data = stream.read(limit + 1)
         after = os.lstat(value)
-        if len(data) > limit or identity(after) != identity(before) or after.st_nlink != 1:
+        if (
+            len(data) > limit
+            or identity(after) != identity(before)
+            or after.st_nlink != (before.st_nlink if observation_link else 1)
+        ):
             raise ValueError("native_copy_file_drift_or_size")
         return data
     finally:
         stream.close()
 
 
-def snapshot(source):
+def _snapshot(source, dependency=False):
     source = path(source)
     metadata = []
     content = []
@@ -110,7 +114,7 @@ def snapshot(source):
         content.append(["directory", relative])
         names = sorted(os.listdir(current))
         for name in names:
-            if blocked(name):
+            if blocked(name) and not dependency:
                 raise ValueError("native_copy_active_or_recovery_artifact")
             selected = os.path.join(current, name)
             child = name if not relative else relative + "/" + name
@@ -118,9 +122,15 @@ def snapshot(source):
             if stat.S_ISDIR(info.st_mode):
                 observe(selected, child, depth + 1)
             elif stat.S_ISREG(info.st_mode):
-                if len(metadata) >= MAX_ENTRIES or info.st_nlink != 1:
+                if len(metadata) >= MAX_ENTRIES or (
+                    info.st_nlink != 1 and not (dependency and blocked(name))
+                ):
                     raise ValueError("native_copy_tree_or_link_bound")
-                data = read_leaf(selected, info, MAX_BYTES - total[0])
+                data = (
+                    read_leaf(selected, info, MAX_BYTES - total[0], True)
+                    if dependency and blocked(name)
+                    else read_leaf(selected, info, MAX_BYTES - total[0])
+                )
                 total[0] += len(data)
                 sha = digest(data)
                 metadata.append(
@@ -135,6 +145,8 @@ def snapshot(source):
                         sha,
                     ]
                 )
+                if dependency:
+                    metadata[-1].append(info.st_nlink)
                 content.append(["file", child, len(data), sha])
             else:
                 raise ValueError("native_copy_link_or_special_file")
@@ -143,13 +155,28 @@ def snapshot(source):
 
     observe(source, "", 0)
     return {
-        "schema_version": 1,
+        "schema_version": 2 if dependency else 1,
         "tree_sha256": digest(canonical(metadata)),
         "content_sha256": digest(canonical(content)),
         "entries": len(metadata),
         "bytes": total[0],
         "metadata": metadata,
     }
+
+
+def snapshot(source):
+    return _snapshot(source)
+
+
+def dependency_snapshot(source):
+    """Read-only library preservation observation, never a source-copy permission.
+
+    Existing regular lock/recovery evidence may have hardlink aliases. Observe
+    their exact content/metadata/link counts without removing or copying them.
+    Code/OA hardlinks, symlinks and special files still reject. The strict
+    snapshot/copy_owned route remains unchanged and rejects every busy source.
+    """
+    return _snapshot(source, True)
 
 
 def sync(directory_path):

@@ -520,10 +520,17 @@ def fresh_store(store: tuple[TestIO, int, Path]) -> tuple[TestIO, int, Path]:
     (path / a.REGISTRY / "manifest.json").write_bytes(a.canonical(anchor))
     index = path / ".cadence_mcp-domain"
     index.mkdir(mode=0o700)
-    (index / "manifest.json").write_bytes(a.canonical(dict(
-        schema_version=1, root=str(path), resource_domain_sha256="a" * 64,
-        identity_manifest_sha256=a.digest(a.canonical(anchor)), plan_sha256="b" * 64,
-    )))
+    (index / "manifest.json").write_bytes(
+        a.canonical(
+            dict(
+                schema_version=1,
+                root=str(path),
+                resource_domain_sha256="a" * 64,
+                identity_manifest_sha256=a.digest(a.canonical(anchor)),
+                plan_sha256="b" * 64,
+            )
+        )
+    )
     return store
 
 
@@ -539,11 +546,19 @@ def test_fresh_storage_zero_consumed_exhausted_and_power_counters(
     io, root, path = fresh_store
     anchor = a.read(str(path / a.REGISTRY / "manifest.json"))
     binding = dict(
-        root_sha256=anchor["root_sha256"], resource_domain_sha256="a" * 64,
-        ledger_ref=a.LEDGER, identity_manifest_sha256=a.digest(a.canonical(anchor)),
-        grant_sha256="b" * 64, runner_sha256="c" * 64, plan_sha256="d" * 64,
-        execution_input_sha256="e" * 64, expires_at=4000000000,
-        max_attempts=2, max_reserved_bytes=131072, reserve_bytes=65536, disk_floor_bytes=0,
+        root_sha256=anchor["root_sha256"],
+        resource_domain_sha256="a" * 64,
+        ledger_ref=a.LEDGER,
+        identity_manifest_sha256=a.digest(a.canonical(anchor)),
+        grant_sha256="b" * 64,
+        runner_sha256="c" * 64,
+        plan_sha256="d" * 64,
+        execution_input_sha256="e" * 64,
+        expires_at=4000000000,
+        max_attempts=2,
+        max_reserved_bytes=131072,
+        reserve_bytes=65536,
+        disk_floor_bytes=0,
     )
     for count in range(3):
         before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
@@ -574,7 +589,8 @@ def test_fresh_storage_zero_consumed_exhausted_and_power_counters(
     ["campaign", "ceiling", "anchor", "lost-slot", "policy-reset", "legacy-fallback", "index"],
 )
 def test_fresh_storage_rejects_forged_or_unconserved_policy(
-    fresh_store: tuple[TestIO, int, Path], change: str,
+    fresh_store: tuple[TestIO, int, Path],
+    change: str,
 ) -> None:
     from cadence_mcp_bridge import _shared_reservations as a
 
@@ -608,9 +624,9 @@ def test_fresh_storage_rejects_forged_or_unconserved_policy(
     assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
 
 
-
 def test_fresh_standalone_legacy_deployment_cannot_import_cwd_code(
-    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+    fresh_store: tuple[TestIO, int, Path],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     io, root, path = fresh_store
     # The old standalone worker is not a verified schema3 generic bundle.
@@ -621,3 +637,50 @@ def test_fresh_standalone_legacy_deployment_cannot_import_cwd_code(
     with pytest.raises(ValueError, match="fixed asset location"):
         w.snapshot(io, root, False)
     assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store):
+    from pydantic import TypeAdapter
+
+    from cadence_mcp_bridge import _shared_reservations as a
+    from cadence_mcp_bridge.power_measurements import RegisteredPowerCounter
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    baseline = dict(campaign_id="AUTO-PHASE-01", count=82, result_reserved_bytes=9798942720)
+    anchor = a.read(str(path / a.REGISTRY / "manifest.json"))
+    anchor.pop("policy")
+    anchor.update(schema_version=1, baseline=baseline)
+    (path / a.REGISTRY / "manifest.json").write_bytes(a.canonical(anchor))
+    index_path = path / ".cadence_mcp-domain" / "manifest.json"
+    index = a.read(str(index_path))
+    index["identity_manifest_sha256"] = a.digest(a.canonical(anchor))
+    index_path.write_bytes(a.canonical(index))
+    (path / a.LEDGER).write_bytes(a.canonical(baseline))
+    upgrade = dict(
+        schema_version=6,
+        kind="EXPLICIT_RETAINED_RESULT_LIMIT_16GIB",
+        root_sha256=anchor["root_sha256"],
+        resource_domain_sha256=anchor["resource_domain_sha256"],
+        identity_manifest_sha256=a.digest(a.canonical(anchor)),
+        policy_sha256=a.RESULT_POLICY_SHA,
+        baseline=baseline,
+        plan_sha256="f" * 64,
+        operator_authority="SYNTHETIC NOT HUMAN CONSENT",
+    )
+    policy_path = path / a.REGISTRY / a.RESULT_POLICY_FILE
+    policy_path.write_bytes(a.canonical(upgrade))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False))
+    assert snapshot.contract_version == 3 and snapshot.result_ceiling_bytes == 17179869184
+    assert snapshot.snapshot_id == snapshot_digest(snapshot)
+    power = TypeAdapter(RegisteredPowerCounter).validate_python(
+        dict(baseline, policy=snapshot.ledger_policy.model_dump())
+    )
+    assert power.result_reserved_bytes == 9798942720
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    upgrade["policy_sha256"] = "0" * 64
+    policy_path.write_bytes(a.canonical(upgrade))
+    with pytest.raises(ValueError, match="retained_policy_binding"):
+        w.snapshot(io, root, False)
+    assert a.read(str(path / a.LEDGER)) == baseline

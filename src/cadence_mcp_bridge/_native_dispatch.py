@@ -24,6 +24,7 @@ FILES = (
     "installer.py",
     "probe.py",
     "storage.py",
+    "modeltrust.py",
     "profile.json",
     "registration.json",
 )
@@ -194,6 +195,7 @@ def main():
     import operations
     import gate
     import worker
+    import modeltrust
 
     bound_gate = gate.ConfirmedGate(
         profile,
@@ -203,6 +205,7 @@ def main():
         manifest["files"]["probe.py"]["sha256"],
         (reservations, confirmation, probe, storage, copying),
         lambda: activation(profile, expected),
+        modeltrust,
     )
     history = closed(
         read(profile["paths"]["managed_root"] + "/native-provider-history/" + expected + ".json")

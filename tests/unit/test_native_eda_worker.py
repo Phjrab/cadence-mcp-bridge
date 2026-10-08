@@ -98,7 +98,15 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
             "ade": {"state": "state1"},
         }
     }
-    route["libraries"] = [{"name": "SourceLib", "path": str(Path(route["source_cell"]).parent)}]
+    route["libraries"] = [
+        {
+            "name": "SourceLib",
+            "path": str(Path(route["source_cell"]).parent),
+            "tree_sha256": copying.dependency_snapshot(str(Path(route["source_cell"]).parent))[
+                "tree_sha256"
+            ],
+        }
+    ]
     route["ade"].update(
         inputs={
             "analysis": "dc",

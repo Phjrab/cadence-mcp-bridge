@@ -80,7 +80,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_bootstrap.py -k operator -q --basetemp "$HOME/grel-operator-tests"
 
       - name: Existing domain migration on disposable files
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py -q --basetemp "$HOME/grel-domain-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"
 
       - name: Fresh storage and result counter policy consumers
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_storage_worker.py tests/unit/test_storage.py tests/unit/test_resource_policy.py -q --basetemp "$HOME/grel-consumer-tests"

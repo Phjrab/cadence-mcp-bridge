@@ -34,7 +34,9 @@ def registered(operator, tmp_path):
                 "reader": reader.model_dump(mode="json"),
                 "source_cell": workspace + "/" + lib + "/" + profile.binding.cell,
                 "source_state": workspace + "/saved-state",
-                "libraries": [{"name": lib, "path": workspace + "/" + lib}],
+                "libraries": [
+                    {"name": lib, "path": workspace + "/" + lib, "tree_sha256": "b" * 64}
+                ],
             }
         ],
     }
@@ -51,7 +53,7 @@ def test_export_has_exact_fixed_assets_bound_hashes_and_no_authority(registered,
     manifest = json.loads(manifest_raw)
     assert result["manifest_sha256"] == hashlib.sha256(manifest_raw).hexdigest()
     assert set(manifest["files"]) == set(dispatch.FILES)
-    assert result["asset_count"] == 13
+    assert result["asset_count"] == len(dispatch.FILES)
     assert set(p.name for p in output.iterdir()) == set(dispatch.FILES + ("manifest.json",))
     for name, entry in manifest["files"].items():
         data = (output / name).read_bytes()
@@ -82,7 +84,9 @@ def test_bad_route_rejected_before_output_creation(registered, tmp_path, failure
     elif failure == "managed":
         route["source_state"] = context.contracts.environment.paths.managed_root + "/state"
     elif failure == "library":
-        route["libraries"].append({"name": "OutsideLib", "path": "/outside/library"})
+        route["libraries"].append(
+            {"name": "OutsideLib", "path": "/outside/library", "tree_sha256": "b" * 64}
+        )
     elif failure == "reader":
         route["reader"]["ade_registration_sha256"] = "9" * 64
     elif failure == "extra":

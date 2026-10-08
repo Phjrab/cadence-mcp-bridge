@@ -28,7 +28,10 @@ LEDGER_REF = "shared-ledger"  # Public logical reference; never a caller-selecte
 JOBS = "native-mcp-v1-jobs"
 REGISTRY = "reservation-identity"
 CEILING_COUNT = 500
-CEILING_BYTES = 10737418240
+CEILING_BYTES = 10737418240  # Historical retained default; not raised globally.
+MAX_POLICY_BYTES = 17179869184  # Supported explicit policy bound, not authority.
+RESULT_POLICY_FILE = "result-policy-v6.json"
+RESULT_POLICY_SHA = "1625e131118a0c0b4ff466c567d8a79bcb050dbf798505c23685e7b5604adac0"
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
 LEGACY_RESERVATION = 134217728
@@ -84,8 +87,8 @@ def check_binding(root, value):
     if not (
         0 < value["expires_at"] < 4102444800
         and 1 <= value["max_attempts"] <= 500
-        and 1 <= value["reserve_bytes"] <= value["max_reserved_bytes"] <= CEILING_BYTES
-        and 0 <= value["disk_floor_bytes"] <= CEILING_BYTES
+        and 1 <= value["reserve_bytes"] <= value["max_reserved_bytes"] <= MAX_POLICY_BYTES
+        and 0 <= value["disk_floor_bytes"] <= MAX_POLICY_BYTES
     ):
         raise ValueError("reservation_binding_bounds")
 
@@ -161,7 +164,7 @@ def shape(value, minimum_count, minimum_bytes):
         or type(value["count"]) not in INTEGER_TYPES
         or type(value["result_reserved_bytes"]) not in INTEGER_TYPES
         or not minimum_count <= value["count"] <= CEILING_COUNT
-        or not minimum_bytes <= value["result_reserved_bytes"] <= CEILING_BYTES
+        or not minimum_bytes <= value["result_reserved_bytes"] <= MAX_POLICY_BYTES
     ):
         raise ValueError("reservation_counter_integrity")
 
@@ -352,7 +355,7 @@ def identity_manifest(root, binding):
             or type(policy["attempt_ceiling"]) not in INTEGER_TYPES
             or type(policy["result_ceiling_bytes"]) not in INTEGER_TYPES
             or not 1 <= policy["attempt_ceiling"] <= CEILING_COUNT
-            or not 1 <= policy["result_ceiling_bytes"] <= CEILING_BYTES
+            or not 1 <= policy["result_ceiling_bytes"] <= MAX_POLICY_BYTES
             or value["baseline"]
             != {"campaign_id": policy["campaign_id"], "count": 0, "result_reserved_bytes": 0}
             or value["legacy_operation_ids"] != []
@@ -372,6 +375,64 @@ def identity_manifest(root, binding):
     ):
         raise ValueError("reservation_legacy_identity_allowlist")
     return value
+
+
+def effective_policy(root, manifest):
+    """Read explicit retained upgrade; historical/fresh operator limits stay intact.
+
+    The immutable receipt is provisioned only by the account-owner CLI after a
+    locked conservation/snapshot check. It does not grant EDA execution authority.
+    """
+    path = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
+    if manifest["schema_version"] == 2:
+        if os.path.lexists(path):
+            raise ValueError("reservation_retained_policy_on_fresh_domain")
+        return manifest["policy"]
+    policy = {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
+    if not os.path.lexists(path):
+        return policy
+    value = read(path)
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != set(
+            (
+                "schema_version",
+                "kind",
+                "root_sha256",
+                "resource_domain_sha256",
+                "identity_manifest_sha256",
+                "policy_sha256",
+                "baseline",
+                "plan_sha256",
+                "operator_authority",
+            )
+        )
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 6
+        or value["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_16GIB"
+        or value["root_sha256"] != manifest["root_sha256"]
+        or value["resource_domain_sha256"] != manifest["resource_domain_sha256"]
+        or value["identity_manifest_sha256"] != digest(canonical(manifest))
+        or value["policy_sha256"] != RESULT_POLICY_SHA
+        or not matches(HASH, value["plan_sha256"])
+        or not isinstance(value["operator_authority"], STRING_TYPES)
+        or not 1 <= len(value["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in value["operator_authority"])
+    ):
+        raise ValueError("reservation_retained_policy_binding")
+    counter_shape(value["baseline"], manifest)
+    if (
+        value["baseline"]["count"] < manifest["baseline"]["count"]
+        or value["baseline"]["result_reserved_bytes"]
+        < manifest["baseline"]["result_reserved_bytes"]
+        or value["baseline"]["result_reserved_bytes"] > CEILING_BYTES
+        or value["baseline"]["result_reserved_bytes"]
+        != expected_bytes(value["baseline"]["count"], [])
+    ):
+        raise ValueError("reservation_retained_policy_baseline")
+    policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
+    return policy
 
 
 def audit(root, counter, manifest, manifest_sha):
@@ -417,7 +478,7 @@ def audit(root, counter, manifest, manifest_sha):
         raise ValueError("reservation_identity_inventory_limit")
     indexed = {}
     for entry in entries:
-        if entry in ("manifest.json", "legacy-seal.json"):
+        if entry in ("manifest.json", "legacy-seal.json", RESULT_POLICY_FILE):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
         if not matches(ID, op):
@@ -483,6 +544,17 @@ def state(root, binding):
         raise ValueError("reservation_ambiguous_barrier")
     counter = read(counter_path)
     counter_shape(counter, manifest)
+    policy = effective_policy(root, manifest)
+    if counter["result_reserved_bytes"] > policy["result_ceiling_bytes"]:
+        raise ValueError("reservation_counter_policy_capacity")
+    upgrade = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
+    if os.path.lexists(upgrade):
+        baseline = read(upgrade)["baseline"]
+        if (
+            counter["count"] < baseline["count"]
+            or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
+        ):
+            raise ValueError("reservation_policy_consumption_rollback")
     if (
         counter["count"] < manifest["baseline"]["count"]
         or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
@@ -606,9 +678,9 @@ def _reserve_held(session, operation_id, binding):
     ):
         raise ValueError("reservation_grant_capacity")
     manifest = identity_manifest(root, binding)
-    policy = manifest.get(
-        "policy", {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
-    )
+    policy = effective_policy(root, manifest)
+    if binding["max_reserved_bytes"] > policy["result_ceiling_bytes"]:
+        raise ValueError("reservation_grant_policy_capacity")
     if (
         counter["count"] + 1 > policy["attempt_ceiling"]
         or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]

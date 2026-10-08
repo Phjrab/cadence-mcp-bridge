@@ -73,13 +73,15 @@ def build_parser() -> argparse.ArgumentParser:
     domain_actions = domain.add_subparsers(dest="domain_action", required=True)
     domain_export = domain_actions.add_parser("export-helper-bundle")
     domain_export.add_argument("--output", type=Path, required=True)
-    domain_plan = domain_actions.add_parser("plan-existing", aliases=["plan-legacy-seal"])
+    domain_plan = domain_actions.add_parser(
+        "plan-existing", aliases=["plan-legacy-seal", "plan-result-limit-v6"]
+    )
     domain_plan.add_argument("--profile", type=Path, required=True)
     domain_plan.add_argument("--output", type=Path, required=True)
     domain_plan.add_argument("--expected-helper-sha256", required=True)
     setup_export = domain_actions.add_parser("export-setup-helper-bundle")
     setup_export.add_argument("--output", type=Path, required=True)
-    setup_stage = domain_actions.add_parser("stage-setup-helper")
+    setup_stage = domain_actions.add_parser("stage-setup-helper", aliases=["stage-helper"])
     setup_stage.add_argument("--profile", type=Path, required=True)
     setup_stage.add_argument("--expected-helper-sha256", required=True)
     setup_plan = domain_actions.add_parser("plan-fresh")
@@ -98,7 +100,9 @@ def build_parser() -> argparse.ArgumentParser:
     setup_existing.add_argument("--expected-helper-sha256", required=True)
     setup_existing.add_argument("--identity-manifest-sha256", required=True)
     setup_existing.add_argument("--operator-authority", required=True)
-    domain_apply = domain_actions.add_parser("apply-existing", aliases=["seal-existing"])
+    domain_apply = domain_actions.add_parser(
+        "apply-existing", aliases=["seal-existing", "apply-result-limit-v6"]
+    )
     for name in ("profile", "plan", "output"):
         domain_apply.add_argument("--" + name, type=Path, required=True)
     domain_apply.add_argument("--expected-plan-sha256", required=True)
@@ -230,6 +234,7 @@ def build_parser() -> argparse.ArgumentParser:
     repair_plan = actions.add_parser("repair-plan")
     repair_plan.add_argument("--profile", type=Path, required=True)
     repair_plan.add_argument("--output", type=Path, required=True)
+    repair_plan.add_argument("--model-include", type=Path)
     repair_export = actions.add_parser("export-repair-helper")
     repair_export.add_argument("--output", type=Path, required=True)
     preflight = actions.add_parser("preflight")
@@ -577,9 +582,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 report = domain_provisioning.export(
                     arguments.output, arguments.domain_action == "export-setup-helper-bundle"
                 )
-            elif arguments.domain_action == "stage-setup-helper":
+            elif arguments.domain_action in {"stage-setup-helper", "stage-helper"}:
                 report = domain_provisioning.stage_setup(
-                    arguments.profile, arguments.expected_helper_sha256
+                    arguments.profile,
+                    arguments.expected_helper_sha256,
+                    arguments.domain_action == "stage-helper",
                 )
             elif arguments.domain_action == "plan-fresh":
                 report = domain_provisioning.prepare_fresh(
@@ -602,7 +609,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.identity_manifest_sha256,
                     arguments.operator_authority,
                 )
-            elif arguments.domain_action in {"apply-existing", "seal-existing"}:
+            elif arguments.domain_action in {
+                "apply-existing",
+                "seal-existing",
+                "apply-result-limit-v6",
+            }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
                     arguments.plan,
@@ -611,6 +622,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.expected_helper_sha256,
                     arguments.operator_authority,
                     arguments.domain_action == "seal-existing",
+                    arguments.domain_action == "apply-result-limit-v6",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -618,6 +630,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.output,
                     arguments.expected_helper_sha256,
                     arguments.domain_action == "plan-legacy-seal",
+                    arguments.domain_action == "plan-result-limit-v6",
                 )
         except (OSError, ValueError):
             print(
@@ -643,7 +656,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif arguments.runner_action == "export-installer":
                 report = bootstrap.export_installer(arguments.output)
             elif arguments.runner_action == "repair-plan":
-                report = bootstrap.prepare_repair(arguments.profile, arguments.output)
+                report = bootstrap.prepare_repair(
+                    arguments.profile, arguments.output, arguments.model_include
+                )
             elif arguments.runner_action == "export-repair-helper":
                 report = bootstrap.export_repair_helper(arguments.output)
             elif arguments.runner_action == "preflight":

@@ -80,7 +80,9 @@ def export_repair_helper(output: Path) -> dict[str, object]:
     }
 
 
-def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
+def prepare_repair(
+    profile: Path, output: Path, model_include: Path | None = None
+) -> dict[str, object]:
     """Read-only standard-VM inventory; exclusive private plan, no approval minted."""
     import json
     import shlex
@@ -95,19 +97,33 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     if executable is None:
         raise ValueError("OpenSSH unavailable")
     code = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_text("utf-8")
+    payload = data
+    action = "inventory"
+    if model_include is not None:
+        from cadence_mcp_bridge.generic_ade import ModelInclude
+
+        raw_include = installer.regular(str(_local_path(model_include)))  # type: ignore[no-untyped-call]
+        if len(raw_include) > 8192:
+            raise ValueError("model_include_document_bound")
+        include = ModelInclude.model_validate_json(raw_include)
+        payload = json.dumps({"profile": json.loads(data),
+            "model_include": include.model_dump(mode="json")}, sort_keys=True).encode("ascii")
+        action = "inventory-models"
     status, stdout, stderr = run_fixed(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
-         "/usr/bin/python", "-B", "-c", shlex.quote(code), "inventory"],
-        data, OpenSshBackend._ssh_environment(), timeout=60, limit=262144,
+         "/usr/bin/python", "-B", "-c", shlex.quote(code), action],
+        payload, OpenSshBackend._ssh_environment(), timeout=60, limit=262144,
     )
     if status or stderr:
         raise ValueError("repair_inventory_rejected")
     result = json.loads(stdout)
-    if not isinstance(result, dict) or set(result) != {
+    required = {"plan", "plan_sha256"} if model_include is not None else {
         "plan", "plan_sha256", "readonly_compatibility_links", "dependency_scope",
         "native_runtime_attestation",
-    } or result["plan_sha256"] != repair.digest(result["plan"]):  # type: ignore[no-untyped-call]
+    }
+    if (not isinstance(result, dict) or set(result) != required or
+            result["plan_sha256"] != repair.digest(result["plan"])):  # type: ignore[no-untyped-call]
         raise ValueError("repair_inventory_binding")
     if result["plan"]["scope"]["profile_sha256"] != repair.digest(  # type: ignore[no-untyped-call]
         json.loads(data)

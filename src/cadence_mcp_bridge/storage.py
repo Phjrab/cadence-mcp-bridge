@@ -9,7 +9,12 @@ from pydantic import Field, field_validator, model_serializer, model_validator
 
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
-from cadence_mcp_bridge.resource_policy import FreshResourceCounter, FreshResourcePolicy
+from cadence_mcp_bridge.resource_policy import (
+    FreshResourceCounter,
+    FreshResourcePolicy,
+    RetainedResourceCounter,
+    RetainedResourcePolicy,
+)
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
 ArtifactId = Annotated[str, Field(pattern=r"^sa-[0-9a-f]{64}$")]
@@ -70,7 +75,7 @@ class StorageArtifact(ContractModel):
 
 
 class StorageSnapshot(ContractModel):
-    contract_version: Literal[1, 2] = 1
+    contract_version: Literal[1, 2, 3] = 1
     snapshot_id: Digest
     artifacts: Annotated[tuple[StorageArtifact, ...], Field(max_length=64)]
     coverage_complete: bool
@@ -94,10 +99,10 @@ class StorageSnapshot(ContractModel):
     filesystem_free_bytes: Bytes
     filesystem_total_bytes: Bytes
     reserved_result_bytes: Bytes
-    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=10_737_418_240)] = (
+    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=17_179_869_184)] = (
         10_737_418_240
     )
-    ledger_policy: FreshResourcePolicy | None = None
+    ledger_policy: FreshResourcePolicy | RetainedResourcePolicy | None = None
     spectre_attempts: Annotated[int, Field(strict=True, ge=0, le=500)]
     active_eda: bool
     platform_delete_primitives: bool
@@ -115,11 +120,24 @@ class StorageSnapshot(ContractModel):
         ):
             raise ValueError("fresh snapshot requires its registered policy")
         if self.ledger_policy is not None:
-            FreshResourceCounter(
-                campaign_id=self.ledger_policy.campaign_id,
-                count=self.spectre_attempts,
-                result_reserved_bytes=self.reserved_result_bytes,
-                policy=self.ledger_policy,
+            if self.contract_version == 2 and not isinstance(
+                self.ledger_policy, FreshResourcePolicy
+            ):
+                raise ValueError("fresh snapshot requires fresh policy")
+            if self.contract_version == 3 and not isinstance(
+                self.ledger_policy, RetainedResourcePolicy
+            ):
+                raise ValueError("retained snapshot requires explicit v6 policy")
+            counter_type = (
+                FreshResourceCounter if self.contract_version == 2 else RetainedResourceCounter
+            )
+            counter_type.model_validate(
+                dict(
+                    campaign_id=self.ledger_policy.campaign_id,
+                    count=self.spectre_attempts,
+                    result_reserved_bytes=self.reserved_result_bytes,
+                    policy=self.ledger_policy.model_dump(),
+                )
             )
         return self
 

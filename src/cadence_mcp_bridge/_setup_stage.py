@@ -59,6 +59,12 @@ def main():
     confirmation_members = set(
         ("confirmation.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
     )
+    migration_members = set(
+        ("migration.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
+    )
+    migration = set(v["files"]) == migration_members
+    if migration:
+        members = migration_members
     confirmation = set(v["files"]) == confirmation_members
     if confirmation:
         members = confirmation_members
@@ -72,9 +78,13 @@ def main():
         raise ValueError("stage_manifest")
     m = json.loads(assets["manifest.json"])
     kind = (
-        "STANDARD_VM_OPERATOR_CONFIRMATION_HELPER"
-        if confirmation
-        else "STANDARD_VM_DOMAIN_SETUP_HELPER"
+        "EXISTING_DOMAIN_OPERATOR_HELPER"
+        if migration
+        else (
+            "STANDARD_VM_OPERATOR_CONFIRMATION_HELPER"
+            if confirmation
+            else "STANDARD_VM_DOMAIN_SETUP_HELPER"
+        )
     )
     if set(m) != set(("schema_version", "kind", "files")) or (
         type(m["schema_version"]) is not int or m["schema_version"] != 1
@@ -108,6 +118,19 @@ def main():
             raise ValueError("stage_directory")
 
     parent = workspace + "/.cadence_mcp-setup"
+    if migration:
+        managed = p["paths"]["managed_root"]
+        if not managed.startswith(workspace + "/") or os.path.realpath(managed) != managed:
+            raise ValueError("stage_existing_root")
+        if not os.path.isdir(managed):
+            raise ValueError("stage_existing_root_missing")
+        current = managed
+        while current != workspace:
+            info = os.lstat(current)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 18:
+                raise ValueError("stage_existing_root_trust")
+            current = os.path.dirname(current)
+        parent = managed + "/operator-helpers"
     directory(parent)
     stage = parent + "/" + expected
     directory(stage)

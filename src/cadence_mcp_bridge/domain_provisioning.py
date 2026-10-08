@@ -88,7 +88,11 @@ def export(output: Path, setup: bool = False) -> dict[str, object]:
 
 
 def prepare(
-    profile: Path, output: Path, expected_helper_sha256: str, seal: bool = False
+    profile: Path,
+    output: Path,
+    expected_helper_sha256: str,
+    seal: bool = False,
+    result_limit: bool = False,
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     _, _, expected = contents()
@@ -99,7 +103,9 @@ def prepare(
         environment,
         raw_profile,
         expected,
-        "inventory-legacy-seal" if seal else "inventory-existing",
+        "plan-result-limit-v6"
+        if result_limit
+        else ("inventory-legacy-seal" if seal else "inventory-existing"),
         output,
     )
 
@@ -121,13 +127,22 @@ def _transport(
         "plan-fresh",
         "apply-fresh",
         "register-existing",
+        "plan-result-limit-v6",
+        "apply-result-limit-v6",
     }
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
     helper_name = (
         "migration.py"
         if action
-        in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
+        in {
+            "inventory-existing",
+            "apply-existing",
+            "inventory-legacy-seal",
+            "seal-existing",
+            "plan-result-limit-v6",
+            "apply-result-limit-v6",
+        }
         else "setup.py"
     )
     helper_path = (
@@ -161,6 +176,43 @@ def _transport(
     receipt = json.loads(stdout)
     if action in {"apply-fresh", "register-existing"}:
         return _setup_receipt(receipt, stdout, output, json.loads(payload), action)
+    if action == "apply-result-limit-v6":
+        from cadence_mcp_bridge import _shared_reservations as accounting
+
+        request = json.loads(payload)
+        value = request["plan"]
+        if (
+            not isinstance(receipt, dict)
+            or set(receipt)
+            != {
+                "status",
+                "created",
+                "policy_sha256",
+                "plan_sha256",
+                "ledger_sha256",
+                "result_ceiling_bytes",
+                "execution_authorized",
+                "ledger_modified",
+                "ledger_initialized",
+                "reservation_cost",
+            }
+            or receipt["status"] != "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE"
+            or type(receipt["created"]) is not bool
+            or receipt["policy_sha256"] != accounting.RESULT_POLICY_SHA
+            or receipt["plan_sha256"] != request["expected_plan_sha256"]
+            or receipt["ledger_sha256"] != value["snapshot"]["ledger_sha256"]
+            or type(receipt["result_ceiling_bytes"]) is not int
+            or receipt["result_ceiling_bytes"] != accounting.MAX_POLICY_BYTES
+            or any(
+                receipt[k] is not False
+                for k in ("execution_authorized", "ledger_modified", "ledger_initialized")
+            )
+            or type(receipt["reservation_cost"]) is not int
+            or receipt["reservation_cost"] != 0
+        ):
+            raise ValueError("result_limit_apply_receipt_binding")
+        installer.exclusive(str(output), stdout)  # type: ignore[no-untyped-call]
+        return {**receipt, "remote_contact": True}
     if action in {"apply-existing", "seal-existing"}:
         return _apply_receipt(receipt, stdout, output, json.loads(payload))
     if (
@@ -193,6 +245,7 @@ def apply_existing(
     expected_helper_sha256: str,
     operator_authority: str,
     seal: bool = False,
+    result_limit: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
@@ -225,7 +278,9 @@ def apply_existing(
         environment,
         _canonical(request),
         expected,
-        "seal-existing" if seal else "apply-existing",
+        "apply-result-limit-v6"
+        if result_limit
+        else ("seal-existing" if seal else "apply-existing"),
         output,
     )
 
@@ -392,10 +447,12 @@ def _setup_receipt(
     return {**receipt, "remote_contact": True}
 
 
-def stage_setup(profile: Path, expected_helper_sha256: str) -> dict[str, object]:
+def stage_setup(
+    profile: Path, expected_helper_sha256: str, migration: bool = False
+) -> dict[str, object]:
     """Stage only current package's fixed helper set, never caller filenames/content/code."""
     environment, data = load_environment(_local_path(profile))
-    assets, manifest, expected = contents(True)
+    assets, manifest, expected = contents(not migration)
     if expected != expected_helper_sha256:
         raise ValueError("helper_package_binding_mismatch")
     executable = shutil.which("ssh.exe")
