@@ -325,7 +325,7 @@ def test_standalone_lifecycle_rejects_staged_wrong_target_without_writes(prepare
     } == before
 
 
-def test_schema_one_history_remains_verifiable(prepared):
+def test_schema_one_history_remains_verifiable(prepared, capsys):
     source, target, _ = prepared
     (source / "reservations.py").unlink()  # Disposable bundle migration fixture only.
     manifest = json.loads((source / "manifest.json").read_bytes())
@@ -337,6 +337,15 @@ def test_schema_one_history_remains_verifiable(prepared):
     bootstrap.install(source, target, digest)
     assert bootstrap.verify(target, digest)["execution_authorized"] is False
     assert set(installer.validate(str(source), digest)[1]) == set(installer.LEGACY_FILES)
+    # Historical content can be inspected, but cannot claim current-package preflight.
+    with pytest.raises(ValueError, match="runner_package_binding_mismatch"):
+        bootstrap.preflight(source, digest)
+    assert (
+        main(["runner", "preflight", "--bundle", str(source), "--expected-plan-sha256", digest])
+        == 1
+    )
+    report = capsys.readouterr().out
+    assert str(source) not in report and "REJECTED" in report
 
 
 def test_reservation_asset_tamper_rejected(prepared):

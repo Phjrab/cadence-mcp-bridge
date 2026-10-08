@@ -175,7 +175,7 @@ def preflight(bundle_path: Path, expected: str) -> dict[str, object]:
         ("reservations.py", "_shared_reservations.py"),
     ):
         trusted = files("cadence_mcp_bridge").joinpath(source).read_bytes()
-        if contents[name] != trusted:
+        if name not in contents or contents[name] != trusted:
             raise ValueError("runner_package_binding_mismatch")
     environment, data = load_environment(root / "profile.json")
     executable = shutil.which("ssh.exe")
