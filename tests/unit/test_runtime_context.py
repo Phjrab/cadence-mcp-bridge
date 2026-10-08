@@ -652,3 +652,38 @@ def test_export_accepts_selected_context_normalized_journals(settings):
     assert output.is_file()
     assert not first.binding.analysis_journal.exists()
     assert not first.binding.sweep_journal.exists()
+
+
+def test_export_binds_one_complete_runtime_snapshot(settings, monkeypatch):
+    import cadence_mcp_bridge.runtime_context as runtime
+
+    first, second = load_runtime(settings)
+    reserved = second.binding.analysis_journal
+    original = runtime.load_runtime
+    calls = []
+
+    def rewritten_after_read(path):
+        contexts = original(path)
+        calls.append(path)
+        data = json.loads(path.read_bytes())
+        data["contexts"] = data["contexts"][:1]
+        replacement = path.with_suffix(".replacement")
+        replacement.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(replacement, path)
+        return contexts
+
+    monkeypatch.setattr(runtime, "load_runtime", rewritten_after_read)
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            reserved,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert len(calls) == 1
+    assert not reserved.exists()
