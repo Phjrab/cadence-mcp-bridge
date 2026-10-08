@@ -223,7 +223,7 @@ def export_client_config(
         for loaded in contexts:
             reserved.add(loaded.lock_path)
             reserved.update(
-                value
+                _local_path(value)
                 for value in (
                     loaded.binding.environment_profile,
                     loaded.binding.design_registry,

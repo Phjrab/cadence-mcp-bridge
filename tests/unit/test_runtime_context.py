@@ -601,3 +601,27 @@ def test_hardlinked_journals_rejected_without_mutating_state(settings, cross_con
         load_runtime(settings)
     assert error.value.reason == "journal_invalid"
     assert original.read_bytes() == alias.read_bytes() == b"retained synthetic journal"
+
+
+@pytest.mark.parametrize("field", ["analysis_journal", "sweep_journal"])
+def test_export_denies_lexical_alias_of_other_context_journal(settings, field):
+    first, second = load_runtime(settings)
+    reserved = getattr(second.binding, field)
+    sub = reserved.parent / "lexical-sub"
+    sub.mkdir()
+    data = json.loads(settings.read_bytes())
+    data["contexts"][1][field] = str(sub / ".." / reserved.name)
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            reserved,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert not reserved.exists()
