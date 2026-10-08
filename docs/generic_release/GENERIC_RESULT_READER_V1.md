@@ -8,7 +8,12 @@ registered readers,85 MCP schemas, source IDs and exact reference math remain
 unchanged. A new circuit changes its reviewed bindings, not Python source.
 
 Reader registration binds exact design/analysis/measurement IDs and canonical ADE
-registration SHA256. Its node selectors are canonical ASCII private names; current
+registration SHA256 plus the canonical analysis-specific measurement contract
+SHA256 from the existing registry v4 or later. An allowlist membership alone is
+insufficient: missing contracts, another analysis or stale contract digest reject.
+The registered contract must remain unqualified; this compiler cannot replace a
+qualified fixed historical reader/definition. Local generic preparation does not
+change that contract's execution qualification. Its node selectors are canonical ASCII private names; current
 selectors require a positive-terminal /INSTANCE/PLUS suffix. Ground is explicit
 null. Sources bind logical positive/negative node IDs, role and signed convention.
 No source-voltage constants are inferred from another circuit. DC power sums
@@ -40,6 +45,7 @@ not origin, human approval or PSF provenance. The local projector always returns
 BOUNDED_FRAME_VALIDATED_NATIVE_UNATTESTED and NOT_ATTESTED provenance. A production
 provider must verify the actual runner, effective input, protected originals,
 owned PSF/save inventory/selector, worker status and terminal extraction receipt
+and exclusively provision a fresh job-owned frame output before running the script
 before using this projector to produce native facts. The extraction script writes
 only the same registered job's work/generic-frame.txt and reads work/psf; no
 remote command, deployment or provider wiring is added here.

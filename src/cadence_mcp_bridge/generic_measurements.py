@@ -100,6 +100,7 @@ class GenericReaderRegistration(VariableModel):
     analysis_id: LogicalId
     measurement_id: LogicalId
     ade_registration_sha256: Digest
+    measurement_contract_sha256: Digest
     nodes: Annotated[tuple[NodeSignal, ...], Field(min_length=1, max_length=8)]
     sources: Annotated[tuple[SourceSignal, ...], Field(max_length=8)]
     transfer: TransferSignal | None
@@ -171,6 +172,21 @@ def bind_reader(
         reader.design_id
     ).allowed_measurements:
         raise OperationRejected("reader_registration_binding_mismatch")
+    measurement = next(
+        (
+            m
+            for m in context.contracts.designs.measurements_for(reader.design_id)
+            if m.measurement_id == reader.measurement_id
+        ),
+        None,
+    )
+    if measurement is None or (
+        measurement.analysis_id != reader.analysis_id
+        or canonical_digest(measurement) != reader.measurement_contract_sha256
+    ):
+        raise OperationRejected("reader_measurement_analysis_binding_mismatch")
+    if measurement.reader != "unqualified":
+        raise OperationRejected("reader_legacy_definition_protected")
     if (plan.analysis == "ac") != (reader.transfer is not None) or (
         plan.analysis != "dc" and reader.sources
     ):

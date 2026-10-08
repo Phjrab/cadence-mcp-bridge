@@ -21,7 +21,57 @@ from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.power_measurements import SignedSource, delivered_power, signed_power_totals
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-operator = operator_fixture
+operator_base = operator_fixture
+
+
+@pytest.fixture
+def operator(operator_base):
+    from cadence_mcp_bridge.analyses import AnalysisContract
+    from cadence_mcp_bridge.designs import DesignMeasurementRegistry, DesignProfile
+    from cadence_mcp_bridge.runtime_context import load_runtime
+    from cadence_mcp_bridge.variable_contracts import DesignVariables
+
+    context, grant, request, settings = operator_base
+    registry = json.loads(context.contracts.designs.model_dump_json())
+    profile = registry["designs"][0]
+    profile["allowed_measurements"].append("tran-summary")
+    profile_hash = canonical_digest(DesignProfile.model_validate_json(json.dumps(profile)))
+    registry["variable_sets"][0]["design_profile_sha256"] = profile_hash
+    variable_hash = canonical_digest(
+        DesignVariables.model_validate_json(json.dumps(registry["variable_sets"][0]))
+    )
+    registry["schema_version"] = 4
+    registry["measurement_contracts"] = []
+    for contract in registry["analysis_contracts"]:
+        contract.update(design_profile_sha256=profile_hash, variable_set_sha256=variable_hash)
+        registry["measurement_contracts"].append(
+            dict(
+                design_id=profile["design_id"],
+                measurement_id={"dc": "dc-output", "ac": "ac-gain", "tran": "tran-summary"}[
+                    contract["analysis"]
+                ],
+                analysis_id=contract["analysis_id"],
+                analysis_contract_sha256=canonical_digest(
+                    AnalysisContract.model_validate_json(json.dumps(contract))
+                ),
+                reader="unqualified",
+                output_id=None,
+                definition_sha256=None,
+            )
+        )
+    registry_model = DesignMeasurementRegistry.model_validate_json(json.dumps(registry))
+    path = context.binding.design_registry
+    path.write_text(registry_model.model_dump_json())
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    runtime = json.loads(settings.read_bytes())
+    runtime["contexts"][0]["design_sha256"] = digest
+    settings.write_text(json.dumps(runtime))
+    return (
+        load_runtime(settings)[0],
+        grant.model_copy(update={"design_sha256": digest}),
+        request,
+        settings,
+    )
 
 
 def reader_for(operator, analysis="dc"):
@@ -32,7 +82,16 @@ def reader_for(operator, analysis="dc"):
                 "schema_version": 1,
                 "design_id": plan.request.design_id,
                 "analysis_id": plan.request.analysis_id,
-                "measurement_id": "dc-output",
+                "measurement_id": {"dc": "dc-output", "ac": "ac-gain", "tran": "tran-summary"}[
+                    analysis
+                ],
+                "measurement_contract_sha256": canonical_digest(
+                    next(
+                        m
+                        for m in context.contracts.designs.measurements_for(plan.request.design_id)
+                        if m.analysis_id == plan.request.analysis_id
+                    )
+                ),
                 "ade_registration_sha256": canonical_digest(ade),
                 "nodes": [
                     {"logical_id": "input", "selector": "/in"},
@@ -345,3 +404,52 @@ def test_aggregate_rows_and_unsupported_array_size_are_denied_before_write(opera
         GenericReaderRegistration.model_validate_json(json.dumps(data))
     data["maximum_samples"] = 192
     assert GenericReaderRegistration.model_validate_json(json.dumps(data)).maximum_samples == 192
+
+
+@pytest.mark.parametrize(
+    "change", ["wrong_analysis", "stale_contract", "missing_contract", "protected_legacy"]
+)
+def test_measurement_identity_requires_registered_exact_analysis_and_definition(operator, change):
+    from dataclasses import replace
+
+    args = reader_for(operator, "ac")
+    context, plan, ade, reader, op, execution = args
+    contracts = context.contracts.designs.measurements_for(reader.design_id)
+    if change == "wrong_analysis":
+        other = next(m for m in contracts if m.analysis_id.endswith("dc"))
+        reader = reader.model_copy(
+            update={
+                "measurement_id": other.measurement_id,
+                "measurement_contract_sha256": canonical_digest(other),
+            }
+        )
+    elif change == "stale_contract":
+        reader = reader.model_copy(update={"measurement_contract_sha256": "a" * 64})
+    else:
+        changed = (
+            tuple()
+            if change == "missing_contract"
+            else tuple(
+                m.model_copy(update={"reader": "native-bounded-result-v1"})
+                if m.analysis_id == reader.analysis_id
+                else m
+                for m in contracts
+            )
+        )
+        registry = context.contracts.designs.model_copy(update={"measurement_contracts": changed})
+        context = replace(context, contracts=replace(context.contracts, designs=registry))
+        if change == "protected_legacy":
+            reader = reader.model_copy(
+                update={
+                    "measurement_contract_sha256": canonical_digest(
+                        next(m for m in changed if m.analysis_id == reader.analysis_id)
+                    )
+                }
+            )
+    with pytest.raises(OperationRejected) as error:
+        render_reader(context, plan, ade, reader, op, execution)
+    assert error.value.reason == (
+        "reader_legacy_definition_protected"
+        if change == "protected_legacy"
+        else "reader_measurement_analysis_binding_mismatch"
+    )

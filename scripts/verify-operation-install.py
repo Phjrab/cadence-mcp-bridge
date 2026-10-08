@@ -53,6 +53,24 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         variable_set_sha256=variable_hash,
     )
     registry["analysis_contracts"].append(contract)
+    from cadence_mcp_bridge.analyses import AnalysisContract
+
+    registry["schema_version"] = 4
+    registry["measurement_contracts"] = [
+        dict(
+            design_id=c["design_id"],
+            measurement_id="dc-output" if c["analysis"] == "dc" else "ac-gain",
+            analysis_id=c["analysis_id"],
+            analysis_contract_sha256=canonical_digest(
+                AnalysisContract.model_validate_json(json.dumps(c))
+            ),
+            reader="unqualified",
+            output_id=None,
+            definition_sha256=None,
+        )
+        for c in registry["analysis_contracts"]
+        if c["analysis"] in ("dc", "ac")
+    ]
     pdk = json.loads((examples / "pdks.json").read_bytes())
     paths = [workspace / (name + ".json") for name in ("environment", "design", "pdk")]
     for path, payload in zip(paths, (environment, registry, pdk), strict=True):
@@ -386,6 +404,13 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                     "analysis_id": analysis_id,
                     "measurement_id": profile_model.allowed_measurements[0],
                     "ade_registration_sha256": canonical_digest(ade_model),
+                    "measurement_contract_sha256": canonical_digest(
+                        next(
+                            m
+                            for m in context.contracts.designs.measurements_for(design_id)
+                            if m.analysis_id == analysis_id
+                        )
+                    ),
                     "nodes": [
                         {"logical_id": "input", "selector": "/gate"},
                         {"logical_id": "output", "selector": "/out"},

@@ -27,7 +27,7 @@
   "report": "GREL_05_RESULT.md",
   "next_phase_authorized": true,
   "next_phase": "GREL03-production-provider-and-GREL04-native-copy-API-then-GREL05-06",
-  "pr_url": null,
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/147",
   "reports": [
     "GREL_02_RESULT.md",
     "GREL_03_RESULT.md",
@@ -421,10 +421,22 @@
     "native_reader_api_qualified": false,
     "generic_sweep_codec": false,
     "new_native_jobs": 0,
-    "local_passed": 189,
+    "local_passed": 193,
     "skipped": 0,
-    "seconds": 11.08,
+    "seconds": 12.64,
     "mypy_files": 71,
-    "final_package_ci_review": "PENDING_FINAL_AGGREGATE_BOUND_SOURCE"
+    "final_package_ci_review": "PENDING_ANALYSIS_BINDING_CORRECTED_SOURCE",
+    "analysis_specific_measurement_binding": true,
+    "legacy_reader_rebinding": false,
+    "tested_source": "PENDING_BOUND_COMMIT",
+    "input_snapshot_sha256": "46a0f687cc116711786a0242dcd6dca954c3bfcef9b4238e9aff2242956221c2",
+    "historical_32906b3": {
+      "windows_passed": 2587,
+      "windows_seconds": 249.34,
+      "posix_passed": 73,
+      "review": "P2_MEASUREMENT_ANALYSIS_MAPPING_FOUND",
+      "artifact_bytes_match": true,
+      "run": 37718061280
+    }
   }
 }

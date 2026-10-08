@@ -1,3 +1,14 @@
+## GREL-05 measurement identity correction, 2026-10-08
+
+Independent PR147 P2 fixed: generic reader requires exact existing registry v4+
+analysis-specific measurement contract and canonical hash; allowlist-only/unknown/
+wrong-analysis/stale binding rejects. Qualified fixed legacy definitions cannot
+be rebound. Related193 PASS/no skips/12.64s, Ruff/mypy71 PASS. Final package/hosted/
+review pending at corrected source;32906b3 CI/package is historical. Native trust/
+provider/automatic extraction/Sweep/Spec/clean actual client remain incomplete;
+release BLOCKED,02–07/895MiB persists. No native side effects/protected changes/
+budget increase/merge/GREL08/publication. See GREL_05_RESULT.md.
+
 ## GREL-05 local generic result reader, 2026-10-08
 
 Continuous02–07/895MiB persists. New stacked feature on unmerged PR146/17cb59a

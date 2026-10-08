@@ -544,7 +544,20 @@
     "native_provenance": "NOT_ATTESTED",
     "automatic_terminal_extraction": false,
     "native_reader_qualified": false,
-    "local_passed": 189,
-    "final_package_ci_review": "PENDING_FINAL_SOURCE"
+    "local_passed": 193,
+    "final_package_ci_review": "PENDING_ANALYSIS_BINDING_CORRECTED_SOURCE",
+    "seconds": 12.64,
+    "analysis_specific_measurement_binding": true,
+    "legacy_reader_rebinding": false,
+    "tested_source": "PENDING_BOUND_COMMIT",
+    "input_snapshot_sha256": "46a0f687cc116711786a0242dcd6dca954c3bfcef9b4238e9aff2242956221c2",
+    "historical_32906b3": {
+      "windows_passed": 2587,
+      "windows_seconds": 249.34,
+      "posix_passed": 73,
+      "review": "P2_MEASUREMENT_ANALYSIS_MAPPING_FOUND",
+      "artifact_bytes_match": true,
+      "run": 37718061280
+    }
   }
 }

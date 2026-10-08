@@ -59,11 +59,15 @@ time-weighted trapezoidal mean, saved sample count and time-step bounds without
 resampling. Missing/failed/truncated data is rejected, never specification FAIL.
 
 Create an operator-reviewed registration from `result-reader schema`: specify
-logical design/analysis/measurement IDs, the canonical ADE registration digest,
+logical design/analysis/measurement IDs, canonical ADE and measurement-contract digests,
 1–8 logical nodes with canonical private selectors, DC source inventory with
 signed positive-terminal `/INSTANCE/PLUS` currents and logical voltage terminals,
 or an AC differential transfer and1–16 positive increasing gain frequencies.
-Selectors are confined to this operator artifact; MCP callers cannot pass paths.
+Use the existing registry v4 or later measurement contract to bind the measurement
+ID to the exact selected analysis. Its reader must remain `unqualified`; this
+compiler cannot replace a qualified historical definition. Registry v3 allowlists
+alone are insufficient. `measurement_contract_sha256` binds the canonical
+registered contract. Selectors stay in operator artifacts; MCP has no path input.
 `maximum_samples` is2–256 per waveform, with1536 aggregate sample rows; oversized, unsampled requested frequencies
 and unsupported selectors are refused. Native reader API/save inventory and
 power scope still require trusted provider qualification.

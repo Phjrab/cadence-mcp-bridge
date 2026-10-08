@@ -42,3 +42,23 @@ script execution, simulation, reservation, deployment, result deletion, protecte
 repair, budget increase/reset, merge, GREL08 or publication was performed.
 Two real new circuits and new DCACtran/Sweep jobs remain acceptance requirements;
 analytical disposable frames and synthetic installed CLI are not substitutes.
+
+
+## Analysis-specific measurement identity review correction
+
+Independent review32906b3 found P2: allowlist membership alone permitted an AC/TRAN
+frame to report dc-output identity. The generic reader now requires an exact
+analysis-specific RegisteredMeasurement from existing registry v4 or later,
+plus its canonical SHA256; missing/wrong-analysis/stale contracts are rejected.
+Qualified fixed historical definitions cannot be rebound to this generic reader.
+Unqualified declarations remain unqualified after local preparation. No registry
+schema or MCP schema/version changes were needed. Tests and installed disposable
+operator contexts now register explicit matching mappings for each analysis.
+Earlier32906b3 software/CI/artifact receipts are historical after this correction.
+
+At32906b3: hosted Windows2587 PASS/four POSIX skips/56 warnings/249.34s,
+Ubuntu73 PASS/no skips/3.57s; run37718061280, jobs113119066492/113119066331.
+Installed32-state preservation and curated79/80-member artifacts matched local:
+wheel d2b7a6cef53458bd97878a13cac164d0a285843f93d43db45af3f28b16530257;
+sdist a9beadee05818b082651001dfcb8a29343ca83f567435f52bceca09e9a5e7d4f.
+Final current-source revalidation follows; none of this is native qualification.
