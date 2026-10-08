@@ -10,9 +10,9 @@
     "GREL-06",
     "GREL-07"
   ],
-  "phase_status": "PARTIAL_ACTIVE_EXISTING_INDEX_REGISTERED_NATIVE_PROVIDER_PENDING",
-  "branch": "feat/grel-03-fresh-domain-policy",
-  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/150",
+  "phase_status": "PARTIAL_ACTIVE_AUTHENTICATED_CONFIRMATION_NATIVE_PROVIDER_PENDING",
+  "branch": "feat/grel-03-authenticated-provider",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/151",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
   "administrator_authority": "Actual user instruction on 2026-10-08, current managed VM only; this document does not mint approval",
   "support": "Professor-provided standard CentOS/Cadence VM or equivalent installation with existing PDK, individual VMware",
@@ -40,7 +40,8 @@
     "prior_identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22",
     "legacy_ids_sealed": 3,
     "fresh_initialization_on_current_vm": "DENIED_EXISTING_DOMAIN_PRESERVED",
-    "normal_user_existing_index_register_repeat": "PASS"
+    "normal_user_existing_index_register_repeat": "PASS",
+    "operator_confirmation": "LOCAL_IMPLEMENTED_ACTUAL_CONFIRMATION_NOT_RUN"
   },
   "resources": {
     "attempts": 82,
@@ -52,14 +53,23 @@
   },
   "validation": {
     "affected_passed": 157,
-    "platform_skips": 8,
+    "platform_skips": 5,
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 43,
-    "hosted_ci": "PR150_WINDOWS_PASS_POSIX_FIXTURE_THRESHOLD_CORRECTED_NEW_SOURCE_PENDING",
+    "hosted_ci": "NO_PROVIDER_BRANCH_PR_SOURCE_RECEIPT_YET",
     "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
-    "security_seconds": 1.69,
-    "installed_preserved_migration_files": 20
+    "security_seconds": 6.49,
+    "installed_preserved_migration_files": 20,
+    "source_receipt_scope": "UNCOMMITTED_PROVIDER_FOUNDATIONS",
+    "related_passed": 332,
+    "confirmation_fault_suite_passed": 37,
+    "mypy_source_files": 80,
+    "actual_py26_renderer": "SYNTHETIC_INPUT_EXECUTION_PASS_NOT_CADENCE",
+    "related_seconds": 65.22,
+    "installed_package": "PASS_SOURCE_FOUNDATIONS_NOT_NATIVE_PROVIDER",
+    "public_schemas_preserved": 85,
+    "actual_codex": "EXISTING_CATALOG_READ_ONLY_NEW_GENERIC_JOB_NOT_RUN"
   },
   "next_work": [
     "authentic provider and existing-domain migration",
@@ -77,8 +87,94 @@
     "historical result/journal deletion",
     "budget reset/refund/increase"
   ],
-  "report": "FRESH_DOMAIN_V1.md",
+  "report": "OPERATOR_CONFIRMATION_V1.md",
   "next_phase_authorized": true,
   "previous_branch": "feat/grel-03-operator-domain-provisioning",
-  "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148"
+  "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148",
+  "history": [
+    {
+      "schema_version": 1,
+      "repository": "Phjrab/cadence-mcp-bridge",
+      "historical_continuation": "PROGRAM_CONTINUATION.json",
+      "authorized_phases": [
+        "GREL-02",
+        "GREL-03",
+        "GREL-04",
+        "GREL-05",
+        "GREL-06",
+        "GREL-07"
+      ],
+      "phase_status": "PARTIAL_ACTIVE_EXISTING_INDEX_REGISTERED_NATIVE_PROVIDER_PENDING",
+      "branch": "feat/grel-03-fresh-domain-policy",
+      "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/150",
+      "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
+      "administrator_authority": "Actual user instruction on 2026-10-08, current managed VM only; this document does not mint approval",
+      "support": "Professor-provided standard CentOS/Cadence VM or equivalent installation with existing PDK, individual VMware",
+      "native_trust": {
+        "metadata_changed": 332,
+        "content_files_preserved": 289,
+        "owner_group_changed": 0,
+        "repeat_changed": 0,
+        "normal_user_ocean_startup": "PASS",
+        "environment_preflight": "PASS",
+        "latest_observation_utc": "2026-10-08T06:13:52+00:00",
+        "full_runtime_attestation": "NOT_COMPLETE",
+        "active_operator_preflight": "PASS",
+        "legacy_launcher_counter_lock_preservation": "PASS",
+        "active_manifest_sha256": "4bf95a3c818e2c8bc07b760d9b2ff2041e64f42d4023970796d0325b3814c02c",
+        "active_launcher_sha256": "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f"
+      },
+      "execution": {
+        "new_simulations": 0,
+        "new_reservations": 0,
+        "production_provider": "NOT_IMPLEMENTED",
+        "public_dispatch": "DISABLED",
+        "existing_domain_migration": "ACTUAL_VM_NORMAL_USER_APPLY_REPEAT_PASS_NO_EXECUTION_AUTHORITY",
+        "identity_manifest_sha256": "cfd037cd4db24359614baa9f5e465bd24176f34151ee252e462016cdd2a6ef36",
+        "prior_identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22",
+        "legacy_ids_sealed": 3,
+        "fresh_initialization_on_current_vm": "DENIED_EXISTING_DOMAIN_PRESERVED",
+        "normal_user_existing_index_register_repeat": "PASS"
+      },
+      "resources": {
+        "attempts": 82,
+        "reserved_result_bytes": 9798942720,
+        "ceiling_result_bytes": 10737418240,
+        "approved_remaining_bytes": 938475520,
+        "fresh_read_required_before_admission": true,
+        "reset_refund_increase_authorized": false
+      },
+      "validation": {
+        "affected_passed": 157,
+        "platform_skips": 8,
+        "security_passed": 18,
+        "dependency_audit": "CLEAN",
+        "installed_preserved_state_files": 43,
+        "hosted_ci": "PR150_WINDOWS_PASS_POSIX_FIXTURE_THRESHOLD_CORRECTED_NEW_SOURCE_PENDING",
+        "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
+        "security_seconds": 1.69,
+        "installed_preserved_migration_files": 20
+      },
+      "next_work": [
+        "authentic provider and existing-domain migration",
+        "two new owned circuit copies, effective inputs and fresh DC/AC/TRAN",
+        "automatic extraction and generic sweep/specification",
+        "clean actual Codex submit/read/retry/restart",
+        "native operational and migration qualification"
+      ],
+      "excluded": [
+        "GREL-08",
+        "publication",
+        "merge",
+        "license or PDK changes",
+        "original OA/ADE changes",
+        "historical result/journal deletion",
+        "budget reset/refund/increase"
+      ],
+      "report": "FRESH_DOMAIN_V1.md",
+      "next_phase_authorized": true,
+      "previous_branch": "feat/grel-03-operator-domain-provisioning",
+      "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148"
+    }
+  ]
 }

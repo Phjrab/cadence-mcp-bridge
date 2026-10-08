@@ -756,3 +756,20 @@ content staging does not permit standalone lifecycle activation of that tree.
 Existing standard-VM installations: see [retained-ledger migration](docs/generic_release/EXISTING_DOMAIN_MIGRATION_V1.md). This explicit operator CLI preserves accounting and does not authorize simulation.
 
 New standard-VM operator initialization and existing-domain reuse: [setup workflow](docs/generic_release/FRESH_DOMAIN_V1.md). Fixed staging is explicit, and existing history never becomes a fresh budget.
+
+
+### Standard-VM operator confirmation
+
+The generic-release target is the professor-provided CentOS/Cadence VM and its
+existing PDK, used in individual VMware installations. SSH/account/workspace,
+circuit/ADE, result/journal and resource policy bindings belong to each operator.
+Current generic native execution remains incomplete; historical result readers
+and synthetic qualification do not prove new-circuit execution.
+
+The installed operator-only `operator-authority` CLI exports/stages a fixed helper
+and explicitly records, inspects or revokes authenticated OS-operator confirmation.
+It preserves the existing accounting domain and never launches EDA or reserves
+capacity. No model-facing grant writer or administrator shell is added. Import,
+server startup and doctor perform no provisioning. See the current
+[confirmation procedure and qualification boundary](docs/generic_release/OPERATOR_CONFIRMATION_V1.md)
+and [domain setup procedure](docs/generic_release/FRESH_DOMAIN_V1.md).

@@ -121,6 +121,28 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--expected-grant-sha256", required=True)
         if name == "plan":
             command.add_argument("--request", type=Path, required=True)
+    authority = subparsers.add_parser(
+        "operator-authority", help="Explicit authenticated OS-operator confirmation; no EDA."
+    )
+    authority_actions = authority.add_subparsers(dest="authority_action", required=True)
+    authority_export = authority_actions.add_parser("export-helper")
+    authority_export.add_argument("--output", type=Path, required=True)
+    authority_stage = authority_actions.add_parser("stage")
+    authority_stage.add_argument("--profile", type=Path, required=True)
+    authority_stage.add_argument("--expected-helper-sha256", required=True)
+    for name in ("confirm", "inspect", "revoke"):
+        command = authority_actions.add_parser(name)
+        for field in ("settings", "grant", "output"):
+            command.add_argument("--" + field, type=Path, required=True)
+        for field in (
+            "context",
+            "expected-grant-sha256",
+            "identity-manifest-sha256",
+            "expected-helper-sha256",
+        ):
+            command.add_argument("--" + field, required=True)
+        if name != "inspect":
+            command.add_argument("--operator-authority", required=True)
     ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
     ade_actions = ade.add_subparsers(dest="ade_action", required=True)
     ade_actions.add_parser("schema")
@@ -327,6 +349,54 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 1
         print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
+        return 0
+    if arguments.command == "operator-authority":
+        from cadence_mcp_bridge import operator_confirmation
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.authority_action == "export-helper":
+                authority_result = operator_confirmation.export(arguments.output)
+            elif arguments.authority_action == "stage":
+                authority_result = operator_confirmation.stage(
+                    arguments.profile, arguments.expected_helper_sha256
+                )
+            else:
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings)
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
+                if context is None:
+                    raise OperationRejected("unknown_context_id")
+                authority_result = operator_confirmation.perform(
+                    context,
+                    arguments.grant,
+                    arguments.expected_grant_sha256,
+                    arguments.identity_manifest_sha256,
+                    arguments.expected_helper_sha256,
+                    arguments.authority_action,
+                    arguments.output,
+                    getattr(arguments, "operator_authority", None),
+                )
+        except (OSError, ValueError, ConfigurationError, RecursionError) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "OPERATOR_CONFIRMATION_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "operator_document_invalid",
+                        "execution_authorized": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(authority_result, sort_keys=True))
         return 0
     if arguments.command == "operation":
         from cadence_mcp_bridge import operator_operations as operations

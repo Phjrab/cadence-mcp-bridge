@@ -519,10 +519,41 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         assert str(workspace) not in projected.stdout.decode()
     assert len(templates) == 1 and store.path.read_bytes() == before
 
+    confirmation_output = workspace / "confirmation-helper"
+    exported = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-X",
+            "utf8",
+            "-m",
+            "cadence_mcp_bridge",
+            "operator-authority",
+            "export-helper",
+            "--output",
+            str(confirmation_output),
+        ],
+        cwd=workspace,
+        env=env,
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+    exported_receipt = json.loads(exported.stdout)
+    from cadence_mcp_bridge.operator_confirmation import contents as confirmation_contents
+
+    assets, manifest, helper_sha = confirmation_contents()
+    assert exported_receipt["manifest_sha256"] == helper_sha
+    assert not exported_receipt["execution_authorized"] and not exported_receipt["remote_contact"]
+    assert (confirmation_output / "manifest.json").read_bytes() == manifest
+    assert all((confirmation_output / name).read_bytes() == data for name, data in assets.items())
+    assert store.path.read_bytes() == before
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
         "durable_admission": "NOT_RUN",
+        "installed_confirmation_helper_export": "PASS_LOCAL_NO_AUTHORITY_OR_SSH",
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,

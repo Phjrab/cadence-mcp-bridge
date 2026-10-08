@@ -1,3 +1,20 @@
+## Active authenticated-provider implementation, 2026-10-08
+
+Continue feat/grel-03-authenticated-provider over retained unmerged PR151/ba02e5b.
+Latest main553276d unchanged. Operator-only OS confirmation/staging/inspection/
+append-only revocation is implemented locally; no public grant writer or generic
+native dispatch. Common Python2.6 renderer/effective-input parser and owned shared
+lock session are implemented; production acceptor/terminal worker remains pending.
+Current actual normal-user retained preflight PASS, ledger82 /9,798,942,720,
+remaining895MiB; seven existing control metadata unchanged. Actual Python2.6 common
+parser executed with synthetic inputs only. New EDA jobs/reservations/remote writes0.
+No actual confirmation/deployment in these checks; installed preflight accounting
+still predates current source. Release BLOCKED. ContinuousGREL02–07 and minimum
+administrator delegation persist; no reapproval, merge/GREL08/publication or
+budget increase/reset/refund. See OPERATOR_CONFIRMATION_V1.md for actual/synthetic
+boundaries and the remaining native provider/circuits/extraction/Sweep/clean app.
+Historical overlays below are preserved, not current completion receipts.
+
 ## Active fresh-policy consumer correction, 2026-10-08
 
 Continue the existing branch and unmerged PR151; latest main remains553276d.

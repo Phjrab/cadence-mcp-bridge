@@ -517,82 +517,133 @@ def free_bytes(root):
     return info.f_bavail * info.f_frsize
 
 
+class ReservationSession(object):
+    """Internal owned flock for one worker lifetime; never constructed from JSON.
+
+    The fixed provider must attest operator/trust/admission before reserving. A
+    session pins the existing lock inode once and retains it through EDA/extraction.
+    Public reserve/lookup callers continue using short-lived sessions. There is no
+    caller flag that can skip locking and no new lock or resource domain.
+    """
+
+    def __init__(self, root):
+        self.root = os.path.abspath(root)
+        self.fd = open_lock(self.root)
+        self.lock_identity = identity(os.fstat(self.fd))
+
+    def check(self):
+        if self.fd is None:
+            raise ValueError("reservation_session_closed")
+        current = safe(os.path.join(self.root, "run.lock"))
+        if (
+            identity(current) != self.lock_identity
+            or identity(os.fstat(self.fd)) != self.lock_identity
+        ):
+            raise ValueError("reservation_lock_drift")
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+
+    def __enter__(self):
+        self.check()
+        return self
+
+    def __exit__(self, kind, value, traceback):
+        self.close()
+
+    def reserve(self, operation_id, binding):
+        self.check()
+        return _reserve_held(self, operation_id, binding)
+
+    def observe(self, binding):
+        self.check()
+        return state(self.root, binding)
+
+
+def _reserve_held(session, operation_id, binding):
+    # This accepts the actual owned session object, never a descriptor/path/flag
+    # supplied by caller JSON. Closing or substituting the lock fails closed.
+    if type(session) is not ReservationSession:
+        raise ValueError("reservation_owned_session_required")
+    session.check()
+    root = session.root
+    check_binding(root, binding)
+    work = paths(root, operation_id)
+    if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
+        raise ValueError("reservation_identity_class_conflict")
+    counter, records = state(root, binding)
+    existing = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
+    if existing is not None:
+        if existing[0]["binding"] != binding:
+            raise ValueError("reservation_replay_identity")
+        return existing[1] or {"status": "UNKNOWN_OUTCOME", "operation_id": operation_id}
+    if any(item[1] is None for item in records):
+        raise ValueError("reservation_unresolved_intent")
+    if os.path.lexists(os.path.join(work, "attempt-reserved")):
+        raise ValueError("reservation_legacy_replay")
+    if os.path.lexists(os.path.join(root, JOBS, "active")):
+        raise ValueError("reservation_active_legacy_job")
+    if time.time() >= binding["expires_at"]:
+        raise ValueError("reservation_grant_expired")
+    used_count, used_bytes, inflight = 0, 0, 0
+    for intent, receipt in records:
+        old = intent["binding"]
+        # No terminal-worker attestation exists yet. Treat every own reservation
+        # as in-flight forever; later reviewed completion must retain receipts.
+        inflight += old["reserve_bytes"]
+        if old["grant_sha256"] == binding["grant_sha256"]:
+            if any(old[key] != binding[key] for key in GRANT_FIELDS):
+                raise ValueError("reservation_grant_binding_drift")
+            used_count += 1
+            used_bytes += old["reserve_bytes"]
+    amount = binding["reserve_bytes"]
+    if (
+        used_count + 1 > binding["max_attempts"]
+        or used_bytes + amount > binding["max_reserved_bytes"]
+    ):
+        raise ValueError("reservation_grant_capacity")
+    manifest = identity_manifest(root, binding)
+    policy = manifest.get(
+        "policy", {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
+    )
+    if (
+        counter["count"] + 1 > policy["attempt_ceiling"]
+        or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]
+    ):
+        raise ValueError("reservation_cumulative_capacity")
+    if free_bytes(root) < binding["disk_floor_bytes"] + inflight + amount:
+        raise ValueError("reservation_physical_disk_floor")
+    after = dict(counter)
+    after["count"] += 1
+    after["result_reserved_bytes"] += amount
+    intent = {
+        "schema_version": 1,
+        "operation_id": operation_id,
+        "binding": binding,
+        "before": counter,
+        "after": after,
+    }
+    counter_path = os.path.join(root, LEDGER)
+    # Legacy adapter recognizes this same barrier. It must precede intent/
+    # marker writes so a crash cannot be overtaken by legacy reservation.
+    write_new(counter_path + ".ade-tmp", after)
+    write_new(os.path.join(root, REGISTRY, operation_id + ".json"), intent)
+    write_new(os.path.join(work, "reservation-intent.json"), intent)
+    write_new(os.path.join(work, "attempt-reserved"), after)
+    safe(counter_path)
+    if os.name == "nt":
+        os.replace(counter_path + ".ade-tmp", counter_path)
+    else:
+        os.rename(counter_path + ".ade-tmp", counter_path)
+    sync_directory(os.path.dirname(counter_path))
+    receipt = receipt_for(intent)
+    write_new(os.path.join(work, "reservation-receipt.json"), receipt)
+    return receipt
+
+
 def reserve(root, operation_id, binding):
     """Internal accounting only. Caller MUST already attest authority/admission."""
-    root = os.path.abspath(root)
-    check_binding(root, binding)
-    fd = open_lock(root)
-    try:
-        work = paths(root, operation_id)
-        if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
-            raise ValueError("reservation_identity_class_conflict")
-        counter, records = state(root, binding)
-        existing = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
-        if existing is not None:
-            if existing[0]["binding"] != binding:
-                raise ValueError("reservation_replay_identity")
-            return existing[1] or {"status": "UNKNOWN_OUTCOME", "operation_id": operation_id}
-        if any(item[1] is None for item in records):
-            raise ValueError("reservation_unresolved_intent")
-        if os.path.lexists(os.path.join(work, "attempt-reserved")):
-            raise ValueError("reservation_legacy_replay")
-        if os.path.lexists(os.path.join(root, JOBS, "active")):
-            raise ValueError("reservation_active_legacy_job")
-        if time.time() >= binding["expires_at"]:
-            raise ValueError("reservation_grant_expired")
-        used_count, used_bytes, inflight = 0, 0, 0
-        for intent, receipt in records:
-            old = intent["binding"]
-            # No terminal-worker attestation exists yet. Treat every own reservation
-            # as in-flight forever; later reviewed completion must retain receipts.
-            inflight += old["reserve_bytes"]
-            if old["grant_sha256"] == binding["grant_sha256"]:
-                if any(old[key] != binding[key] for key in GRANT_FIELDS):
-                    raise ValueError("reservation_grant_binding_drift")
-                used_count += 1
-                used_bytes += old["reserve_bytes"]
-        amount = binding["reserve_bytes"]
-        if (
-            used_count + 1 > binding["max_attempts"]
-            or used_bytes + amount > binding["max_reserved_bytes"]
-        ):
-            raise ValueError("reservation_grant_capacity")
-        manifest = identity_manifest(root, binding)
-        policy = manifest.get(
-            "policy", {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
-        )
-        if (
-            counter["count"] + 1 > policy["attempt_ceiling"]
-            or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]
-        ):
-            raise ValueError("reservation_cumulative_capacity")
-        if free_bytes(root) < binding["disk_floor_bytes"] + inflight + amount:
-            raise ValueError("reservation_physical_disk_floor")
-        after = dict(counter)
-        after["count"] += 1
-        after["result_reserved_bytes"] += amount
-        intent = {
-            "schema_version": 1,
-            "operation_id": operation_id,
-            "binding": binding,
-            "before": counter,
-            "after": after,
-        }
-        counter_path = os.path.join(root, LEDGER)
-        # Legacy adapter recognizes this same barrier. It must precede intent/
-        # marker writes so a crash cannot be overtaken by legacy reservation.
-        write_new(counter_path + ".ade-tmp", after)
-        write_new(os.path.join(root, REGISTRY, operation_id + ".json"), intent)
-        write_new(os.path.join(work, "reservation-intent.json"), intent)
-        write_new(os.path.join(work, "attempt-reserved"), after)
-        safe(counter_path)
-        if os.name == "nt":
-            os.replace(counter_path + ".ade-tmp", counter_path)
-        else:
-            os.rename(counter_path + ".ade-tmp", counter_path)
-        sync_directory(os.path.dirname(counter_path))
-        receipt = receipt_for(intent)
-        write_new(os.path.join(work, "reservation-receipt.json"), receipt)
-        return receipt
-    finally:
-        os.close(fd)
+    with ReservationSession(root) as session:
+        return session.reserve(operation_id, binding)

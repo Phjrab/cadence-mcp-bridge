@@ -56,6 +56,12 @@ def main():
     members = set(
         ("setup.py", "migration.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
     )
+    confirmation_members = set(
+        ("confirmation.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
+    )
+    confirmation = set(v["files"]) == confirmation_members
+    if confirmation:
+        members = confirmation_members
     if set(v["files"]) != members:
         raise ValueError("stage_members")
     assets = dict((name, base64.b64decode(raw)) for name, raw in v["files"].items())
@@ -65,9 +71,16 @@ def main():
     ):
         raise ValueError("stage_manifest")
     m = json.loads(assets["manifest.json"])
-    if m["kind"] != "STANDARD_VM_DOMAIN_SETUP_HELPER" or set(m["files"]) != members - set(
-        ("manifest.json",)
+    kind = (
+        "STANDARD_VM_OPERATOR_CONFIRMATION_HELPER"
+        if confirmation
+        else "STANDARD_VM_DOMAIN_SETUP_HELPER"
+    )
+    if set(m) != set(("schema_version", "kind", "files")) or (
+        type(m["schema_version"]) is not int or m["schema_version"] != 1
     ):
+        raise ValueError("stage_manifest_schema")
+    if m["kind"] != kind or set(m["files"]) != members - set(("manifest.json",)):
         raise ValueError("stage_manifest_shape")
     for name in m["files"]:
         if m["files"][name] != {
@@ -139,7 +152,11 @@ def main():
     print(
         json.dumps(
             {
-                "status": "STANDARD_VM_SETUP_HELPER_STAGED",
+                "status": (
+                    "STANDARD_VM_CONFIRMATION_HELPER_STAGED"
+                    if confirmation
+                    else "STANDARD_VM_SETUP_HELPER_STAGED"
+                ),
                 "manifest_sha256": expected,
                 "changed_files": changed,
                 "execution_authorized": False,
