@@ -60,3 +60,51 @@ Free25,689,890,816 bytes/floor6,238,251,418/OK (free telemetry may fluctuate).
 Only registered result roots were scanned. The unrelated original OCN hash
 2cf3673f4e80cb3c2bd6815f919c0d2aaf9b20a944b2ef1b8eb231589c634b32 remains exact.
 Prior whole-selected-tree preservation is historical, not freshly rerun.
+
+## Exact implementation source CI and independent review
+
+Implementation sourcea3f5fb89840d2a83b661115509f878b63f80cf39 is pushed and
+PR145 is open/ready, stacked on unmerged PR144. Hosted run37708446152/
+job113088339472 SUCCESS:2473 PASS/no skips/56 warnings/204.08s. Ruff/mypy69/
+security18/locked dependency audit/85 schemas/curated package/installed generic
+CLI/context/bootstrap/reinstall/uninstall19-state preservation PASS.
+Independent automated review completed2026-10-08T00:39:27.449797Z with no inline
+findings and bot+1 at00:39:30Z. No formal APPROVED review or merge authority follows.
+CI backend initially returnedHTTP502 for the job-log read; supported-tool retry
+succeeded, without a source-control CLI diagnostic fallback.
+
+Hosted committed-source wheel SHA256
+73c971a25396873087b00de429321ed2f9fbc030d311bd72d77522f337c38cc4;
+sdist SHA256e9e29d439dc8c1f1ac524f92786cb7e02db7c210b2acdaf3f169f2365164fb3e.
+These differ from the local CRLF-working-copy artifacts above. Bounded raw-byte
+comparison against Git objects found only CRLF-to-LF differences in the five
+edited source/test/script/README files; all other package sources match. Both
+artifact sets were independently curated and installed; they are separate
+receipts, never claimed byte-identical. No native experiment was run.
+
+Local full run completed:2466 PASS/seven Windows unprivileged-symlink fixture
+skips/56 warnings/795.02s. Original279 input hashes have zero drift across that
+run. This was the CRLF representation documented above. After completion, only
+the five edited files' line endings were normalized to their exact committed
+Git bytes; no Python/template content or public Git diff changed. Canonical279
+snapshotdc7572cf8e219864f8cc454c1b6adf2af0a566f9205369e790970f487e99a221.
+Committed LF-source hosted2473 PASS covers every test without skips. Canonical
+local package comparison is in progress; earlier artifacts remain historical.
+
+## Final package representation and preservation
+
+Local normalization comparison completed. Four edited Python files now have
+exact committed LF bytes; README is restored to its original Windows checkout
+CRLF representation (like the hosted checkout's root packaging files). An
+intermediate fully-LF README sdist is a separate historical artifact. Final
+local wheel and sdist hashes are BOTH byte-identical to the hosted sourcea3f5fb8
+artifacts recorded above. The matching wheel passed another isolated installed
+CLI/SDK/bootstrap/reinstall/uninstall19-state preservation run. Final artifacts
+are retained privately in .tmp/grel04-final-artifacts. Root packaging CRLF bytes
+must not be confused with an LF Git object or with Python-source differences.
+
+Final279 checkout inputs snapshot: 77feae150e4a89481dd321c6e24aca00ded42693b140ff0ed0dece8dda630d38.
+Python/template content, tests, package/workflow definitions and Git source have
+no semantic change since hosted sourcea3f5fb8. All full/native limitations above
+remain. Fresh final origin/main is still553276d; original OCN unchanged. This
+receipt-only follow-up does not activate dispatch, merge, GREL08 or publication.

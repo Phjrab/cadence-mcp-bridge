@@ -1,3 +1,17 @@
+## GREL-04 source/package/review checkpoint, 2026-10-08
+
+Sourcea3f5fb8 in PR145 (stacked on unmerged144): hosted2473 PASS/no skips;
+local2466 PASS/seven OS symlink skips. Ruff/mypy69/security18/dependency/85 schemas/
+curated matching artifacts/installed CLI/bootstrap/19-state preservation PASS.
+Independent bot+1/no findings is not formal approval. Operator-only generic ADE L
+input compilation/comparison is implemented; native provider/copy/API/jobs/
+extraction/Sweep/clean actual client remain incomplete. Latest main553276d and
+82/9,798,942,720 shared counters preserved. Native trust still blocked by latest
+executable_permissions check, not rerun here. Continuous02–07/895MiB persists;
+no protected repairs/simulations/reservations/deployments/deletions/merge/GREL08/
+publication. Exact receipts and ordered remaining work: GREL_04_RESULT.md and
+NATIVE_RESUME_BOUNDARY.md. Historical overlays below retain their original scope.
+
 ## GREL-04 generic-input implementation, 2026-10-08
 
 Continuous02–07/895MiB authorization persists. Latest main553276d unchanged;

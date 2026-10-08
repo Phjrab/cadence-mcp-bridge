@@ -463,6 +463,6 @@
   },
   "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE",
   "historical_grel03_candidate_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
-  "current_input_source": "PENDING_COMMIT",
+  "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
   "grel04_local_inputs": "PARTIAL_LOCAL_IMPLEMENTED_NATIVE_UNQUALIFIED"
 }
