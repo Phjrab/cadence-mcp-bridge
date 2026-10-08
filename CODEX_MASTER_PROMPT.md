@@ -1,3 +1,16 @@
+## GREL-05 local generic result reader, 2026-10-08
+
+Continuous02–07/895MiB persists. New stacked feature on unmerged PR146/17cb59a
+implements a registered fixed OCEAN reader and bounded DC/AC/TRAN frame projection.
+Signed role power reuses exact legacy math; AC uses measured complex input and
+selected samples; TRAN reports saved-sample resolution and time-weighted mean.
+Local189 PASS/no skips/11.08s, Ruff/mypy71/85 schemas PASS. Initial package32-state
+preservation PASS predates final aggregate bound; final receipts pending. No public
+MCP execution added. Native trust/authentic provider/automatic extraction/Sweep/
+Spec facts/clean actual app remain incomplete. Release BLOCKED; native side effects0,
+no protected repair/budget increase/merge/GREL08/publication. See GREL_05_RESULT.md.
+Historical overlays below remain source-scoped history.
+
 ## GREL-03 sealed accounting source receipt, 2026-10-08
 
 Sourceccd01ab in PR146: hosted Windows2544 PASS/four POSIX skips and Ubuntu73

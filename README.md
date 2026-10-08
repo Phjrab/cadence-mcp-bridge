@@ -45,6 +45,42 @@ are rejected. Local input matches explicitly retain native-attestation false.
 Actual new-circuit DC/AC/TRAN, automatic extraction, Sweep and clean-client
 execution remain required for general release.
 
+## Generic result reader preparation (native provenance unqualified)
+
+The installed `cadence-mcp-bridge result-reader schema`, `compile` and
+`project-frame` commands bind a fixed OCEAN reader to registered logical nodes,
+source currents and the exact ADE registration, plan and execution-input identity.
+No circuit names are compiled into the reader. DC returns node voltages and signed
+power separately for supply, bias and stimulus sources; ground terminals use null.
+AC gain uses measured complex differential output divided by measured complex
+input at operator-selected actual sample frequencies, rather than assuming a1V
+source or10Hz. Zero transfer has null dB/phase. TRAN returns min/max/first/last,
+time-weighted trapezoidal mean, saved sample count and time-step bounds without
+resampling. Missing/failed/truncated data is rejected, never specification FAIL.
+
+Create an operator-reviewed registration from `result-reader schema`: specify
+logical design/analysis/measurement IDs, the canonical ADE registration digest,
+1–8 logical nodes with canonical private selectors, DC source inventory with
+signed positive-terminal `/INSTANCE/PLUS` currents and logical voltage terminals,
+or an AC differential transfer and1–16 positive increasing gain frequencies.
+Selectors are confined to this operator artifact; MCP callers cannot pass paths.
+`maximum_samples` is2–256 per waveform, with1536 aggregate sample rows; oversized, unsampled requested frequencies
+and unsupported selectors are refused. Native reader API/save inventory and
+power scope still require trusted provider qualification.
+
+Both commands require `--settings`, `--context`, `--plan`,
+`--expected-plan-sha256`, `--ade-registration`, `--expected-ade-sha256`,
+`--reader-registration`, `--expected-reader-sha256`, `--operation-id` and
+`--execution-input-sha256`. The two registration digests use canonical model JSON;
+the plan digest is the previously prepared plan identity. Use `--output NEW_DIR`
+for `compile`, or `--frame LOCAL_FRAME` for `project-frame`; `--help` lists syntax.
+Compile writes exclusive private `extract.ocn`, `registration.json`, `manifest.json`.
+Projection always reports `native_provenance=NOT_ATTESTED` and
+`spec_evaluation=not_evaluated`. These commands perform no remote execution,
+reservation or admission. Manual frame validation is development tooling;
+a production worker must automatically extract and attest its own terminal job.
+Actual new-job extraction, Sweep and clean-app gates remain open.
+
 ## Release scope
 
 The [current release readiness assessment](docs/RELEASE_READINESS_V3.md) separates

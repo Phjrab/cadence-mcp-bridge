@@ -104,6 +104,27 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--output", type=Path, required=True)
         else:
             command.add_argument("--native-input", type=Path, required=True)
+    reader = subparsers.add_parser(
+        "result-reader", help="Local generic reader artifacts and unattested frame validation."
+    )
+    reader_actions = reader.add_subparsers(dest="reader_action", required=True)
+    reader_actions.add_parser("schema")
+    for name in ("compile", "project-frame"):
+        command = reader_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        command.add_argument("--plan", type=Path, required=True)
+        command.add_argument("--expected-plan-sha256", required=True)
+        command.add_argument("--ade-registration", type=Path, required=True)
+        command.add_argument("--expected-ade-sha256", required=True)
+        command.add_argument("--reader-registration", type=Path, required=True)
+        command.add_argument("--expected-reader-sha256", required=True)
+        command.add_argument("--operation-id", required=True)
+        command.add_argument("--execution-input-sha256", required=True)
+        if name == "compile":
+            command.add_argument("--output", type=Path, required=True)
+        else:
+            command.add_argument("--frame", type=Path, required=True)
     runner = subparsers.add_parser(
         "runner", help="Fixed installed runner content workflow; no simulation."
     )
@@ -219,6 +240,53 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 1
         print(json.dumps(ade_result, sort_keys=True))
+        return 0
+    if arguments.command == "result-reader":
+        from cadence_mcp_bridge.generic_measurements import (
+            GenericReaderRegistration,
+            operator_reader,
+        )
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+
+        try:
+            if arguments.reader_action == "schema":
+                reader_result = GenericReaderRegistration.model_json_schema()
+            else:
+                reader_result = operator_reader(
+                    arguments.settings,
+                    arguments.context,
+                    arguments.plan,
+                    arguments.expected_plan_sha256,
+                    arguments.ade_registration,
+                    arguments.expected_ade_sha256,
+                    arguments.reader_registration,
+                    arguments.expected_reader_sha256,
+                    arguments.operation_id,
+                    arguments.execution_input_sha256,
+                    getattr(arguments, "output", None),
+                    getattr(arguments, "frame", None),
+                )
+        except (
+            OSError,
+            ValueError,
+            ConfigurationError,
+            InvalidInputError,
+            RecursionError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "RESULT_READER_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "reader_document_invalid",
+                        "execution_authorized": False,
+                        "remote_contact": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
         return 0
     if arguments.command == "operation":
         from cadence_mcp_bridge import operator_operations as operations

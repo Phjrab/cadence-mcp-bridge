@@ -45,8 +45,9 @@ may exceed this envelope; never silently raise limits or refund reservations.
 Consolidate any concrete additional resource need with its cause before requesting
 an increase. Existing remaining-space authorization persists.
 
-GREL-04 generic ADE execution, GREL-05 automatic new-job measurement/Sweep and
-GREL-06 actual clean client acceptance are currently NOT_IMPLEMENTED/NOT_RUN;
+GREL-04 has a local generic ADE input compiler; GREL-05 has a local registered
+reader/compiler and unattested frame projector. Actual generic execution, automatic
+new-job measurement/Sweep and GREL-06 clean client acceptance remain NOT_RUN;
 installation trust is also BLOCKED. Synthetic forms and replay cannot close them.
 GREL-07 public CI/preservation can progress independently; live migration and
 conditional native deletion remain unsupported. GREL-08 and publishing require

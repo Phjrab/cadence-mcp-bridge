@@ -9,11 +9,11 @@
     "GREL-06",
     "GREL-07"
   ],
-  "current_phase": "GREL-03-shared-reservation-transactions",
-  "phase_status": "PARTIAL_ACCOUNTING_PROVIDER_NATIVE_TRUST_BLOCKED",
-  "branch": "feat/grel-03-shared-reservations",
+  "current_phase": "GREL-05-generic-result-reader",
+  "phase_status": "PARTIAL_LOCAL_READER_PROVIDER_NATIVE_TRUST_BLOCKED",
+  "branch": "feat/grel-05-generic-result-reader",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "81aebdd",
+  "parent_feature": "17cb59ab35cb8ae60c75a0c2761401e7e18f96ad",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -24,23 +24,24 @@
   "grel08_authorized": false,
   "native_blocker": "executable_permissions_actual_group_or_other_writable_vendor_chain",
   "remote_deployments": 0,
-  "report": "GREL_03_SHARED_RESERVATIONS_RESULT.md",
+  "report": "GREL_05_RESULT.md",
   "next_phase_authorized": true,
   "next_phase": "GREL03-production-provider-and-GREL04-native-copy-API-then-GREL05-06",
-  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/146",
+  "pr_url": null,
   "reports": [
     "GREL_02_RESULT.md",
     "GREL_03_RESULT.md",
     "GREL_07_RESULT.md",
     "GREL_04_RESULT.md",
-    "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+    "GREL_03_SHARED_RESERVATIONS_RESULT.md",
+    "GREL_05_RESULT.md"
   ],
-  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/145",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/146",
   "blocked_phases": {
     "GREL-02": "positive_native_trust",
     "GREL-03": "authentic_production_provider_and_terminal_worker_receipts_absent",
     "GREL-04": "local_generic_input_compiler_implemented_native_provider_copy_API_execution_unqualified",
-    "GREL-05": "new_job_measurement_and_sweep_not_implemented",
+    "GREL-05": "local_generic_reader_implemented_automatic_native_extraction_sweep_spec_binding_incomplete",
     "GREL-06": "clean_actual_app_new_job_not_run"
   },
   "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
@@ -412,5 +413,18 @@
       "completed_utc": "2026-10-08T02:07:49.781251Z",
       "plus_one_observed_utc": "2026-10-08T02:07:54Z"
     }
+  },
+  "generic_result_reader": {
+    "status": "LOCAL_COMPILER_PROJECTOR_NATIVE_UNATTESTED",
+    "production_provider": false,
+    "automatic_terminal_extraction": false,
+    "native_reader_api_qualified": false,
+    "generic_sweep_codec": false,
+    "new_native_jobs": 0,
+    "local_passed": 189,
+    "skipped": 0,
+    "seconds": 11.08,
+    "mypy_files": 71,
+    "final_package_ci_review": "PENDING_FINAL_AGGREGATE_BOUND_SOURCE"
   }
 }

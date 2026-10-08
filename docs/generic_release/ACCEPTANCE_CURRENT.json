@@ -103,15 +103,16 @@
     },
     {
       "id": "G08",
-      "status": "NOT_IMPLEMENTED",
+      "status": "PARTIAL",
       "required": true,
       "evidence_reference": [
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "GREL_07_RESULT.md",
+        "GREL_05_RESULT.md"
       ],
       "limitations": [
-        "automatic extraction of new generic job absent"
+        "local generic bounded reader/compiler and mathematical projection implemented; automatic terminal worker and native PSF/selector/source attestation absent"
       ]
     },
     {
@@ -536,5 +537,14 @@
       "sdist_sha256": "9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26",
       "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION"
     }
+  },
+  "generic_result_reader": {
+    "status": "PARTIAL_LOCAL_ONLY",
+    "report": "GREL_05_RESULT.md",
+    "native_provenance": "NOT_ATTESTED",
+    "automatic_terminal_extraction": false,
+    "native_reader_qualified": false,
+    "local_passed": 189,
+    "final_package_ci_review": "PENDING_FINAL_SOURCE"
   }
 }
