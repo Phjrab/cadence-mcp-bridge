@@ -26,7 +26,10 @@ registered source boundaries separately. This is not inferred DUT-only power;
 complete source inventory, orientation and effective topology need native attestation.
 
 AC transfer binds positive/negative input/output logical nodes and explicit gain
-frequencies within the compiled interval. All registered waves must share an
+frequencies within the compiled interval. Requested frequency count cannot exceed
+the registered waveform sample limit, and frequencies must remain distinct in
+the binary-float representation used by projection. Matching tolerance cannot
+reuse one saved sample for multiple requested frequencies. All registered waves must share an
 increasing exact saved frequency axis. Each requested frequency must match one
 actual sample (relative tolerance1e-12); there is no interpolation. Division uses
 the measured complex differential input; zero input rejects. Zero output has

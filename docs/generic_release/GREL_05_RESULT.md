@@ -116,3 +116,26 @@ Legitimate hierarchy nodes with those names are temporarily unsupported rather
 than inferred to be volts. Actual saved-quantity units remain an unqualified
 native provider responsibility. Earlier a4b3930 validation receipts remain
 source-scoped history after this correction. No native state was mutated.
+
+
+## AC frequency feasibility and representation review correction
+
+Independent af0a6c3 review found two P2s: a requested frequency set could exceed
+the waveform sample limit, or unique Decimal frequencies could collapse to one
+binary float. Registration now rejects both before compiling a reader. Projection
+also rejects requests that match the same saved sample through tolerance, so a
+frame cannot emit duplicate frequency results. Five regression cases cover count
+limits, two float-collapse magnitudes and distinct nearby requests sharing a sample.
+Local related225 PASS/no skips/25.87s; Ruff/mypy71 and85 schemas PASS. Final package,
+security, hosted and corrected-source review follow separately. A test invocation
+with two nonexistent legacy test filenames ran zero tests and was corrected; it is
+not PASS evidence. One new regression initially used W instead of protocol P and
+failed before reaching the intended branch; corrected protocol test now passes.
+
+At af0a6c3, hosted Windows2595 PASS/four POSIX skips/56 warnings/229.15s and
+Ubuntu73 PASS/no skips/3.73s, run37719977175/jobs113125162135/113125161889.
+Hosted79/80-member wheel/sdist matched retained local8f8854.../c9c2d0... bytes.
+These are historical after the AC correction; no native qualification follows.
+Security invocation without local PYTHONUTF8 failed in pip-api decoding the Korean
+workspace path. The failed log is retained; process-only UTF8 retry is pending.
+No runtime, protected installation, global app setting or native state changed.

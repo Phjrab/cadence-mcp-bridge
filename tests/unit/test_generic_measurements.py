@@ -469,3 +469,48 @@ def test_disjoint_voltage_and_current_inventories_even_for_internal_prebuilt_mod
     source = reader.sources[0].model_copy(update={"current_selector": reader.nodes[0].selector})
     with pytest.raises(ValueError):
         reader.model_copy(update={"sources": (source,)}).inventory()
+
+
+@pytest.mark.parametrize("frequencies", [("10", "100", "1000"), ("1000", "10000", "100000")])
+def test_gain_frequency_count_must_fit_reader_samples(operator, frequencies):
+    args = reader_for(operator, "ac")
+    data = json.loads(args[3].model_dump_json())
+    data["transfer"]["gain_frequencies_hz"] = frequencies
+    data["maximum_samples"] = 2
+    with pytest.raises(ValidationError, match="frequency count"):
+        GenericReaderRegistration.model_validate_json(json.dumps(data))
+    data["maximum_samples"] = 3
+    assert (
+        len(
+            GenericReaderRegistration.model_validate_json(
+                json.dumps(data)
+            ).transfer.gain_frequencies_hz
+        )
+        == 3
+    )
+
+
+@pytest.mark.parametrize(
+    "frequencies", [("100000000000", "100000000000.000001"), ("1000", "1000.00000000000001")]
+)
+def test_gain_frequencies_must_remain_distinct_as_projected_floats(operator, frequencies):
+    args = reader_for(operator, "ac")
+    data = json.loads(args[3].model_dump_json())
+    data["transfer"]["gain_frequencies_hz"] = frequencies
+    with pytest.raises(ValidationError, match="float conversion"):
+        GenericReaderRegistration.model_validate_json(json.dumps(data))
+
+
+def test_close_distinct_gain_frequencies_cannot_share_a_saved_sample(operator):
+    args = reader_for(operator, "ac")
+    context, plan, ade, reader, operation, execution = args
+    data = json.loads(reader.model_dump_json())
+    data["transfer"]["gain_frequencies_hz"] = ["1000", "1000.0000000005"]
+    reader = GenericReaderRegistration.model_validate_json(json.dumps(data))
+    args = (context, plan, ade, reader, operation, execution)
+    frame = frame_for(
+        args, "P|input|0|10|2|0\nP|input|1|1000|2|0\nP|output|0|10|4|0\nP|output|1|1000|4|0"
+    )
+    with pytest.raises(OperationRejected, match="Operator operation rejected") as exc:
+        project_frame(*args, frame)
+    assert exc.value.reason == "reader_gain_sample_reused"

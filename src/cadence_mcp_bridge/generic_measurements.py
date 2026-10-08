@@ -92,6 +92,9 @@ class TransferSignal(VariableModel):
         values = tuple(Decimal(item) for item in self.gain_frequencies_hz)
         if values != tuple(sorted(set(values))) or values[0] <= 0:
             raise ValueError("unique increasing positive frequencies required")
+        projected = tuple(float(value) for value in values)
+        if projected != tuple(sorted(set(projected))):
+            raise ValueError("frequencies must remain distinct after float conversion")
         if (
             self.positive_input == self.negative_input
             or self.positive_output == self.negative_output
@@ -136,6 +139,8 @@ class GenericReaderRegistration(VariableModel):
             n for s in self.sources for n in (s.positive_node, s.negative_node) if n is not None
         ]
         if self.transfer:
+            if len(self.transfer.gain_frequencies_hz) > self.maximum_samples:
+                raise ValueError("gain frequency count exceeds waveform sample limit")
             refs += [
                 n
                 for n in (
@@ -436,12 +441,16 @@ def _transfer(
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
+    selected: set[int] = set()
     for text in transfer.gain_frequencies_hz:
         freq = float(text)
         matches = [i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)]
         if len(matches) != 1:
             raise OperationRejected("reader_gain_sample_unavailable")
         i = matches[0]
+        if i in selected:
+            raise OperationRejected("reader_gain_sample_reused")
+        selected.add(i)
 
         def differential(positive: str, negative: str | None, index: int) -> complex:
             return waves[positive][index][1] - (waves[negative][index][1] if negative else 0j)
