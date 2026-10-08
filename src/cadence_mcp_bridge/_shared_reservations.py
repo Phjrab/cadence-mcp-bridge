@@ -167,8 +167,9 @@ def counter_shape(value):
 
 def marker_shape(value):
     # Retained native-v1 jobs predate the current policy. Preserve their markers
-    # from the original21 /1,611,661,312 baseline without weakening current state.
-    shape(value, 21, 1611661312)
+    # starting at the first post-reservation22 /1,745,879,040 values. The
+    # unincremented policy baseline is never a valid attempt-reserved marker.
+    shape(value, 22, 1745879040)
 
 
 def open_lock(root):

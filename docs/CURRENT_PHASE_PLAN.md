@@ -1,17 +1,18 @@
-## GREL-03 shared-reservation implementation, 2026-10-08
+## GREL-03 shared-reservation source checkpoint, 2026-10-08
 
-Existing-counter/job-marker/physical-lock accounting is shipped as an internal
-asset, with barrier-first crash handling, immutable intent/receipts, same-grant
-accounting and conservative in-flight capacity. Schema2 includes it; schema1
-history remains verifiable. Related213 PASS/five skips, Ruff/mypy70,85 schemas
-and actual Python2.6 grammar-only checks PASS. Final package/security and29-state
-preservation historically PASS. Compiled-input replay identity and independent
-P1 old-marker floor correction are tested; final source package/CI/review pending.
-PR146 unmerged. Exact receipts:
-docs/generic_release/GREL_03_SHARED_RESERVATIONS_RESULT.md.
-Production provider/operator authenticity/native execution remain absent/blocked;
-no public dispatch or native side effects. Continuous02–07/895MiB persists;
-no protected repair, budget reset/increase, merge/GREL08/publication.
+Tested source52b5452 in PR146: hosted Windows2527 PASS/four POSIX skips and
+Ubuntu56 PASS/no skips. Local related213 PASS/five OS skips; Ruff/mypy70,
+security18/audit/85 schemas, matching78/79-member artifacts and installed29-state
+preservation PASS. Actual Python2.6 evidence is grammar-only, not module execution.
+Existing-domain transaction asset, compiled-input identity and corrected historical
+marker compatibility are implemented; schema2 carries it and schema1 remains readable.
+Independent P1/P2 marker corrections implemented; source52b5452 receipts
+below are historical after the latest22-marker floor correction. Related214
+PASS/five skips, Ruff/mypy70/Python2.6 grammar PASS; final package/CI/review pending. PR146 ready/unmerged.
+Production provider/operator authenticity/native jobs/extraction/Sweep/clean client
+remain incomplete; vendor trust still blocked. Continuous02–07/895MiB persists.
+No native side effects, protected repair, budget reset/increase, merge/GREL08/
+publication. Exact source-scoped history: GREL_03_SHARED_RESERVATIONS_RESULT.md.
 Historical overlays below retain their original source/scope.
 
 ## GREL-04 source/package/review checkpoint, 2026-10-08

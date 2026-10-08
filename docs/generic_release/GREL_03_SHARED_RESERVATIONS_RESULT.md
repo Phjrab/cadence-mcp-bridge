@@ -85,3 +85,47 @@ Python2.6 grammar-only parsing PASS. Final corrected package/security/hosted
 Windows+POSIX and independent review receipts are pending.
 Final325-input snapshot4bf4256a4e6d31c5c44d662dcc236b771a8c648e4cbb8357b2e9b45d7b10ab89.
 Earlier package/artifact/CI figures above remain source-scoped history.
+
+
+## Final source/package/hosted checkpoint
+
+Tested source52b5452664411152b84e114332507f745918800d (PR146, ready/unmerged):
+- Local related213 PASS /5 skips /20.46s;35 bootstrap PASS /one OS skip separately.
+- Ruff/mypy70 PASS. Fresh security18 PASS /1.13s; locked audit no known vulnerabilities.
+- Actual VM source parsing: five Python2.6 assets PASS; no asset execution/write.
+- Hosted Windows run37712345189/job113100964367:2527 PASS /4 POSIX-only skips /
+  56 warnings /211.49s. Ruff/mypy70/security18/audit/85 schemas/all installed
+  protocol/context/compiler/bootstrap/accounting/reinstall/uninstall PASS.
+- Hosted Ubuntu run37712341835/job113101014540:56 PASS /zero skips /0.99s,
+  including independently held flock and actual group-writable component refusal.
+- Final local and hosted artifacts byte-identical: wheel78 members SHA256
+  e09be827e092ac614759c4fce42a2c4a4057f9ea4c43b95c381114e65b7a482f;
+  sdist79 members SHA256
+  908db5556babfef92be92acffabb608db047bc7becace43600fca460ea5da819.
+  Curated source/license/notices exact; unexpected/protected content0.
+- Final installed accounting two batches/replay and29-file same-version
+  reinstall/uninstall preservation PASS. Native install/migration not qualified.
+- Final325 local source/test/package/contract inputs zero unexpected drift;
+  snapshotc85049aff1a86e988fd05eba02881d96482081434d98ba1185007248e3f2bd03.
+- One supported CI log read returned HTTP502; retry through the same reviewed
+  backend succeeded. No CLI CI-log fallback was used.
+- Independent P1 old-marker finding corrected. Latest automated review still
+  in progress when this record was prepared; no formal approval or merge inferred.
+
+Earlier logs and source/artifact receipts remain history. No GREL02–07 native
+acceptance gate is promoted by this source checkpoint. Continuation remains
+authentic production provider/operator confirmation, terminal worker/lock
+integration, native source/copy/API/input attestation, new-job extraction/Sweep
+and clean actual-client qualification. Native execution also still requires
+owner-supplied trusted Cadence installation and fresh runtime qualification.
+
+
+## Second independent marker correction
+
+Review52b5452 at2026-10-08T01:26:19Z found P2: the unincremented native-v1
+policy baseline was accepted as a reserved marker. Reserved markers now require
+at least22 /1,745,879,040 (the original baseline plus one128MiB reservation).
+Both baseline-pair rejection and one-field boundary cases are tested, while
+valid old22–24 markers remain unchanged. Current-ledger floor and historical
+policies/conservation guards remain unchanged. Final source revalidation follows;
+52b5452 CI/package evidence above is historical after this correction.

@@ -493,7 +493,7 @@ def test_pre32_legacy_markers_remain_readable_and_unchanged(root):
     assert all(marker.read_bytes() == before for marker, before in markers)
 
 
-@pytest.mark.parametrize("field,value", [("count", 20), ("result_reserved_bytes", 1611661311)])
+@pytest.mark.parametrize("field,value", [("count", 21), ("result_reserved_bytes", 1745879039)])
 def test_legacy_marker_below_original_domain_floor_is_rejected(root, field, value):
     op = job(root)
     marker = root / ledger.JOBS / op / "work/attempt-reserved"
@@ -501,6 +501,21 @@ def test_legacy_marker_below_original_domain_floor_is_rejected(root, field, valu
     old[field] = value
     ledger.write_new(str(marker), old)
     before = snapshot(root)
+    with pytest.raises(ValueError, match="counter_integrity"):
+        reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
+
+
+def test_unincremented_native_policy_baseline_is_not_a_reserved_marker(root):
+    op = job(root)
+    marker = root / ledger.JOBS / op / "work/attempt-reserved"
+    ledger.write_new(
+        str(marker),
+        {"campaign_id": "AUTO-PHASE-01", "count": 21, "result_reserved_bytes": 1611661312},
+    )
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="counter_integrity"):
+        lookup(root, job(root), binding(root))
     with pytest.raises(ValueError, match="counter_integrity"):
         reserve(root, job(root), binding(root))
     assert snapshot(root) == before

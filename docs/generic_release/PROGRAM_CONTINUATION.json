@@ -71,9 +71,9 @@
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
     "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
-    "shared_reservations": "P1_PRE32_MARKERS_CORRECTED_REVIEW_PENDING"
+    "shared_reservations": "P1_P2_FIXED_REVIEW_PENDING"
   },
-  "local_input_snapshot_sha256": "4bf4256a4e6d31c5c44d662dcc236b771a8c648e4cbb8357b2e9b45d7b10ab89",
+  "local_input_snapshot_sha256": "b0e98ff550dcb6a84e305dfaf3ac5ffab57b926185a2c80cee850025748fc85c",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -176,23 +176,24 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
-    "conclusion": "PENDING_CORRECTED_SOURCE"
+    "conclusion": "PENDING_SECOND_REVIEW_CORRECTION"
   },
   "local_validation": {
-    "affected_passed": 213,
+    "affected_passed": 214,
     "skipped": 5,
-    "seconds": 19.33,
+    "seconds": 20.46,
     "source_typecheck_files": 70,
     "mcp_full_schemas": 85,
     "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
-    "final_package_security": "PENDING_CORRECTED_SOURCE",
+    "final_package_security": "PENDING_SECOND_REVIEW_CORRECTION",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "preserved_synthetic_state_files": 29,
     "input_files": 325,
     "unexpected_input_drift": 0,
-    "wheel_sha256": null,
-    "sdist_sha256": null
+    "wheel_sha256": "e09be827e092ac614759c4fce42a2c4a4057f9ea4c43b95c381114e65b7a482f",
+    "sdist_sha256": "908db5556babfef92be92acffabb608db047bc7becace43600fca460ea5da819",
+    "security_seconds": 1.13
   },
   "grel04_inputs": {
     "implementation": "OPERATOR_ONLY_FIXED_ADE_L_INPUT_TEMPLATE_AND_BOUNDED_SPECTRE_COMPARISON",
@@ -204,7 +205,7 @@
     "native_dispatch": "DISABLED"
   },
   "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "PENDING_CORRECTED_COMMIT",
+  "tested_source": "PENDING_SECOND_REVIEW_CORRECTION_COMMIT",
   "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
@@ -279,5 +280,42 @@
     "posix_job": 113098868426,
     "posix_run": 37711604247,
     "independent_review": "P1_PRE32_MARKERS_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "historical_shared_52b5452": {
+    "hosted_ci": {
+      "tested_source": "52b5452664411152b84e114332507f745918800d",
+      "run": 37712345189,
+      "job": 113100964367,
+      "conclusion": "PASS",
+      "unit_passed": 2527,
+      "unit_skipped": 4,
+      "unit_warnings": 56,
+      "unit_seconds": 211.49,
+      "posix_run": 37712341835,
+      "posix_job": 113101014540,
+      "posix_passed": 56,
+      "posix_skipped": 0,
+      "posix_seconds": 0.99,
+      "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+      "artifact_bytes_match_local": true
+    },
+    "local_validation": {
+      "affected_passed": 214,
+      "skipped": 5,
+      "seconds": 20.46,
+      "source_typecheck_files": 70,
+      "mcp_full_schemas": 85,
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
+      "final_package_security": "PENDING_SECOND_REVIEW_CORRECTION",
+      "security_passed": 18,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 29,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "wheel_sha256": "e09be827e092ac614759c4fce42a2c4a4057f9ea4c43b95c381114e65b7a482f",
+      "sdist_sha256": "908db5556babfef92be92acffabb608db047bc7becace43600fca460ea5da819",
+      "security_seconds": 1.13
+    },
+    "independent_review": "P1_FIXED_P2_RESERVED_MARKER_PRE_BASELINE_FOUND"
   }
 }

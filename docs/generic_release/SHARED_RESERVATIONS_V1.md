@@ -66,8 +66,9 @@ Completed replay and expired-grant reads do not spend, dispatch or refund.
 Conflicting bindings fail. Same-grant quota is reconstructed from immutable
 job records under the physical lock; another client cannot reset it with a new
 local journal or changed policy fields. The counter retains legacy consumption. Historical marker validation preserves
-the native-v1 domain's original21 /1,611,661,312 baseline (including completed
-count22–24 markers). The current ledger and new transaction before/after records
+the native-v1 domain's first post-reservation22 /1,745,879,040 values
+(including completed count22–24 markers). The policy's unincremented
+21 /1,611,661,312 baseline is not a valid reserved marker. The current ledger and new transaction before/after records
 still require the newer32 /3,088,056,320 policy floor. This distinction does not
 weaken historical campaign conservation checks or permit current-ledger rollback.
 

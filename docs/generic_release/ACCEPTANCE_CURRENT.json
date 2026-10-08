@@ -478,12 +478,16 @@
     "native_qualified": false,
     "public_dispatch": false,
     "bootstrap_schema": 2,
-    "tested_source": "PENDING_CORRECTED_COMMIT",
-    "local_passed": 213,
+    "tested_source": "PENDING_SECOND_REVIEW_CORRECTION_COMMIT",
+    "local_passed": 214,
     "skipped": 5,
-    "package_security": "PENDING_CORRECTED_SOURCE",
+    "package_security": "PENDING_SECOND_REVIEW_CORRECTION",
     "preserved_synthetic_files": 29,
-    "hosted_ci": "PENDING",
-    "independent_review": "P1_OLD_MARKERS_CORRECTED_PENDING"
+    "hosted_ci": "PENDING_SECOND_REVIEW_CORRECTION",
+    "independent_review": "P1_P2_FIXED_PENDING",
+    "hosted_windows_passed": 2527,
+    "hosted_posix_skipped_in_windows": 4,
+    "hosted_posix_passed": 56,
+    "artifact_bytes_match_local": true
   }
 }
