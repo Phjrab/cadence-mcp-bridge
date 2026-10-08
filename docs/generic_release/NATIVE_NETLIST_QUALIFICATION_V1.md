@@ -87,3 +87,24 @@ This resume's13 new preparation/diagnostic roots contain927 regular files,
 2,223,116 logical bytes and4,993,024 file-allocated bytes. Directories are excluded
 from the allocated-file sum. Observed filesystem available bytes25,677,615,104.
 These are separate from cumulative reserved-result accounting and remain preserved.
+
+## Exact-source hosted receipt
+
+Source3b06c5f074180863f0ca5251ece6f4f26e09d4eb has four successful Windows/Ubuntu
+push/PR checks. Hosted Windows2889 PASS/39 OS skips/56 warnings, security18,
+curated exact-commit build and installed/reinstall/uninstall63-state preservation
+PASS. Ubuntu native/provider/setup124 PASS/no skips, including the owned Spectre
+cwd and distinct Python2.6-style vanished-member exception regressions. Other
+shared-accounting/operator/domain/confirmation suites passed. This is synthetic CI,
+separate from the six actual standard-VM netlists and actual Python2.6 parser checks.
+Formal review is NOT_RUN; draftPR152 remains open/unmerged. A following docs-only
+receipt commit does not change the tested production assets.
+
+Additional read-only model preparation preserved the top model's bytes/metadata.
+It found shared-write bits on that model file. An initial private probe rejected a
+strict permission assertion; the following metadata/hash observation is not model
+execution trust or complete include-graph qualification. No PDK permission/content
+change, approval record or new trust baseline was created. Qualify the model
+include/dependency chain before a real runtime admission; the existing minimum
+administrator delegation remains available without renewed per-path approval.
+Actual native activation, confirmation and fresh simulations remain NOT_RUN.

@@ -228,7 +228,8 @@ Actual /proc race exposed Python2.6 IOError handling; vanished-member-only handl
 is corrected. HNL continuation/default-output syntax is narrowly supported, DC
 sweep cannot be promoted by hash alone, and Spectre cwd stays in owned work.
 Current affected415 PASS/28 Windows POSIX skips; Ruff/mypy90/security18/audit and
-installed63-state preservation PASS. Exact changed-source hosted CI pending.
+installed63-state preservation PASS. Exact3b06c5f four hosted checks PASS: Windows2889/39 OS skips/56 warnings,
+Ubuntu native/provider/setup124/no skips. Formal review NOT_RUN; PR152 draft/unmerged.
 Original top-level OA/ADE and each registered QA source/state snapshot preserved.
 Hierarchy lock/recovery files and failed diagnostic/source versions remain intact;
 whole hierarchy metadata attestation is not claimed. Final fresh retained preflight/eight-asset Python2.6 grammar and seven-control/
