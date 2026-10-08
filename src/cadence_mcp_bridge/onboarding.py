@@ -212,8 +212,8 @@ def export_client_config(
             context.contracts.environment_sha256 != snapshot.environment_sha256
             or context.contracts.design_sha256 != snapshot.design_sha256
             or context.contracts.pdk_sha256 != snapshot.pdk_sha256
-            or context.binding.analysis_journal != journal_path
-            or context.binding.sweep_journal != sweep_path
+            or _local_path(context.binding.analysis_journal) != journal_path
+            or _local_path(context.binding.sweep_journal) != sweep_path
             or output_path == runtime_path
         ):
             raise OnboardingRejected("runtime_export_mismatch")

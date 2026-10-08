@@ -542,13 +542,14 @@ def test_explicit_legacy_launch_ignores_inherited_operator_mode(
 
 
 @pytest.mark.parametrize("conflict", [False, True])
-def test_case_variant_hostnames_share_domain_and_policy(tmp_path, conflict):
+@pytest.mark.parametrize("suffix", ["", "."])
+def test_case_variant_hostnames_share_domain_and_policy(tmp_path, conflict, suffix):
     settings = make_settings(tmp_path, shared=True)
     data = json.loads(settings.read_bytes())
     binding = data["contexts"][1]
     env_path = Path(binding["environment_profile"])
     env = json.loads(env_path.read_bytes())
-    env["host"]["hostname"] = env["host"]["hostname"].upper()
+    env["host"]["hostname"] = env["host"]["hostname"].upper() + suffix
     if conflict:
         binding["ledger_ref"] = "different-ledger"
     env_path.write_text(json.dumps(env), encoding="utf-8")
@@ -625,3 +626,29 @@ def test_export_denies_lexical_alias_of_other_context_journal(settings, field):
             context_id=first.binding.context_id,
         )
     assert not reserved.exists()
+
+
+def test_export_accepts_selected_context_normalized_journals(settings):
+    first = load_runtime(settings)[0]
+    sub = first.binding.analysis_journal.parent / "lexical-selected"
+    sub.mkdir()
+    data = json.loads(settings.read_bytes())
+    for field in ("analysis_journal", "sweep_journal"):
+        path = getattr(first.binding, field)
+        data["contexts"][0][field] = str(sub / ".." / path.name)
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    output = first.binding.analysis_journal.parent / "normalized-client.json"
+    export_client_config(
+        first.binding.environment_profile,
+        first.binding.design_registry,
+        first.binding.pdk_registry,
+        first.binding.analysis_journal,
+        output,
+        format="mcp-json",
+        sweep_journal=first.binding.sweep_journal,
+        runtime_settings=settings,
+        context_id=first.binding.context_id,
+    )
+    assert output.is_file()
+    assert not first.binding.analysis_journal.exists()
+    assert not first.binding.sweep_journal.exists()
