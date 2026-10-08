@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
 
-from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, bind_inputs
+from cadence_mcp_bridge.generic_ade import AcInputs, AdeExecutionRegistration, bind_inputs
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected
 from cadence_mcp_bridge.power_measurements import signed_power_totals
@@ -207,16 +207,10 @@ def bind_reader(
     if reader.transfer:
         if ade.inputs.analysis != "ac":
             raise OperationRejected("reader_analysis_inventory_mismatch")
-        # Include both endpoints conservatively for a partial final decade.
-        # This is a declared-grid bound, not attestation of actual PSF sampling.
-        with localcontext() as decimal_context:
-            decimal_context.prec = 128
-            intervals = (
-                Decimal(ade.inputs.stop_hz) / Decimal(ade.inputs.start_hz)
-            ).log10() * ade.inputs.points_per_decade
-            requested_samples = int(intervals.to_integral_value(rounding=ROUND_CEILING)) + 1
+        requested_samples = _ac_sample_count(ade.inputs)
         if requested_samples > reader.maximum_samples:
             raise OperationRejected("reader_ac_grid_exceeds_sample_limit")
+        _ac_axis(ade.inputs)
         for frequency in reader.transfer.gain_frequencies_hz:
             if (
                 not Decimal(ade.inputs.start_hz)
@@ -435,6 +429,28 @@ def project_frame(
     return output
 
 
+def _ac_sample_count(inputs: AcInputs) -> int:
+    # Include both endpoints for a partial final decade. Native API proof remains required.
+    with localcontext() as decimal_context:
+        decimal_context.prec = 128
+        intervals = (
+            Decimal(inputs.stop_hz) / Decimal(inputs.start_hz)
+        ).log10() * inputs.points_per_decade
+        return int(intervals.to_integral_value(rounding=ROUND_CEILING)) + 1
+
+
+def _ac_axis(inputs: AcInputs) -> tuple[float, ...]:
+    count = _ac_sample_count(inputs)
+    if count > MAX_SAMPLES:
+        raise OperationRejected("reader_ac_grid_exceeds_sample_limit")
+    start, stop = float(inputs.start_hz), float(inputs.stop_hz)
+    axes = tuple(start * 10 ** (i / inputs.points_per_decade) for i in range(count - 1)) + (stop,)
+    serialized = tuple(float(format(axis, ".16g")) for axis in axes)
+    if any(a >= b for a, b in zip(serialized, serialized[1:], strict=False)):
+        raise OperationRejected("reader_ac_grid_float_resolution_invalid")
+    return axes
+
+
 def _transfer(
     ade: AdeExecutionRegistration,
     reader: GenericReaderRegistration,
@@ -442,25 +458,29 @@ def _transfer(
     waves: dict[str, tuple[tuple[float, complex], ...]],
 ) -> list[dict[str, object]]:
     inputs = ade.inputs
-    if (
-        inputs.analysis != "ac"
-        or (
-            axes[0] < float(inputs.start_hz)
-            and not math.isclose(axes[0], float(inputs.start_hz), rel_tol=1e-12, abs_tol=0)
-        )
-        or (
-            axes[-1] > float(inputs.stop_hz)
-            and not math.isclose(axes[-1], float(inputs.stop_hz), rel_tol=1e-12, abs_tol=0)
-        )
+    if inputs.analysis != "ac":
+        raise OperationRejected("reader_ac_interval_invalid")
+    expected_axes = _ac_axis(inputs)
+    if not math.isclose(axes[0], expected_axes[0], rel_tol=1e-12, abs_tol=0) or not math.isclose(
+        axes[-1], expected_axes[-1], rel_tol=1e-12, abs_tol=0
     ):
         raise OperationRejected("reader_ac_interval_invalid")
+    if len(axes) != len(expected_axes) or any(
+        not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=0)
+        for actual, expected in zip(axes, expected_axes, strict=True)
+    ):
+        raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
     selected: set[int] = set()
     for text in transfer.gain_frequencies_hz:
         freq = float(text)
-        matches = [i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)]
+        matches = [i for i, x in enumerate(axes) if x == freq]
+        if not matches:
+            matches = [
+                i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)
+            ]
         if len(matches) != 1:
             raise OperationRejected("reader_gain_sample_unavailable")
         i = matches[0]

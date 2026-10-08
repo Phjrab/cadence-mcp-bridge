@@ -33,7 +33,14 @@ reuse one saved sample for multiple requested frequencies. The whole declared AC
 logarithmic grid must fit maximum_samples before compilation: ceil(log10(stop/start)
 * points_per_decade)+1 includes both endpoints conservatively. This local bound
 is not native sampling attestation. Serialized interval endpoints use the same
-relative1e-12 tolerance; materially out-of-interval frames still reject. All registered waves must share an
+relative1e-12 tolerance. Both endpoints and every declared logarithmic-grid
+sample must be present: missing interior samples, shifted or larger unsupported
+axes reject. The initial grid uses start*10^(index/points_per_decade) followed
+by the declared stop, including a partial final interval. Native Cadence API
+behavior for that grid remains unqualified; other sampling forms are unsupported.
+Grid points must stay strictly ordered after %.16g serialization. Projection
+prefers an exact float equality before trying a unique tolerant match, so narrow
+valid sweeps with close neighbors remain distinguishable. All registered waves must share an
 increasing exact saved frequency axis. Each requested frequency must match one
 actual sample (relative tolerance1e-12); there is no interpolation. Division uses
 the measured complex differential input; zero input rejects. Zero output has

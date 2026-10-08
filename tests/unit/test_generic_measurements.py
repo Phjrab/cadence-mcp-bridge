@@ -76,6 +76,14 @@ def operator(operator_base):
 
 def reader_for(operator, analysis="dc"):
     context, plan, ade, _ = setup(operator, analysis)
+    if analysis == "ac":
+        ade = ade.model_copy(
+            update={
+                "inputs": ade.inputs.model_copy(
+                    update={"start_hz": "1000", "stop_hz": "2000", "points_per_decade": 1}
+                )
+            }
+        )
     reader = GenericReaderRegistration.model_validate_json(
         json.dumps(
             {
@@ -200,7 +208,7 @@ def test_ac_uses_measured_complex_stimulus_and_selected_frequency(operator, ampl
     args = reader_for(operator, "ac")
     frame = frame_for(
         args,
-        f"P|input|0|1000|2|0\nP|input|1|1000000|2|0\nP|output|0|1000|0|{amplitude}\nP|output|1|1000000|0|{amplitude}",
+        f"P|input|0|1000|2|0\nP|input|1|2000|2|0\nP|output|0|1000|0|{amplitude}\nP|output|1|2000|0|{amplitude}",
     )
     value = project_frame(*args, frame)["transfer"][0]
     assert value["frequency_hz"] == 1000 and value["gain_v_per_v"] == amplitude / 2
@@ -260,10 +268,10 @@ def test_every_frame_identity_is_bound(operator, field):
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("input|1|1000000", "input|0|1000000"),
-        ("input|1|1000000", "input|1|1000"),
-        ("output|1|1000000", "output|1|2000000"),
-        ("output|1|1000000", "output|1|999999"),
+        ("input|1|2000", "input|0|2000"),
+        ("input|1|2000", "input|1|1000"),
+        ("output|1|2000", "output|1|2000000"),
+        ("output|1|2000", "output|1|999999"),
         ("input|0|1000|2|0", "input|0|1000|0|0"),
         ("input|0|1000", "input|0|1001"),
         ("output|0|1000", "output|0|1001"),
@@ -271,7 +279,7 @@ def test_every_frame_identity_is_bound(operator, field):
 )
 def test_ac_zero_input_missing_gain_sample_nonmatching_axes_or_order(operator, old, new):
     args = reader_for(operator, "ac")
-    body = "P|input|0|1000|2|0\nP|input|1|1000000|2|0\nP|output|0|1000|0|4\nP|output|1|1000000|0|4"
+    body = "P|input|0|1000|2|0\nP|input|1|2000|2|0\nP|output|0|1000|0|4\nP|output|1|2000|0|4"
     with pytest.raises(OperationRejected):
         project_frame(*args, frame_for(args, body.replace(old, new)))
 
@@ -509,7 +517,7 @@ def test_close_distinct_gain_frequencies_cannot_share_a_saved_sample(operator):
     reader = GenericReaderRegistration.model_validate_json(json.dumps(data))
     args = (context, plan, ade, reader, operation, execution)
     frame = frame_for(
-        args, "P|input|0|10|2|0\nP|input|1|1000|2|0\nP|output|0|10|4|0\nP|output|1|1000|4|0"
+        args, "P|input|0|1000|2|0\nP|input|1|2000|2|0\nP|output|0|1000|4|0\nP|output|1|2000|4|0"
     )
     with pytest.raises(OperationRejected, match="Operator operation rejected") as exc:
         project_frame(*args, frame)
@@ -578,3 +586,95 @@ def test_ac_interval_accepts_extractor_endpoint_rounding(operator, start, stop):
     with pytest.raises(OperationRejected) as exc:
         project_frame(*args, frame_for(args, outside))
     assert exc.value.reason == "reader_ac_interval_invalid"
+
+
+@pytest.mark.parametrize("axis", [("1000", "10000"), ("1000", "1000000"), ("1", "1000", "1000000")])
+def test_ac_omitted_endpoints_or_interior_samples_are_rejected(operator, axis):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(analysis="ac", start_hz="1", stop_hz="1000000", points_per_decade=1)
+        }
+    )
+    reader = reader.model_copy(update={"ade_registration_sha256": canonical_digest(ade)})
+    args = (context, plan, ade, reader, op, execution)
+    body = "\n".join(
+        f"P|{node}|{i}|{x}|{value}|0"
+        for node, value in (("input", 2), ("output", 4))
+        for i, x in enumerate(axis)
+    )
+    with pytest.raises(OperationRejected):
+        project_frame(*args, frame_for(args, body))
+
+
+def test_ac_exact_neighbor_samples_take_precedence_over_tolerant_matches(operator):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    endpoints = ("1000000", "1000000.000001")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(
+                analysis="ac", start_hz=endpoints[0], stop_hz=endpoints[1], points_per_decade=1
+            )
+        }
+    )
+    transfer = reader.transfer.model_copy(update={"gain_frequencies_hz": endpoints})
+    reader = reader.model_copy(
+        update={"ade_registration_sha256": canonical_digest(ade), "transfer": transfer}
+    )
+    args = (context, plan, ade, reader, op, execution)
+    body = "\n".join(
+        f"P|{node}|{i}|{x}|{value}|0"
+        for node, value in (("input", 2), ("output", 4))
+        for i, x in enumerate(endpoints)
+    )
+    results = project_frame(*args, frame_for(args, body))["transfer"]
+    assert [r["frequency_hz"] for r in results] == [float(x) for x in endpoints]
+    assert all(r["gain_v_per_v"] == 2 for r in results)
+
+
+def test_ac_complete_declared_grid_passes_and_changed_interior_rejects(operator):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(analysis="ac", start_hz="1", stop_hz="1000000", points_per_decade=1)
+        }
+    )
+    reader = reader.model_copy(update={"ade_registration_sha256": canonical_digest(ade)})
+    args = (context, plan, ade, reader, op, execution)
+    axis = (1, 10, 100, 1000, 10000, 100000, 1000000)
+    body = "\n".join(
+        f"P|{node}|{i}|{x}|{value}|0"
+        for node, value in (("input", 2), ("output", 4))
+        for i, x in enumerate(axis)
+    )
+    assert project_frame(*args, frame_for(args, body))["transfer"][0]["gain_v_per_v"] == 2
+    changed = body.replace("|2|100|", "|2|101|")
+    with pytest.raises(OperationRejected) as exc:
+        project_frame(*args, frame_for(args, changed))
+    assert exc.value.reason == "reader_ac_grid_incomplete_or_unsupported"
+
+
+def test_ac_grid_must_remain_distinct_after_extractor_serialization(operator):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(
+                analysis="ac", start_hz="1", stop_hz="1.0000000000000002", points_per_decade=1
+            )
+        }
+    )
+    transfer = reader.transfer.model_copy(update={"gain_frequencies_hz": ("1",)})
+    reader = reader.model_copy(
+        update={"ade_registration_sha256": canonical_digest(ade), "transfer": transfer}
+    )
+    with pytest.raises(OperationRejected) as exc:
+        render_reader(context, plan, ade, reader, op, execution)
+    assert exc.value.reason == "reader_ac_grid_float_resolution_invalid"

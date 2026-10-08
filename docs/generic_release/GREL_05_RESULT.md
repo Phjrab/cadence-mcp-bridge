@@ -154,3 +154,22 @@ pass; original AC fixture reader limit was raised from impossible4 to64 for its
 51-sample declared grid. All63 reader tests pass. Final related/package/security/
 hosted/review receipts follow separately;48f8879 receipts are source-scoped history.
 No native action, budget reservation, protected repair or original mutation occurred.
+
+
+## Complete AC frame and exact-sample selection review correction
+
+Independent e756b5e review found two P2s: omitted endpoints could pass an interior
+subset frame, and two close valid samples made even an exact requested frequency
+ambiguous under tolerant-only matching. Both endpoints must now match, and the
+full declared logarithmic grid is checked for count and each interior frequency.
+Exact sample equality takes precedence; ambiguous tolerance and duplicate sample
+use remain rejected. Grids collapsing under actual %.16g serialization reject
+before compiling. Other native sampling forms remain unsupported/unqualified.
+
+Six added regression cases cover omitted endpoints/interiors, exact close neighbors,
+complete-grid success/shifted-interior rejection, and output-resolution collapse.
+Default analytical AC fixture now uses a complete two-point1kHz–2kHz grid. A broad
+test-text replacement accidentally changed a1e11 float-collapse example and was
+corrected after its expected rejection failed;69 reader tests now pass. Final
+source-scoped related/package/CI/review receipts follow. Prior source evidence is
+retained without being promoted to this corrected source or native acceptance.
