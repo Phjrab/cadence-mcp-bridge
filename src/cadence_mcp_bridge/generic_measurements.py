@@ -33,6 +33,12 @@ MAX_SAMPLES = 256
 Selector = Annotated[str, Field(pattern=r"^/[A-Za-z0-9_#][A-Za-z0-9_#./-]{0,126}$", max_length=128)]
 
 
+def _canonical_selector(value: str) -> str:
+    if any(part in ("", ".", "..") for part in value[1:].split("/")):
+        raise ValueError("canonical signal selector required")
+    return value
+
+
 class NodeSignal(VariableModel):
     logical_id: LogicalId
     selector: Selector
@@ -40,9 +46,9 @@ class NodeSignal(VariableModel):
     @field_validator("selector")
     @classmethod
     def canonical_selector(cls, value: str) -> str:
-        if any(part in ("", ".", "..") for part in value[1:].split("/")):
-            raise ValueError("canonical signal selector required")
-        return value
+        if value.rsplit("/", 1)[-1] in ("PLUS", "MINUS"):
+            raise ValueError("branch current selector is not a node voltage")
+        return _canonical_selector(value)
 
 
 class SourceSignal(VariableModel):
@@ -58,7 +64,7 @@ class SourceSignal(VariableModel):
     def canonical_selector(cls, value: str) -> str:
         if not value.endswith("/PLUS"):
             raise ValueError("positive-terminal branch current selector required")
-        return NodeSignal.canonical_selector(value)
+        return _canonical_selector(value)
 
     @model_validator(mode="after")
     def distinct_terminals(self) -> Self:
@@ -124,6 +130,8 @@ class GenericReaderRegistration(VariableModel):
             {s.current_selector for s in self.sources}
         ) != len(self.sources):
             raise ValueError("distinct current identities required")
+        if {n.selector for n in self.nodes} & {s.current_selector for s in self.sources}:
+            raise ValueError("voltage and current selector inventories must be disjoint")
         refs = [
             n for s in self.sources for n in (s.positive_node, s.negative_node) if n is not None
         ]

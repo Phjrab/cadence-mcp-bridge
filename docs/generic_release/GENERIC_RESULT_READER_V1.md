@@ -14,7 +14,11 @@ insufficient: missing contracts, another analysis or stale contract digest rejec
 The registered contract must remain unqualified; this compiler cannot replace a
 qualified fixed historical reader/definition. Local generic preparation does not
 change that contract's execution qualification. Its node selectors are canonical ASCII private names; current
-selectors require a positive-terminal /INSTANCE/PLUS suffix. Ground is explicit
+selectors require a positive-terminal /INSTANCE/PLUS suffix. Voltage and current
+selector sets must be disjoint; nodes ending PLUS or MINUS are refused as an
+ambiguous branch-current spelling, including legitimate same-named hierarchy nodes
+until a native quantity inventory can distinguish them. Actual PSF units still
+need provider attestation; string syntax alone cannot prove physical quantity. Ground is explicit
 null. Sources bind logical positive/negative node IDs, role and signed convention.
 No source-voltage constants are inferred from another circuit. DC power sums
 -Vterminal * Isigned, retains absorption and reports supply/bias/stimulus/all

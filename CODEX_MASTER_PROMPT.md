@@ -1,3 +1,13 @@
+## GREL-05 voltage/current identity correction, 2026-10-08
+
+Second PR147 P2 fixed: voltage/current selector inventories must be disjoint;
+known PLUS/MINUS branch spellings cannot be registered as node volts. Physical
+PSF quantity/unit attestation remains absent. Corrected193-source receipts below
+are historical; final quantity-corrected package/CI/review pending. Native trust/
+provider/automatic extraction/Sweep/Spec/clean app remain incomplete; release
+BLOCKED.02–07/895MiB persists; no native side effects/protected change/merge/
+GREL08/publication. See GREL_05_RESULT.md. Earlier overlays remain history.
+
 ## GREL-05 measurement identity correction, 2026-10-08
 
 Independent PR147 P2 fixed: generic reader requires exact existing registry v4+

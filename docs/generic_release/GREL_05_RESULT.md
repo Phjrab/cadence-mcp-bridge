@@ -62,3 +62,57 @@ Installed32-state preservation and curated79/80-member artifacts matched local:
 wheel d2b7a6cef53458bd97878a13cac164d0a285843f93d43db45af3f28b16530257;
 sdist a9beadee05818b082651001dfcb8a29343ca83f567435f52bceca09e9a5e7d4f.
 Final current-source revalidation follows; none of this is native qualification.
+
+
+## Corrected source validation receipt
+
+Tested source a4b3930bf98242a119b905047f84445f7efc763f, PR147 ready/open/unmerged:
+- Local193 related PASS /zero skips /12.64s; Ruff/mypy71 and85 schemas PASS.
+- Fresh security18 PASS /1.08s; locked audit no known vulnerabilities.
+- Hosted Windows run37718949128/job113121887165:2591 PASS /four POSIX skips /
+  56 warnings /237.78s; lint/type/security/audit/85 schemas/installed CLI PASS.
+- Ubuntu same run/job113121887034:73 PASS /zero skips /2.90s. These are retained
+  shared-reservation tests, not native OCEAN or generic waveform qualification.
+- Corrected installed CLI requires actual registry v4 analysis mappings; generic
+  ADE compile, reader compile and mathematical frame projection PASS in a new
+  disposable operator workspace. Same-version reinstall/uninstall retains32 files.
+- Curated wheel79 members SHA256
+  5421da2aa5ec64dc71dae1366946eed8d7acebe3571565223b6fd29a79d84597;
+  sdist80 members SHA256
+  e6a4eae7f5b041d2daafc11cc1f2baa0911395d85cf7d08e8b160ca0490c67f2.
+  Retained local and hosted bytes match; unexpected/protected0; source/notices exact.
+-327 inputs zero unexpected drift; snapshotSHA256
+  46a0f687cc116711786a0242dcd6dca954c3bfcef9b4238e9aff2242956221c2.
+  Four intentional review changes from the prior snapshot are README, installed
+  verifier, generic measurement module and its tests. Earlier evidence is retained.
+- Corrected-source independent review is still pending when this receipt is written.
+
+Fresh current-connected-app local MCP observation at2026-10-08T02:43:18Z differs
+from historical builtin-v4 observations: operator-supplied design registryv2,
+one reference-differential-amplifier-tb2 description, PDK registryv2/two entries,
+and operator-supplied analysis/Sweep journals. Registration is unqualified and
+execution_authorized=false; health/trust/authority are not assessed. Exact semantic
+hashes are in PROGRAM_CONTINUATION.json. Self-reported1.0.0 does not attest the
+candidate source/build or imported memory. No global config change/restart/new job
+was performed. Preserve this current selection; historical app receipts remain
+scoped history. This is not GREL06 clean-client or complete app schema acceptance.
+
+No native execution/reservation/deployment/deletion or protected permission/license
+change occurred. Last actual native trust/resource observations were not refreshed.
+Production provider/operator authenticity/migration/renewal, terminal worker lock,
+native copy/API/input/reader proof, automatic extraction/recovery, generic1D Sweep,
+specification fact binding and actual clean-client qualification remain incomplete.
+Generic release BLOCKED. Continuous02–07/895MiB persists without phase reapproval.
+Receipt-only later HEADs must not be represented as this tested source revision.
+
+
+## Voltage/current selector separation review correction
+
+Independent reviewa4b3930 found P2: a selector shared between node/current sets
+could feed the same branch-current value into volts and amperes, yielding
+invalid power dimensions. Both sets must now be disjoint, and node selectors with
+known PLUS/MINUS branch suffixes reject even without a matching source entry.
+Legitimate hierarchy nodes with those names are temporarily unsupported rather
+than inferred to be volts. Actual saved-quantity units remain an unqualified
+native provider responsibility. Earlier a4b3930 validation receipts remain
+source-scoped history after this correction. No native state was mutated.

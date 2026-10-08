@@ -63,6 +63,8 @@ logical design/analysis/measurement IDs, canonical ADE and measurement-contract 
 1–8 logical nodes with canonical private selectors, DC source inventory with
 signed positive-terminal `/INSTANCE/PLUS` currents and logical voltage terminals,
 or an AC differential transfer and1–16 positive increasing gain frequencies.
+Voltage and current selectors must be disjoint. Node selectors ending in
+`PLUS`/`MINUS` are unsupported because those spellings can denote branch currents.
 Use the existing registry v4 or later measurement contract to bind the measurement
 ID to the exact selected analysis. Its reader must remain `unqualified`; this
 compiler cannot replace a qualified historical definition. Registry v3 allowlists

@@ -453,3 +453,19 @@ def test_measurement_identity_requires_registered_exact_analysis_and_definition(
         if change == "protected_legacy"
         else "reader_measurement_analysis_binding_mismatch"
     )
+
+
+@pytest.mark.parametrize("selector", ["/VDD/PLUS", "/VDD/MINUS", "/nested/VDD/PLUS"])
+def test_branch_current_selectors_are_never_projected_as_node_voltage(operator, selector):
+    data = json.loads(reader_for(operator)[3].model_dump_json())
+    data["nodes"][0]["selector"] = selector
+    with pytest.raises(ValidationError):
+        GenericReaderRegistration.model_validate_json(json.dumps(data))
+
+
+def test_disjoint_voltage_and_current_inventories_even_for_internal_prebuilt_models(operator):
+    # Keep the cross-inventory invariant independent from today's selector grammar.
+    reader = reader_for(operator)[3]
+    source = reader.sources[0].model_copy(update={"current_selector": reader.nodes[0].selector})
+    with pytest.raises(ValueError):
+        reader.model_copy(update={"sources": (source,)}).inventory()
