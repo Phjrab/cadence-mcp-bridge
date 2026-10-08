@@ -1,3 +1,17 @@
+## GREL-05 feasible-reader exact-source receipt, 2026-10-08
+
+Tested source f5a1de2 in ready/unmerged PR147: local247 related PASS/no skips;
+hosted Windows2622 PASS/four POSIX skips and Ubuntu73 PASS/no skips. Ruff/mypy71,
+security18/audit/85 schemas, matching79/80-member artifacts, installed CLI and
+32-state preservation PASS. Ten P2s fixed; automatic bot+1/no new findings is
+not formal approval. Complete feasible AC/TRAN reader binding is local only;
+native attestation/provider/extraction/Sweep/Spec/clean app remain incomplete.
+Generic release BLOCKED. Continuous02–07/895MiB persists; no native side effects,
+protected repair/budget reset/merge/GREL08/publication. Native trust/resource
+observations remain historical, not refreshed here. Exact receipts and ordered
+remaining work: docs/generic_release/GREL_05_RESULT.md and NATIVE_RESUME_BOUNDARY.md.
+Later docs-only HEADs are separate from the tested code. Prior overlays are history.
+
 ## GREL-05 voltage/current identity correction, 2026-10-08
 
 Second PR147 P2 fixed: voltage/current selector inventories must be disjoint;

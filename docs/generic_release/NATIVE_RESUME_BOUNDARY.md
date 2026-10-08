@@ -52,3 +52,28 @@ installation trust is also BLOCKED. Synthetic forms and replay cannot close them
 GREL-07 public CI/preservation can progress independently; live migration and
 conditional native deletion remain unsupported. GREL-08 and publishing require
 separate explicit authorization after the program's real gates have passed.
+
+
+## Reader source checkpoint, 2026-10-08
+
+Generic reader source f5a1de2 has local247 related PASS/no skips, installed
+operator CLI/protocol/bootstrap and32-state reinstall/uninstall preservation
+PASS. Ten independent P2 corrections cover exact analysis/measurement identity,
+selector dimensions, complete feasible AC/TRAN grids, serialization resolution,
+endpoint rounding and sample matching. Automatic bot+1 at03:34:41Z is not formal
+approval. Exact current package/hosted receipts are in GREL_05_RESULT.md.
+
+This is calculation/compiler infrastructure only. Source hash/script hash/frame
+hash are not native attestation. Automatic terminal extraction/recovery, a
+production authenticated provider, generic SweepStore/Supervisor codec and
+specification fact binding remain required. Clean actual app/new-circuit jobs
+remain unrun. The current connected app's operator registryv2 observation is
+preserved; it is not proof that this reader candidate is loaded or qualified.
+
+The human MyDesignLib hint concerns a circuit library. It does not attest the
+registered Virtuoso/OCEAN/Spectre executable, ancestor and dependency chains.
+Last native trust/resource observations were not refreshed at this local reader
+checkpoint. The installation owner must verify a trusted chain through their own
+process before fresh qualification and native provisioning. Continuous02–07 and
+existing895MiB delegation persists; every native attempt still needs a fresh
+shared-ledger/trust check. No phase reapproval or protected repair is implied.

@@ -192,3 +192,57 @@ partial TRAN sample bounds, and saved-time gaps despite valid endpoints/count.
 Analytical TRAN fixture maxstep is explicitly4ms to match its coarse saved grid.
 Corrected local/hosted/artifact/review receipts follow separately; c3f5ca5
 receipts remain historical after this correction. No native side effect occurred.
+
+
+## Final feasible-reader software receipt, 2026-10-08
+
+Tested code source f5a1de2626c0a6b9323d15bd13e89622ff3577de in PR147,
+stacked on unmerged PR146/17cb59a. Later receipt-only HEADs are not this source.
+- Local247 related PASS/no skips/26.15s; Ruff and mypy71 PASS.
+- Fresh security18 PASS/1.61s; locked dependency audit no known vulnerabilities.
+- Hosted Windows run37723131490/job113135125151:2622 PASS/four POSIX skips/
+  56 warnings/268.39s; lint/type/security/audit/85 schemas/installed CLI PASS.
+- Ubuntu same run/job113135125399:73 PASS/no skips/2.58s. These are
+  actual disposable POSIX files/flock tests, not Cadence execution.
+- Exact installed-wheel reader/ADE CLI, isolated SDK/protocol/bootstrap and
+  same-version reinstall/uninstall32-state preservation PASS. Native jobs0.
+- Curated79-member wheelSHA256
+  046f2f9cf2ce8e1288ff8c977730c663393a9891c214d04776524b46986e0ea2;
+  80-member sdistSHA256
+  8b9f3ea8dce4e56814c3181f2c37ec1d4565b38180bb13fe65d599c540667d5e.
+  Hosted/local retained bytes match; source/notices exact; unexpected/protected0.
+-327 inputs have zero unexpected drift; final snapshotSHA256
+  81112255023d333731c70af8b3a27374a5ad78e02eb1d7a812be05aee64480ed.
+  Only intentional changes from previous source are README, reader and tests.
+- Ten independent P2s corrected. Corrected-source automatic review returned
+  bot+1 at2026-10-08T03:34:41Z with no new findings. This is not formal APPROVED.
+- Latest main553276d unchanged; original unrelated OCN retains
+  2cf3673f4e80cb3c2bd6815f919c0d2aaf9b20a944b2ef1b8eb231589c634b32.
+  Prior99,964-file preservation observation was not rehashed wholesale.
+
+Prior c3f5ca5 Windows2613 PASS/268.07s and matching037640.../f58ff5...
+artifacts are history after feasibility fixes. Its Ubuntu success was observed,
+but log read after branch movement returned HTTP409; its count/timing stay
+null in the machine receipt. Current f5a1de2 Ubuntu73/2.58s was actually read.
+All earlier failure/correction/source evidence remains retained and scoped.
+
+User-visible capability now available from the package: register private logical
+reader bindings, compile one fixed reader and locally validate bounded DC/AC/TRAN
+frames without circuit-specific Python edits. Mathematical outputs remain
+NOT_ATTESTED/NOT_EVALUATED. No native OCEAN API, PSF-unit/source-orientation,
+actual whole-waveform or clean-app new-job qualification is claimed. Installed
+fixtures are synthetic; they are not two actual newly simulated circuits.
+
+Generic release remains BLOCKED. Production authenticated provider/operator
+confirmation/migration/renewal/terminal lock; trusted native copy/API/input/reader
+attestation; automatic extraction/recovery; generic1D Sweep/specification fact
+binding; actual clean-app jobs/restart and native operational/update qualification
+remain incomplete. Other Cadence versions/PDKs/PCs stay deferred. Last native
+trust still rejected executable_permissions; trust/resources were not refreshed
+by this local checkpoint. MyDesignLib is a circuit-library hint, not executable/
+dependency-chain attestation. Installation-owner trust action remains required.
+
+Continuous02–07 and existing895MiB authorization persists without phase reapproval.
+This checkpoint0 native executions/reservations/deployments/deletions; no protected
+permission/license change, budget reset/increase, merge, GREL08 or publication.
+Fresh shared-ledger/trust checks are required before any later native admission.
