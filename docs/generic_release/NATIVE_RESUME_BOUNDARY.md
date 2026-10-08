@@ -1,3 +1,22 @@
+## Active fresh-policy consumer correction, 2026-10-08
+
+Continue the existing branch and unmerged PR151; latest main remains553276d.
+Fresh counter/storage observations now carry and audit the registered schema2
+policy and account index rather than inheriting the developer campaign/10GiB.
+Historical PowerCounter/study output and85 public MCP schemas remain exact.
+The generic provider/public storage route remains incomplete; do not treat this
+consumer correction as native dispatch or completed GREL03. Source/package/CI
+receipts are tracked in [fresh-policy consumer report](FRESH_POLICY_CONSUMERS_V1.md).
+
+Actual ordinary-user retained preflight PASS, existing seven control metadata
+unchanged; installed accounting predates current source and cannot attest current
+package dispatch. Actual OCEAN17 ADE APIs callable is existence only, not netlisting.
+Counter82 /9,798,942,720, remaining895MiB; this continuation simulations/reservations0.
+ContinuousGREL02–07 and current minimum administrator delegation persist; no
+phase reapproval, merge/GREL08/publication, budget increase/reset/refund or deletion.
+Next remains authentic provider/worker, new RC/MOS inputs/jobs/extraction/Sweep/spec
+and actual clean Codex retry/restart. Historical overlays below remain evidence.
+
 ## Active fresh-policy and retained-domain provisioning, 2026-10-08
 
 Current branch feat/grel-03-fresh-domain-policy continues unmerged PR150 corrected

@@ -2,13 +2,14 @@
 
 import hashlib
 import json
-from typing import Annotated, Literal, Protocol, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_serializer, model_validator
 
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter, FreshResourcePolicy
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
 ArtifactId = Annotated[str, Field(pattern=r"^sa-[0-9a-f]{64}$")]
@@ -69,7 +70,7 @@ class StorageArtifact(ContractModel):
 
 
 class StorageSnapshot(ContractModel):
-    contract_version: Literal[1] = 1
+    contract_version: Literal[1, 2] = 1
     snapshot_id: Digest
     artifacts: Annotated[tuple[StorageArtifact, ...], Field(max_length=64)]
     coverage_complete: bool
@@ -93,10 +94,41 @@ class StorageSnapshot(ContractModel):
     filesystem_free_bytes: Bytes
     filesystem_total_bytes: Bytes
     reserved_result_bytes: Bytes
-    result_ceiling_bytes: Literal[10_737_418_240] = 10_737_418_240
+    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=10_737_418_240)] = (
+        10_737_418_240
+    )
+    ledger_policy: FreshResourcePolicy | None = None
     spectre_attempts: Annotated[int, Field(strict=True, ge=0, le=500)]
     active_eda: bool
     platform_delete_primitives: bool
+
+    @model_validator(mode="after")
+    def registered_policy(self) -> Self:
+        if self.contract_version == 1:
+            if self.ledger_policy is not None or self.result_ceiling_bytes != 10_737_418_240:
+                raise ValueError("legacy snapshot policy is unchanged")
+        elif (
+            self.ledger_policy is None
+            or self.result_ceiling_bytes != self.ledger_policy.result_ceiling_bytes
+            or self.spectre_attempts > self.ledger_policy.attempt_ceiling
+            or self.reserved_result_bytes > self.result_ceiling_bytes
+        ):
+            raise ValueError("fresh snapshot requires its registered policy")
+        if self.ledger_policy is not None:
+            FreshResourceCounter(
+                campaign_id=self.ledger_policy.campaign_id,
+                count=self.spectre_attempts,
+                result_reserved_bytes=self.reserved_result_bytes,
+                policy=self.ledger_policy,
+            )
+        return self
+
+    @model_serializer(mode="wrap")
+    def retain_legacy_shape(self, handler: Any) -> dict[str, Any]:
+        value: dict[str, Any] = handler(self)
+        if self.contract_version == 1:
+            value.pop("ledger_policy", None)
+        return value
 
 
 class StoragePageRequest(VariableModel):

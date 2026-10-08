@@ -127,3 +127,13 @@ Earlier failures remain historical; its old P2 threads are outdated, not formal 
 Final corrected-staging-source canonical package verification also PASS:43 operator
 plus20 domain fixture files retained across reinstall/uninstall. This closes the
 transport-correction package receipt gap; it does not qualify native new jobs.
+
+
+## Fresh-policy consumer correction
+
+PR151 independent P1 identified consumers that still assumed the legacy campaign.
+[The versioned consumer correction](FRESH_POLICY_CONSUMERS_V1.md) adds actual-policy
+counter/storage parsing and shared conservation audit. It preserves historical
+public output schemas and does not assert production provider/public generic
+routing, terminal workers or fresh circuit execution are complete. The existing
+account index is read/reused; no second initialization or registration is performed.
