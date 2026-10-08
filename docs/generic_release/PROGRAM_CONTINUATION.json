@@ -71,7 +71,12 @@
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
     "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
-    "shared_reservations": "TWO_P1_TWO_P2_CORRECTED_REVIEW_PENDING"
+    "shared_reservations": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "status": "BOT_PLUS_ONE_NO_NEW_FINDINGS_NOT_FORMAL_APPROVED",
+      "completed_utc": "2026-10-08T02:07:49.781251Z",
+      "plus_one_observed_utc": "2026-10-08T02:07:54Z"
+    }
   },
   "local_input_snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
   "historical_validation_before_durable_lifecycle": {
@@ -176,24 +181,38 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
-    "conclusion": "PENDING_IDENTITY_SEAL_SOURCE"
+    "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+    "run": 37716014588,
+    "job": 113112518632,
+    "conclusion": "PASS",
+    "unit_passed": 2544,
+    "unit_skipped": 4,
+    "unit_warnings": 56,
+    "unit_seconds": 256.31,
+    "posix_run": 37716014588,
+    "posix_job": 113112518763,
+    "posix_passed": 73,
+    "posix_skipped": 0,
+    "posix_seconds": 3.05,
+    "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+    "artifact_bytes_match_local": true,
+    "preserved_synthetic_files": 32
   },
   "local_validation": {
     "affected_passed": 230,
     "skipped": 5,
     "seconds": 47.04,
     "source_typecheck_files": 70,
-    "mcp_full_schemas": 85,
-    "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
-    "final_package_security": "PENDING_IDENTITY_SEAL_SOURCE",
     "security_passed": 18,
+    "security_seconds": 1.07,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
-    "preserved_synthetic_state_files": "PENDING_EXPECTED_32",
+    "preserved_synthetic_state_files": 32,
     "input_files": 325,
     "unexpected_input_drift": 0,
-    "wheel_sha256": null,
-    "sdist_sha256": null,
-    "security_seconds": 1.13
+    "snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
+    "wheel_sha256": "c29788ab8ce5bbfb6c85f6a242e042306249f3af1557e739a8de6fd2b5518b61",
+    "sdist_sha256": "9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26",
+    "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION"
   },
   "grel04_inputs": {
     "implementation": "OPERATOR_ONLY_FIXED_ADE_L_INPUT_TEMPLATE_AND_BOUNDED_SPECTRE_COMPARISON",
@@ -205,7 +224,7 @@
     "native_dispatch": "DISABLED"
   },
   "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "PENDING_IDENTITY_SEAL_COMMIT",
+  "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
   "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
@@ -350,5 +369,48 @@
     "wheel_sha256": "a781d7e5c4f9d169e298ccb83980a6f66f2b9e1b9b71e6d3279bf2a6e7302409",
     "sdist_sha256": "c95b88fa2e4af881d64d9ceeccee33d5a7c2f85e9a5560ccbae5491c987261c8",
     "independent_review": "P1_IDENTITY_LOSS_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "current_shared_source_checkpoint": {
+    "source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+    "local": {
+      "affected_passed": 230,
+      "skipped": 5,
+      "seconds": 47.04,
+      "source_typecheck_files": 70,
+      "security_passed": 18,
+      "security_seconds": 1.07,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 32,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
+      "wheel_sha256": "c29788ab8ce5bbfb6c85f6a242e042306249f3af1557e739a8de6fd2b5518b61",
+      "sdist_sha256": "9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26",
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION"
+    },
+    "hosted": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "run": 37716014588,
+      "job": 113112518632,
+      "conclusion": "PASS",
+      "unit_passed": 2544,
+      "unit_skipped": 4,
+      "unit_warnings": 56,
+      "unit_seconds": 256.31,
+      "posix_run": 37716014588,
+      "posix_job": 113112518763,
+      "posix_passed": 73,
+      "posix_skipped": 0,
+      "posix_seconds": 3.05,
+      "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+      "artifact_bytes_match_local": true,
+      "preserved_synthetic_files": 32
+    },
+    "review": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "status": "BOT_PLUS_ONE_NO_NEW_FINDINGS_NOT_FORMAL_APPROVED",
+      "completed_utc": "2026-10-08T02:07:49.781251Z",
+      "plus_one_observed_utc": "2026-10-08T02:07:54Z"
+    }
   }
 }

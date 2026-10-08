@@ -166,3 +166,37 @@ check missing anchors, migration rebind, predeclared legacy identity conflicts,
 unlisted increments and every durable write (now including the identity seal).
 No real native migration, grant, deployment or reservation was created.
 Earlier sourcee1a6437 package/CI evidence is historical after this correction.
+
+
+## Current identity-sealed source receipt, 2026-10-08
+
+Tested source ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb, PR146 ready/open/unmerged:
+- Local related230 PASS /five documented OS skips /47.04s; Ruff/mypy70 PASS.
+- Fresh security18 PASS /1.07s; locked audit no known vulnerabilities.
+- Actual VM five-asset Python2.6 grammar-only parsing PASS; no asset execution.
+- Hosted Windows run37716014588/job113112518632:2544 PASS /four POSIX skips /
+  56 warnings /256.31s; lint/type/security/audit/85 schemas/installed protocol PASS.
+- Hosted Ubuntu same run/job113112518763:73 PASS /zero skips /3.05s,
+  including real POSIX flock/process-death/mode checks on disposable files.
+- Installed fictional migration anchor, two accounting batches and same-version
+  reinstall/uninstall preserve32 synthetic state files. Native jobs0.
+- Fresh retained local wheel78 members SHA256
+  c29788ab8ce5bbfb6c85f6a242e042306249f3af1557e739a8de6fd2b5518b61;
+  sdist79 members SHA256
+  9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26.
+  Both match exact hosted bytes. Curated source/notices exact; unexpected/protected0.
+-325 inputs have zero unexpected drift; snapshotSHA256
+  1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9.
+- Automatic review completed2026-10-08T02:07:49.781251Z, bot+1 at02:07:54Z,
+  no new findings. This is not formal APPROVED and gives no merge authorization.
+- Two supported running-job CI-log reads returned HTTP502; the same backend
+  returned final completed logs successfully. No CLI CI-log fallback was used.
+
+Main553276d unchanged; unrelated OCN hash unchanged. Older source receipts above
+remain history. No native reservations/simulations/deployments/deletions, protected
+repair, budget increase/reset, merge, GREL08 or publication. Last native trust and
+resource observations were not refreshed. Production provider, authentic operator
+confirmation/migration/renewal, terminal worker lock integration, native copy/API/
+inputs and automatic new-job extraction/Sweep/clean actual client remain incomplete.
+Continuous GREL02–07 and existing895MiB remain authorized without reapproval.
+Receipt-only later commits must not be represented as this tested source SHA.

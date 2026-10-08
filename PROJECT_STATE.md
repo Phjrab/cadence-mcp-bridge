@@ -1,3 +1,17 @@
+## GREL-03 sealed accounting source receipt, 2026-10-08
+
+Sourceccd01ab in PR146: hosted Windows2544 PASS/four POSIX skips and Ubuntu73
+PASS/no skips. Local230 PASS/five OS skips; Ruff/mypy70/security18/audit/85 schemas,
+matching78/79-member artifacts and installed32-state preservation PASS. Actual
+Python2.6 is grammar-only. Automatic review no new findings/bot+1, not formal
+approval. Existing counter/lock with migration-bound immutable identity seals and
+conservation implemented; production provider/operator confirmation/real migration/
+terminal workers/native trust/new circuits/extraction/Sweep/clean app incomplete.
+Main553276d and unrelated OCN preserved. Generic release BLOCKED;02–07/895MiB
+continues. Native side effects0; no protected repairs/merge/GREL08/publication.
+Exact source-scoped receipts: docs/generic_release/GREL_03_SHARED_RESERVATIONS_RESULT.md.
+Historical overlays below remain history.
+
 ## GREL-03 immutable reservation identity correction, 2026-10-08
 
 Second independent P1 corrected with an immutable identity index and mandatory
