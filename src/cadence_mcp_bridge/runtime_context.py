@@ -212,7 +212,7 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
                     OperatorTransport(
                         profile.ssh_alias,
                         profile.paths.managed_root,
-                        profile.paths.managed_root + "/bin/cadence-runner",
+                        profile.paths.managed_root + "/bin/cadence-operator-runner",
                     ),
                     domain,
                     state_root,

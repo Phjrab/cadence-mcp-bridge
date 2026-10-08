@@ -217,6 +217,8 @@ def test_preflight_selects_exact_manifest_and_preserves_permission_rejection(pre
         bootstrap.preflight(source, digest)
     assert error.value.reason == "executable_permissions"
     argv = transport.call_args.args[0]
+    assert argv[-4].endswith("/bin/cadence-operator-runner")
+    assert argv[-8:-4] == ["/usr/bin/python", "-E", "-s", "-B"]
     assert argv[-3] == "preflight" and argv[-2] == digest and len(argv[-1]) == 32
     assert "StrictHostKeyChecking=yes" in argv
     assert not list(source.glob("*.sqlite3"))
@@ -354,3 +356,249 @@ def test_reservation_asset_tamper_rejected(prepared):
     with pytest.raises(ValueError, match="asset_drift"):
         bootstrap.install(source, target, digest)
     assert not (target / "runtime").exists()
+
+
+@pytest.fixture
+def operator_bound(prepared_bound, monkeypatch):
+    # Portable content fixtures; actual shared flock is tested separately below.
+    monkeypatch.setattr(installer, "_operator_lock", lambda target: None)
+    source, target, digest = prepared_bound
+    bootstrap.install(source, target, digest)
+    binary = target / "bin"
+    binary.mkdir()
+    (binary / "cadence-runner").write_bytes(b"historical-reference")
+    (target / "active-runner.json").write_bytes(b"historical-pointer")
+    (target / "runner-revoked.json").write_bytes(b"historical-revocation")
+    (target / "counter.json").write_bytes(b"historical-counter")
+    return source, target, digest
+
+
+def test_operator_activation_coexists_and_repeat_preserves_history(operator_bound):
+    _, target, digest = operator_bound
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    first = installer.operator_activation(str(target), digest)
+    assert first["status"] == "OPERATOR_ACTIVATION_RECORDED_NOT_QUALIFIED"
+    assert not first["execution_authorized"]
+    assert (
+        installer.operator_activation(str(target), digest)["status"]
+        == "EXISTING_EXACT_OPERATOR_ACTIVATION"
+    )
+    for name, data in before.items():
+        assert (target / name).read_bytes() == data
+    assert (target / "bin/cadence-operator-runner").read_bytes() == (
+        target / "runtime" / digest / "launcher.py"
+    ).read_bytes()
+
+
+def test_operator_partial_activation_resumes_exact_launcher(operator_bound, monkeypatch):
+    _, target, digest = operator_bound
+    original = installer.exclusive
+
+    def interrupted(path, content, mode=384):
+        if path.endswith("active-operator-runner.json"):
+            raise OSError("simulated interruption before pointer")
+        return original(path, content, mode)
+
+    monkeypatch.setattr(installer, "exclusive", interrupted)
+    with pytest.raises(OSError, match="interruption"):
+        installer.operator_activation(str(target), digest)
+    assert (target / "bin/cadence-operator-runner").exists()
+    assert not (target / "active-operator-runner.json").exists()
+    monkeypatch.setattr(installer, "exclusive", original)
+    assert (
+        installer.operator_activation(str(target), digest)["status"]
+        == "OPERATOR_ACTIVATION_RECORDED_NOT_QUALIFIED"
+    )
+
+
+def test_operator_launcher_collision_fails_without_overwrite(operator_bound):
+    _, target, digest = operator_bound
+    launcher = target / "bin/cadence-operator-runner"
+    launcher.write_bytes(b"unrelated code")
+    launcher.chmod(0o700)
+    with pytest.raises(ValueError, match="operator_launcher_collision"):
+        installer.operator_activation(str(target), digest)
+    assert launcher.read_bytes() == b"unrelated code"
+    assert not (target / "active-operator-runner.json").exists()
+
+
+def test_operator_deactivation_is_repeatable_preserves_bytes_and_blocks_reactivation(
+    operator_bound,
+):
+    _, target, digest = operator_bound
+    installer.operator_activation(str(target), digest)
+    before = (target / "active-operator-runner.json").read_bytes()
+    assert installer.operator_deactivate(str(target), digest)["execution_authorized"] is False
+    assert installer.operator_deactivate(str(target), digest)["execution_authorized"] is False
+    assert (target / "active-operator-runner.json").read_bytes() == before
+    with pytest.raises(ValueError, match="operator_runner_revoked"):
+        installer.operator_activation(str(target), digest)
+    assert (target / "runner-revoked.json").read_bytes() == b"historical-revocation"
+
+
+def test_operator_wrong_manifest_and_active_jobs_deny_before_writes(operator_bound):
+    _, target, digest = operator_bound
+    (target / "execution.lock").write_bytes(b"unresolved")
+    with pytest.raises(ValueError, match="active_or_unresolved_jobs"):
+        installer.operator_activation(str(target), digest)
+    assert not (target / "bin/cadence-operator-runner").exists()
+    assert (target / "counter.json").read_bytes() == b"historical-counter"
+
+
+def test_operator_lock_requires_existing_domain_and_obeys_flock(tmp_path, monkeypatch):
+    import os
+    import stat
+
+    if os.name == "nt":
+        pytest.skip("Linux shared resource lock")
+    import fcntl
+
+    real_lstat = os.lstat
+
+    # The fixture ancestors are deliberately disposable /tmp, not a native target.
+    def fixture_stat(path):
+        info = real_lstat(path)
+        if str(path) in ("/tmp", "/tmp/pytest-of-root"):
+            parts = list(info)
+            parts[0] = stat.S_IFDIR | 0o755
+            return os.stat_result(parts)
+        return info
+
+    monkeypatch.setattr(os, "lstat", fixture_stat)
+    with pytest.raises(OSError):
+        installer._operator_lock(str(tmp_path))
+    lock = tmp_path / "run.lock"
+    assert not lock.exists()
+    lock.write_bytes(b"")
+    lock.chmod(0o600)
+    with lock.open("rb") as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(ValueError, match="operator_domain_busy"):
+            installer._operator_lock(str(tmp_path))
+    fd = installer._operator_lock(str(tmp_path))
+    os.close(fd)
+
+
+@pytest.mark.parametrize("version", [True, 1.0])
+def test_operator_state_rejects_coerced_version_without_mutation(operator_bound, version):
+    _, target, digest = operator_bound
+    state = target / "active-operator-runner.json"
+    raw = installer.canonical({"schema_version": version, "manifest_sha256": digest})
+    state.write_bytes(raw)
+    state.chmod(0o600)
+    with pytest.raises(ValueError, match="operator_state_shape"):
+        installer.operator_activation(str(target), digest)
+    assert state.read_bytes() == raw
+    assert not (target / "bin/cadence-operator-runner").exists()
+
+
+@pytest.fixture
+def operator_update_pair(operator_bound):
+    source, target, previous = operator_bound
+    installer.operator_activation(str(target), previous)
+    launcher = source / "launcher.py"
+    launcher.write_bytes(launcher.read_bytes() + b"\n# new synthetic preflight launcher revision\n")
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    manifest["files"]["launcher.py"] = {
+        "sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+        "bytes": len(launcher.read_bytes()),
+    }
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    expected = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, expected)
+    return source, target, previous, expected
+
+
+def test_operator_preflight_update_preserves_history_and_is_idempotent(operator_update_pair):
+    _, target, previous, expected = operator_update_pair
+    old_version = target / "runtime" / previous
+    old = {p.name: p.read_bytes() for p in old_version.iterdir()}
+    receipt = installer.operator_preflight_update(str(target), expected, previous)
+    assert receipt["execution_authorized"] is False
+    assert receipt["status"] == "OPERATOR_PREFLIGHT_UPDATE_RECORDED"
+    snapshot = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert installer.operator_preflight_update(str(target), expected, previous) == receipt
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == snapshot
+    assert {p.name: p.read_bytes() for p in old_version.iterdir()} == old
+    assert (target / "bin/cadence-runner").read_bytes() == b"historical-reference"
+    assert (target / "active-runner.json").read_bytes() == b"historical-pointer"
+    assert (target / "counter.json").read_bytes() == b"historical-counter"
+
+
+def test_operator_preflight_update_recovers_interrupted_pair(operator_update_pair, monkeypatch):
+    _, target, previous, expected = operator_update_pair
+    original = installer._replace_operator_file
+
+    def interrupted(source, destination):
+        if destination.endswith("active-operator-runner.json"):
+            raise OSError("simulated crash between launcher and pointer")
+        return original(source, destination)
+
+    monkeypatch.setattr(installer, "_replace_operator_file", interrupted)
+    with pytest.raises(OSError, match="simulated crash"):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert (
+        json.loads((target / "active-operator-runner.json").read_bytes())["manifest_sha256"]
+        == previous
+    )
+    assert (target / "bin/cadence-operator-runner").read_bytes() == (
+        target / "runtime" / expected / "launcher.py"
+    ).read_bytes()
+    monkeypatch.setattr(installer, "_replace_operator_file", original)
+    installer.operator_preflight_update(str(target), expected, previous)
+    assert (
+        json.loads((target / "active-operator-runner.json").read_bytes())["manifest_sha256"]
+        == expected
+    )
+
+
+def test_operator_preflight_update_refuses_orphan_replacement(operator_update_pair):
+    _, target, previous, expected = operator_update_pair
+    state = target / "active-operator-runner.json"
+    state.write_bytes(installer.canonical({"schema_version": 1, "manifest_sha256": expected}))
+    (target / "bin/cadence-operator-runner").write_bytes(
+        (target / "runtime" / expected / "launcher.py").read_bytes()
+    )
+    with pytest.raises(ValueError, match="operator_update_history_missing"):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert not (target / "operator-activation-history").exists() or not list(
+        (target / "operator-activation-history").iterdir()
+    )
+
+
+@pytest.mark.parametrize("change", ["runner.py", "profile.json", "probe.py", "reservations.py"])
+def test_operator_preflight_update_refuses_nonlauncher_change(operator_update_pair, change):
+    source, target, previous, _ = operator_update_pair
+    asset = source / change
+    asset.write_bytes(asset.read_bytes() + b"\n")
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+    manifest["files"][change] = {"sha256": digest, "bytes": len(asset.read_bytes())}
+    if change == "profile.json":
+        manifest["profile_sha256"] = digest
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    expected = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, expected)
+    before = (target / "active-operator-runner.json").read_bytes()
+    with pytest.raises(ValueError, match="preflight_only_update_required"):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert (target / "active-operator-runner.json").read_bytes() == before
+    assert not (target / "operator-activation-history").exists()
+
+
+
+def test_operator_update_rejects_reversed_pair(operator_update_pair):
+    _, target, previous, expected = operator_update_pair
+    installer.operator_preflight_update(str(target), expected, previous)
+    (target / "bin/cadence-operator-runner").write_bytes(
+        (target / "runtime" / previous / "launcher.py").read_bytes()
+    )
+    with pytest.raises(ValueError, match="operator_update_state_drift"):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert json.loads((target / "active-operator-runner.json").read_bytes())[
+        "manifest_sha256"
+    ] == expected

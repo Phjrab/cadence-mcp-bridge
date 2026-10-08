@@ -10,9 +10,9 @@
     "GREL-06",
     "GREL-07"
   ],
-  "phase_status": "PARTIAL_NATIVE_TRUST_REPAIRED_PROVIDER_PENDING",
-  "branch": "feat/grel-02-standard-vm-trust-repair",
-  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/147",
+  "phase_status": "PARTIAL_ACTIVE_NATIVE_PREFLIGHT_PROVIDER_PENDING",
+  "branch": "feat/grel-02-operator-runner-coexistence",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
   "administrator_authority": "Actual user instruction on 2026-10-08, current managed VM only; this document does not mint approval",
   "support": "Professor-provided standard CentOS/Cadence VM or equivalent installation with existing PDK, individual VMware",
@@ -23,8 +23,12 @@
     "repeat_changed": 0,
     "normal_user_ocean_startup": "PASS",
     "environment_preflight": "PASS",
-    "latest_observation_utc": "2026-10-08T04:49:03Z",
-    "full_runtime_attestation": "NOT_COMPLETE"
+    "latest_observation_utc": "2026-10-08T06:13:52+00:00",
+    "full_runtime_attestation": "NOT_COMPLETE",
+    "active_operator_preflight": "PASS",
+    "legacy_launcher_counter_lock_preservation": "PASS",
+    "active_manifest_sha256": "4bf95a3c818e2c8bc07b760d9b2ff2041e64f42d4023970796d0325b3814c02c",
+    "active_launcher_sha256": "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f"
   },
   "execution": {
     "new_simulations": 0,
@@ -41,16 +45,16 @@
     "reset_refund_increase_authorized": false
   },
   "validation": {
-    "affected_passed": 184,
-    "platform_skips": 6,
+    "affected_passed": 199,
+    "platform_skips": 7,
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 32,
-    "hosted_ci": "PENDING",
-    "independent_review": "PENDING"
+    "hosted_ci": "PR148_PASS_NEW_SOURCE_PENDING",
+    "independent_review": "PENDING",
+    "security_seconds": 1.69
   },
   "next_work": [
-    "coexisting operator launcher without replacing legacy launcher",
     "authentic provider and existing-domain migration",
     "two new owned circuit copies, effective inputs and fresh DC/AC/TRAN",
     "automatic extraction and generic sweep/specification",
@@ -66,6 +70,8 @@
     "historical result/journal deletion",
     "budget reset/refund/increase"
   ],
-  "report": "ADMIN_REPAIR_V1.md",
-  "next_phase_authorized": true
+  "report": "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+  "next_phase_authorized": true,
+  "previous_branch": "feat/grel-02-standard-vm-trust-repair",
+  "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148"
 }

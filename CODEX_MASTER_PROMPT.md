@@ -1,3 +1,22 @@
+## Active operator runner coexistence, 2026-10-08
+
+The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
+passed hosted Windows and Ubuntu verification. Continuous GREL02–07 and the
+895MiB remainder stay authorized. The operator route now uses a separate
+cadence-operator-runner and active-operator-runner.json while retaining the legacy
+launcher/pointer. Ordinary-user actual activation, repeat, two fresh fixed-Python
+preflights and shared run.lock contention rejection passed. No new simulations,
+reservations, owner/group changes or journal migration occurred. Existing counter
+still82 /9,798,942,720. Failure evidence remains private and retained.
+
+Same-profile preflight-launcher updates retain immutable old versions/history;
+only the compiled known preflight runner and unchanged other assets are accepted.
+This is not a native worker update gate. Production provider/operator confirmation,
+existing-domain migration/fresh provisioning, two new OA/ADE circuits, effective
+inputs/DC/AC/TRAN/extraction, generic Sweep/spec and clean actual Codex remain
+incomplete. Continue those authorized tasks; no phase approval question.
+See [coexistence workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+
 ## Current standard-VM administrator delegation and repair, 2026-10-08
 
 The user's latest direct instruction fixes release support to the professor-provided

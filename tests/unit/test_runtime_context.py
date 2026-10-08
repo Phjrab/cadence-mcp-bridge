@@ -102,7 +102,7 @@ def test_resolved_backends_and_immutable_selection(settings: Path) -> None:
     assert first.resolve("design-1") is first
     assert first.transport.ssh_alias == "operator-1"
     assert second.transport.ssh_alias == "operator-2"
-    assert first.transport.runner_path == "/srv/project/.cadence_mcp/bin/cadence-runner"
+    assert first.transport.runner_path == "/srv/project/.cadence_mcp/bin/cadence-operator-runner"
     assert first.resource_domain_sha256 != second.resource_domain_sha256
     with pytest.raises(FrozenInstanceError):
         first.transport.ssh_alias = "attacker"  # type: ignore[misc]
