@@ -17,6 +17,14 @@ the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
 
+## Generic native provider checkpoint
+
+The current feature implements fixed authenticated admission and a common owned
+OA/ADE/netlist/Spectre/result worker. The native-runtime schema/bundle CLI exports
+a hash-bound runtime locally. Installation/activation and public operator-service
+injection are pending; new-circuit execution and general release remain incomplete.
+See [provider evidence and remaining gates](docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md).
+
 ## Coexisting operator runner
 
 The installed package's runner bundle/export-installer/verify/preflight workflow

@@ -68,7 +68,7 @@ def confirmed_domain(root, monkeypatch):
         "authorization_source": "explicit_operator_record",
         "resource_domain_sha256": anchor["resource_domain_sha256"],
         "runner_sha256": "b" * 64,
-        "ledger_ref": accounting.LEDGER,
+        "ledger_ref": accounting.LEDGER_REF,
         "environment_sha256": native.digest(native.canonical(profile)),
         "design_sha256": "c" * 64,
         "pdk_sha256": "d" * 64,
@@ -353,3 +353,24 @@ def test_staging_response_field_drift_denies(monkeypatch, field):
     examples = Path(__file__).resolve().parents[2] / "docs/examples/onboarding/environment.json"
     with pytest.raises(OperationRejected):
         host.stage(examples, sha)
+
+
+def test_logical_grant_parses_modern_contract_and_internal_path_is_not_live_authority(
+    confirmed_domain,
+):
+    from cadence_mcp_bridge.operator_operations import OperatorGrant
+
+    _, profile, request = confirmed_domain
+    grant = OperatorGrant.model_validate_json(request["grant_json"])
+    assert grant.ledger_ref == accounting.LEDGER_REF
+    wrong = json.loads(request["grant_json"])
+    wrong["ledger_ref"] = accounting.LEDGER
+    raw = native.canonical(wrong).decode("ascii")
+    root, binding, _, _ = native.domain(profile, request["identity_manifest_sha256"])
+    with pytest.raises(ValueError, match="grant_shape"):
+        native.grant_document(raw, native.digest(raw.encode("ascii")), profile, binding, True)
+    # Historical non-live inspection remains possible; this cannot dispatch.
+    assert (
+        native.grant_document(raw, native.digest(raw.encode("ascii")), profile, binding, False)
+        == wrong
+    )

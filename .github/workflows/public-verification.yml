@@ -87,3 +87,6 @@ jobs:
 
       - name: OS-operator confirmation and append-only revocation on disposable files
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_operator_confirmation.py tests/unit/test_native_copy.py -q --basetemp "$HOME/grel-confirmation-tests"
+
+      - name: Fixed admission, confirmed gate and detached worker flock on disposable files
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_native_operations.py tests/unit/test_native_gate.py tests/unit/test_authenticated_provider.py tests/unit/test_native_eda_worker.py tests/unit/test_native_runtime.py -q --basetemp "$HOME/grel-provider-tests"

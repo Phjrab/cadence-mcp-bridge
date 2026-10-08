@@ -250,7 +250,10 @@ def grant_document(raw, expected, profile, binding, live=True):
         or (
             grant["schema_version"] != 1
             or grant["authorization_source"] != "explicit_operator_record"
-            or grant["ledger_ref"] != accounting.LEDGER
+            or (
+                grant["ledger_ref"] != accounting.LEDGER_REF
+                and (live or grant["ledger_ref"] != accounting.LEDGER)
+            )
             or grant["resource_domain_sha256"] != binding["resource_domain_sha256"]
             or not matches(r"^[a-z][a-z0-9-]{0,63}$", grant["grant_id"])
         )

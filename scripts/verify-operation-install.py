@@ -85,7 +85,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         pdk_sha256=hashlib.sha256(paths[2].read_bytes()).hexdigest(),
         runner_sha256="b" * 64,
         authority_ref="fictional-record",
-        ledger_ref="fictional-existing",
+        ledger_ref="shared-ledger",
         analysis_journal=str(workspace / "analysis.sqlite3"),
         sweep_journal=str(workspace / "sweep.sqlite3"),
     )
@@ -104,7 +104,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 authorization_source="explicit_operator_record",
                 resource_domain_sha256=context.resource_domain_sha256,
                 runner_sha256="b" * 64,
-                ledger_ref="fictional-existing",
+                ledger_ref="shared-ledger",
                 environment_sha256=binding["environment_sha256"],
                 design_sha256=binding["design_sha256"],
                 pdk_sha256=binding["pdk_sha256"],
@@ -430,6 +430,80 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 }
             )
         )
+        # Installed package exports the same fixed provider/worker inventory.
+        # This step creates local artifacts only; it cannot confirm or dispatch.
+        from cadence_mcp_bridge import _native_dispatch
+        from cadence_mcp_bridge.native_runtime import SOURCES
+
+        native_registration = workspace / (design_id + "-native-registration.json")
+        library = profile_model.binding.library
+        remote_workspace = context.contracts.environment.paths.workspace_root
+        native_registration.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "identity_manifest_sha256": "a" * 64,
+                    "routes": [
+                        {
+                            "validation_request": request_model.model_dump(mode="json"),
+                            "ade": ade_model.model_dump(mode="json"),
+                            "reader": reader_model.model_dump(mode="json"),
+                            "source_cell": remote_workspace
+                            + "/"
+                            + library
+                            + "/"
+                            + profile_model.binding.cell,
+                            "source_state": remote_workspace + "/fictional-state",
+                            "libraries": [
+                                {"name": library, "path": remote_workspace + "/" + library}
+                            ],
+                        }
+                    ],
+                }
+            ),
+            encoding="ascii",
+        )
+        native_output = workspace / (design_id + "-native-runtime")
+        native_export = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "native-runtime",
+                "bundle",
+                "--settings",
+                str(settings),
+                "--context",
+                "installed-operation",
+                "--registration",
+                str(native_registration),
+                "--output",
+                str(native_output),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        native_receipt = json.loads(native_export.stdout)
+        native_manifest_raw = (native_output / "manifest.json").read_bytes()
+        native_manifest = json.loads(native_manifest_raw)
+        assert native_receipt["manifest_sha256"] == hashlib.sha256(native_manifest_raw).hexdigest()
+        assert native_receipt["asset_count"] == len(_native_dispatch.FILES) == 13
+        assert not native_receipt["execution_authorized"] and not native_receipt["remote_contact"]
+        assert set(native_manifest["files"]) == set(_native_dispatch.FILES)
+        from importlib.resources import files
+
+        for name, source in SOURCES.items():
+            assert (native_output / name).read_bytes() == files("cadence_mcp_bridge").joinpath(
+                source
+            ).read_bytes()
+        assert store.path.read_bytes() == before
+
         reader_path = workspace / (design_id + "-reader.json")
         reader_path.write_text(reader_model.model_dump_json(), encoding="ascii")
         plan_path = workspace / (design_id + "-plan.json")

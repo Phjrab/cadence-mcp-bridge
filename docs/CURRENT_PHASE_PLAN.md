@@ -1,3 +1,33 @@
+## Current fixed native admission/worker implementation, 2026-10-08
+
+Continue feat/grel-03-authenticated-provider and draft PR152; latest main remains
+553276d. Concrete fixed SSH provider, existing-lock admission/hash-chain journal,
+confirmed gate, generic owned OA/ADE/netlist/Spectre/reader worker and local
+immutable runtime export are implemented. Admission rechecks runtime/revocation
+under the existing lock; Linux cleanup pins the unreaped leader until its group
+stops. No public shell/admin/grant writer, parallel ledger or transport resend.
+
+Fresh related local284 PASS/12 Windows POSIX skips; Ruff/mypy87, security18/audit,
+85 schemas and installed wheel/sdist/runtime-export/43+20-state preservation PASS.
+Linux exact-source hosted validation is pending. Actual retained normal-user
+preflight and seven protected-control metadata checks PASS; ledger82 /
+9,798,942,720, remaining938,475,520 (895MiB). Seven new assets pass actual
+Python2.6 grammar only. CRLF grammar and Windows audit encoding failures were
+corrected, with private failure evidence retained.
+
+The native runtime is not installed/activated or actual EDA-qualified; public MCP
+provider injection is pending. Separate staging/activation, independent route
+validation, new RC/MOS OA/ADE/DC/AC/TRAN/extraction, Sweep/spec, clean actual Codex
+submit/retry/restart and GREL07 remain incomplete. General release/GREL03 are not
+complete. This continuation adds0 jobs/reservations/remote writes. Earlier helper
+staging and332 approved metadata repairs remain historical cumulative evidence.
+Current control equality uses the approved repaired baseline.
+
+ContinuousGREL02–07, current-VM administrator delegation and the existing895MiB
+continue; no phase reapproval, merge/GREL08/publication, original content changes,
+budget increase/reset/refund or deletion. See generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md.
+Earlier overlays below are preserved as historical receipts.
+
 ## Active authenticated-provider implementation, 2026-10-08
 
 Continue feat/grel-03-authenticated-provider over retained unmerged PR151/ba02e5b.

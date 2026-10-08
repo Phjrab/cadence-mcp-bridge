@@ -143,6 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--" + field, required=True)
         if name != "inspect":
             command.add_argument("--operator-authority", required=True)
+    native = subparsers.add_parser(
+        "native-runtime", help="Local fixed native bundle construction; no installation or grant."
+    )
+    native_actions = native.add_subparsers(dest="native_action", required=True)
+    native_actions.add_parser("schema")
+    native_bundle = native_actions.add_parser("bundle")
+    for field in ("settings", "registration", "output"):
+        native_bundle.add_argument("--" + field, type=Path, required=True)
+    native_bundle.add_argument("--context", required=True)
     ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
     ade_actions = ade.add_subparsers(dest="ade_action", required=True)
     ade_actions.add_parser("schema")
@@ -349,6 +358,48 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 1
         print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
+        return 0
+    if arguments.command == "native-runtime":
+        from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.native_action == "schema":
+                native_result = NativeRegistration.model_json_schema()
+            else:
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings)
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
+                if context is None:
+                    raise OperationRejected("native_runtime_unknown_context")
+                native_result = bundle(context, arguments.registration, arguments.output)
+        except (
+            OSError,
+            ValueError,
+            ConfigurationError,
+            InvalidInputError,
+            RecursionError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "NATIVE_RUNTIME_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "native_registration_invalid",
+                        "execution_authorized": False,
+                        "remote_contact": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(native_result, sort_keys=True))
         return 0
     if arguments.command == "operator-authority":
         from cadence_mcp_bridge import operator_confirmation

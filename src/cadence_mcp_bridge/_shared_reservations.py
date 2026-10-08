@@ -24,6 +24,7 @@ except NameError:
     INTEGER_TYPES = (int,)
 
 LEDGER = "sim-mcp-v2-jobs/counter.json"
+LEDGER_REF = "shared-ledger"  # Public logical reference; never a caller-selected file.
 JOBS = "native-mcp-v1-jobs"
 REGISTRY = "reservation-identity"
 CEILING_COUNT = 500
