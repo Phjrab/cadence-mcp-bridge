@@ -134,3 +134,11 @@ These identify this candidate, separate from earlier CRLF artifacts/failures.
 
 Final installed package/protocol/coexistence/update/bootstrap and reinstall/uninstall
 verification PASS;43 synthetic state files preserved and native jobs0.
+
+PR149 independent P2 corrected: shared-lock path device/inode/owner/mode are
+revalidated after flock, rejecting replacement of the held path. Corrected
+bootstrap/runtime88 PASS/four platform skips,18.92s. Actual normal-user existing
+activation changed0; actual CentOS/Python2.6 disposable lock-replacement test PASS.
+The unchanged immutable preflight bundle is separate from this installer-source
+correction. Original review/source CI receipts remain historical; corrected-source
+hosted verification is pending. No counter/reservation/native job changes.

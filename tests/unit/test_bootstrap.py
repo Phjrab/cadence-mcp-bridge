@@ -590,7 +590,6 @@ def test_operator_preflight_update_refuses_nonlauncher_change(operator_update_pa
     assert not (target / "operator-activation-history").exists()
 
 
-
 def test_operator_update_rejects_reversed_pair(operator_update_pair):
     _, target, previous, expected = operator_update_pair
     installer.operator_preflight_update(str(target), expected, previous)
@@ -599,6 +598,34 @@ def test_operator_update_rejects_reversed_pair(operator_update_pair):
     )
     with pytest.raises(ValueError, match="operator_update_state_drift"):
         installer.operator_preflight_update(str(target), expected, previous)
-    assert json.loads((target / "active-operator-runner.json").read_bytes())[
-        "manifest_sha256"
-    ] == expected
+    assert (
+        json.loads((target / "active-operator-runner.json").read_bytes())["manifest_sha256"]
+        == expected
+    )
+
+
+def test_operator_lock_rechecks_path_after_flock(tmp_path, monkeypatch):
+    import os
+
+    if os.name != "posix":
+        pytest.skip("POSIX lock replacement race")
+    import fcntl
+
+    root = tmp_path / "managed"
+    root.mkdir(mode=0o700)
+    lock = root / "run.lock"
+    lock.write_bytes(b"original lock")
+    lock.chmod(0o600)
+    original = fcntl.flock
+
+    def replace_after_acquire(fd, operation):
+        original(fd, operation)
+        lock.rename(root / "preserved-lock")
+        lock.write_bytes(b"replacement lock")
+        lock.chmod(0o600)
+
+    monkeypatch.setattr(fcntl, "flock", replace_after_acquire)
+    with pytest.raises(ValueError, match="operator_lock_drift"):
+        installer._operator_lock(str(root))
+    assert (root / "preserved-lock").read_bytes() == b"original lock"
+    assert lock.read_bytes() == b"replacement lock"

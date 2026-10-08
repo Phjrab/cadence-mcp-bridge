@@ -260,6 +260,19 @@ def _operator_lock(target):
     except Exception:
         os.close(fd)
         raise ValueError("operator_domain_busy")
+    try:
+        after = os.lstat(path)
+        if (
+            not stat.S_ISREG(after.st_mode)
+            or after.st_nlink != 1
+            or after.st_uid != os.getuid()
+            or after.st_mode & 18
+            or (after.st_dev, after.st_ino) != (held.st_dev, held.st_ino)
+        ):
+            raise ValueError("operator_lock_drift")
+    except Exception:
+        os.close(fd)
+        raise ValueError("operator_lock_drift")
     return fd
 
 
