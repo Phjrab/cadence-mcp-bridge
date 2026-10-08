@@ -530,8 +530,12 @@ def test_explicit_legacy_launch_ignores_inherited_operator_mode(
         if key.startswith("CADENCE_MCP_"):
             monkeypatch.delenv(key)
     monkeypatch.setenv("CADENCE_MCP_RUNTIME_MODE", "operator")
+    monkeypatch.setenv("CADENCE_MCP_RUNTIME_SETTINGS_PATH", "unused-operator-settings.json")
+    monkeypatch.setenv("CADENCE_MCP_RUNTIME_CONTEXT_ID", "operator-session")
     selected = []
     factory = MagicMock(side_effect=lambda config: selected.append(config) or MagicMock())
     monkeypatch.setattr(server, "OpenSshBackend", factory)
     server.create_default_server()
     assert selected[0].runtime_mode == "legacy_reference"
+    assert selected[0].runtime_settings_path is None
+    assert selected[0].runtime_context_id is None
