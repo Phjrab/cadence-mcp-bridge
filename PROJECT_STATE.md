@@ -8,8 +8,12 @@ lock session are implemented; production acceptor/terminal worker remains pendin
 Current actual normal-user retained preflight PASS, ledger82 /9,798,942,720,
 remaining895MiB; seven existing control metadata unchanged. Actual Python2.6 common
 parser executed with synthetic inputs only. New EDA jobs/reservations/remote writes0.
-No actual confirmation/deployment in these checks; installed preflight accounting
-still predates current source. Release BLOCKED. ContinuousGREL02–07 and minimum
+Subsequent exact5917442 helper stage/repeat on the actual VM PASS: five new
+files /78,678 content bytes, repeat0; existing controls/index/counter unchanged.
+No grant or active-runtime change. Installed preflight accounting still predates
+current source. PR152 stays draft; its exact5917442 four hosted checks PASS.
+Later common owned-copy/routing foundation has local106 PASS/1 link skip and
+actual Python2.6 pure routing parser PASS, not native OA copy/netlisting. Release BLOCKED. ContinuousGREL02–07 and minimum
 administrator delegation persist; no reapproval, merge/GREL08/publication or
 budget increase/reset/refund. See docs/generic_release/OPERATOR_CONFIRMATION_V1.md for actual/synthetic
 boundaries and the remaining native provider/circuits/extraction/Sweep/clean app.

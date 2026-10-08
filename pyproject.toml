@@ -69,6 +69,7 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 "src/cadence_mcp_bridge/_setup_stage.py" = ["UP", "I", "SIM", "B"]
 "src/cadence_mcp_bridge/_native_rendering.py" = ["UP", "I", "SIM", "B"]
 "src/cadence_mcp_bridge/_operator_confirmation.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_native_copy.py" = ["UP", "I", "SIM", "B"]
 
 [tool.mypy]
 python_version = "3.12"

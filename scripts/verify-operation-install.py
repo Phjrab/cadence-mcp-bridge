@@ -549,11 +549,31 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     assert all((confirmation_output / name).read_bytes() == data for name, data in assets.items())
     assert store.path.read_bytes() == before
 
+    from cadence_mcp_bridge import _native_copy
+
+    copy_source = workspace / "synthetic-owned-source"
+    copy_source.mkdir(mode=0o700)
+    (copy_source / "state").mkdir(mode=0o700)
+    (copy_source / "state" / "variables").write_bytes(b"synthetic state bytes")
+    copy_parent = workspace / "synthetic-job"
+    copy_parent.mkdir(mode=0o700)
+    source_before = _native_copy.snapshot(str(copy_source.resolve()))
+    copied_receipt = _native_copy.copy_owned(
+        str(copy_source.resolve()),
+        str((copy_parent / "copy").resolve()),
+        source_before["tree_sha256"],
+    )
+    assert copied_receipt["source_preserved"]
+    assert copied_receipt["copy_content_sha256"] == source_before["content_sha256"]
+    assert _native_copy.snapshot(str(copy_source.resolve())) == source_before
+    assert store.path.read_bytes() == before
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
         "durable_admission": "NOT_RUN",
         "installed_confirmation_helper_export": "PASS_LOCAL_NO_AUTHORITY_OR_SSH",
+        "installed_owned_copy": "SYNTHETIC_FILES_ONLY_NOT_NATIVE_OA",
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,

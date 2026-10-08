@@ -125,3 +125,42 @@ Actual Codex runtime-info-v2 returned the existing operator-supplied catalog wit
 one design (schema2) and two PDK entries (schema2), with authority/environment
 qualification unassessed. No new generic job tool is connected yet. That read
 proves only the loaded catalog, not new-job submission or restart qualification.
+
+
+## Subsequent normal-user staging and worker copy foundation
+
+Exact CI-qualified confirmation assets from5917442 were staged on the current
+managed VM using the fixed operator CLI. Fresh retained preflight ran immediately
+before staging. Five new helper files,78,678 content bytes total, were written;
+a repeat changed0. Active launcher/runtime, seven protected control-file content
+and metadata, account index and authoritative ledger were unchanged. No actual
+grant was confirmed. This is actual helper staging, not native provider activation
+or an installed-current-package dispatch attestation. Prior zero-write evidence
+above describes the earlier checks and remains historical.
+
+Both push/PR Windows and Ubuntu checks for exact5917442 passed. Those checks do
+not cover the subsequently added copy foundation. The common bounded tree-copy
+asset observes source content, owner/group/mode/mtime, rejects links/special files,
+active locks/recovery artifacts and oversized trees, and exclusively creates
+private ordinary-user files/directories. It checks original preservation and copy
+content separately; copy metadata intentionally differs. Partial copies remain
+as failure evidence and are not overwritten or retried blindly. A fixed routing
+parser changes only two fields in the owned ADE-state bytes; original state bytes
+are untouched. Initial quote-parser mismatch was found by a synthetic test and
+corrected. Related106 PASS /1 Windows link skip; mypy81 source files PASS. Actual
+Python2.6 executed the pure routing parser with synthetic bytes; no actual OA/ADE
+copy or netlisting has been qualified. The asset has no CLI or public path input.
+
+Read-only current workspace metadata found the existing circuit libraries and
+cell/view names; no new RC/MOS acceptance sources or jobs were created by that
+read. Source/ADE contents were not returned. Current ledger remains82 /
+9,798,942,720 and the approved remainder895MiB. Subsequent provider/terminal worker,
+source preparation/effective inputs and actual jobs are still required in this
+same draft PR. Do not mark GREL03–07 or the release complete on these foundations.
+
+
+Copy-foundation package receipt: curated wheel/sdist and installed copy/CLI/
+protocol/bootstrap/reinstall/uninstall PASS;43 operator+20 domain files retained.
+This is synthetic installed-file qualification. Native-copy source hash for actual
+Python2.6 pure routing execution2e5df882325e8e5f7d3f43a9eb2a5ddfbadc769c8be50962648284cd045f1c1e.
+No actual OA/ADE source copy or Spectre execution is implied.

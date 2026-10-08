@@ -23,7 +23,7 @@
     "repeat_changed": 0,
     "normal_user_ocean_startup": "PASS",
     "environment_preflight": "PASS",
-    "latest_observation_utc": "2026-10-08T06:13:52+00:00",
+    "latest_observation_utc": "2026-10-08T09:32:14+00:00",
     "full_runtime_attestation": "NOT_COMPLETE",
     "active_operator_preflight": "PASS",
     "legacy_launcher_counter_lock_preservation": "PASS",
@@ -41,7 +41,12 @@
     "legacy_ids_sealed": 3,
     "fresh_initialization_on_current_vm": "DENIED_EXISTING_DOMAIN_PRESERVED",
     "normal_user_existing_index_register_repeat": "PASS",
-    "operator_confirmation": "LOCAL_IMPLEMENTED_ACTUAL_CONFIRMATION_NOT_RUN"
+    "operator_confirmation": "LOCAL_IMPLEMENTED_ACTUAL_CONFIRMATION_NOT_RUN",
+    "confirmation_helper_staging": "ACTUAL_NORMAL_USER_STAGE_REPEAT_PASS_NO_GRANT_OR_RUNTIME_CHANGE",
+    "staged_helper_sha256": "ec9b52fe7cdc01a3e1f5a09cabb82279abb0ebff99e420488458cbd3cd238d80",
+    "new_helper_files": 5,
+    "new_helper_content_bytes": 78678,
+    "owned_copy": "COMMON_ASSET_LOCAL_SYNTHETIC_ONLY_NATIVE_OA_NOT_RUN"
   },
   "resources": {
     "attempts": 82,
@@ -57,19 +62,22 @@
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 43,
-    "hosted_ci": "NO_PROVIDER_BRANCH_PR_SOURCE_RECEIPT_YET",
+    "hosted_ci": "5917442_FOUR_PUSH_PR_WINDOWS_UBUNTU_CHECKS_PASS_COPY_SOURCE_PENDING",
     "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
     "security_seconds": 6.49,
     "installed_preserved_migration_files": 20,
-    "source_receipt_scope": "UNCOMMITTED_PROVIDER_FOUNDATIONS",
+    "source_receipt_scope": "5917442_FOUNDATIONS_QUALIFIED_COPY_FOUNDATION_SUBSEQUENT",
     "related_passed": 332,
     "confirmation_fault_suite_passed": 37,
-    "mypy_source_files": 80,
+    "mypy_source_files": 81,
     "actual_py26_renderer": "SYNTHETIC_INPUT_EXECUTION_PASS_NOT_CADENCE",
     "related_seconds": 65.22,
     "installed_package": "PASS_SOURCE_FOUNDATIONS_NOT_NATIVE_PROVIDER",
     "public_schemas_preserved": 85,
-    "actual_codex": "EXISTING_CATALOG_READ_ONLY_NEW_GENERIC_JOB_NOT_RUN"
+    "actual_codex": "EXISTING_CATALOG_READ_ONLY_NEW_GENERIC_JOB_NOT_RUN",
+    "copy_related_passed": 106,
+    "copy_related_platform_skips": 1,
+    "copy_installed_package": "PASS_SYNTHETIC_FILE_COPY_AND_PRESERVATION_NATIVE_OA_NOT_RUN"
   },
   "next_work": [
     "authentic provider and existing-domain migration",
@@ -176,5 +184,7 @@
       "previous_branch": "feat/grel-03-operator-domain-provisioning",
       "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148"
     }
-  ]
+  ],
+  "provider_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/152",
+  "foundation_head": "59174423ff469d890020f9eb1a25b6cf01f84335"
 }
