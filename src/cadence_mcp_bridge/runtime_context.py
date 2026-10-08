@@ -192,7 +192,10 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
             design_ids.update(current_ids)
             # Alias, context ID, username and managed-root changes do not create extra capacity.
             domain = _digest(
-                {"hostname": profile.host.hostname, "architecture": profile.host.architecture}
+                {
+                    "hostname": profile.host.hostname.lower(),
+                    "architecture": profile.host.architecture,
+                }
             )
             domain_binding = (binding.ledger_ref, profile.limits)
             if domain in domains and domains[domain] != domain_binding:

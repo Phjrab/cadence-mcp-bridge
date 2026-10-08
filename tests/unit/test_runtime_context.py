@@ -539,3 +539,28 @@ def test_explicit_legacy_launch_ignores_inherited_operator_mode(
     assert selected[0].runtime_mode == "legacy_reference"
     assert selected[0].runtime_settings_path is None
     assert selected[0].runtime_context_id is None
+
+
+@pytest.mark.parametrize("conflict", [False, True])
+def test_case_variant_hostnames_share_domain_and_policy(tmp_path, conflict):
+    settings = make_settings(tmp_path, shared=True)
+    data = json.loads(settings.read_bytes())
+    binding = data["contexts"][1]
+    env_path = Path(binding["environment_profile"])
+    env = json.loads(env_path.read_bytes())
+    env["host"]["hostname"] = env["host"]["hostname"].upper()
+    if conflict:
+        binding["ledger_ref"] = "different-ledger"
+    env_path.write_text(json.dumps(env), encoding="utf-8")
+    binding["environment_sha256"] = hashlib.sha256(env_path.read_bytes()).hexdigest()
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    if conflict:
+        with pytest.raises(RuntimeRejected) as error:
+            load_runtime(settings)
+        assert error.value.reason == "shared_resource_policy_conflict"
+    else:
+        first, second = load_runtime(settings)
+        assert first.resource_domain_sha256 == second.resource_domain_sha256
+        assert first.lock_path == second.lock_path
+        with resource_lock(first), pytest.raises(RuntimeRejected), resource_lock(second):
+            pytest.fail("hostname case bypassed the shared lock")
