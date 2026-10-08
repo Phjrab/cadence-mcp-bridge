@@ -87,6 +87,7 @@ def retrieval(operator, monkeypatch):
             b"",
         )
 
+    monkeypatch.setattr(wire, "_ssh", lambda _: ["fixed-synthetic-ssh", "python", "-B"])
     monkeypatch.setattr(wire, "run_fixed", transport)
     return provider, plan, op, payload, calls
 

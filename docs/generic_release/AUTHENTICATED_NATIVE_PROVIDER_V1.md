@@ -203,3 +203,12 @@ latest retained preflight/current eight assets grammar PASS; ledger82/9,798,942,
 Earlier private diagnostic Python2.6 dict-comprehension failure produced0 remote
 writes and was corrected; its evidence is retained. No source content or private
 paths are published. This is setup evidence, not EDA success.
+
+
+ca9ca14 exact hosted Ubuntu run:100 native/provider tests passed,11 result tests
+failed and6 public-service fixture errors. New fixtures incorrectly resolved real
+Windows ssh.exe before reaching the synthetic wire. Fixed tests now inject the
+fixed SSH argv and backend factory, including restart construction. Production
+SSH/gates/worker code is unchanged; no Linux-host support claim follows. The native
+owned pipeline/result/PSF-drift cases passed in that failed run. Failed CI evidence
+is preserved; corrected exact-source CI is pending.

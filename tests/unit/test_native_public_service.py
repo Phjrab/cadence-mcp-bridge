@@ -31,7 +31,7 @@ NAMES = {
 
 
 @pytest.fixture
-def configured(operator, tmp_path):
+def configured(operator, tmp_path, monkeypatch):
     context, grant, request, settings = operator
     provider_path, grant_path = tmp_path / "provider.json", tmp_path / "grant.json"
     provider_path.write_bytes(
@@ -57,7 +57,8 @@ def configured(operator, tmp_path):
         runtime_settings_path=settings,
         runtime_context_id=context.binding.context_id,
     )
-    service = create_operator_service(config)
+    monkeypatch.setattr(wire, "_ssh", lambda _: ["fixed-synthetic-ssh", "python", "-B"])
+    service = create_operator_service(config, factory=lambda _: object())
     assert not context.binding.analysis_journal.exists()
     return create_server(cast(CadenceService, service)), service, request, settings, grant_path
 
@@ -97,7 +98,8 @@ async def test_operator_only_conditional_schema_and_no_server_start_side_effects
             runtime_mode="operator",
             runtime_settings_path=settings,
             runtime_context_id=service.context.binding.context_id,
-        )
+        ),
+        factory=lambda _: object(),
     )
     assert old.native_operations is None
     assert len(await create_server(cast(CadenceService, old)).list_tools()) == 85
@@ -151,7 +153,8 @@ async def test_public_submit_retry_restart_and_status_preserve_one_remote_accept
                         runtime_mode="operator",
                         runtime_settings_path=settings,
                         runtime_context_id=service.context.binding.context_id,
-                    )
+                    ),
+                    factory=lambda _: object(),
                 ),
             )
         ),
