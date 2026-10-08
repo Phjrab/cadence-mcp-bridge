@@ -1,5 +1,6 @@
 """Compiled worker uses disposable OA/PSF placeholders and synthetic programs."""
 
+import errno
 import os
 import sys
 from pathlib import Path
@@ -292,3 +293,66 @@ def test_partial_log_setup_closes_open_descriptor_without_spawning(qualified, mo
             worker.program(session, journal, ["unused"], "partial", 1, 1048576)
         assert set(os.listdir("/proc/self/fd")) == before
         assert (Path(journal.work) / "partial.stderr").read_bytes() == b"retained"
+
+
+@pytest.mark.parametrize("code", [errno.ENOENT, errno.ESRCH, errno.EACCES])
+@pytest.mark.parametrize("failure_at", ["uid", "identity"])
+def test_py26_vanished_member_ioerror_only_skips_confirmed_absence(monkeypatch, code, failure_at):
+    # Python 3 aliases IOError/OSError. Simulate the distinct Python 2.6 class
+    # exposed by an actual standard-VM /proc read.
+    class Py26IOError(Exception):
+        def __init__(self, value):
+            self.errno = value
+
+    monkeypatch.setattr(eda, "IOError", Py26IOError, raising=False)
+    monkeypatch.setattr(eda.os, "getuid", lambda: 500, raising=False)
+    monkeypatch.setattr(eda.os, "listdir", lambda _: ["123", "456", "self"])
+    worker = eda.EdaWorker(None, operations, rendering, copying, installer)
+
+    def identity(pid):
+        if pid == 123:
+            return "Z", 123, 123, "start"
+        if failure_at == "identity":
+            raise Py26IOError(code)
+        pytest.fail("vanished UID lookup must not proceed to identity")
+
+    def uid(pid):
+        if failure_at == "uid" and pid == 456:
+            raise Py26IOError(code)
+        return (os.getuid(),) * 4
+
+    monkeypatch.setattr(worker, "process_identity", identity)
+    monkeypatch.setattr(worker, "process_uid", uid)
+    process = type("Process", (), {"pid": 123})()
+    if code == errno.EACCES:
+        with pytest.raises(Py26IOError):
+            worker.group_active(process, ("Z", 123, 123, "start"))
+    else:
+        assert not worker.group_active(process, ("Z", 123, 123, "start"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="ordinary-user Linux process")
+def test_spectre_relative_outputs_remain_inside_owned_job(qualified):
+    root, gate, plan, _ = qualified
+    gate.storage = storage
+    worker = eda.EdaWorker(gate, operations, rendering, copying, installer)
+    journal = operations.OperationJournal(str(root), str(uuid4()), plan, accounting)
+    with accounting.ReservationSession(str(root)) as session:
+        permit, _ = gate.check(session, plan, "submit")
+        journal.create(permit)
+        worker.program(
+            session,
+            journal,
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                "from pathlib import Path;Path('spectre.dc').write_text('synthetic')",
+            ],
+            "spectre",
+            2,
+            1048576,
+        )
+    assert (Path(journal.work) / "spectre.dc").read_text() == "synthetic"
+    assert not (Path(journal.job) / "spectre.dc").exists()
+    assert accounting.read(str(root / accounting.LEDGER))["count"] == 82

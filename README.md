@@ -828,3 +828,21 @@ extraction rerun occurs during retrieval. Goals remain `not_evaluated` unless a
 separate applicable specification is registered. Legacy/no-native-binding mode
 retains its original 85 tool schemas. The additional tool contract is recorded in
 `docs/contracts/MCP_NATIVE_OPERATIONS_V1_SNAPSHOT.json` in the source repository.
+
+
+For a new registered source, prepare an owned QA/source copy in Cadence and use
+Check and Save after changing schematic stimuli. Keep a valid ADE L state and
+register the numeric variables that the common renderer sets after loading it;
+do not invent internal saved-state variable component structures. DC support
+requires a true operating-point state, without a component/parameter sweep.
+Register new source/state/static-input hashes after reviewing any source edit.
+Model includes must use canonical installed paths and separately attested hashes.
+
+The standard-VM HNL verifier supports bounded terminal backslash continuations and
+only the known relative sensitivity/DC/TRAN output defaults. It rejects incomplete
+statements, arbitrary output paths, duplicate or unsupported inherited analysis
+options, and a saved DC sweep even if its statement hash matches. Spectre runs in
+its owned work directory. Two new QA sources have generated and verified all three
+analysis inputs on the actual standard VM; fresh simulator/results/clean-client
+qualification remains pending. See
+[native input qualification](docs/generic_release/NATIVE_NETLIST_QUALIFICATION_V1.md).

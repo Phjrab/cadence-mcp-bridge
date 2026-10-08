@@ -62,18 +62,22 @@ with `ade-input verify-input --native-input INPUT_SCS` instead of `compile --out
 The file must be regular, unlinked, at most 256 KiB and reached without symlink or
 junction parents. Same-account concurrent file replacement is not fully isolated.
 
-The initial dialect deliberately accepts ASCII, a `simulator lang=spectre` header,
-one statement per physical line, full-line `//` comments, explicit scalar parameter
-assignments, exact ordered model includes, and one top-level DC/AC/TRAN statement.
-It rejects continuation, inline/block comments, escapes, quoted expressions,
-engineering-unit suffixes and non-scalar parameter expressions. Unsupported
-native formatting is a denial requiring a reviewed parser extension, not proof
-that the circuit is invalid. Extra/missing/duplicate parameters, includes and
-analyses are rejected. AC/TRAN compare the complete supported option set; DC
-compares the bound statement digest. All remaining normalized statements retain
-order and are hashed together, covering registered topology/stimulus/load and
-opaque expressions. The registration's reviewed digest is the source of truth;
-the compiler never learns a new expected digest from the candidate input itself.
+The supported standard-VM dialect accepts ASCII, a simulator lang=spectre header,
+full-line comments, bounded terminal backslash continuations, explicit scalar
+parameters, exact ordered canonical model includes and one DC/AC/TRAN statement.
+It rejects incomplete/embedded/alternate continuations, inline/block comments,
+arbitrary quoted expressions/output paths, engineering suffixes or non-scalar
+expressions in registered parameters. Static device expressions remain covered by
+the reviewed static digest; the verifier does not evaluate them.
+
+Only the fixed HNL sensitivity/DC/TRAN relative output filenames are accepted.
+Spectre's cwd must be the job's owned work directory, preserving the containment
+of the known sensitivity parent path. AC permits annotate=status; TRAN additionally
+permits the fixed maxiters=5/errpreset=moderate/write/writefinal defaults. Other
+inherited analysis options and duplicates reject. DC requires an exact statement
+hash and bounded OP-only options; a hashed saved sweep cannot qualify as OP.
+Normalized static statements retain order and their reviewed digest. The compiler
+never automatically adopts a candidate input as the new registration or grant.
 
 A PASS is `LOCAL_EFFECTIVE_INPUT_MATCHED`. It includes operation/plan/registration/
 template/input hashes and source/state declarations. Actual source/copy and model

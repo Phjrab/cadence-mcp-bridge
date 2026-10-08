@@ -174,7 +174,9 @@ class EdaWorker(object):
                 if self.process_uid(int(name)) != (os.getuid(),) * 4:
                     continue
                 member = self.process_identity(int(name))
-            except OSError as error:
+            except (IOError, OSError) as error:
+                # Python 2.6 open raises IOError, distinct from OSError. Only
+                # an independently vanished member may be skipped.
                 if error.errno in (errno.ENOENT, errno.ESRCH):
                     continue
                 raise
@@ -214,7 +216,8 @@ class EdaWorker(object):
             null = open(os.devnull, "rb")
             process = subprocess.Popen(
                 argv,
-                cwd=journal.job,
+                # HNL relative sensitivity/output paths must stay within this job.
+                cwd=journal.work if label == "spectre" else journal.job,
                 stdin=null,
                 stdout=out,
                 stderr=err,

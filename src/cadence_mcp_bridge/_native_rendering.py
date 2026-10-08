@@ -312,19 +312,55 @@ def statements(data):
         raise ValueError("spectre_dialect_unsupported")
     if len(data) > INPUT_LIMIT or any(ord(c) < 32 and c not in "\n\r\t" for c in value):
         raise ValueError("spectre_dialect_unsupported")
-    lines = []
-    for line in value.splitlines():
-        line = line.strip()
+    lines, pending = [], ""
+    for physical in value.splitlines():
+        line = physical.strip()
         if not line or line.startswith("//"):
+            if pending:
+                raise ValueError("spectre_dialect_unsupported")
             continue
-        if any(token in line for token in ("\\", ";", "//", "/*", "*/")) or line.startswith("+"):
+        continued = line.endswith(chr(92))
+        if continued:
+            line = line[:-1].rstrip()
+            if not line:
+                raise ValueError("spectre_dialect_unsupported")
+        if any(token in line for token in (chr(92), ";", "//", "/*", "*/")) or line.startswith("+"):
             raise ValueError("spectre_dialect_unsupported")
+        pending += (" " if pending else "") + line
+        if len(pending) > 16384:
+            raise ValueError("spectre_dialect_unsupported")
+        if continued:
+            continue
+        line, pending = " ".join(pending.split()), ""
         if '"' in line and not line.startswith('include "'):
-            raise ValueError("spectre_dialect_unsupported")
-        lines.append(" ".join(line.split()))
-    if not lines or lines[0] != "simulator lang=spectre":
+            # HNL defaults only. Spectre runs with cwd=owned work, making the
+            # sensitivity file's single parent traversal remain in the owned job.
+            allowed = []
+            if line.startswith("simulatorOptions options "):
+                allowed = ['sensfile="../psf/sens.output"']
+            elif full_match(r"[A-Za-z][A-Za-z0-9_]* dc(?: .*|)", line):
+                allowed = ['write="spectre.dc"']
+            elif full_match(r"[A-Za-z][A-Za-z0-9_]* tran(?: .*|)", line):
+                allowed = ['write="spectre.ic"', 'writefinal="spectre.fc"']
+            checked = line
+            for pair in allowed:
+                checked = re.sub(r"(?<!\S)" + re.escape(pair) + r"(?!\S)", "", checked)
+            if '"' in checked:
+                raise ValueError("spectre_dialect_unsupported")
+        lines.append(line)
+    if pending or not lines or lines[0] != "simulator lang=spectre":
         raise ValueError("spectre_dialect_unsupported")
     return lines[1:]
+
+
+def analysis_options(text):
+    pairs = text.split()
+    if any(p.count("=") != 1 for p in pairs):
+        raise ValueError("spectre_analysis_binding_mismatch")
+    observed = dict(p.split("=", 1) for p in pairs)
+    if len(observed) != len(pairs):
+        raise ValueError("spectre_analysis_binding_mismatch")
+    return observed
 
 
 def static_fingerprint(lines):
@@ -367,6 +403,20 @@ def effective_input(data, expected_parameters, expected_includes, inputs, static
         raise ValueError("spectre_analysis_binding_mismatch")
     options = analyses[0][1]
     if inputs["analysis"] == "dc":
+        observed = analysis_options(options)
+        # An exact hash alone must not promote a saved sweep to a DC OP.
+        fixed = {"write": '"spectre.dc"', "annotate": "status"}
+        if set(observed) - set(("write", "annotate", "save", "maxiters", "maxsteps")):
+            raise ValueError("spectre_analysis_binding_mismatch")
+        for key, value in observed.items():
+            if key in fixed and value != fixed[key]:
+                raise ValueError("spectre_analysis_binding_mismatch")
+            if key == "save" and value not in ("all", "allpub"):
+                raise ValueError("spectre_analysis_binding_mismatch")
+            if key in ("maxiters", "maxsteps") and not (
+                matches(r"[1-9][0-9]{0,5}", value) and int(value) <= 100000
+            ):
+                raise ValueError("spectre_analysis_binding_mismatch")
         if (
             hashlib.sha256(("dc " + options).encode("ascii")).hexdigest()
             != inputs["statement_sha256"]
@@ -386,13 +436,24 @@ def effective_input(data, expected_parameters, expected_includes, inputs, static
                 "method": inputs["method"],
             }
         )
-        pairs = options.split()
-        if len(pairs) != len(expected) or any(p.count("=") != 1 for p in pairs):
+        observed = analysis_options(options)
+        defaults = {"annotate": "status"}
+        if inputs["analysis"] == "tran":
+            defaults.update(
+                {
+                    "maxiters": "5",
+                    "errpreset": "moderate",
+                    "write": '"spectre.ic"',
+                    "writefinal": '"spectre.fc"',
+                }
+            )
+        for key in set(observed) - set(expected):
+            if key not in defaults or observed[key] != defaults[key]:
+                raise ValueError("spectre_analysis_binding_mismatch")
+        if not set(expected).issubset(observed):
             raise ValueError("spectre_analysis_binding_mismatch")
-        observed = dict(p.split("=", 1) for p in pairs)
-        if len(observed) != len(pairs) or set(observed) != set(expected):
-            raise ValueError("spectre_analysis_binding_mismatch")
-        for key, value in observed.items():
+        for key in expected:
+            value = observed[key]
             try:
                 actual = value if key == "method" else number_text(value)
             except ValueError:

@@ -67,6 +67,20 @@
       "content_bytes": 57818,
       "originals_preserved": true,
       "scope": "DISTINCT_CURRENT_VM_NONAMPLIFIER_CIRCUIT_STATES_WORKER_RUNS_NOT_YET_QUALIFIED"
+    },
+    "actual_qa_source_preparation": "PASS_TWO_NEW_OWNED_SOURCES_CHECK_AND_SAVE_CORRECTED_STATES",
+    "actual_netlisting": {
+      "generated_inputs": 6,
+      "circuits": 2,
+      "analyses": [
+        "dc",
+        "ac",
+        "tran"
+      ],
+      "template": "COMMON_PRODUCTION_BODY_WITH_DIAGNOSTIC_MARKERS_ERROR_BOUNDARY",
+      "source_snapshots_preserved": true,
+      "hierarchy_metadata_attestation": "INCOMPLETE_LOCK_RECOVERY_ARTIFACT_PRESERVED",
+      "spectre_runs": 0
     }
   },
   "resources": {
@@ -75,7 +89,15 @@
     "ceiling_result_bytes": 10737418240,
     "approved_remaining_bytes": 938475520,
     "fresh_read_required_before_admission": true,
-    "reset_refund_increase_authorized": false
+    "reset_refund_increase_authorized": false,
+    "current_preparation_storage": {
+      "roots": 13,
+      "regular_files": 927,
+      "logical_bytes": 2223116,
+      "file_allocated_bytes": 4993024,
+      "directory_allocated_bytes_included": false,
+      "filesystem_available_bytes": 25677615104
+    }
   },
   "validation": {
     "affected_passed": 157,
@@ -83,7 +105,7 @@
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 43,
-    "hosted_ci": "ca9ca14_UBUNTU100_PASS11_FAIL6_ERRORS_SYNTHETIC_SSH_FIXTURES_CORRECTED_PENDING",
+    "hosted_ci": "2898d5b_FOUR_CHECKS_SUCCESS_PRIOR_TO_IOERROR_HNL_SOURCE_CHANGES",
     "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
     "security_seconds": 6.49,
     "installed_preserved_migration_files": 20,
@@ -110,11 +132,20 @@
     "related_native_result_passed": 213,
     "related_native_result_platform_skips": 26,
     "native_public_sdk_passed": 6,
-    "conditional_native_schemas": 5
+    "conditional_native_schemas": 5,
+    "actual_py26_effective_inputs": "PASS_SIX_REAL_NETLISTS_NOT_AUTHENTICATED_JOBS",
+    "hosted_windows_full_passed": 2861,
+    "hosted_windows_full_platform_skips": 38,
+    "current_local_dialect_passed": 89,
+    "current_local_dialect_platform_skips": 11,
+    "current_source_final_checks": "LOCAL_AFFECTED415_PASS28_SKIPS_RUFF_MYPY90_SECURITY18_AUDIT_CODE_PACKAGE63_STATE_PASS_CI_PENDING",
+    "current_affected_passed": 415,
+    "current_affected_platform_skips": 28,
+    "actual_postcheck": "RETAINED_PREFLIGHT_EIGHT_ASSET_PY26_GRAMMAR_SEVEN_CONTROLS_INDEX_METADATA_EQUAL"
   },
   "next_work": [
-    "exact-source CI/Linux result/provider checks and immutable route qualification",
-    "prepare two distinct new OA/ADE source circuits in clean operator settings",
+    "finish changed-source package/security/CI; clean operator registrations and full native qualification",
+    "prepare reviewed registration from the two actual QA sources and six bound native inputs",
     "fresh confirmation/preflight/artifact/current existing ledger gates then native activation",
     "effective inputs/new DCACtran and automatic extraction",
     "generic1D Sweep/specification, two batches and same-ID/restart prevention",
@@ -129,7 +160,7 @@
     "historical result/journal deletion",
     "budget reset/refund/increase"
   ],
-  "report": "AUTHENTICATED_NATIVE_PROVIDER_V1.md",
+  "report": "NATIVE_NETLIST_QUALIFICATION_V1.md",
   "next_phase_authorized": true,
   "previous_branch": "feat/grel-03-operator-domain-provisioning",
   "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148",

@@ -212,3 +212,29 @@ fixed SSH argv and backend factory, including restart construction. Production
 SSH/gates/worker code is unchanged; no Linux-host support claim follows. The native
 owned pipeline/result/PSF-drift cases passed in that failed run. Failed CI evidence
 is preserved; corrected exact-source CI is pending.
+
+
+## Current actual native input checkpoint, 2026-10-08
+
+Same feat/grel-03-authenticated-provider/draftPR152 and main553276d preserved.
+Previous2898d5b now has four successful Windows/Ubuntu push/PR checks; hosted
+Windows2861 PASS/38 OS skips/56 warnings and installed63-state preservation PASS.
+Current standard-VM normal-user preparation and common-renderer DCACtran netlisting
+succeeded for two distinct new owned QA sources: six real generated inputs.
+Actual Python2.6 shared-parser verification of all six PASS. No Spectre run,
+reservation, grant, native activation or actual new Codex job occurred.
+
+Actual /proc race exposed Python2.6 IOError handling; vanished-member-only handling
+is corrected. HNL continuation/default-output syntax is narrowly supported, DC
+sweep cannot be promoted by hash alone, and Spectre cwd stays in owned work.
+Current affected415 PASS/28 Windows POSIX skips; Ruff/mypy90/security18/audit and
+installed63-state preservation PASS. Exact changed-source hosted CI pending.
+Original top-level OA/ADE and each registered QA source/state snapshot preserved.
+Hierarchy lock/recovery files and failed diagnostic/source versions remain intact;
+whole hierarchy metadata attestation is not claimed. Final fresh retained preflight/eight-asset Python2.6 grammar and seven-control/
+home-index content/metadata equality PASS. Ledger82/9,798,942,720,895MiB remaining.
+
+Continue clean context/native confirmation/activation/fresh DCACtran/extraction,
+Sweep/spec/retry/restart/actual Codex/GREL07 within authorized02–07. Release remains
+BLOCKED; no phase reapproval, merge/GREL08/publication/budget reset/increase/refund.
+See NATIVE_NETLIST_QUALIFICATION_V1.md; earlier sections remain historical.
