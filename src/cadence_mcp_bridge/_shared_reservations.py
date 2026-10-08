@@ -165,12 +165,32 @@ def shape(value, minimum_count, minimum_bytes):
         raise ValueError("reservation_counter_integrity")
 
 
-def counter_shape(value):
+def fresh_shape(value, manifest, marker=False):
+    policy = manifest["policy"]
+    if (
+        not isinstance(value, dict)
+        or set(value) != set(("campaign_id", "count", "result_reserved_bytes"))
+        or value["campaign_id"] != policy["campaign_id"]
+        or type(value["count"]) not in INTEGER_TYPES
+        or type(value["result_reserved_bytes"]) not in INTEGER_TYPES
+        or not (1 if marker else 0) <= value["count"] <= policy["attempt_ceiling"]
+        or not (1 if marker else 0)
+        <= value["result_reserved_bytes"]
+        <= policy["result_ceiling_bytes"]
+    ):
+        raise ValueError("reservation_fresh_counter_integrity")
+
+
+def counter_shape(value, manifest=None):
+    if manifest is not None and manifest["schema_version"] == 2:
+        return fresh_shape(value, manifest)
     # Current cumulative policy floor; never accept rollback to the old baseline.
     shape(value, 32, 3088056320)
 
 
-def marker_shape(value):
+def marker_shape(value, manifest=None):
+    if manifest is not None and manifest["schema_version"] == 2:
+        return fresh_shape(value, manifest, True)
     # Retained native-v1 jobs predate the current policy. Preserve their markers
     # starting at the first post-reservation22 /1,745,879,040 values. The
     # unincremented policy baseline is never a valid attempt-reserved marker.
@@ -227,7 +247,7 @@ def paths(root, operation_id):
     return work
 
 
-def transaction(work, root, operation_id, counter):
+def transaction(work, root, operation_id, counter, manifest=None):
     intent_path = os.path.join(work, "reservation-intent.json")
     receipt_path = os.path.join(work, "reservation-receipt.json")
     has_intent, has_receipt = os.path.lexists(intent_path), os.path.lexists(receipt_path)
@@ -246,8 +266,8 @@ def transaction(work, root, operation_id, counter):
         raise ValueError("reservation_intent_identity")
     check_binding(root, intent["binding"])
     before, after = intent["before"], intent["after"]
-    counter_shape(before)
-    counter_shape(after)
+    counter_shape(before, manifest)
+    counter_shape(after, manifest)
     if (
         after["count"] != before["count"] + 1
         or after["result_reserved_bytes"]
@@ -312,16 +332,35 @@ def identity_manifest(root, binding):
                 "legacy_operation_ids",
             )
         )
+        | (set(("policy",)) if value.get("schema_version") == 2 else set())
         or type(value["schema_version"]) is not int
-        or value["schema_version"] != 1
+        or value["schema_version"] not in (1, 2)
         or value["root_sha256"] != binding["root_sha256"]
         or value["resource_domain_sha256"] != binding["resource_domain_sha256"]
         or value["ledger_ref"] != LEDGER
         or digest(canonical(value)) != binding["identity_manifest_sha256"]
     ):
         raise ValueError("reservation_identity_manifest_binding")
-    counter_shape(value["baseline"])
-    if value["baseline"]["result_reserved_bytes"] != expected_bytes(value["baseline"]["count"], []):
+    if value["schema_version"] == 2:
+        policy = value["policy"]
+        if (
+            not isinstance(policy, dict)
+            or set(policy) != set(("campaign_id", "attempt_ceiling", "result_ceiling_bytes"))
+            or not isinstance(policy["campaign_id"], STRING_TYPES)
+            or not matches(ID, policy["campaign_id"])
+            or type(policy["attempt_ceiling"]) not in INTEGER_TYPES
+            or type(policy["result_ceiling_bytes"]) not in INTEGER_TYPES
+            or not 1 <= policy["attempt_ceiling"] <= CEILING_COUNT
+            or not 1 <= policy["result_ceiling_bytes"] <= CEILING_BYTES
+            or value["baseline"]
+            != {"campaign_id": policy["campaign_id"], "count": 0, "result_reserved_bytes": 0}
+            or value["legacy_operation_ids"] != []
+        ):
+            raise ValueError("reservation_fresh_policy_binding")
+    counter_shape(value["baseline"], value)
+    if value["baseline"]["result_reserved_bytes"] != expected_bytes(
+        value["baseline"]["count"], [], value
+    ):
         raise ValueError("reservation_migration_baseline")
     ids = value["legacy_operation_ids"]
     if (
@@ -359,7 +398,7 @@ def audit(root, counter, manifest, manifest_sha):
         marker = os.path.join(work, "attempt-reserved")
         if os.path.lexists(marker):
             value = read(marker)
-            marker_shape(value)
+            marker_shape(value, manifest)
             markers.append(value)
             marker_ids[name] = value
             if (
@@ -367,7 +406,7 @@ def audit(root, counter, manifest, manifest_sha):
                 or value["result_reserved_bytes"] > counter["result_reserved_bytes"]
             ):
                 raise ValueError("reservation_legacy_unreconciled")
-        item = transaction(work, root, name, counter)
+        item = transaction(work, root, name, counter, manifest)
         if item is not None:
             records.append(item)
             by_id[name] = item[0]
@@ -411,18 +450,24 @@ def audit(root, counter, manifest, manifest_sha):
     # increments are accounted by their immutable own records, not another ledger.
     # Include unresolved own intents for conservation only; never infer completion.
     for value in markers:
-        if value["result_reserved_bytes"] != expected_bytes(value["count"], records):
+        if value["result_reserved_bytes"] != expected_bytes(value["count"], records, manifest):
             raise ValueError("reservation_marker_conservation")
     for intent, receipt in records:
         for value in (intent["before"], intent["after"]):
-            if value["result_reserved_bytes"] != expected_bytes(value["count"], records):
+            if value["result_reserved_bytes"] != expected_bytes(value["count"], records, manifest):
                 raise ValueError("reservation_intent_conservation")
-    if counter["result_reserved_bytes"] != expected_bytes(counter["count"], records):
+    if counter["result_reserved_bytes"] != expected_bytes(counter["count"], records, manifest):
         raise ValueError("reservation_counter_conservation")
     return records
 
 
-def expected_bytes(count, records):
+def expected_bytes(count, records, manifest=None):
+    if manifest is not None and manifest["schema_version"] == 2:
+        return sum(
+            intent["binding"]["reserve_bytes"]
+            for intent, receipt in records
+            if intent["after"]["count"] <= count
+        )
     total = LEGACY_BASE_BYTES + (count - LEGACY_BASE_COUNT) * LEGACY_RESERVATION
     for intent, receipt in records:
         if intent["after"]["count"] <= count:
@@ -436,7 +481,7 @@ def state(root, binding):
     if os.path.lexists(counter_path + ".ade-tmp"):
         raise ValueError("reservation_ambiguous_barrier")
     counter = read(counter_path)
-    counter_shape(counter)
+    counter_shape(counter, manifest)
     if (
         counter["count"] < manifest["baseline"]["count"]
         or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
@@ -453,7 +498,7 @@ def lookup(root, operation_id, binding):
     try:
         work = paths(root, operation_id)
         counter, records = state(root, binding)
-        item = transaction(work, root, operation_id, counter)
+        item = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
         if item is None:
             return None
         if item[0]["binding"] != binding:
@@ -482,7 +527,7 @@ def reserve(root, operation_id, binding):
         if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
             raise ValueError("reservation_identity_class_conflict")
         counter, records = state(root, binding)
-        existing = transaction(work, root, operation_id, counter)
+        existing = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
         if existing is not None:
             if existing[0]["binding"] != binding:
                 raise ValueError("reservation_replay_identity")
@@ -512,9 +557,13 @@ def reserve(root, operation_id, binding):
             or used_bytes + amount > binding["max_reserved_bytes"]
         ):
             raise ValueError("reservation_grant_capacity")
+        manifest = identity_manifest(root, binding)
+        policy = manifest.get(
+            "policy", {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
+        )
         if (
-            counter["count"] + 1 > CEILING_COUNT
-            or counter["result_reserved_bytes"] + amount > CEILING_BYTES
+            counter["count"] + 1 > policy["attempt_ceiling"]
+            or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]
         ):
             raise ValueError("reservation_cumulative_capacity")
         if free_bytes(root) < binding["disk_floor_bytes"] + inflight + amount:

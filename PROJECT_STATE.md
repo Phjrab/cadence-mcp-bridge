@@ -1,3 +1,22 @@
+## Active fresh-policy and retained-domain provisioning, 2026-10-08
+
+Current branch feat/grel-03-fresh-domain-policy continues unmerged PR150 corrected
+ancestor a26256a. A fixed normal-user setup CLI separates genuine zero-history
+initialization from retained accounting reuse. Account-home index and history
+inventory reject alternate-root resets; the same transaction/audit code supports
+schema2 initial policy and unchanged historical schema1. Local157 PASS/8 skips,
+security18/audit clean, Ruff/mypy76 and installed43+20-state preservation PASS.
+Actual current VM installed-wheel staging/repeat and existing-domain index
+registration/repeat PASS; fresh initialization correctly DENIED. Existing seven
+protected control files' content/uid/gid/mode/inode/mtime unchanged. Counter82 /
+9,798,942,720, remaining895MiB; new reservations/simulations0. Setup grant false.
+
+Production authenticated provider/terminal workers, new RC/MOS OA/ADE inputs,
+effective netlisting/DC/AC/TRAN/extraction, generic Sweep/specification and actual
+clean Codex jobs remain incomplete; release BLOCKED. Existing continuousGREL02–07
+and minimum administrator delegation continue; no phase reapproval. See
+FRESH_DOMAIN_V1.md for actual/synthetic boundaries and source-scoped receipts.
+
 ## Active legacy classification correction, 2026-10-08
 
 PR150 P2 feedback corrected: all retained IDs, including unmarked legacy jobs,

@@ -65,6 +65,8 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 
 "src/cadence_mcp_bridge/_installation_repair.py" = ["UP", "I", "SIM", "B", "F821"]
 "src/cadence_mcp_bridge/_domain_migration.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_fresh_domain.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_setup_stage.py" = ["UP", "I", "SIM", "B"]
 
 [tool.mypy]
 python_version = "3.12"

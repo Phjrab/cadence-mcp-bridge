@@ -78,6 +78,62 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         assert all(after[k] == value for k, value in before.items())
     finally:
         migration.profile, installer._operator_lock = original_profile, original_lock
+    from cadence_mcp_bridge import _fresh_domain as setup
+
+    home = root / "synthetic-fresh-home"
+    home.mkdir(mode=0o700)
+    fresh_workspace = home / "workspace"
+    fresh_workspace.mkdir(mode=0o700)
+    fresh_root = fresh_workspace / ".cadence_mcp"
+    index = home / ".cadence_mcp-domain"
+    original_home, original_setup_profile = setup.home, setup.profile
+    setup.home = lambda: str(home)
+    setup.profile = lambda profile: (str(fresh_root), str(index))
+    original_lock = installer._operator_lock
+    installer._operator_lock = lambda target: None
+    try:
+        _, _, setup_digest = contents(True)
+        profile["limits"]["spectre_attempts"] = 3
+        profile["limits"]["result_reserved_bytes"] = 1048576
+        planned = setup.plan_fresh(profile, setup_digest)
+        request = {
+            "plan": planned["plan"],
+            "expected_plan_sha256": planned["plan_sha256"],
+            "operator_authority": "SYNTHETIC ONLY, NOT REAL USER CONSENT",
+        }
+        assert setup.apply_fresh(request, setup_digest)["ledger_initialized"] is True
+        anchor = accounting.read(str(fresh_root / accounting.REGISTRY / "manifest.json"))
+        assert anchor["baseline"]["count"] == 0
+        from uuid import uuid4
+
+        binding = {
+            "root_sha256": anchor["root_sha256"],
+            "resource_domain_sha256": anchor["resource_domain_sha256"],
+            "identity_manifest_sha256": accounting.digest(accounting.canonical(anchor)),
+            "ledger_ref": accounting.LEDGER,
+            "grant_sha256": "a" * 64,
+            "runner_sha256": "b" * 64,
+            "plan_sha256": "c" * 64,
+            "execution_input_sha256": "d" * 64,
+            "expires_at": 4000000000,
+            "max_attempts": 3,
+            "max_reserved_bytes": 1048576,
+            "reserve_bytes": 65536,
+            "disk_floor_bytes": 0,
+        }
+        for _ in range(2):
+            operation = str(uuid4())
+            work = fresh_root / accounting.JOBS / operation / "work"
+            work.mkdir(mode=0o700, parents=True)
+            receipt = accounting.reserve(str(fresh_root), operation, binding)
+            assert accounting.reserve(str(fresh_root), operation, binding) == receipt
+        consumed = snapshots(fresh_root)
+        assert setup.apply_fresh(request, setup_digest)["ledger_initialized"] is False
+        assert snapshots(fresh_root) == consumed
+        assert accounting.read(str(fresh_root / accounting.LEDGER))["count"] == 2
+    finally:
+        setup.home, setup.profile = original_home, original_setup_profile
+        installer._operator_lock = original_lock
     (workspace / "preservation.json").write_text(json.dumps(snapshots(root), sort_keys=True))
     return {
         "status": "PASS",
@@ -87,6 +143,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "ledger_modified": False,
         "execution_authorized": False,
         "native_jobs": 0,
+        "fresh_zero_policy_two_batches": "DISPOSABLE_FILES_ONLY_NOT_SIMULATIONS",
     }
 
 
