@@ -65,7 +65,7 @@ jobs:
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.12.6"
-          checksum: "df7cb9f243eae1621400d4fcf5b1b3d90f20e264ece91b64deb3b0078abca6ef"
+          checksum: "8681d8921e7d520fb368991dcf5f9c1905b80f5bf2a265a0ed085c8d8e342477"
           enable-cache: false
       - name: Install locked public dependencies
         run: uv sync --locked --all-groups --python 3.12.10

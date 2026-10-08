@@ -44,3 +44,12 @@ not rerun. MyDesignLib identifies a circuit library, not a trusted Cadence
 executable/dependency installation. Owner-supplied trusted installation and
 fresh qualification remain required before native deployment/jobs. Independent
 authorized implementation can continue without phase reapproval.
+
+
+Initial source4396c4e Ubuntu CI failed before tests because its uv Linux archive
+was compared with the Windows archive checksum. Official GitHub release asset
+metadata for uv0.12.6 gives Linux SHA256
+8681d8921e7d520fb368991dcf5f9c1905b80f5bf2a265a0ed085c8d8e342477;
+the platform-specific pinned checksum is corrected without changing version.
+Failures37711436546/job113098028221 and37711481159/job113098168368 are retained.
+Windows checks at that initial source were still running when observed.
