@@ -100,3 +100,37 @@ Final canonical package verification PASS: installed CLI/protocol/bootstrap and
 retained accounting tests; reinstall and uninstall preserve43 synthetic operator
 files plus5 synthetic migration files. These are local disposable records, not
 actual new jobs. Public hosted checks remain pending for this new feature source.
+
+## Independent review correction and current effective anchor
+
+PR150 review identified two P2 issues: an unmarked retained job could reuse its
+old UUID as generic work, and the local response parser incorrectly reused the
+32KiB environment document limit. Inventory now seals every retained job ID,
+including admission-only jobs. Existing migration supports128 retained IDs and
+256KiB plans, with duplicate/nonfinite/deep-nesting rejection. A128-job plan over
+32KiB is tested. Accounting rejects all inventoried legacy IDs before charging.
+
+The already-applied original anchor/receipts are retained unchanged. An explicit
+`plan-legacy-seal` / `seal-existing` operator correction is restricted to the
+known pre-reservation state with exactly the retained original baseline, no
+generic reservation records and an empty historical legacy allowlist. It adds
+`reservation-identity/legacy-seal.json` and new intent/completion records, preserving
+the old manifest bytes. The effective anchor changes only by the sealed legacy ID
+list. Old anchor bindings now reject in the corrected accounting implementation.
+A consumed/mismatched prior baseline rejects; this path cannot rebase consumption.
+
+Actual normal-user installed-wheel seal/apply/repeat PASS on the current VM:
+three retained IDs sealed, counter/metadata/markers/lock snapshot identical;
+original anchor `d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22`
+retained, effective identity
+`cfd037cd4db24359614baa9f5e465bd24176f34151ee252e462016cdd2a6ef36`.
+Helper `62cbc8a8db04fe1c0a02c4f29dcb97bc413b5b8a264788e5536bc0f9ba328f1f`,
+correction plan `ab5706ebd3943684809d9f8cb1e1bfb80a9ba2b57e760533627ff8abd802a26f`.
+No new simulation/reservation or execution grant. Initial migration evidence is
+historical; it is not replaced with a false claim that it had sealed those IDs.
+
+Initial source02a1f7f push Windows CI and both Ubuntu jobs passed. Its PR-event
+Windows job failed in an unrelated PowerShell synthetic lock-holder cold-start
+fixture (2673 tests passed). The fixture now prefers available PowerShell7, waits
+for the explicit ready signal up to45s and cleans up only its own synthetic child.
+Production lock behavior is unchanged. Corrected-source hosted checks are pending.

@@ -308,3 +308,119 @@ def test_apply_cli_fixed_transport_verifies_remote_conservation_receipt(
             "synthetic scope only",
         )
     assert not (tmp_path / "bad-receipt.json").exists()
+
+
+def test_unmarked_retained_job_is_sealed_as_legacy_and_cannot_be_reserved(domain):
+    root, _, _, _ = domain
+    identity = str(uuid4())
+    work = root / accounting.JOBS / identity / "work"
+    work.mkdir(mode=0o700, parents=True)
+    work.parent.chmod(0o700)
+    req = request(domain)
+    receipt = migration.apply(req, "a" * 64)
+    assert identity in req["plan"]["anchor"]["legacy_operation_ids"]
+    binding = {
+        "root_sha256": req["plan"]["anchor"]["root_sha256"],
+        "resource_domain_sha256": req["plan"]["anchor"]["resource_domain_sha256"],
+        "ledger_ref": accounting.LEDGER,
+        "identity_manifest_sha256": receipt["identity_manifest_sha256"],
+        "grant_sha256": "b" * 64,
+        "runner_sha256": "c" * 64,
+        "plan_sha256": "d" * 64,
+        "execution_input_sha256": "e" * 64,
+        "expires_at": 4000000000,
+        "max_attempts": 2,
+        "max_reserved_bytes": 33554432,
+        "reserve_bytes": 16777216,
+        "disk_floor_bytes": 0,
+    }
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="identity_class_conflict"):
+        accounting.reserve(str(root), identity, binding)
+    assert snapshot(root) == before
+
+
+def test_append_only_classification_correction_preserves_old_anchor_and_counter(domain):
+    root, value, _, _ = domain
+    # Exact historical bug state, no generic reservation or execution.
+    current = migration.snapshot(str(root))
+    old = migration.anchor_for(value, str(root), current)
+    old["legacy_operation_ids"] = []
+    (root / accounting.REGISTRY).mkdir(mode=0o700)
+    accounting.write_new(str(root / accounting.REGISTRY / "manifest.json"), old)
+    before = snapshot(root)
+    planned = migration.plan(value, "a" * 64, True)
+    req = {
+        "plan": planned["plan"],
+        "expected_plan_sha256": planned["plan_sha256"],
+        "operator_authority": "synthetic correction only",
+    }
+    corrected = migration.apply(req, "a" * 64)
+    assert corrected["anchor_created"]
+    after = snapshot(root)
+    assert all(after[k] == data for k, data in before.items())
+    assert not migration.apply(req, "a" * 64)["anchor_created"]
+    binding = {
+        "root_sha256": old["root_sha256"],
+        "resource_domain_sha256": old["resource_domain_sha256"],
+        "ledger_ref": accounting.LEDGER,
+        "identity_manifest_sha256": corrected["identity_manifest_sha256"],
+    }
+    actual = accounting.identity_manifest(str(root), binding)
+    assert actual["legacy_operation_ids"] == [domain[2]]
+    assert (
+        accounting.audit(
+            str(root), current["baseline"], actual, binding["identity_manifest_sha256"]
+        )
+        == []
+    )
+    binding["identity_manifest_sha256"] = accounting.digest(accounting.canonical(old))
+    with pytest.raises(ValueError, match="identity_manifest_binding"):
+        accounting.identity_manifest(str(root), binding)
+
+
+def test_large_retained_inventory_uses_protocol_limit_and_duplicate_rejection(
+    domain, tmp_path, monkeypatch
+):
+    root, value, _, _ = domain
+    for count in range(22, 82):
+        work = root / accounting.JOBS / str(uuid4()) / "work"
+        work.mkdir(mode=0o700, parents=True)
+        work.parent.chmod(0o700)
+        accounting.write_new(
+            str(work / "attempt-reserved"),
+            {
+                "campaign_id": "AUTO-PHASE-01",
+                "count": count,
+                "result_reserved_bytes": accounting.expected_bytes(count, []),
+            },
+        )
+    for _ in range(67):
+        work = root / accounting.JOBS / str(uuid4()) / "work"
+        work.mkdir(mode=0o700, parents=True)
+        work.parent.chmod(0o700)
+    _, _, helper = domain_provisioning.contents()
+    planned = migration.plan(value, helper)
+    raw = json.dumps(planned).encode()
+    assert 32768 < len(raw) < 262144
+    domain_provisioning._closed_document(raw)
+    profile = tmp_path / "environment.json"
+    profile.write_bytes(json.dumps(value).encode())
+    monkeypatch.setattr(domain_provisioning.shutil, "which", lambda name: "ssh.exe")
+    monkeypatch.setattr(domain_provisioning, "run_fixed", lambda *args, **kwargs: (0, raw, b""))
+    assert (
+        domain_provisioning.prepare(profile, tmp_path / "large-plan.json", helper)["plan_sha256"]
+        == planned["plan_sha256"]
+    )
+    migration.apply(
+        {
+            "plan": planned["plan"],
+            "expected_plan_sha256": planned["plan_sha256"],
+            "operator_authority": "synthetic inventory",
+        },
+        helper,
+    )
+    assert (root / accounting.REGISTRY / "manifest.json").stat().st_size < accounting.LIMIT
+    for invalid in (b'{"x":1,"x":2}', b'{"x":NaN}', b" " * 262145):
+        with pytest.raises(ValueError):
+            domain_provisioning._closed_document(invalid)

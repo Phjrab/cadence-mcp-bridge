@@ -29,6 +29,26 @@ def _canonical(value: object) -> bytes:
     )
 
 
+def _closed_document(data: bytes) -> None:
+    def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in items:
+            if key in value:
+                raise ValueError("duplicate migration JSON field")
+            value[key] = item
+        return value
+
+    def constant(_: str) -> None:
+        raise ValueError("nonfinite migration JSON")
+
+    if len(data) > 262144:
+        raise ValueError("migration document too large")
+    try:
+        json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
+    except RecursionError as error:
+        raise ValueError("migration document nesting") from error
+
+
 def contents() -> tuple[dict[str, bytes], bytes, str]:
     assets = {
         name: files("cadence_mcp_bridge").joinpath(source).read_bytes()
@@ -64,13 +84,21 @@ def export(output: Path) -> dict[str, object]:
     }
 
 
-def prepare(profile: Path, output: Path, expected_helper_sha256: str) -> dict[str, object]:
+def prepare(
+    profile: Path, output: Path, expected_helper_sha256: str, seal: bool = False
+) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     _, _, expected = contents()
     if expected_helper_sha256 != expected:
         raise ValueError("helper_package_binding_mismatch")
     raw_profile: bytes = _canonical(json.loads(data))
-    return _transport(environment, raw_profile, expected, "inventory-existing", output)
+    return _transport(
+        environment,
+        raw_profile,
+        expected,
+        "inventory-legacy-seal" if seal else "inventory-existing",
+        output,
+    )
 
 
 def _transport(
@@ -104,11 +132,9 @@ def _transport(
     )
     if status or stderr:
         raise ValueError("existing_domain_inventory_rejected")
-    from cadence_mcp_bridge.environments import _closed_json
-
-    _closed_json(stdout)
+    _closed_document(stdout)
     receipt = json.loads(stdout)
-    if action == "apply-existing":
+    if action in {"apply-existing", "seal-existing"}:
         return _apply_receipt(receipt, stdout, output, json.loads(payload))
     if (
         not isinstance(receipt, dict)
@@ -139,16 +165,15 @@ def apply_existing(
     expected_plan_sha256: str,
     expected_helper_sha256: str,
     operator_authority: str,
+    seal: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
-    from cadence_mcp_bridge.environments import _closed_json
-
     environment, data = load_environment(_local_path(profile))
     _, _, expected = contents()
     if expected != expected_helper_sha256:
         raise ValueError("helper_package_binding_mismatch")
     raw = installer.regular(str(_local_path(plan)))  # type: ignore[no-untyped-call]
-    _closed_json(raw)
+    _closed_document(raw)
     receipt = json.loads(raw)
     if (
         not isinstance(receipt, dict)
@@ -169,7 +194,13 @@ def apply_existing(
         "expected_plan_sha256": expected_plan_sha256,
         "operator_authority": operator_authority,
     }
-    return _transport(environment, _canonical(request), expected, "apply-existing", output)
+    return _transport(
+        environment,
+        _canonical(request),
+        expected,
+        "seal-existing" if seal else "apply-existing",
+        output,
+    )
 
 
 def _apply_receipt(receipt: Any, raw: bytes, output: Path, request: Any) -> dict[str, object]:

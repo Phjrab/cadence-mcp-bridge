@@ -36,7 +36,9 @@
     "production_provider": "NOT_IMPLEMENTED",
     "public_dispatch": "DISABLED",
     "existing_domain_migration": "ACTUAL_VM_NORMAL_USER_APPLY_REPEAT_PASS_NO_EXECUTION_AUTHORITY",
-    "identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22"
+    "identity_manifest_sha256": "cfd037cd4db24359614baa9f5e465bd24176f34151ee252e462016cdd2a6ef36",
+    "prior_identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22",
+    "legacy_ids_sealed": 3
   },
   "resources": {
     "attempts": 82,
@@ -52,8 +54,8 @@
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 43,
-    "hosted_ci": "PR149_CORRECTED_HEAD_PASS_NEW_SOURCE_PENDING",
-    "independent_review": "PENDING",
+    "hosted_ci": "INITIAL_PUSH_PASS_PR_EVENT_WINDOWS_SYNTHETIC_STARTUP_FAILURE_CORRECTION_PENDING",
+    "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
     "security_seconds": 1.69,
     "installed_preserved_migration_files": 5
   },

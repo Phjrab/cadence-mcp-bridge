@@ -167,7 +167,7 @@ def snapshot(root):
     if os.path.lexists(jobs + "/active") or os.path.lexists(root + "/execution.lock"):
         raise ValueError("migration_active_or_unresolved")
     names = sorted(os.listdir(jobs))
-    if len(names) > 2048:
+    if len(names) > 129:
         raise ValueError("migration_inventory_limit")
     records, slots = [], set()
     for name in names:
@@ -201,6 +201,8 @@ def snapshot(root):
                 record["marker_sha256"] = digest(installer.regular(marker))
                 record["marker_metadata"] = file_metadata(marker)
         records.append(record)
+    if len(records) > 128:
+        raise ValueError("migration_inventory_limit")
     lock = accounting.safe(root + "/run.lock")
     return {
         "baseline": counter,
@@ -228,21 +230,25 @@ def anchor_for(value, root, current):
         ),
         "ledger_ref": accounting.LEDGER,
         "baseline": current["baseline"],
-        "legacy_operation_ids": [],
+        "legacy_operation_ids": sorted(record["operation_id"] for record in current["native_jobs"]),
     }
 
 
-def plan(value, assets_sha256):
+def plan(value, assets_sha256, seal=False):
     accounting, installer, probe = helpers()
     root = profile(value)
     fd = installer._operator_lock(root)
     try:
         current = snapshot(root)
-        if os.path.lexists(root + "/" + accounting.REGISTRY):
+        if seal:
+            prior = prior_anchor(value, root, current)
+        elif os.path.lexists(root + "/" + accounting.REGISTRY):
             raise ValueError("migration_already_present_use_established_provider")
         result = {
             "schema_version": 1,
-            "recipe_id": "existing-legacy-domain-v1",
+            "recipe_id": "repair-existing-legacy-classification-v1"
+            if seal
+            else "existing-legacy-domain-v1",
             "helper_manifest_sha256": assets_sha256,
             "profile": value,
             "profile_sha256": digest(canonical(value)),
@@ -250,6 +256,8 @@ def plan(value, assets_sha256):
             "anchor": anchor_for(value, root, current),
             "authority": "PLAN_IS_NOT_OPERATOR_APPROVAL",
         }
+        if seal:
+            result["prior_anchor_sha256"] = digest(canonical(prior))
         return {
             "plan": result,
             "plan_sha256": digest(canonical(result)),
@@ -259,6 +267,23 @@ def plan(value, assets_sha256):
     finally:
         if fd is not None:
             os.close(fd)
+
+
+def prior_anchor(value, root, current):
+    accounting, installer, probe = helpers()
+    registry = root + "/" + accounting.REGISTRY
+    accounting.safe(registry, True)
+    if set(os.listdir(registry)) not in (
+        set(("manifest.json",)),
+        set(("manifest.json", "legacy-seal.json")),
+    ):
+        raise ValueError("migration_seal_not_prereservation_state")
+    prior = accounting.read(registry + "/manifest.json")
+    expected = anchor_for(value, root, current)
+    expected["legacy_operation_ids"] = []
+    if canonical(prior) != canonical(expected):
+        raise ValueError("migration_seal_prior_anchor_or_consumption_drift")
+    return prior
 
 
 def apply(request, assets_sha256):
@@ -273,6 +298,10 @@ def apply(request, assets_sha256):
     ):
         raise ValueError("migration_request_shape")
     value = request["plan"]
+    seal = (
+        isinstance(value, dict)
+        and value.get("recipe_id") == "repair-existing-legacy-classification-v1"
+    )
     if (
         not isinstance(value, dict)
         or set(value)
@@ -288,9 +317,11 @@ def apply(request, assets_sha256):
                 "helper_manifest_sha256",
             )
         )
+        | (set(("prior_anchor_sha256",)) if seal else set())
         or type(value["schema_version"]) is not int
         or value["schema_version"] != 1
-        or value["recipe_id"] != "existing-legacy-domain-v1"
+        or value["recipe_id"]
+        not in ("existing-legacy-domain-v1", "repair-existing-legacy-classification-v1")
         or value["helper_manifest_sha256"] != assets_sha256
         or value["authority"] != "PLAN_IS_NOT_OPERATOR_APPROVAL"
         or digest(canonical(value)) != request["expected_plan_sha256"]
@@ -310,7 +341,11 @@ def apply(request, assets_sha256):
         registry = root + "/" + accounting.REGISTRY
         key = request["expected_plan_sha256"]
         intent = receipts + "/" + key + ".intent.json"
-        if os.path.lexists(registry):
+        if seal:
+            prior = prior_anchor(value["profile"], root, current)
+            if digest(canonical(prior)) != value["prior_anchor_sha256"]:
+                raise ValueError("migration_seal_prior_binding")
+        if os.path.lexists(registry) and not seal:
             accounting.safe(registry, True)
             if sorted(os.listdir(registry)) not in ([], ["manifest.json"]):
                 raise ValueError("migration_registry_conflict")
@@ -343,7 +378,18 @@ def apply(request, assets_sha256):
             os.mkdir(registry, 448)
             accounting.sync_directory(root)
         accounting.safe(registry, True)
-        created = retain(registry + "/manifest.json", anchor)
+        if seal:
+            created = retain(
+                registry + "/legacy-seal.json",
+                {
+                    "schema_version": 1,
+                    "prior_anchor_sha256": value["prior_anchor_sha256"],
+                    "anchor": anchor,
+                    "plan_sha256": key,
+                },
+            )
+        else:
+            created = retain(registry + "/manifest.json", anchor)
         if canonical(snapshot(root)) != canonical(current):
             raise ValueError("migration_post_snapshot_drift")
         result = {
@@ -367,13 +413,25 @@ def apply(request, assets_sha256):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in ("inventory-existing", "apply-existing"):
+    if len(sys.argv) != 3 or sys.argv[1] not in (
+        "inventory-existing",
+        "apply-existing",
+        "inventory-legacy-seal",
+        "seal-existing",
+    ):
         raise ValueError("fixed_existing_migration_command_required")
     if os.name != "posix":
         raise ValueError("native_linux_required")
     assets = validate_assets(sys.argv[2])
     data = closed(sys.stdin.read(LIMIT + 1).encode("ascii"))
-    result = plan(data, assets) if sys.argv[1] == "inventory-existing" else apply(data, assets)
+    if sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
+        result = plan(data, assets, sys.argv[1] == "inventory-legacy-seal")
+    else:
+        if (data["plan"].get("recipe_id") == "repair-existing-legacy-classification-v1") != (
+            sys.argv[1] == "seal-existing"
+        ):
+            raise ValueError("migration_recipe_action_conflict")
+        result = apply(data, assets)
     print(json.dumps(result, sort_keys=True))
 
 

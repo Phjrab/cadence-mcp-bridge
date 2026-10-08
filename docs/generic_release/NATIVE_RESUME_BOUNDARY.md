@@ -1,3 +1,16 @@
+## Active legacy classification correction, 2026-10-08
+
+PR150 P2 feedback corrected: all retained IDs, including unmarked legacy jobs,
+are sealed before generic reservation;256KiB JSON plans no longer use the32KiB
+profile limit. Actual normal-user installed-wheel append-only correction/repeat
+PASS. Old anchor/receipts remain intact; effective anchorcfd037cd seals3 IDs.
+Counter82 /9,798,942,720 and old marker/lock snapshot identical; new attempts0.
+Original apply evidence below remains historical. An unrelated hosted PowerShell
+cold-start fixture caused one PR-event failure while its push Windows/Ubuntu
+checks passed; corrected source CI pending. No execution grant/provider/new jobs.
+Continue authorized fresh-domain/provider work without phase reapproval.
+See EXISTING_DOMAIN_MIGRATION_V1.md for exact receipts and limits.
+
 ## Active existing-domain migration checkpoint, 2026-10-08
 
 Current branch feat/grel-03-operator-domain-provisioning stacks on corrected
