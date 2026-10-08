@@ -477,6 +477,13 @@
     "report": "GREL_03_SHARED_RESERVATIONS_RESULT.md",
     "native_qualified": false,
     "public_dispatch": false,
-    "bootstrap_schema": 2
+    "bootstrap_schema": 2,
+    "tested_source": "PENDING_CORRECTED_COMMIT",
+    "local_passed": 213,
+    "skipped": 5,
+    "package_security": "PENDING_CORRECTED_SOURCE",
+    "preserved_synthetic_files": 29,
+    "hosted_ci": "PENDING",
+    "independent_review": "P1_OLD_MARKERS_CORRECTED_PENDING"
   }
 }

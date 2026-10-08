@@ -23,7 +23,7 @@ domain attestation will be required for that capability.
 
 New files in the existing job's work directory are reservation-intent.json,
 legacy-compatible attempt-reserved, and reservation-receipt.json. Bindings
-include root/domain, ledger reference, grant/runner/plan hashes, expiry, limits,
+include root/domain, ledger reference, grant/runner/plan and compiled execution-input hashes, expiry, limits,
 per-operation bytes and disk floor. Hashes identify a verified contract; they
 do not authenticate it. Different aliases/clients must resolve to the same
 canonical root/physical lock. Links, junctions, hardlinks, untrusted POSIX
@@ -48,6 +48,12 @@ Under the existing physical EDA lock:
 4. Atomically rename the barrier onto the counter; fsync its directory.
 5. Exclusively create/fsync the receipt and its directory.
 
+The execution_input_sha256 binding must be the verified generic compiler manifest
+digest, in addition to the legacy OperationPlan hash. The old plan alone omits
+generic AC/TRAN/DC settings and cannot distinguish substituted input settings.
+Different compiled inputs can consume another slot under the same verified grant;
+same-operation input substitution is rejected.
+
 No file is removed or repaired on failure. Before step4, the barrier makes
 legacy preflight/audit reject uncertain accounting. After step4 without a receipt,
 consistent intent/marker lookup and replay return UNKNOWN_OUTCOME. Another own
@@ -59,7 +65,11 @@ semantics and are not established by process-death tests or grammar parsing.
 Completed replay and expired-grant reads do not spend, dispatch or refund.
 Conflicting bindings fail. Same-grant quota is reconstructed from immutable
 job records under the physical lock; another client cannot reset it with a new
-local journal or changed policy fields. The counter retains legacy consumption.
+local journal or changed policy fields. The counter retains legacy consumption. Historical marker validation preserves
+the native-v1 domain's original21 /1,611,661,312 baseline (including completed
+count22–24 markers). The current ledger and new transaction before/after records
+still require the newer32 /3,088,056,320 policy floor. This distinction does not
+weaken historical campaign conservation checks or permit current-ledger rollback.
 
 Every own reservation remains conservatively in-flight because trusted terminal
 worker receipts are not implemented. Physical free space must cover the floor,

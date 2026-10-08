@@ -247,6 +247,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "grant_sha256": "b" * 64,
         "runner_sha256": "c" * 64,
         "plan_sha256": "d" * 64,
+        "execution_input_sha256": "1" * 64,
         "expires_at": int(time.time()) + 600,
         "max_attempts": 2,
         "max_reserved_bytes": 33554432,

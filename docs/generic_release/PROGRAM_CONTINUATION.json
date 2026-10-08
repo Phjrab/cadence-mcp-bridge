@@ -27,7 +27,7 @@
   "report": "GREL_03_SHARED_RESERVATIONS_RESULT.md",
   "next_phase_authorized": true,
   "next_phase": "GREL03-production-provider-and-GREL04-native-copy-API-then-GREL05-06",
-  "pr_url": null,
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/146",
   "reports": [
     "GREL_02_RESULT.md",
     "GREL_03_RESULT.md",
@@ -70,9 +70,10 @@
     "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
-    "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z"
+    "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
+    "shared_reservations": "P1_PRE32_MARKERS_CORRECTED_REVIEW_PENDING"
   },
-  "local_input_snapshot_sha256": "004be6a3f0c6b11fa1a9778fa865bf6d5503623b1b209cc2f360c142445e4ac9",
+  "local_input_snapshot_sha256": "4bf4256a4e6d31c5c44d662dcc236b771a8c648e4cbb8357b2e9b45d7b10ab89",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -175,19 +176,23 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
-    "conclusion": "PENDING_CURRENT_SOURCE"
+    "conclusion": "PENDING_CORRECTED_SOURCE"
   },
   "local_validation": {
-    "affected_passed": 207,
+    "affected_passed": 213,
     "skipped": 5,
-    "seconds": 19.79,
+    "seconds": 19.33,
     "source_typecheck_files": 70,
     "mcp_full_schemas": 85,
     "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
-    "final_package_security": "PENDING",
+    "final_package_security": "PENDING_CORRECTED_SOURCE",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
-    "preserved_synthetic_state_files": 29
+    "preserved_synthetic_state_files": 29,
+    "input_files": 325,
+    "unexpected_input_drift": 0,
+    "wheel_sha256": null,
+    "sdist_sha256": null
   },
   "grel04_inputs": {
     "implementation": "OPERATOR_ONLY_FIXED_ADE_L_INPUT_TEMPLATE_AND_BOUNDED_SPECTRE_COMPARISON",
@@ -199,7 +204,7 @@
     "native_dispatch": "DISABLED"
   },
   "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "PENDING_FEATURE_COMMIT",
+  "tested_source": "PENDING_CORRECTED_COMMIT",
   "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
@@ -251,5 +256,28 @@
     "bootstrap_schema": 2,
     "legacy_schema_one_verification": true,
     "all_own_reservations_inflight": true
+  },
+  "historical_shared_3928377": {
+    "tested_source": "3928377ea52626011edcabc17a24c342e5f2fc29",
+    "local_validation": {
+      "affected_passed": 213,
+      "skipped": 5,
+      "seconds": 19.33,
+      "source_typecheck_files": 70,
+      "mcp_full_schemas": 85,
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
+      "final_package_security": "PENDING_CORRECTED_SOURCE",
+      "security_passed": 18,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 29,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "wheel_sha256": null,
+      "sdist_sha256": null
+    },
+    "hosted_posix_passed": 50,
+    "posix_job": 113098868426,
+    "posix_run": 37711604247,
+    "independent_review": "P1_PRE32_MARKERS_FOUND_CORRECTED_NEXT_SOURCE"
   }
 }

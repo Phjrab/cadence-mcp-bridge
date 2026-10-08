@@ -3,8 +3,11 @@
 Existing-counter/job-marker/physical-lock accounting is shipped as an internal
 asset, with barrier-first crash handling, immutable intent/receipts, same-grant
 accounting and conservative in-flight capacity. Schema2 includes it; schema1
-history remains verifiable. Related207 PASS/five skips, Ruff/mypy70,85 schemas
-and actual Python2.6 grammar-only checks PASS. Final package/CI/review receipts:
+history remains verifiable. Related213 PASS/five skips, Ruff/mypy70,85 schemas
+and actual Python2.6 grammar-only checks PASS. Final package/security and29-state
+preservation historically PASS. Compiled-input replay identity and independent
+P1 old-marker floor correction are tested; final source package/CI/review pending.
+PR146 unmerged. Exact receipts:
 docs/generic_release/GREL_03_SHARED_RESERVATIONS_RESULT.md.
 Production provider/operator authenticity/native execution remain absent/blocked;
 no public dispatch or native side effects. Continuous02–07/895MiB persists;

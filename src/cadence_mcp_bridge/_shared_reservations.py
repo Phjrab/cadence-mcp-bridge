@@ -37,13 +37,16 @@ BINDING = (
     "grant_sha256",
     "runner_sha256",
     "plan_sha256",
+    "execution_input_sha256",
     "expires_at",
     "max_attempts",
     "max_reserved_bytes",
     "reserve_bytes",
     "disk_floor_bytes",
 )
-GRANT_FIELDS = tuple(x for x in BINDING if x not in ("plan_sha256", "reserve_bytes"))
+GRANT_FIELDS = tuple(
+    x for x in BINDING if x not in ("plan_sha256", "execution_input_sha256", "reserve_bytes")
+)
 
 
 def canonical(value):
@@ -64,12 +67,12 @@ def matches(pattern, value):
 def check_binding(root, value):
     if not isinstance(value, dict) or set(value) != set(BINDING):
         raise ValueError("reservation_binding_shape")
-    for key in BINDING[:6]:
+    for key in BINDING[:7]:
         if key != "ledger_ref" and not matches(HASH, value[key]):
             raise ValueError("reservation_binding_hash")
     if value["ledger_ref"] != LEDGER or value["root_sha256"] != digest(root.encode("utf-8")):
         raise ValueError("reservation_domain_binding")
-    for key in BINDING[6:]:
+    for key in BINDING[7:]:
         if type(value[key]) not in INTEGER_TYPES:
             raise ValueError("reservation_binding_integer")
     if not (
@@ -144,17 +147,28 @@ def write_new(path, value):
     sync_directory(os.path.dirname(path))
 
 
-def counter_shape(value):
+def shape(value, minimum_count, minimum_bytes):
     if (
         not isinstance(value, dict)
         or set(value) != set(("campaign_id", "count", "result_reserved_bytes"))
         or value["campaign_id"] != "AUTO-PHASE-01"
         or type(value["count"]) not in INTEGER_TYPES
         or type(value["result_reserved_bytes"]) not in INTEGER_TYPES
-        or not 32 <= value["count"] <= CEILING_COUNT
-        or not 3088056320 <= value["result_reserved_bytes"] <= CEILING_BYTES
+        or not minimum_count <= value["count"] <= CEILING_COUNT
+        or not minimum_bytes <= value["result_reserved_bytes"] <= CEILING_BYTES
     ):
         raise ValueError("reservation_counter_integrity")
+
+
+def counter_shape(value):
+    # Current cumulative policy floor; never accept rollback to the old baseline.
+    shape(value, 32, 3088056320)
+
+
+def marker_shape(value):
+    # Retained native-v1 jobs predate the current policy. Preserve their markers
+    # from the original21 /1,611,661,312 baseline without weakening current state.
+    shape(value, 21, 1611661312)
 
 
 def open_lock(root):
@@ -281,7 +295,7 @@ def audit(root, counter):
         marker = os.path.join(work, "attempt-reserved")
         if os.path.lexists(marker):
             value = read(marker)
-            counter_shape(value)
+            marker_shape(value)
             if (
                 value["count"] > counter["count"]
                 or value["result_reserved_bytes"] > counter["result_reserved_bytes"]

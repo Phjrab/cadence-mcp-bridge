@@ -64,6 +64,7 @@ def binding(root, **updates):
         "grant_sha256": "b" * 64,
         "runner_sha256": "c" * 64,
         "plan_sha256": "d" * 64,
+        "execution_input_sha256": "1" * 64,
         "expires_at": int(time.time()) + 600,
         "max_attempts": 8,
         "max_reserved_bytes": 8 * AMOUNT,
@@ -233,6 +234,7 @@ def test_existing_legacy_lock_is_respected(root):
     "change",
     [
         {"plan_sha256": "e" * 64},
+        {"execution_input_sha256": "e" * 64},
         {"runner_sha256": "e" * 64},
         {"resource_domain_sha256": "e" * 64},
         {"reserve_bytes": 2 * AMOUNT},
@@ -289,6 +291,7 @@ def test_invalid_binding_does_not_mutate(root, field, value):
     "counter",
     [
         dict(SEED, count=True),
+        dict(SEED, count=21, result_reserved_bytes=1611661312),
         dict(SEED, count=501),
         dict(SEED, result_reserved_bytes=1),
         {**SEED, "epoch": 2},
@@ -458,3 +461,46 @@ def test_legacy_default_json_serialization_remains_accepted(root):
     assert lookup(root, op, permit) is None
     assert (root / ledger.LEDGER).read_bytes() == raw
     assert reserve(root, op, permit)["after"]["count"] == 83
+
+
+def test_second_batch_can_change_compiled_input_within_same_grant(root):
+    permit = binding(root)
+    first = reserve(root, job(root), permit)
+    second = reserve(root, job(root), {**permit, "execution_input_sha256": "2" * 64})
+    assert second["after"]["count"] == first["after"]["count"] + 1
+    assert second["intent_sha256"] != first["intent_sha256"]
+
+
+def test_pre32_legacy_markers_remain_readable_and_unchanged(root):
+    markers = []
+    for step in (1, 2, 3):
+        op = job(root)
+        marker = root / ledger.JOBS / op / "work/attempt-reserved"
+        value = {
+            "campaign_id": "AUTO-PHASE-01",
+            "count": 21 + step,
+            "result_reserved_bytes": 1611661312 + step * 134217728,
+        }
+        # Original legacy adapter's exact serialization.
+        marker.write_bytes(json.dumps(value, sort_keys=True).encode("ascii"))
+        os.chmod(marker, 0o600)
+        markers.append((marker, marker.read_bytes()))
+    current = (root / ledger.LEDGER).read_bytes()
+    op, permit = job(root), binding(root)
+    assert lookup(root, op, permit) is None
+    assert (root / ledger.LEDGER).read_bytes() == current
+    assert reserve(root, op, permit)["after"]["count"] == 83
+    assert all(marker.read_bytes() == before for marker, before in markers)
+
+
+@pytest.mark.parametrize("field,value", [("count", 20), ("result_reserved_bytes", 1611661311)])
+def test_legacy_marker_below_original_domain_floor_is_rejected(root, field, value):
+    op = job(root)
+    marker = root / ledger.JOBS / op / "work/attempt-reserved"
+    old = dict(campaign_id="AUTO-PHASE-01", count=22, result_reserved_bytes=1745879040)
+    old[field] = value
+    ledger.write_new(str(marker), old)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="counter_integrity"):
+        reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
