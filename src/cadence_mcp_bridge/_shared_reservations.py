@@ -27,6 +27,9 @@ LEDGER = "sim-mcp-v2-jobs/counter.json"
 JOBS = "native-mcp-v1-jobs"
 CEILING_COUNT = 500
 CEILING_BYTES = 10737418240
+LEGACY_BASE_COUNT = 21
+LEGACY_BASE_BYTES = 1611661312
+LEGACY_RESERVATION = 134217728
 LIMIT = 8192
 ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -277,6 +280,7 @@ def receipt_for(intent):
 
 def audit(root, counter):
     records = []
+    markers = []
     jobs = os.path.join(root, JOBS)
     names = os.listdir(jobs)
     if len(names) > 2048:
@@ -297,6 +301,7 @@ def audit(root, counter):
         if os.path.lexists(marker):
             value = read(marker)
             marker_shape(value)
+            markers.append(value)
             if (
                 value["count"] > counter["count"]
                 or value["result_reserved_bytes"] > counter["result_reserved_bytes"]
@@ -305,10 +310,30 @@ def audit(root, counter):
         item = transaction(work, root, name, counter)
         if item is not None:
             records.append(item)
-    counts = [item[0]["after"]["count"] for item in records]
+    counts = [value["count"] for value in markers]
     if len(set(counts)) != len(counts):
         raise ValueError("reservation_duplicate_counter_slot")
+    # Every legacy increment after native-v1 baseline uses128MiB. New variable
+    # increments are accounted by their immutable own records, not another ledger.
+    # Include unresolved own intents for conservation only; never infer completion.
+    for value in markers:
+        if value["result_reserved_bytes"] != expected_bytes(value["count"], records):
+            raise ValueError("reservation_marker_conservation")
+    for intent, receipt in records:
+        for value in (intent["before"], intent["after"]):
+            if value["result_reserved_bytes"] != expected_bytes(value["count"], records):
+                raise ValueError("reservation_intent_conservation")
+    if counter["result_reserved_bytes"] != expected_bytes(counter["count"], records):
+        raise ValueError("reservation_counter_conservation")
     return records
+
+
+def expected_bytes(count, records):
+    total = LEGACY_BASE_BYTES + (count - LEGACY_BASE_COUNT) * LEGACY_RESERVATION
+    for intent, receipt in records:
+        if intent["after"]["count"] <= count:
+            total += intent["binding"]["reserve_bytes"] - LEGACY_RESERVATION
+    return total
 
 
 def state(root):

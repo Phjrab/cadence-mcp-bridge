@@ -71,9 +71,9 @@
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
     "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
-    "shared_reservations": "P1_P2_FIXED_REVIEW_PENDING"
+    "shared_reservations": "P1_AND_TWO_P2_FIXED_FINAL_REVIEW_PENDING"
   },
-  "local_input_snapshot_sha256": "b0e98ff550dcb6a84e305dfaf3ac5ffab57b926185a2c80cee850025748fc85c",
+  "local_input_snapshot_sha256": "5e33bad0ba4dd711a16c24d84351cb4dba8d87dde4193830f2ecfee82ce5ef8c",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -176,23 +176,23 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
-    "conclusion": "PENDING_SECOND_REVIEW_CORRECTION"
+    "conclusion": "PENDING_CONSERVATION_SOURCE"
   },
   "local_validation": {
-    "affected_passed": 214,
+    "affected_passed": 220,
     "skipped": 5,
-    "seconds": 20.46,
+    "seconds": 38.77,
     "source_typecheck_files": 70,
     "mcp_full_schemas": 85,
     "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
-    "final_package_security": "PENDING_SECOND_REVIEW_CORRECTION",
+    "final_package_security": "PENDING_CONSERVATION_SOURCE",
     "security_passed": 18,
     "dependency_audit": "NO_KNOWN_VULNERABILITIES",
     "preserved_synthetic_state_files": 29,
     "input_files": 325,
     "unexpected_input_drift": 0,
-    "wheel_sha256": "e09be827e092ac614759c4fce42a2c4a4057f9ea4c43b95c381114e65b7a482f",
-    "sdist_sha256": "908db5556babfef92be92acffabb608db047bc7becace43600fca460ea5da819",
+    "wheel_sha256": null,
+    "sdist_sha256": null,
     "security_seconds": 1.13
   },
   "grel04_inputs": {
@@ -205,7 +205,7 @@
     "native_dispatch": "DISABLED"
   },
   "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "PENDING_SECOND_REVIEW_CORRECTION_COMMIT",
+  "tested_source": "PENDING_CONSERVATION_COMMIT",
   "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
@@ -317,5 +317,19 @@
       "security_seconds": 1.13
     },
     "independent_review": "P1_FIXED_P2_RESERVED_MARKER_PRE_BASELINE_FOUND"
+  },
+  "historical_shared_e2eb709": {
+    "tested_source": "e2eb7097c316e77891dd44169e7f2c8ebbff9e41",
+    "related_passed": 214,
+    "skipped": 5,
+    "seconds": 19.59,
+    "posix_passed": 57,
+    "posix_run": 37713363856,
+    "posix_job": 113104162309,
+    "package_security": "PASS_SOURCE_SCOPED",
+    "preserved_files": 29,
+    "wheel_sha256": "49f0cb76f9d7cf4235546bd7a3389ff4b1b0790d0f9bc3443a4fd25e34833a73",
+    "sdist_sha256": "16781d2cea8cae2731900318524ab82b96072a1925e608750b37405e83a09313",
+    "independent_review": "P2_COUNT_BYTE_RELATION_FOUND_CORRECTED_NEXT_SOURCE"
   }
 }

@@ -78,6 +78,17 @@ all those in-flight bytes and the new reservation. Cumulative reservations,
 grant usage, in-flight commitments and physical free space are distinct.
 Logical/allocated occupancy is not measured by this adapter.
 
+The historical native domain starts at21 /1,611,661,312 bytes and uses128MiB
+for each legacy increment thereafter. Audit validates each marker, own
+before/after counter, and current counter against that count/byte relationship,
+adjusted by each preceding immutable own variable reservation's difference from
+128MiB. This permits legacy increments interleaved with variable generic ones
+without accepting impossible count/byte pairs or silently losing variable history.
+Unknown own intents contribute only to conservative conservation, never to a
+fabricated completion receipt. All native-job marker slots must be unique.
+Unrecorded changes to the legacy reservation rule require a reviewed migration;
+they are not silently admitted. Existing historical campaign guards are unchanged.
+
 ## Verification and remaining work
 
 Disposable files are seeded82 /9,798,942,720 bytes. Tests exercise second batches,

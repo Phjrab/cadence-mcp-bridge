@@ -1,3 +1,16 @@
+## GREL-03 shared-counter conservation correction, 2026-10-08
+
+Independent P1 and two P2 marker findings corrected: retain valid old22–24
+markers, reject pre-reservation values, and conserve count/byte pairs against
+fixed legacy increments plus immutable generic variable reservations. Duplicate
+slots, missing variable records and mixed legacy/new increments are tested.
+Related220 PASS/five skips/38.77s, Ruff/mypy70 and five-asset actual Python2.6
+grammar-only PASS. Final exact-source package/CI/review pending in PR146;
+earlier source/package receipts below remain historical. No native side effects,
+protected repairs/budget reset/increase/merge/GREL08/publication. Continuous
+02–07/895MiB remains; production provider/trust/jobs/extraction/Sweep/clean client
+remain incomplete. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
 ## GREL-03 shared-reservation source checkpoint, 2026-10-08
 
 Tested source52b5452 in PR146: hosted Windows2527 PASS/four POSIX skips and

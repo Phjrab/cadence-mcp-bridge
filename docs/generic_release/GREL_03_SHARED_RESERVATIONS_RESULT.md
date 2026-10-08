@@ -129,3 +129,21 @@ Both baseline-pair rejection and one-field boundary cases are tested, while
 valid old22–24 markers remain unchanged. Current-ledger floor and historical
 policies/conservation guards remain unchanged. Final source revalidation follows;
 52b5452 CI/package evidence above is historical after this correction.
+
+
+## Third independent marker correction
+
+Reviewe2eb709 found P2: independent count/byte floors permitted impossible legacy
+pairs (e.g.22 /3,088,056,320). Audit now conserves the original21 /
+1,611,661,312 baseline and fixed128MiB legacy increments, adjusted by preceding
+immutable own variable-reservation records. It checks all marker pairs, each own
+before/after and the current ledger, and rejects duplicate native marker slots.
+It still never infers completion from a later counter or manufactures a receipt.
+
+Tests now cover inconsistent legacy/current pairs, duplicate old slots, mixed
+legacy+variable reservations, dropped variable records, and a genuine synthetic
+500-attempt/10GiB exhausted state represented by actual immutable disposable files.
+The first conservation test run had one stale fixture incorrectly using16MiB
+for a legacy increment; it was corrected to the source-defined128MiB. Initial
+failure log/test-temp evidence is retained. No historical guards or policy changed.
+Earlier sourcee2eb709 evidence is historical after this correction.

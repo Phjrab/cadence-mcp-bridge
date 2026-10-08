@@ -206,7 +206,9 @@ def test_later_legacy_advancement_does_not_prove_missing_receipt(root):
     assert finish(child(root, op, permit, "rename"))[0] == 91
     # Emulate legitimate legacy advancement under the same domain after our rename.
     advanced = dict(
-        SEED, count=84, result_reserved_bytes=SEED["result_reserved_bytes"] + 2 * AMOUNT
+        SEED,
+        count=84,
+        result_reserved_bytes=SEED["result_reserved_bytes"] + AMOUNT + ledger.LEGACY_RESERVATION,
     )
     (root / ledger.LEDGER).write_bytes(ledger.canonical(advanced))
     before = snapshot(root)
@@ -316,11 +318,36 @@ def test_duplicate_key_counter_is_rejected(root):
 
 @pytest.mark.parametrize("limited", ["count", "bytes"])
 def test_global_existing_consumption_still_limits_new_grants(root, limited):
-    value = dict(SEED)
-    value["count" if limited == "count" else "result_reserved_bytes"] = (
-        ledger.CEILING_COUNT if limited == "count" else ledger.CEILING_BYTES
-    )
-    (root / ledger.LEDGER).write_bytes(ledger.canonical(value))
+    if limited == "bytes":
+        remaining = ledger.CEILING_BYTES - SEED["result_reserved_bytes"]
+        reserve(
+            root, job(root), binding(root, reserve_bytes=remaining, max_reserved_bytes=remaining)
+        )
+    else:
+        # Seed actual disposable immutable variable-reservation records, not an
+        # impossible counter pair. This is fictional past accounting, no authority.
+        permit = binding(root, reserve_bytes=1, max_reserved_bytes=500, max_attempts=500)
+        before_counter = dict(SEED)
+        for _ in range(ledger.CEILING_COUNT - SEED["count"]):
+            op = job(root)
+            work = root / ledger.JOBS / op / "work"
+            after_counter = {
+                **before_counter,
+                "count": before_counter["count"] + 1,
+                "result_reserved_bytes": before_counter["result_reserved_bytes"] + 1,
+            }
+            intent = {
+                "schema_version": 1,
+                "operation_id": op,
+                "binding": permit,
+                "before": before_counter,
+                "after": after_counter,
+            }
+            ledger.write_new(str(work / "reservation-intent.json"), intent)
+            ledger.write_new(str(work / "attempt-reserved"), after_counter)
+            ledger.write_new(str(work / "reservation-receipt.json"), ledger.receipt_for(intent))
+            before_counter = after_counter
+        (root / ledger.LEDGER).write_bytes(ledger.canonical(before_counter))
     before = snapshot(root)
     with pytest.raises(ValueError, match="cumulative_capacity"):
         reserve(root, job(root), binding(root, grant_sha256="f" * 64))
@@ -398,7 +425,13 @@ def test_lookup_of_durable_receipt_can_follow_later_legacy_counter(root):
     receipt = reserve(root, op, permit)
     (root / ledger.LEDGER).write_bytes(
         ledger.canonical(
-            dict(SEED, count=84, result_reserved_bytes=SEED["result_reserved_bytes"] + 2 * AMOUNT)
+            dict(
+                SEED,
+                count=84,
+                result_reserved_bytes=SEED["result_reserved_bytes"]
+                + AMOUNT
+                + ledger.LEGACY_RESERVATION,
+            )
         )
     )
     before = snapshot(root)
@@ -518,4 +551,80 @@ def test_unincremented_native_policy_baseline_is_not_a_reserved_marker(root):
         lookup(root, job(root), binding(root))
     with pytest.raises(ValueError, match="counter_integrity"):
         reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("count,amount", [(22, 3088056320), (24, 1745879040)])
+def test_impossible_legacy_marker_count_byte_pair_is_rejected(root, count, amount):
+    op = job(root)
+    ledger.write_new(
+        str(root / ledger.JOBS / op / "work/attempt-reserved"),
+        {
+            "campaign_id": "AUTO-PHASE-01",
+            "count": count,
+            "result_reserved_bytes": amount,
+        },
+    )
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="marker_conservation"):
+        lookup(root, job(root), binding(root))
+    with pytest.raises(ValueError, match="marker_conservation"):
+        reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
+
+
+def test_impossible_current_counter_pair_is_rejected(root):
+    (root / ledger.LEDGER).write_bytes(
+        ledger.canonical(dict(SEED, result_reserved_bytes=SEED["result_reserved_bytes"] + 1))
+    )
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="counter_conservation"):
+        reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
+
+
+def test_duplicate_retained_legacy_counter_slot_is_rejected(root):
+    for _ in range(2):
+        ledger.write_new(
+            str(root / ledger.JOBS / job(root) / "work/attempt-reserved"),
+            {
+                "campaign_id": "AUTO-PHASE-01",
+                "count": 22,
+                "result_reserved_bytes": 1745879040,
+            },
+        )
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="duplicate_counter_slot"):
+        reserve(root, job(root), binding(root))
+    assert snapshot(root) == before
+
+
+def test_legacy_increment_after_variable_reservation_reconciles(root):
+    permit = binding(root)
+    first = reserve(root, job(root), permit)
+    value = {
+        **first["after"],
+        "count": first["after"]["count"] + 1,
+        "result_reserved_bytes": first["after"]["result_reserved_bytes"]
+        + ledger.LEGACY_RESERVATION,
+    }
+    marker = root / ledger.JOBS / job(root) / "work/attempt-reserved"
+    ledger.write_new(str(marker), value)
+    (root / ledger.LEDGER).write_bytes(ledger.canonical(value))
+    before_marker = marker.read_bytes()
+    result = reserve(root, job(root), {**permit, "execution_input_sha256": "2" * 64})
+    assert result["after"]["count"] == 85
+    assert marker.read_bytes() == before_marker
+
+
+def test_missing_variable_reservation_records_cannot_reset_accounting(root):
+    op, permit = job(root), binding(root)
+    reserve(root, op, permit)
+    work = root / ledger.JOBS / op / "work"
+    # Disposable corruption fixture only. Production deletion is not exposed.
+    for leaf in ("reservation-intent.json", "reservation-receipt.json", "attempt-reserved"):
+        (work / leaf).unlink()
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="counter_conservation"):
+        reserve(root, job(root), permit)
     assert snapshot(root) == before
