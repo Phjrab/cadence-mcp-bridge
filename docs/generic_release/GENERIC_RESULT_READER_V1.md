@@ -29,7 +29,11 @@ AC transfer binds positive/negative input/output logical nodes and explicit gain
 frequencies within the compiled interval. Requested frequency count cannot exceed
 the registered waveform sample limit, and frequencies must remain distinct in
 the binary-float representation used by projection. Matching tolerance cannot
-reuse one saved sample for multiple requested frequencies. All registered waves must share an
+reuse one saved sample for multiple requested frequencies. The whole declared AC
+logarithmic grid must fit maximum_samples before compilation: ceil(log10(stop/start)
+* points_per_decade)+1 includes both endpoints conservatively. This local bound
+is not native sampling attestation. Serialized interval endpoints use the same
+relative1e-12 tolerance; materially out-of-interval frames still reject. All registered waves must share an
 increasing exact saved frequency axis. Each requested frequency must match one
 actual sample (relative tolerance1e-12); there is no interpolation. Division uses
 the measured complex differential input; zero input rejects. Zero output has

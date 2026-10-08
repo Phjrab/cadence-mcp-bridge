@@ -8,7 +8,7 @@ import math
 import os
 import re
 from collections import deque
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal, localcontext
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
@@ -207,6 +207,16 @@ def bind_reader(
     if reader.transfer:
         if ade.inputs.analysis != "ac":
             raise OperationRejected("reader_analysis_inventory_mismatch")
+        # Include both endpoints conservatively for a partial final decade.
+        # This is a declared-grid bound, not attestation of actual PSF sampling.
+        with localcontext() as decimal_context:
+            decimal_context.prec = 128
+            intervals = (
+                Decimal(ade.inputs.stop_hz) / Decimal(ade.inputs.start_hz)
+            ).log10() * ade.inputs.points_per_decade
+            requested_samples = int(intervals.to_integral_value(rounding=ROUND_CEILING)) + 1
+        if requested_samples > reader.maximum_samples:
+            raise OperationRejected("reader_ac_grid_exceeds_sample_limit")
         for frequency in reader.transfer.gain_frequencies_hz:
             if (
                 not Decimal(ade.inputs.start_hz)
@@ -434,8 +444,14 @@ def _transfer(
     inputs = ade.inputs
     if (
         inputs.analysis != "ac"
-        or axes[0] < float(inputs.start_hz)
-        or axes[-1] > float(inputs.stop_hz)
+        or (
+            axes[0] < float(inputs.start_hz)
+            and not math.isclose(axes[0], float(inputs.start_hz), rel_tol=1e-12, abs_tol=0)
+        )
+        or (
+            axes[-1] > float(inputs.stop_hz)
+            and not math.isclose(axes[-1], float(inputs.stop_hz), rel_tol=1e-12, abs_tol=0)
+        )
     ):
         raise OperationRejected("reader_ac_interval_invalid")
     assert reader.transfer is not None

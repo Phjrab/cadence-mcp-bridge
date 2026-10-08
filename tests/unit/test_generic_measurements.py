@@ -118,7 +118,7 @@ def reader_for(operator, analysis="dc"):
                 }
                 if analysis == "ac"
                 else None,
-                "maximum_samples": 4,
+                "maximum_samples": 64 if analysis == "ac" else 4,
             }
         )
     )
@@ -514,3 +514,67 @@ def test_close_distinct_gain_frequencies_cannot_share_a_saved_sample(operator):
     with pytest.raises(OperationRejected, match="Operator operation rejected") as exc:
         project_frame(*args, frame)
     assert exc.value.reason == "reader_gain_sample_reused"
+
+
+@pytest.mark.parametrize(
+    "stop,ppd,limit,allowed",
+    [
+        ("1000000", 100, 256, False),
+        ("1000000", 10, 60, False),
+        ("1000000", 10, 61, True),
+        ("2", 10, 4, False),
+        ("2", 10, 5, True),
+    ],
+)
+def test_declared_ac_grid_must_fit_waveform_limit_before_compiling(
+    operator, stop, ppd, limit, allowed
+):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(analysis="ac", start_hz="1", stop_hz=stop, points_per_decade=ppd)
+        }
+    )
+    transfer = reader.transfer.model_copy(update={"gain_frequencies_hz": ("1",)})
+    reader = reader.model_copy(
+        update={
+            "ade_registration_sha256": canonical_digest(ade),
+            "maximum_samples": limit,
+            "transfer": transfer,
+        }
+    )
+    if allowed:
+        assert render_reader(context, plan, ade, reader, op, execution)
+    else:
+        with pytest.raises(OperationRejected) as exc:
+            render_reader(context, plan, ade, reader, op, execution)
+        assert exc.value.reason == "reader_ac_grid_exceeds_sample_limit"
+    assert not context.binding.analysis_journal.exists()
+
+
+@pytest.mark.parametrize("start,stop", [("1", "1.2345678901234567"), ("1.2345678901234564", "2")])
+def test_ac_interval_accepts_extractor_endpoint_rounding(operator, start, stop):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(analysis="ac", start_hz=start, stop_hz=stop, points_per_decade=1)
+        }
+    )
+    transfer = reader.transfer.model_copy(update={"gain_frequencies_hz": (start, stop)})
+    reader = reader.model_copy(
+        update={"ade_registration_sha256": canonical_digest(ade), "transfer": transfer}
+    )
+    args = (context, plan, ade, reader, op, execution)
+    lo, hi = (format(float(x), ".16g") for x in (start, stop))
+    body = f"P|input|0|{lo}|2|0\nP|input|1|{hi}|2|0\nP|output|0|{lo}|4|0\nP|output|1|{hi}|4|0"
+    result = project_frame(*args, frame_for(args, body))["transfer"]
+    assert len(result) == 2 and all(r["gain_v_per_v"] == 2 for r in result)
+    # Materially outside the declared interval must still reject.
+    outside = body.replace(f"|1|{hi}|", f"|1|{float(stop) * 1.000001:.16g}|")
+    with pytest.raises(OperationRejected) as exc:
+        project_frame(*args, frame_for(args, outside))
+    assert exc.value.reason == "reader_ac_interval_invalid"

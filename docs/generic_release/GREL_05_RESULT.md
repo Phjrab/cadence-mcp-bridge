@@ -139,3 +139,18 @@ These are historical after the AC correction; no native qualification follows.
 Security invocation without local PYTHONUTF8 failed in pip-api decoding the Korean
 workspace path. The failed log is retained; process-only UTF8 retry is pending.
 No runtime, protected installation, global app setting or native state changed.
+
+
+## AC full-grid capacity and serialized endpoint review correction
+
+Independent48f8879 review found two more P2s: a full declared AC grid could exceed
+the reader's sample capacity even though requested gain count fits, and %.16g
+serialization could round an endpoint just outside strict float interval checks.
+Binding now conservatively counts the whole logarithmic grid with128-digit
+Decimal arithmetic and rejects over-capacity compilation. AC interval comparisons
+use relative1e-12 endpoint tolerance, retaining rejection of material excursions.
+Five whole/partial-decade capacity cases and two high-precision endpoint cases
+pass; original AC fixture reader limit was raised from impossible4 to64 for its
+51-sample declared grid. All63 reader tests pass. Final related/package/security/
+hosted/review receipts follow separately;48f8879 receipts are source-scoped history.
+No native action, budget reservation, protected repair or original mutation occurred.
