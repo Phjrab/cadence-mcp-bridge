@@ -642,10 +642,110 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     assert _native_copy.snapshot(str(copy_source.resolve())) == source_before
     assert store.path.read_bytes() == before
 
+    # Exercise the installed parser and bounded pre-contact failure. No SSH or admission.
+    for action in ("submit", "reconcile", "cancel-pending", "result"):
+        documented = subprocess.run(
+            [sys.executable, "-I", "-m", "cadence_mcp_bridge", "operation", action, "--help"],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        assert b"--provider-binding" in documented.stdout
+        provider_path = workspace / "invalid-provider.json"
+        provider_path.write_bytes(b"{}")
+        argv = [
+            sys.executable,
+            "-I",
+            "-m",
+            "cadence_mcp_bridge",
+            "operation",
+            action,
+            "--settings",
+            str(settings),
+            "--context",
+            "installed-operation",
+            "--provider-binding",
+            str(provider_path),
+            "--expected-provider-sha256",
+            "0" * 64,
+            "--operation-id",
+            operation_id,
+            "--expected-plan-sha256",
+            input_plan.plan_sha256,
+        ]
+        if action in ("submit", "cancel-pending"):
+            argv.extend(["--grant", str(grant), "--expected-grant-sha256", "0" * 64])
+        if action == "submit":
+            argv.extend(["--request", str(plan_path)])
+        denied = subprocess.run(argv, cwd=workspace, env=env, capture_output=True, timeout=30)
+        assert denied.returncode == 1 and not denied.stderr
+        assert json.loads(denied.stdout)["reason"] == "native_operator_binding_changed"
+        assert store.path.read_bytes() == before
+
+    # Installed stdio conditional tools and local plan; fictional runtime only.
+    from cadence_mcp_bridge.authenticated_provider import NativeProviderBinding
+
+    selected_provider = workspace / "selected-provider.json"
+    selected_provider.write_bytes(
+        NativeProviderBinding(
+            schema_version=1,
+            identity_manifest_sha256="a" * 64,
+            runtime_manifest_sha256=context.binding.runner_sha256,
+        )
+        .model_dump_json()
+        .encode("ascii")
+    )
+    configured = json.loads(settings.read_bytes())
+    configured["contexts"][0].update(
+        native_provider_binding=str(selected_provider),
+        native_provider_sha256=hashlib.sha256(selected_provider.read_bytes()).hexdigest(),
+        operator_grant=str(grant),
+        operator_grant_sha256=hashlib.sha256(grant.read_bytes()).hexdigest(),
+    )
+    native_settings = workspace / "native-service.json"
+    native_settings.write_text(json.dumps(configured), encoding="ascii")
+
+    async def native_stdio() -> None:
+        from mcp import Client
+        from mcp.client.stdio import StdioServerParameters
+
+        configured_env = {
+            **env,
+            "CADENCE_MCP_RUNTIME_SETTINGS_PATH": str(native_settings),
+            "CADENCE_MCP_RUNTIME_CONTEXT_ID": "installed-operation",
+        }
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-I", "-m", "cadence_mcp_bridge", "serve-operator"],
+            env=configured_env,
+            cwd=str(workspace),
+        )
+        for _ in range(2):
+            async with Client(params) as client:
+                tools = (await client.list_tools()).tools
+                names = {tool.name for tool in tools}
+                assert len(names) == 90 and "cadence_submit_operation" in names
+                planned = await client.call_tool(
+                    "cadence_plan_operation",
+                    {"request": input_plan.request.model_dump(mode="json")},
+                )
+                assert not planned.is_error and planned.structured_content is not None
+                assert planned.structured_content["plan_sha256"] == input_plan.plan_sha256
+                assert not planned.structured_content["remote_contact"]
+            assert store.path.read_bytes() == before
+
+    import asyncio
+
+    asyncio.run(native_stdio())
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
         "durable_admission": "NOT_RUN",
+        "installed_conditional_native_stdio": "PASS90_SCHEMA_LOCAL_PLAN_RESTART_NO_TRANSPORT",
+        "installed_native_operation_forms": "PASS_PARSE_AND_PRECONTACT_DENIAL_ONLY",
         "installed_confirmation_helper_export": "PASS_LOCAL_NO_AUTHORITY_OR_SSH",
         "installed_owned_copy": "SYNTHETIC_FILES_ONLY_NOT_NATIVE_OA",
         "native_dispatch": "NOT_RUN",

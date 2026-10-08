@@ -150,7 +150,13 @@ def activation(profile, expected):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[2] not in ("authorize", "accept", "lookup", "cancel_pending"):
+    if len(sys.argv) != 3 or sys.argv[2] not in (
+        "authorize",
+        "accept",
+        "lookup",
+        "cancel_pending",
+        "result",
+    ):
         raise ValueError("native_runtime_fixed_action")
     expected, action = sys.argv[1:]
     here, manifest, assets, profile = validate(expected)
@@ -227,6 +233,10 @@ def main():
             result = coordinator.accept(request["operation_id"], request["plan"])
         elif action == "lookup":
             result = coordinator.lookup(request["operation_id"], request["plan"])
+        elif action == "result":
+            result = eda.result(
+                coordinator.journal(request["operation_id"], request["plan"]), request["plan"]
+            )
         else:
             result = coordinator.cancel_pending(request["operation_id"], request["plan"])
     reply = {

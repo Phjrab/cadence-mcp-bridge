@@ -104,7 +104,9 @@ def build_parser() -> argparse.ArgumentParser:
     domain_apply.add_argument("--expected-plan-sha256", required=True)
     domain_apply.add_argument("--expected-helper-sha256", required=True)
     domain_apply.add_argument("--operator-authority", required=True)
-    operation = subparsers.add_parser("operation", help="Local authority and plan verification.")
+    operation = subparsers.add_parser(
+        "operation", help="Operator authority/plan and fixed native lifecycle."
+    )
     operation_actions = operation.add_subparsers(dest="operation_action", required=True)
     operation_actions.add_parser("grant-schema")
     operation_actions.add_parser("request-schema")
@@ -120,6 +122,22 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--grant", type=Path, required=True)
         command.add_argument("--expected-grant-sha256", required=True)
         if name == "plan":
+            command.add_argument("--request", type=Path, required=True)
+    for name in ("submit", "reconcile", "cancel-pending", "result"):
+        command = operation_actions.add_parser(name)
+        for field in ("settings", "provider-binding"):
+            command.add_argument("--" + field, type=Path, required=True)
+        for field in (
+            "context",
+            "operation-id",
+            "expected-plan-sha256",
+            "expected-provider-sha256",
+        ):
+            command.add_argument("--" + field, required=True)
+        if name not in ("reconcile", "result"):
+            command.add_argument("--grant", type=Path, required=True)
+            command.add_argument("--expected-grant-sha256", required=True)
+        if name == "submit":
             command.add_argument("--request", type=Path, required=True)
     authority = subparsers.add_parser(
         "operator-authority", help="Explicit authenticated OS-operator confirmation; no EDA."
@@ -498,6 +516,29 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "remote_contact": False,
                         "execution_authorized": False,
                     }
+                elif arguments.operation_action in (
+                    "submit",
+                    "reconcile",
+                    "cancel-pending",
+                    "result",
+                ):
+                    import asyncio
+
+                    from cadence_mcp_bridge.authenticated_provider import operator_action
+
+                    operation_result = asyncio.run(
+                        operator_action(
+                            context,
+                            arguments.provider_binding,
+                            arguments.expected_provider_sha256,
+                            arguments.operation_action,
+                            arguments.operation_id,
+                            arguments.expected_plan_sha256,
+                            getattr(arguments, "grant", None),
+                            getattr(arguments, "expected_grant_sha256", None),
+                            getattr(arguments, "request", None),
+                        )
+                    )
                 elif arguments.operation_action == "plan":
                     operation_result = operations.inspect_plan(
                         context, arguments.grant, arguments.expected_grant_sha256, arguments.request

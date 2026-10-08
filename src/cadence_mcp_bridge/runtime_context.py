@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.config import BridgeConfig, OperatorTransport
@@ -50,6 +50,22 @@ class ContextBinding(EnvironmentModel):
     ledger_ref: LogicalId
     analysis_journal: Path
     sweep_journal: Path
+    native_provider_binding: Path | None = None
+    native_provider_sha256: Digest | None = None
+    operator_grant: Path | None = None
+    operator_grant_sha256: Digest | None = None
+
+    @model_validator(mode="after")
+    def native_binding_complete(self) -> ContextBinding:
+        values = (
+            self.native_provider_binding,
+            self.native_provider_sha256,
+            self.operator_grant,
+            self.operator_grant_sha256,
+        )
+        if any(v is not None for v in values) and any(v is None for v in values):
+            raise ValueError("complete explicit native provider/grant bindings required")
+        return self
 
 
 class RuntimeSettings(EnvironmentModel):
@@ -170,7 +186,14 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
             paths = (binding.environment_profile, binding.design_registry, binding.pdk_registry)
             if any(not p.is_absolute() for p in paths):
                 raise RuntimeRejected("absolute_contract_paths_required")
-            inputs.update(_local_path(p) for p in paths)
+            native_paths = tuple(
+                p
+                for p in (binding.native_provider_binding, binding.operator_grant)
+                if p is not None
+            )
+            if any(not p.is_absolute() for p in native_paths):
+                raise RuntimeRejected("absolute_native_binding_paths_required")
+            inputs.update(_local_path(p) for p in (*paths, *native_paths))
             snapshot = load_contracts(*paths)
             if (snapshot.environment_sha256, snapshot.design_sha256, snapshot.pdk_sha256) != (
                 binding.environment_sha256,
@@ -321,6 +344,11 @@ class OperatorService:
     def __init__(self, context: ExecutionContext | None, backend: Any = None) -> None:
         self.context = context
         self._backend = backend
+        self.native_operations = None
+        if context is not None and context.binding.native_provider_binding is not None:
+            from cadence_mcp_bridge.native_service import NativeOperationService
+
+            self.native_operations = NativeOperationService(context)
         self.designs: RegistryBase = (
             DesignRegistry(schema_version=1, designs=())
             if context is None

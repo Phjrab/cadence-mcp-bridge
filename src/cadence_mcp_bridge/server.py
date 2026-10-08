@@ -351,6 +351,11 @@ class DesignContractServer(MCPServer):
                 "cadence_list_design_variables",
                 "cadence_check_variable_values",
                 "cadence_list_analyses",
+                "cadence_plan_operation",
+                "cadence_submit_operation",
+                "cadence_operation_status",
+                "cadence_operation_result",
+                "cadence_cancel_pending_operation",
                 "cadence_plan_analysis",
                 "cadence_submit_analysis",
                 "cadence_analysis_status",
@@ -429,6 +434,11 @@ class DesignContractServer(MCPServer):
             "cadence_describe_storage_artifact": "request",
             "cadence_plan_storage_cleanup": "request",
             "cadence_execute_storage_cleanup": "request",
+            "cadence_plan_operation": "request",
+            "cadence_submit_operation": "submission",
+            "cadence_operation_status": "request",
+            "cadence_operation_result": "request",
+            "cadence_cancel_pending_operation": "request",
             "cadence_plan_analysis": "request",
             "cadence_submit_analysis": "submission",
             "cadence_analysis_status": "request",
@@ -1423,7 +1433,9 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.execute_design_write_validation(confirmation))
 
     @server.tool(
-        name="cadence_prepare_amplifier_sweep", annotations=_READ_ONLY, structured_output=True,
+        name="cadence_prepare_amplifier_sweep",
+        annotations=_READ_ONLY,
+        structured_output=True,
         description="Prepare a compiled 1D finite reference amplifier grid with registered "
         "variable/analysis/measurement/definition hashes. Requires the reviewed operator numeric "
         "registry. Local only; no reservation, range expansion or source change.",
@@ -1434,7 +1446,9 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.prepare_amplifier_sweep(request))
 
     @server.tool(
-        name="cadence_submit_amplifier_sweep", annotations=_SUBMIT, structured_output=True,
+        name="cadence_submit_amplifier_sweep",
+        annotations=_SUBMIT,
+        structured_output=True,
         description="Submit/resume the exact prepared finite 1D amplifier grid using the existing "
         "durable sweep engine and shared EDA/resource guards. "
         "Same experiment UUID is lookup/resume; "
@@ -1446,7 +1460,9 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.submit_amplifier_sweep(submission))
 
     @server.tool(
-        name="cadence_amplifier_sweep_status", annotations=_READ_ONLY, structured_output=True,
+        name="cadence_amplifier_sweep_status",
+        annotations=_READ_ONLY,
+        structured_output=True,
         description="Read the registered amplifier sweep journal and deterministic point states.",
     )
     async def cadence_amplifier_sweep_status(
@@ -1455,7 +1471,9 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.amplifier_sweep_status(request))
 
     @server.tool(
-        name="cadence_amplifier_sweep_result", annotations=_READ_ONLY, structured_output=True,
+        name="cadence_amplifier_sweep_result",
+        annotations=_READ_ONLY,
+        structured_output=True,
         description="Read bounded qualified per-point10Hz differential gain or signed DC supply "
         "power with effective conditions and provenance. No raw PSF or target PASS/FAIL.",
     )
@@ -1465,7 +1483,9 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.amplifier_sweep_result(request))
 
     @server.tool(
-        name="cadence_cancel_amplifier_sweep", annotations=_CANCEL, structured_output=True,
+        name="cadence_cancel_amplifier_sweep",
+        annotations=_CANCEL,
+        structured_output=True,
         description="Durably cancel unstarted amplifier sweep points only. Active simulator "
         "continues; no process termination or active cancellation qualification.",
     )
@@ -1475,7 +1495,8 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.cancel_amplifier_sweep(request))
 
     @server.tool(
-        name="cadence_amplifier_specification_catalog", annotations=_READ_ONLY,
+        name="cadence_amplifier_specification_catalog",
+        annotations=_READ_ONLY,
         structured_output=True,
         description="Inspect at most16 operator-owned version3 gain/power goals and the target "
         "catalog digest. Empty by default; no target registration or simulation from MCP.",
@@ -1486,7 +1507,8 @@ def create_server(service: CadenceService) -> MCPServer:
         return await _stable_result(service.amplifier_specification_catalog(design_id))
 
     @server.tool(
-        name="cadence_evaluate_amplifier_specifications", annotations=_READ_ONLY,
+        name="cadence_evaluate_amplifier_specifications",
+        annotations=_READ_ONLY,
         structured_output=True,
         description="Evaluate registered goals against exact admitted amplifier sweep point "
         "facts using source/catalog digests and the existing comparator. Absent goal remains "
@@ -1497,6 +1519,15 @@ def create_server(service: CadenceService) -> MCPServer:
         request: AmplifierEvaluationQuery,
     ) -> Annotated[CallToolResult, AmplifierSpecificationEvaluation]:
         return await _stable_result(service.evaluate_amplifier_specifications(request))
+
+    from cadence_mcp_bridge.runtime_context import OperatorService
+
+    if isinstance(service, OperatorService) and service.native_operations is not None:
+        native = service.native_operations
+
+        from cadence_mcp_bridge.native_server import register_native_tools
+
+        register_native_tools(server, native)
 
     return server
 

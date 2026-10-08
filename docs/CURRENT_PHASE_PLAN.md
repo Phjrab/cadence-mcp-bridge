@@ -1,3 +1,45 @@
+## Current explicit native MCP/result checkpoint, 2026-10-08
+
+Same branch and draftPR152 preserved; main553276d unchanged. Operator submit/
+reconcile/result/pending-cancel CLI and conditional MCP provider injection are
+implemented. Only explicit hash-bound provider/grant context exposes the five
+additional operation tools; existing85 schemas remain exact. Startup/planning
+cannot install or grant. Retrieval checks successful event/receipt/input/reader/
+frame/PSF and returns registered bounded measurements without rerunning EDA.
+Full local2853 PASS/46 OS skips/56 warnings; Ruff/mypy90/security18/audit and85
+schemas PASS. Synthetic SDK same-ID/restart and installed stdio local plan/restart/
+63-state preservation PASS. Exact source hosted Linux checks are pending.
+
+Previous2f1501f inactive stage added14 files/210,413 bytes, repeat0. Its synthetic
+absent-source/unqualified registration must remain inactive. Post-stage seven
+controls/home index/ledger match their prior content and metadata. Latest retained
+normal-user preflight and current eight-asset Python2.6 grammar PASS; ledger82/
+9,798,942,720 and895MiB remaining. New simulations/reservations/metadata repairs0.
+Two distinct nonamplifier ADE source copies added42 files/57,818 bytes, with original
+OA/ADE and controls preserved. This is preparation, no new topology or native job.
+Actual activation/two circuit runs/netlisting/DCACtran/extraction/Sweep/spec/clean
+Codex/GREL07 are still incomplete; general release BLOCKED. Continue authorized
+02–07 without phase reapproval. No merge/GREL08/publication/budget reset/increase/
+refund/protected-content changes. See AUTHENTICATED_NATIVE_PROVIDER_V1.md.
+Earlier dated sections remain source-scoped history.
+
+## Latest native source and operator CLI checkpoint, 2026-10-08
+
+2f1501f in draftPR152 now has four successful Windows/Ubuntu push/PR checks.
+Ubuntu final native provider/setup suite97 PASS/no skips. This is synthetic,
+not actual EDA. Current VM retained preflight/eight-asset Python2.6 grammar/
+fixed memory helpers/owned synthetic process checks PASS; ledger82/9,798,942,720,
+remaining895MiB and seven controls unchanged. New jobs/reservations/remote writes0.
+
+Subsequent operator submit/reconcile/pending-cancel CLI uses the existing
+authenticated provider and durable lifecycle; related64 PASS/no skips. That
+new CLI source needs final package/CI verification. Native activation, public
+operator-service/result connection, two new RC/MOS OA/ADE/DCACtran/extraction,
+Sweep/spec/clean actual Codex/GREL07 are incomplete. Release remains BLOCKED.
+Continue authorized02–07 without phase reapproval; no merge/GREL08/publication,
+budget increase/reset/refund, original mutation or evidence deletion. See
+generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md. Earlier sections remain source-scoped history.
+
 ## Current fixed native admission/worker implementation, 2026-10-08
 
 Continue feat/grel-03-authenticated-provider and draft PR152; latest main remains

@@ -20,6 +20,84 @@ class EdaWorker(object):
         self.gate, self.operations, self.rendering = gate, operations, rendering
         self.copying, self.installer = copying, installer
 
+    def result(self, journal, plan):
+        # Lookup-only: no gate for new spend, process, extraction rerun or writes.
+        self.gate.read(plan)
+        observed = journal.observation()
+        if observed is None or observed["progress"]["phase"] != "SUCCEEDED":
+            raise ValueError("native_worker_result_not_succeeded")
+        admission, events = journal.events()
+        route = self.gate.route(plan)
+        receipt = self.operations.read(journal.work + "/extraction-receipt.json")
+        fields = (
+            "schema_version",
+            "operation_id",
+            "plan_sha256",
+            "native_input_sha256",
+            "reader_registration_sha256",
+            "reader_script_sha256",
+            "frame_sha256",
+            "psf_tree_fingerprint",
+            "pre_receipt_tree_fingerprint",
+            "logical_bytes",
+            "allocated_bytes",
+            "originals_preserved",
+        )
+        if set(receipt) != set(fields) or (
+            type(receipt["schema_version"]) is not int
+            or receipt["schema_version"] != 1
+            or receipt["operation_id"] != journal.operation_id
+            or receipt["plan_sha256"] != journal.plan_sha
+            or receipt["originals_preserved"] is not True
+            or events[-1]["evidence_sha256"]
+            != self.operations.digest(self.operations.canonical(receipt))
+        ):
+            raise ValueError("native_worker_result_receipt_binding")
+        for key in (
+            "native_input_sha256",
+            "reader_registration_sha256",
+            "reader_script_sha256",
+            "frame_sha256",
+            "psf_tree_fingerprint",
+            "pre_receipt_tree_fingerprint",
+        ):
+            self.operations.sha(receipt[key])
+        for key in ("logical_bytes", "allocated_bytes"):
+            if not self.gate.confirmation.integer(receipt[key]) or receipt[key] < 0:
+                raise ValueError("native_worker_result_size")
+        frame = self.operations.read_bytes(journal.work + "/generic-frame.txt")
+        script = self.operations.read_bytes(journal.work + "/reader.ocn")
+        native_input = self.operations.read_bytes(journal.work + "/input.scs")
+        if (
+            self.operations.digest(frame) != receipt["frame_sha256"]
+            or self.operations.digest(script) != receipt["reader_script_sha256"]
+            or self.operations.digest(native_input) != receipt["native_input_sha256"]
+            or self.operations.digest(self.operations.canonical(route["reader"]))
+            != receipt["reader_registration_sha256"]
+        ):
+            raise ValueError("native_worker_result_content_drift")
+        self.operation_id = journal.operation_id
+        self.frame(frame, plan, route, receipt["native_input_sha256"])
+        io = self.gate.storage.PosixIO()
+        work_fd = io.root(journal.work)
+        try:
+            _, _, fingerprint = self.gate.storage.tree(io, work_fd, "psf", [0])
+        finally:
+            os.close(work_fd)
+        if fingerprint != receipt["psf_tree_fingerprint"]:
+            raise ValueError("native_worker_result_psf_drift")
+        # Recheck immutable terminal chain after content observation.
+        if journal.observation() != observed:
+            raise ValueError("native_worker_result_terminal_drift")
+        return {
+            "observation": observed,
+            "terminal_event": events[-1],
+            "receipt": receipt,
+            "ade": route["ade"],
+            "reader": route["reader"],
+            "frame": frame.decode("ascii"),
+        }
+
     def write(self, path, data):
         self.operations.private(os.path.dirname(path), True)
         if len(data) > 262144:

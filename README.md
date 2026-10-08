@@ -782,3 +782,49 @@ capacity. No model-facing grant writer or administrator shell is added. Import,
 server startup and doctor perform no provisioning. See the current
 [confirmation procedure and qualification boundary](docs/generic_release/OPERATOR_CONFIRMATION_V1.md)
 and [domain setup procedure](docs/generic_release/FRESH_DOMAIN_V1.md).
+
+
+### Explicit native operator execution (implementation checkpoint)
+
+For the professor-provided CentOS/Cadence VM and its existing PDK, native operations
+are selected by the operator context. The package contains the fixed runner, setup
+helper and schemas; no Cadence/PDK binary is bundled. Actual new-circuit execution
+qualification remains incomplete. Other Cadence versions, PDKs and host machines
+have not been verified.
+
+Use `native-runtime registration-schema` and `native-runtime bundle` for the
+registered source cell, saved ADE state, variables and DC/AC/TRAN reader. Place
+source/state copies in the registered workspace, preserve the originals, and use
+measured hashes rather than example placeholders. The bundle receipt supplies
+`manifest_sha256` and `provider_binding`; save the latter as operator JSON with
+its exact byte SHA256. Select that manifest as the context's `runner_sha256`.
+Staging an immutable bundle is separate from activation and simulation consent:
+`native-runtime stage|activate|inspect|revoke --help` shows the fixed setup interface.
+Administrator repair, when needed, requires the owner of that VM; routine server
+and EDA execution run as the ordinary user.
+
+To enable native MCP operations, add all four fields to that context:
+`native_provider_binding` (absolute local JSON path), `native_provider_sha256`,
+`operator_grant` (absolute local grant path) and `operator_grant_sha256`.
+The grant must come from the actual operator's authorized scope and be separately
+confirmed through the OS-operator workflow. Configuration alone cannot grant
+execution. Existing installations reuse their real resource ledger and replay
+history; a new local journal does not create a fresh remote budget.
+
+Start the exported `serve-operator` configuration. These five conditional tools
+are available only with the explicit binding:
+`cadence_plan_operation`, `cadence_submit_operation`, `cadence_operation_status`,
+`cadence_operation_result`, `cadence_cancel_pending_operation`.
+Plan every registered numeric value and result reservation explicitly. Submit
+with one UUID4 and the returned exact plan SHA. Repeat that same ID for a lost
+reply or after restart: retries only reconcile, never resend. Pending cancellation
+cannot stop an active simulator or refund consumed reservations.
+
+The operator CLI offers the same fixed lifecycle through
+`operation submit|reconcile|result|cancel-pending --help`.
+Results require a successful terminal receipt and unchanged input, reader, frame
+and PSF; only registered bounded measurements are returned. No simulation or
+extraction rerun occurs during retrieval. Goals remain `not_evaluated` unless a
+separate applicable specification is registered. Legacy/no-native-binding mode
+retains its original 85 tool schemas. The additional tool contract is recorded in
+`docs/contracts/MCP_NATIVE_OPERATIONS_V1_SNAPSHOT.json` in the source repository.

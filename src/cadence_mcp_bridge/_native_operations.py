@@ -61,7 +61,7 @@ def private(path, directory=False):
     return info
 
 
-def read(path):
+def read_bytes(path):
     before = private(path)
     fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     stream = os.fdopen(fd, "rb")
@@ -76,12 +76,17 @@ def read(path):
             or len(raw) > LIMIT
         ):
             raise ValueError("native_operation_read_drift")
-        value = json.loads(raw.decode("ascii"))
-        if canonical(value) != raw:
-            raise ValueError("native_operation_noncanonical")
-        return value
+        return raw
     finally:
         stream.close()
+
+
+def read(path):
+    raw = read_bytes(path)
+    value = json.loads(raw.decode("ascii"))
+    if canonical(value) != raw:
+        raise ValueError("native_operation_noncanonical")
+    return value
 
 
 def directory(path, accounting):
@@ -376,6 +381,7 @@ class ForkWorker(object):
             return pid
         try:
             os.setsid()
+            os.umask(63)  # Private output inheritance for Cadence and all descendants.
             null = os.open(os.devnull, os.O_RDWR)
             for descriptor in (0, 1, 2):
                 os.dup2(null, descriptor)

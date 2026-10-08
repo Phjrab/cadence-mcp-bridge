@@ -17,7 +17,8 @@
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
         "ADMIN_REPAIR_V1.md",
-        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
+        "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
         "installed coexisting operator runner and actual active preflight passed; fresh-domain/provider bootstrap remains incomplete"
@@ -31,7 +32,8 @@
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
-        "ADMIN_REPAIR_V1.md"
+        "ADMIN_REPAIR_V1.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
         "operator routing and current VM binaries/roots qualified; new circuit/native provider remains unqualified"
@@ -46,10 +48,12 @@
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
         "ADMIN_REPAIR_V1.md",
-        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
+        "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
-        "current executable permissions repaired; ordinary-user active runner preflight and shared lock contention denial passed; full dynamic attestation and actual native job qualification remain incomplete"
+        "fixed admission/setup/CLI and conditional public provider injection are implemented and synthetic SDK same-ID/restart pass",
+        "previous inactive staging/repeat passes; actual native activation and new EDA remain unqualified"
       ]
     },
     {
@@ -100,7 +104,8 @@
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
-        "GREL_04_RESULT.md"
+        "GREL_04_RESULT.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
         "local generic compiler/effective-input comparison implemented; actual native source/state/copy/model attestation and execution absent"
@@ -117,7 +122,8 @@
         "GREL_05_RESULT.md"
       ],
       "limitations": [
-        "local generic bounded reader/compiler and mathematical projection implemented; automatic terminal worker and native PSF/selector/source attestation absent"
+        "fixed worker extraction and terminal hash-bound result retrieval/projector are implemented and synthetic tested",
+        "automatic extraction on new real circuits has not run"
       ]
     },
     {
@@ -212,7 +218,8 @@
         "GREL_07_RESULT.md"
       ],
       "limitations": [
-        "actual current Codex new generic job/restart absent"
+        "installed SDK stdio conditional90-tool local plan/restart and synthetic wire submit/retry pass",
+        "actual Codex new-job/app restart remains NOT_RUN"
       ]
     },
     {
@@ -869,5 +876,15 @@
   },
   "native_trust_observation_freshness": "LAST_OBSERVED_REJECTION_NOT_REFRESHED_IN_THIS_CHECKPOINT",
   "current_administrator_scope": "explicit human 2026-10-08 current managed VM minimum reversible metadata repair; historical restrictions superseded only within that scope",
-  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation with existing PDK, per-user VMware and operator configuration; other hosts/versions/PDKs deferred"
+  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation with existing PDK, per-user VMware and operator configuration; other hosts/versions/PDKs deferred",
+  "latest_checkpoint": {
+    "source_head": "2f1501f8df69014b968f89ce6fdf1fc3a8547efb",
+    "feature_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/152",
+    "hosted_checks": "FOUR_PASS_SYNTHETIC_WINDOWS_UBUNTU",
+    "actual_vm": "RETAINED_PREFLIGHT_CONTROLS_PY26_MEMORY_HELPERS_ONLY_PASS",
+    "new_simulations": 0,
+    "new_reservations": 0,
+    "remaining_reserved_budget_bytes": 938475520,
+    "subsequent_operator_cli": "LOCAL64_PASS_NOT_ACTUAL_EDA"
+  }
 }

@@ -149,6 +149,7 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
                 header + ("\nEND\n" if failure == "reader" else "\nV|out|0.5\nEND\n"),
                 encoding="ascii",
             )
+            (Path(journal.work) / "generic-frame.txt").chmod(0o600)
 
     monkeypatch.setattr(worker, "program", program)
     with accounting.ReservationSession(str(root)) as session:
@@ -176,6 +177,17 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
             "EXTRACTION_FAILED" if failure else "SUCCEEDED"
         )
     if failure is None:
+        result = worker.result(journal, plan)
+        assert result["observation"] == journal.observation()
+        assert result["frame"].endswith("V|out|0.5\nEND\n")
+        assert result["terminal_event"]["evidence_sha256"] == operations.digest(
+            operations.canonical(result["receipt"])
+        )
+        psf = Path(journal.work) / "psf/synthetic-result"
+        psf.write_bytes(b"changed after extraction")
+        with pytest.raises(ValueError, match="result_psf_drift"):
+            worker.result(journal, plan)
+        assert accounting.read(str(root / accounting.LEDGER))["count"] == 83
         assert (
             operations.read(journal.work + "/effective-input.json")[
                 "planned_execution_input_sha256"
