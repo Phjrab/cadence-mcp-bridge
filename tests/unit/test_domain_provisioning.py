@@ -383,7 +383,18 @@ def test_large_retained_inventory_uses_protocol_limit_and_duplicate_rejection(
     domain, tmp_path, monkeypatch
 ):
     root, value, _, _ = domain
-    for count in range(22, 82):
+    # More retained marked slots exceed32KiB even with short Linux inode metadata.
+    # This fixture advances only its disposable counter, never a VM ledger.
+    extended = {
+        "campaign_id": "AUTO-PHASE-01",
+        "count": 88,
+        "result_reserved_bytes": accounting.expected_bytes(88, []),
+    }
+    (root / accounting.LEDGER).write_bytes(accounting.canonical(extended))
+    (root / accounting.JOBS / domain[2] / "work" / "attempt-reserved").write_bytes(
+        accounting.canonical(extended)
+    )
+    for count in range(22, 88):
         work = root / accounting.JOBS / str(uuid4()) / "work"
         work.mkdir(mode=0o700, parents=True)
         work.parent.chmod(0o700)
@@ -395,7 +406,7 @@ def test_large_retained_inventory_uses_protocol_limit_and_duplicate_rejection(
                 "result_reserved_bytes": accounting.expected_bytes(count, []),
             },
         )
-    for _ in range(67):
+    for _ in range(61):
         work = root / accounting.JOBS / str(uuid4()) / "work"
         work.mkdir(mode=0o700, parents=True)
         work.parent.chmod(0o700)
