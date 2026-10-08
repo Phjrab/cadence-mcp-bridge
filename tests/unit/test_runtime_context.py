@@ -21,7 +21,7 @@ from cadence_mcp_bridge import __main__ as cli
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.config import BridgeConfig, OperatorTransport
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
-from cadence_mcp_bridge.onboarding import export_client_config
+from cadence_mcp_bridge.onboarding import OnboardingRejected, export_client_config
 from cadence_mcp_bridge.runtime_context import (
     RuntimeRejected,
     create_operator_service,
@@ -564,3 +564,40 @@ def test_case_variant_hostnames_share_domain_and_policy(tmp_path, conflict):
         assert first.lock_path == second.lock_path
         with resource_lock(first), pytest.raises(RuntimeRejected), resource_lock(second):
             pytest.fail("hostname case bypassed the shared lock")
+
+
+@pytest.mark.parametrize("reserved", ["analysis", "sweep", "lock"])
+def test_export_denies_other_context_reserved_paths(settings, reserved):
+    first, second = load_runtime(settings)
+    output = {
+        "analysis": second.binding.analysis_journal,
+        "sweep": second.binding.sweep_journal,
+        "lock": second.lock_path,
+    }[reserved]
+    assert not output.exists()
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            output,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("cross_context", [False, True])
+def test_hardlinked_journals_rejected_without_mutating_state(settings, cross_context):
+    first, second = load_runtime(settings)
+    original = first.binding.analysis_journal
+    alias = second.binding.analysis_journal if cross_context else first.binding.sweep_journal
+    original.write_bytes(b"retained synthetic journal")
+    os.link(original, alias)
+    with pytest.raises(RuntimeRejected) as error:
+        load_runtime(settings)
+    assert error.value.reason == "journal_invalid"
+    assert original.read_bytes() == alias.read_bytes() == b"retained synthetic journal"

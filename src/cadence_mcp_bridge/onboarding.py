@@ -194,7 +194,7 @@ def export_client_config(
     )
     context_report = None
     if runtime_settings is not None or context_id is not None:
-        from cadence_mcp_bridge.runtime_context import select_context
+        from cadence_mcp_bridge.runtime_context import load_runtime, select_context
 
         runtime_path = None if runtime_settings is None else _local_path(runtime_settings)
         operator_config = BridgeConfig(
@@ -217,6 +217,28 @@ def export_client_config(
             or output_path == runtime_path
         ):
             raise OnboardingRejected("runtime_export_mismatch")
+        assert runtime_path is not None
+        contexts = load_runtime(runtime_path)
+        reserved = {runtime_path}
+        for loaded in contexts:
+            reserved.add(loaded.lock_path)
+            reserved.update(
+                value
+                for value in (
+                    loaded.binding.environment_profile,
+                    loaded.binding.design_registry,
+                    loaded.binding.pdk_registry,
+                    loaded.binding.analysis_journal,
+                    loaded.binding.sweep_journal,
+                    getattr(loaded.binding, "native_provider_binding", None),
+                    getattr(loaded.binding, "operator_grant", None),
+                )
+                if value is not None
+            )
+        if output_path in reserved or not any(
+            loaded.context_sha256 == context.context_sha256 for loaded in contexts
+        ):
+            raise OnboardingRejected("runtime_export_reserved_path")
         settings = operator_config.model_dump(mode="json")
         context_report = context.observation()
     env = {"CADENCE_MCP_" + k.upper(): str(v) for k, v in settings.items() if v is not None}

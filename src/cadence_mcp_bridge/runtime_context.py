@@ -137,7 +137,7 @@ def _journal(path: Path) -> Path:
     value = _local_path(path)
     if not path.is_absolute() or not value.parent.is_dir():
         raise RuntimeRejected("journal_parent_required")
-    if value.exists() and not value.is_file():
+    if value.exists() and (not value.is_file() or value.stat().st_nlink != 1):
         raise RuntimeRejected("journal_invalid")
     return value
 
