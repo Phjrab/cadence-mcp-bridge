@@ -226,6 +226,155 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     assert cached["progress"]["phase"] == "ADMITTED" and not cached["remote_contact"]
     assert store.path.read_bytes() == before and str(workspace) not in observed.stdout.decode()
 
+    # Exercise generic artifacts from the installed wheel for two independent
+    # fictional topologies. This is not OA/ADE/native qualification.
+    from cadence_mcp_bridge.generic_ade import static_fingerprint
+    from cadence_mcp_bridge.operator_operations import OperationRequest, prepare_plan
+
+    templates = []
+    for design_id, analysis_id, static_lines in (
+        (
+            "example-amplifier",
+            "example-dc",
+            ["R0 (in out) resistor r=1000", "C0 (out 0) capacitor c=0.000001"],
+        ),
+        (
+            "synthetic-parameterized",
+            "synthetic-parameterized-dc",
+            ["M0 (out gate 0 0) nch w=0.000002 l=0.0000001", "V0 (gate 0) vsource dc=1"],
+        ),
+    ):
+        profile_model = context.contracts.designs.profile(design_id)
+        variable_model = context.contracts.designs.variable_set(design_id)
+        request_model = OperationRequest.model_validate_json(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "design_id": design_id,
+                    "analysis_id": analysis_id,
+                    "values": [
+                        {"logical_id": name, "unit": "V", "value": "1"}
+                        for name in profile_model.allowed_variables
+                    ],
+                    "result_reservation_bytes": 134217728,
+                }
+            )
+        )
+        from cadence_mcp_bridge.operator_operations import load_grant
+
+        loaded_grant, grant_digest = load_grant(
+            grant, hashlib.sha256(grant.read_bytes()).hexdigest()
+        )
+        input_plan = prepare_plan(
+            context, loaded_grant, grant_digest, request_model, int(time.time())
+        )
+        input_request = workspace / (design_id + "-request.json")
+        input_request.write_text(request_model.model_dump_json(), encoding="utf-8")
+        registration = workspace / (design_id + "-ade.json")
+        registration.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "design_id": design_id,
+                    "analysis_id": analysis_id,
+                    "design_profile_sha256": canonical_digest(profile_model),
+                    "variable_set_sha256": canonical_digest(variable_model)
+                    if variable_model
+                    else None,
+                    "source_tree_sha256": "1" * 64,
+                    "ade_state_tree_sha256": "2" * 64,
+                    "static_statements_sha256": static_fingerprint(static_lines),
+                    "model_includes": [],
+                    "inputs": {
+                        "analysis": "dc",
+                        "mode": "saved_operating_point",
+                        "statement_sha256": hashlib.sha256(b"dc save=all").hexdigest(),
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        # Original zero-variable fixture is a read-only description; compilation
+        # must reject it rather than silently broadening its copy policy.
+        input_args = [
+            *arguments,
+            "--request",
+            str(input_request),
+            "--registration",
+            str(registration),
+            "--expected-registration-sha256",
+            hashlib.sha256(registration.read_bytes()).hexdigest(),
+            "--operation-id",
+            str(uuid4()),
+            "--expected-plan-sha256",
+            input_plan.plan_sha256,
+        ]
+        output = workspace / (design_id + "-ade-inputs")
+        compiled = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "ade-input",
+                "compile",
+                *input_args,
+                "--output",
+                str(output),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+        )
+        receipt = json.loads(compiled.stdout)
+        if profile_model.work_copy_policy != "owned_copy_only":
+            assert compiled.returncode == 1 and not output.exists()
+            assert receipt["reason"] == "ade_subtype_or_copy_policy_unsupported"
+            continue
+        assert compiled.returncode == 0 and not receipt["execution_authorized"]
+        assert json.loads((output / "manifest.json").read_bytes()) == receipt
+        templates.append(receipt["template_sha256"])
+        native_input = workspace / (design_id + "-synthetic.scs")
+        params = "parameters " + " ".join(
+            v.cadence_binding + "=1" for v in variable_model.variables
+        )
+        native_input.write_text(
+            "simulator lang=spectre\n"
+            + params
+            + "\n"
+            + "\n".join(static_lines)
+            + "\nanalysis0 dc save=all\n",
+            encoding="ascii",
+        )
+        matched = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "ade-input",
+                "verify-input",
+                *input_args,
+                "--native-input",
+                str(native_input),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        verified = json.loads(matched.stdout)
+        assert verified["status"] == "LOCAL_EFFECTIVE_INPUT_MATCHED"
+        assert not verified["native_source_copy_attested"] and not verified["remote_contact"]
+        assert str(workspace) not in matched.stdout.decode()
+    assert len(templates) == 1 and store.path.read_bytes() == before
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
@@ -233,6 +382,8 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,
+        "installed_generic_ade_compile_and_effective_input": "SYNTHETIC_PASS",
+        "read_only_design_compile": "REJECTED",
         "cached_lifecycle_metadata": "LOCAL_SYNTHETIC_NOT_REMOTE_AUTHORITY",
         "execution_authorized": False,
         "remote_contact": False,

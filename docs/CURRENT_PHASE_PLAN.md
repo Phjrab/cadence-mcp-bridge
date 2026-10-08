@@ -1,3 +1,14 @@
+## GREL-04 generic-input implementation, 2026-10-08
+
+Continuous02–07/895MiB authorization persists. Latest main553276d unchanged;
+GREL03 PR144 remains unmerged. New stacked feat/grel-04-generic-ade-inputs adds
+operator-only ADE L input compilation/verification, no native dispatch. Local
+checks and exact receipts are recorded in docs/generic_release/GREL_04_RESULT.md.
+Native trust/provider/copy/API/new DCACtran/extraction/Sweep/clean app remain
+incomplete. General release BLOCKED. No simulations/reservations/deployments/
+deletions/protected repairs/merge/GREL08/publication. Historical overlays below
+remain scoped evidence; do not promote synthetic inputs to native qualification.
+
 ## Final durable lifecycle source checkpoint, 2026-10-08
 
 Tested sourcea7fcf45: hosted2423 PASS/no skips/56 warnings; local153 related PASS/
