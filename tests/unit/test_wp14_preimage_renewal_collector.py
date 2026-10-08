@@ -621,7 +621,7 @@ def test_reparse_lock_path_fails_before_consumption(
 
 
 def test_lock_is_compatible_with_powershell_fileshare_none(runtime: Runtime) -> None:
-    powershell = shutil.which("powershell") or shutil.which("pwsh")
+    powershell = shutil.which("pwsh") or shutil.which("powershell")
     if powershell is None:
         pytest.skip("PowerShell is unavailable")
     ready = runtime.repository / "lock-ready"
@@ -644,16 +644,20 @@ def test_lock_is_compatible_with_powershell_fileshare_none(runtime: Runtime) -> 
         shell=False,
     )
     try:
-        deadline = time.monotonic() + 5
-        while not ready.exists() and time.monotonic() < deadline:
+        deadline = time.monotonic() + 45
+        while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
             time.sleep(0.02)
-        assert ready.exists()
+        assert ready.exists(), "synthetic PowerShell lock holder did not signal readiness"
         with pytest.raises(runtime.module.CollectorError) as raised:
             runtime.module._open_exclusive_existing_lock(runtime.deployment_lock)
         assert raised.value.code == "LOCK_UNAVAILABLE"
     finally:
         stop.write_text("stop", encoding="ascii")
-        process.wait(timeout=5)
+        try:
+            process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            process.terminate()  # Only this test-owned synthetic child.
+            process.wait(timeout=5)
     assert process.returncode == 0
 
 
