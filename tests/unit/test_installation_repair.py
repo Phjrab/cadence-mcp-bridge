@@ -314,3 +314,21 @@ def test_selected_model_include_graph_is_bounded_and_readonly(tmp_path, monkeypa
             str(leaf): hashlib.sha256(leaf.read_bytes()).hexdigest(),
         }
     assert before == {p: p.read_bytes() for p in tmp_path.iterdir()}
+
+
+def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monkeypatch):
+    path = tmp_path / "code"
+    path.write_bytes(b"fictional installation contents")
+    os.utime(path, (1234567890.1234567, 1234567890.1234567))
+    monkeypatch.setattr(repair, "open_fixed", lambda p: os.open(p, os.O_RDONLY))
+    monkeypatch.setattr(repair, "acl", lambda fd: "user::rw-\ngroup::r--\nother::r--\n")
+    monkeypatch.setattr(os.path, "realpath", lambda p: p)
+    record = repair.snapshot(str(path))
+    assert isinstance(record["mtime"], str)
+    assert record["mtime"] == format(path.stat().st_mtime, ".17g")
+    # A Python2.6 JSON serializer can no longer truncate a numeric mtime.
+    wire = repair.canonical(record)
+    assert repair.digest(json.loads(wire)) == hashlib.sha256(wire).hexdigest()
+    assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
+    assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
+    assert repair.metadata_equal("mtime", None, None)

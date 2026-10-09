@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "BLOCKED_HUMAN_APP_CONNECTION_RESTART",
-      "evidence_scope": "QA connection registered; actual loaded legacy namespace remains. New actual app job0, new-job query/restart not verified."
+      "status": "PARTIAL_ACTUAL_QA_LOCAL_CONFIG_LOADED",
+      "evidence_scope": "Actual Codex QA runtime_info_v2 loads operator registry4/two designs/one PDK. Remote qualification/authority unassessed; exact corrected artifact and fresh app submit/query/retry/restart pending. New actual app jobs0."
     },
     {
       "id": "G16",
@@ -132,7 +132,7 @@
   ],
   "synthetic_vm_scenarios": 17,
   "current_parser_actual_baselines": 6,
-  "later_host_correction": "SWEEP_IDS_RESERVED_BY_DURABLE_PARENT_AND_AC_TOLERANCE_CAPPED_BY_GRID_LOCAL_AND_EXACT_INSTALLED_PASS_FINAL_CI_REVIEW_PENDING",
+  "later_host_correction": "SERIALIZED_AC_GRID_FREQUENCY_AND_CROSS_PY26_MTIME_DIGEST_LOCAL_INSTALLED_PASS_FINAL_EXACT_CI_REVIEW_PENDING",
   "latest_checked_main": "5a85beb80429f1642b2f242f47c2ec148c1f1a11",
   "retained_actual_journal_claims": {
     "parents": 2,
@@ -141,5 +141,19 @@
     "original_preserved": true,
     "scope": "READONLY_ISOLATED_CLONE_NOT_FRESH_NATIVE_EXECUTION"
   },
-  "retained_actual_ac_requeries": 2
+  "retained_actual_ac_requeries": 2,
+  "actual_qa_local_runtime_observed": {
+    "schema_version": 2,
+    "design_registry_schema": 4,
+    "design_count": 2,
+    "pdk_count": 1,
+    "remote_contact": false,
+    "new_jobs": 0
+  },
+  "current_repair_inventory": {
+    "actual_operator_uid": 500,
+    "items": 332,
+    "required_changes": 0,
+    "scope": "READONLY_NO_NEW_ADMIN_CHANGE"
+  }
 }

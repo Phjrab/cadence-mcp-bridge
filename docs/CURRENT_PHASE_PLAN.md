@@ -1,3 +1,27 @@
+## Current QA connection and compatibility corrections, 2026-10-09
+
+Actual Codex QA runtime_info_v2 now observes operator registry4 with two designs
+and one PDK; list_designs names qa-inverter and qa-comparator. This is loaded
+local configuration only, not remote qualification, execution authority or a new
+app job. The earlier connection-restart blocker is superseded by this observation;
+exact corrected-artifact loading and fresh submit/query/retry/restart remain pending.
+
+AC compares the expected grid and requested frequencies in %.16g representation
+before disjoint quarter-gap comparisons. Both valid ultra-narrow reviewer cases
+pass without allowing missing boundaries. Repair inventories encode mtimes as
+round-trip strings across Python2.6/3; historical records/helpers remain intact.
+Local128 native/reader tests plus106 reader/repair tests pass, with two/four POSIX
+skips respectively; Ruff/mypy94 and exact installed96-schema/43+20-state package
+conservation pass. Final exact-head hosted checks and independent review are pending.
+Actual UID500/Python2.6 fractional synthetic metadata digest agrees with host;
+current read-only332-target installation inventory passes with0 required changes.
+
+Latest actual ledger94/11,409,555,456 bytes, free25,612,369,920 bytes; remaining
+5,770,313,728 under16GiB. This continuation0 simulations/reservations/admin changes.
+Current native bundle eb6d638 remains historical execution scope; no corrected
+rollout or candidate is claimed. Continue authorized02-08/conditional normal
+merges; publication remains false and exactRC undefined. Earlier receipts are history.
+
 ## Sweep identity and narrow AC correction checkpoint, 2026-10-09
 
 PR145 normally merged exact38ff7bc after both hosted checks/final review as
