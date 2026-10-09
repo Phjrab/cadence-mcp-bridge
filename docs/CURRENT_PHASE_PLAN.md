@@ -1,3 +1,16 @@
+## Serialized AC grid correction, 2026-10-09
+
+Final review exposed valid ultra-narrow grids whose %.16g displacement exceeds
+the quarter-gap cap. Projection now compares the expected grid in the extractor's
+serialized representation and normalizes requested frequencies to that same format
+before unique sample selection. The quarter-gap bound remains disjoint; missing
+boundaries and collapsed serialized grids still reject before execution. Both
+reviewer counterexamples pass compile/projection regression, with both endpoints
+selected. Local352 tests/4 POSIX skips, Ruff/mypy71 and exact isolated wheel/sdist/
+installed32-state preservation pass. Final hosted checks and review are refreshed.
+No new native deployment, simulation or reservation; publication remains blocked.
+Earlier receipts below retain their historical source scope.
+
 ## Narrow AC grid review correction, 2026-10-09
 
 Latest PR147 review found an additional P2: relative1e-12 endpoint/full-grid
