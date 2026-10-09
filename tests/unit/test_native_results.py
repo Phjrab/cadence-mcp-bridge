@@ -155,3 +155,33 @@ async def test_result_substitution_and_partial_or_unbound_frames_fail_closed(ret
     with pytest.raises(OperationRejected):
         await provider.result(op, plan)
     assert calls == ["result"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "change", [None, "logical_over", "allocated_over", "logical_under", "allocated_under"]
+)
+async def test_completed_job_size_includes_terminal_files_and_stays_bounded(retrieval, change):
+    provider, plan, op, data, calls = retrieval
+    size = dict(logical_bytes=1024, allocated_bytes=12288, tree_fingerprint="d" * 64)
+    if change == "logical_over":
+        size["logical_bytes"] = plan.request.result_reservation_bytes + 1
+    elif change == "allocated_over":
+        size["allocated_bytes"] = plan.request.result_reservation_bytes + 1
+    elif change == "logical_under":
+        size["logical_bytes"] = data["receipt"]["logical_bytes"] - 1
+    elif change == "allocated_under":
+        size["allocated_bytes"] = data["receipt"]["allocated_bytes"] - 1
+    data["completed_size"] = size
+    if change is not None:
+        with pytest.raises(OperationRejected) as error:
+            await provider.result(op, plan)
+        assert error.value.reason == "native_provider_completed_size_invalid"
+    else:
+        _, result = await provider.result(op, plan)
+        assert result["logical_bytes"] == size["logical_bytes"]
+        assert result["allocated_bytes"] == size["allocated_bytes"]
+        assert result["size_observation"] == "COMPLETED_JOB_READONLY"
+        assert result["completed_tree_fingerprint"] == "d" * 64
+    assert calls == ["result"]
+    assert not provider.context.binding.analysis_journal.exists()

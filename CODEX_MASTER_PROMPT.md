@@ -1,3 +1,42 @@
+## Current review corrections and retained-resource checkpoint, 2026-10-09
+
+Latest checked main98710153a167e103c2955b1c5c82612eb2864038 normally merges
+PR142-147; PR148-152 still require their exact final review/CI/integration gates.
+The direct-user16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+remains active. Exact-candidate tag/Release/upload approval is still required.
+Older dated exclusions/observations below remain historical evidence.
+
+AC specification frequencies use the same %.16g representation as extraction.
+Native workers reserve bounded terminal receipt/event/directory overhead and
+read-only result collection checks the completed tree against its retained
+per-job reservation. Historical receipts remain immutable. Vendor installation
+roots are compared by components. Exact chmod-before-ACL rollback states can
+resume safely without accepting other metadata drift. Migration retains every
+legacy ID when the whole anchor/seal fits the unchanged8192-byte record limit;
+129/160 IDs pass, oversized240-ID plans reject before writes.
+
+Relevant181 tests/22 Windows POSIX skips and separate78 repair/bootstrap tests/
+7 skips pass; Ruff/mypy94, security18/strict dependency audit and local technical
+contract85/22 pass. The earlier audit invocation's Windows encoding failure is
+retained; UTF-8 rerun finds no known vulnerabilities. Installed96-schema/43+20-state
+preservation passes for terminal/spec/root/migration source. The subsequent ACL
+rollback source also passes exact96-schema/43+20-state package preservation.
+The exact hosted Ubuntu pipeline and final review remain pending.
+Actual UID500/Python2.6 synthetic migration and apply/rollback interruption/repeat
+pass with the actual ledger unchanged. These fixtures are not Cadence executions
+or new installation metadata repairs. Current installation read-only plan332
+items requires0 changes; prior approved342 metadata repairs preserve296 contents.
+
+Actual Codex QA local planning succeeds for registered inverter DC (128MiB),
+plan a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e.
+This is local planning, not a new app submission. Corrected exact artifact/native
+bundle loading, fresh app submit/query/same-ID/restart, final deployed requalification,
+artifact-only fresh-operator walkthrough and candidate operational matrix remain.
+Release BLOCKED; no exactRC or publication claim. This continuation0 simulations/
+reservations/admin changes; latest actual94 attempts/11,409,555,456 bytes,
+remaining5,770,313,728 under17,179,869,184 bytes. The separately scoped old grant
+has8 jobs/1,073,741,824 bytes remaining; execution must recheck time and scope.
+
 ## Native Sweep and specification checkpoint, 2026-10-09
 
 Two explicit native1D batches completed on the current standard VM: DC3 points

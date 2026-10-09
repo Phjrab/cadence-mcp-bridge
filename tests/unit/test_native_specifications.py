@@ -207,3 +207,37 @@ def test_target_units_shapes_and_opaque_selectors_are_closed():
     ):
         with pytest.raises(ValidationError):
             contract(**updates)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("frequency", ["1.2345678901234564", "263269111992.82767"])
+async def test_ac_target_uses_same_serialized_frequency_as_registered_reader(frequency):
+    c = contract(
+        metric="ac_gain_db",
+        unit="dB",
+        signal_id=None,
+        frequency_hz=frequency,
+        comparison=">=",
+        target="1",
+        upper_target=None,
+    )
+    native = Native(
+        dict(
+            design_id=c.design_id,
+            measurement_id=c.measurement_id,
+            analysis="ac",
+            reader_registration_sha256="b" * 64,
+            transfer=[dict(frequency_hz=float(format(float(frequency), ".16g")), gain_db=5.0)],
+        )
+    )
+    supervisor = NativeSpecificationSupervisor(native)
+    supervisor.contracts = lambda: (c,)
+    query = NativeSpecificationQuery(
+        spec_id=c.spec_id,
+        expected_contract_sha256=canonical_digest(c),
+        operation_id=str(uuid4()),
+        expected_plan_sha256="a" * 64,
+    )
+    assert (await supervisor.result(query)).status == "PASS"
+    native.data["transfer"][0]["frequency_hz"] *= 1.000001
+    assert (await supervisor.result(query)).status == "UNQUALIFIED"

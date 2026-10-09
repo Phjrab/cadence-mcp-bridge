@@ -132,8 +132,8 @@
   ],
   "synthetic_vm_scenarios": 17,
   "current_parser_actual_baselines": 6,
-  "later_host_correction": "SERIALIZED_AC_GRID_FREQUENCY_AND_CROSS_PY26_MTIME_DIGEST_LOCAL_INSTALLED_PASS_FINAL_EXACT_CI_REVIEW_PENDING",
-  "latest_checked_main": "5a85beb80429f1642b2f242f47c2ec148c1f1a11",
+  "later_host_correction": "AC_SPEC_SERIALIZATION_COMPLETED_JOB_BOUND_COMPONENT_ROOT_ROLLBACK_RECOVERY_MIGRATION_CAPACITY_LOCAL_TESTED_EXACT_HOSTED_REVIEW_PENDING",
+  "latest_checked_main": "98710153a167e103c2955b1c5c82612eb2864038",
   "retained_actual_journal_claims": {
     "parents": 2,
     "children": 5,
@@ -155,5 +155,27 @@
     "items": 332,
     "required_changes": 0,
     "scope": "READONLY_NO_NEW_ADMIN_CHANGE"
+  },
+  "actual_qa_local_plan": {
+    "plan_sha256": "a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e",
+    "reservation_bytes": 134217728,
+    "new_app_jobs": 0,
+    "remote_contact": false
+  },
+  "actual_py26_migration_capacity": {
+    "retained_ids": [
+      129,
+      160
+    ],
+    "oversized_rejection_ids": 240,
+    "actual_ledger_preserved": true,
+    "scope": "SYNTHETIC_NOT_SIMULATION"
+  },
+  "actual_py26_rollback_recovery": {
+    "apply_and_rollback_interruption": true,
+    "repeat": true,
+    "contents_metadata_restored": true,
+    "scope": "SYNTHETIC_NOT_VENDOR_REPAIR",
+    "actual_ledger_preserved": true
   }
 }

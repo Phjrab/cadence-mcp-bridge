@@ -154,6 +154,13 @@ def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch, ad
     repair.mutate(request)
     assert stat.S_IMODE(code.stat().st_mode) == 0o755
     assert code.read_bytes() == b"synthetic immutable code"
+    with monkeypatch.context() as patch:
+        patch.setattr(subprocess, "Popen", fail_acl_once)
+        with pytest.raises(OSError):
+            repair.mutate(request, rollback=True)
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o777
+    assert "default:group::r-x" in repair.snapshot(str(directory))["acl"]
+    repair.mutate(request, rollback=True)
     repair.mutate(request, rollback=True)
     for record in result["plan"]["records"]:
         actual = repair.snapshot(record["path"])
@@ -332,3 +339,30 @@ def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monk
     assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
     assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
     assert repair.metadata_equal("mtime", None, None)
+
+
+@pytest.mark.parametrize(
+    "ic,ms,expected",
+    [
+        ("/opt/cadence/IC6", "/opt/cadence/IC6x", "/opt/cadence"),
+        ("/opt/cadence/IC6x", "/opt/cadence/IC6", "/opt/cadence"),
+        ("/home/user/cadence/IC615", "/home/user/cadence/MMSIM121", "/home/user/cadence"),
+        ("/opt/ic/install", "/opt/ms/install", "/opt"),
+    ],
+)
+def test_vendor_root_prefix_does_not_drop_spectre_targets(ic, ms, expected):
+    base = repair.common_installation_root(ic, ms)
+    assert base == expected
+    assert repair.inside(ic, base) and repair.inside(ms, base)
+
+
+def test_rollback_chmod_intermediate_preserves_restricted_named_and_default_acl():
+    before = "user::rwx\nuser:501:rwx\ngroup::rwx\nmask::rwx\nother::rwx\n"
+    before += "default:user::rwx\ndefault:group::rwx\ndefault:other::rwx\n"
+    after = repair.restricted_acl(before)
+    interim = repair.chmod_acl(after, 0o777)
+    assert "mask::rwx\n" in interim
+    assert "other::rwx\n" in interim
+    assert "default:group::r-x\n" in interim
+    assert repair.normalize_acl(interim) != repair.normalize_acl(before)
+    assert repair.normalize_acl(interim) != repair.normalize_acl(after)

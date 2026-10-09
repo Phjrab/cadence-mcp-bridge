@@ -369,7 +369,8 @@ def identity_manifest(root, binding):
     ids = value["legacy_operation_ids"]
     if (
         not isinstance(ids, list)
-        or len(ids) > 128
+        or len(ids) > 2048
+        or len(canonical(value)) > LIMIT
         or any(not matches(ID, op) for op in ids)
         or sorted(set(ids)) != ids
     ):

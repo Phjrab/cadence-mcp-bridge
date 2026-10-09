@@ -65,6 +65,12 @@ class TerminalEvent(EnvironmentModel):
     evidence_sha256: Digest
 
 
+class CompletedJobSize(EnvironmentModel):
+    logical_bytes: Annotated[int, Field(ge=0)]
+    allocated_bytes: Annotated[int, Field(ge=0)]
+    tree_fingerprint: Digest
+
+
 class NativeResultPayload(EnvironmentModel):
     observation: ProviderObservation
     terminal_event: TerminalEvent
@@ -72,6 +78,7 @@ class NativeResultPayload(EnvironmentModel):
     ade: AdeExecutionRegistration
     reader: GenericReaderRegistration
     frame: Annotated[str, Field(max_length=65536)]
+    completed_size: CompletedJobSize | None = None
 
 
 class AuthenticatedOperatorProvider:
@@ -284,6 +291,13 @@ class AuthenticatedOperatorProvider:
             > plan.request.result_reservation_bytes
         ):
             raise OperationRejected("native_provider_result_binding_mismatch")
+        if data.completed_size is not None and (
+            max(data.completed_size.logical_bytes, data.completed_size.allocated_bytes)
+            > plan.request.result_reservation_bytes
+            or data.completed_size.logical_bytes < receipt.logical_bytes
+            or data.completed_size.allocated_bytes < receipt.allocated_bytes
+        ):
+            raise OperationRejected("native_provider_completed_size_invalid")
         projected = project_frame(
             self.context,
             plan,
@@ -304,6 +318,13 @@ class AuthenticatedOperatorProvider:
             allocated_bytes=receipt.allocated_bytes,
             originals_preserved=receipt.originals_preserved,
         )
+        if data.completed_size is not None:
+            projected.update(
+                logical_bytes=data.completed_size.logical_bytes,
+                allocated_bytes=data.completed_size.allocated_bytes,
+                completed_tree_fingerprint=data.completed_size.tree_fingerprint,
+                size_observation="COMPLETED_JOB_READONLY",
+            )
         return observation, projected
 
 

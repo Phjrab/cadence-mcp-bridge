@@ -132,7 +132,8 @@ def project_specification(
             value = next(
                 p["gain_db"]
                 for p in result["transfer"]
-                if Decimal(str(p["frequency_hz"])) == Decimal(contract.frequency_hz or "0")
+                if float(p["frequency_hz"])
+                == float(format(float(contract.frequency_hz or "0"), ".16g"))
             )
         else:
             key = "nodes" if contract.metric == "dc_voltage" else "transient"

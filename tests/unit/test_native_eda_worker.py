@@ -78,7 +78,7 @@ def test_frame_identity_cannot_be_rebound(frame_worker, field):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="compiled EDA driver requires POSIX")
-@pytest.mark.parametrize("failure", [None, "effective", "reader", "source"])
+@pytest.mark.parametrize("failure", [None, "effective", "reader", "source", "terminal"])
 def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
     qualified, monkeypatch, failure
 ):
@@ -129,7 +129,9 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
     def program(session, journal, argv, label, seconds, amount):
         calls.append(label)
         session.check()
-        assert amount == plan["request"]["result_reservation_bytes"]
+        assert amount == plan["request"]["result_reservation_bytes"] - (
+            16384 + 8 * max(4096, os.statvfs(journal.job).f_frsize)
+        )
         if label == "netlist":
             folder = Path(journal.job) / "project/nested/netlist"
             folder.mkdir(parents=True)
@@ -160,6 +162,15 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
             )
             (Path(journal.work) / "generic-frame.txt").chmod(0o600)
 
+    original_size = worker.size
+
+    def size(job):
+        logical, allocated, fingerprint = original_size(job)
+        if failure == "terminal" and calls == ["netlist", "spectre", "reader"]:
+            return plan["request"]["result_reservation_bytes"] - 1, allocated, fingerprint
+        return logical, allocated, fingerprint
+
+    monkeypatch.setattr(worker, "size", size)
     monkeypatch.setattr(worker, "program", program)
     with accounting.ReservationSession(str(root)) as session:
         permit, _ = gate.check(session, plan, "submit")
@@ -185,6 +196,8 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
         assert journal.observation()["progress"]["phase"] == (
             "EXTRACTION_FAILED" if failure else "SUCCEEDED"
         )
+    if failure == "terminal":
+        assert not (Path(journal.work) / "extraction-receipt.json").exists()
     if failure is None:
         result = worker.result(journal, plan)
         assert result["observation"] == journal.observation()
@@ -192,6 +205,22 @@ def test_owned_copy_netlist_effective_reader_and_preservation_pipeline(
         assert result["terminal_event"]["evidence_sha256"] == operations.digest(
             operations.canonical(result["receipt"])
         )
+        completed = result["completed_size"]
+        assert completed["logical_bytes"] > result["receipt"]["logical_bytes"]
+        assert completed["allocated_bytes"] > result["receipt"]["allocated_bytes"]
+        assert (
+            max(completed["logical_bytes"], completed["allocated_bytes"])
+            <= plan["request"]["result_reservation_bytes"]
+        )
+        original_size = worker.size
+        monkeypatch.setattr(
+            worker,
+            "size",
+            lambda job: (plan["request"]["result_reservation_bytes"] + 1, 1, "a" * 64),
+        )
+        with pytest.raises(ValueError, match="completed_result_limit"):
+            worker.result(journal, plan)
+        monkeypatch.setattr(worker, "size", original_size)
         psf = Path(journal.work) / "psf/synthetic-result"
         psf.write_bytes(b"changed after extraction")
         with pytest.raises(ValueError, match="result_psf_drift"):

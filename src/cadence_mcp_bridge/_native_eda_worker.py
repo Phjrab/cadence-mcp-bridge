@@ -86,6 +86,9 @@ class EdaWorker(object):
             os.close(work_fd)
         if fingerprint != receipt["psf_tree_fingerprint"]:
             raise ValueError("native_worker_result_psf_drift")
+        logical, allocated, completed_fingerprint = self.size(journal.job)
+        if max(logical, allocated) > plan["request"]["result_reservation_bytes"]:
+            raise ValueError("native_worker_completed_result_limit")
         # Recheck immutable terminal chain after content observation.
         if journal.observation() != observed:
             raise ValueError("native_worker_result_terminal_drift")
@@ -96,6 +99,11 @@ class EdaWorker(object):
             "ade": route["ade"],
             "reader": route["reader"],
             "frame": frame.decode("ascii"),
+            "completed_size": {
+                "logical_bytes": logical,
+                "allocated_bytes": allocated,
+                "tree_fingerprint": completed_fingerprint,
+            },
         }
 
     def write(self, path, data):
@@ -364,6 +372,12 @@ class EdaWorker(object):
         )
         self.protected(route, before)
         amount = plan["request"]["result_reservation_bytes"]
+        # Hold space for the bounded receipt, terminal event and directory growth.
+        fragment = max(4096, os.statvfs(journal.job).f_frsize)
+        terminal_overhead = 16384 + 8 * fragment
+        execution_limit = amount - terminal_overhead
+        if execution_limit <= 0:
+            raise ValueError("native_worker_terminal_capacity")
         if sum(v["bytes"] for v in before.values()) + 1048576 > amount:
             raise ValueError("native_worker_copy_capacity")
         root, work = journal.job, journal.work
@@ -445,7 +459,7 @@ class EdaWorker(object):
             ],
             "netlist",
             240,
-            amount,
+            execution_limit,
         )
         self.protected(route, before)
         native_input = self.installer.regular(self.find_input(root + "/project"))
@@ -492,7 +506,7 @@ class EdaWorker(object):
             ],
             "spectre",
             180,
-            amount,
+            execution_limit,
         )
         self.protected(route, before)
         journal.append(
@@ -526,12 +540,14 @@ class EdaWorker(object):
                 ],
                 "reader",
                 120,
-                amount,
+                execution_limit,
             )
             frame = self.installer.regular(work + "/generic-frame.txt")
             self.frame(frame, plan, route, input_sha)
             self.protected(route, before)
             logical, allocated, pre_receipt_fingerprint = self.size(root)
+            if max(logical, allocated) > execution_limit:
+                raise ValueError("native_worker_terminal_capacity")
             io = self.gate.storage.PosixIO()
             work_fd = io.root(work)
             try:
@@ -552,7 +568,12 @@ class EdaWorker(object):
                 "allocated_bytes": allocated,
                 "originals_preserved": True,
             }
+            if len(self.operations.canonical(receipt)) > 8192:
+                raise ValueError("native_worker_terminal_receipt_limit")
             self.gate.accounting.write_new(work + "/extraction-receipt.json", receipt)
+            logical, allocated, unused = self.size(root)
+            if max(logical, allocated) > amount - (8192 + 4 * fragment):
+                raise ValueError("native_worker_terminal_event_capacity")
             journal.append(
                 session, "SUCCEEDED", self.operations.digest(self.operations.canonical(receipt))
             )
