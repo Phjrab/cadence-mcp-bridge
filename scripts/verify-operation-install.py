@@ -53,6 +53,24 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         variable_set_sha256=variable_hash,
     )
     registry["analysis_contracts"].append(contract)
+    from cadence_mcp_bridge.analyses import AnalysisContract
+
+    registry["schema_version"] = 4
+    registry["measurement_contracts"] = [
+        dict(
+            design_id=c["design_id"],
+            measurement_id="dc-output" if c["analysis"] == "dc" else "ac-gain",
+            analysis_id=c["analysis_id"],
+            analysis_contract_sha256=canonical_digest(
+                AnalysisContract.model_validate_json(json.dumps(c))
+            ),
+            reader="unqualified",
+            output_id=None,
+            definition_sha256=None,
+        )
+        for c in registry["analysis_contracts"]
+        if c["analysis"] in ("dc", "ac")
+    ]
     pdk = json.loads((examples / "pdks.json").read_bytes())
     paths = [workspace / (name + ".json") for name in ("environment", "design", "pdk")]
     for path, payload in zip(paths, (environment, registry, pdk), strict=True):
@@ -373,6 +391,132 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         assert verified["status"] == "LOCAL_EFFECTIVE_INPUT_MATCHED"
         assert not verified["native_source_copy_attested"] and not verified["remote_contact"]
         assert str(workspace) not in matched.stdout.decode()
+        # Compile/project through the isolated installed CLI, never execute OCEAN.
+        from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
+        from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
+
+        ade_model = AdeExecutionRegistration.model_validate_json(registration.read_bytes())
+        reader_model = GenericReaderRegistration.model_validate_json(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "design_id": design_id,
+                    "analysis_id": analysis_id,
+                    "measurement_id": profile_model.allowed_measurements[0],
+                    "ade_registration_sha256": canonical_digest(ade_model),
+                    "measurement_contract_sha256": canonical_digest(
+                        next(
+                            m
+                            for m in context.contracts.designs.measurements_for(design_id)
+                            if m.analysis_id == analysis_id
+                        )
+                    ),
+                    "nodes": [
+                        {"logical_id": "input", "selector": "/gate"},
+                        {"logical_id": "output", "selector": "/out"},
+                    ],
+                    "sources": [
+                        {
+                            "source_id": "rail",
+                            "role": "supply",
+                            "positive_node": "input",
+                            "negative_node": None,
+                            "current_selector": "/V0/PLUS",
+                            "current_convention": "positive_into_source_positive_terminal_A",
+                        }
+                    ],
+                    "transfer": None,
+                    "maximum_samples": 256,
+                }
+            )
+        )
+        reader_path = workspace / (design_id + "-reader.json")
+        reader_path.write_text(reader_model.model_dump_json(), encoding="ascii")
+        plan_path = workspace / (design_id + "-plan.json")
+        plan_path.write_text(input_plan.model_dump_json(), encoding="ascii")
+        operation_id = input_args[input_args.index("--operation-id") + 1]
+        reader_args = [
+            "--settings",
+            str(settings),
+            "--context",
+            "installed-operation",
+            "--plan",
+            str(plan_path),
+            "--expected-plan-sha256",
+            input_plan.plan_sha256,
+            "--ade-registration",
+            str(registration),
+            "--expected-ade-sha256",
+            canonical_digest(ade_model),
+            "--reader-registration",
+            str(reader_path),
+            "--expected-reader-sha256",
+            canonical_digest(reader_model),
+            "--operation-id",
+            operation_id,
+            "--execution-input-sha256",
+            receipt["execution_input_sha256"],
+        ]
+        reader_output = workspace / (design_id + "-reader-output")
+        prepared = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "result-reader",
+                "compile",
+                *reader_args,
+                "--output",
+                str(reader_output),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        assert not json.loads(prepared.stdout)["execution_authorized"]
+        frame_path = workspace / (design_id + "-frame.txt")
+        header = "|".join(
+            (
+                "MCP_GREL_FRAME",
+                "1",
+                operation_id,
+                input_plan.plan_sha256,
+                receipt["execution_input_sha256"],
+                canonical_digest(reader_model),
+            )
+        )
+        frame_path.write_text(
+            header + "\nV|input|1\nV|output|0.5\nI|rail|-0.001\nEND\n", encoding="ascii"
+        )
+        projected = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "result-reader",
+                "project-frame",
+                *reader_args,
+                "--frame",
+                str(frame_path),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        result = json.loads(projected.stdout)
+        assert result["power"]["supply_w"] == 0.001
+        assert result["native_provenance"] == "NOT_ATTESTED" and not result["remote_contact"]
+        assert str(workspace) not in projected.stdout.decode()
     assert len(templates) == 1 and store.path.read_bytes() == before
 
     return {
@@ -383,6 +527,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,
         "installed_generic_ade_compile_and_effective_input": "SYNTHETIC_PASS",
+        "installed_generic_reader_compile_and_frame": "SYNTHETIC_NATIVE_UNATTESTED_PASS",
         "read_only_design_compile": "REJECTED",
         "cached_lifecycle_metadata": "LOCAL_SYNTHETIC_NOT_REMOTE_AUTHORITY",
         "execution_authorized": False,

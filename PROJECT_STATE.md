@@ -1,3 +1,37 @@
+## Serialized AC grid correction, 2026-10-09
+
+Final review exposed valid ultra-narrow grids whose %.16g displacement exceeds
+the quarter-gap cap. Projection now compares the expected grid in the extractor's
+serialized representation and normalizes requested frequencies to that same format
+before unique sample selection. The quarter-gap bound remains disjoint; missing
+boundaries and collapsed serialized grids still reject before execution. Both
+reviewer counterexamples pass compile/projection regression, with both endpoints
+selected. Local352 tests/4 POSIX skips, Ruff/mypy71 and exact isolated wheel/sdist/
+installed32-state preservation pass. Final exact-head hosted checks and independent review are pending.
+No new native deployment, simulation or reservation; publication remains blocked.
+Earlier receipts below retain their historical source scope.
+
+## Narrow AC grid review correction, 2026-10-09
+
+Latest PR147 review found an additional P2: relative1e-12 endpoint/full-grid
+tolerance could consume the entire spacing of a valid ultra-narrow high-frequency
+sweep, accepting a missing start/end sample. Both checks now cap tolerance at one
+quarter of the nearest declared grid gap. Regressions request only the unchanged
+endpoint and demonstrate the other missing boundary still rejects. Exact close
+neighbors and normal16-digit serialized endpoints remain supported.
+Local350 related tests PASS/4 Windows POSIX skips, Ruff/mypy71 PASS; exact isolated
+wheel/sdist/CLI/SDK/bootstrap/reinstall/uninstall32-state preservation PASS.
+Current PR152 host reader also reprojects both retained actual AC results identically;
+that is prior-bundle result evidence, not fresh candidate simulation/app acceptance.
+All ten earlier findings remain implemented with distinct regressions. Final exact
+hosted CI and fresh independent review are still required before conditional merge.
+
+PR145 and146 normally merged asbdcba004 and5a85beb; current main5a85beb. Direct
+GREL02-08/retained16GiB/conditional related merge authority continues; consumption,
+replay and history are retained. No new VM jobs/admin changes/reservations. This
+foundation remains native-unqualified, release BLOCKED and exact publication approval
+separate. Earlier dated restrictions below are preserved historical checkpoints.
+
 ## Closed static-input grammar checkpoint, 2026-10-09
 
 The final control boundary accepts only ordinary port-list component instances,
@@ -157,6 +191,53 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+## GREL-05 feasible-reader exact-source receipt, 2026-10-08
+
+Tested source f5a1de2 in ready/unmerged PR147: local247 related PASS/no skips;
+hosted Windows2622 PASS/four POSIX skips and Ubuntu73 PASS/no skips. Ruff/mypy71,
+security18/audit/85 schemas, matching79/80-member artifacts, installed CLI and
+32-state preservation PASS. Ten P2s fixed; automatic bot+1/no new findings is
+not formal approval. Complete feasible AC/TRAN reader binding is local only;
+native attestation/provider/extraction/Sweep/Spec/clean app remain incomplete.
+Generic release BLOCKED. Continuous02–07/895MiB persists; no native side effects,
+protected repair/budget reset/merge/GREL08/publication. Native trust/resource
+observations remain historical, not refreshed here. Exact receipts and ordered
+remaining work: docs/generic_release/GREL_05_RESULT.md and NATIVE_RESUME_BOUNDARY.md.
+Later docs-only HEADs are separate from the tested code. Prior overlays are history.
+
+## GREL-05 voltage/current identity correction, 2026-10-08
+
+Second PR147 P2 fixed: voltage/current selector inventories must be disjoint;
+known PLUS/MINUS branch spellings cannot be registered as node volts. Physical
+PSF quantity/unit attestation remains absent. Corrected193-source receipts below
+are historical; final quantity-corrected package/CI/review pending. Native trust/
+provider/automatic extraction/Sweep/Spec/clean app remain incomplete; release
+BLOCKED.02–07/895MiB persists; no native side effects/protected change/merge/
+GREL08/publication. See GREL_05_RESULT.md. Earlier overlays remain history.
+
+## GREL-05 measurement identity correction, 2026-10-08
+
+Independent PR147 P2 fixed: generic reader requires exact existing registry v4+
+analysis-specific measurement contract and canonical hash; allowlist-only/unknown/
+wrong-analysis/stale binding rejects. Qualified fixed legacy definitions cannot
+be rebound. Related193 PASS/no skips/12.64s, Ruff/mypy71 PASS. Final package/hosted/
+review pending at corrected source;32906b3 CI/package is historical. Native trust/
+provider/automatic extraction/Sweep/Spec/clean actual client remain incomplete;
+release BLOCKED,02–07/895MiB persists. No native side effects/protected changes/
+budget increase/merge/GREL08/publication. See GREL_05_RESULT.md.
+
+## GREL-05 local generic result reader, 2026-10-08
+
+Continuous02–07/895MiB persists. New stacked feature on unmerged PR146/17cb59a
+implements a registered fixed OCEAN reader and bounded DC/AC/TRAN frame projection.
+Signed role power reuses exact legacy math; AC uses measured complex input and
+selected samples; TRAN reports saved-sample resolution and time-weighted mean.
+Local189 PASS/no skips/11.08s, Ruff/mypy71/85 schemas PASS. Initial package32-state
+preservation PASS predates final aggregate bound; final receipts pending. No public
+MCP execution added. Native trust/authentic provider/automatic extraction/Sweep/
+Spec facts/clean actual app remain incomplete. Release BLOCKED; native side effects0,
+no protected repair/budget increase/merge/GREL08/publication. See GREL_05_RESULT.md.
+Historical overlays below remain source-scoped history.
 
 ## GREL-03 sealed accounting source receipt, 2026-10-08
 

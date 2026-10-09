@@ -174,17 +174,33 @@ def delivered_power(sources: tuple[SignedSource, ...]) -> tuple[float, float, fl
     """Passive source currents make delivered power -V*I, including absorption."""
     if len(sources) != 6 or any(s.voltage_v is None or s.current_a is None for s in sources):
         raise ValueError("complete signed sources required")
-    contributions = [
-        -(s.voltage_v * s.current_a)
-        for s in sources
-        if s.voltage_v is not None and s.current_a is not None
-    ]
-    values = (
-        math.fsum(contributions[:2]),
-        math.fsum(contributions[2:4]),
-        math.fsum(contributions[4:]),
-        math.fsum(contributions),
+    return signed_power_totals(
+        tuple(
+            (role, s.voltage_v, s.current_a)
+            for s, role in zip(
+                sources, ("supply", "supply", "bias", "bias", "stimulus", "stimulus"), strict=True
+            )
+            if s.voltage_v is not None and s.current_a is not None
+        )
     )
-    if any(not math.isfinite(v) for v in values):
+
+
+def signed_power_totals(
+    sources: tuple[tuple[str, float, float], ...],
+) -> tuple[float, float, float, float]:
+    """Shared signed source calculation; inventory qualification belongs to readers."""
+    if not 1 <= len(sources) <= 32 or any(
+        role not in ("supply", "bias", "stimulus")
+        or not math.isfinite(voltage)
+        or not math.isfinite(current)
+        for role, voltage, current in sources
+    ):
+        raise ValueError("bounded signed source inventory required")
+    grouped: dict[str, list[float]] = {role: [] for role in ("supply", "bias", "stimulus")}
+    for role, voltage, current in sources:
+        grouped[role].append(-voltage * current)
+    values = tuple(math.fsum(grouped[role]) for role in grouped)
+    total = math.fsum(-voltage * current for _, voltage, current in sources)
+    if any(not math.isfinite(v) for v in (*values, total)):
         raise ValueError("nonfinite delivered power")
-    return values
+    return values[0], values[1], values[2], total
