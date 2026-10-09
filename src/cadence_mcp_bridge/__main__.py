@@ -69,6 +69,20 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--context")
         if action == "resolve":
             command.add_argument("--design-id", required=True)
+    domain = subparsers.add_parser("domain", help="Existing-domain operator provisioning only.")
+    domain_actions = domain.add_subparsers(dest="domain_action", required=True)
+    domain_export = domain_actions.add_parser("export-helper-bundle")
+    domain_export.add_argument("--output", type=Path, required=True)
+    domain_plan = domain_actions.add_parser("plan-existing", aliases=["plan-legacy-seal"])
+    domain_plan.add_argument("--profile", type=Path, required=True)
+    domain_plan.add_argument("--output", type=Path, required=True)
+    domain_plan.add_argument("--expected-helper-sha256", required=True)
+    domain_apply = domain_actions.add_parser("apply-existing", aliases=["seal-existing"])
+    for name in ("profile", "plan", "output"):
+        domain_apply.add_argument("--" + name, type=Path, required=True)
+    domain_apply.add_argument("--expected-plan-sha256", required=True)
+    domain_apply.add_argument("--expected-helper-sha256", required=True)
+    domain_apply.add_argument("--operator-authority", required=True)
     operation = subparsers.add_parser("operation", help="Local authority and plan verification.")
     operation_actions = operation.add_subparsers(dest="operation_action", required=True)
     operation_actions.add_parser("grant-schema")
@@ -357,6 +371,42 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 1
         print(json.dumps(operation_result, sort_keys=True))
+        return 0
+    if arguments.command == "domain":
+        from cadence_mcp_bridge import domain_provisioning
+
+        try:
+            if arguments.domain_action == "export-helper-bundle":
+                report = domain_provisioning.export(arguments.output)
+            elif arguments.domain_action in {"apply-existing", "seal-existing"}:
+                report = domain_provisioning.apply_existing(
+                    arguments.profile,
+                    arguments.plan,
+                    arguments.output,
+                    arguments.expected_plan_sha256,
+                    arguments.expected_helper_sha256,
+                    arguments.operator_authority,
+                    arguments.domain_action == "seal-existing",
+                )
+            else:
+                report = domain_provisioning.prepare(
+                    arguments.profile,
+                    arguments.output,
+                    arguments.expected_helper_sha256,
+                    arguments.domain_action == "plan-legacy-seal",
+                )
+        except (OSError, ValueError):
+            print(
+                json.dumps(
+                    {
+                        "status": "OPERATOR_DOMAIN_SETUP_REJECTED",
+                        "execution_authorized": False,
+                        "action": "verify helper hashes, host, retained ledger and current lock",
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(report, sort_keys=True))
         return 0
     if arguments.command == "runner":
         from cadence_mcp_bridge import bootstrap

@@ -283,6 +283,22 @@ def receipt_for(intent):
 def identity_manifest(root, binding):
     # Operator-provisioned immutable migration anchor, never created by this asset.
     value = read(os.path.join(root, REGISTRY, "manifest.json"))
+    seal_path = os.path.join(root, REGISTRY, "legacy-seal.json")
+    if os.path.lexists(seal_path):
+        seal = read(seal_path)
+        if (
+            not isinstance(seal, dict)
+            or set(seal) != set(("schema_version", "prior_anchor_sha256", "anchor", "plan_sha256"))
+            or type(seal["schema_version"]) is not int
+            or seal["schema_version"] != 1
+            or not matches(HASH, seal["plan_sha256"])
+            or seal["prior_anchor_sha256"] != digest(canonical(value))
+            or not isinstance(seal["anchor"], dict)
+            or value.get("legacy_operation_ids") != []
+            or dict(seal["anchor"], legacy_operation_ids=[]) != value
+        ):
+            raise ValueError("reservation_legacy_classification_seal")
+        value = seal["anchor"]
     if (
         not isinstance(value, dict)
         or set(value)
@@ -310,7 +326,8 @@ def identity_manifest(root, binding):
     ids = value["legacy_operation_ids"]
     if (
         not isinstance(ids, list)
-        or len(ids) > 16
+        or len(ids) > 2048
+        or len(canonical(value)) > LIMIT
         or any(not matches(ID, op) for op in ids)
         or sorted(set(ids)) != ids
     ):
@@ -361,7 +378,7 @@ def audit(root, counter, manifest, manifest_sha):
         raise ValueError("reservation_identity_inventory_limit")
     indexed = {}
     for entry in entries:
-        if entry == "manifest.json":
+        if entry in ("manifest.json", "legacy-seal.json"):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
         if not matches(ID, op):

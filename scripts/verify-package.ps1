@@ -87,12 +87,21 @@ try {
         --workspace $operatorWorkspace
     if ($LASTEXITCODE -ne 0) { throw "Installed fixed bootstrap acceptance failed." }
 
+    $domainAcceptance = Join-Path $projectRoot "scripts\verify-domain-install.py"
+    $domainWorkspace = Join-Path $resolvedTemporaryRoot "domain-state-acceptance"
+    & $python -I -X utf8 $domainAcceptance `
+        --examples (Join-Path $projectRoot "docs\examples\onboarding") `
+        --workspace $domainWorkspace
+    if ($LASTEXITCODE -ne 0) { throw "Installed existing-domain migration acceptance failed." }
+
     # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
     & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
         --python $python $wheel[0].FullName
     if ($LASTEXITCODE -ne 0) { throw "Isolated candidate reinstall failed." }
     & $python -I -X utf8 $bootstrapAcceptance --workspace $operatorWorkspace --verify-preserved
     if ($LASTEXITCODE -ne 0) { throw "Reinstall changed synthetic operator state." }
+    & $python -I -X utf8 $domainAcceptance --workspace $domainWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Reinstall changed synthetic migration state." }
 
     & $uv pip uninstall --python $python cadence-mcp-bridge
     if ($LASTEXITCODE -ne 0) {
@@ -105,6 +114,8 @@ try {
 
     & $python -I -X utf8 $bootstrapAcceptance --workspace $operatorWorkspace --verify-preserved
     if ($LASTEXITCODE -ne 0) { throw "Uninstall changed synthetic operator state." }
+    & $python -I -X utf8 $domainAcceptance --workspace $domainWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Uninstall changed synthetic migration state." }
 
     Write-Output "Package build, installed protocol/bootstrap, reinstall and uninstall preservation passed."
 }

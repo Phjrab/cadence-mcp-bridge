@@ -78,3 +78,6 @@ jobs:
 
       - name: Operator launcher coexistence, recovery and shared lock
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_bootstrap.py -k operator -q --basetemp "$HOME/grel-operator-tests"
+
+      - name: Existing domain migration on disposable files
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py -q --basetemp "$HOME/grel-domain-tests"
