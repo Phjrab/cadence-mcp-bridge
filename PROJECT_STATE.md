@@ -1,3 +1,12 @@
+## PR144 paired authority correction, 2026-10-09
+
+Final review requires explicit per-design analysis scope. Version2 paired grants
+now deny unintended cross combinations while retaining v1 bytes/replay and explicit
+Cartesian legacy semantics. Foundation remote-v2 admission remains unqualified.
+Local169 PASS/2 skips, Ruff/mypy68 and installed19-state preservation PASS.
+Final exact-head review/CI pending; continuousGREL02–08 and conditional normal
+merge authority remain, public tag/Release/upload still excluded.
+
 ## GREL03 integration refresh, 2026-10-09
 
 PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.

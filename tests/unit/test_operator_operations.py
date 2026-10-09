@@ -359,3 +359,103 @@ def test_region_scope_is_closed_and_unique_within_design(operator, fault):
     }
     with pytest.raises(ValidationError, match=expected[fault]):
         OperatorGrant.model_validate_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize(
+    "design_id,analysis,permitted",
+    [
+        ("example-amplifier", "dc", True),
+        ("example-amplifier", "ac", False),
+        ("synthetic-other", "dc", False),
+        ("synthetic-other", "ac", True),
+    ],
+)
+def test_v2_pairs_reject_cross_product(multiple_designs, design_id, analysis, permitted):
+    from copy import deepcopy
+    from dataclasses import replace
+
+    from cadence_mcp_bridge.operator_operations import GRANT_DOCUMENT
+
+    context, legacy, original = multiple_designs
+    catalog = context.contracts.designs
+    template = next(c for c in catalog.analysis_contracts if c.analysis == "ac")
+    other_profile = catalog.profile("synthetic-other")
+    other_variables = catalog.variable_set("synthetic-other")
+    extra = template.model_copy(
+        update={
+            "design_id": "synthetic-other",
+            "analysis_id": "synthetic-other-ac",
+            "design_profile_sha256": canonical_digest(other_profile),
+            "variable_set_sha256": canonical_digest(other_variables),
+        }
+    )
+    # This fixture deliberately registers all four combinations; grant is the boundary.
+    registry = catalog.model_copy(
+        update={"analysis_contracts": (*catalog.analysis_contracts, extra)}
+    )
+    contracts = replace(context.contracts, designs=registry)
+    context = replace(context, contracts=contracts)
+    payload = deepcopy(legacy.model_dump(mode="json"))
+    payload.update(
+        schema_version=2,
+        design_ids=["example-amplifier", "synthetic-other"],
+        analyses=["dc", "ac"],
+        design_analyses=[
+            {"design_id": "example-amplifier", "analysis": "dc"},
+            {"design_id": "synthetic-other", "analysis": "ac"},
+        ],
+    )
+    grant = GRANT_DOCUMENT.validate_json(json.dumps(payload))
+    request = original.model_dump(mode="json")
+    request.update(
+        design_id=design_id,
+        analysis_id=("example-" + analysis)
+        if design_id == "example-amplifier"
+        else design_id + "-" + analysis,
+    )
+    if design_id == "synthetic-other":
+        for v in request["values"]:
+            v["value"] = "2"
+    request = OperationRequest.model_validate_json(json.dumps(request))
+    if permitted:
+        assert (
+            prepare_plan(context, grant, "c" * 64, request, int(time.time())).analysis == analysis
+        )
+    else:
+        with pytest.raises(OperationRejected) as error:
+            prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+        assert error.value.reason == "analysis_scope_denied"
+    assert not context.binding.analysis_journal.exists()
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "outside"])
+def test_v2_requires_exact_unique_pairs(operator, fault):
+    from cadence_mcp_bridge.operator_operations import GRANT_DOCUMENT
+
+    _, grant, _, _ = operator
+    payload = grant.model_dump(mode="json")
+    payload.update(
+        schema_version=2,
+        design_analyses=[
+            {"design_id": "example-amplifier", "analysis": a} for a in ("dc", "ac", "tran")
+        ],
+    )
+    if fault == "missing":
+        del payload["design_analyses"]
+    elif fault == "duplicate":
+        payload["design_analyses"].append(payload["design_analyses"][0])
+    else:
+        payload["design_analyses"][0]["design_id"] = "outside"
+    with pytest.raises(ValidationError):
+        GRANT_DOCUMENT.validate_json(json.dumps(payload))
+
+
+def test_v1_bytes_and_explicit_scope_semantics_are_preserved(operator, tmp_path):
+    _, grant, _, _ = operator
+    raw = grant.model_dump_json().encode()
+    p = tmp_path / "retained-v1.json"
+    p.write_bytes(raw)
+    restored, _ = load_grant(p, hashlib.sha256(raw).hexdigest())
+    assert type(restored) is OperatorGrant
+    assert restored.model_dump_json().encode() == raw
+    assert "design_analyses" not in restored.model_dump()

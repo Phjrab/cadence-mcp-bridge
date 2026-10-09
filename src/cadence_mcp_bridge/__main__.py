@@ -165,12 +165,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         try:
             if arguments.operation_action in ("grant-schema", "request-schema"):
-                model = (
-                    operations.OperatorGrant
+                operation_result = (
+                    operations.GRANT_DOCUMENT.json_schema()
                     if arguments.operation_action == "grant-schema"
-                    else operations.OperationRequest
+                    else operations.OperationRequest.model_json_schema()
                 )
-                operation_result = model.model_json_schema()
             else:
                 contexts = load_runtime(arguments.settings)
                 context = next(

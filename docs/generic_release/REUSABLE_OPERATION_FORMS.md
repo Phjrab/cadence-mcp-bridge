@@ -101,3 +101,22 @@ reservation as a conservative upper bound and never subtracts historical cumulat
 reservation history from free space. Physical free already reflects materialized
 occupancy; aggregate logical/allocated counts do not establish remaining per-job
 commitments. Native provider acceptance must repeat the check atomically.
+
+
+## Explicit per-design analysis authority v2, 2026-10-09
+
+The final PR144 review identified that v1 design/analysis lists describe their
+Cartesian product and cannot express narrower A/DC and B/AC authority. New grants
+with different analysis rights per design must use schema_version2 and required
+`design_analyses` pairs. Every submitted plan checks its exact pair before admission;
+duplicates, undeclared pairs and missing paired scope fail closed. `operation
+grant-schema` exports both versioned forms. V1 retained grants keep exact bytes and
+their explicit legacy all-design/all-analysis semantics; they are not silently
+migrated or described as narrow authority. Remote v2 confirmation/provider support
+is still unqualified in this foundation PR, so v2 alone never activates a worker.
+
+Four registered A/DC, A/AC, B/DC, B/AC combinations verify only A/DC and B/AC pass
+under a narrow v2 grant. Missing/duplicate/outside pairs reject. Existing v1 byte
+identity/replay is preserved. Local169 PASS/2 OS skips, Ruff/mypy68 and installed
+bootstrap/reinstall/uninstall19-state preservation PASS. Final hosted CI/review
+must pass at the exact updated commit before normal merge.
