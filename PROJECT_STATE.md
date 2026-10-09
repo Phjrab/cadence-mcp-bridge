@@ -1,3 +1,37 @@
+## Sweep identity and narrow AC correction checkpoint, 2026-10-09
+
+PR145 normally merged exact38ff7bc after both hosted checks/final review as
+bdcba00487a2405e59280de1d594ba9309506b48. PR146 bcdff78 passed all4 Windows/Ubuntu
+checks/final no-major automated review and normally merged as
+5a85beb80429f1642b2f242f47c2ec148c1f1a11. No formal APPROVED review or protected-rule
+bypass is inferred. Current main is5a85beb; PR147/148 onward remain unmerged.
+
+Final review found two additional blockers, now locally corrected. Sweep parent
+and exposed child UUIDs share one admission namespace: immutable retained parent
+documents reserve the IDs inside the same SQLite transaction before exposure.
+Standalone/other-parent/wrong-plan admission rejects; only internal Sweep advance
+passes the matching owner. No public owner override, extra ledger or deletion is
+added. Existing pre-index journal records are covered without rewriting them.
+An isolated read-only clone of the actual operator journal validates both parents/
+all5 children and7 standalone denials; original bytes/metadata remain preserved.
+
+AC endpoint and full-grid tolerances are capped at one quarter of each nearest
+declared grid gap. Missing boundary samples in valid ultra-narrow high-frequency
+sweeps reject, while exact neighbors and normal16-digit endpoint rounding pass.
+Both retained actual AC results requery identically through the current host reader;
+this is prior-bundle result validation, not new candidate execution. Local affected
+220 tests PASS/one POSIX skip, Ruff/mypy94 PASS. Exact final wheel/sdist/installed
+CLI/96 conditional SDK schemas/bootstrap/reinstall/uninstall PASS, preserving43
+operator and20 migration files. Namespace-specific125 checks also PASS. Final
+hosted checks and independent review remain required. Failed fault-injection
+fixture checks remain evidence; the fixture now preserves the internal owner argument.
+
+This continuation adds0 simulations/reservations/admin changes; the last actual ledger
+is94/11,409,555,456 bytes (10,881 MiB), remaining5,503 MiB under16GiB, scoped grant
+8 jobs/1GiB. Existing approved02-08/conditional merge authority continues. Actual Codex
+new-job/restart, exact deployed requalification, artifact-only operator acceptance,
+upgrade/downgrade and finalRC remain incomplete. Release BLOCKED/publication false.
+
 ## Closed static-input grammar checkpoint, 2026-10-09
 
 The final control boundary accepts only ordinary port-list component instances,

@@ -4,7 +4,7 @@
   "generic_release_gate": "BLOCKED",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "4c62d73d667bf14297de7b6a237dc3dde75d9bc7",
+  "source_checkpoint": "e89d2628b74ccbd41b77c84276b5c79e1d16043b",
   "later_scope_correction": "CLOSED_STATIC_GRAMMAR_RESERVED_ANALYSIS_MASTERS_AND_PROTECTION_PRAGMAS_LOCAL_PACKAGE_SIX_ACTUAL_PY26_INPUTS_PASS_FINAL_CI_REVIEW_PENDING",
   "live_native_bundle_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
   "publication_authorized": false,
@@ -131,5 +131,15 @@
     "GREL_07_RESULT.md"
   ],
   "synthetic_vm_scenarios": 17,
-  "current_parser_actual_baselines": 6
+  "current_parser_actual_baselines": 6,
+  "later_host_correction": "SWEEP_IDS_RESERVED_BY_DURABLE_PARENT_AND_AC_TOLERANCE_CAPPED_BY_GRID_LOCAL_AND_EXACT_INSTALLED_PASS_FINAL_CI_REVIEW_PENDING",
+  "latest_checked_main": "5a85beb80429f1642b2f242f47c2ec148c1f1a11",
+  "retained_actual_journal_claims": {
+    "parents": 2,
+    "children": 5,
+    "standalone_denials": 7,
+    "original_preserved": true,
+    "scope": "READONLY_ISOLATED_CLONE_NOT_FRESH_NATIVE_EXECUTION"
+  },
+  "retained_actual_ac_requeries": 2
 }

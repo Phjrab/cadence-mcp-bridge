@@ -100,9 +100,73 @@ class AnalysisStore:
             if connection is not None:
                 connection.close()
 
+    @staticmethod
+    def native_sweep_claims(
+        connection: sqlite3.Connection,
+    ) -> Iterator[tuple[str, OperationPlan | None, str]]:
+        # The immutable parent document is the durable claim, including existing
+        # pre-index journals. Read it under the same BEGIN IMMEDIATE transaction
+        # as every admission; no journal reset or unsafe migration is needed.
+        if (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='native_sweeps_v1'"
+            ).fetchone()
+            is None
+        ):
+            return
+        from cadence_mcp_bridge.native_sweeps import NativeSweepRecord
+
+        for index, (sweep_id, raw) in enumerate(
+            connection.execute("SELECT sweep_id,document FROM native_sweeps_v1")
+        ):
+            try:
+                if index >= MAX_RECORDS or not isinstance(raw, str) or len(raw) > 524288:
+                    raise ValueError("capacity")
+                record = NativeSweepRecord.model_validate_json(raw)
+                if record.sweep_id != sweep_id:
+                    raise ValueError("identity")
+            except ValueError:
+                raise InvalidInputError("Native sweep checkpoint identity is invalid") from None
+            yield sweep_id, None, sweep_id
+            for operation_id, plan in zip(record.operation_ids, record.plan.points, strict=True):
+                yield operation_id, plan, sweep_id
+
+    @classmethod
+    def _check_native_sweep_claim(
+        cls,
+        connection: sqlite3.Connection,
+        operation_id: str,
+        plan: OperationPlan | None = None,
+        sweep_id: str | None = None,
+    ) -> None:
+        claims = [
+            (point, owner)
+            for identity, point, owner in cls.native_sweep_claims(connection)
+            if identity == operation_id
+        ]
+        if claims:
+            if len(claims) != 1 or plan is None or claims[0] != (plan, sweep_id):
+                raise InvalidInputError("Operation ID is reserved by a native sweep")
+        elif sweep_id is not None:
+            raise InvalidInputError("Native sweep point identity is not reserved")
+
+    @classmethod
+    def native_sweep_identity_available(
+        cls,
+        connection: sqlite3.Connection,
+        operation_id: str,
+    ) -> bool:
+        return connection.execute(
+            "SELECT 1 FROM admissions WHERE operation_id=?",
+            (operation_id,),
+        ).fetchone() is None and not any(
+            identity == operation_id for identity, _, _ in cls.native_sweep_claims(connection)
+        )
+
     def admit(self, operation_id: str, design_id: str, analysis_id: str, plan_hash: str) -> bool:
         """Persist before dispatch; exactly one caller gets first-send authority."""
         with self.connection(create=True) as connection:
+            self._check_native_sweep_claim(connection, operation_id)
             row = connection.execute(
                 "SELECT design_id, analysis_id, plan_hash FROM admissions WHERE operation_id=?",
                 (operation_id,),
@@ -238,12 +302,18 @@ class AnalysisStore:
         )
 
     def admit_operation(
-        self, operation_id: str, plan: OperationPlan, *, dispatch_intent: bool = False
+        self,
+        operation_id: str,
+        plan: OperationPlan,
+        *,
+        dispatch_intent: bool = False,
+        sweep_id: str | None = None,
     ) -> bool:
         raw = plan.model_dump_json()
         if len(raw) > 32768:
             raise ConfigurationError("Analysis lifecycle plan exceeds capacity")
         with self.connection(create=True) as connection:
+            self._check_native_sweep_claim(connection, operation_id, plan, sweep_id)
             existing = connection.execute(
                 "SELECT 1 FROM admissions WHERE operation_id=?", (operation_id,)
             ).fetchone()

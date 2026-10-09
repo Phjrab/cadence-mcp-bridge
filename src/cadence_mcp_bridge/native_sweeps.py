@@ -218,19 +218,20 @@ class NativeSweepStore:
                 >= MAX_RECORDS
             ):
                 raise ConfigurationError("Native sweep journal capacity reached")
-            # Reject reuse of an existing single-operation identity as a parent.
-            if (
-                connection.execute(
-                    "SELECT 1 FROM admissions WHERE operation_id=?", (query.sweep_id,)
-                ).fetchone()
-                is not None
-            ):
-                raise InvalidInputError("Native sweep ID conflicts with a native operation")
+            # Parent and child IDs share one namespace with every admission and
+            # prior sweep claim, even before any child is dispatched.
+            if not self.store.native_sweep_identity_available(connection, query.sweep_id):
+                raise InvalidInputError("Native sweep ID conflicts with a reserved operation")
             record = NativeSweepRecord(
                 sweep_id=query.sweep_id,
                 plan=plan,
                 operation_ids=tuple(str(uuid4()) for _ in plan.points),
             )
+            if any(
+                not self.store.native_sweep_identity_available(connection, identity)
+                for identity in record.operation_ids
+            ):
+                raise InvalidInputError("Native sweep child ID conflicts with a reserved operation")
             raw = record.model_dump_json()
             if len(raw) > 524288:
                 raise ConfigurationError("Native sweep plan exceeds journal capacity")
@@ -393,6 +394,7 @@ class NativeSweepSupervisor:
                     operation_id=record.operation_ids[i], expected_plan_sha256=plan.plan_sha256
                 ),
                 plan.request,
+                sweep_id=record.sweep_id,
             )
             break
         return await self.status(query)

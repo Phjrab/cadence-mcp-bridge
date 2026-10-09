@@ -764,3 +764,50 @@ def test_registered_selectors_bind_verified_standard_vm_psf_aliases(operator):
     assert 'mcpGenericScalar("/VDD/PLUS" "VDD:p")' in text
     # Alias selection is compiled only from registered selectors; no expression.
     assert "unless(data data=getData(alias))" in text
+
+
+@pytest.mark.parametrize("missing", ["start", "stop"])
+def test_narrow_ac_endpoints_cannot_hide_inside_relative_tolerance(operator, missing):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    endpoints = ("1000000", "1000000.000001")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(
+                analysis="ac",
+                start_hz=endpoints[0],
+                stop_hz=endpoints[1],
+                points_per_decade=1,
+            )
+        }
+    )
+    # Request only the unchanged endpoint: frequency matching alone cannot reveal
+    # that the other declared boundary is missing from the complete waveform.
+    selected = endpoints[1] if missing == "start" else endpoints[0]
+    reader = reader.model_copy(
+        update={
+            "ade_registration_sha256": canonical_digest(ade),
+            "transfer": reader.transfer.model_copy(update={"gain_frequencies_hz": (selected,)}),
+        }
+    )
+    args = (context, plan, ade, reader, op, execution)
+
+    def body(axis):
+        return "\n".join(
+            f"P|{node}|{i}|{x}|{value}|0"
+            for node, value in (("input", 2), ("output", 4))
+            for i, x in enumerate(axis)
+        )
+
+    assert (
+        project_frame(*args, frame_for(args, body(endpoints)))["transfer"][0]["gain_v_per_v"] == 2
+    )
+    changed = (
+        ("1000000.0000008", endpoints[1])
+        if missing == "start"
+        else (endpoints[0], "1000000.0000002")
+    )
+    with pytest.raises(OperationRejected) as error:
+        project_frame(*args, frame_for(args, body(changed)))
+    assert error.value.reason == "reader_ac_interval_invalid"

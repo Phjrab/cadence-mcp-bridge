@@ -101,10 +101,12 @@ def sweep_native(operator):
                 plan = plan.model_copy(update={"runner_sha256": "c" * 64})
             return SimpleNamespace(plan=plan)
 
-        async def observe(self, query, submission=None):
+        async def observe(self, query, submission=None, *, sweep_id=None):
             if submission is not None:
                 plan = (await self.plan(submission)).plan
-                first = store.admit_operation(query.operation_id, plan, dispatch_intent=True)
+                first = store.admit_operation(
+                    query.operation_id, plan, dispatch_intent=True, sweep_id=sweep_id
+                )
                 if first:
                     self.calls.append(query.operation_id)
                     before = store.operation(query.operation_id)
@@ -188,7 +190,9 @@ async def test_unknown_dispatch_outcome_is_lookup_only(sweep_native):
     supervisor, query, _, status = await admit(native, request)
     point = status.points[0]
     plan = supervisor.store.read(query).plan.points[0]
-    native.lifecycle.store.admit_operation(point["operation_id"], plan, dispatch_intent=True)
+    native.lifecycle.store.admit_operation(
+        point["operation_id"], plan, dispatch_intent=True, sweep_id=query.sweep_id
+    )
     assert (await supervisor.advance(query)).state == "STOPPED"
     assert native.calls == []
 
@@ -277,3 +281,72 @@ async def test_mcp_sweep_schemas_plan_and_idempotent_submission(sweep_native):
     assert native.calls == []
     advanced = await server.call_tool("cadence_advance_native_sweep", {"request": query})
     assert not advanced.is_error and len(native.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_exposed_child_and_parent_ids_reject_independent_admission_after_restart(
+    sweep_native,
+):
+    native, request = sweep_native
+    supervisor, query, submission, status = await admit(native, request)
+    child = status.points[0]["operation_id"]
+    plan = supervisor.store.read(query).plan.points[0]
+    restarted = AnalysisStore(native.lifecycle.store.path)
+    before = restarted.path.read_bytes()
+    for identity in (child, query.sweep_id):
+        with pytest.raises(InvalidInputError):
+            restarted.admit(
+                identity, plan.request.design_id, plan.request.analysis_id, plan.plan_sha256
+            )
+        for proposed in (plan, plan.model_copy(update={"runner_sha256": "f" * 64})):
+            with pytest.raises(InvalidInputError):
+                restarted.admit_operation(identity, proposed, dispatch_intent=True)
+        with pytest.raises(InvalidInputError):
+            restarted.admit_operation(identity, plan, sweep_id=str(uuid4()))
+    assert restarted.path.read_bytes() == before and native.calls == []
+    assert (await NativeSweepSupervisor(native).submit(submission)).state == "PLANNED"
+    assert (await NativeSweepSupervisor(native).advance(query)).points[0]["phase"] == "SUCCEEDED"
+    assert native.calls == [child]
+
+
+@pytest.mark.asyncio
+async def test_child_id_cannot_be_reused_as_another_parent_or_generated_child(
+    sweep_native, monkeypatch
+):
+    import cadence_mcp_bridge.native_sweeps as module
+
+    native, request = sweep_native
+    supervisor, query, _, status = await admit(native, request)
+    child = status.points[0]["operation_id"]
+    planned = await supervisor.plan(request)
+    before = native.lifecycle.store.path.read_bytes()
+    with pytest.raises(InvalidInputError):
+        supervisor.store.admit(
+            NativeSweepQuery(sweep_id=child, expected_plan_sha256=planned.plan_sha256), planned.plan
+        )
+    # Force one otherwise improbable UUID collision with an existing claim.
+    identities = iter([child, str(uuid4()), str(uuid4())])
+    monkeypatch.setattr(module, "uuid4", lambda: next(identities))
+    with pytest.raises(InvalidInputError):
+        supervisor.store.admit(
+            NativeSweepQuery(sweep_id=str(uuid4()), expected_plan_sha256=planned.plan_sha256),
+            planned.plan,
+        )
+    assert native.lifecycle.store.path.read_bytes() == before and native.calls == []
+
+
+@pytest.mark.asyncio
+async def test_wrong_internal_owner_or_point_plan_cannot_consume_a_claim(sweep_native):
+    native, request = sweep_native
+    supervisor, query, _, status = await admit(native, request)
+    record = supervisor.store.read(query)
+    child = status.points[0]["operation_id"]
+    with pytest.raises(InvalidInputError):
+        native.lifecycle.store.admit_operation(
+            child, record.plan.points[1], sweep_id=query.sweep_id
+        )
+    with pytest.raises(InvalidInputError):
+        native.lifecycle.store.admit_operation(
+            str(uuid4()), record.plan.points[0], sweep_id=query.sweep_id
+        )
+    assert (await supervisor.status(query)).state == "PLANNED" and native.calls == []

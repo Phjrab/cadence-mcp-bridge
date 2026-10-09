@@ -448,6 +448,19 @@ def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tu
     return tuple(selected)
 
 
+def _matches_ac_axis(actual: float, expected_axes: tuple[float, ...], index: int) -> bool:
+    expected = expected_axes[index]
+    gaps = []
+    if index > 0:
+        gaps.append(expected - expected_axes[index - 1])
+    if index + 1 < len(expected_axes):
+        gaps.append(expected_axes[index + 1] - expected)
+    # Serialization/numerical tolerance must not consume a neighboring sample's
+    # interval. Narrow but representable grids keep disjoint acceptance bands.
+    tolerance = min(abs(expected) * 1e-12, min(gaps) / 4)
+    return math.isclose(actual, expected, rel_tol=0, abs_tol=tolerance)
+
+
 def _transfer(
     ade: AdeExecutionRegistration,
     reader: GenericReaderRegistration,
@@ -458,13 +471,12 @@ def _transfer(
     if inputs.analysis != "ac":
         raise OperationRejected("reader_ac_interval_invalid")
     expected_axes = _ac_axis(inputs)
-    if not math.isclose(axes[0], expected_axes[0], rel_tol=1e-12, abs_tol=0) or not math.isclose(
-        axes[-1], expected_axes[-1], rel_tol=1e-12, abs_tol=0
+    if not _matches_ac_axis(axes[0], expected_axes, 0) or not _matches_ac_axis(
+        axes[-1], expected_axes, len(expected_axes) - 1
     ):
         raise OperationRejected("reader_ac_interval_invalid")
     if len(axes) != len(expected_axes) or any(
-        not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=0)
-        for actual, expected in zip(axes, expected_axes, strict=True)
+        not _matches_ac_axis(actual, expected_axes, index) for index, actual in enumerate(axes)
     ):
         raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
     assert reader.transfer is not None
