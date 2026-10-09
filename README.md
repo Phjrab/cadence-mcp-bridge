@@ -493,3 +493,77 @@ Actual Codex-app summary/list/describe/plan reads are now
 [verified in their bounded scope](docs/CLIENT_STORAGE_QUAL_01.md).
 Actual app cleanup execution remains NOT_RUN; SDK/native evidence is separate.
 See [STORAGE-REAL-QUAL-01 result](docs/STORAGE_REAL_QUAL_01_RESULT_V1.md).
+
+## Operator runner content preparation (GREL-02)
+
+The installed package contains original fixed Python2.6-compatible runner,
+launcher, installer and the existing environment probe. No Cadence/PDK files or
+private deployment scripts are bundled. Content installation alone does not
+qualify the environment or permit DC/AC/TRAN.
+
+~~~powershell
+cadence-mcp-bridge runner bundle --profile environment.json --output fresh-bundle
+cadence-mcp-bridge runner export-installer --output install-runner.py
+cadence-mcp-bridge runner install --bundle fresh-bundle --target existing-private-root --expected-plan-sha256 REVIEWED_HASH
+cadence-mcp-bridge runner verify --target existing-private-root --expected-plan-sha256 REVIEWED_HASH
+~~~
+
+Review the generated manifest hash, byte inventory, private profile and target.
+The bundle contains operator paths and is private. The target must be a reviewed
+existing owned directory with no links and safe permissions. The hash directory
+is exclusive: partial installs and drift remain preserved and blocked, never
+overwritten or silently retried. Successful repeated install verifies all bytes.
+
+For a Linux host, an operator can transfer the exact bundle and exported installer
+through their strict-host-key SSH/SCP configuration into an approved staging area,
+verify the exported installer SHA256, then run the fixed installer with
+/usr/bin/python -B install-runner.py install BUNDLE TARGET REVIEWED_HASH.
+Use verify TARGET REVIEWED_HASH before activate TARGET REVIEWED_HASH. The fixed
+launcher accepts identity HASH or preflight HASH NONCE only; simulation is not enabled.
+Activation refuses an existing launcher/active marker, preserving legacy installs.
+A dedicated registered managed root is required for a fresh operator installation.
+Deactivation is append-only: deactivate TARGET REVIEWED_HASH retains installed
+versions and the original activation record. Updating an existing active pointer
+requires the reviewed lifecycle migration gate; it cannot override a running job.
+
+Registration, content verification, native environment preflight, runner trust,
+analysis qualification and operation authority are different gates. An
+executable_permissions rejection requires administrator investigation of the
+actual executable and its dependency/ancestor trust; no ignore switch, wrapper
+exception or vendor chmod is performed by the bridge. License configuration is
+not license checkout or entitlement evidence. Current generic execution remains
+blocked until those gates and reusable authority are implemented and verified.
+
+The installed runner trust diagnostic is read-only:
+~~~powershell
+cadence-mcp-bridge runner trust --profile environment.json --output fresh-private-trust-report.json
+~~~
+Only the private exclusive report includes affected executable/ancestor paths.
+The console returns bounded per-tool counts; it never chmods or grants execution.
+Metadata diagnosis does not attest transitive dependencies or license entitlement.
+An administrator must inspect the installation and dependent code before treating
+it as trusted; changing only a wrapper's permissions is insufficient.
+
+After reviewed activation, request the exact current installed preflight:
+~~~powershell
+cadence-mcp-bridge runner preflight --bundle fresh-bundle --expected-plan-sha256 REVIEWED_HASH
+~~~
+The CLI binds the private profile, fixed package bytes, selected manifest and
+fresh nonce, and reuses the existing environment qualifier. Successful preflight
+is identity/runtime/binary/root/disk evidence; analysis, license entitlement,
+physical ledger provisioning and operation authority remain separate gates.
+
+
+Native standalone runner installation refuses a TARGET that differs from the
+hash-verified profile's paths.managed_root before creating any directory. A
+mistyped target cannot create a runtime tree in an original/source/vendor root.
+Windows runner install is local content staging only and reports
+WINDOWS_LOCAL_CONTENT_STAGING_ONLY/native_installation_verified=false. The
+standalone Linux installer has no staging command; Linux installation still
+requires the exact managed root and positive native trust is a separate gate.
+
+
+Native install, activate and deactivate all require TARGET to equal the managed
+root in the hash-verified bundled profile before any write. A hash-valid copied
+runtime at another root cannot authorize activation or revocation there. Windows
+content staging does not permit standalone lifecycle activation of that tree.

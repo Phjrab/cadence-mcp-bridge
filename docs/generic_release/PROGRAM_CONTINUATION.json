@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "authorized_phases": [
+    "GREL-02",
+    "GREL-03",
+    "GREL-04",
+    "GREL-05",
+    "GREL-06",
+    "GREL-07"
+  ],
+  "current_phase": "GREL-02",
+  "phase_status": "LOCAL_VERIFIED_NATIVE_TRUST_BLOCKED",
+  "branch": "feat/grel-02-runner-bootstrap",
+  "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
+  "parent_feature": "3a1fdaaadc4af511ae056c025728add128be83ec",
+  "new_simulations": 0,
+  "new_reservations": 0,
+  "approved_remaining_reserved_bytes": 938475520,
+  "budget_increase_authorized": false,
+  "protected_permissions_change_authorized": false,
+  "old_result_delete_authorized": false,
+  "publication_authorized": false,
+  "grel08_authorized": false,
+  "native_blocker": "executable_permissions_actual_group_or_other_writable_vendor_chain",
+  "remote_deployments": 0,
+  "report": "GREL_02_RESULT.md",
+  "next_phase_authorized": true,
+  "next_phase": "GREL-03",
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
+  "tested_source_commit": "142e1b4",
+  "full_unit": {
+    "passed": 2319,
+    "skipped": 7,
+    "warnings": 56,
+    "elapsed_seconds": 790.75
+  },
+  "live_resource_snapshot": {
+    "attempts": 82,
+    "reserved_result_bytes": 9798942720,
+    "result_ceiling_bytes": 10737418240,
+    "remaining_bytes": 938475520,
+    "logical_bytes": 18030073,
+    "allocated_bytes": 48308224,
+    "filesystem_free_bytes": 25690324992,
+    "disk_floor_status": "OK"
+  },
+  "independent_review": "PENDING_AUTOMATIC_PR_REVIEW",
+  "hosted_ci": "NOT_RUN_ON_THIS_BRANCH"
+}
