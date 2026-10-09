@@ -116,11 +116,11 @@ def operator(tmp_path):
 
 def test_plan_frozen_canonical_and_no_journal(operator):
     context, grant, request, _ = operator
-    first = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    first = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     second = prepare_plan(
         context,
         grant,
-        "c" * 64,
+        canonical_digest(grant),
         request.model_copy(update={"values": tuple(reversed(request.values))}),
         int(time.time()),
     )
@@ -178,7 +178,13 @@ def test_lifetime_and_ceiling_no_budget_reset(operator, change):
 def test_request_denials(operator, change, reason):
     context, grant, request, _ = operator
     with pytest.raises(OperationRejected) as error:
-        prepare_plan(context, grant, "c" * 64, request.model_copy(update=change), int(time.time()))
+        prepare_plan(
+            context,
+            grant,
+            canonical_digest(grant),
+            request.model_copy(update=change),
+            int(time.time()),
+        )
     assert error.value.reason == reason
 
 
@@ -189,17 +195,18 @@ def test_registered_numbers_and_grant_region_are_independent(operator):
         prepare_plan(
             context,
             grant,
-            "c" * 64,
+            canonical_digest(grant),
             request.model_copy(update={"values": (wrong_value, request.values[1])}),
             int(time.time()),
         )
     assert error.value.reason == "registered_numeric_contract_denied"
     region = grant.numeric_regions[0].model_copy(update={"minimum": "2", "maximum": "3"})
+    changed = grant.model_copy(update={"numeric_regions": (region, grant.numeric_regions[1])})
     with pytest.raises(OperationRejected) as error:
         prepare_plan(
             context,
-            grant.model_copy(update={"numeric_regions": (region, grant.numeric_regions[1])}),
-            "c" * 64,
+            changed,
+            canonical_digest(changed),
             request,
             int(time.time()),
         )
@@ -212,7 +219,7 @@ def test_bounded_closed_grant_and_sha(operator, tmp_path):
     data = grant.model_dump_json().encode()
     path.write_bytes(data)
     digest = hashlib.sha256(data).hexdigest()
-    assert load_grant(path, digest)[0] == grant
+    assert load_grant(path, digest)[0].model_dump() == grant.model_dump()
     with pytest.raises(OperationRejected):
         load_grant(path, "d" * 64)
     for raw in (b'{"schema_version":1,"schema_version":1}', b" " * 65537):
@@ -318,11 +325,13 @@ def test_one_grant_plans_different_design_variable_sets(multiple_designs, design
         for value in request["values"]:
             value["value"] = "2"
     request = OperationRequest.model_validate_json(json.dumps(request))
-    first = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    first = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     assert first.request.design_id == design_id
     assert (
         first.plan_sha256
-        == prepare_plan(context, grant, "c" * 64, request, int(time.time())).plan_sha256
+        == prepare_plan(
+            context, grant, canonical_digest(grant), request, int(time.time())
+        ).plan_sha256
     )
     assert not context.binding.analysis_journal.exists()
     assert not context.lock_path.exists()
@@ -338,7 +347,7 @@ def test_other_design_regions_cannot_satisfy_current_values(multiple_designs):
         }
     )
     with pytest.raises(OperationRejected) as error:
-        prepare_plan(context, other_only, "c" * 64, request, int(time.time()))
+        prepare_plan(context, other_only, canonical_digest(other_only), request, int(time.time()))
     assert error.value.reason == "authority_numeric_scope_mismatch"
 
 
@@ -359,3 +368,125 @@ def test_region_scope_is_closed_and_unique_within_design(operator, fault):
     }
     with pytest.raises(ValidationError, match=expected[fault]):
         OperatorGrant.model_validate_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize(
+    "design_id,analysis,permitted",
+    [
+        ("example-amplifier", "dc", True),
+        ("example-amplifier", "ac", False),
+        ("synthetic-other", "dc", False),
+        ("synthetic-other", "ac", True),
+    ],
+)
+def test_v2_pairs_reject_cross_product(multiple_designs, design_id, analysis, permitted):
+    from copy import deepcopy
+    from dataclasses import replace
+
+    from cadence_mcp_bridge.operator_operations import GRANT_DOCUMENT
+
+    context, legacy, original = multiple_designs
+    catalog = context.contracts.designs
+    template = next(c for c in catalog.analysis_contracts if c.analysis == "ac")
+    other_profile = catalog.profile("synthetic-other")
+    other_variables = catalog.variable_set("synthetic-other")
+    extra = template.model_copy(
+        update={
+            "design_id": "synthetic-other",
+            "analysis_id": "synthetic-other-ac",
+            "design_profile_sha256": canonical_digest(other_profile),
+            "variable_set_sha256": canonical_digest(other_variables),
+        }
+    )
+    # This fixture deliberately registers all four combinations; grant is the boundary.
+    registry = catalog.model_copy(
+        update={"analysis_contracts": (*catalog.analysis_contracts, extra)}
+    )
+    contracts = replace(context.contracts, designs=registry)
+    context = replace(context, contracts=contracts)
+    payload = deepcopy(legacy.model_dump(mode="json"))
+    payload.update(
+        schema_version=2,
+        design_ids=["example-amplifier", "synthetic-other"],
+        analyses=["dc", "ac"],
+        design_analyses=[
+            {"design_id": "example-amplifier", "analysis": "dc"},
+            {"design_id": "synthetic-other", "analysis": "ac"},
+        ],
+    )
+    grant = GRANT_DOCUMENT.validate_json(json.dumps(payload))
+    request = original.model_dump(mode="json")
+    request.update(
+        design_id=design_id,
+        analysis_id=("example-" + analysis)
+        if design_id == "example-amplifier"
+        else design_id + "-" + analysis,
+    )
+    if design_id == "synthetic-other":
+        for v in request["values"]:
+            v["value"] = "2"
+    request = OperationRequest.model_validate_json(json.dumps(request))
+    if permitted:
+        assert (
+            prepare_plan(
+                context, grant, canonical_digest(grant), request, int(time.time())
+            ).analysis
+            == analysis
+        )
+    else:
+        with pytest.raises(OperationRejected) as error:
+            prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
+        assert error.value.reason == "analysis_scope_denied"
+    assert not context.binding.analysis_journal.exists()
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "outside"])
+def test_v2_requires_exact_unique_pairs(operator, fault):
+    from cadence_mcp_bridge.operator_operations import GRANT_DOCUMENT
+
+    _, grant, _, _ = operator
+    payload = grant.model_dump(mode="json")
+    payload.update(
+        schema_version=2,
+        design_analyses=[
+            {"design_id": "example-amplifier", "analysis": a} for a in ("dc", "ac", "tran")
+        ],
+    )
+    if fault == "missing":
+        del payload["design_analyses"]
+    elif fault == "duplicate":
+        payload["design_analyses"].append(payload["design_analyses"][0])
+    else:
+        payload["design_analyses"][0]["design_id"] = "outside"
+    with pytest.raises(ValidationError):
+        GRANT_DOCUMENT.validate_json(json.dumps(payload))
+
+
+def test_v1_bytes_and_explicit_scope_semantics_are_preserved(operator, tmp_path):
+    _, grant, _, _ = operator
+    raw = grant.model_dump_json().encode()
+    p = tmp_path / "retained-v1.json"
+    p.write_bytes(raw)
+    restored, _ = load_grant(p, hashlib.sha256(raw).hexdigest())
+    assert type(restored) is OperatorGrant
+    assert restored.model_dump_json().encode() == raw
+    assert "design_analyses" not in restored.model_dump()
+
+
+@pytest.mark.parametrize("loaded", [False, True])
+def test_grant_object_cannot_claim_unrelated_reviewed_hash(operator, tmp_path, loaded):
+    context, grant, request, _ = operator
+    if loaded:
+        raw = grant.model_dump_json(indent=2).encode()
+        path = tmp_path / "reviewed.json"
+        path.write_bytes(raw)
+        digest = hashlib.sha256(raw).hexdigest()
+        grant, _ = load_grant(path, digest)
+    else:
+        digest = canonical_digest(grant)
+    assert prepare_plan(context, grant, digest, request, int(time.time())).grant_sha256 == digest
+    broader = grant.model_copy(update={"attempt_limit": grant.attempt_limit + 1})
+    with pytest.raises(OperationRejected) as error:
+        prepare_plan(context, broader, digest, request, int(time.time()))
+    assert error.value.reason == "grant_document_digest_mismatch"
+    assert not context.binding.analysis_journal.exists()

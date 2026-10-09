@@ -12,7 +12,7 @@ from test_operator_operations import operator
 from cadence_mcp_bridge import authenticated_provider as wire
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.analysis_store import AnalysisStore
-from cadence_mcp_bridge.operator_operations import prepare_plan
+from cadence_mcp_bridge.operator_operations import load_grant, prepare_plan
 
 __all__ = ["operator"]
 
@@ -33,6 +33,7 @@ def cli(operator, tmp_path, monkeypatch):
     def sha(name):
         return hashlib.sha256(paths[name].read_bytes()).hexdigest()
 
+    grant, _ = load_grant(paths["grant"], sha("grant"))
     plan = prepare_plan(context, grant, sha("grant"), request, int(time.time()))
     args = [
         "--settings",
@@ -66,6 +67,8 @@ def test_submit_retry_reconcile_share_one_durable_identity(cli, monkeypatch, cap
         payload = (
             accounting(plan) if action == "authorize" else observation(op, plan, "DISPATCHED", 2)
         )
+        if action == "lookup" and len(calls) == 1:
+            payload = None
         return (
             0,
             wire._canonical(
@@ -90,7 +93,7 @@ def test_submit_retry_reconcile_share_one_durable_identity(cli, monkeypatch, cap
         result = json.loads(capsys.readouterr().out)
         assert result["progress"]["phase"] == "DISPATCHED"
         assert result["operation_id"] == op and not result["simulation_retry"]
-    assert calls == ["authorize", "accept", "lookup", "lookup"]
+    assert calls == ["lookup", "authorize", "accept", "lookup", "lookup"]
     assert AnalysisStore(context.binding.analysis_journal).operation(op).plan == plan
 
 
@@ -114,6 +117,8 @@ def test_lost_acceptance_reply_never_resends_or_erases_intent(cli, monkeypatch, 
         if action == "accept":
             raise ValueError("synthetic lost acknowledgement")
         payload = accounting(plan) if action == "authorize" else None
+        if action == "lookup" and len(calls) == 1:
+            payload = None
         return (
             0,
             wire._canonical(
@@ -135,7 +140,7 @@ def test_lost_acceptance_reply_never_resends_or_erases_intent(cli, monkeypatch, 
     assert main(["operation", "submit", *args, *authority, *explicit]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["progress"]["phase"] == "UNKNOWN_OUTCOME"
-    assert calls == ["authorize", "accept", "lookup"]
+    assert calls == ["lookup", "authorize", "accept", "lookup"]
     op = args[args.index("--operation-id") + 1]
     assert (
         AnalysisStore(context.binding.analysis_journal).operation(op).progress.phase

@@ -348,3 +348,37 @@ def test_dependency_library_drift_denied_before_spend(qualified):
     ):
         gate.check(session, plan, "submit")
     assert snapshot(root) == before
+
+
+@pytest.mark.parametrize(
+    "design,analysis,allowed",
+    [
+        ("new-rc", "dc", True),
+        ("new-rc", "ac", False),
+        ("new-mos", "dc", False),
+        ("new-mos", "ac", True),
+    ],
+)
+def test_v2_native_record_scope_denies_unapproved_cross_product(
+    qualified, design, analysis, allowed
+):
+    _, gate, plan, _ = qualified
+    record = gate.read(plan)
+    grant = copy.deepcopy(record["grant"])
+    grant.update(
+        schema_version=2,
+        analyses=["dc", "ac"],
+        numeric_regions=[],
+        design_analyses=[
+            dict(design_id="new-rc", analysis="dc"),
+            dict(design_id="new-mos", analysis="ac"),
+        ],
+    )
+    requested = copy.deepcopy(plan)
+    requested["request"]["design_id"] = design
+    requested["analysis"] = analysis
+    if allowed:
+        gate.match_record(requested, grant)
+    else:
+        with pytest.raises(ValueError, match="native_gate_confirmed_scope"):
+            gate.match_record(requested, grant)

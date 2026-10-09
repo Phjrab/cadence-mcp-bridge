@@ -126,6 +126,8 @@ async def test_public_submit_retry_restart_and_status_preserve_one_remote_accept
         action = json.loads(raw)["action"]
         calls.append(action)
         payload = accounting(plan) if action == "authorize" else observation(op, plan)
+        if action == "lookup" and len(calls) == 1:
+            payload = None
         return (
             0,
             wire._canonical(
@@ -163,7 +165,7 @@ async def test_public_submit_retry_restart_and_status_preserve_one_remote_accept
         assert not reply.is_error and reply.structured_content["progress"]["phase"] == "DISPATCHED"
     reply = await server.call_tool("cadence_operation_status", {"request": query})
     assert not reply.is_error
-    assert calls == ["authorize", "accept", "lookup", "lookup"]
+    assert calls == ["lookup", "authorize", "accept", "lookup", "lookup"]
     assert AnalysisStore(service.context.binding.analysis_journal).operation(op).plan == plan
     assert grant_path.exists()
 

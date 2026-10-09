@@ -57,16 +57,16 @@ binding mismatch. `verify --remote-preflight` adds a read-only VM qualification.
 Create runtime settings from `runtime schema`, with absolute host paths to your
 three registries and their exact hashes, a distinct context ID, your explicit
 authority reference, logical `shared-ledger`, and private analysis/sweep journals.
-Bind the installed runner hash. `runtime inspect --settings RUNTIME --context ID`
+Bind the installed runner hash. `runtime verify --settings RUNTIME --context ID`
 checks selection. Remote identity is the same managed resource domain regardless
 of the host journal; changing a local journal cannot reset remote accounting.
 
 ## Trust, installation and resource domain
 
-Run the read-only bootstrap trust/preflight path for your observed environment.
-`bootstrap repair-plan --profile ENV --output NEW_PLAN` enumerates exact code
+Run the read-only runner trust/preflight path for your observed environment.
+`runner repair-plan --profile ENV --output NEW_PLAN` enumerates exact code
 paths, symlinks, metadata, contents and proposed shared-write-bit removals.
-`bootstrap export-repair-helper --output NEW_HELPER` exports the fixed helper.
+`runner export-repair-helper --output NEW_HELPER` exports the fixed helper.
 Your VM owner must approve that exact bounded plan, preserve rollback information,
 and apply only its listed targets via their normal administrator access. See the
 exported helper's `--help` for apply/verify/rollback and exact plan hash arguments.
@@ -74,8 +74,8 @@ No recursive broad chmod/chown, license changes or security disabling is needed.
 Do not blindly trust unexplained content changes. Recheck under the normal user.
 Writable caches, logs and results must remain separate from executable code.
 
-`bootstrap bundle`, `bootstrap export-installer`, fixed `bootstrap preflight`,
-`bootstrap install` and `bootstrap verify` prepare/install the coexisting operator
+`runner bundle`, `runner export-installer`, fixed `runner preflight`,
+`runner install` and `runner verify` prepare/install the coexisting operator
 runner. Each accepts only package-bound assets and expected hashes. Old runtime
 versions, legacy launcher and pointers are retained. Stage/update is never an
 import side effect. Follow command output and help for exact plan/installer paths.
@@ -146,8 +146,10 @@ approval; that authority must come from the VM operator's actual decision.
 
 For new narrowly scoped grants use the versioned design/analysis pair schema;
 retained v1 grants have their historic all-design/all-analysis product meaning.
-Remote paired v2 support must be qualified before activation; the current
-foundation rejects unsupported versions. Do not silently broaden a retained grant.
+The remote confirmation/native gate accepts the same exact v2 pairs and rejects
+unselected combinations. Its parser/gate is tested on the standard VM Python2.6;
+a new deployment must still qualify its actual jobs. Unsupported versions reject.
+Do not silently broaden a retained grant.
 Check its expiry, per-grant scope and current global ledger before each new job.
 Use `native-runtime activate`, then `native-runtime preflight`/`inspect` to prove
 active installation, normal UID, executable trust, current policy/disk and counters.

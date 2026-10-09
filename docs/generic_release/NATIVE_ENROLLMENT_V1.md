@@ -1,3 +1,45 @@
+## Current native enrollment and reviewed authority checkpoint, 2026-10-09
+
+Continuous direct GREL02-08, conditional normal related-PR merges and the current
+managed VM retained16GiB policy remain authorized. Spectre500/corrections20, disk
+floors, old results/failures/journals/replay and original/vendor contents are binding.
+Exact-candidate tag/Release/upload still needs final public approval. Prior dated
+limits/exclusions below remain historical. No phase or routine path reapproval.
+
+Normally integrated reviewed PR144 parent55f57f2/main eda060e preserves grant object/
+raw-byte digest binding, pending cancellation, replay lookup-before-capacity and
+SQLite sidecar concurrency guards. Current native confirmation/gate accepts exact
+v2 design-analysis pairs without broadening preserved v1 documents. Confirmation
+and revoke now publish complete fsynced records atomically; interrupted candidates
+remain evidence. Packaged guide names actual runner/runtime verify commands and
+installed acceptance validates every listed command. Distribution test fixtures
+now include the four explicitly packaged starter resources on Windows as well.
+
+Independent PR145 P1 scope issue is also corrected in the shared native parser:
+nested parameter/include/analysis controls and unbalanced subckt/inline-subckt
+scope reject. All six private actual DC/AC/TRAN baselines reassemble byte-identical
+registration5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190.
+This is local reassembly of actual inputs, not another fresh execution acceptance.
+Real ordinary-user Python2.6/POSIX14 synthetic recovery/authority/scope scenarios
+PASS with live ledger94 attempts/11,409,555,456 reserved bytes unchanged. Remaining
+5,770,313,728 bytes of16GiB. This continuation0 simulations/0 reservations/0 admin
+metadata changes. Existing grant retains8 jobs/1GiB of its previously approved scope.
+
+Local affected263 PASS/43 OS skips; broader parent integration491 PASS/9 skips;
+confirmation/onboarding atomic138 PASS/one skip; Ruff/mypy94/security18/locked audit
+PASS. Exact post-correction wheel/sdist106/107 members match source/license/notices,
+with protected/unexpected content0. Installed starter/offline validation, SDK96
+conditional native schemas, bootstrap and43 operator+20 migration state preservation
+PASS. Those are synthetic installation/protocol evidence, not actual Codex acceptance.
+Final exact hosted CI and refreshed independent automated review remain required.
+
+PR14557bc3ec scope correction is feature-pushed, final hosted/review pending.
+Actual current Codex QA connection remains pending the already requested Restart;
+legacy namespace is still loaded, actual new app jobs0. The configured installed
+QA91ac wheel remains distinct from this source. Fresh installed operator/native
+qualification, final operational matrix, ordered PR145-152 integration and exact
+GREL08 commit/version/artifacts are not finished. Generic release BLOCKED.
+
 # Product circuit enrollment and packaged operator starter, 2026-10-09
 
 Latest native work adds operator-only `native-registration observe` and `assemble`
@@ -57,3 +99,26 @@ Configured bootstrap SDK negotiates96 conditional tools; reinstall/uninstall pre
 prove a new actual Codex job, fresh VM initialization or version upgrade compatibility.
 Later README/checkpoint edits are separate from this local artifact hash receipt;
 final hosted CI and exact candidate packaging still need source-matched receipts.
+
+
+## Reviewed parent and paired authority integration
+
+PR14455f57f2 passed both exact hosted Windows checks and final automated review
+without major findings; all six threads were resolved and main had no protected
+branch/ruleset or formal human-review requirement. Normal expected-head merge
+produced eda060e1a1a984134e25490839c60ec2c2a93eb4, confirmed remotely. This is code
+integration, not generic Cadence acceptance. Bot review is not formal APPROVED.
+This branch normally integrates that parent while retaining its own native runtime,
+registered specification reserved paths, packaged starter and historical evidence.
+
+Confirmation parsing and native match_record now accept closed schema2 exact
+per-design analysis pairs, preserving canonical v1 documents/replay/semantics.
+Malformed/missing/duplicate/incomplete/extra pairs reject before confirmation writes;
+the unapproved cross combinations reject at the native gate. Real UID500/Python2.6
+synthetic verification passed11 scenarios (prior10 plus v1/v2 parsing and all four
+pair combinations), with live ledger94/11,409,555,456 bytes unchanged. This does not
+claim a real v2-authorized Cadence job. Existing actual v1 grant/bundle is untouched.
+Local integration initially exposed stale synthetic fake digests and old transports;
+updated fixtures now load the real byte grant and return absent on the initial
+lookup. Targeted confirmation/gate/ADE/public129 tests PASS; earlier failures retained.
+Final broader integration/package/hosted review checks remain required.

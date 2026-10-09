@@ -167,6 +167,11 @@ class ConfirmedGate(object):
         if (
             plan["request"]["design_id"] not in grant["design_ids"]
             or plan["analysis"] not in grant["analyses"]
+            or (
+                grant["schema_version"] == 2
+                and (plan["request"]["design_id"], plan["analysis"]) not in set(
+                    (scope["design_id"], scope["analysis"]) for scope in grant["design_analyses"])
+            )
         ):
             raise ValueError("native_gate_confirmed_scope")
         regions = [

@@ -238,18 +238,18 @@ def test_tampered_record_rejected(confirmed_domain, change):
 
 def test_confirmation_response_loss_reuses_original_record(confirmed_domain, monkeypatch):
     root, _, request = confirmed_domain
-    original = accounting.write_new
+    original = native.write_atomic_record
 
-    def lost(path, value):
-        original(path, value)
+    def lost(path, value, helper):
+        original(path, value, helper)
         if path.endswith(request["grant_sha256"] + ".json"):
             raise OSError("synthetic response loss after durable write")
 
-    monkeypatch.setattr(accounting, "write_new", lost)
+    monkeypatch.setattr(native, "write_atomic_record", lost)
     with pytest.raises(OSError):
         native.confirm(request, "a" * 64)
     before = snapshot(root)
-    monkeypatch.setattr(accounting, "write_new", original)
+    monkeypatch.setattr(native, "write_atomic_record", original)
     assert not native.confirm(request, "a" * 64)["changed"]
     assert snapshot(root) == before
 
@@ -373,4 +373,90 @@ def test_logical_grant_parses_modern_contract_and_internal_path_is_not_live_auth
     assert (
         native.grant_document(raw, native.digest(raw.encode("ascii")), profile, binding, False)
         == wrong
+    )
+
+
+@pytest.mark.parametrize("fault", [None, "missing", "duplicate", "outside", "incomplete", "extra"])
+def test_v2_confirm_exact_pairs_and_reject_malformed_without_writes(confirmed_domain, fault):
+    root, profile, request = confirmed_domain
+    grant = json.loads(request["grant_json"])
+    grant.update(
+        schema_version=2,
+        analyses=["dc", "ac"],
+        design_analyses=[
+            dict(design_id="new-rc", analysis="dc"),
+            dict(design_id="new-mos", analysis="ac"),
+        ],
+    )
+    if fault == "missing":
+        del grant["design_analyses"]
+    elif fault == "duplicate":
+        grant["design_analyses"].append(grant["design_analyses"][0])
+    elif fault == "outside":
+        grant["design_analyses"][0]["design_id"] = "not-registered"
+    elif fault == "incomplete":
+        grant["design_analyses"].pop()
+    elif fault == "extra":
+        grant["design_analyses"][0]["action"] = "shell"
+    raw = native.canonical(grant)
+    request.update(grant_json=raw.decode("ascii"), grant_sha256=native.digest(raw))
+    before = snapshot(root)
+    if fault:
+        with pytest.raises(ValueError):
+            native.confirm(request, "a" * 64)
+        assert snapshot(root) == before
+    else:
+        result = native.confirm(request, "a" * 64)
+        assert result["changed"] and result["new_reservations"] == 0
+        value, _ = native.inspect(
+            profile, request["grant_sha256"], request["identity_manifest_sha256"]
+        )
+        assert value["grant"] == grant and value["grant"]["schema_version"] == 2
+        assert not native.confirm(request, "a" * 64)["changed"]
+
+
+@pytest.mark.parametrize("action", ["confirm", "revoke"])
+def test_interrupted_authority_record_can_retry_without_altering_evidence(
+    confirmed_domain, monkeypatch, action
+):
+    import os
+
+    root, profile, request = confirmed_domain
+    if action == "revoke":
+        native.confirm(request, "a" * 64)
+    prior = snapshot(root)
+    revoke_request = dict(
+        profile=profile,
+        grant_sha256=request["grant_sha256"],
+        identity_manifest_sha256=request["identity_manifest_sha256"],
+        operator_authority="SYNTHETIC_ONLY-revocation",
+    )
+    selected, arguments = (
+        (native.confirm, request) if action == "confirm" else (native.revoke, revoke_request)
+    )
+    original = os.write
+
+    def interrupted(fd, data):
+        original(fd, data[:5])
+        raise OSError("synthetic interrupted authority write")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "write", interrupted)
+        with pytest.raises(OSError):
+            selected(arguments, "a" * 64)
+    partial = {p: raw for p, raw in snapshot(root).items() if ".confirmation-record-" in p}
+    assert partial and all(snapshot(root)[p] == raw for p, raw in prior.items())
+    target = (
+        root
+        / "operator-confirmations"
+        / (request["grant_sha256"] + (".json" if action == "confirm" else ".revoked.json"))
+    )
+    assert not target.exists()
+    assert selected(arguments, "a" * 64)["changed"]
+    assert not selected(arguments, "a" * 64)["changed"]
+    after = snapshot(root)
+    assert all(after[p] == raw for p, raw in prior.items())
+    assert all(after[p] == raw for p, raw in partial.items())
+    assert native.inspect(
+        profile, request["grant_sha256"], request["identity_manifest_sha256"], False
     )

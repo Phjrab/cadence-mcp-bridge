@@ -371,7 +371,27 @@ def static_fingerprint(lines):
 
 def partition_input(data):
     parameters, includes, analyses, static = {}, [], [], []
+    scopes = []
     for line in statements(data):
+        words = line.split()
+        opening = words[1:] if words[0] == "inline" else words
+        if opening and opening[0] == "subckt":
+            if len(opening) < 2 or not full_match(r"[A-Za-z][A-Za-z0-9_#-]{0,63}", opening[1]):
+                raise ValueError("spectre_scope_unsupported")
+            scopes.append(opening[1])
+            static.append(line)
+            continue
+        if words[0] == "ends":
+            if not scopes or len(words) > 2 or (len(words) == 2 and words[1] != scopes[-1]):
+                raise ValueError("spectre_scope_unsupported")
+            scopes.pop()
+            static.append(line)
+            continue
+        if scopes and (
+            line.startswith(("parameters ", "include "))
+            or re.match(r"[A-Za-z][A-Za-z0-9_]* (dc|ac|tran)(?: |$)", line)
+        ):
+            raise ValueError("spectre_scoped_inputs_unsupported")
         if line.startswith("parameters "):
             for pair in line.split()[1:]:
                 found = full_match(r"([A-Za-z][A-Za-z0-9_#-]{0,63})=(.+)", pair)
@@ -394,6 +414,8 @@ def partition_input(data):
                 analyses.append((found.group(1), found.group(2) or ""))
             else:
                 static.append(line)
+    if scopes:
+        raise ValueError("spectre_scope_unsupported")
     return parameters, includes, analyses, static
 
 

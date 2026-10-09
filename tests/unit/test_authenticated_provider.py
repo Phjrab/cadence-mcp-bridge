@@ -12,6 +12,7 @@ from cadence_mcp_bridge import authenticated_provider as wire
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.operator_lifecycle import OperatorLifecycle
 from cadence_mcp_bridge.operator_operations import OperationRejected, prepare_plan
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 operator = operator_fixture
 
@@ -19,7 +20,7 @@ operator = operator_fixture
 @pytest.fixture
 def connected(operator, monkeypatch):
     context, grant, request, settings = operator
-    plan = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    plan = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     provider = wire.AuthenticatedOperatorProvider(
         context,
         wire.NativeProviderBinding(
@@ -172,7 +173,11 @@ async def test_timeout_after_local_intent_restart_only_looks_up(connected, monke
             envelope(
                 provider,
                 action,
-                accounting(plan) if action == "authorize" else observation(op, plan),
+                accounting(plan)
+                if action == "authorize"
+                else None
+                if action == "lookup" and len(calls) == 1
+                else observation(op, plan),
             ),
             b"",
         )
@@ -182,16 +187,16 @@ async def test_timeout_after_local_intent_restart_only_looks_up(connected, monke
         provider.context, AnalysisStore(provider.context.binding.analysis_journal), provider
     )
     with pytest.raises(OperationRejected):
-        await lifecycle.submit(op, grant, "c" * 64, request, plan.plan_sha256)
+        await lifecycle.submit(op, grant, canonical_digest(grant), request, plan.plan_sha256)
     assert lifecycle.read(op, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
     restarted = OperatorLifecycle(provider.context, AnalysisStore(lifecycle.store.path), provider)
     assert (
-        await restarted.submit(op, grant, "c" * 64, request, plan.plan_sha256)
+        await restarted.submit(op, grant, canonical_digest(grant), request, plan.plan_sha256)
     ).progress.phase == "DISPATCHED"
     assert (
-        await restarted.submit(op, grant, "c" * 64, request, plan.plan_sha256)
+        await restarted.submit(op, grant, canonical_digest(grant), request, plan.plan_sha256)
     ).progress.phase == "DISPATCHED"
-    assert calls == ["authorize", "accept", "lookup", "lookup"]
+    assert calls == ["lookup", "authorize", "accept", "lookup", "lookup"]
 
 
 @pytest.mark.asyncio

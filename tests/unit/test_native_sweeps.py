@@ -96,7 +96,7 @@ def sweep_native(operator):
             from cadence_mcp_bridge.operator_operations import OperationRequest
 
             requested = OperationRequest.model_validate_json(requested.model_dump_json())
-            plan = prepare_plan(context, self.grant, "a" * 64, requested, 100)
+            plan = prepare_plan(context, self.grant, canonical_digest(self.grant), requested, 100)
             if self.changed:
                 plan = plan.model_copy(update={"runner_sha256": "c" * 64})
             return SimpleNamespace(plan=plan)

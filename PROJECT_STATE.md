@@ -1,3 +1,45 @@
+## Current native enrollment and reviewed authority checkpoint, 2026-10-09
+
+Continuous direct GREL02-08, conditional normal related-PR merges and the current
+managed VM retained16GiB policy remain authorized. Spectre500/corrections20, disk
+floors, old results/failures/journals/replay and original/vendor contents are binding.
+Exact-candidate tag/Release/upload still needs final public approval. Prior dated
+limits/exclusions below remain historical. No phase or routine path reapproval.
+
+Normally integrated reviewed PR144 parent55f57f2/main eda060e preserves grant object/
+raw-byte digest binding, pending cancellation, replay lookup-before-capacity and
+SQLite sidecar concurrency guards. Current native confirmation/gate accepts exact
+v2 design-analysis pairs without broadening preserved v1 documents. Confirmation
+and revoke now publish complete fsynced records atomically; interrupted candidates
+remain evidence. Packaged guide names actual runner/runtime verify commands and
+installed acceptance validates every listed command. Distribution test fixtures
+now include the four explicitly packaged starter resources on Windows as well.
+
+Independent PR145 P1 scope issue is also corrected in the shared native parser:
+nested parameter/include/analysis controls and unbalanced subckt/inline-subckt
+scope reject. All six private actual DC/AC/TRAN baselines reassemble byte-identical
+registration5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190.
+This is local reassembly of actual inputs, not another fresh execution acceptance.
+Real ordinary-user Python2.6/POSIX14 synthetic recovery/authority/scope scenarios
+PASS with live ledger94 attempts/11,409,555,456 reserved bytes unchanged. Remaining
+5,770,313,728 bytes of16GiB. This continuation0 simulations/0 reservations/0 admin
+metadata changes. Existing grant retains8 jobs/1GiB of its previously approved scope.
+
+Local affected263 PASS/43 OS skips; broader parent integration491 PASS/9 skips;
+confirmation/onboarding atomic138 PASS/one skip; Ruff/mypy94/security18/locked audit
+PASS. Exact post-correction wheel/sdist106/107 members match source/license/notices,
+with protected/unexpected content0. Installed starter/offline validation, SDK96
+conditional native schemas, bootstrap and43 operator+20 migration state preservation
+PASS. Those are synthetic installation/protocol evidence, not actual Codex acceptance.
+Final exact hosted CI and refreshed independent automated review remain required.
+
+PR14557bc3ec scope correction is feature-pushed, final hosted/review pending.
+Actual current Codex QA connection remains pending the already requested Restart;
+legacy namespace is still loaded, actual new app jobs0. The configured installed
+QA91ac wheel remains distinct from this source. Fresh installed operator/native
+qualification, final operational matrix, ordered PR145-152 integration and exact
+GREL08 commit/version/artifacts are not finished. Generic release BLOCKED.
+
 ## Product enrollment checkpoint, 2026-10-09
 
 Fixed read-only observe/assemble handles two new circuits and six actual DC/AC/TRAN
@@ -536,6 +578,59 @@ Native trust/provider/copy/API/new DCACtran/extraction/Sweep/clean app remain
 incomplete. General release BLOCKED. No simulations/reservations/deployments/
 deletions/protected repairs/merge/GREL08/publication. Historical overlays below
 remain scoped evidence; do not promote synthetic inputs to native qualification.
+## PR144 final identity/SQLite correction checkpoint, 2026-10-09
+
+Grant object/document hash binding is enforced before planning and pending
+cancellation. Exact historic v1/v2 document hashes are preserved. Hosted da10e616
+push failed concurrent admission on a vanished SQLite sidecar; one-lstat guard
+fix preserves hardlink/type rejection.131 related local tests, Ruff/mypy68 and
+installed19-file reinstall/uninstall conservation PASS. Final hosted CI/review
+pending; do not merge on the earlier passing PR check alone. General native
+acceptance remains a separate unmerged PR152 track. Direct GREL02–08/16GiB and
+conditional normal-merge authority continue; no tag/Release/upload consent.
+
+## PR144 remote identity recovery checkpoint, 2026-10-09
+
+Fixed remote duplicate lookup now precedes fresh-spend capacity checks, preserving
+existing remote job observation at exhausted quota without another accept. Wrong
+identity cannot create a local record. Local171 PASS/2 skips and installed19-file
+preservation PASS; final hosted review/CI pending. v2 paired scope and historical
+v1 bytes remain preserved. Continuous GREL02–08/normal merge authority remains.
+
+## PR144 paired authority correction, 2026-10-09
+
+Final review requires explicit per-design analysis scope. Version2 paired grants
+now deny unintended cross combinations while retaining v1 bytes/replay and explicit
+Cartesian legacy semantics. Foundation remote-v2 admission remains unqualified.
+Local169 PASS/2 skips, Ruff/mypy68 and installed19-state preservation PASS.
+Final exact-head review/CI pending; continuousGREL02–08 and conditional normal
+merge authority remain, public tag/Release/upload still excluded.
+
+## GREL03 integration refresh, 2026-10-09
+
+PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.
+This branch integrates parent routing/context checks while retaining its own short
+Windows test path, installed lifecycle/bootstrap and state-preservation gates.
+The synthetic PowerShell lock-holder readiness wait retains parent's45s allowance;
+production lock denial is unchanged. Current direct user permits conditional normal
+related PR merges, continuousGREL02–08 and current-VM16GiB, with consumed records
+preserved. Dated exclusions below are history. Public tag/Release still unapproved.
+Refreshed affected tests, Ruff/mypy68 and exact isolated package/context/bootstrap/
+reinstall/uninstall19-file preservation PASS; hosted exact-head checks and final
+review remain required. Old a7fcf45 receipts remain history.
+
+## GREL02 integration refresh, 2026-10-09
+
+PR142 normally merged as239a1949923fdae210d50e1232b6b7b41e60c7de after final
+review and exact hosted checks. PR143 retargeted to main and receives that parent
+through a normal merge without history rewrite. Routing/hostname/journal snapshot
+fixes and installed context verifier are preserved. Affected85 tests PASS/two
+OS skips, Ruff/mypy66 and exact isolated package/context/CLI/uninstall PASS.
+Bootstrap behavior is covered by the affected tests; this refreshed artifact did
+not run a reinstall-state preservation test. Final hosted checks and review still required before PR143 merge.
+No new VM simulation or reservation from this repository integration refresh.
+Earlier dated restrictions below are historical under the latest direct user's
+conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
 
 ## Final durable lifecycle source checkpoint, 2026-10-08
 

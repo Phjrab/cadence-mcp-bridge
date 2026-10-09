@@ -238,11 +238,13 @@ def grant_document(raw, expected, profile, binding, live=True):
     grant = json.loads(raw)
     if canonical(grant) != data:
         raise ValueError("confirmation_canonical_grant_required")
+    version = grant.get("schema_version")
+    keys = set(GRANT_KEYS) | (set(("design_analyses",)) if version == 2 else set())
     if (
-        set(grant) != set(GRANT_KEYS)
+        set(grant) != keys
         or type(grant["schema_version"]) is not int
         or (
-            grant["schema_version"] != 1
+            version not in (1, 2)
             or grant["authorization_source"] != "explicit_operator_record"
             or (
                 grant["ledger_ref"] != accounting.LEDGER_REF
@@ -276,6 +278,24 @@ def grant_document(raw, expected, profile, binding, live=True):
             )
         ):
             raise ValueError("confirmation_grant_scope")
+    if version == 2:
+        scopes = grant["design_analyses"]
+        if not isinstance(scopes, list) or not 1 <= len(scopes) <= 48:
+            raise ValueError("confirmation_design_analysis_scope")
+        pairs = set()
+        for scope in scopes:
+            if not isinstance(scope, dict) or set(scope) != set(("design_id", "analysis")):
+                raise ValueError("confirmation_design_analysis_scope")
+            if (scope["design_id"] not in grant["design_ids"]
+                    or scope["analysis"] not in grant["analyses"]):
+                raise ValueError("confirmation_design_analysis_scope")
+            pair = (scope["design_id"], scope["analysis"])
+            if pair in pairs:
+                raise ValueError("confirmation_design_analysis_scope")
+            pairs.add(pair)
+        if set(p[0] for p in pairs) != set(grant["design_ids"]) or set(
+            p[1] for p in pairs) != set(grant["analyses"]):
+            raise ValueError("confirmation_design_analysis_scope")
     for name in (
         "attempt_limit",
         "result_reserved_bytes_limit",
@@ -326,6 +346,43 @@ def authority_reference(value):
     if not matches(r"^[A-Za-z0-9][A-Za-z0-9 ._:/#-]{0,255}$", value):
         raise ValueError("confirmation_authority_reference")
     return value
+
+
+def write_atomic_record(path, value, accounting):
+    """Publish only complete/fsynced records under the existing lifetime flock.
+
+    Interrupted private candidates remain evidence. Retry creates another bounded
+    candidate instead of deleting or parsing a truncated final-path authority record.
+    """
+    raw = canonical(value)
+    if len(raw) > LIMIT:
+        raise ValueError("confirmation_record_size")
+    parent = os.path.dirname(path)
+    private(parent, True)
+    if os.path.lexists(path):
+        if read_private(path) != raw:
+            raise ValueError("confirmation_record_conflict")
+        return
+    name = ".confirmation-record-" + hashlib.sha256(os.urandom(32)).hexdigest()
+    candidate = os.path.join(parent, name)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(candidate, flags, 384)
+    try:
+        offset = 0
+        while offset < len(raw):
+            wrote = os.write(fd, raw[offset:])
+            if wrote <= 0:
+                raise ValueError("confirmation_record_short_write")
+            offset += wrote
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    accounting.sync_directory(parent)
+    if read_private(candidate) != raw or os.path.lexists(path):
+        raise ValueError("confirmation_record_publish_conflict")
+    os.rename(candidate, path)
+    accounting.sync_directory(parent)
+
 
 
 def confirm(request, assets):
@@ -379,7 +436,7 @@ def confirm(request, assets):
                 raise ValueError("confirmation_existing_conflict")
             changed = False
         else:
-            accounting.write_new(target, value)
+            write_atomic_record(target, value, accounting)
             changed = True
         return {
             "status": "OS_OPERATOR_CONFIRMATION_RECORDED",
@@ -487,7 +544,7 @@ def revoke(request, assets):
                 raise ValueError("confirmation_revocation_conflict")
             changed = False
         else:
-            accounting.write_new(target, record)
+            write_atomic_record(target, record, accounting)
             changed = True
         return {
             "status": "OS_OPERATOR_CONFIRMATION_REVOKED",
