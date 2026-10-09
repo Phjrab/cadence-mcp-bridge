@@ -16,7 +16,7 @@ def run_fixed(
     timeout: float = 30,
     limit: int = 32768,
 ) -> tuple[int, bytes, bytes]:
-    if len(request) > limit or not 1 <= limit <= 262144 or not 0 < timeout <= 60:
+    if len(request) > limit or not 1 <= limit <= 1048576 or not 0 < timeout <= 60:
         raise ValueError("fixed_transport_bounds")
     process = subprocess.Popen(
         argv,

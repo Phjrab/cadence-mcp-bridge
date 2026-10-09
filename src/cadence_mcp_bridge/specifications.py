@@ -211,15 +211,23 @@ def evaluate_fact(
     ):
         return "CONDITION_MISMATCH"
     # Keep the source float's shortest round-trip decimal; do not round to display precision.
-    observed, target = Decimal(str(value)), Decimal(c.target)
-    if c.comparison == "range":
-        assert c.upper_target is not None
-        matched = target <= observed <= Decimal(c.upper_target)
-    elif c.comparison == ">=":
+    observed = Decimal(str(value))
+    return compare_numeric_target(c.comparison, observed, c.target, c.upper_target)
+
+
+def compare_numeric_target(
+    comparison: Comparison, observed: Decimal, target_text: str, upper_target: str | None
+) -> Literal["PASS", "FAIL"]:
+    """Shared exact decimal comparator after each adapter validates conditions and units."""
+    target = Decimal(target_text)
+    if comparison == "range":
+        assert upper_target is not None
+        matched = target <= observed <= Decimal(upper_target)
+    elif comparison == ">=":
         matched = observed >= target
-    elif c.comparison == "<=":
+    elif comparison == "<=":
         matched = observed <= target
-    elif c.comparison == ">":
+    elif comparison == ">":
         matched = observed > target
     else:
         matched = observed < target

@@ -34,6 +34,7 @@ from cadence_mcp_bridge.onboarding import (
     OnboardingRejected,
     configured_registries_valid,
     export_client_config,
+    export_starter,
     verify_contracts,
 )
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry, load_pdk_registry, register_pdk_adapters
@@ -58,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "serve-operator", help="Serve an explicit operator context; no legacy fallback."
     )
+    starter = subparsers.add_parser(
+        "operator-starter", help="Export packaged fictional templates and guide."
+    )
+    starter.add_argument("--output", type=Path, required=True)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -73,13 +78,15 @@ def build_parser() -> argparse.ArgumentParser:
     domain_actions = domain.add_subparsers(dest="domain_action", required=True)
     domain_export = domain_actions.add_parser("export-helper-bundle")
     domain_export.add_argument("--output", type=Path, required=True)
-    domain_plan = domain_actions.add_parser("plan-existing", aliases=["plan-legacy-seal"])
+    domain_plan = domain_actions.add_parser(
+        "plan-existing", aliases=["plan-legacy-seal", "plan-result-limit-v6"]
+    )
     domain_plan.add_argument("--profile", type=Path, required=True)
     domain_plan.add_argument("--output", type=Path, required=True)
     domain_plan.add_argument("--expected-helper-sha256", required=True)
     setup_export = domain_actions.add_parser("export-setup-helper-bundle")
     setup_export.add_argument("--output", type=Path, required=True)
-    setup_stage = domain_actions.add_parser("stage-setup-helper")
+    setup_stage = domain_actions.add_parser("stage-setup-helper", aliases=["stage-helper"])
     setup_stage.add_argument("--profile", type=Path, required=True)
     setup_stage.add_argument("--expected-helper-sha256", required=True)
     setup_plan = domain_actions.add_parser("plan-fresh")
@@ -98,13 +105,17 @@ def build_parser() -> argparse.ArgumentParser:
     setup_existing.add_argument("--expected-helper-sha256", required=True)
     setup_existing.add_argument("--identity-manifest-sha256", required=True)
     setup_existing.add_argument("--operator-authority", required=True)
-    domain_apply = domain_actions.add_parser("apply-existing", aliases=["seal-existing"])
+    domain_apply = domain_actions.add_parser(
+        "apply-existing", aliases=["seal-existing", "apply-result-limit-v6"]
+    )
     for name in ("profile", "plan", "output"):
         domain_apply.add_argument("--" + name, type=Path, required=True)
     domain_apply.add_argument("--expected-plan-sha256", required=True)
     domain_apply.add_argument("--expected-helper-sha256", required=True)
     domain_apply.add_argument("--operator-authority", required=True)
-    operation = subparsers.add_parser("operation", help="Local authority and plan verification.")
+    operation = subparsers.add_parser(
+        "operation", help="Operator authority/plan and fixed native lifecycle."
+    )
     operation_actions = operation.add_subparsers(dest="operation_action", required=True)
     operation_actions.add_parser("grant-schema")
     operation_actions.add_parser("request-schema")
@@ -121,6 +132,102 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--expected-grant-sha256", required=True)
         if name == "plan":
             command.add_argument("--request", type=Path, required=True)
+    for name in ("submit", "reconcile", "cancel-pending", "result"):
+        command = operation_actions.add_parser(name)
+        for field in ("settings", "provider-binding"):
+            command.add_argument("--" + field, type=Path, required=True)
+        for field in (
+            "context",
+            "operation-id",
+            "expected-plan-sha256",
+            "expected-provider-sha256",
+        ):
+            command.add_argument("--" + field, required=True)
+        if name not in ("reconcile", "result"):
+            command.add_argument("--grant", type=Path, required=True)
+            command.add_argument("--expected-grant-sha256", required=True)
+        if name == "submit":
+            command.add_argument("--request", type=Path, required=True)
+    authority = subparsers.add_parser(
+        "operator-authority", help="Explicit authenticated OS-operator confirmation; no EDA."
+    )
+    authority_actions = authority.add_subparsers(dest="authority_action", required=True)
+    authority_export = authority_actions.add_parser("export-helper")
+    authority_export.add_argument("--output", type=Path, required=True)
+    authority_stage = authority_actions.add_parser("stage")
+    authority_stage.add_argument("--profile", type=Path, required=True)
+    authority_stage.add_argument("--expected-helper-sha256", required=True)
+    for name in ("confirm", "inspect", "revoke"):
+        command = authority_actions.add_parser(name)
+        for field in ("settings", "grant", "output"):
+            command.add_argument("--" + field, type=Path, required=True)
+        for field in (
+            "context",
+            "expected-grant-sha256",
+            "identity-manifest-sha256",
+            "expected-helper-sha256",
+        ):
+            command.add_argument("--" + field, required=True)
+        if name != "inspect":
+            command.add_argument("--operator-authority", required=True)
+    specification = subparsers.add_parser("native-specification", help="Registered native targets.")
+    spec_actions = specification.add_subparsers(dest="spec_action", required=True)
+    spec_actions.add_parser("schema")
+    for name in ("list", "evaluate"):
+        command = spec_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        if name == "evaluate":
+            command.add_argument("--spec-id", required=True)
+            command.add_argument("--expected-contract-sha256", required=True)
+            command.add_argument("--operation-id")
+            command.add_argument("--expected-plan-sha256")
+    sweep = subparsers.add_parser("native-sweep", help="Bounded registered native1D lifecycle.")
+    sweep_actions = sweep.add_subparsers(dest="sweep_action", required=True)
+    sweep_actions.add_parser("schema")
+    for name in ("plan", "submit", "advance", "status", "result"):
+        command = sweep_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        if name in ("plan", "submit"):
+            command.add_argument("--request", type=Path, required=True)
+        if name != "plan":
+            command.add_argument("--sweep-id", required=True)
+            command.add_argument("--expected-plan-sha256", required=True)
+    enrollment = subparsers.add_parser(
+        "native-registration", help="Operator-only read-only OA/ADE/dependency fingerprints."
+    )
+    enrollment_actions = enrollment.add_subparsers(dest="enrollment_action", required=True)
+    enrollment_actions.add_parser("schema")
+    enrollment_observe = enrollment_actions.add_parser("observe")
+    for field in ("settings", "request", "output"):
+        enrollment_observe.add_argument("--" + field, type=Path, required=True)
+    enrollment_observe.add_argument("--context", required=True)
+    enrollment_assemble = enrollment_actions.add_parser("assemble")
+    enrollment_assemble.add_argument("--settings", type=Path, required=True)
+    enrollment_assemble.add_argument("--context", required=True)
+    enrollment_assemble.add_argument("--identity-manifest-sha256", required=True)
+    enrollment_assemble.add_argument("--output", type=Path, required=True)
+    for field in ("request", "record", "reader-definition"):
+        enrollment_assemble.add_argument("--" + field, type=Path, required=True, action="append")
+    enrollment_actions.add_parser("reader-schema")
+    native = subparsers.add_parser(
+        "native-runtime", help="Explicit operator fixed native runtime export/setup; no grant."
+    )
+    native_actions = native.add_subparsers(dest="native_action", required=True)
+    native_actions.add_parser("schema")
+    native_bundle = native_actions.add_parser("bundle")
+    for field in ("settings", "registration", "output"):
+        native_bundle.add_argument("--" + field, type=Path, required=True)
+    native_bundle.add_argument("--context", required=True)
+    for name in ("stage", "activate", "inspect", "revoke", "update", "preflight"):
+        command = native_actions.add_parser(name)
+        command.add_argument("--bundle", type=Path, required=True)
+        command.add_argument("--expected-manifest-sha256", required=True)
+        if name not in ("inspect", "preflight"):
+            command.add_argument("--operator-authority", required=True)
+        if name == "update":
+            command.add_argument("--previous-manifest-sha256", required=True)
     ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
     ade_actions = ade.add_subparsers(dest="ade_action", required=True)
     ade_actions.add_parser("schema")
@@ -175,6 +282,7 @@ def build_parser() -> argparse.ArgumentParser:
     repair_plan = actions.add_parser("repair-plan")
     repair_plan.add_argument("--profile", type=Path, required=True)
     repair_plan.add_argument("--output", type=Path, required=True)
+    repair_plan.add_argument("--model-include", type=Path)
     repair_export = actions.add_parser("export-repair-helper")
     repair_export.add_argument("--output", type=Path, required=True)
     preflight = actions.add_parser("preflight")
@@ -238,6 +346,54 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-starter":
+        try:
+            result = export_starter(arguments.output)
+        except (OSError, ValueError):
+            print(json.dumps(dict(status="rejected", reason="starter_output_invalid")))
+            return 1
+        print(json.dumps(result, sort_keys=True))
+        return 0
+    if arguments.command == "native-registration":
+        from cadence_mcp_bridge.native_registration import (
+            ReaderDefinition,
+            RegistrationProbeRequest,
+            assemble,
+            operator_observe,
+        )
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.enrollment_action == "schema":
+                enrollment_result = RegistrationProbeRequest.model_json_schema()
+            elif arguments.enrollment_action == "reader-schema":
+                enrollment_result = ReaderDefinition.model_json_schema()
+            else:
+                contexts = load_runtime(arguments.settings.resolve())
+                context = next(
+                    (c for c in contexts if c.binding.context_id == arguments.context), None
+                )
+                if context is None:
+                    raise OperationRejected("unknown_context_id")
+                if arguments.enrollment_action == "assemble":
+                    enrollment_result = assemble(
+                        context,
+                        arguments.request,
+                        arguments.record,
+                        arguments.reader_definition,
+                        arguments.identity_manifest_sha256,
+                        arguments.output.resolve(),
+                    )
+                else:
+                    enrollment_result = operator_observe(
+                        context, arguments.request.resolve(), arguments.output.resolve()
+                    )
+        except (OSError, ValueError, KeyError):
+            print(json.dumps({"status": "blocked", "reason": "native_registration_invalid"}))
+            return 1
+        print(json.dumps(enrollment_result, sort_keys=True))
+        return 0
     if arguments.command == "ade-input":
         from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, operator_inputs
         from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -328,20 +484,223 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
         return 0
+    if arguments.command == "native-specification":
+        import asyncio
+
+        from cadence_mcp_bridge.errors import BridgeError
+        from cadence_mcp_bridge.native_service import NativeOperationService
+        from cadence_mcp_bridge.native_specifications import (
+            NativeSpecificationCatalog,
+            NativeSpecificationQuery,
+            NativeSpecificationSupervisor,
+        )
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.spec_action == "schema":
+                spec_result = NativeSpecificationCatalog.model_json_schema()
+            else:
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings.resolve())
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
+                if context is None:
+                    raise ValueError("unknown_context")
+                specifications = NativeSpecificationSupervisor(NativeOperationService(context))
+                if arguments.spec_action == "list":
+                    spec_result = specifications.listing()
+                else:
+                    spec_result = asyncio.run(
+                        specifications.result(
+                            NativeSpecificationQuery(
+                                spec_id=arguments.spec_id,
+                                expected_contract_sha256=arguments.expected_contract_sha256,
+                                operation_id=arguments.operation_id,
+                                expected_plan_sha256=arguments.expected_plan_sha256,
+                            )
+                        )
+                    ).model_dump(mode="json")
+        except (BridgeError, ValueError, OSError):
+            print(
+                json.dumps(
+                    {"status": "NATIVE_SPECIFICATION_REJECTED", "execution_authorized": False}
+                )
+            )
+            return 1
+        print(json.dumps(spec_result, sort_keys=True, allow_nan=False))
+        return 0
+    if arguments.command == "native-sweep":
+        import asyncio
+
+        from cadence_mcp_bridge.errors import BridgeError
+        from cadence_mcp_bridge.native_service import NativeOperationService
+        from cadence_mcp_bridge.native_sweeps import (
+            NativeSweepQuery,
+            NativeSweepRequest,
+            NativeSweepSubmission,
+            NativeSweepSupervisor,
+        )
+        from cadence_mcp_bridge.operator_operations import bounded_document
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        async def run_sweep() -> dict[str, object]:
+            if arguments.sweep_action == "schema":
+                return NativeSweepRequest.model_json_schema()
+            context = next(
+                (
+                    c
+                    for c in load_runtime(arguments.settings.resolve())
+                    if c.binding.context_id == arguments.context
+                ),
+                None,
+            )
+            if context is None:
+                raise ValueError("unknown_context")
+            native = NativeOperationService(context)
+            supervisor = NativeSweepSupervisor(native)
+            if arguments.sweep_action in ("plan", "submit"):
+                request = NativeSweepRequest.model_validate_json(
+                    bounded_document(arguments.request)
+                )
+            if arguments.sweep_action == "plan":
+                return (await supervisor.plan(request)).model_dump(mode="json")
+            query = NativeSweepQuery(
+                sweep_id=arguments.sweep_id, expected_plan_sha256=arguments.expected_plan_sha256
+            )
+            if arguments.sweep_action == "submit":
+                result = await supervisor.submit(
+                    NativeSweepSubmission(**query.model_dump(), request=request)
+                )
+            elif arguments.sweep_action == "advance":
+                result = await supervisor.advance(query)
+            elif arguments.sweep_action == "status":
+                result = await supervisor.status(query)
+            else:
+                return (await supervisor.result(query)).model_dump(mode="json")
+            return result.model_dump(mode="json")
+
+        try:
+            result = asyncio.run(run_sweep())
+        except (BridgeError, ValueError, OSError):
+            print(json.dumps({"status": "NATIVE_SWEEP_REJECTED", "execution_authorized": False}))
+            return 1
+        print(json.dumps(result, sort_keys=True, allow_nan=False))
+        return 0
+    if arguments.command == "native-runtime":
+        from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle, setup_runtime
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.native_action == "schema":
+                native_result = NativeRegistration.model_json_schema()
+            elif arguments.native_action != "bundle":
+                native_result = setup_runtime(
+                    arguments.bundle,
+                    arguments.expected_manifest_sha256,
+                    arguments.native_action,
+                    getattr(arguments, "operator_authority", None),
+                    getattr(arguments, "previous_manifest_sha256", None),
+                )
+            else:
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings.resolve())
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
+                if context is None:
+                    raise OperationRejected("native_runtime_unknown_context")
+                native_result = bundle(context, arguments.registration, arguments.output)
+        except (
+            OSError,
+            ValueError,
+            ConfigurationError,
+            InvalidInputError,
+            RecursionError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "NATIVE_RUNTIME_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "native_registration_invalid",
+                        "execution_authorized": False,
+                        "remote_contact": getattr(failure, "remote_contact", False),
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(native_result, sort_keys=True))
+        return 0
+    if arguments.command == "operator-authority":
+        from cadence_mcp_bridge import operator_confirmation
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.authority_action == "export-helper":
+                authority_result = operator_confirmation.export(arguments.output)
+            elif arguments.authority_action == "stage":
+                authority_result = operator_confirmation.stage(
+                    arguments.profile, arguments.expected_helper_sha256
+                )
+            else:
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings.resolve())
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
+                if context is None:
+                    raise OperationRejected("unknown_context_id")
+                authority_result = operator_confirmation.perform(
+                    context,
+                    arguments.grant,
+                    arguments.expected_grant_sha256,
+                    arguments.identity_manifest_sha256,
+                    arguments.expected_helper_sha256,
+                    arguments.authority_action,
+                    arguments.output,
+                    getattr(arguments, "operator_authority", None),
+                )
+        except (OSError, ValueError, ConfigurationError, RecursionError) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "OPERATOR_CONFIRMATION_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "operator_document_invalid",
+                        "execution_authorized": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(authority_result, sort_keys=True))
+        return 0
     if arguments.command == "operation":
         from cadence_mcp_bridge import operator_operations as operations
         from cadence_mcp_bridge.runtime_context import load_runtime
 
         try:
             if arguments.operation_action in ("grant-schema", "request-schema"):
-                model = (
-                    operations.OperatorGrant
+                operation_result = (
+                    operations.GRANT_DOCUMENT.json_schema()
                     if arguments.operation_action == "grant-schema"
-                    else operations.OperationRequest
+                    else operations.OperationRequest.model_json_schema()
                 )
-                operation_result = model.model_json_schema()
             else:
-                contexts = load_runtime(arguments.settings)
+                contexts = load_runtime(arguments.settings.resolve())
                 context = next(
                     (c for c in contexts if c.binding.context_id == arguments.context), None
                 )
@@ -364,6 +723,29 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "remote_contact": False,
                         "execution_authorized": False,
                     }
+                elif arguments.operation_action in (
+                    "submit",
+                    "reconcile",
+                    "cancel-pending",
+                    "result",
+                ):
+                    import asyncio
+
+                    from cadence_mcp_bridge.authenticated_provider import operator_action
+
+                    operation_result = asyncio.run(
+                        operator_action(
+                            context,
+                            arguments.provider_binding,
+                            arguments.expected_provider_sha256,
+                            arguments.operation_action,
+                            arguments.operation_id,
+                            arguments.expected_plan_sha256,
+                            getattr(arguments, "grant", None),
+                            getattr(arguments, "expected_grant_sha256", None),
+                            getattr(arguments, "request", None),
+                        )
+                    )
                 elif arguments.operation_action == "plan":
                     operation_result = operations.inspect_plan(
                         context, arguments.grant, arguments.expected_grant_sha256, arguments.request
@@ -402,9 +784,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 report = domain_provisioning.export(
                     arguments.output, arguments.domain_action == "export-setup-helper-bundle"
                 )
-            elif arguments.domain_action == "stage-setup-helper":
+            elif arguments.domain_action in {"stage-setup-helper", "stage-helper"}:
                 report = domain_provisioning.stage_setup(
-                    arguments.profile, arguments.expected_helper_sha256
+                    arguments.profile,
+                    arguments.expected_helper_sha256,
+                    arguments.domain_action == "stage-helper",
                 )
             elif arguments.domain_action == "plan-fresh":
                 report = domain_provisioning.prepare_fresh(
@@ -427,7 +811,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.identity_manifest_sha256,
                     arguments.operator_authority,
                 )
-            elif arguments.domain_action in {"apply-existing", "seal-existing"}:
+            elif arguments.domain_action in {
+                "apply-existing",
+                "seal-existing",
+                "apply-result-limit-v6",
+            }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
                     arguments.plan,
@@ -436,6 +824,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.expected_helper_sha256,
                     arguments.operator_authority,
                     arguments.domain_action == "seal-existing",
+                    arguments.domain_action == "apply-result-limit-v6",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -443,6 +832,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.output,
                     arguments.expected_helper_sha256,
                     arguments.domain_action == "plan-legacy-seal",
+                    arguments.domain_action == "plan-result-limit-v6",
                 )
         except (OSError, ValueError):
             print(
@@ -468,7 +858,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif arguments.runner_action == "export-installer":
                 report = bootstrap.export_installer(arguments.output)
             elif arguments.runner_action == "repair-plan":
-                report = bootstrap.prepare_repair(arguments.profile, arguments.output)
+                report = bootstrap.prepare_repair(
+                    arguments.profile, arguments.output, arguments.model_include
+                )
             elif arguments.runner_action == "export-repair-helper":
                 report = bootstrap.export_repair_helper(arguments.output)
             elif arguments.runner_action == "preflight":
@@ -528,7 +920,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if context is None:
                         raise RuntimeRejected("setup_required")
                     context.resolve(arguments.design_id)
-                observation = runtime_observation(config)
+                    observation = context.observation()
+                else:
+                    observation = runtime_observation(config)
         except (OSError, ValueError, ConfigurationError, InvalidInputError) as failure:
             print(
                 json.dumps(

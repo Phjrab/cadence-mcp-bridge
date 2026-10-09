@@ -374,8 +374,24 @@ def fresh_ledger(io, root, counter):
     if type(anchor) is not dict or type(anchor.get("schema_version")) is not int:
         raise ValueError("storage anchor schema required")
     if anchor["schema_version"] == 1:
-        return None  # Retained migration policy uses the historical counter.
-    if anchor["schema_version"] != 2:
+        registry = private_directory(io, root, "reservation-identity")
+        try:
+            try:
+                read_json(io, registry, "result-policy-v6.json", 8192, private=True)
+            except OSError as failure:
+                if failure.errno == errno.ENOENT:
+                    return None  # Historical retained policy; unchanged legacy path.
+                raise
+            # Seal preserves the historical anchor; current domain binds the effective anchor.
+            try:
+                seal = read_json(io, registry, "legacy-seal.json", 8192, private=True)
+                anchor = seal["anchor"]
+            except OSError as failure:
+                if failure.errno != errno.ENOENT:
+                    raise
+        finally:
+            os.close(registry)
+    if anchor["schema_version"] not in (1, 2):
         raise ValueError("fresh storage anchor required")
     path = io.canonical_root(root)
     home = io.root(io.account_home())
@@ -456,11 +472,16 @@ def fresh_ledger(io, root, counter):
         "ledger_ref": "sim-mcp-v2-jobs/counter.json",
         "identity_manifest_sha256": digest(anchor),
     }
-    accounting.identity_manifest(path, binding)
+    anchor = accounting.identity_manifest(path, binding)
     audited, records = accounting.state(path, binding)
     if canonical(counter) != canonical(audited):
         raise ValueError("storage ledger changed during observation")
-    return anchor["policy"]
+    policy = accounting.effective_policy(path, anchor)
+    if anchor["schema_version"] == 1:
+        policy = dict(
+            policy, campaign_id="AUTO-PHASE-01", policy_sha256=accounting.RESULT_POLICY_SHA
+        )
+    return policy
 
 
 def snapshot(io, root, is_active):
@@ -619,7 +640,7 @@ def snapshot(io, root, is_active):
     disk = os.fstatvfs(root)
     is_active = is_active or any(a["active_dependency"] for a in artifacts)
     value = dict(
-        contract_version=2 if policy else 1,
+        contract_version=(3 if "policy_sha256" in policy else 2) if policy else 1,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,

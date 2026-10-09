@@ -446,3 +446,23 @@ def test_v1_v2_v3_schema_cli_and_exclusive_registration(
     assert isinstance(loaded, DesignAnalysisRegistry)
     fictional, _ = load_design_registry(root / "docs/examples/design-registry-v3.fictional.json")
     assert all(c.adapter_kind == "unqualified" for c in fictional.analyses_for("example-amplifier"))
+
+
+@pytest.mark.parametrize("suffix", ["-journal", "-wal", "-shm"])
+def test_sqlite_removed_sidecar_is_absence_not_corruption(tmp_path, monkeypatch, suffix):
+    path = tmp_path / "store.sqlite3"
+    store = AnalysisStore(path)
+    identity = str(uuid4())
+    store.admit(identity, DESIGN, "native-dc", "a" * 64)
+    original = Path.lstat
+    calls = []
+
+    def disappeared(target, *args, **kwargs):
+        if target == path.with_name(path.name + suffix):
+            calls.append(target)
+            raise FileNotFoundError("SQLite writer just committed")
+        return original(target, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", disappeared)
+    assert not store.admit(identity, DESIGN, "native-dc", "a" * 64)
+    assert calls

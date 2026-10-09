@@ -85,7 +85,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         pdk_sha256=hashlib.sha256(paths[2].read_bytes()).hexdigest(),
         runner_sha256="b" * 64,
         authority_ref="fictional-record",
-        ledger_ref="fictional-existing",
+        ledger_ref="shared-ledger",
         analysis_journal=str(workspace / "analysis.sqlite3"),
         sweep_journal=str(workspace / "sweep.sqlite3"),
     )
@@ -104,7 +104,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 authorization_source="explicit_operator_record",
                 resource_domain_sha256=context.resource_domain_sha256,
                 runner_sha256="b" * 64,
-                ledger_ref="fictional-existing",
+                ledger_ref="shared-ledger",
                 environment_sha256=binding["environment_sha256"],
                 design_sha256=binding["design_sha256"],
                 pdk_sha256=binding["pdk_sha256"],
@@ -430,6 +430,84 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 }
             )
         )
+        # Installed package exports the same fixed provider/worker inventory.
+        # This step creates local artifacts only; it cannot confirm or dispatch.
+        from cadence_mcp_bridge import _native_dispatch
+        from cadence_mcp_bridge.native_runtime import SOURCES
+
+        native_registration = workspace / (design_id + "-native-registration.json")
+        library = profile_model.binding.library
+        remote_workspace = context.contracts.environment.paths.workspace_root
+        native_registration.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "identity_manifest_sha256": "a" * 64,
+                    "routes": [
+                        {
+                            "validation_request": request_model.model_dump(mode="json"),
+                            "ade": ade_model.model_dump(mode="json"),
+                            "reader": reader_model.model_dump(mode="json"),
+                            "source_cell": remote_workspace
+                            + "/"
+                            + library
+                            + "/"
+                            + profile_model.binding.cell,
+                            "source_state": remote_workspace + "/fictional-state",
+                            "libraries": [
+                                {
+                                    "name": library,
+                                    "path": remote_workspace + "/" + library,
+                                    "tree_sha256": "b" * 64,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            encoding="ascii",
+        )
+        native_output = workspace / (design_id + "-native-runtime")
+        native_export = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "cadence_mcp_bridge",
+                "native-runtime",
+                "bundle",
+                "--settings",
+                str(settings),
+                "--context",
+                "installed-operation",
+                "--registration",
+                str(native_registration),
+                "--output",
+                str(native_output),
+            ],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        native_receipt = json.loads(native_export.stdout)
+        native_manifest_raw = (native_output / "manifest.json").read_bytes()
+        native_manifest = json.loads(native_manifest_raw)
+        assert native_receipt["manifest_sha256"] == hashlib.sha256(native_manifest_raw).hexdigest()
+        assert native_receipt["asset_count"] == len(_native_dispatch.FILES)
+        assert not native_receipt["execution_authorized"] and not native_receipt["remote_contact"]
+        assert set(native_manifest["files"]) == set(_native_dispatch.FILES)
+        from importlib.resources import files
+
+        for name, source in SOURCES.items():
+            assert (native_output / name).read_bytes() == files("cadence_mcp_bridge").joinpath(
+                source
+            ).read_bytes()
+        assert store.path.read_bytes() == before
+
         reader_path = workspace / (design_id + "-reader.json")
         reader_path.write_text(reader_model.model_dump_json(), encoding="ascii")
         plan_path = workspace / (design_id + "-plan.json")
@@ -519,10 +597,161 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         assert str(workspace) not in projected.stdout.decode()
     assert len(templates) == 1 and store.path.read_bytes() == before
 
+    confirmation_output = workspace / "confirmation-helper"
+    exported = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-X",
+            "utf8",
+            "-m",
+            "cadence_mcp_bridge",
+            "operator-authority",
+            "export-helper",
+            "--output",
+            str(confirmation_output),
+        ],
+        cwd=workspace,
+        env=env,
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+    exported_receipt = json.loads(exported.stdout)
+    from cadence_mcp_bridge.operator_confirmation import contents as confirmation_contents
+
+    assets, manifest, helper_sha = confirmation_contents()
+    assert exported_receipt["manifest_sha256"] == helper_sha
+    assert not exported_receipt["execution_authorized"] and not exported_receipt["remote_contact"]
+    assert (confirmation_output / "manifest.json").read_bytes() == manifest
+    assert all((confirmation_output / name).read_bytes() == data for name, data in assets.items())
+    assert store.path.read_bytes() == before
+
+    from cadence_mcp_bridge import _native_copy
+
+    copy_source = workspace / "synthetic-owned-source"
+    copy_source.mkdir(mode=0o700)
+    (copy_source / "state").mkdir(mode=0o700)
+    (copy_source / "state" / "variables").write_bytes(b"synthetic state bytes")
+    copy_parent = workspace / "synthetic-job"
+    copy_parent.mkdir(mode=0o700)
+    source_before = _native_copy.snapshot(str(copy_source.resolve()))
+    copied_receipt = _native_copy.copy_owned(
+        str(copy_source.resolve()),
+        str((copy_parent / "copy").resolve()),
+        source_before["tree_sha256"],
+    )
+    assert copied_receipt["source_preserved"]
+    assert copied_receipt["copy_content_sha256"] == source_before["content_sha256"]
+    assert _native_copy.snapshot(str(copy_source.resolve())) == source_before
+    assert store.path.read_bytes() == before
+
+    # Exercise the installed parser and bounded pre-contact failure. No SSH or admission.
+    for action in ("submit", "reconcile", "cancel-pending", "result"):
+        documented = subprocess.run(
+            [sys.executable, "-I", "-m", "cadence_mcp_bridge", "operation", action, "--help"],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        assert b"--provider-binding" in documented.stdout
+        provider_path = workspace / "invalid-provider.json"
+        provider_path.write_bytes(b"{}")
+        argv = [
+            sys.executable,
+            "-I",
+            "-m",
+            "cadence_mcp_bridge",
+            "operation",
+            action,
+            "--settings",
+            str(settings),
+            "--context",
+            "installed-operation",
+            "--provider-binding",
+            str(provider_path),
+            "--expected-provider-sha256",
+            "0" * 64,
+            "--operation-id",
+            operation_id,
+            "--expected-plan-sha256",
+            input_plan.plan_sha256,
+        ]
+        if action in ("submit", "cancel-pending"):
+            argv.extend(["--grant", str(grant), "--expected-grant-sha256", "0" * 64])
+        if action == "submit":
+            argv.extend(["--request", str(plan_path)])
+        denied = subprocess.run(argv, cwd=workspace, env=env, capture_output=True, timeout=30)
+        assert denied.returncode == 1 and not denied.stderr
+        assert json.loads(denied.stdout)["reason"] == "native_operator_binding_changed"
+        assert store.path.read_bytes() == before
+
+    # Installed stdio conditional tools and local plan; fictional runtime only.
+    from cadence_mcp_bridge.authenticated_provider import NativeProviderBinding
+
+    selected_provider = workspace / "selected-provider.json"
+    selected_provider.write_bytes(
+        NativeProviderBinding(
+            schema_version=1,
+            identity_manifest_sha256="a" * 64,
+            runtime_manifest_sha256=context.binding.runner_sha256,
+        )
+        .model_dump_json()
+        .encode("ascii")
+    )
+    configured = json.loads(settings.read_bytes())
+    configured["contexts"][0].update(
+        native_provider_binding=str(selected_provider),
+        native_provider_sha256=hashlib.sha256(selected_provider.read_bytes()).hexdigest(),
+        operator_grant=str(grant),
+        operator_grant_sha256=hashlib.sha256(grant.read_bytes()).hexdigest(),
+    )
+    native_settings = workspace / "native-service.json"
+    native_settings.write_text(json.dumps(configured), encoding="ascii")
+
+    async def native_stdio() -> None:
+        from mcp import Client
+        from mcp.client.stdio import StdioServerParameters
+
+        configured_env = {
+            **env,
+            "CADENCE_MCP_RUNTIME_SETTINGS_PATH": str(native_settings),
+            "CADENCE_MCP_RUNTIME_CONTEXT_ID": "installed-operation",
+        }
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-I", "-m", "cadence_mcp_bridge", "serve-operator"],
+            env=configured_env,
+            cwd=str(workspace),
+        )
+        for _ in range(2):
+            async with Client(params) as client:
+                tools = (await client.list_tools()).tools
+                names = {tool.name for tool in tools}
+                assert len(names) == 96 and "cadence_submit_operation" in names
+                planned = await client.call_tool(
+                    "cadence_plan_operation",
+                    {"request": input_plan.request.model_dump(mode="json")},
+                )
+                assert not planned.is_error and planned.structured_content is not None
+                assert planned.structured_content["plan_sha256"] == input_plan.plan_sha256
+                assert not planned.structured_content["remote_contact"]
+            assert store.path.read_bytes() == before
+
+    import asyncio
+
+    asyncio.run(native_stdio())
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
         "durable_admission": "NOT_RUN",
+        "installed_conditional_native_stdio": "PASS96_SCHEMA_LOCAL_PLAN_RESTART_NO_TRANSPORT",
+        "installed_native_operation_forms": "PASS_PARSE_AND_PRECONTACT_DENIAL_ONLY",
+        "installed_confirmation_helper_export": "PASS_LOCAL_NO_AUTHORITY_OR_SSH",
+        "installed_owned_copy": "SYNTHETIC_FILES_ONLY_NOT_NATIVE_OA",
         "native_dispatch": "NOT_RUN",
         "repeat_plan_identity": True,
         "same_grant_distinct_design_variable_sets": 2,

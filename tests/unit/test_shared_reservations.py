@@ -743,3 +743,73 @@ def test_unindexed_post_migration_legacy_increment_is_not_implicitly_accepted(ro
     with pytest.raises(ValueError, match="post_migration_identity_missing"):
         reserve(root, job(root), permit)
     assert snapshot(root) == before
+
+
+
+def test_owned_session_reserves_without_nested_lock_and_retains_concurrency(root):
+    first, second, third = job(root), job(root), job(root)
+    permit = binding(root)
+    with ledger.ReservationSession(str(root)) as session:
+        receipt = session.reserve(first, permit)
+        assert session.reserve(first, permit) == receipt
+        # The same verified descriptor owns the entire future worker lifetime.
+        session.reserve(second, permit)
+        current, records = session.observe(permit)
+        assert current["count"] == 84 and len(records) == 2
+        before = {p: p.read_bytes() for p in root.rglob("*")
+                  if p.is_file() and p.name != "run.lock"}
+        code = """
+import importlib.util,os,sys
+spec=importlib.util.spec_from_file_location("accounting",sys.argv[1])
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+try: fd=m.open_lock(sys.argv[2])
+except OSError: sys.exit(0)
+os.close(fd);sys.exit(1)
+"""
+        contender = subprocess.run(
+            [sys.executable, "-I", "-B", "-c", code, str(ASSET), str(root)],
+            capture_output=True, timeout=10,
+        )
+        assert contender.returncode == 0 and not contender.stdout and not contender.stderr
+        assert {p: p.read_bytes() for p in root.rglob("*")
+                if p.is_file() and p.name != "run.lock"} == before
+    # Closing releases only the existing lock; reservations are never refunded.
+    assert reserve(root, third, permit)["after"]["count"] == 85
+    with pytest.raises(ValueError, match="session_closed"):
+        session.reserve(first, permit)
+
+
+def test_a_descriptor_flag_or_fake_session_cannot_bypass_lock(root):
+    operation, permit = job(root), binding(root)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="owned_session_required"):
+        ledger._reserve_held(dict(root=str(root), lock_held=True), operation, permit)
+    with pytest.raises(ValueError, match="binding_shape"):
+        reserve(root, operation, dict(permit, lock_held=True))
+    assert snapshot(root) == before
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX descriptor inheritance")
+def test_detached_own_worker_can_keep_existing_flock_after_acceptor_exits(root):
+    session = ledger.ReservationSession(str(root))
+    code = """
+import os,sys
+fd=int(sys.argv[1]); assert os.fstat(fd).st_ino==int(sys.argv[2])
+print("INHERITED",flush=True); sys.stdin.read(1);os.close(fd)
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-I", "-B", "-c", code, str(session.fd), str(session.lock_identity[1])],
+        pass_fds=(session.fd,), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        assert process.stdout.readline() == b"INHERITED\n"
+        session.close()
+        with pytest.raises(OSError):
+            ledger.open_lock(str(root))
+    finally:
+        session.close()
+        _, error = process.communicate(input=b"x", timeout=10)
+        assert process.returncode == 0 and not error
+    fd = ledger.open_lock(str(root))
+    os.close(fd)

@@ -194,7 +194,7 @@ def export_client_config(
     )
     context_report = None
     if runtime_settings is not None or context_id is not None:
-        from cadence_mcp_bridge.runtime_context import select_context
+        from cadence_mcp_bridge.runtime_context import RuntimeRejected, load_runtime
 
         runtime_path = None if runtime_settings is None else _local_path(runtime_settings)
         operator_config = BridgeConfig(
@@ -207,16 +207,46 @@ def export_client_config(
             runtime_settings_path=runtime_path,
             runtime_context_id=context_id,
         )
-        context = select_context(operator_config)
+        if operator_config.runtime_settings_path is None:
+            raise RuntimeRejected("context_without_settings")
+        contexts = load_runtime(operator_config.runtime_settings_path)
+        if operator_config.runtime_context_id is None:
+            raise RuntimeRejected("explicit_context_selection_required")
+        context = next(
+            (c for c in contexts if c.binding.context_id == operator_config.runtime_context_id),
+            None,
+        )
+        if context is None:
+            raise RuntimeRejected("unknown_context_id")
         if context is None or (
             context.contracts.environment_sha256 != snapshot.environment_sha256
             or context.contracts.design_sha256 != snapshot.design_sha256
             or context.contracts.pdk_sha256 != snapshot.pdk_sha256
-            or context.binding.analysis_journal != journal_path
-            or context.binding.sweep_journal != sweep_path
+            or _local_path(context.binding.analysis_journal) != journal_path
+            or _local_path(context.binding.sweep_journal) != sweep_path
             or output_path == runtime_path
         ):
             raise OnboardingRejected("runtime_export_mismatch")
+        assert runtime_path is not None
+        reserved = {runtime_path}
+        for loaded in contexts:
+            reserved.add(loaded.lock_path)
+            reserved.update(
+                _local_path(value)
+                for value in (
+                    loaded.binding.environment_profile,
+                    loaded.binding.design_registry,
+                    loaded.binding.pdk_registry,
+                    loaded.binding.analysis_journal,
+                    loaded.binding.sweep_journal,
+                    getattr(loaded.binding, "native_provider_binding", None),
+                    getattr(loaded.binding, "operator_grant", None),
+                    getattr(loaded.binding, "native_specifications", None),
+                )
+                if value is not None
+            )
+        if output_path in reserved:
+            raise OnboardingRejected("runtime_export_reserved_path")
         settings = operator_config.model_dump(mode="json")
         context_report = context.observation()
     env = {"CADENCE_MCP_" + k.upper(): str(v) for k, v in settings.items() if v is not None}
@@ -268,4 +298,34 @@ def export_client_config(
             if context_report
             else {}
         ),
+    }
+
+
+STARTER_FILES = ("README.md", "environment.json", "designs.json", "pdks.json")
+
+
+def export_starter(output: Path) -> dict[str, object]:
+    from importlib.resources import files
+
+    target = _local_path(output)
+    if target.exists() or not target.parent.is_dir():
+        raise OnboardingRejected("exclusive_starter_output_required")
+    data = {
+        name: files("cadence_mcp_bridge").joinpath("operator_starter", name).read_bytes()
+        for name in STARTER_FILES
+    }
+    target.mkdir(mode=0o700)
+    for name, raw in data.items():
+        fd = os.open(target / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+    return {
+        "status": "FICTIONAL_OPERATOR_STARTER_EXPORTED_NOT_AUTHORIZED",
+        "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
+        "remote_contact": False,
+        "execution_authorized": False,
+        "new_simulations": 0,
+        "new_reservations": 0,
     }

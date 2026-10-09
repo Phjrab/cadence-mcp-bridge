@@ -272,3 +272,63 @@ def test_reference_recipe_cannot_follow_code_link_into_pdk(tmp_path):
         repair.inventory(profile)
     assert protected.stat().st_mode == before
     assert protected.read_bytes() == b"synthetic protected PDK"
+
+
+@pytest.mark.parametrize(
+    "change", ["none", "escape", "unknown-section", "bad-syntax"]
+)
+def test_selected_model_include_graph_is_bounded_and_readonly(tmp_path, monkeypatch, change):
+    from pathlib import Path
+
+    top = tmp_path / "top.scs"
+    leaf = tmp_path / "leaf.scs"
+    top.write_text(
+        'library qa\nsection NN\ninclude "leaf.scs" section = CORE\nendsection NN\n'
+        'section FF\ninclude "unselected.scs" section=CORE\nendsection FF\nendlibrary qa\n'
+    )
+    leaf.write_text(
+        '/* include "outside.scs" */\nsection CORE\n'
+        'model qa_model resistor r=100\nendsection CORE\n'
+    )
+    if change == "escape":
+        top.write_text('section NN\ninclude "../outside.scs"\nendsection NN\n')
+    elif change == "unknown-section":
+        top.write_text('section NN\ninclude "leaf.scs" section=UNKNOWN\nendsection NN\n')
+    elif change == "bad-syntax":
+        top.write_text('section NN\ninclude "leaf.scs" section=CORE extra=1\nendsection NN\n')
+
+    # Disposable Windows files exercise parser/read behavior; actual POSIX
+    # no-follow, ACL and mutation remain covered by the existing Linux suite.
+    def opened(path):
+        return os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+
+    monkeypatch.setattr(repair, "open_fixed", opened)
+    monkeypatch.setattr(repair, "inside", lambda p, r: Path(p).is_relative_to(Path(r)))
+    before = {p: p.read_bytes() for p in tmp_path.iterdir()}
+    if change in ("escape", "unknown-section", "bad-syntax"):
+        with pytest.raises(ValueError, match="model_graph"):
+            repair.model_graph(str(top), "NN")
+    else:
+        assert repair.model_graph(str(top), "NN") == {
+            str(top): hashlib.sha256(top.read_bytes()).hexdigest(),
+            str(leaf): hashlib.sha256(leaf.read_bytes()).hexdigest(),
+        }
+    assert before == {p: p.read_bytes() for p in tmp_path.iterdir()}
+
+
+def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monkeypatch):
+    path = tmp_path / "code"
+    path.write_bytes(b"fictional installation contents")
+    os.utime(path, (1234567890.1234567, 1234567890.1234567))
+    monkeypatch.setattr(repair, "open_fixed", lambda p: os.open(p, os.O_RDONLY))
+    monkeypatch.setattr(repair, "acl", lambda fd: "user::rw-\ngroup::r--\nother::r--\n")
+    monkeypatch.setattr(os.path, "realpath", lambda p: p)
+    record = repair.snapshot(str(path))
+    assert isinstance(record["mtime"], str)
+    assert record["mtime"] == format(path.stat().st_mtime, ".17g")
+    # A Python2.6 JSON serializer can no longer truncate a numeric mtime.
+    wire = repair.canonical(record)
+    assert repair.digest(json.loads(wire)) == hashlib.sha256(wire).hexdigest()
+    assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
+    assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
+    assert repair.metadata_equal("mtime", None, None)

@@ -67,6 +67,21 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 "src/cadence_mcp_bridge/_domain_migration.py" = ["UP", "I", "SIM", "B"]
 "src/cadence_mcp_bridge/_fresh_domain.py" = ["UP", "I", "SIM", "B"]
 "src/cadence_mcp_bridge/_setup_stage.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_native_rendering.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_operator_confirmation.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_native_copy.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_native_operations.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_native_gate.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_native_eda_worker.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_native_dispatch.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_native_setup.py" = ["UP", "I", "SIM", "B"]
+
+"src/cadence_mcp_bridge/_registration_probe.py" = ["UP", "I", "SIM", "B", "F821"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -14,6 +14,7 @@ from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
 
+from cadence_mcp_bridge import _native_rendering
 from cadence_mcp_bridge.generic_ade import AcInputs, AdeExecutionRegistration, bind_inputs
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected
@@ -159,15 +160,7 @@ class GenericReaderRegistration(VariableModel):
 
 
 # Proven API spellings from the retained native readers; general binding remains unqualified.
-_PREAMBLE = r"""procedure(mcpGenericScalar(name)
-  let((data vec)
-    data=getData(name)
-    cond((numberp(data) data)
-      (drIsWaveform(data)
-        vec=drGetWaveformYVec(data)
-        if(equal(drVectorLength(vec) 1) then drGetElem(vec 0) else nil))
-      (t nil))))
-"""
+_PREAMBLE = _native_rendering.READER_PREAMBLE
 
 
 def bind_reader(
@@ -266,48 +259,17 @@ def render_reader(
     execution_input_sha256: str,
 ) -> bytes:
     bind_reader(context, plan, ade, reader)
-    header = _header(operation_id, plan, reader, execution_input_sha256)
-    # Paths come only from the immutable operator environment and validated UUID.
-    job = context.contracts.environment.paths.job_root + "/" + operation_id + "/work"
-    result = "dcOp" if plan.analysis == "dc" else plan.analysis
-    lines = [
-        _PREAMBLE,
-        "let((port data wave xVec yVec count index sample axis)",
-        f'  port=outfile("{job}/generic-frame.txt")',
-        "  unless(port exit(1))",
-        f'  unless(openResults("{job}/psf") close(port) exit(1))',
-        f"  unless(selectResult('{result}) close(port) exit(1))",
-        f'  fprintf(port "{header}\\n")',
-    ]
-    if plan.analysis == "dc":
-        for node in reader.nodes:
-            lines += [
-                f'  data=mcpGenericScalar("{node.selector}")',
-                "  unless(numberp(data) close(port) exit(1))",
-                f'  fprintf(port "V|{node.logical_id}|%.16g\\n" data)',
-            ]
-        for source in reader.sources:
-            lines += [
-                f'  data=mcpGenericScalar("{source.current_selector}")',
-                "  unless(numberp(data) close(port) exit(1))",
-                f'  fprintf(port "I|{source.source_id}|%.16g\\n" data)',
-            ]
-    else:
-        for node in reader.nodes:
-            lines += [
-                f'  wave=getData("{node.selector}")',
-                "  unless(wave && drIsWaveform(wave) close(port) exit(1))",
-                "  xVec=drGetWaveformXVec(wave) yVec=drGetWaveformYVec(wave)",
-                "  count=drVectorLength(xVec)",
-                f"  unless(count>=2 && count<={reader.maximum_samples} && "
-                "count==drVectorLength(yVec) close(port) exit(1))",
-                "  for(index 0 sub1(count)",
-                "    axis=drGetElem(xVec index) sample=drGetElem(yVec index)",
-                f'    fprintf(port "P|{node.logical_id}|%d|%.16g|%.16g|%.16g\\n" '
-                "index axis real(sample) imag(sample)))",
-            ]
-    lines += ['  fprintf(port "END\\n")', "  close(port))", "exit(0)", ""]
-    return "\n".join(lines).encode("ascii")
+    _header(operation_id, plan, reader, execution_input_sha256)
+    # Paths and selectors are validated registration primitives, not MCP paths.
+    return _native_rendering.reader(  # type: ignore[no-any-return,no-untyped-call]
+        context.contracts.environment.paths.job_root,
+        plan.analysis,
+        reader.model_dump(mode="json"),
+        operation_id,
+        plan.plan_sha256,
+        execution_input_sha256,
+        canonical_digest(reader),
+    )
 
 
 def _finite(text: str) -> float:
@@ -471,12 +433,10 @@ def _ac_axis(inputs: AcInputs) -> tuple[float, ...]:
 def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tuple[int, ...]:
     selected: list[int] = []
     for text in frequencies:
-        freq = float(text)
+        freq = float(format(float(text), ".16g"))
         matches = [i for i, x in enumerate(axes) if x == freq]
         if not matches:
-            matches = [
-                i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)
-            ]
+            matches = [i for i, _ in enumerate(axes) if _matches_ac_axis(freq, axes, i)]
         if len(matches) != 1:
             raise OperationRejected("reader_gain_sample_unavailable")
         index = matches[0]
@@ -484,6 +444,20 @@ def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tu
             raise OperationRejected("reader_gain_sample_reused")
         selected.append(index)
     return tuple(selected)
+
+
+def _matches_ac_axis(actual: float, expected_axes: tuple[float, ...], index: int) -> bool:
+    expected = expected_axes[index]
+    gaps = []
+    if index > 0:
+        gaps.append(expected - expected_axes[index - 1])
+    if index + 1 < len(expected_axes):
+        gaps.append(expected_axes[index + 1] - expected)
+    # Axes are compared in the extractor's %.16g representation. Numerical
+    # tolerance must not consume a neighboring serialized sample's interval.
+    # Narrow but representable grids keep disjoint acceptance bands.
+    tolerance = min(abs(expected) * 1e-12, min(gaps) / 4)
+    return math.isclose(actual, expected, rel_tol=0, abs_tol=tolerance)
 
 
 def _transfer(
@@ -495,14 +469,13 @@ def _transfer(
     inputs = ade.inputs
     if inputs.analysis != "ac":
         raise OperationRejected("reader_ac_interval_invalid")
-    expected_axes = _ac_axis(inputs)
-    if not math.isclose(axes[0], expected_axes[0], rel_tol=1e-12, abs_tol=0) or not math.isclose(
-        axes[-1], expected_axes[-1], rel_tol=1e-12, abs_tol=0
+    expected_axes = tuple(float(format(x, ".16g")) for x in _ac_axis(inputs))
+    if not _matches_ac_axis(axes[0], expected_axes, 0) or not _matches_ac_axis(
+        axes[-1], expected_axes, len(expected_axes) - 1
     ):
         raise OperationRejected("reader_ac_interval_invalid")
     if len(axes) != len(expected_axes) or any(
-        not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=0)
-        for actual, expected in zip(axes, expected_axes, strict=True)
+        not _matches_ac_axis(actual, expected_axes, index) for index, actual in enumerate(axes)
     ):
         raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
     assert reader.transfer is not None

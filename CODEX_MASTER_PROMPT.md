@@ -1,3 +1,192 @@
+## Native Sweep and specification checkpoint, 2026-10-09
+
+Two explicit native1D batches completed on the current standard VM: DC3 points
+then an independent AC2 points, same core/template/authority and retained ledger.
+All5 fresh jobs passed effective inputs, automatic extraction and bounded result
+collection. New-process same-parent submit/advance after success dispatched0 and
+reserved0. Product native preflight PASS at UID500. Latest actual ledger94 /
+11,409,555,456 bytes; remaining5,770,313,728 of16GiB. This continuation5 runs/640MiB;
+all current generic validation12 attempts/1536MiB includes retained failed128MiB.
+
+QA-only targets on fresh sweep results produced PASS, deliberately failing FAIL,
+NOT_EVALUATED with no target, and CONDITION_MISMATCH for another point's inputs.
+No real amplifier goal was invented. Source/native library/model guards remain.
+Current new operator MCP/CLI Sweep/spec implementation is not yet exact installed
+or actual Codex qualification. Independent PR152 P2 exposed partial record-write
+recovery: fixed atomic complete-record publication preserves interrupted candidates;
+actual Py26/POSIX9 synthetic scenarios PASS with real ledger unchanged. This is not
+new Cadence execution evidence. Final hosted review/CI still required.
+
+PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.
+PR144 refreshed parent normal merge2decbfe; final review/CI pending. Existing local
+changes/old history/results/locks/grants stay preserved. General release BLOCKED:
+fresh operator registration/installed onboarding, actual Codex, remaining normal
+PR integration/operational matrix and exactGREL08 candidate still required.
+Continue directGREL02–08/16GiB/conditional merge authority without phase reapproval.
+Tag/Release/upload still requires approval of the exact finished candidate.
+See NATIVE_SWEEP_SPEC_V1.md; earlier checkpoints below are preserved history.
+
+## Six fresh standard VM analyses checkpoint, 2026-10-09
+
+Two distinct new registered QA circuits completed DC/AC/TRAN plus automatic
+extraction and bounded result retrieval through the same native core/template.
+Actual UID500; effective inputs and protected OA/state/library/model checks PASS.
+Corrected immutable update15-stage/3-update/repeat0 preserves earlier failed DC,
+old bundles/grants, same journals/resource lock and existing ledger. Both successful
+and failed same-ID requests after process restart add no execution/reservation.
+Product `native-runtime preflight` PASS/read-only; retained preflight/9-source Py26
+grammar/seven legacy controls and home-index content/metadata conservation PASS.
+Current ledger89 /10,738,466,816 bytes;16GiB remaining6,441,402,368 bytes.
+This continuation6 successful runs/768MiB; including preceding failure7/896MiB.
+The original20job/2.5GiB scope accounts for that spent failure before the new grant.
+
+Local relevant tests/static/security/install checks are distinct from exact hosted
+CI and actual Codex. PR142 finala032a0f review and both hosted checks PASS; normally merged
+through239a1949923fdae210d50e1232b6b7b41e60c7de. PR152 remains
+draft. Generic native1D Sweep/spec, second batch, actual Codex, GREL07 matrix,
+ordered normal integration and exact GREL08 candidate remain. Release BLOCKED;
+no tag/Release/upload consent. Continue directly authorized02–08/16GiB and
+conditional merges without routine reapproval. See NATIVE_UPDATE_AND_RESULTS_V1.md.
+Earlier dated checkpoints remain preserved historical evidence.
+
+## Actual native admission checkpoint, 2026-10-09
+
+Current ordinary-user native15-file stage, explicit OS-operator confirmation,
+activation and repeat PASS; existing ledger/lock/index preserved. First fresh
+registered inverter DC passed common OA copy/netlisting/effective input and
+Spectre, then automatic extraction failed. Failure artifacts and128MiB reservation
+are retained. Same-ID request after process restart returns EXTRACTION_FAILED and
+adds no dispatch/reservation. Latest actual counter83 /9,933,160,448 bytes; remaining
+7,246,708,736 of the approved16GiB. Protected controls/index and retained preflight
+PASS after execution; whole registered libraries/model closure were rechecked
+through the pre-extraction worker boundary. No source/vendor content changes.
+
+Read-only diagnosis identified standard-VM PSF naming: top node names lack the
+leading slash and positive voltage-source current uses the `:p` terminal suffix.
+The closed common renderer must map registered logical selectors to those verified
+names; this is not a circuit-specific extractor. A safe explicit native runtime
+update path is also needed before deploying a corrected immutable bundle.
+The failed job/result is not deleted, refunded or replayed as successful.
+
+Latest exact local package checks PASS,83 runtime/onboarding PASS/two OS skips;
+related211 PASS/29 skips, Ruff/mypy90, security18/clean audit, compatibility85/22.
+Hosted exact PR152 remains pending and PR142 final review/CI is still in progress.
+Release remains BLOCKED; DC automatic reader, other five analyses, Sweep/spec,
+actual Codex and GREL07/08 acceptance remain. Continue existing directGREL02–08
+and conditional integration authority without renewed routine approval.
+
+## Active result-policy and model-trust checkpoint, 2026-10-09
+
+The current managed VM now enforces the explicitly approved retained16 GiB
+policy (17,179,869,184 bytes). Actual ordinary-user migration and repeat passed;
+existing ledger/lock/index/anchor/replay were retained. Latest observed consumption
+is82 attempts and9,798,942,720 reserved bytes, leaving7,380,926,464 bytes.
+Spectre500 and same-change corrections20 remain; no reset/refund or new simulation.
+Fresh installs retain operator-selected policy; this VM's16GiB is not their default.
+
+The VM realtime clock was9h behind trusted UTC. Minimum delegated administrator
+provisioning corrected only realtime UTC; timezone/NTP/RTC configuration files and
+metadata were preserved. Latest normal-user retained preflight PASS. This retained
+preflight is not a current authenticated worker installation attestation.
+
+The NN model closure contains7 files/147,351 bytes. Exact metadata repair removed
+shared-write bits from7 model files and3 ancestors; contents/owners/groups/inodes/
+mtime preserved. One normal ancestor needed no change; repeat changed0. Including
+prior code repair,342 targets changed and296 file contents remain identical.
+Read-only whole closure trust now passes on actual UID500/Python2.6. Current
+native gate binds all7 dependencies and rejects missing/extra/changed models before
+reservation and at worker boundaries. No model/license/vendor content was changed.
+
+Current related124 PASS/31 OS skips, Ruff and mypy90 PASS. Actual nine-source
+Python2.6 grammar/retained preflight/seven-control and home-index equality PASS.
+These are distinct from actual new Cadence jobs, automatic extraction, Sweep/spec
+and Codex app lifecycle, which remain incomplete. Original hierarchy locks remain
+untouched; whole OA hierarchy protection is still a pre-execution gate.
+
+ContinuousGREL02–08 and conditional related PR integration follow the latest direct
+user authorization. PR142 final selector correction isbe0594568247b69a815d2eee9ee516ae75d4e446;
+final hosted checks/review pending. PR152 remains draft with native actual acceptance
+pending. No direct main/force/admin bypass; exact-candidate public approval remains
+required for tag/Release/upload. Prior checkpoints below are dated history.
+See RESULT_POLICY_MODEL_TRUST_V1.md for reproducible operator procedures.
+
+## Current user approval overlay, 2026-10-09
+
+The latest direct user instruction supersedes earlier no-merge, no-budget-increase
+and no-GREL08 statements below only for the current standard-VM release work.
+Those dated statements remain historical evidence. The authority is the user's
+instruction, not this plan or a generated approval file.
+
+Current managed validation VM: cumulative result ceiling16 GiB
+(17,179,869,184 bytes), Spectre500 and same-change corrections20; consumed
+attempts/reservations/corrections, disk floors, per-job limits, replay and the
+existing ledger/lock/index remain binding. Versioned policies V1–V5 are retained.
+PHASE_RESULT_LIMIT_V6.json records the new limit; actual enforcement migration
+must be verified before claiming it active. This is not another user's default.
+
+Continuous GREL02–08 implementation and exact release-candidate verification are
+authorized. Related PR142–152 and necessary corrective PRs may be normally merged
+in dependency order after final review, relevant acceptance/CI/security/package
+checks and GitHub protections. No direct main push, force push or admin bypass.
+Unqualified native routes stay opt-in; a code merge is not actual Cadence PASS.
+Current-VM minimum reversible administrator delegation remains active. Original
+OA/ADE, PDK/vendor contents, licenses, historical evidence and journals stay protected.
+
+GitHub tag/Release/upload, PyPI/MCPB/marketplace and prior-release changes still
+require one final approval of the exact commit/version/artifacts/hashes. Prepare
+that candidate only after actual generic execution gates pass. Do not request
+routine phase, per-PR or previously approved resource permissions again.
+
+Latest read-only VM observation:82 attempts/9,798,942,720 reserved bytes,
+25,677,393,920 filesystem available bytes. With the approved16GiB ceiling the
+arithmetic remaining capacity is7,380,926,464 bytes; migration is not yet applied.
+The latest retained preflight was rejected by freshness: VM UTC is9h behind
+trusted host/tool UTC. Preserve the check and diagnose time configuration.
+No new simulation or reservation occurred. Two circuits/six actual netlists remain
+input evidence only; native activation/results/extraction/Sweep/app are incomplete.
+
+## Current actual native input checkpoint, 2026-10-08
+
+Same feat/grel-03-authenticated-provider/draftPR152 and main553276d preserved.
+Previous2898d5b now has four successful Windows/Ubuntu push/PR checks; hosted
+Windows2861 PASS/38 OS skips/56 warnings and installed63-state preservation PASS.
+Current standard-VM normal-user preparation and common-renderer DCACtran netlisting
+succeeded for two distinct new owned QA sources: six real generated inputs.
+Actual Python2.6 shared-parser verification of all six PASS. No Spectre run,
+reservation, grant, native activation or actual new Codex job occurred.
+
+Actual /proc race exposed Python2.6 IOError handling; vanished-member-only handling
+is corrected. HNL continuation/default-output syntax is narrowly supported, DC
+sweep cannot be promoted by hash alone, and Spectre cwd stays in owned work.
+Current affected415 PASS/28 Windows POSIX skips; Ruff/mypy90/security18/audit and
+installed63-state preservation PASS. Exact3b06c5f four hosted checks PASS: Windows2889/39 OS skips/56 warnings,
+Ubuntu native/provider/setup124/no skips. Formal review NOT_RUN; PR152 draft/unmerged.
+Original top-level OA/ADE and each registered QA source/state snapshot preserved.
+Hierarchy lock/recovery files and failed diagnostic/source versions remain intact;
+whole hierarchy metadata attestation is not claimed. Final fresh retained preflight/eight-asset Python2.6 grammar and seven-control/
+home-index content/metadata equality PASS. Ledger82/9,798,942,720,895MiB remaining.
+
+Continue clean context/native confirmation/activation/fresh DCACtran/extraction,
+Sweep/spec/retry/restart/actual Codex/GREL07 within authorized02–07. Release remains
+BLOCKED; no phase reapproval, merge/GREL08/publication/budget reset/increase/refund.
+See docs/generic_release/NATIVE_NETLIST_QUALIFICATION_V1.md; earlier sections remain historical.
+
+## Current confirmed native runtime continuation, 2026-10-08
+
+DraftPR152 continues on the same branch. Concrete admission/normal-user worker,
+local runtime export and explicit operator stage/activate/inspect/revoke CLI are
+implemented, but no actual native activation/new EDA occurred. Initial84fd3d8
+Windows CI passed; Ubuntu found5 process-owner failures. Corrected task-UID/start/
+PGID/SID code and setup tests await final Linux CI. Actual current Python2.6
+grammar/memory-helper/owned synthetic-process checks and retained preflight PASS;
+ledger82/9,798,942,720, remainder895MiB, seven controls unchanged. Public service
+injection, route qualification, two actual new circuits/DCACTRAN/extraction,
+Sweep/spec and clean actual Codex remain incomplete. Continue authorizedGREL02–07
+and minimum current-VM administrator delegation; no reapproval, merge/GREL08/
+publication, original mutation, evidence deletion or budget increase/reset/refund.
+See docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md. Prior overlays are
+historical; no older administrator exclusion cancels the user's current delegation.
+
 ## Active operator runner coexistence, 2026-10-08
 
 The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73

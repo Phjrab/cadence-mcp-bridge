@@ -24,10 +24,14 @@ except NameError:
     INTEGER_TYPES = (int,)
 
 LEDGER = "sim-mcp-v2-jobs/counter.json"
+LEDGER_REF = "shared-ledger"  # Public logical reference; never a caller-selected file.
 JOBS = "native-mcp-v1-jobs"
 REGISTRY = "reservation-identity"
 CEILING_COUNT = 500
-CEILING_BYTES = 10737418240
+CEILING_BYTES = 10737418240  # Historical retained default; not raised globally.
+MAX_POLICY_BYTES = 17179869184  # Supported explicit policy bound, not authority.
+RESULT_POLICY_FILE = "result-policy-v6.json"
+RESULT_POLICY_SHA = "1625e131118a0c0b4ff466c567d8a79bcb050dbf798505c23685e7b5604adac0"
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
 LEGACY_RESERVATION = 134217728
@@ -83,8 +87,8 @@ def check_binding(root, value):
     if not (
         0 < value["expires_at"] < 4102444800
         and 1 <= value["max_attempts"] <= 500
-        and 1 <= value["reserve_bytes"] <= value["max_reserved_bytes"] <= CEILING_BYTES
-        and 0 <= value["disk_floor_bytes"] <= CEILING_BYTES
+        and 1 <= value["reserve_bytes"] <= value["max_reserved_bytes"] <= MAX_POLICY_BYTES
+        and 0 <= value["disk_floor_bytes"] <= MAX_POLICY_BYTES
     ):
         raise ValueError("reservation_binding_bounds")
 
@@ -160,7 +164,7 @@ def shape(value, minimum_count, minimum_bytes):
         or type(value["count"]) not in INTEGER_TYPES
         or type(value["result_reserved_bytes"]) not in INTEGER_TYPES
         or not minimum_count <= value["count"] <= CEILING_COUNT
-        or not minimum_bytes <= value["result_reserved_bytes"] <= CEILING_BYTES
+        or not minimum_bytes <= value["result_reserved_bytes"] <= MAX_POLICY_BYTES
     ):
         raise ValueError("reservation_counter_integrity")
 
@@ -351,7 +355,7 @@ def identity_manifest(root, binding):
             or type(policy["attempt_ceiling"]) not in INTEGER_TYPES
             or type(policy["result_ceiling_bytes"]) not in INTEGER_TYPES
             or not 1 <= policy["attempt_ceiling"] <= CEILING_COUNT
-            or not 1 <= policy["result_ceiling_bytes"] <= CEILING_BYTES
+            or not 1 <= policy["result_ceiling_bytes"] <= MAX_POLICY_BYTES
             or value["baseline"]
             != {"campaign_id": policy["campaign_id"], "count": 0, "result_reserved_bytes": 0}
             or value["legacy_operation_ids"] != []
@@ -371,6 +375,64 @@ def identity_manifest(root, binding):
     ):
         raise ValueError("reservation_legacy_identity_allowlist")
     return value
+
+
+def effective_policy(root, manifest):
+    """Read explicit retained upgrade; historical/fresh operator limits stay intact.
+
+    The immutable receipt is provisioned only by the account-owner CLI after a
+    locked conservation/snapshot check. It does not grant EDA execution authority.
+    """
+    path = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
+    if manifest["schema_version"] == 2:
+        if os.path.lexists(path):
+            raise ValueError("reservation_retained_policy_on_fresh_domain")
+        return manifest["policy"]
+    policy = {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
+    if not os.path.lexists(path):
+        return policy
+    value = read(path)
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != set(
+            (
+                "schema_version",
+                "kind",
+                "root_sha256",
+                "resource_domain_sha256",
+                "identity_manifest_sha256",
+                "policy_sha256",
+                "baseline",
+                "plan_sha256",
+                "operator_authority",
+            )
+        )
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 6
+        or value["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_16GIB"
+        or value["root_sha256"] != manifest["root_sha256"]
+        or value["resource_domain_sha256"] != manifest["resource_domain_sha256"]
+        or value["identity_manifest_sha256"] != digest(canonical(manifest))
+        or value["policy_sha256"] != RESULT_POLICY_SHA
+        or not matches(HASH, value["plan_sha256"])
+        or not isinstance(value["operator_authority"], STRING_TYPES)
+        or not 1 <= len(value["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in value["operator_authority"])
+    ):
+        raise ValueError("reservation_retained_policy_binding")
+    counter_shape(value["baseline"], manifest)
+    if (
+        value["baseline"]["count"] < manifest["baseline"]["count"]
+        or value["baseline"]["result_reserved_bytes"]
+        < manifest["baseline"]["result_reserved_bytes"]
+        or value["baseline"]["result_reserved_bytes"] > CEILING_BYTES
+        or value["baseline"]["result_reserved_bytes"]
+        != expected_bytes(value["baseline"]["count"], [])
+    ):
+        raise ValueError("reservation_retained_policy_baseline")
+    policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
+    return policy
 
 
 def audit(root, counter, manifest, manifest_sha):
@@ -416,7 +478,7 @@ def audit(root, counter, manifest, manifest_sha):
         raise ValueError("reservation_identity_inventory_limit")
     indexed = {}
     for entry in entries:
-        if entry in ("manifest.json", "legacy-seal.json"):
+        if entry in ("manifest.json", "legacy-seal.json", RESULT_POLICY_FILE):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
         if not matches(ID, op):
@@ -482,6 +544,17 @@ def state(root, binding):
         raise ValueError("reservation_ambiguous_barrier")
     counter = read(counter_path)
     counter_shape(counter, manifest)
+    policy = effective_policy(root, manifest)
+    if counter["result_reserved_bytes"] > policy["result_ceiling_bytes"]:
+        raise ValueError("reservation_counter_policy_capacity")
+    upgrade = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
+    if os.path.lexists(upgrade):
+        baseline = read(upgrade)["baseline"]
+        if (
+            counter["count"] < baseline["count"]
+            or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
+        ):
+            raise ValueError("reservation_policy_consumption_rollback")
     if (
         counter["count"] < manifest["baseline"]["count"]
         or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
@@ -517,82 +590,133 @@ def free_bytes(root):
     return info.f_bavail * info.f_frsize
 
 
+class ReservationSession(object):
+    """Internal owned flock for one worker lifetime; never constructed from JSON.
+
+    The fixed provider must attest operator/trust/admission before reserving. A
+    session pins the existing lock inode once and retains it through EDA/extraction.
+    Public reserve/lookup callers continue using short-lived sessions. There is no
+    caller flag that can skip locking and no new lock or resource domain.
+    """
+
+    def __init__(self, root):
+        self.root = os.path.abspath(root)
+        self.fd = open_lock(self.root)
+        self.lock_identity = identity(os.fstat(self.fd))
+
+    def check(self):
+        if self.fd is None:
+            raise ValueError("reservation_session_closed")
+        current = safe(os.path.join(self.root, "run.lock"))
+        if (
+            identity(current) != self.lock_identity
+            or identity(os.fstat(self.fd)) != self.lock_identity
+        ):
+            raise ValueError("reservation_lock_drift")
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+
+    def __enter__(self):
+        self.check()
+        return self
+
+    def __exit__(self, kind, value, traceback):
+        self.close()
+
+    def reserve(self, operation_id, binding):
+        self.check()
+        return _reserve_held(self, operation_id, binding)
+
+    def observe(self, binding):
+        self.check()
+        return state(self.root, binding)
+
+
+def _reserve_held(session, operation_id, binding):
+    # This accepts the actual owned session object, never a descriptor/path/flag
+    # supplied by caller JSON. Closing or substituting the lock fails closed.
+    if type(session) is not ReservationSession:
+        raise ValueError("reservation_owned_session_required")
+    session.check()
+    root = session.root
+    check_binding(root, binding)
+    work = paths(root, operation_id)
+    if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
+        raise ValueError("reservation_identity_class_conflict")
+    counter, records = state(root, binding)
+    existing = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
+    if existing is not None:
+        if existing[0]["binding"] != binding:
+            raise ValueError("reservation_replay_identity")
+        return existing[1] or {"status": "UNKNOWN_OUTCOME", "operation_id": operation_id}
+    if any(item[1] is None for item in records):
+        raise ValueError("reservation_unresolved_intent")
+    if os.path.lexists(os.path.join(work, "attempt-reserved")):
+        raise ValueError("reservation_legacy_replay")
+    if os.path.lexists(os.path.join(root, JOBS, "active")):
+        raise ValueError("reservation_active_legacy_job")
+    if time.time() >= binding["expires_at"]:
+        raise ValueError("reservation_grant_expired")
+    used_count, used_bytes, inflight = 0, 0, 0
+    for intent, receipt in records:
+        old = intent["binding"]
+        # No terminal-worker attestation exists yet. Treat every own reservation
+        # as in-flight forever; later reviewed completion must retain receipts.
+        inflight += old["reserve_bytes"]
+        if old["grant_sha256"] == binding["grant_sha256"]:
+            if any(old[key] != binding[key] for key in GRANT_FIELDS):
+                raise ValueError("reservation_grant_binding_drift")
+            used_count += 1
+            used_bytes += old["reserve_bytes"]
+    amount = binding["reserve_bytes"]
+    if (
+        used_count + 1 > binding["max_attempts"]
+        or used_bytes + amount > binding["max_reserved_bytes"]
+    ):
+        raise ValueError("reservation_grant_capacity")
+    manifest = identity_manifest(root, binding)
+    policy = effective_policy(root, manifest)
+    if binding["max_reserved_bytes"] > policy["result_ceiling_bytes"]:
+        raise ValueError("reservation_grant_policy_capacity")
+    if (
+        counter["count"] + 1 > policy["attempt_ceiling"]
+        or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]
+    ):
+        raise ValueError("reservation_cumulative_capacity")
+    if free_bytes(root) < binding["disk_floor_bytes"] + inflight + amount:
+        raise ValueError("reservation_physical_disk_floor")
+    after = dict(counter)
+    after["count"] += 1
+    after["result_reserved_bytes"] += amount
+    intent = {
+        "schema_version": 1,
+        "operation_id": operation_id,
+        "binding": binding,
+        "before": counter,
+        "after": after,
+    }
+    counter_path = os.path.join(root, LEDGER)
+    # Legacy adapter recognizes this same barrier. It must precede intent/
+    # marker writes so a crash cannot be overtaken by legacy reservation.
+    write_new(counter_path + ".ade-tmp", after)
+    write_new(os.path.join(root, REGISTRY, operation_id + ".json"), intent)
+    write_new(os.path.join(work, "reservation-intent.json"), intent)
+    write_new(os.path.join(work, "attempt-reserved"), after)
+    safe(counter_path)
+    if os.name == "nt":
+        os.replace(counter_path + ".ade-tmp", counter_path)
+    else:
+        os.rename(counter_path + ".ade-tmp", counter_path)
+    sync_directory(os.path.dirname(counter_path))
+    receipt = receipt_for(intent)
+    write_new(os.path.join(work, "reservation-receipt.json"), receipt)
+    return receipt
+
+
 def reserve(root, operation_id, binding):
     """Internal accounting only. Caller MUST already attest authority/admission."""
-    root = os.path.abspath(root)
-    check_binding(root, binding)
-    fd = open_lock(root)
-    try:
-        work = paths(root, operation_id)
-        if operation_id in identity_manifest(root, binding)["legacy_operation_ids"]:
-            raise ValueError("reservation_identity_class_conflict")
-        counter, records = state(root, binding)
-        existing = transaction(work, root, operation_id, counter, identity_manifest(root, binding))
-        if existing is not None:
-            if existing[0]["binding"] != binding:
-                raise ValueError("reservation_replay_identity")
-            return existing[1] or {"status": "UNKNOWN_OUTCOME", "operation_id": operation_id}
-        if any(item[1] is None for item in records):
-            raise ValueError("reservation_unresolved_intent")
-        if os.path.lexists(os.path.join(work, "attempt-reserved")):
-            raise ValueError("reservation_legacy_replay")
-        if os.path.lexists(os.path.join(root, JOBS, "active")):
-            raise ValueError("reservation_active_legacy_job")
-        if time.time() >= binding["expires_at"]:
-            raise ValueError("reservation_grant_expired")
-        used_count, used_bytes, inflight = 0, 0, 0
-        for intent, receipt in records:
-            old = intent["binding"]
-            # No terminal-worker attestation exists yet. Treat every own reservation
-            # as in-flight forever; later reviewed completion must retain receipts.
-            inflight += old["reserve_bytes"]
-            if old["grant_sha256"] == binding["grant_sha256"]:
-                if any(old[key] != binding[key] for key in GRANT_FIELDS):
-                    raise ValueError("reservation_grant_binding_drift")
-                used_count += 1
-                used_bytes += old["reserve_bytes"]
-        amount = binding["reserve_bytes"]
-        if (
-            used_count + 1 > binding["max_attempts"]
-            or used_bytes + amount > binding["max_reserved_bytes"]
-        ):
-            raise ValueError("reservation_grant_capacity")
-        manifest = identity_manifest(root, binding)
-        policy = manifest.get(
-            "policy", {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
-        )
-        if (
-            counter["count"] + 1 > policy["attempt_ceiling"]
-            or counter["result_reserved_bytes"] + amount > policy["result_ceiling_bytes"]
-        ):
-            raise ValueError("reservation_cumulative_capacity")
-        if free_bytes(root) < binding["disk_floor_bytes"] + inflight + amount:
-            raise ValueError("reservation_physical_disk_floor")
-        after = dict(counter)
-        after["count"] += 1
-        after["result_reserved_bytes"] += amount
-        intent = {
-            "schema_version": 1,
-            "operation_id": operation_id,
-            "binding": binding,
-            "before": counter,
-            "after": after,
-        }
-        counter_path = os.path.join(root, LEDGER)
-        # Legacy adapter recognizes this same barrier. It must precede intent/
-        # marker writes so a crash cannot be overtaken by legacy reservation.
-        write_new(counter_path + ".ade-tmp", after)
-        write_new(os.path.join(root, REGISTRY, operation_id + ".json"), intent)
-        write_new(os.path.join(work, "reservation-intent.json"), intent)
-        write_new(os.path.join(work, "attempt-reserved"), after)
-        safe(counter_path)
-        if os.name == "nt":
-            os.replace(counter_path + ".ade-tmp", counter_path)
-        else:
-            os.rename(counter_path + ".ade-tmp", counter_path)
-        sync_directory(os.path.dirname(counter_path))
-        receipt = receipt_for(intent)
-        write_new(os.path.join(work, "reservation-receipt.json"), receipt)
-        return receipt
-    finally:
-        os.close(fd)
+    with ReservationSession(root) as session:
+        return session.reserve(operation_id, binding)

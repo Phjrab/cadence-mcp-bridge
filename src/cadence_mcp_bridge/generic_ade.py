@@ -18,6 +18,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
 
+from cadence_mcp_bridge import _native_rendering
 from cadence_mcp_bridge.designs import BindingName
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
@@ -143,35 +144,7 @@ class AdeExecutionRegistration(VariableModel):
 
 # Fixed API syntax. Only validated ASCII identifiers, decimal strings and
 # canonical job-owned paths are substituted; no caller expressions or scripts.
-_TEMPLATE = r"""; Generic ADE L owned-copy netlist input. No OA/state save and no simulator run.
-envSetVal("asimenv.startup" "projectDir" 'string @PROJECT@)
-envSetVal("asimenv.startup" "simulator" 'string "spectre")
-let((win session sevId cv ana)
-  unless(sevStartSession(?lib @LIB@ ?cell @CELL@ ?view @VIEW@) exit(1))
-  win=hiGetCurrentWindow()
-  session=asiGetSession(win)
-  sevId=sevSession(win)
-  unless(session && sevId exit(1))
-  cv=asiGetTopCellView(session)
-  unless(cv && cv~>libName==@LIB@ && cv~>cellName==@CELL@ &&
-    cv~>viewName==@VIEW@ exit(1))
-  unless(asiLoadState(session ?name @STATE@ ?option 'dir ?stateDir @STATE_ROOT@
-    ?lib @LIB@ ?cell @CELL@ ?simulator "spectre") exit(1))
-  foreach(name asiGetAnalysisNameList(session)
-    unless(asiDisableAnalysis(asiGetAnalysis(session name)) exit(1)))
-@VARIABLES@
-  ana=asiGetAnalysis(session '@ANALYSIS@)
-  unless(ana exit(1))
-@FIELDS@
-  unless(asiEnableAnalysis(ana) && asiIsAnalysisEnabled(ana) exit(1))
-  unless(length(asiGetEnabledAnalysisList(session))==1 exit(1))
-  unless(sevNetlistFile(sevId 'recreate) exit(1))
-  printf("MCP_GENERIC_ADE_NETLIST|@PLAN@|@OPERATION@\n")
-  unless(asiLoadState(session ?name @STATE@ ?option 'dir ?stateDir @STATE_ROOT@
-    ?lib @LIB@ ?cell @CELL@ ?simulator "spectre") exit(1))
-  unless(sevQuit(sevId) exit(1)))
-exit(0)
-"""
+_TEMPLATE = _native_rendering.ADE_TEMPLATE
 
 
 def template_sha256() -> str:
@@ -271,59 +244,22 @@ def render_netlist(
     profile = context.contracts.designs.profile(plan.request.design_id)
     # Provider must exclusively create and attest this owned library/cell/state.
     library = "MCP_GREL_Work"
-    cell = "Grel_" + operation_id.replace("-", "_")
     if profile.binding.library == library:
         raise OperationRejected("owned_library_source_collision")
-    job = context.contracts.environment.paths.job_root + "/" + operation_id
     variables = context.contracts.designs.variable_set(profile.design_id)
     bindings = {v.logical_id: v.cadence_binding for v in variables.variables} if variables else {}
-    variable_lines: list[str] = []
-    # Set the complete list once: repeated setters could replace earlier values.
-    if plan.request.values:
-        pairs = " ".join(
-            "list(" + _quoted(bindings[v.logical_id]) + " " + _quoted(v.value) + ")"
+    return _native_rendering.netlist(  # type: ignore[no-any-return,no-untyped-call]
+        context.contracts.environment.paths.job_root,
+        profile.binding.view,
+        profile.binding.ade.state,
+        tuple(
+            (bindings[v.logical_id], v.value)
             for v in sorted(plan.request.values, key=lambda v: v.logical_id)
-        )
-        variable_lines = [
-            "  unless(isCallable('asiSetDesignVarList) && asiSetDesignVarList(session list("
-            + pairs
-            + ")) exit(1))"
-        ]
-    fields: list[str] = []
-    inputs = registration.inputs
-    if isinstance(inputs, AcInputs):
-        fields = [
-            f"  unless(asiSetAnalysisFieldVal(ana '{name} {_quoted(value)}) exit(1))"
-            for name, value in (
-                ("start", inputs.start_hz),
-                ("stop", inputs.stop_hz),
-                ("incrType", "Logarithmic"),
-                ("dec", str(inputs.points_per_decade)),
-            )
-        ]
-    elif isinstance(inputs, TranInputs):
-        fields = [f"  unless(asiSetAnalysisFieldVal(ana 'stop {_quoted(inputs.stop_s)}) exit(1))"]
-        fields.extend(
-            f"  unless(asiSetAnalysisOptionVal(ana '{name} {_quoted(value)}) exit(1))"
-            for name, value in (("maxstep", inputs.maxstep_s), ("method", inputs.method))
-        )
-    replacements = {
-        "PROJECT": _quoted(job + "/project"),
-        "LIB": _quoted(library),
-        "CELL": _quoted(cell),
-        "VIEW": _quoted(profile.binding.view),
-        "STATE": _quoted(profile.binding.ade.state),
-        "STATE_ROOT": _quoted(job + "/state-root"),
-        "VARIABLES": "\n".join(variable_lines),
-        "FIELDS": "\n".join(fields),
-        "ANALYSIS": plan.analysis,
-        "PLAN": plan.plan_sha256,
-        "OPERATION": operation_id,
-    }
-    script = _TEMPLATE
-    for name, value in replacements.items():
-        script = script.replace("@" + name + "@", value)
-    return script.encode("ascii")
+        ),
+        registration.inputs.model_dump(mode="json"),
+        plan.plan_sha256,
+        operation_id,
+    )
 
 
 def _read_input(path: Path) -> bytes:
@@ -343,30 +279,13 @@ def _read_input(path: Path) -> bytes:
 
 def _statements(data: bytes) -> list[str]:
     try:
-        text = data.decode("ascii")
-    except UnicodeError:
-        raise OperationRejected("spectre_dialect_unsupported") from None
-    if len(data) > LIMIT or any(ord(c) < 32 and c not in "\n\r\t" for c in text):
-        raise OperationRejected("spectre_dialect_unsupported")
-    lines = []
-    for line in text.splitlines():
-        # Deliberately narrow single-line dialect; no inline/block comments,
-        # continuation, escapes or quoted expression normalization.
-        line = line.strip()
-        if not line or line.startswith("//"):
-            continue
-        if any(token in line for token in ("\\", ";", "//", "/*", "*/")) or line.startswith("+"):
-            raise OperationRejected("spectre_dialect_unsupported")
-        if '"' in line and not line.startswith('include "'):
-            raise OperationRejected("spectre_dialect_unsupported")
-        lines.append(" ".join(line.split()))
-    if not lines or lines[0] != "simulator lang=spectre":
-        raise OperationRejected("spectre_dialect_unsupported")
-    return lines[1:]
+        return _native_rendering.statements(data)  # type: ignore[no-any-return,no-untyped-call]
+    except ValueError as error:
+        raise OperationRejected(str(error)) from None
 
 
 def static_fingerprint(statements: list[str]) -> str:
-    return hashlib.sha256(("\n".join(statements) + "\n").encode("ascii")).hexdigest()
+    return _native_rendering.static_fingerprint(statements)  # type: ignore[no-any-return,no-untyped-call]
 
 
 def verify_effective_input(
@@ -378,70 +297,18 @@ def verify_effective_input(
 ) -> dict[str, object]:
     TypeAdapter(OperationId).validate_python(operation_id)
     bind_inputs(context, plan, registration)
-    parameters: dict[str, str] = {}
-    includes: list[tuple[str, str]] = []
-    analyses: list[tuple[str, str]] = []
-    static: list[str] = []
-    for line in _statements(data):
-        if line.startswith("parameters "):
-            for pair in line.split()[1:]:
-                match = re.fullmatch(r"([A-Za-z][A-Za-z0-9_#-]{0,63})=(.+)", pair)
-                if match is None or match[1] in parameters:
-                    raise OperationRejected("spectre_parameters_invalid")
-                try:
-                    parameters[match[1]] = number_text(match[2])
-                except ValueError:
-                    raise OperationRejected("spectre_scalar_expression_denied") from None
-        elif line.startswith("include "):
-            match = re.fullmatch(
-                r'include "(/[A-Za-z0-9._/-]+)" section=([A-Za-z][A-Za-z0-9_#-]{0,63})', line
-            )
-            if match is None:
-                raise OperationRejected("spectre_model_binding_mismatch")
-            includes.append((match[1], match[2]))
-        else:
-            match = re.fullmatch(r"[A-Za-z][A-Za-z0-9_]* (dc|ac|tran)(?: (.*))?", line)
-            if match:
-                analyses.append((match[1], match[2] or ""))
-            else:
-                static.append(line)
     variables = context.contracts.designs.variable_set(plan.request.design_id)
     bindings = {v.logical_id: v.cadence_binding for v in variables.variables} if variables else {}
-    expected_parameters = {bindings[v.logical_id]: v.value for v in plan.request.values}
-    if parameters != expected_parameters:
-        raise OperationRejected("spectre_explicit_parameters_mismatch")
-    if includes != [(m.path, m.section) for m in registration.model_includes]:
-        raise OperationRejected("spectre_model_binding_mismatch")
-    if len(analyses) != 1 or analyses[0][0] != plan.analysis:
-        raise OperationRejected("spectre_analysis_binding_mismatch")
-    inputs = registration.inputs
-    options = analyses[0][1]
-    if isinstance(inputs, DcInputs):
-        # Include the analysis name only through its kind; ADE can name the
-        # single generated operating-point statement independently.
-        if hashlib.sha256(("dc " + options).encode("ascii")).hexdigest() != inputs.statement_sha256:
-            raise OperationRejected("spectre_analysis_binding_mismatch")
-    else:
-        expected = (
-            {"start": inputs.start_hz, "stop": inputs.stop_hz, "dec": str(inputs.points_per_decade)}
-            if isinstance(inputs, AcInputs)
-            else {"stop": inputs.stop_s, "maxstep": inputs.maxstep_s, "method": inputs.method}
+    try:
+        checked = _native_rendering.effective_input(  # type: ignore[no-untyped-call]
+            data,
+            {bindings[v.logical_id]: v.value for v in plan.request.values},
+            [(m.path, m.section) for m in registration.model_includes],
+            registration.inputs.model_dump(mode="json"),
+            registration.static_statements_sha256,
         )
-        pairs = options.split()
-        if len(pairs) != len(expected) or any(p.count("=") != 1 for p in pairs):
-            raise OperationRejected("spectre_analysis_binding_mismatch")
-        observed = dict(p.split("=", 1) for p in pairs)
-        if len(observed) != len(pairs) or set(observed) != set(expected):
-            raise OperationRejected("spectre_analysis_binding_mismatch")
-        for key, value in observed.items():
-            try:
-                actual = value if key == "method" else number_text(value)
-            except ValueError:
-                raise OperationRejected("spectre_analysis_binding_mismatch") from None
-            if actual != expected[key]:
-                raise OperationRejected("spectre_analysis_binding_mismatch")
-    if static_fingerprint(static) != registration.static_statements_sha256:
-        raise OperationRejected("spectre_static_inputs_mismatch")
+    except ValueError as error:
+        raise OperationRejected(str(error)) from None
     return {
         "status": "LOCAL_EFFECTIVE_INPUT_MATCHED",
         "operation_id": operation_id,
@@ -452,8 +319,8 @@ def verify_effective_input(
         "source_tree_sha256": registration.source_tree_sha256,
         "ade_state_tree_sha256": registration.ade_state_tree_sha256,
         "analysis": plan.analysis,
-        "parameter_count": len(parameters),
-        "model_count": len(includes),
+        "parameter_count": checked["parameter_count"],
+        "model_count": checked["model_count"],
         "native_source_copy_attested": False,
         "native_model_bytes_attested": False,
         "execution_authorized": False,

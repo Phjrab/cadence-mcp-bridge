@@ -1,0 +1,930 @@
+{
+  "schema_version": 1,
+  "baseline_parent": "2f1501f8df69014b968f89ce6fdf1fc3a8547efb",
+  "activation": "explicit_operator_context_provider_and_grant_only",
+  "native_qualification": "NOT_RUN",
+  "tools": {
+    "cadence_plan_operation": {
+      "name": "cadence_plan_operation",
+      "title": null,
+      "description": "Plan explicit registered numeric values under the operator grant. Local only; no reservation or permission is created.",
+      "inputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "NativeOperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "NativeOperationRequest",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeOperationRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_plan_operationArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "OperationPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "resource_domain_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Resource Domain Sha256",
+                "type": "string"
+              },
+              "runner_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Runner Sha256",
+                "type": "string"
+              },
+              "ledger_ref": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Ledger Ref",
+                "type": "string"
+              },
+              "environment_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Environment Sha256",
+                "type": "string"
+              },
+              "design_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Design Sha256",
+                "type": "string"
+              },
+              "pdk_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Pdk Sha256",
+                "type": "string"
+              },
+              "grant_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Grant Sha256",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/OperationRequest"
+              },
+              "analysis": {
+                "enum": [
+                  "dc",
+                  "ac",
+                  "tran"
+                ],
+                "title": "Analysis",
+                "type": "string"
+              },
+              "attempt_cost": {
+                "const": 1,
+                "default": 1,
+                "title": "Attempt Cost",
+                "type": "integer"
+              },
+              "accounting": {
+                "const": "existing_remote_shared_ledger_no_reset",
+                "default": "existing_remote_shared_ledger_no_reset",
+                "title": "Accounting",
+                "type": "string"
+              }
+            },
+            "required": [
+              "resource_domain_sha256",
+              "runner_sha256",
+              "ledger_ref",
+              "environment_sha256",
+              "design_sha256",
+              "pdk_sha256",
+              "grant_sha256",
+              "request",
+              "analysis"
+            ],
+            "title": "OperationPlan",
+            "type": "object"
+          },
+          "OperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "OperationRequest",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "plan": {
+            "$ref": "#/$defs/OperationPlan"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "remote_contact": {
+            "const": false,
+            "default": false,
+            "title": "Remote Contact",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan",
+          "plan_sha256"
+        ],
+        "title": "NativeOperationPlan",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_submit_operation": {
+      "name": "cadence_submit_operation",
+      "title": null,
+      "description": "Submit one registered DC/AC/TRAN operation under confirmed operator scope and existing shared accounting. Same UUID retries only look up; never resend.",
+      "inputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "NativeOperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "NativeOperationRequest",
+            "type": "object"
+          },
+          "NativeOperationSubmission": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/NativeOperationRequest"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256",
+              "request"
+            ],
+            "title": "NativeOperationSubmission",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "submission": {
+            "$ref": "#/$defs/NativeOperationSubmission"
+          }
+        },
+        "required": [
+          "submission"
+        ],
+        "title": "cadence_submit_operationArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "OperationProgress": {
+            "additionalProperties": false,
+            "properties": {
+              "phase": {
+                "enum": [
+                  "ADMITTED",
+                  "UNKNOWN_OUTCOME",
+                  "RESERVED",
+                  "DISPATCHED",
+                  "RUNNING",
+                  "EXTRACTING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "EXTRACTION_FAILED",
+                  "CANCELLED"
+                ],
+                "title": "Phase",
+                "type": "string"
+              },
+              "remote_revision": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Remote Revision"
+              },
+              "provider_receipt_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Provider Receipt Sha256"
+              }
+            },
+            "required": [
+              "phase"
+            ],
+            "title": "OperationProgress",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "operation_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/$defs/OperationProgress"
+          },
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation_id",
+          "plan_sha256",
+          "progress",
+          "event_count"
+        ],
+        "title": "NativeOperationStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_operation_status": {
+      "name": "cadence_operation_status",
+      "title": null,
+      "description": "Reconcile one admitted UUID and exact plan hash without dispatch or spend.",
+      "inputSchema": {
+        "$defs": {
+          "NativeOperationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeOperationQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeOperationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_operation_statusArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "OperationProgress": {
+            "additionalProperties": false,
+            "properties": {
+              "phase": {
+                "enum": [
+                  "ADMITTED",
+                  "UNKNOWN_OUTCOME",
+                  "RESERVED",
+                  "DISPATCHED",
+                  "RUNNING",
+                  "EXTRACTING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "EXTRACTION_FAILED",
+                  "CANCELLED"
+                ],
+                "title": "Phase",
+                "type": "string"
+              },
+              "remote_revision": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Remote Revision"
+              },
+              "provider_receipt_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Provider Receipt Sha256"
+              }
+            },
+            "required": [
+              "phase"
+            ],
+            "title": "OperationProgress",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "operation_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/$defs/OperationProgress"
+          },
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation_id",
+          "plan_sha256",
+          "progress",
+          "event_count"
+        ],
+        "title": "NativeOperationStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_operation_result": {
+      "name": "cadence_operation_result",
+      "title": null,
+      "description": "Retrieve registered bounded measurements with terminal receipt, input, reader, frame and PSF integrity checks. Never reruns simulation or extraction.",
+      "inputSchema": {
+        "$defs": {
+          "NativeOperationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeOperationQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeOperationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_operation_resultArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "operation_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "operation_id",
+          "plan_sha256",
+          "result"
+        ],
+        "title": "NativeOperationResult",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_cancel_pending_operation": {
+      "name": "cadence_cancel_pending_operation",
+      "title": null,
+      "description": "Cancel only a verified pending or absent-intent operation with a durable remote tombstone. No active termination or reservation refund.",
+      "inputSchema": {
+        "$defs": {
+          "NativeOperationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeOperationQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeOperationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_cancel_pending_operationArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "OperationProgress": {
+            "additionalProperties": false,
+            "properties": {
+              "phase": {
+                "enum": [
+                  "ADMITTED",
+                  "UNKNOWN_OUTCOME",
+                  "RESERVED",
+                  "DISPATCHED",
+                  "RUNNING",
+                  "EXTRACTING",
+                  "SUCCEEDED",
+                  "FAILED",
+                  "EXTRACTION_FAILED",
+                  "CANCELLED"
+                ],
+                "title": "Phase",
+                "type": "string"
+              },
+              "remote_revision": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Remote Revision"
+              },
+              "provider_receipt_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Provider Receipt Sha256"
+              }
+            },
+            "required": [
+              "phase"
+            ],
+            "title": "OperationProgress",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "operation_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/$defs/OperationProgress"
+          },
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation_id",
+          "plan_sha256",
+          "progress",
+          "event_count"
+        ],
+        "title": "NativeOperationStatus",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    }
+  }
+}

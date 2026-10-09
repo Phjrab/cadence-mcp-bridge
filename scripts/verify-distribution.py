@@ -77,6 +77,15 @@ def inspect_artifact(artifact: Path, project: Path) -> dict[str, object]:
         for p in (project / "src/cadence_mcp_bridge").iterdir()
         if p.is_file() and (p.suffix == ".py" or p.name == "py.typed")
     }
+    starter_files = ("README.md", "environment.json", "designs.json", "pdks.json")
+    source.update(
+        {
+            "cadence_mcp_bridge/operator_starter/" + name: (
+                project / "src/cadence_mcp_bridge/operator_starter" / name
+            ).read_bytes()
+            for name in starter_files
+        }
+    )
     required = {name: (project / name).read_bytes() for name in LICENSE_FILES}
     if hashlib.sha256(required["LICENSE"]).hexdigest() != APACHE_SHA256:
         raise ValueError("Canonical Apache license bytes differ")
@@ -95,8 +104,10 @@ def inspect_artifact(artifact: Path, project: Path) -> dict[str, object]:
         expected = {
             **{prefix + "src/" + name: data for name, data in source.items()},
             **{prefix + name: data for name, data in required.items()},
-            **{prefix + name: (project / name).read_bytes()
-               for name in ("README.md", "pyproject.toml", "uv.lock", ".gitignore")},
+            **{
+                prefix + name: (project / name).read_bytes()
+                for name in ("README.md", "pyproject.toml", "uv.lock", ".gitignore")
+            },
         }
         generated = {prefix + "PKG-INFO"}
         meta_path = prefix + "PKG-INFO"
@@ -138,8 +149,12 @@ def main() -> None:
     sdists = list(args.artifacts.glob("*.tar.gz"))
     if len(wheels) != 1 or len(sdists) != 1:
         raise ValueError("Expected exactly one wheel and source distribution")
-    print(json.dumps({"distribution_audit": [inspect_artifact(p, args.project)
-                                           for p in (*wheels, *sdists)]}, sort_keys=True))
+    print(
+        json.dumps(
+            {"distribution_audit": [inspect_artifact(p, args.project) for p in (*wheels, *sdists)]},
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":
