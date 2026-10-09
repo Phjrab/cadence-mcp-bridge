@@ -10,9 +10,9 @@
     "GREL-06",
     "GREL-07"
   ],
-  "phase_status": "PARTIAL_ACTIVE_EXISTING_DOMAIN_ANCHORED_PROVIDER_PENDING",
-  "branch": "feat/grel-03-operator-domain-provisioning",
-  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/149",
+  "phase_status": "PARTIAL_ACTIVE_EXISTING_INDEX_REGISTERED_NATIVE_PROVIDER_PENDING",
+  "branch": "feat/grel-03-fresh-domain-policy",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/150",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
   "administrator_authority": "Actual user instruction on 2026-10-08, current managed VM only; this document does not mint approval",
   "support": "Professor-provided standard CentOS/Cadence VM or equivalent installation with existing PDK, individual VMware",
@@ -38,7 +38,9 @@
     "existing_domain_migration": "ACTUAL_VM_NORMAL_USER_APPLY_REPEAT_PASS_NO_EXECUTION_AUTHORITY",
     "identity_manifest_sha256": "cfd037cd4db24359614baa9f5e465bd24176f34151ee252e462016cdd2a6ef36",
     "prior_identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22",
-    "legacy_ids_sealed": 3
+    "legacy_ids_sealed": 3,
+    "fresh_initialization_on_current_vm": "DENIED_EXISTING_DOMAIN_PRESERVED",
+    "normal_user_existing_index_register_repeat": "PASS"
   },
   "resources": {
     "attempts": 82,
@@ -49,15 +51,15 @@
     "reset_refund_increase_authorized": false
   },
   "validation": {
-    "affected_passed": 140,
+    "affected_passed": 157,
     "platform_skips": 8,
     "security_passed": 18,
     "dependency_audit": "CLEAN",
     "installed_preserved_state_files": 43,
-    "hosted_ci": "INITIAL_PUSH_PASS_PR_EVENT_WINDOWS_SYNTHETIC_STARTUP_FAILURE_CORRECTION_PENDING",
+    "hosted_ci": "PR150_WINDOWS_PASS_POSIX_FIXTURE_THRESHOLD_CORRECTED_NEW_SOURCE_PENDING",
     "independent_review": "TWO_P2_CORRECTED_NO_FORMAL_APPROVAL",
     "security_seconds": 1.69,
-    "installed_preserved_migration_files": 5
+    "installed_preserved_migration_files": 20
   },
   "next_work": [
     "authentic provider and existing-domain migration",
@@ -75,8 +77,8 @@
     "historical result/journal deletion",
     "budget reset/refund/increase"
   ],
-  "report": "EXISTING_DOMAIN_MIGRATION_V1.md",
+  "report": "FRESH_DOMAIN_V1.md",
   "next_phase_authorized": true,
-  "previous_branch": "feat/grel-02-operator-runner-coexistence",
+  "previous_branch": "feat/grel-03-operator-domain-provisioning",
   "repair_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/148"
 }

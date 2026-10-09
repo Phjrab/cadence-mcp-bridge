@@ -33,6 +33,7 @@ class TestIO:
         self.real_close = os.close
         self.bad_permission: set[str] = set()
         real_fstat, real_close, real_fsync = os.fstat, os.close, os.fsync
+        actual_uid = os.getuid() if hasattr(os, "getuid") else 0
 
         def fstat(fd: int) -> Any:
             s = self.paths[fd].stat() if fd < 0 else real_fstat(fd)
@@ -65,7 +66,7 @@ class TestIO:
         monkeypatch.setattr(w.os, "fstat", fstat)
         monkeypatch.setattr(w.os, "close", close)
         monkeypatch.setattr(w.os, "fsync", lambda fd: real_fsync(fd) if fd >= 0 else None)
-        monkeypatch.setattr(w.os, "getuid", lambda: 0, raising=False)
+        monkeypatch.setattr(w.os, "getuid", lambda: actual_uid, raising=False)
         monkeypatch.setattr(
             w.os,
             "fstatvfs",
@@ -93,6 +94,15 @@ class TestIO:
         self.next_fd -= 1
         self.paths[self.next_fd] = path
         return self.next_fd
+
+    def account_home(self) -> str:
+        return str(self.root_path)
+
+    def root(self, path: str) -> int:
+        return self.directory(Path(path))
+
+    def canonical_root(self, fd: int) -> str:
+        return str(self.paths[fd])
 
     def names(self, fd: int) -> list[str]:
         names = sorted(p.name for p in self.paths[fd].iterdir())
@@ -485,3 +495,129 @@ def test_orphan_active_marker_in_every_historical_group_blocks_cleanup(
     marker.parent.mkdir()
     marker.write_bytes(b"unresolved queued operation")
     assert w.active_eda(str(tmp_path))
+
+
+@pytest.fixture
+def fresh_store(store: tuple[TestIO, int, Path]) -> tuple[TestIO, int, Path]:
+    from cadence_mcp_bridge import _shared_reservations as a
+
+    _, _, path = store
+    (path / "run.lock").write_bytes(b"x")
+    (path / a.JOBS).mkdir(mode=0o700)
+    (path / a.REGISTRY).mkdir(mode=0o700)
+    campaign = str(uuid4())
+    baseline = dict(campaign_id=campaign, count=0, result_reserved_bytes=0)
+    anchor = dict(
+        schema_version=2,
+        root_sha256=a.digest(str(path).encode("utf-8")),
+        resource_domain_sha256="a" * 64,
+        ledger_ref=a.LEDGER,
+        baseline=baseline,
+        legacy_operation_ids=[],
+        policy=dict(campaign_id=campaign, attempt_ceiling=2, result_ceiling_bytes=131072),
+    )
+    (path / a.LEDGER).write_bytes(a.canonical(baseline))
+    (path / a.REGISTRY / "manifest.json").write_bytes(a.canonical(anchor))
+    index = path / ".cadence_mcp-domain"
+    index.mkdir(mode=0o700)
+    (index / "manifest.json").write_bytes(a.canonical(dict(
+        schema_version=1, root=str(path), resource_domain_sha256="a" * 64,
+        identity_manifest_sha256=a.digest(a.canonical(anchor)), plan_sha256="b" * 64,
+    )))
+    return store
+
+
+def test_fresh_storage_zero_consumed_exhausted_and_power_counters(
+    fresh_store: tuple[TestIO, int, Path],
+) -> None:
+    from pydantic import TypeAdapter
+
+    from cadence_mcp_bridge import _shared_reservations as a
+    from cadence_mcp_bridge.power_measurements import RegisteredPowerCounter
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    anchor = a.read(str(path / a.REGISTRY / "manifest.json"))
+    binding = dict(
+        root_sha256=anchor["root_sha256"], resource_domain_sha256="a" * 64,
+        ledger_ref=a.LEDGER, identity_manifest_sha256=a.digest(a.canonical(anchor)),
+        grant_sha256="b" * 64, runner_sha256="c" * 64, plan_sha256="d" * 64,
+        execution_input_sha256="e" * 64, expires_at=4000000000,
+        max_attempts=2, max_reserved_bytes=131072, reserve_bytes=65536, disk_floor_bytes=0,
+    )
+    for count in range(3):
+        before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+        value = w.snapshot(io, root, False)
+        snapshot = StorageSnapshot.model_validate(value)
+        assert snapshot.snapshot_id == snapshot_digest(snapshot)
+        assert snapshot.spectre_attempts == count
+        assert snapshot.result_ceiling_bytes == 131072
+        assert snapshot.ledger_policy is not None
+        assert snapshot.ledger_policy.campaign_id == anchor["policy"]["campaign_id"]
+        counter = a.read(str(path / a.LEDGER))
+        power = TypeAdapter(RegisteredPowerCounter).validate_python(
+            dict(counter, policy=anchor["policy"])
+        )
+        assert power.count == count and power.result_reserved_bytes == count * 65536
+        assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+        if count < 2:
+            identity = str(uuid4())
+            work = path / a.JOBS / identity / "work"
+            work.mkdir(parents=True, mode=0o700)
+            a.reserve(str(path), identity, binding)
+    # A fully consumed domain remains readable; reading never reserves/refunds.
+    assert w.snapshot(io, root, False)["reserved_result_bytes"] == 131072
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["campaign", "ceiling", "anchor", "lost-slot", "policy-reset", "legacy-fallback", "index"],
+)
+def test_fresh_storage_rejects_forged_or_unconserved_policy(
+    fresh_store: tuple[TestIO, int, Path], change: str,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as a
+
+    io, root, path = fresh_store
+    counter = a.read(str(path / a.LEDGER))
+    anchor_path = path / a.REGISTRY / "manifest.json"
+    anchor = a.read(str(anchor_path))
+    if change == "campaign":
+        counter["campaign_id"] = str(uuid4())
+    elif change == "ceiling":
+        counter["result_reserved_bytes"] = 131073
+    elif change == "anchor":
+        anchor["root_sha256"] = "b" * 64
+        anchor_path.write_bytes(a.canonical(anchor))
+    elif change == "policy-reset":
+        anchor["policy"]["result_ceiling_bytes"] = 1048576
+        anchor_path.write_bytes(a.canonical(anchor))
+    elif change == "legacy-fallback":
+        counter.update(campaign_id="AUTO-PHASE-01", count=62, result_reserved_bytes=7114588160)
+    elif change == "index":
+        index = path / ".cadence_mcp-domain" / "manifest.json"
+        registration = a.read(str(index))
+        registration["root"] = str(path / "new-domain")
+        index.write_bytes(a.canonical(registration))
+    else:
+        counter.update(count=1, result_reserved_bytes=65536)
+    (path / a.LEDGER).write_bytes(a.canonical(counter))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError):
+        w.snapshot(io, root, False)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+
+def test_fresh_standalone_legacy_deployment_cannot_import_cwd_code(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    io, root, path = fresh_store
+    # The old standalone worker is not a verified schema3 generic bundle.
+    # An attacker-controlled CWD sibling must never be imported as accounting.
+    (path / "reservations.py").write_text("raise AssertionError('untrusted import executed')")
+    monkeypatch.setattr(w, "__package__", "")
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError, match="fixed asset location"):
+        w.snapshot(io, root, False)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}

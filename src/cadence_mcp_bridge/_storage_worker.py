@@ -114,6 +114,21 @@ class PosixIO(object):
             os.close(fd)
             raise
 
+    def account_home(self):
+        import pwd
+
+        return pwd.getpwuid(os.getuid()).pw_dir
+
+    def canonical_root(self, fd):
+        # Linux descriptor path is observed, never supplied by model input.
+        path = os.readlink("/proc/self/fd/" + str(fd))
+        if not path.startswith("/") or os.path.realpath(path) != path:
+            raise ValueError("storage root identity unavailable")
+        opened, named = os.fstat(fd), os.lstat(path)
+        if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
+            raise ValueError("storage root identity drift")
+        return path
+
     def names(self, fd):
         duplicate = self.checked(
             self.libc.openat(fd, b".", os.O_RDONLY | self.directory | self.nofollow, 0)
@@ -338,6 +353,116 @@ def append_artifact(artifacts, aggregates, item):
     frames.append([item["artifact_id"], item["fingerprint"]])
 
 
+def fresh_ledger(io, root, counter):
+    """Authenticate schema2 policy at the pinned root and audit conserved slots.
+
+    This internal consumer assumes its caller holds the existing run.lock, like
+    snapshot/cleanup. It never acquires another flock, reserves or repairs.
+    Standalone generic bundles must hash-verify reservations.py before import.
+    The historical standalone worker never loads it for a legacy counter.
+    """
+    try:
+        registry = private_directory(io, root, "reservation-identity")
+    except OSError as failure:
+        if failure.errno == errno.ENOENT:
+            return None  # Unmigrated historical installation only.
+        raise
+    try:
+        anchor = read_json(io, registry, "manifest.json", 262144, private=True)
+    finally:
+        os.close(registry)
+    if type(anchor) is not dict or type(anchor.get("schema_version")) is not int:
+        raise ValueError("storage anchor schema required")
+    if anchor["schema_version"] == 1:
+        return None  # Retained migration policy uses the historical counter.
+    if anchor["schema_version"] != 2:
+        raise ValueError("fresh storage anchor required")
+    path = io.canonical_root(root)
+    home = io.root(io.account_home())
+    try:
+        domain = private_directory(io, home, ".cadence_mcp-domain")
+        try:
+            index = read_json(io, domain, "manifest.json", 8192, private=True)
+        finally:
+            os.close(domain)
+    finally:
+        os.close(home)
+    exact(index, "schema_version root resource_domain_sha256 identity_manifest_sha256 plan_sha256")
+    if (
+        type(index["schema_version"]) is not int or index["schema_version"] != 1
+        or index["root"] != path
+        or index["resource_domain_sha256"] != anchor.get("resource_domain_sha256")
+        or index["identity_manifest_sha256"] != digest(anchor)
+        or any(
+            not isinstance(index[k], STRINGS) or not DIGEST.match(index[k])
+            for k in ("resource_domain_sha256", "identity_manifest_sha256", "plan_sha256")
+        )
+    ):
+        raise ValueError("fresh storage registered domain drift")
+    if __package__:
+        from cadence_mcp_bridge import _shared_reservations as accounting
+    else:
+        # A legacy standalone deployment cannot grow generic capability by
+        # importing code from CWD/PYTHONPATH. Only an immutable schema3 runtime
+        # may supply the two hash-bound fixed assets at its private location.
+        directory = os.path.dirname(os.path.abspath(__file__))
+        if os.path.realpath(directory) != directory or os.path.basename(__file__) != "storage.py":
+            raise ValueError("fresh storage fixed asset location")
+        ancestor = directory
+        while True:
+            info = os.lstat(ancestor)
+            if (
+                not stat.S_ISDIR(info.st_mode)
+                or info.st_uid not in (0, os.getuid()) or info.st_mode & 18
+            ):
+                raise ValueError("fresh storage asset ancestor trust")
+            parent = os.path.dirname(ancestor)
+            if parent == ancestor:
+                break
+            ancestor = parent
+        source = io.root(directory)
+        try:
+            manifest = read_json(io, source, "manifest.json", 262144, private=True)
+            if (
+                type(manifest) is not dict or type(manifest.get("schema_version")) is not int
+                or manifest["schema_version"] != 3
+                or digest(manifest) != os.path.basename(directory)
+            ):
+                raise ValueError("fresh storage fixed asset manifest")
+            for name in ("storage.py", "reservations.py"):
+                fd = io.open(source, name)
+                try:
+                    info = os.fstat(fd)
+                    if (
+                        not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                        or info.st_uid != os.getuid() or info.st_mode & 18 or info.st_size > 262144
+                    ):
+                        raise ValueError("fresh storage fixed asset trust")
+                    raw = os.read(fd, 262145)
+                    if manifest["files"][name] != {
+                        "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
+                    }:
+                        raise ValueError("fresh storage fixed asset drift")
+                finally:
+                    os.close(fd)
+        finally:
+            os.close(source)
+        import imp
+
+        accounting = imp.load_source("fixed_storage_accounting", directory + "/reservations.py")
+    binding = {
+        "root_sha256": hashlib.sha256(path.encode("utf-8")).hexdigest(),
+        "resource_domain_sha256": anchor.get("resource_domain_sha256"),
+        "ledger_ref": "sim-mcp-v2-jobs/counter.json",
+        "identity_manifest_sha256": digest(anchor),
+    }
+    accounting.identity_manifest(path, binding)
+    audited, records = accounting.state(path, binding)
+    if canonical(counter) != canonical(audited):
+        raise ValueError("storage ledger changed during observation")
+    return anchor["policy"]
+
+
 def snapshot(io, root, is_active):
     artifacts, coverage = [], {}
     reasons = {}
@@ -481,18 +606,20 @@ def snapshot(io, root, is_active):
     finally:
         os.close(counter_root)
     exact(counter, "campaign_id count result_reserved_bytes")
-    if (
-        counter["campaign_id"] != "AUTO-PHASE-01"
-        or type(counter["count"]) not in INTEGERS
-        or not 62 <= counter["count"] <= 500
-        or type(counter["result_reserved_bytes"]) not in INTEGERS
-        or not 7114588160 <= counter["result_reserved_bytes"] <= 10737418240
-    ):
-        raise ValueError("invalid cumulative ledger")
+    policy = fresh_ledger(io, root, counter)
+    if policy is None:
+        if (
+            counter["campaign_id"] != "AUTO-PHASE-01"
+            or type(counter["count"]) not in INTEGERS
+            or not 62 <= counter["count"] <= 500
+            or type(counter["result_reserved_bytes"]) not in INTEGERS
+            or not 7114588160 <= counter["result_reserved_bytes"] <= 10737418240
+        ):
+            raise ValueError("invalid cumulative ledger")
     disk = os.fstatvfs(root)
     is_active = is_active or any(a["active_dependency"] for a in artifacts)
     value = dict(
-        contract_version=1,
+        contract_version=2 if policy else 1,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,
@@ -502,11 +629,13 @@ def snapshot(io, root, is_active):
         filesystem_free_bytes=disk.f_bavail * disk.f_frsize,
         filesystem_total_bytes=disk.f_blocks * disk.f_frsize,
         reserved_result_bytes=counter["result_reserved_bytes"],
-        result_ceiling_bytes=10737418240,
+        result_ceiling_bytes=policy["result_ceiling_bytes"] if policy else 10737418240,
         spectre_attempts=counter["count"],
         active_eda=is_active,
         platform_delete_primitives=True,
     )
+    if policy is not None:
+        value["ledger_policy"] = policy
     bound = dict(value)
     del bound["filesystem_free_bytes"]
     del bound["filesystem_total_bytes"]

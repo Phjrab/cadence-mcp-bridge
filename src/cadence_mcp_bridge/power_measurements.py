@@ -10,6 +10,7 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.registered_measurements import MeasurementProvenance
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel
 
 REFERENCE_OPERATION = "f154d798-0f7f-47d6-9323-6b046394eef6"
@@ -94,6 +95,11 @@ class PowerCounter(ContractModel):
     campaign_id: Literal["AUTO-PHASE-01"]
     count: Annotated[int, Field(ge=0, le=500)]
     result_reserved_bytes: Annotated[int, Field(ge=0, le=10 * 1024**3)]
+
+
+# Historical counters retain their exact three-field serialization. Fresh
+# observations carry their registered policy rather than inheriting AUTO-PHASE-01.
+RegisteredPowerCounter = PowerCounter | FreshResourceCounter
 
 
 class PowerExtraction(ContractModel):
