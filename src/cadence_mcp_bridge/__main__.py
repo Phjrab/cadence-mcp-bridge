@@ -299,12 +299,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         try:
             if arguments.operation_action in ("grant-schema", "request-schema"):
-                model = (
-                    operations.OperatorGrant
+                operation_result = (
+                    operations.GRANT_DOCUMENT.json_schema()
                     if arguments.operation_action == "grant-schema"
-                    else operations.OperationRequest
+                    else operations.OperationRequest.model_json_schema()
                 )
-                operation_result = model.model_json_schema()
             else:
                 contexts = load_runtime(arguments.settings)
                 context = next(
@@ -430,7 +429,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if context is None:
                         raise RuntimeRejected("setup_required")
                     context.resolve(arguments.design_id)
-                observation = runtime_observation(config)
+                    observation = context.observation()
+                else:
+                    observation = runtime_observation(config)
         except (OSError, ValueError, ConfigurationError, InvalidInputError) as failure:
             print(
                 json.dumps(

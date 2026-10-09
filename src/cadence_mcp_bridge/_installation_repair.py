@@ -96,7 +96,7 @@ def snapshot(path):
             "path": path, "dev": info.st_dev, "ino": info.st_ino,
             "uid": info.st_uid, "gid": info.st_gid,
             "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
-            "mtime": info.st_mtime if stat.S_ISREG(info.st_mode) else None,
+            "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
             "mode": stat.S_IMODE(info.st_mode),
             "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
             "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
@@ -197,6 +197,15 @@ def emit(value):
     sys.stdout.flush()
 
 
+def metadata_equal(key, before, after):
+    # New private inventories encode binary64 mtimes as round-trip strings.
+    # Historical numeric records remain usable with their original digest/helper.
+    if key == "mtime":
+        before = "%.17g" % before if isinstance(before, float) else before
+        after = "%.17g" % after if isinstance(after, float) else after
+    return before == after
+
+
 def _mutate_locked(request, rollback=False):
     if set(request) != set(("plan", "expected_plan_sha256", "operator_authority")):
         raise ValueError("mutation_shape")
@@ -213,7 +222,7 @@ def _mutate_locked(request, rollback=False):
     for old, now in zip(original["records"], current["records"]):
         invariant = ("path", "dev", "ino", "uid", "gid", "kind",
                      "sha256", "size", "mtime", "reason")
-        if any(old[key] != now[key] for key in invariant):
+        if any(not metadata_equal(key, old[key], now[key]) for key in invariant):
             raise ValueError("protected_drift")
         if old["after_mode"] != old["mode"] & ~18:
             raise ValueError("mode_plan")
@@ -260,7 +269,7 @@ def _mutate_locked(request, rollback=False):
         finally:
             os.close(fd)
         final = snapshot(old["path"])
-        if any(final[key] != old[key] for key in
+        if any(not metadata_equal(key, final[key], old[key]) for key in
                ("dev", "ino", "uid", "gid", "kind", "sha256", "size", "mtime")):
             raise ValueError("postchange_protected_drift")
         if final["mode"] != target_mode or normalize_acl(final["acl"]) != normalize_acl(target_acl):

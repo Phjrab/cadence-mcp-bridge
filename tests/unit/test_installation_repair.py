@@ -272,3 +272,21 @@ def test_reference_recipe_cannot_follow_code_link_into_pdk(tmp_path):
         repair.inventory(profile)
     assert protected.stat().st_mode == before
     assert protected.read_bytes() == b"synthetic protected PDK"
+
+
+def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monkeypatch):
+    path = tmp_path / "code"
+    path.write_bytes(b"fictional installation contents")
+    os.utime(path, (1234567890.1234567, 1234567890.1234567))
+    monkeypatch.setattr(repair, "open_fixed", lambda p: os.open(p, os.O_RDONLY))
+    monkeypatch.setattr(repair, "acl", lambda fd: "user::rw-\ngroup::r--\nother::r--\n")
+    monkeypatch.setattr(os.path, "realpath", lambda p: p)
+    record = repair.snapshot(str(path))
+    assert isinstance(record["mtime"], str)
+    assert record["mtime"] == format(path.stat().st_mtime, ".17g")
+    # A Python2.6 JSON serializer can no longer truncate a numeric mtime.
+    wire = repair.canonical(record)
+    assert repair.digest(json.loads(wire)) == hashlib.sha256(wire).hexdigest()
+    assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
+    assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
+    assert repair.metadata_equal("mtime", None, None)

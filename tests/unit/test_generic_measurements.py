@@ -750,3 +750,90 @@ def test_tran_saved_grid_cannot_have_gaps_above_the_declared_maxstep(operator, a
     with pytest.raises(OperationRejected) as exc:
         project_frame(*args, frame_for(args, body))
     assert exc.value.reason == "reader_tran_saved_step_exceeds_declared_maxstep"
+
+
+@pytest.mark.parametrize("missing", ["start", "stop"])
+def test_narrow_ac_endpoints_cannot_hide_inside_relative_tolerance(operator, missing):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    endpoints = ("1000000", "1000000.000001")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(
+                analysis="ac",
+                start_hz=endpoints[0],
+                stop_hz=endpoints[1],
+                points_per_decade=1,
+            )
+        }
+    )
+    # Request only the unchanged endpoint: frequency matching alone cannot reveal
+    # that the other declared boundary is missing from the complete waveform.
+    selected = endpoints[1] if missing == "start" else endpoints[0]
+    reader = reader.model_copy(
+        update={
+            "ade_registration_sha256": canonical_digest(ade),
+            "transfer": reader.transfer.model_copy(update={"gain_frequencies_hz": (selected,)}),
+        }
+    )
+    args = (context, plan, ade, reader, op, execution)
+
+    def body(axis):
+        return "\n".join(
+            f"P|{node}|{i}|{x}|{value}|0"
+            for node, value in (("input", 2), ("output", 4))
+            for i, x in enumerate(axis)
+        )
+
+    assert (
+        project_frame(*args, frame_for(args, body(endpoints)))["transfer"][0]["gain_v_per_v"] == 2
+    )
+    changed = (
+        ("1000000.0000008", endpoints[1])
+        if missing == "start"
+        else (endpoints[0], "1000000.0000002")
+    )
+    with pytest.raises(OperationRejected) as error:
+        project_frame(*args, frame_for(args, body(changed)))
+    assert error.value.reason == "reader_ac_interval_invalid"
+
+
+@pytest.mark.parametrize(
+    "endpoints",
+    [("1.2345678901234564", "1.2345678901234569"), ("263269111992.82767", "263269111992.82776")],
+)
+def test_ultranarrow_serialized_grid_accepts_own_reader_frame(operator, endpoints):
+    from cadence_mcp_bridge.generic_ade import AcInputs
+
+    context, plan, ade, reader, op, execution = reader_for(operator, "ac")
+    ade = ade.model_copy(
+        update={
+            "inputs": AcInputs(
+                analysis="ac", start_hz=endpoints[0], stop_hz=endpoints[1], points_per_decade=1
+            )
+        }
+    )
+    reader = reader.model_copy(
+        update={
+            "ade_registration_sha256": canonical_digest(ade),
+            "transfer": reader.transfer.model_copy(update={"gain_frequencies_hz": endpoints}),
+        }
+    )
+    args = (context, plan, ade, reader, op, execution)
+    assert render_reader(*args)
+    axis = tuple(format(float(x), ".16g") for x in endpoints)
+
+    def body(values):
+        return "\n".join(
+            f"P|{node}|{i}|{x}|{value}|0"
+            for node, value in (("input", 2), ("output", 4))
+            for i, x in enumerate(values)
+        )
+
+    result = project_frame(*args, frame_for(args, body(axis)))["transfer"]
+    assert [r["frequency_hz"] for r in result] == [float(x) for x in axis]
+    assert all(r["gain_v_per_v"] == 2 for r in result)
+    # A complete frame cannot substitute one serialized boundary for the other.
+    with pytest.raises(OperationRejected):
+        project_frame(*args, frame_for(args, body((axis[1], axis[1]))))
