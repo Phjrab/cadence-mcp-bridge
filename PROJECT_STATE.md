@@ -1,3 +1,24 @@
+## Closed static-input grammar checkpoint, 2026-10-09
+
+The final control boundary accepts only ordinary port-list component instances,
+plain/parenthesized lowercase subckt and inline-subckt declarations, matched ends,
+global/save node lists and named options/info assignments as static statements.
+Unknown named commands reject before static-hash comparison. Reserved analysis
+masters also reject in port-list form, including PSP/QPSP/HBSP/QPSTB and keyword
+case variants. Protection pragmas reject before comments are discarded. Unsupported
+model/initial-condition dialects fail closed rather than being promoted by a hash.
+The standard VM's existing PDK includes and exact source/model fingerprints remain
+separately bound; no PDK/vendor/source contents were changed.
+
+Local237 related input/operations/lifecycle tests PASS; Ruff and mypy69 PASS.
+Exact isolated package/CLI/SDK/bootstrap/reinstall/uninstall PASS with19 operator
+state files preserved. The corresponding common native parser in draftPR152 has
+actual UID500/Python2.6 synthetic coverage and preserves all six real registrations;
+this parent feature does not itself establish live execution authority. Hosted
+final-head CI and independent review remain required. Release BLOCKED, no RC or
+publication. Latest direct02–08/16GiB/conditional merge authority remains active;
+older historical exclusions below do not override it.
+
 ## Extracted-control case and hidden-analysis correction, 2026-10-09
 
 The third independent PR145 P1 exposed PARAMETERS and uppercase DC/AC/TRAN being

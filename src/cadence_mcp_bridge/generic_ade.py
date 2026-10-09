@@ -353,6 +353,8 @@ def _statements(data: bytes) -> list[str]:
         # Deliberately narrow single-line dialect; no inline/block comments,
         # continuation, escapes or quoted expression normalization.
         line = line.strip()
+        if re.match(r"//\s*pragma(?:\s|$)", line, re.I):
+            raise OperationRejected("spectre_scope_unsupported")
         if not line or line.startswith("//"):
             continue
         if any(token in line for token in ("\\", ";", "//", "/*", "*/")) or line.startswith("+"):
@@ -367,6 +369,96 @@ def _statements(data: bytes) -> list[str]:
 
 def static_fingerprint(statements: list[str]) -> str:
     return hashlib.sha256(("\n".join(statements) + "\n").encode("ascii")).hexdigest()
+
+
+def static_statement(line: str) -> bool:
+    # Closed v1 topology grammar: unknown named commands cannot gain authority
+    # from an operator-supplied static hash. Keep it Python 2.6 compatible.
+    identifier = r"[A-Za-z][A-Za-z0-9_#-]{0,63}"
+    node = r"[A-Za-z0-9_#!.+:/-]{1,128}"
+    nodes = node + r"(?: " + node + r")*"
+    pair = identifier + r"=[^\s=;{}]+"
+    pairs = r"(?: " + pair + r")*"
+    if re.fullmatch(r"global " + nodes, line):
+        return True
+    if re.fullmatch(r"save " + nodes, line):
+        return True
+    # HNL emits named options/info with key=value arguments. Bare commands,
+    # extra positional tokens and a second named analysis are never static.
+    if re.fullmatch(identifier + r" (?:options|info)" + pairs, line):
+        return True
+    # The first parenthesized list is exclusively ports; the master is an
+    # identifier and all remaining arguments must be assignments.
+    instance = re.fullmatch(identifier + r" \(" + nodes + r"\) (" + identifier + r")" + pairs, line)
+    if not instance:
+        return False
+    # Some Spectre controls (e.g. transfer/stability analyses) accept a node
+    # list. A reserved simulator command can never serve as a component master.
+    return instance.group(1).lower() not in (
+        "dc",
+        "ac",
+        "tran",
+        "noise",
+        "pz",
+        "sp",
+        "stb",
+        "xf",
+        "sens",
+        "dcmatch",
+        "acmatch",
+        "montecarlo",
+        "sweep",
+        "pss",
+        "pac",
+        "pnoise",
+        "pxf",
+        "pstb",
+        "pdisto",
+        "psp",
+        "qpss",
+        "qpac",
+        "qpnoise",
+        "qpxf",
+        "qpsp",
+        "qpstb",
+        "hb",
+        "hbac",
+        "hbnoise",
+        "hbstb",
+        "hbxf",
+        "hbsp",
+        "envlp",
+        "alter",
+        "altergroup",
+        "paramset",
+        "parameters",
+        "include",
+        "options",
+        "info",
+        "save",
+        "global",
+        "model",
+        "subckt",
+        "ends",
+        "inline",
+        "simulator",
+        "assert",
+        "check",
+        "checklimit",
+    )
+
+
+def subcircuit_statement(line: str) -> bool:
+    identifier = r"[A-Za-z][A-Za-z0-9_#-]{0,63}"
+    node = r"[A-Za-z0-9_#!.+:/-]{1,128}"
+    nodes = node + r"(?: " + node + r")*"
+    # Actual standard-VM HNL uses unparenthesized ports; both forms are closed.
+    return bool(
+        re.fullmatch(
+            r"(?:inline )?subckt " + identifier + r"(?: (?:" + nodes + r"|\(" + nodes + r"\)))?",
+            line,
+        )
+    )
 
 
 def verify_effective_input(
@@ -414,41 +506,11 @@ def verify_effective_input(
         if words[0].lower() in ("parameters", "include") and words[0] != words[0].lower():
             raise OperationRejected("spectre_control_unsupported")
         kind = words[1].lower() if len(words) > 1 else ""
-        if (kind in ("dc", "ac", "tran") and words[1] != kind) or kind in (
-            "noise",
-            "pz",
-            "sp",
-            "stb",
-            "xf",
-            "sens",
-            "dcmatch",
-            "acmatch",
-            "montecarlo",
-            "sweep",
-            "pss",
-            "pac",
-            "pnoise",
-            "pxf",
-            "pstb",
-            "pdisto",
-            "qpss",
-            "qpac",
-            "qpnoise",
-            "qpxf",
-            "hb",
-            "hbac",
-            "hbnoise",
-            "hbstb",
-            "hbxf",
-            "envlp",
-            "alter",
-            "altergroup",
-            "paramset",
-        ):
+        if kind in ("dc", "ac", "tran") and words[1] != kind:
             raise OperationRejected("spectre_control_unsupported")
         opening = words[1:] if words[0] == "inline" else words
         if opening and opening[0] == "subckt":
-            if len(opening) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_#-]{0,63}", opening[1]):
+            if not subcircuit_statement(line):
                 raise OperationRejected("spectre_scope_unsupported")
             scopes.append(opening[1])
             static.append(line)
@@ -485,6 +547,8 @@ def verify_effective_input(
             if match:
                 analyses.append((match[1], match[2] or ""))
             else:
+                if not static_statement(line):
+                    raise OperationRejected("spectre_control_unsupported")
                 static.append(line)
     if scopes:
         raise OperationRejected("spectre_scope_unsupported")

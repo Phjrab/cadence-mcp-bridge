@@ -509,3 +509,53 @@ def test_effective_input_rejects_registered_static_hidden_controls(operator, ana
     with pytest.raises(OperationRejected) as error:
         verify_effective_input(context, plan, registration, str(uuid4()), data)
     assert error.value.reason == "spectre_control_unsupported"
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "extra psp fund=1G",
+        "extra qpsp fund=1G",
+        "extra hbsp fund=1G",
+        "extra qpstb fund=1G",
+        "extra futureAnalysis stop=1",
+        "extra PSP fund=1G",
+        "extra (in out) psp fund=1G",
+        "extra (in out) QPSTB fund=1G",
+        "extra (in out) psp fund=1G trailing",
+        "extra options temp=27 extra psp fund=1G",
+        "unrecognized command=1",
+        "subckt Small in out parameters Hidden=2\nends Small",
+    ],
+)
+def test_unknown_named_controls_cannot_be_registered_as_static(operator, analysis, extra):
+    context, plan, registration, data = setup(operator, analysis, RC + "\n" + extra)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason in {"spectre_control_unsupported", "spectre_scope_unsupported"}
+
+
+@pytest.mark.parametrize(
+    "pragma", ["//pragma protect begin", "// pragma protect end", "//PRAGMA PROTECT begin"]
+)
+def test_protection_pragmas_are_rejected_before_comment_elision(operator, pragma):
+    context, plan, registration, data = setup(operator)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(
+            context, plan, registration, str(uuid4()), pragma.encode() + b"\n" + data
+        )
+    assert error.value.reason == "spectre_scope_unsupported"
+
+
+@pytest.mark.parametrize("opening", ["subckt Small in out", "inline subckt Small in out"])
+def test_plain_hnl_subcircuit_ports_and_static_output_directives(operator, opening):
+    static = (
+        "global 0\n" + opening + "\n" + RC + "\nends Small\n"
+        "simulatorOptions options temp=27\nmodelInfo info what=models where=rawfile\nsave out"
+    )
+    context, plan, registration, data = setup(operator, static=static)
+    assert (
+        verify_effective_input(context, plan, registration, str(uuid4()), data)["parameter_count"]
+        == 2
+    )
