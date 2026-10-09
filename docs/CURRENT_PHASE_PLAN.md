@@ -1,3 +1,16 @@
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
+
 ## Descriptor snapshot stability correction, 2026-10-09
 
 The subsequent review identified content/metadata change during ACL collection.
