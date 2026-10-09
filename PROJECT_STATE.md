@@ -1,3 +1,15 @@
+## Component-aware installation boundary correction, 2026-10-09
+
+The fixed repair recipe now derives the installation base from path components,
+so sibling vendor roots whose names share a prefix keep both IC/OCEAN and MMSIM/
+Spectre targets in scope. The exact profile/executable hashes, role-specific seed
+list, no-follow descriptors, ACL/content/owner checks and bounded mutation remain.
+Local58 repair/bootstrap tests pass with5 Windows OS skips; Ruff/mypy72 and exact
+installed32-state conservation pass. Current authoritative16GiB/GREL02-08 and
+conditional normal merge overlay remains;82-attempt repair evidence is historical.
+Final exact-head hosted checks and independent review are pending. No new remote
+repair, simulation or reservation; actual generic release acceptance is separate.
+
 ## Cross-version repair metadata correction, 2026-10-09
 
 A final PR148 review found fractional mtime serialization differs between

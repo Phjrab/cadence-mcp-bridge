@@ -316,6 +316,16 @@ def mutate(request, rollback=False):
 
 
 
+def common_installation_root(ic, ms):
+    # commonprefix compares characters; vendor root names can share a prefix.
+    components = []
+    for left, right in zip(ic.split("/"), ms.split("/")):
+        if left != right:
+            break
+        components.append(left)
+    return "/".join(components) or "/"
+
+
 def inventory(profile):
     """Standard-VM recipe; address/account/install roots come from operator data.
 
@@ -359,7 +369,7 @@ def inventory(profile):
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
-    base = os.path.commonprefix([ic + "/", ms + "/"]).rstrip("/")
+    base = common_installation_root(ic, ms)
     if not os.path.isdir(base) or base.count("/") < 2:
         raise ValueError("installation_common_root")
     protected = profile["paths"]["protected_roots"]
