@@ -1,3 +1,32 @@
+## Hidden control correction and exact installation checkpoint, 2026-10-09
+
+Third PR145 P1 covers case-variant extracted controls. The common parser rejects
+PARAMETERS/include variants, uppercase DC/AC/TRAN and unsupported noise/periodic/
+sweep/alter controls before static comparison. Regression deliberately registers
+the harmful extra line in the static hash, proving hash equality cannot hide its
+control meaning. Local145 affected tests PASS/one POSIX skip; Ruff/mypy94 PASS;
+actual normal-user Python2.6/POSIX16 synthetic scenarios PASS. All six actual
+baseline routes reassemble byte-identical original registration. Live94 attempts/
+11,409,555,456 reserved bytes and prior runtime/grant/journals remain unchanged;
+this continuation0 simulations/0 reservations/0 administrator changes.
+
+Exact corrected artifact source/license/notices/allowlist and isolated installed
+starter/CLI/SDK96/bootstrap/reinstall/uninstall43+20-state preservation PASS.
+Prior abed4c2 exact QA wheel4587fd27f6ac300761b61d69f0148ae307c79b0392c2115270d662db2158df73
+has99 installed package files equal and unchanged96 SDK schemas; it remains separate
+from this later control correction and is not an RC or actual app acceptance.
+Codex loaded runtime read still reports legacy registry2/context, new actual app
+jobs0 and requested QA Restart remains pending. The new source is not deployed.
+
+PR1457ff5563 final CI/review pending after three corrected P1 findings. PR1463beb2cf
+four hosted checks PASS; four historical reservation findings have retained fixes/
+regressions and resolved discussions; fresh review pending. Its provider foundation
+is disabled/unqualified, with production16GiB paths separately in PR152. Continue
+normal dependency integration after final gates; no direct main/force/admin bypass.
+GENERIC_ACCEPTANCE_CURRENT.json remains BLOCKED, exact candidate undefined and
+exact public tag/Release/upload approval still required after actual gates.
+Earlier receipts below preserve their original tested-source scope.
+
 ## Closed-scope dialect and acceptance matrix checkpoint, 2026-10-09
 
 The second independent PR145 P1 extends the scope correction: library/section,

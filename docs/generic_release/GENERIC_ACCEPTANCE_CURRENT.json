@@ -5,7 +5,7 @@
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
   "source_checkpoint": "f6845f435fdbaf0ad8885fcb914cc776216cf0b0",
-  "later_scope_correction": "LOCAL_VALIDATED_FINAL_CI_PENDING",
+  "later_scope_correction": "LOCAL_AND_REAL_PY26_SYNTHETIC_VALIDATED_CASE_VARIANT_AND_HIDDEN_CONTROLS_FINAL_CI_PENDING",
   "live_native_bundle_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
   "publication_authorized": false,
   "resource": {
@@ -127,5 +127,6 @@
     "NATIVE_SWEEP_SPEC_V1.md",
     "NATIVE_RESUME_BOUNDARY.md",
     "GREL_07_RESULT.md"
-  ]
+  ],
+  "synthetic_vm_scenarios": 16
 }
