@@ -4,8 +4,9 @@ PR142 normally merged as239a1949923fdae210d50e1232b6b7b41e60c7de after final
 review and exact hosted checks. PR143 retargeted to main and receives that parent
 through a normal merge without history rewrite. Routing/hostname/journal snapshot
 fixes and installed context verifier are preserved. Affected85 tests PASS/two
-OS skips, Ruff/mypy66 and exact isolated package/bootstrap/reinstall/uninstall
-preservation PASS. Final hosted checks and review still required before PR143 merge.
+OS skips, Ruff/mypy66 and exact isolated package/context/CLI/uninstall PASS.
+Bootstrap behavior is covered by the affected tests; this refreshed artifact did
+not run a reinstall-state preservation test. Final hosted checks and review still required before PR143 merge.
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
