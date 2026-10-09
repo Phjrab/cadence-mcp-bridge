@@ -1,3 +1,32 @@
+## Closed static-input grammar checkpoint, 2026-10-09
+
+The final control boundary accepts only ordinary port-list component instances,
+plain/parenthesized lowercase subckt and inline-subckt declarations, matched ends,
+global/save node lists and named options/info assignments as static statements.
+Unknown named commands reject before static-hash comparison. Reserved analysis
+masters also reject in port-list form, including PSP/QPSP/HBSP/QPSTB and keyword
+case variants. Protection pragmas reject before comments are discarded. Unsupported
+model/initial-condition dialects fail closed rather than being promoted by a hash.
+The standard VM's existing PDK includes and exact source/model fingerprints remain
+separately bound; no PDK/vendor/source contents were changed.
+
+Local affected239 tests PASS/12 Windows POSIX skips; Ruff and mypy94 PASS.
+Exact wheel/sdist/isolated CLI/96 conditional MCP schemas/bootstrap/reinstall/
+uninstall PASS, preserving43 operator and20 migration files. Actual ordinary-user
+UID500/Python2.6 synthetic17 scenarios PASS, including interruption recovery,
+closed controls and protection pragmas. Six actual baseline registrations reassemble
+byte-identically (5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190).
+All six real inputs also pass the current parser at actual UID500/Python2.6,
+with their extracted partitions identical and the real ledger preserved.
+These parser/package/recovery checks are not fresh Cadence or actual Codex evidence.
+
+Current actual ledger remains94 attempts/11,409,555,456 bytes (10,881 MiB), leaving
+5,770,313,728 bytes (5,503 MiB) under16 GiB. Current grant still8 jobs/1 GiB remaining.
+This correction adds0 simulations/reservations/admin repairs; historical failed
+checks and results remain preserved. New exact hosted CI/review required before
+integration/deployment. Release remains BLOCKED; exact RC undefined/publication
+false. Continue direct02–08 and conditional merge authority without reapproval.
+
 ## Hidden control correction and exact installation checkpoint, 2026-10-09
 
 Third PR145 P1 covers case-variant extracted controls. The common parser rejects

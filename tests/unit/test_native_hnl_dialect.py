@@ -119,3 +119,39 @@ def test_incomplete_or_ambiguous_continuations_fail_closed(suffix):
     raw, inputs, static = candidate()
     with pytest.raises(ValueError, match="dialect_unsupported"):
         rendering.effective_input(raw + suffix, {"Bias": "0.6"}, [], inputs, static)
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "extra psp fund=1G",
+        "extra qpsp fund=1G",
+        "extra hbsp fund=1G",
+        "extra qpstb fund=1G",
+        "extra futureAnalysis stop=1",
+        "extra PSP fund=1G",
+        "extra (in out) psp fund=1G",
+        "extra (in out) QPSTB fund=1G",
+        "extra (in out) psp fund=1G trailing",
+        "extra options temp=27 extra psp fund=1G",
+        "unrecognized command=1",
+    ],
+)
+def test_unknown_controls_fail_even_with_registered_static_hash(analysis, extra):
+    raw, inputs, _ = candidate(analysis)
+    raw += (extra + "\n").encode()
+    static = rendering.static_fingerprint(rendering.statements(raw)[1:-2] + [extra])
+    with pytest.raises(ValueError, match="spectre_control_unsupported"):
+        rendering.effective_input(raw, {"Bias": "0.6"}, [], inputs, static)
+
+
+@pytest.mark.parametrize(
+    "pragma", ["//pragma protect begin", "// pragma protect end", "//PRAGMA PROTECT begin"]
+)
+def test_protection_pragmas_are_not_ordinary_comments(pragma):
+    raw, inputs, static = candidate()
+    with pytest.raises(ValueError, match="spectre_scope_unsupported"):
+        rendering.effective_input(
+            pragma.encode() + b"\n" + raw, {"Bias": "0.6"}, [], inputs, static
+        )

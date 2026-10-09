@@ -4,8 +4,8 @@
   "generic_release_gate": "BLOCKED",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "f6845f435fdbaf0ad8885fcb914cc776216cf0b0",
-  "later_scope_correction": "LOCAL_AND_REAL_PY26_SYNTHETIC_VALIDATED_CASE_VARIANT_AND_HIDDEN_CONTROLS_FINAL_CI_PENDING",
+  "source_checkpoint": "4c62d73d667bf14297de7b6a237dc3dde75d9bc7",
+  "later_scope_correction": "CLOSED_STATIC_GRAMMAR_RESERVED_ANALYSIS_MASTERS_AND_PROTECTION_PRAGMAS_LOCAL_PACKAGE_SIX_ACTUAL_PY26_INPUTS_PASS_FINAL_CI_REVIEW_PENDING",
   "live_native_bundle_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
   "publication_authorized": false,
   "resource": {
@@ -16,7 +16,9 @@
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
     "new_simulations_this_continuation": 0,
-    "new_reservations_this_continuation": 0
+    "new_reservations_this_continuation": 0,
+    "reserved_mib_observed": 10881,
+    "remaining_mib": 5503
   },
   "mandatory": [
     {
@@ -128,5 +130,6 @@
     "NATIVE_RESUME_BOUNDARY.md",
     "GREL_07_RESULT.md"
   ],
-  "synthetic_vm_scenarios": 16
+  "synthetic_vm_scenarios": 17,
+  "current_parser_actual_baselines": 6
 }
