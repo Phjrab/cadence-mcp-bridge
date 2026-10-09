@@ -138,10 +138,19 @@ def chmod_acl(before, mode):
     has_mask = any(line.startswith("mask::") for line in lines)
     result = []
     for line in lines:
-        if line.startswith("other::"):
-            line = "other::" + line.split(":")[-1].replace("w", "-")
-        elif line.startswith("mask::") or (not has_mask and line.startswith("group::")):
-            line = line.rsplit(":", 1)[0] + ":" + line.split(":")[-1].replace("w", "-")
+        role = line.split(":", 1)[0]
+        shift = None
+        if line.startswith("user::"):
+            shift = 6
+        elif line.startswith("other::"):
+            shift = 0
+        elif role == "mask" or (not has_mask and line.startswith("group::")):
+            shift = 3
+        if shift is not None:
+            bits = (mode >> shift) & 7
+            perms = "".join(flag if bits & bit else "-"
+                            for flag, bit in (("r", 4), ("w", 2), ("x", 1)))
+            line = line.rsplit(":", 1)[0] + ":" + perms
         result.append(line)
     return "\n".join(result) + "\n"
 
@@ -235,7 +244,10 @@ def _mutate_locked(request, rollback=False):
         intermediate = (now["mode"] == old["after_mode"] and
                         normalize_acl(now["acl"]) ==
                         normalize_acl(chmod_acl(old["acl"], old["after_mode"])))
-        if not (before or after or intermediate):
+        rollback_intermediate = (rollback and now["mode"] == old["mode"] and
+            normalize_acl(now["acl"]) ==
+            normalize_acl(chmod_acl(old["after_acl"], old["mode"])))
+        if not (before or after or intermediate or rollback_intermediate):
             raise ValueError("unexpected_metadata")
         allowed.append((old, now, before, after))
     emit({"event": "validated", "plan_sha256": request["expected_plan_sha256"],
