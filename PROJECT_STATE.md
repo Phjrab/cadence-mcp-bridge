@@ -20,7 +20,7 @@ before unique sample selection. The quarter-gap bound remains disjoint; missing
 boundaries and collapsed serialized grids still reject before execution. Both
 reviewer counterexamples pass compile/projection regression, with both endpoints
 selected. Local352 tests/4 POSIX skips, Ruff/mypy71 and exact isolated wheel/sdist/
-installed32-state preservation pass. Final hosted checks and review are refreshed.
+installed32-state preservation pass. Final exact-head hosted checks and independent review are pending.
 No new native deployment, simulation or reservation; publication remains blocked.
 Earlier receipts below retain their historical source scope.
 
