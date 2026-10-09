@@ -1,3 +1,16 @@
+## Closed Spectre scope dialect correction, 2026-10-09
+
+The second independent PR145 P1 identified library/section and keyword-case scopes
+that could remain opaque while controls were extracted globally. Supported parsing
+now permits only lowercase named subckt/inline-subckt scopes, and rejects other
+library/section/protected/conditional/braced/language-switch constructs and scope
+keyword case variants before comparing fingerprints. DC/AC/TRAN regression covers
+all those cases. Existing six actual native baselines remain supported by the same
+common parser correction in PR152. No scope is inferred from an opaque static hash.
+Earlier limited scope correction receipts below are preserved as superseded evidence.
+Current GREL02-08/conditional merge/retained16GiB authority is unchanged; no new
+simulation or reservation or publication occurs. Exact corrected gates follow.
+
 ## Current GREL04 parameter-scope review correction, 2026-10-09
 
 Current direct user authority allows continuous GREL02-08, normal conditional
