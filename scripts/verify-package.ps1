@@ -46,7 +46,12 @@ try {
     $python = Join-Path $environmentDirectory "Scripts\python.exe"
     # Isolate DLL file identity from the active source environment/cache on Windows.
     # Shared uv hardlinks can keep a temporary DLL undeletable while tests import it.
-    & $uv pip install --link-mode copy --python $python $wheel[0].FullName
+    $runtimeRequirements = Join-Path $resolvedTemporaryRoot "locked-runtime.txt"
+    & $uv export --quiet --locked --no-dev --no-emit-project --no-header `
+        --format requirements.txt --output-file $runtimeRequirements
+    if ($LASTEXITCODE -ne 0) { throw "Locked runtime export failed." }
+    & $uv pip install --link-mode copy --python $python --requirement $runtimeRequirements `
+        $wheel[0].FullName
     if ($LASTEXITCODE -ne 0) {
         throw "Package installation failed."
     }
@@ -64,10 +69,30 @@ try {
         throw "Installed onboarding/stdio acceptance failed."
     }
 
-    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-runtime-context-install.py") `
+    $contextAcceptance = Join-Path $projectRoot "scripts\verify-runtime-context-install.py"
+    & $python -I -X utf8 $contextAcceptance `
         --examples (Join-Path $projectRoot "docs\examples\onboarding") `
         --workspace (Join-Path $resolvedTemporaryRoot "runtime-acceptance")
     if ($LASTEXITCODE -ne 0) { throw "Installed operator context acceptance failed." }
+
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-operation-install.py") `
+        --examples (Join-Path $projectRoot "docs\examples\onboarding") `
+        --workspace (Join-Path $resolvedTemporaryRoot "operation-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed local operation form acceptance failed." }
+
+    $bootstrapAcceptance = Join-Path $projectRoot "scripts\verify-bootstrap-install.py"
+    $operatorWorkspace = Join-Path $resolvedTemporaryRoot "operator-state-acceptance"
+    & $python -I -X utf8 $bootstrapAcceptance `
+        --examples (Join-Path $projectRoot "docs\examples\onboarding") `
+        --workspace $operatorWorkspace
+    if ($LASTEXITCODE -ne 0) { throw "Installed fixed bootstrap acceptance failed." }
+
+    # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
+    & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
+        --python $python $wheel[0].FullName
+    if ($LASTEXITCODE -ne 0) { throw "Isolated candidate reinstall failed." }
+    & $python -I -X utf8 $bootstrapAcceptance --workspace $operatorWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Reinstall changed synthetic operator state." }
 
     & $uv pip uninstall --python $python cadence-mcp-bridge
     if ($LASTEXITCODE -ne 0) {
@@ -78,7 +103,10 @@ try {
         throw "Package remained importable after uninstall."
     }
 
-    Write-Output "Package build, installed onboarding/stdio, CLI version, and uninstall verification passed."
+    & $python -I -X utf8 $bootstrapAcceptance --workspace $operatorWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Uninstall changed synthetic operator state." }
+
+    Write-Output "Package build, installed protocol/bootstrap, reinstall and uninstall preservation passed."
 }
 finally {
     if (Test-Path -LiteralPath $resolvedTemporaryRoot -PathType Container) {

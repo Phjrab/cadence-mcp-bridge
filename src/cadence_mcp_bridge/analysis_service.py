@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import json
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from cadence_mcp_bridge.analyses import (
     AnalysisCancellation,
@@ -33,6 +33,10 @@ from cadence_mcp_bridge.native_diagnostics import (
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 
+if TYPE_CHECKING:
+    from cadence_mcp_bridge.operator_lifecycle import OperatorLifecycle, OperatorProvider
+    from cadence_mcp_bridge.runtime_context import ExecutionContext
+
 
 class NativeOperations(Protocol):
     async def submit_native_diagnostic(
@@ -58,6 +62,14 @@ class AnalysisSupervisor:
         self.registry = registry
         self.pdks = reference_pdk_registry() if pdks is None else pdks
         self.store = AnalysisStore(default_analysis_journal() if journal is None else journal)
+
+    def operator_lifecycle(
+        self, context: ExecutionContext, provider: OperatorProvider | None = None
+    ) -> OperatorLifecycle:
+        """Reuse this supervisor's existing journal, without changing legacy routes."""
+        from cadence_mcp_bridge.operator_lifecycle import OperatorLifecycle
+
+        return OperatorLifecycle(context, self.store, provider)
 
     def plan(self, selection: AnalysisSelection) -> AnalysisPlan:
         contracts = self.registry.analyses_for(selection.design_id)

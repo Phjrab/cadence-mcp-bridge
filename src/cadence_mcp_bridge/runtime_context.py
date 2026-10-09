@@ -273,35 +273,36 @@ def resource_lock(context: ExecutionContext) -> Iterator[None]:
     descriptor = None
     locked = False
     try:
-        path = _local_path(context.lock_path)
-        descriptor = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
-        observed = os.fstat(descriptor)
-        current = path.lstat()
-        if (
-            not stat.S_ISREG(observed.st_mode)
-            or observed.st_nlink != 1
-            or (observed.st_dev, observed.st_ino) != (current.st_dev, current.st_ino)
-            or (
-                os.name != "nt"
-                and (
-                    observed.st_uid != getattr(os, "getuid", lambda: -1)()
-                    or observed.st_mode & 0o077
+        try:
+            path = _local_path(context.lock_path)
+            descriptor = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            observed = os.fstat(descriptor)
+            current = path.lstat()
+            if (
+                not stat.S_ISREG(observed.st_mode)
+                or observed.st_nlink != 1
+                or (observed.st_dev, observed.st_ino) != (current.st_dev, current.st_ino)
+                or (
+                    os.name != "nt"
+                    and (
+                        observed.st_uid != getattr(os, "getuid", lambda: -1)()
+                        or observed.st_mode & 0o077
+                    )
                 )
-            )
-        ):
-            raise RuntimeRejected("resource_lock_file_invalid")
-        if os.name == "nt":
-            import msvcrt
+            ):
+                raise RuntimeRejected("resource_lock_file_invalid")
+            if os.name == "nt":
+                import msvcrt
 
-            msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
-        else:
-            fcntl = importlib.import_module("fcntl")
+                msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl = importlib.import_module("fcntl")
 
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        locked = True
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            locked = True
+        except OSError:
+            raise RuntimeRejected("resource_domain_busy_or_invalid") from None
         yield
-    except OSError:
-        raise RuntimeRejected("resource_domain_busy_or_invalid") from None
     finally:
         if descriptor is not None:
             if locked:

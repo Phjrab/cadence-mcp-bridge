@@ -9,11 +9,11 @@
     "GREL-06",
     "GREL-07"
   ],
-  "current_phase": "GREL-02",
-  "phase_status": "LOCAL_VERIFIED_NATIVE_TRUST_BLOCKED",
-  "branch": "feat/grel-02-runner-bootstrap",
+  "current_phase": "GREL-03/GREL-07",
+  "phase_status": "PARTIAL_DURABLE_LOCAL_IMPLEMENTED_NATIVE_TRUST_BLOCKED",
+  "branch": "feat/grel-03-reusable-operations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "3a1fdaaadc4af511ae056c025728add128be83ec",
+  "parent_feature": "b0e2693",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -24,17 +24,37 @@
   "grel08_authorized": false,
   "native_blocker": "executable_permissions_actual_group_or_other_writable_vendor_chain",
   "remote_deployments": 0,
-  "report": "GREL_02_RESULT.md",
+  "report": "GREL_03_RESULT.md",
   "next_phase_authorized": true,
-  "next_phase": "GREL-03",
-  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source_commit": "142e1b4",
-  "full_unit": {
-    "passed": 2319,
-    "skipped": 7,
-    "warnings": 56,
-    "elapsed_seconds": 790.75
+  "next_phase": "GREL-03-native-admission-then-GREL04-06",
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/144",
+  "reports": [
+    "GREL_02_RESULT.md",
+    "GREL_03_RESULT.md",
+    "GREL_07_RESULT.md"
+  ],
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
+  "blocked_phases": {
+    "GREL-02": "positive_native_trust",
+    "GREL-03": "native_provider_and_operator_attestation_not_implemented",
+    "GREL-04": "generic_native_ADE_execution_not_implemented",
+    "GREL-05": "new_job_measurement_and_sweep_not_implemented",
+    "GREL-06": "clean_actual_app_new_job_not_run"
   },
+  "grel07_status": "INDEPENDENT_SYNTHETIC_IMPLEMENTATION_FULL_NATIVE_OPERATION_AND_MIGRATION_INCOMPLETE",
+  "hosted_ci": {
+    "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+    "run": 37703731751,
+    "job": 113073056336,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37703731751",
+    "conclusion": "PASS",
+    "unit_passed": 2423,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 192.12,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+  },
+  "native_resume_boundary": "NATIVE_RESUME_BOUNDARY.md",
   "live_resource_snapshot": {
     "attempts": 82,
     "reserved_result_bytes": 9798942720,
@@ -42,9 +62,109 @@
     "remaining_bytes": 938475520,
     "logical_bytes": 18030073,
     "allocated_bytes": 48308224,
-    "filesystem_free_bytes": 25690324992,
-    "disk_floor_status": "OK"
+    "filesystem_free_bytes": 25689919488,
+    "disk_floor_status": "OK",
+    "disk_floor_bytes": 6238251418,
+    "snapshot_sha256": "1ff1794c7ff2d75b3aeed475d587a68e2d39bc5157a8704107397cc7610b09e2"
   },
-  "independent_review": "PENDING_AUTOMATIC_PR_REVIEW",
-  "hosted_ci": "NOT_RUN_ON_THIS_BRANCH"
+  "selected_local_preservation": {
+    "files": 99964,
+    "changed": 0
+  },
+  "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+  "local_validation": {
+    "affected_passed": 153,
+    "os_symlink_skips": 1,
+    "source_typecheck_files": 68,
+    "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
+    "final_security_package_ci": "PASS_SCOPED_COMBINED_SOURCE",
+    "security_passed": 18,
+    "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+    "mcp_full_schemas": 85,
+    "preserved_synthetic_state_files": 19,
+    "input_files": 273,
+    "input_drift": 0
+  },
+  "independent_review": {
+    "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
+    "pr143": "TWO_P1_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle": "TWO_P2_FIXED_BOT_PLUS_ONE_AFTER_A7FCF45_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
+    "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED"
+  },
+  "local_input_snapshot_sha256": "e68e1d23fda0ea1ba213a3744f9b440627169ef0f9a4a4b58e533405f343763a",
+  "historical_validation_before_durable_lifecycle": {
+    "hosted_ci": {
+      "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
+      "historical_run": 37649117150,
+      "historical_conclusion": "PASS",
+      "corrected_candidate": {
+        "tested_source": "fe22a3a422451540e0079562862f15d953acf9c1",
+        "run": 37650489494,
+        "conclusion": "PASS_HISTORICAL_AFTER_LIFECYCLE_FIX",
+        "unit_passed": 2364
+      },
+      "current": {
+        "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+        "run": 37654390528,
+        "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
+        "conclusion": "PASS",
+        "unit_passed": 2373,
+        "unit_skipped": 0,
+        "unit_warnings": 56,
+        "unit_seconds": 258.88,
+        "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+      },
+      "historical_lifecycle_correction": {
+        "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+        "run": 37652706492,
+        "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
+        "conclusion": "PASS",
+        "unit_passed": 2366,
+        "unit_skipped": 0,
+        "unit_warnings": 56,
+        "unit_seconds": 177.28,
+        "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+      }
+    },
+    "local_validation": {
+      "affected_passed": 65,
+      "os_symlink_skips": 0,
+      "security_passed": 18,
+      "source_typecheck_files": 67,
+      "mcp_full_schemas": 85,
+      "preserved_synthetic_state_files": 19,
+      "input_files": 271,
+      "input_drift": 0,
+      "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    }
+  },
+  "durable_lifecycle": {
+    "implementation": "EXISTING_ANALYSIS_STORE_PROVIDER_SEAM",
+    "production_provider": "NOT_IMPLEMENTED",
+    "public_dispatch": "DISABLED",
+    "extraction_recovery": "NOT_IMPLEMENTED",
+    "renewal": "NOT_IMPLEMENTED",
+    "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
+    "budget_reset_or_refund": false
+  },
+  "historical_d67df77_ci": {
+    "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
+    "run": 37701436071,
+    "conclusion": "PASS_HISTORICAL_AFTER_REVIEW_CORRECTION",
+    "unit_passed": 2414,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 189.08
+  },
+  "historical_64227a2_ci": {
+    "tested_source": "64227a2856778e6e8f0a49aa5a113916fad7e93b",
+    "run": 37702503567,
+    "conclusion": "PASS_HISTORICAL_AFTER_INFLIGHT_AND_LINK_GUARDS",
+    "unit_passed": 2417,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 260.78
+  },
+  "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE"
 }

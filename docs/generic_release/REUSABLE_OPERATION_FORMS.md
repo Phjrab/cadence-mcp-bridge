@@ -1,0 +1,133 @@
+# Local reusable operation forms
+
+This checkpoint supplies installed CLI validation of operator-owned authority
+forms and immutable explicit-input plans. It does not supply a trusted native
+admission provider. GREL-03 remains incomplete until a real shared ledger,
+operator confirmation, native lifecycle and repeated batches are qualified.
+
+Generate the closed schemas from an installed artifact:
+
+~~~powershell
+cadence-mcp-bridge operation grant-schema
+cadence-mcp-bridge operation request-schema
+cadence-mcp-bridge operation check-authority --settings C:/operator/runtime.json --context lab-a --grant C:/operator/grant.json --expected-grant-sha256 <reviewed-raw-file-sha256>
+cadence-mcp-bridge operation plan --settings C:/operator/runtime.json --context lab-a --grant C:/operator/grant.json --expected-grant-sha256 <reviewed-raw-file-sha256> --request C:/operator/request.json
+~~~
+
+The operating-system operator creates and reviews their own private record from
+the schema. The CLI only reads it; no MCP or CLI command writes, signs, activates,
+renews or revokes a grant. A file hash binds exact bytes, not human consent.
+The local record cannot authenticate a human against a model running as the same
+OS account. The future trusted admission boundary must independently attest that
+confirmation. Locally matched forms always return execution_authorized=false.
+
+Authority records bind the runner, declared resource domain, existing ledger
+reference, exact environment/design/PDK input digests, logical design and analysis
+allowlists, numeric regions, allowed actions, request and result reservation
+ceilings, lifetime and status. Expiration/revocation denies new plan preparation.
+No existing completed-result reader depends on this new form. A local description
+is never reported as remaining remote capacity: those fields remain null until
+observed from authoritative accounting. The environment ceiling is not reset.
+
+Each request includes all declared variable values and a reservation size. The
+existing registry's numeric/unit/copy checks apply before the narrower authority
+region. Missing values, inherited ADE defaults and duplicate values are denied.
+Fixed constraints are distinct from electrically qualified ranges. Canonical
+value order and decimal representation produce a stable plan hash. The frozen
+plan binds the entire input snapshot and exact authority file, and exposes only
+logical IDs, units, canonical numbers and hashes, not library/ADE/private paths.
+
+No journal or resource lock is created by local preparation. Existing AnalysisStore,
+SweepStore, supervisors and historical native ledger/EDA lock remain intact.
+The extended AnalysisStore admission establishes local first-send identity, stores
+immutable plans and hash-linked progress, and retains lookup-only retry. The
+provider-coordinated lifecycle preserves that boundary and reconciles observations;
+a production provider still must attest physical identity and remote acceptance. Local timeout must not mint a new ID or resubmit.
+There is no exactly-once execution claim. Current native reference behavior and
+all old 85 full wire schemas remain the compatibility baseline.
+
+Remote attestation, existing-ledger integration and generic analysis adapters
+remain explicit blocking reasons. Pending cancellation is locally implemented at the provider seam and requires
+atomic remote absent/pending identity tombstones; no public native cancellation
+route is enabled. Active termination, extraction-only recovery, renewable authority
+and two real batches remain unimplemented/unqualified on the native generic path. The form's allowed-action
+field describes intended scope and does not enable those capabilities.
+
+
+Each numeric_regions entry requires design_id plus logical_id. Regions are unique
+within a design and their design_id must belong to the grant design_ids. A request
+uses exactly its design's regions; another authorized design's variables do not
+satisfy or obstruct that scope. Thus a zero-variable circuit and a parameterized
+circuit can share one local grant. Same-named variables on different designs can
+have distinct unit/range constraints. The total bounded region count remains32.
+This unreleased draft schema requires explicit design_id; older unscoped draft
+forms are rejected and must be regenerated/reviewed by their operator. No grant
+is automatically rewritten or reauthorized.
+
+
+The installed CLI can inspect an already recorded local operation:
+
+~~~powershell
+cadence-mcp-bridge operation journal-status --settings C:/operator/runtime.json --context lab-a --operation-id <existing-operation-uuid> --expected-plan-sha256 <original-plan-sha256>
+~~~
+
+This grant-free read returns LOCAL_LAST_OBSERVATION, bounded phase/revision/receipt,
+event count and identity. It opens only the context's existing journal and creates
+no admission, tables or lock. It is cached history, with remote_contact=false and
+execution_authorized=false. Matching current settings/domain/ledger and original
+plan hash are required. Grant expiry/revocation does not erase completed history.
+Changed settings that no longer resolve the context require separately reviewed
+historical context restoration, not automatic rewriting of the plan or journal.
+
+The coordinator is a Python implementation seam, not a configurable plugin hook.
+No caller JSON/MCP input injects provider code. The public native runtime retains
+its setup denial. SyntheticProvider exists only in tests; its fake counters are
+not evidence of physical-domain attestation or real atomic native accounting.
+
+
+Submission admission and dispatch intent are committed in one transaction. A crash
+before the network call remains UNKNOWN_OUTCOME and lookup-only, even if the
+provider has no record. To abandon it, pending cancellation asks the trusted
+provider to atomically tombstone the absent identity or cancel its pending record.
+The provider must independently reject active or uncertain remote state; lookup
+absence alone proves neither no execution nor cancellation permission. Once the
+provider has confirmed remote UNKNOWN_OUTCOME, ordinary cancellation is denied.
+Cancellation cannot resend an analysis, refund capacity or reset identity. This
+mechanism is tested only with a synthetic provider; the native route is disabled.
+
+Disk-floor admission reserves room for both existing in-flight commitments and the
+new request above the configured byte/percentage floor. It uses the full in-flight
+reservation as a conservative upper bound and never subtracts historical cumulative
+reservation history from free space. Physical free already reflects materialized
+occupancy; aggregate logical/allocated counts do not establish remaining per-job
+commitments. Native provider acceptance must repeat the check atomically.
+
+
+## Explicit per-design analysis authority v2, 2026-10-09
+
+The final PR144 review identified that v1 design/analysis lists describe their
+Cartesian product and cannot express narrower A/DC and B/AC authority. New grants
+with different analysis rights per design must use schema_version2 and required
+`design_analyses` pairs. Every submitted plan checks its exact pair before admission;
+duplicates, undeclared pairs and missing paired scope fail closed. `operation
+grant-schema` exports both versioned forms. V1 retained grants keep exact bytes and
+their explicit legacy all-design/all-analysis semantics; they are not silently
+migrated or described as narrow authority. Remote v2 confirmation/provider support
+is still unqualified in this foundation PR, so v2 alone never activates a worker.
+
+Four registered A/DC, A/AC, B/DC, B/AC combinations verify only A/DC and B/AC pass
+under a narrow v2 grant. Missing/duplicate/outside pairs reject. Existing v1 byte
+identity/replay is preserved. Local169 PASS/2 OS skips, Ruff/mypy68 and installed
+bootstrap/reinstall/uninstall19-state preservation PASS. Final hosted CI/review
+must pass at the exact updated commit before normal merge.
+
+## Exhausted-capacity remote identity recovery, 2026-10-09
+
+A second client journal now performs fixed remote identity lookup before any
+new-spend accounting gate. A fully matching saved remote observation is persisted
+locally without accept/reservation. Wrong identity fails before journal creation;
+an absent identity must still pass all fresh capacity/disk/authority checks.
+Tests verify an existing accepted job can be read at the500-attempt/10GiB fixture
+ceiling while a new ID is denied. No existing journal is reset or replaced.
+Local171 PASS/2 OS skips, mypy68, Ruff and installed19-file preservation PASS.
+Final hosted exact-head review/CI remain required.

@@ -1,3 +1,103 @@
+## Final durable lifecycle source checkpoint, 2026-10-08
+
+Tested sourcea7fcf45: hosted2423 PASS/no skips/56 warnings; local153 related PASS/
+one OS symlink skip; Ruff/mypy68/security18/dependency/85 schemas/package and
+installed19-state preservation PASS. Existing AnalysisStore durable lifecycle,
+atomic admission/intent, lookup-only retries/provider tombstones, in-flight floor,
+SQLite link guards and cached local journal-status are implemented. Two independent
+P2s fixed; bot+1 after corrected ready is not formal APPROVED. PR144 ready/unmerged,
+main553276d unchanged. Exact receipts in generic_release reports/continuation.
+Native provider/attestation/renewal/extraction recovery/generic ADE/new measurement/
+Sweep/clean actual client remain incomplete; latest trust rejects executable_permissions
+(not rerun in this chunk). Release BLOCKED. Native side effects0;02–07/895MiB
+approval persists. Merge/GREL08/publication/protected repairs remain excluded.
+Installation owner must provide a trusted chain before native execution. Prior
+source overlays and failures below remain history, not current PASS evidence.
+
+## Combined durable lifecycle corrections, 2026-10-08
+
+Two independent P2 findings fixed: atomic admission/intent and restart-safe
+provider tombstones; disk floor includes existing in-flight commitments. Primary
+review also closes SQLite sidecar hardlinks/nonregular leaves and junction parents.
+Affected153 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source/package/hosted
+receipts pending; previous sources remain historical. Native provider/authority/
+trust/generic ADE/new measurements/Sweep/actual clean client remain incomplete.
+02–07/895MiB authorization persists; no native side effects/merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
+## In-flight floor review correction, 2026-10-08
+
+Independent PR144 disk-floor finding corrected: physical free must cover existing
+in-flight commitments plus the new reservation above the configured floor.
+Affected149 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source CI/package/
+security receipts pending; previous source receipts remain history. Atomic
+admission/intent and safe absent-intent cancellation remain implemented. Production
+provider/native trust/generic ADE/new measurements/Sweep/clean client remain
+incomplete/blocked; no native side effects.02–07/895MiB authorization persists;
+merge/GREL08/publication excluded. See current generic_release reports/continuation.
+
+## Durable lifecycle review correction, 2026-10-08
+
+PR144 independent pre-send crash finding corrected: admission/intent commit
+atomically; lookup absence permits only provider-verified atomic tombstone, never
+resend. Active/remote-unknown state remains denied. Affected147 PASS/one OS skip,
+Ruff/mypy68 PASS; final corrected package/hosted receipts pending. d67df77 full2414
+PASS is historical after correction. Native provider/operator attestation/generic
+ADE/new measurement/Sweep/actual clean client and trust remain incomplete/blocked.
+02–07/895MiB authorization persists; no native side effects, merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
+## Durable operator lifecycle checkpoint, 2026-10-08
+
+GREL03 now extends the existing AnalysisStore with immutable plans and bounded
+append-only lifecycle events. Provider-coordinated submit/reconcile/pending cancel
+are implemented locally and tested synthetically; no production native provider
+or public dispatch route is installed. Network ambiguity is committed before send;
+retries only look up, and cancellation needs an atomic remote identity tombstone.
+Legacy admissions/application identity/version remain intact. No budget DB,
+parallel worker, refund, reset, grant writer or termination capability is added.
+Fresh affected144 PASS/one local OS symlink skip, Ruff/mypy68 PASS. Final exact
+source package/security/full hosted receipts are recorded in generic_release
+reports/continuation as they are observed; earlier233e27e receipts are historical.
+Main553276d unchanged. Continuous02–07 and existing895MiB approval persist.
+Native trust/execution, operator attestation, extraction recovery/renewal,
+generic ADE/new results/Sweep/actual clean client remain incomplete. No native
+simulations/reservations/deployments/deletions/permission/license changes.
+GREL08/merge/publication excluded; no repeated phase approval inside02–07.
+Prior overlays below remain dated history.
+
+## Final corrected local/hosted checkpoint, 2026-10-08
+
+Tested source233e27e: independent hosted2373 PASS/no skips/56 warnings; fresh
+local analysis/forms65 PASS, Ruff/mypy67/security18/dependency/85 schemas/package/
+installed two-design forms/reinstall/uninstall19-state preservation PASS. Three
+independent review findings are fixed; bot+1 after corrected ready transitions is
+recorded separately from formal approval. PR143/144 ready/unmerged; main553276d.
+Native trust blocked/executable_permissions; generic admission/ADE/new results/
+Sweep/actual clean client and native operating/migration qualification incomplete.
+Program0 simulations/reservations/deployments/deletions/permission/license changes;
+895MiB existing-remainder approval and continuous02–07 delegation persist.
+GREL08/merge/publication excluded. Exact source/artifact/CI/failure receipts:
+docs/generic_release/GREL_03_RESULT.md, GREL_07_RESULT.md, ACCEPTANCE_CURRENT.json.
+Installation owner must supply a trusted executable/dependency chain first; ordered
+resume is in NATIVE_RESUME_BOUNDARY.md. Prior overlays below remain history.
+
+## GREL-03/GREL-07 independent checkpoint, 2026-10-08
+
+Explicit continuous GREL-02 through GREL-07 and existing895MiB remaining-space
+approval are active. Latest main553276d is unchanged. GREL02 fixed assets/local
+bootstrap are implemented in stacked PR143; positive native trust is BLOCKED by
+actual group/other-writable vendor chains. GREL03 adds local authority/immutable
+plan forms only; no grant issuance/remote lifecycle/provider/ledger reset. GREL07
+adds hosted synthetic workflow and installed state-preservation tooling. Generic
+ADE execution/new measurements/Sweep/actual clean app remain NOT_IMPLEMENTED/
+NOT_RUN; do not call these phases complete. Source/test/package evidence and
+exact source-scoped CI/review receipts are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
+No simulations/reservations/deployments/deletions/permission/license changes.
+Installation-owner trust action is required before native acceptance. No protected
+chmod, budget increase, merge, GREL08 or publication is authorized. No phase-boundary
+question inside02-through-07. Earlier overlays remain dated historical records.
+
 ## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
 
 The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.

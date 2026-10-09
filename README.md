@@ -554,6 +554,47 @@ is identity/runtime/binary/root/disk evidence; analysis, license entitlement,
 physical ledger provisioning and operation authority remain separate gates.
 
 
+### Local reusable authority and operation plans
+
+Installed operator CLI now supplies closed authority/request schemas and local
+immutable planning:
+
+~~~powershell
+cadence-mcp-bridge operation grant-schema
+cadence-mcp-bridge operation request-schema
+cadence-mcp-bridge operation check-authority --settings C:/operator/runtime.json --context lab-a --grant C:/operator/grant.json --expected-grant-sha256 <reviewed-raw-file-sha256>
+cadence-mcp-bridge operation plan --settings C:/operator/runtime.json --context lab-a --grant C:/operator/grant.json --expected-grant-sha256 <reviewed-raw-file-sha256> --request C:/operator/request.json
+~~~
+
+The operator supplies their reviewed private record; these commands never write
+or sign approval. The form binds runner/domain/existing ledger/catalogs and
+logical design/analysis/numeric scope, ceilings and lifetime. The request names a
+registered design/analysis and all explicit values with units and reservation size.
+Both registered numeric contracts and narrower authority regions are enforced;
+there is no inherited ADE default. Plans contain canonical numbers and logical
+IDs/hashes, not private bindings. A matching local form reports remote accounting
+and human attestation as unassessed and always execution_authorized=false.
+Native dispatch, pending cancellation and extraction recovery remain unavailable
+until trusted runner, actual shared ledger, generic adapter and operator
+confirmation are implemented and qualified. A form is not an execution grant.
+
+Operator journals must live outside site-packages in preexisting selected state
+parents. Installing, same-version reinstalling or uninstalling the package does
+not migrate/reset them. Bootstrap staging preserves the selected runner;
+active-pointer replacement, live migration and N-to-N+1/downgrade qualification
+are not supported at this checkpoint. Retain originals, results, replay, partial
+candidates, unresolved jobs, audit and cumulative reservations. Fresh operator
+Storage/deletion remains disabled; phase approval is not result deletion consent.
+
+Public verification uses disposable GitHub-hosted Windows/Python3.12 machines,
+locked dependencies, SHA-pinned actions, read-only token permission and a pinned
+uv binary checksum. It runs synthetic lint/type/unit/security/contract/curated
+build/isolated SDK+bootstrap+preservation checks without Cadence/PDK/license/SSH
+secrets. Actual native acceptance and actual-app new execution remain distinct
+BLOCKED/NOT_RUN gates. See CONTRIBUTING.md for commands and SECURITY.md for
+sanitized reports. General release and publication remain blocked.
+
+
 Native standalone runner installation refuses a TARGET that differs from the
 hash-verified profile's paths.managed_root before creating any directory. A
 mistyped target cannot create a runtime tree in an original/source/vendor root.

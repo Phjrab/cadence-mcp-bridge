@@ -1,0 +1,24 @@
+name: Fictional bug report
+description: Report a reproducible public bridge issue without private EDA data.
+body:
+  - type: markdown
+    attributes:
+      value: "Use fictional reproductions. Exclude PDK/model/netlist/OA/ADE/raw PSF, credentials, license endpoints, private paths and unrestricted logs. Use SECURITY.md for sensitive issues."
+  - type: input
+    id: version
+    attributes:
+      label: Package version or source commit and host Python/OS
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Fictional minimal reproduction
+      description: Include expected and observed outcomes and sanitized error codes.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Relevant test and qualification evidence
+      description: Distinguish synthetic verification from actual Cadence observations.

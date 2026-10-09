@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "program": "GENERAL_RELEASE",
+  "assessment_kind": "IMPLEMENTATION_CHECKPOINT_NOT_RELEASE_CANDIDATE",
+  "candidate_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+  "version": "1.0.0",
+  "generic_release_gate": "BLOCKED",
+  "publication_authorized": false,
+  "grel08_authorized": false,
+  "gates": [
+    {
+      "id": "G01",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "shipped fixed bootstrap assets; native installation/positive trust blocked"
+      ]
+    },
+    {
+      "id": "G02",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "installed operator contracts/routing verified; native executable path unqualified"
+      ]
+    },
+    {
+      "id": "G03",
+      "status": "BLOCKED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual executable/dependency chain permissions rejected"
+      ]
+    },
+    {
+      "id": "G04",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "read-only local authority forms; authentic operator confirmation/provider absent"
+      ]
+    },
+    {
+      "id": "G05",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "two genuine new circuits not created or registered for native acceptance"
+      ]
+    },
+    {
+      "id": "G06",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "new MOS native DC/AC/TRAN execution absent"
+      ]
+    },
+    {
+      "id": "G07",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "generic effective native inputs and copy receipt absent"
+      ]
+    },
+    {
+      "id": "G08",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "automatic extraction of new generic job absent"
+      ]
+    },
+    {
+      "id": "G09",
+      "status": "NOT_IMPLEMENTED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "new registered-circuit native 1D Sweep absent"
+      ]
+    },
+    {
+      "id": "G10",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "second actual batch under reusable authority absent"
+      ]
+    },
+    {
+      "id": "G11",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "durable generic local reconciliation and failure tests implemented; production provider/native qualification absent"
+      ]
+    },
+    {
+      "id": "G12",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "declared local shared lock tested; attested remote shared domain/provider absent"
+      ]
+    },
+    {
+      "id": "G13",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "85 full schemas and legacy tests preserved; native new-path historical replay absent"
+      ]
+    },
+    {
+      "id": "G14",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "isolated synthetic operator install verified; actual fresh native context absent"
+      ]
+    },
+    {
+      "id": "G15",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual current Codex new generic job/restart absent"
+      ]
+    },
+    {
+      "id": "G16",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "hosted synthetic workflow and same-version state preservation; semver migration absent"
+      ]
+    },
+    {
+      "id": "G17",
+      "status": "PASS_SCOPED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "exact curated wheel/sdist source/license/notices and content audits pass; history rights separate"
+      ]
+    },
+    {
+      "id": "G18",
+      "status": "PARTIAL",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "shipped bootstrap/form instructions distinguish local match and execution; generic runbook pending"
+      ]
+    },
+    {
+      "id": "G19",
+      "status": "NOT_AUTHORIZED",
+      "required": true,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "GREL08 final release candidate/version/publication are not authorized"
+      ]
+    },
+    {
+      "id": "C01",
+      "status": "DISABLED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "fresh operator deletion disabled; no exact consent or native delete qualification"
+      ]
+    },
+    {
+      "id": "C02",
+      "status": "UNSUPPORTED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "active native termination unsupported; pending cancellation tested only at synthetic provider seam"
+      ]
+    },
+    {
+      "id": "C03",
+      "status": "UNQUALIFIED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "historical qualified/partial measurement scopes preserved; generic PM/Offset/Slew absent"
+      ]
+    },
+    {
+      "id": "C04",
+      "status": "DEFERRED",
+      "required": false,
+      "evidence_reference": [
+        "GREL_02_RESULT.md",
+        "GREL_03_RESULT.md",
+        "GREL_07_RESULT.md"
+      ],
+      "limitations": [
+        "actual Claude complete qualification stays deferred"
+      ]
+    }
+  ],
+  "native_jobs_this_program": 0,
+  "new_reservations_this_program": 0,
+  "remote_deployments_this_program": 0,
+  "existing_resources": {
+    "attempts": 82,
+    "cumulative_reserved_bytes": 9798942720,
+    "ceiling_bytes": 10737418240,
+    "approved_remaining_bytes": 938475520,
+    "remaining_capacity_increase_authorized": false
+  },
+  "local_protected_selected_files": {
+    "count": 99964,
+    "changed": 0
+  },
+  "next_native_boundary": "NATIVE_RESUME_BOUNDARY.md",
+  "excluded_from_current_validation": [
+    "different Cadence versions",
+    "different PDKs",
+    "different physical hosts",
+    "fresh complete Claude application qualification"
+  ],
+  "local_validation": {
+    "affected_passed": 153,
+    "os_symlink_skips": 1,
+    "source_typecheck_files": 68,
+    "native_qualification": "NOT_RERUN_PREVIOUS_BLOCKED_EXECUTABLE_PERMISSIONS",
+    "final_security_package_ci": "PASS_SCOPED_COMBINED_SOURCE",
+    "security_passed": 18,
+    "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+    "mcp_full_schemas": 85,
+    "preserved_synthetic_state_files": 19,
+    "input_files": 273,
+    "input_drift": 0
+  },
+  "hosted_ci": {
+    "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+    "run": 37703731751,
+    "job": 113073056336,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37703731751",
+    "conclusion": "PASS",
+    "unit_passed": 2423,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 192.12,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+  },
+  "historical_hosted_ci": {
+    "tested_source": "0ee2c17ba68cced8423d279b64d011319b60ef9a",
+    "run": 37652706492,
+    "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37652706492",
+    "conclusion": "PASS",
+    "unit_passed": 2366,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 177.28,
+    "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+  },
+  "independent_review": {
+    "pr144": "P2_DESIGN_SCOPE_FIXED_BOT_PLUS_ONE_AFTER_CORRECTED_READY_NOT_FORMAL_APPROVAL",
+    "plus_one_observed_utc": "2026-10-07T16:46:55Z",
+    "current_lifecycle": "TWO_P2_FIXED_BOT_PLUS_ONE_AFTER_A7FCF45_READY_NOT_FORMAL_APPROVAL",
+    "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
+    "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED"
+  },
+  "historical_validation_before_durable_lifecycle": {
+    "hosted_ci": {
+      "tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+      "run": 37654390528,
+      "url": "https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/37654390528",
+      "conclusion": "PASS",
+      "unit_passed": 2373,
+      "unit_skipped": 0,
+      "unit_warnings": 56,
+      "unit_seconds": 258.88,
+      "evidence_scope": "GITHUB_HOSTED_WINDOWS_SYNTHETIC_NOT_NATIVE"
+    },
+    "local_validation": {
+      "affected_passed": 65,
+      "os_symlink_skips": 0,
+      "security_passed": 18,
+      "source_typecheck_files": 67,
+      "mcp_full_schemas": 85,
+      "preserved_synthetic_state_files": 19,
+      "input_files": 271,
+      "input_drift": 0,
+      "native_qualification": "BLOCKED_EXECUTABLE_PERMISSIONS"
+    }
+  },
+  "durable_lifecycle": {
+    "implementation": "EXISTING_ANALYSIS_STORE_PROVIDER_SEAM",
+    "production_provider": "NOT_IMPLEMENTED",
+    "public_dispatch": "DISABLED",
+    "extraction_recovery": "NOT_IMPLEMENTED",
+    "renewal": "NOT_IMPLEMENTED",
+    "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
+    "budget_reset_or_refund": false
+  },
+  "historical_artifact_identities": {
+    "grel02_tested_source": "69d3f434f61a65cfde9234a63c442a5106b87d9f",
+    "grel02_corrected_wheel_sha256": "caa017021a63c548ffbcbe18e38a55cce79c8f0c520a08383721b695ebe9f254",
+    "grel02_corrected_sdist_sha256": "6b1783ae5a58ef2a54980f6a64a5ed1d131f6a101584a72c8c4968f63e077f5d",
+    "grel03_tested_source": "233e27e2359e34772eecd62cbcf9af142507a555",
+    "grel03_corrected_wheel_sha256": "c6b83193519f4db9e99b40fa8b65adb9e3d0afae6bab7d5d4b0be16414ce4312",
+    "grel03_corrected_sdist_sha256": "0ee63730ee6e9b542108be7e7d5f5455d1ec5e09e3e87bfe763a406a50e19218",
+    "grel03_hosted_wheel_sha256": "34d4b8f10dc3950925557dffc883027b55f60bc5b5d74177487da670e5bddcc2",
+    "grel03_hosted_sdist_sha256": "43edc5d6c62d59aaf983eb3f1d50f96235337e870021707eb277bcfdb80fd8bb"
+  },
+  "artifact_identities": {
+    "source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
+    "wheel_sha256": "cd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b",
+    "sdist_sha256": "4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671",
+    "wheel_members": 76,
+    "sdist_members": 77,
+    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE",
+    "hosted_wheel_sha256": "cd63959cf99be9ef6b64759f0517a86a11a8dd2321a0cc8e54bee143c42c317b",
+    "hosted_sdist_sha256": "4addf9d55a169409c9375faced20a83d29234e66b64a5b55653ffee35da04671"
+  },
+  "local_input_snapshot_sha256": "e68e1d23fda0ea1ba213a3744f9b440627169ef0f9a4a4b58e533405f343763a",
+  "historical_d67df77_ci": {
+    "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
+    "run": 37701436071,
+    "conclusion": "PASS_HISTORICAL_AFTER_REVIEW_CORRECTION",
+    "unit_passed": 2414,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 189.08
+  },
+  "historical_d67df77_artifact_identities": {
+    "source": "CURRENT_DURABLE_LIFECYCLE_INPUTS",
+    "wheel_sha256": "3df95d15bcf28187a304dcc9237dfc5cfbb3d2f60d504425045938dcb3919537",
+    "sdist_sha256": "a63b92a20328c5ac2c637a2e1bd41d2fbddcba6dea86b7c2acd193611eac6059",
+    "wheel_members": 76,
+    "sdist_members": 77,
+    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE"
+  },
+  "historical_64227a2_ci": {
+    "tested_source": "64227a2856778e6e8f0a49aa5a113916fad7e93b",
+    "run": 37702503567,
+    "conclusion": "PASS_HISTORICAL_AFTER_INFLIGHT_AND_LINK_GUARDS",
+    "unit_passed": 2417,
+    "unit_skipped": 0,
+    "unit_warnings": 56,
+    "unit_seconds": 260.78
+  },
+  "historical_64227a2_artifact_identities": {
+    "source": "REVIEW_CORRECTED_DURABLE_LIFECYCLE_INPUTS",
+    "wheel_sha256": "747b683b89923a89f9f3c0b9a3a8b29e5f3ccfe2f741d6579815f43c9b325f53",
+    "sdist_sha256": "61ef73fe742606b3f23ae3fffe2223049d1018ae04b9b2e68e4b1d1bfa84c64f",
+    "wheel_members": 76,
+    "sdist_members": 77,
+    "evidence_scope": "LOCAL_SYNTHETIC_NOT_NATIVE"
+  },
+  "final_source_checkpoint": "GREL03_LOCAL_DURABLE_AND_GREL07_SYNTHETIC_PARTIAL_NOT_NATIVE_RELEASE"
+}

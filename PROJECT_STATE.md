@@ -1,3 +1,44 @@
+## PR144 final identity/SQLite correction checkpoint, 2026-10-09
+
+Grant object/document hash binding is enforced before planning and pending
+cancellation. Exact historic v1/v2 document hashes are preserved. Hosted da10e616
+push failed concurrent admission on a vanished SQLite sidecar; one-lstat guard
+fix preserves hardlink/type rejection.131 related local tests, Ruff/mypy68 and
+installed19-file reinstall/uninstall conservation PASS. Final hosted CI/review
+pending; do not merge on the earlier passing PR check alone. General native
+acceptance remains a separate unmerged PR152 track. Direct GREL02–08/16GiB and
+conditional normal-merge authority continue; no tag/Release/upload consent.
+
+## PR144 remote identity recovery checkpoint, 2026-10-09
+
+Fixed remote duplicate lookup now precedes fresh-spend capacity checks, preserving
+existing remote job observation at exhausted quota without another accept. Wrong
+identity cannot create a local record. Local171 PASS/2 skips and installed19-file
+preservation PASS; final hosted review/CI pending. v2 paired scope and historical
+v1 bytes remain preserved. Continuous GREL02–08/normal merge authority remains.
+
+## PR144 paired authority correction, 2026-10-09
+
+Final review requires explicit per-design analysis scope. Version2 paired grants
+now deny unintended cross combinations while retaining v1 bytes/replay and explicit
+Cartesian legacy semantics. Foundation remote-v2 admission remains unqualified.
+Local169 PASS/2 skips, Ruff/mypy68 and installed19-state preservation PASS.
+Final exact-head review/CI pending; continuousGREL02–08 and conditional normal
+merge authority remain, public tag/Release/upload still excluded.
+
+## GREL03 integration refresh, 2026-10-09
+
+PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.
+This branch integrates parent routing/context checks while retaining its own short
+Windows test path, installed lifecycle/bootstrap and state-preservation gates.
+The synthetic PowerShell lock-holder readiness wait retains parent's45s allowance;
+production lock denial is unchanged. Current direct user permits conditional normal
+related PR merges, continuousGREL02–08 and current-VM16GiB, with consumed records
+preserved. Dated exclusions below are history. Public tag/Release still unapproved.
+Refreshed affected tests, Ruff/mypy68 and exact isolated package/context/bootstrap/
+reinstall/uninstall19-file preservation PASS; hosted exact-head checks and final
+review remain required. Old a7fcf45 receipts remain history.
+
 ## GREL02 integration refresh, 2026-10-09
 
 PR142 normally merged as239a1949923fdae210d50e1232b6b7b41e60c7de after final
@@ -10,6 +51,106 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+
+## Final durable lifecycle source checkpoint, 2026-10-08
+
+Tested sourcea7fcf45: hosted2423 PASS/no skips/56 warnings; local153 related PASS/
+one OS symlink skip; Ruff/mypy68/security18/dependency/85 schemas/package and
+installed19-state preservation PASS. Existing AnalysisStore durable lifecycle,
+atomic admission/intent, lookup-only retries/provider tombstones, in-flight floor,
+SQLite link guards and cached local journal-status are implemented. Two independent
+P2s fixed; bot+1 after corrected ready is not formal APPROVED. PR144 ready/unmerged,
+main553276d unchanged. Exact receipts in generic_release reports/continuation.
+Native provider/attestation/renewal/extraction recovery/generic ADE/new measurement/
+Sweep/clean actual client remain incomplete; latest trust rejects executable_permissions
+(not rerun in this chunk). Release BLOCKED. Native side effects0;02–07/895MiB
+approval persists. Merge/GREL08/publication/protected repairs remain excluded.
+Installation owner must provide a trusted chain before native execution. Prior
+source overlays and failures below remain history, not current PASS evidence.
+
+## Combined durable lifecycle corrections, 2026-10-08
+
+Two independent P2 findings fixed: atomic admission/intent and restart-safe
+provider tombstones; disk floor includes existing in-flight commitments. Primary
+review also closes SQLite sidecar hardlinks/nonregular leaves and junction parents.
+Affected153 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source/package/hosted
+receipts pending; previous sources remain historical. Native provider/authority/
+trust/generic ADE/new measurements/Sweep/actual clean client remain incomplete.
+02–07/895MiB authorization persists; no native side effects/merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
+## In-flight floor review correction, 2026-10-08
+
+Independent PR144 disk-floor finding corrected: physical free must cover existing
+in-flight commitments plus the new reservation above the configured floor.
+Affected149 PASS/one OS symlink skip; Ruff/mypy68 PASS. Final source CI/package/
+security receipts pending; previous source receipts remain history. Atomic
+admission/intent and safe absent-intent cancellation remain implemented. Production
+provider/native trust/generic ADE/new measurements/Sweep/clean client remain
+incomplete/blocked; no native side effects.02–07/895MiB authorization persists;
+merge/GREL08/publication excluded. See current generic_release reports/continuation.
+
+## Durable lifecycle review correction, 2026-10-08
+
+PR144 independent pre-send crash finding corrected: admission/intent commit
+atomically; lookup absence permits only provider-verified atomic tombstone, never
+resend. Active/remote-unknown state remains denied. Affected147 PASS/one OS skip,
+Ruff/mypy68 PASS; final corrected package/hosted receipts pending. d67df77 full2414
+PASS is historical after correction. Native provider/operator attestation/generic
+ADE/new measurement/Sweep/actual clean client and trust remain incomplete/blocked.
+02–07/895MiB authorization persists; no native side effects, merge/GREL08/publication.
+See current generic_release reports/continuation. Prior overlays remain history.
+
+## Durable operator lifecycle checkpoint, 2026-10-08
+
+GREL03 now extends the existing AnalysisStore with immutable plans and bounded
+append-only lifecycle events. Provider-coordinated submit/reconcile/pending cancel
+are implemented locally and tested synthetically; no production native provider
+or public dispatch route is installed. Network ambiguity is committed before send;
+retries only look up, and cancellation needs an atomic remote identity tombstone.
+Legacy admissions/application identity/version remain intact. No budget DB,
+parallel worker, refund, reset, grant writer or termination capability is added.
+Fresh affected144 PASS/one local OS symlink skip, Ruff/mypy68 PASS. Final exact
+source package/security/full hosted receipts are recorded in generic_release
+reports/continuation as they are observed; earlier233e27e receipts are historical.
+Main553276d unchanged. Continuous02–07 and existing895MiB approval persist.
+Native trust/execution, operator attestation, extraction recovery/renewal,
+generic ADE/new results/Sweep/actual clean client remain incomplete. No native
+simulations/reservations/deployments/deletions/permission/license changes.
+GREL08/merge/publication excluded; no repeated phase approval inside02–07.
+Prior overlays below remain dated history.
+
+## Final corrected local/hosted checkpoint, 2026-10-08
+
+Tested source233e27e: independent hosted2373 PASS/no skips/56 warnings; fresh
+local analysis/forms65 PASS, Ruff/mypy67/security18/dependency/85 schemas/package/
+installed two-design forms/reinstall/uninstall19-state preservation PASS. Three
+independent review findings are fixed; bot+1 after corrected ready transitions is
+recorded separately from formal approval. PR143/144 ready/unmerged; main553276d.
+Native trust blocked/executable_permissions; generic admission/ADE/new results/
+Sweep/actual clean client and native operating/migration qualification incomplete.
+Program0 simulations/reservations/deployments/deletions/permission/license changes;
+895MiB existing-remainder approval and continuous02–07 delegation persist.
+GREL08/merge/publication excluded. Exact source/artifact/CI/failure receipts:
+docs/generic_release/GREL_03_RESULT.md, GREL_07_RESULT.md, ACCEPTANCE_CURRENT.json.
+Installation owner must supply a trusted executable/dependency chain first; ordered
+resume is in NATIVE_RESUME_BOUNDARY.md. Prior overlays below remain history.
+
+## GREL-03/GREL-07 independent checkpoint, 2026-10-08
+
+Explicit continuous GREL-02 through GREL-07 and existing895MiB remaining-space
+approval are active. Latest main553276d is unchanged. GREL02 fixed assets/local
+bootstrap are implemented in stacked PR143; positive native trust is BLOCKED by
+actual group/other-writable vendor chains. GREL03 adds local authority/immutable
+plan forms only; no grant issuance/remote lifecycle/provider/ledger reset. GREL07
+adds hosted synthetic workflow and installed state-preservation tooling. Generic
+ADE execution/new measurements/Sweep/actual clean app remain NOT_IMPLEMENTED/
+NOT_RUN; do not call these phases complete. Source/test/package evidence and
+exact source-scoped CI/review receipts are in docs/generic_release/GREL_03_RESULT.md and GREL_07_RESULT.md.
+No simulations/reservations/deployments/deletions/permission/license changes.
+Installation-owner trust action is required before native acceptance. No protected
+chmod, budget increase, merge, GREL08 or publication is authorized. No phase-boundary
+question inside02-through-07. Earlier overlays remain dated historical records.
 
 ## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
 
@@ -171,7 +312,7 @@ Native deletion/replay/audit qualification remains pending; earlier overlays his
 project: cadence-mcp-bridge
 repository: Phjrab/cadence-mcp-bridge
 visibility: public
-current_wp: GREL-02
+current_wp: GREL-03-GREL-07-INDEPENDENT-CHECKPOINT
 client_lifecycle_01_status: bounded_actual_schema_reconnect_verified_graceful_shutdown_unverified
 client_lifecycle_01_report: docs/CLIENT_LIFECYCLE_QUAL_01.md
 client_lifecycle_01_tools: raw85_filtered26_no_API_change
@@ -576,7 +717,7 @@ spec_contract_01_desktop: CLAUDE_REAL_CLIENT_UNVERIFIED_fresh_Codex_app_NOT_TEST
 spec_contract_01_spectre_reservations_deployments_deletions: 0_0_0_0_cumulative62_of500_and7114588160_of10737418240
 spec_contract_01_protection: source_ADE_PDK_saved_jobs_counters_admission_journal_and1063_prior_records_equal
 spec_contract_01_next_phase: Release_Readiness_reassessment_pending_one_boundary_choice_no_publication_or_optimization
-current_status: implementing_runner_bootstrap_continuous_GREL02_to_07
+current_status: local_forms_and_public_verification_native_trust_blocked
 analog_meas_01_starting_main: e3fcfad30f35c68b1a90160d4d5f3a364436ab12
 analog_meas_01_workflow: docs/ANALOG_MEASUREMENTS_V1.md
 analog_meas_01_scope: registered_v6_local_derivation_admitted_native_evidence_no_new_extraction
@@ -1331,7 +1472,7 @@ wp16_remote_probe_performed: false
 wp16_parameterized_execution_authorized: false
 wp16_sweep_execution_authorized: false
 wp16_wp14_blocker_carried: true
-current_feature_branch: feat/grel-02-runner-bootstrap
+current_feature_branch: feat/grel-03-reusable-operations
 base_main_commit: 553276d28c54d8e87092229d102bfd05ec98e74f
 last_commit: recorded_in_GREL_01_continuation_and_feature_PR
 last_push: verified_feature_implementation_738b610_PR142_final_head_in_GitHub
@@ -1340,7 +1481,7 @@ awaiting_user_merge: true
 remote_runner_deployed: true
 codex_mcp_registered: true
 last_e2e_result: GREL01_installed_synthetic_two_context_restart_pass_actual_new_jobs_NOT_RUN
-user_action_required: "Review GREL-01 feature PR; choose once whether to proceed to GREL-02."
+user_action_required: "Installation owner must establish trusted executable/dependency chain; continuous GREL02-07 approval persists."
 ```
 
 ## GENERIC-DESIGN-01 checkpoint
