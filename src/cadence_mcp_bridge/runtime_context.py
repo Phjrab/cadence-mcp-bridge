@@ -216,7 +216,7 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
             # Alias, context ID, username and managed-root changes do not create extra capacity.
             domain = _digest(
                 {
-                    "hostname": profile.host.hostname.lower(),
+                    "hostname": profile.host.hostname.lower().rstrip("."),
                     "architecture": profile.host.architecture,
                 }
             )

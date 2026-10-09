@@ -245,3 +245,221 @@ sys.stdout.write("FIXED_MEMORY_MODULES_OK")
         check=True,
     )
     assert result.stdout == b"FIXED_MEMORY_MODULES_OK" and not result.stderr
+
+
+def replacement(prepared):
+    root, original, previous, known = prepared
+    setup.apply(original, previous, known)
+    setup.apply(dict(original, action="activate"), previous, known)
+    assets = {name: base64.b64decode(raw) for name, raw in original["files"].items()}
+    profile = setup.closed(assets["profile.json"])
+    profile["environment_id"] = "synthetic-native-update"
+    assets["profile.json"] = setup.canonical(profile)
+    registration = setup.closed(assets["registration.json"])
+    registration["environment_sha256"] = setup.digest(assets["profile.json"])
+    assets["registration.json"] = setup.canonical(registration)
+    manifest = setup.closed(assets["manifest.json"])
+    manifest.update(
+        environment_id=profile["environment_id"],
+        profile_sha256=setup.digest(assets["profile.json"]),
+        registration_sha256=setup.digest(assets["registration.json"]),
+    )
+    manifest["files"] = {
+        name: {"sha256": setup.digest(raw), "bytes": len(raw)}
+        for name, raw in assets.items()
+        if name != "manifest.json"
+    }
+    assets["manifest.json"] = setup.canonical(manifest)
+    expected = setup.digest(assets["manifest.json"])
+    request = dict(
+        original,
+        manifest_sha256=expected,
+        files={name: base64.b64encode(raw).decode("ascii") for name, raw in assets.items()},
+    )
+    setup.apply(request, expected, known)
+    return (
+        root,
+        dict(request, action="update", previous_manifest_sha256=previous),
+        expected,
+        previous,
+        known,
+    )
+
+
+@pytest.mark.skipif(os.name != "posix", reason="normal Linux atomic update")
+def test_update_preserves_old_assets_history_and_counters_and_repeats(prepared):
+    root, request, expected, previous, known = replacement(prepared)
+    before = snapshot(root)
+    old_metadata = setup.metadata(str(root / "active-native-provider.json"))
+    result = setup.apply(request, expected, known)
+    assert result["active"] and result["changed_files"] == 3
+    assert result["counter"]["count"] == 82 and result["new_reservations"] == 0
+    after = snapshot(root)
+    for name, raw in before.items():
+        if name != "active-native-provider.json":
+            assert after[name] == raw
+    record = setup.closed(
+        (root / "native-provider-updates" / f"{previous}-{expected}.json").read_bytes()
+    )
+    assert record["previous_metadata"] == old_metadata
+    assert record["replacement_metadata"] == setup.metadata(
+        str(root / "active-native-provider.json")
+    )
+    assert record["replacement_metadata"]["inode"] != old_metadata["inode"]
+    assert setup.apply(request, expected, known)["changed_files"] == 0
+    assert snapshot(root) == after
+    old = prepared[1]
+    assert not setup.apply(dict(old, action="inspect", operator_authority=None), previous, known)[
+        "active"
+    ]
+    with pytest.raises(ValueError, match="other_active_runtime"):
+        setup.apply(dict(old, action="activate"), previous, known)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="durable Linux partial update")
+@pytest.mark.parametrize("failure", ["pending", "receipt", "history", "rename"])
+def test_partial_update_resumes_without_spend(prepared, monkeypatch, failure):
+    root, request, expected, previous, known = replacement(prepared)
+    original = (
+        installer.exclusive
+        if failure == "pending"
+        else os.rename
+        if failure == "rename"
+        else accounting.write_new
+    )
+    module = installer if failure == "pending" else os if failure == "rename" else accounting
+    name = "exclusive" if failure == "pending" else "rename" if failure == "rename" else "write_new"
+
+    def interrupted(path, value):
+        original(path, value)
+        if (
+            failure in ("pending", "rename")
+            or failure == "receipt"
+            and "native-provider-updates" in path
+            or failure == "history"
+            and "native-provider-history" in path
+        ):
+            raise OSError("synthetic lost update reply")
+
+    monkeypatch.setattr(module, name, interrupted)
+    with pytest.raises(OSError):
+        setup.apply(request, expected, known)
+    monkeypatch.setattr(module, name, original)
+    result = setup.apply(request, expected, known)
+    assert result["active"] and result["counter"]["count"] == 82
+    assert result["new_reservations"] == result["new_simulations"] == 0
+    assert setup.apply(request, expected, known)["changed_files"] == 0
+    assert (root / "runtime" / previous / "manifest.json").is_file()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="Linux predecessor binding")
+@pytest.mark.parametrize("failure", ["missing", "wrong", "asset", "revoked", "lock", "same"])
+def test_update_rejects_unknown_drift_revocation_and_live_worker(prepared, failure):
+    root, request, expected, previous, known = replacement(prepared)
+    if failure == "missing":
+        request.pop("previous_manifest_sha256")
+    elif failure == "wrong":
+        request["previous_manifest_sha256"] = "a" * 64
+    elif failure == "same":
+        request["previous_manifest_sha256"] = expected
+    elif failure == "asset":
+        (root / "runtime" / previous / "worker.py").write_bytes(b"retained drift")
+    elif failure == "revoked":
+        accounting.write_new(
+            str(root / "native-provider-history" / (previous + ".revoked.json")), {}
+        )
+    before = snapshot(root)
+    if failure == "lock":
+        with accounting.ReservationSession(str(root)), pytest.raises((OSError, ValueError)):
+            setup.apply(request, expected, known)
+    else:
+        with pytest.raises((OSError, ValueError)):
+            setup.apply(request, expected, known)
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("previous", [None, "not-a-sha", "b" * 64])
+def test_host_update_requires_exact_distinct_predecessor(tmp_path, monkeypatch, previous):
+    monkeypatch.setattr(host, "run_fixed", lambda *a, **k: pytest.fail("no contact"))
+    with pytest.raises(host.OperationRejected) as error:
+        host.setup_runtime(tmp_path, "b" * 64, "update", "SYNTHETIC", previous)
+    assert error.value.reason == "native_update_exact_predecessor_required"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="read-only Linux fixed preflight")
+def test_native_preflight_has_no_writes_or_execution_authority(prepared):
+    root, request, expected, known = prepared
+    setup.apply(request, expected, known)
+    _, _, probe, _ = setup.modules({})
+    calls = []
+    probe.observe = lambda *args: calls.append(args) or {"synthetic_only": True}
+    before = snapshot(root)
+    result = setup.apply(
+        dict(request, action="preflight", operator_authority=None, nonce="1" * 32), expected, known
+    )
+    assert len(calls) == 1 and calls[0][-1] == "1" * 32
+    assert result["environment_observation"] == {"synthetic_only": True}
+    assert not result["execution_authorized"] and result["changed_files"] == 0
+    assert snapshot(root) == before
+
+
+@pytest.mark.parametrize("drift", [None, "nonce", "clock", "executable", "disk", "mutation"])
+def test_host_preflight_verifies_exact_fresh_package_observation(
+    registered, tmp_path, monkeypatch, drift
+):
+    from datetime import UTC, datetime
+
+    from test_environments import observation
+
+    from cadence_mcp_bridge.environments import load_environment
+
+    context, _, registration = registered
+    monkeypatch.setattr(host, "_ssh", lambda environment: ["synthetic-ssh", "python", "-B"])
+    output = tmp_path / "preflight-bundle"
+    receipt = host.bundle(context, registration, output)
+    expected = receipt["manifest_sha256"]
+    environment, raw = load_environment(output / "profile.json")
+
+    def transport(argv, payload, environment_variables, **bounds):
+        request = json.loads(payload)
+        assert request["action"] == "preflight" and request["operator_authority"] is None
+        observed = observation(environment, raw)
+        observed.update(nonce=request["nonce"], observed_at=datetime.now(UTC).isoformat())
+        for name in ("virtuoso", "spectre", "ocean"):
+            binding = getattr(environment.tools, name)
+            observed["tools"][name].update(
+                sha256=binding.sha256, version=None if name == "ocean" else binding.version
+            )
+        if drift == "nonce":
+            observed["nonce"] = "f" * 32
+        elif drift == "clock":
+            observed["observed_at"] = "2026-01-01T00:00:00Z"
+        elif drift == "executable":
+            observed["tools"]["spectre"]["sha256"] = "f" * 64
+        elif drift == "disk":
+            observed["free_bytes"] = 0
+        value = {
+            "schema_version": 1,
+            "status": "NATIVE_RUNTIME_PREFLIGHT",
+            "manifest_sha256": expected,
+            "identity_manifest_sha256": receipt["provider_binding"]["identity_manifest_sha256"],
+            "changed_files": 1 if drift == "mutation" else 0,
+            "active": True,
+            "counter": {"campaign_id": "synthetic", "count": 0, "result_reserved_bytes": 0},
+            "operator_uid": 500,
+            "execution_authorized": False,
+            "new_reservations": 0,
+            "new_simulations": 0,
+            "environment_observation": observed,
+        }
+        return 0, setup.canonical(value), b""
+
+    monkeypatch.setattr(host, "run_fixed", transport)
+    if drift:
+        with pytest.raises(host.NativeSetupRemoteRejected):
+            host.setup_runtime(output, expected, "preflight")
+    else:
+        result = host.setup_runtime(output, expected, "preflight")
+        assert result["environment_preflight"]["status"] == "qualified_environment_preflight"
+        assert result["new_reservations"] == result["new_simulations"] == 0
+        assert "environment_observation" not in result

@@ -44,6 +44,20 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def metadata(path):
+    info = private(path)
+    return {
+        "device": info.st_dev,
+        "inode": info.st_ino,
+        "uid": info.st_uid,
+        "gid": info.st_gid,
+        "mode": stat.S_IMODE(info.st_mode),
+        "nlink": info.st_nlink,
+        "size": info.st_size,
+        "mtime": info.st_mtime,
+    }
+
+
 def closed(raw):
     value = json.loads(raw.decode("ascii"))
     if len(raw) > LIMIT or canonical(value) != raw:
@@ -163,13 +177,18 @@ def apply(request, expected, known):
         raise ValueError("native_setup_normal_linux_user")
     if (
         set(request)
-        != set(("schema_version", "action", "manifest_sha256", "files", "operator_authority"))
+        != set(
+            ("schema_version", "action", "manifest_sha256", "files", "operator_authority")
+            + (("previous_manifest_sha256",) if request.get("action") == "update" else ())
+            + (("nonce",) if request.get("action") == "preflight" else ())
+        )
         or type(request["schema_version"]) is not int
         or request["schema_version"] != 1
         or request["manifest_sha256"] != expected
         or len(expected) != 64
         or any(c not in "0123456789abcdef" for c in expected)
-        or request["action"] not in ("stage", "activate", "inspect", "revoke")
+        or request["action"]
+        not in ("stage", "activate", "inspect", "revoke", "update", "preflight")
         or set(request["files"]) != set(FILES + ("manifest.json",))
     ):
         raise ValueError("native_setup_request")
@@ -186,13 +205,18 @@ def apply(request, expected, known):
         profile, registration["identity_manifest_sha256"]
     )
     reference = request["operator_authority"]
-    if request["action"] == "inspect":
+    if request["action"] in ("inspect", "preflight"):
         if reference is not None:
             raise ValueError("native_setup_inspection_authority")
     else:
         confirmation.authority_reference(reference)
     target = root + "/runtime/" + expected
     changed = 0
+    observation = None
+    if request["action"] == "preflight" and not confirmation.matches(
+        r"^[0-9a-f]{32}$", request["nonce"]
+    ):
+        raise ValueError("native_setup_preflight_nonce")
     with accounting.ReservationSession(root) as session:
         confirmation.domain(profile, registration["identity_manifest_sha256"])
         before, records = session.observe(binding)
@@ -255,10 +279,17 @@ def apply(request, expected, known):
             active = actual_pointer == pointer
             if active and history is None:
                 raise ValueError("native_setup_pointer_without_history")
-        if request["action"] == "activate":
+        if request["action"] == "preflight":
+            observation = probe.observe(
+                profile,
+                digest(assets["profile.json"]),
+                digest(assets["probe.py"]),
+                request["nonce"],
+            )
+        if request["action"] in ("activate", "update"):
             if os.path.lexists(revoked) or os.path.lexists(root + "/native-provider-revoked.json"):
                 raise ValueError("native_setup_revoked")
-            if os.path.lexists(pointer_path) and not active:
+            if os.path.lexists(pointer_path) and not active and request["action"] != "update":
                 raise ValueError("native_setup_other_active_runtime")
             probe.observe(
                 profile,
@@ -266,6 +297,94 @@ def apply(request, expected, known):
                 digest(assets["probe.py"]),
                 __import__("binascii").hexlify(os.urandom(16)).decode("ascii"),
             )
+            previous = None
+            update_path = None
+            if request["action"] == "update":
+                previous = request["previous_manifest_sha256"]
+                if (
+                    not confirmation.matches(r"^[0-9a-f]{64}$", previous)
+                    or previous == expected
+                    or not os.path.lexists(pointer_path)
+                ):
+                    raise ValueError("native_setup_update_predecessor")
+                old_target = root + "/runtime/" + previous
+                private(old_target, True)
+                old_raw = read(old_target + "/manifest.json")
+                old_manifest = closed(old_raw)
+                if (
+                    digest(old_raw) != previous
+                    or old_manifest.get("schema_version") != 3
+                    or old_manifest.get("kind") != manifest["kind"]
+                    or set(old_manifest.get("files", {})) != set(FILES)
+                    or set(os.listdir(old_target)) != set(FILES + ("manifest.json",))
+                ):
+                    raise ValueError("native_setup_update_prior_manifest")
+                for name in FILES:
+                    old_data = read(old_target + "/" + name)
+                    if old_manifest["files"][name] != {
+                        "sha256": digest(old_data),
+                        "bytes": len(old_data),
+                    }:
+                        raise ValueError("native_setup_update_prior_asset_drift")
+                old_registration = closed(read(old_target + "/registration.json"))
+                old_history = closed(read(history_dir + "/" + previous + ".json"))
+                if (
+                    old_registration["identity_manifest_sha256"]
+                    != registration["identity_manifest_sha256"]
+                    or old_history["manifest_sha256"] != previous
+                    or old_history["identity_manifest_sha256"]
+                    != registration["identity_manifest_sha256"]
+                    or os.path.lexists(history_dir + "/" + previous + ".revoked.json")
+                ):
+                    raise ValueError("native_setup_update_prior_identity_or_revocation")
+                confirmation.authority_reference(old_history["operator_authority"])
+                previous_pointer = {"schema_version": 1, "manifest_sha256": previous}
+                if actual_pointer not in (previous_pointer, pointer):
+                    raise ValueError("native_setup_update_pointer_moved")
+                update_dir = root + "/native-provider-updates"
+                directory(update_dir, accounting)
+                update_path = update_dir + "/" + previous + "-" + expected + ".json"
+                pending = root + "/active-native-provider.pending-" + expected
+                raw_pointer = canonical(pointer)
+                update_record = {
+                    "schema_version": 1,
+                    "previous_manifest_sha256": previous,
+                    "manifest_sha256": expected,
+                    "identity_manifest_sha256": registration["identity_manifest_sha256"],
+                    "operator_authority": reference,
+                    "previous_pointer": previous_pointer,
+                }
+                if os.path.lexists(update_path):
+                    old_update = closed(read(update_path))
+                    if set(old_update) != set(update_record) | set(
+                        ("previous_metadata", "replacement_metadata")
+                    ) or any(old_update[key] != value for key, value in update_record.items()):
+                        raise ValueError("native_setup_update_history_conflict")
+                    update_record = old_update
+                    if active:
+                        if metadata(pointer_path) != update_record["replacement_metadata"]:
+                            raise ValueError("native_setup_update_pointer_metadata_drift")
+                    elif metadata(pointer_path) != update_record["previous_metadata"]:
+                        raise ValueError("native_setup_update_prior_metadata_drift")
+                elif active:
+                    raise ValueError("native_setup_update_pointer_without_history")
+                else:
+                    update_record["previous_metadata"] = metadata(pointer_path)
+                if not active:
+                    if os.path.lexists(pending):
+                        if read(pending) != raw_pointer:
+                            raise ValueError("native_setup_update_pending_conflict")
+                    else:
+                        installer.exclusive(pending, raw_pointer)
+                        accounting.sync_directory(root)
+                    if "replacement_metadata" in update_record:
+                        if metadata(pending) != update_record["replacement_metadata"]:
+                            raise ValueError("native_setup_update_pending_metadata_drift")
+                    else:
+                        update_record["replacement_metadata"] = metadata(pending)
+                if not os.path.lexists(update_path):
+                    accounting.write_new(update_path, update_record)
+                    changed += 1
             wanted = {
                 "schema_version": 1,
                 "manifest_sha256": expected,
@@ -280,7 +399,17 @@ def apply(request, expected, known):
                 changed += 1
                 history = wanted
             if not active:
-                accounting.write_new(pointer_path, pointer)
+                if request["action"] == "update":
+                    # Same existing flock; never replace a live worker's pointer.
+                    # Old immutable runtime/history/grants/jobs remain untouched.
+                    if closed(read(pointer_path)) != previous_pointer:
+                        raise ValueError("native_setup_update_pointer_race")
+                    os.rename(pending, pointer_path)
+                    accounting.sync_directory(root)
+                    if metadata(pointer_path) != update_record["replacement_metadata"]:
+                        raise ValueError("native_setup_update_replacement_metadata_drift")
+                else:
+                    accounting.write_new(pointer_path, pointer)
                 changed += 1
                 active = True
         if request["action"] == "revoke":
@@ -317,7 +446,7 @@ def apply(request, expected, known):
         after, records = session.observe(binding)
         if before != after:
             raise ValueError("native_setup_accounting_drift")
-    return {
+    result = {
         "schema_version": 1,
         "status": "NATIVE_RUNTIME_" + request["action"].upper(),
         "manifest_sha256": expected,
@@ -330,6 +459,9 @@ def apply(request, expected, known):
         "new_reservations": 0,
         "new_simulations": 0,
     }
+    if request["action"] == "preflight":
+        result["environment_observation"] = observation
+    return result
 
 
 def main(known):

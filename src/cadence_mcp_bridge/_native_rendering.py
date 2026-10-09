@@ -52,9 +52,11 @@ ADE_TEMPLATE = (
 )
 
 READER_PREAMBLE = (
-    "procedure(mcpGenericScalar(name)\n"
+    "procedure(mcpGenericData(name alias)\n"
+    "  let((data) data=getData(name) unless(data data=getData(alias)) data))\n"
+    "procedure(mcpGenericScalar(name alias)\n"
     "  let((data vec)\n"
-    "    data=getData(name)\n"
+    "    data=mcpGenericData(name alias)\n"
     "    cond((numberp(data) data)\n"
     "      (drIsWaveform(data)\n"
     "        vec=drGetWaveformYVec(data)\n"
@@ -242,7 +244,7 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
             name = logical(node["logical_id"])
             selected = selector(node["selector"])
             lines += [
-                '  data=mcpGenericScalar("' + selected + '")',
+                '  data=mcpGenericScalar("' + selected + '" "' + selected[1:] + '")',
                 "  unless(numberp(data) close(port) exit(1))",
                 '  fprintf(port "V|' + name + '|%.16g\\n" data)',
             ]
@@ -250,7 +252,7 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
             name = logical(source["source_id"])
             selected = selector(source["current_selector"], True)
             lines += [
-                '  data=mcpGenericScalar("' + selected + '")',
+                '  data=mcpGenericScalar("' + selected + '" "' + selected[1:-5] + ':p")',
                 "  unless(numberp(data) close(port) exit(1))",
                 '  fprintf(port "I|' + name + '|%.16g\\n" data)',
             ]
@@ -259,7 +261,7 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
             name = logical(node["logical_id"])
             selected = selector(node["selector"])
             lines += [
-                '  wave=getData("' + selected + '")',
+                '  wave=mcpGenericData("' + selected + '" "' + selected[1:] + '")',
                 "  unless(wave && drIsWaveform(wave) close(port) exit(1))",
                 "  xVec=drGetWaveformXVec(wave) yVec=drGetWaveformYVec(wave)",
                 "  count=drVectorLength(xVec)",

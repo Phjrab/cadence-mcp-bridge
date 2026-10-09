@@ -174,12 +174,14 @@ def build_parser() -> argparse.ArgumentParser:
     for field in ("settings", "registration", "output"):
         native_bundle.add_argument("--" + field, type=Path, required=True)
     native_bundle.add_argument("--context", required=True)
-    for name in ("stage", "activate", "inspect", "revoke"):
+    for name in ("stage", "activate", "inspect", "revoke", "update", "preflight"):
         command = native_actions.add_parser(name)
         command.add_argument("--bundle", type=Path, required=True)
         command.add_argument("--expected-manifest-sha256", required=True)
-        if name != "inspect":
+        if name not in ("inspect", "preflight"):
             command.add_argument("--operator-authority", required=True)
+        if name == "update":
+            command.add_argument("--previous-manifest-sha256", required=True)
     ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
     ade_actions = ade.add_subparsers(dest="ade_action", required=True)
     ade_actions.add_parser("schema")
@@ -402,6 +404,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.expected_manifest_sha256,
                     arguments.native_action,
                     getattr(arguments, "operator_authority", None),
+                    getattr(arguments, "previous_manifest_sha256", None),
                 )
             else:
                 context = next(
@@ -718,7 +721,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if context is None:
                         raise RuntimeRejected("setup_required")
                     context.resolve(arguments.design_id)
-                observation = runtime_observation(config)
+                    observation = context.observation()
+                else:
+                    observation = runtime_observation(config)
         except (OSError, ValueError, ConfigurationError, InvalidInputError) as failure:
             print(
                 json.dumps(

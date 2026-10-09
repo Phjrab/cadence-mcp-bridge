@@ -223,7 +223,7 @@ def anchor_for(value, root, current):
         "resource_domain_sha256": digest(
             canonical(
                 {
-                    "hostname": value["host"]["hostname"].lower(),
+                    "hostname": value["host"]["hostname"].lower().rstrip("."),
                     "architecture": value["host"]["architecture"],
                 }
             )
@@ -425,7 +425,7 @@ def result_limit_plan(value, assets_sha256):
             "resource_domain_sha256": digest(
                 canonical(
                     {
-                        "hostname": value["host"]["hostname"].lower(),
+                        "hostname": value["host"]["hostname"].lower().rstrip("."),
                         "architecture": value["host"]["architecture"],
                     }
                 )

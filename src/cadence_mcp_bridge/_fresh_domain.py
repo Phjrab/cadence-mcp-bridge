@@ -171,7 +171,7 @@ def make_anchor(value, root, campaign):
         "resource_domain_sha256": digest(
             canonical(
                 {
-                    "hostname": value["host"]["hostname"].lower(),
+                    "hostname": value["host"]["hostname"].lower().rstrip("."),
                     "architecture": value["host"]["architecture"],
                 }
             )
@@ -403,7 +403,7 @@ def register_existing(request, assets):
                 "resource_domain_sha256": digest(
                     canonical(
                         {
-                            "hostname": value["profile"]["host"]["hostname"].lower(),
+                            "hostname": value["profile"]["host"]["hostname"].lower().rstrip("."),
                             "architecture": value["profile"]["host"]["architecture"],
                         }
                     )

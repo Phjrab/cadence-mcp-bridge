@@ -22,8 +22,9 @@ protected. Feature changes go through a dedicated PR.
 The current feature implements fixed authenticated admission and a common owned
 OA/ADE/netlist/Spectre/result worker. The native-runtime schema/bundle CLI exports
 a hash-bound runtime locally. Explicit operator stage/activate/inspect/revoke
-CLI actions are implemented; actual native activation and public service injection
-are pending; new-circuit execution and general release remain incomplete.
+CLI actions are implemented. In the current feature, two new standard-VM circuits
+completed fresh DC/AC/TRAN with automatic extraction. Native Sweep/specification
+and actual Codex qualification remain incomplete; general release is blocked.
 See [provider evidence and remaining gates](docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md).
 
 ## Coexisting operator runner
@@ -792,7 +793,7 @@ helper and schemas; no Cadence/PDK binary is bundled. Actual new-circuit executi
 qualification remains incomplete. Other Cadence versions, PDKs and host machines
 have not been verified.
 
-Use `native-runtime registration-schema` and `native-runtime bundle` for the
+Use `native-runtime schema` and `native-runtime bundle` for the
 registered source cell, saved ADE state, variables and DC/AC/TRAN reader. Place
 source/state copies in the registered workspace, preserve the originals, and use
 measured hashes rather than example placeholders. The bundle receipt supplies
@@ -846,3 +847,22 @@ its owned work directory. Two new QA sources have generated and verified all thr
 analysis inputs on the actual standard VM; fresh simulator/results/clean-client
 qualification remains pending. See
 [native input qualification](docs/generic_release/NATIVE_NETLIST_QUALIFICATION_V1.md).
+
+
+## Native runtime update and current preflight
+
+The fixed operator CLI supports an explicit immutable runtime update:
+`native-runtime update --bundle NEW_BUNDLE --expected-manifest-sha256 NEW_SHA
+--previous-manifest-sha256 OLD_SHA --operator-authority ACTUAL_AUTHORITY_REFERENCE`.
+Stage the new exact package bundle first. Existing runtime/history/grants/jobs,
+local journals and cumulative ledger remain preserved; mismatching predecessors
+or a live worker reject. Partial updates resume only from matching durable records;
+repeating a completed update changes0 files. This does not renew a spent budget.
+
+`native-runtime preflight --bundle NEW_BUNDLE --expected-manifest-sha256 NEW_SHA`
+is a read-only current-profile/package/environment/domain/accounting check. It
+verifies fresh nonce/time, executable bindings and disk floors without changing
+files or granting execution. The old profile-bound `environment qualify` is kept
+for its exact original deployment. Normal users run the MCP server and Cadence;
+setup helpers remain explicit operator actions. See
+[native update and actual six-analysis evidence](docs/generic_release/NATIVE_UPDATE_AND_RESULTS_V1.md).

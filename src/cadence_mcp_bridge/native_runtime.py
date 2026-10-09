@@ -251,10 +251,22 @@ class NativeSetupRemoteRejected(OperationRejected):
 
 
 def setup_runtime(
-    local_bundle: Path, expected: str, action: str, operator_authority: str | None = None
+    local_bundle: Path,
+    expected: str,
+    action: str,
+    operator_authority: str | None = None,
+    previous_manifest_sha256: str | None = None,
 ) -> dict[str, object]:
-    if action not in ("stage", "activate", "inspect", "revoke"):
+    if action not in ("stage", "activate", "inspect", "revoke", "update", "preflight"):
         raise OperationRejected("native_setup_fixed_action")
+    if (action == "update") != (previous_manifest_sha256 is not None):
+        raise OperationRejected("native_update_exact_predecessor_required")
+    if previous_manifest_sha256 is not None and (
+        len(previous_manifest_sha256) != 64
+        or any(c not in "0123456789abcdef" for c in previous_manifest_sha256)
+        or previous_manifest_sha256 == expected
+    ):
+        raise OperationRejected("native_update_exact_predecessor_required")
     target = _local_path(local_bundle)
     if not target.is_dir() or {p.name for p in target.iterdir()} != set(
         setup.FILES + ("manifest.json",)
@@ -273,13 +285,14 @@ def setup_runtime(
     environment, raw_profile = load_environment(target / "profile.json")
     if raw_profile != assets["profile.json"]:
         raise OperationRejected("native_setup_profile_drift")
-    if action == "inspect":
+    if action in ("inspect", "preflight"):
         if operator_authority is not None:
             raise OperationRejected("native_setup_inspection_authority")
     else:
         from cadence_mcp_bridge import _operator_confirmation
 
         _operator_confirmation.authority_reference(operator_authority)  # type: ignore[no-untyped-call]
+    nonce = __import__("uuid").uuid4().hex
     request = _canonical(
         {
             "schema_version": 1,
@@ -287,6 +300,10 @@ def setup_runtime(
             "manifest_sha256": expected,
             "operator_authority": operator_authority,
             "files": {name: base64.b64encode(raw).decode("ascii") for name, raw in assets.items()},
+            **(
+                {"previous_manifest_sha256": previous_manifest_sha256} if action == "update" else {}
+            ),
+            **({"nonce": nonce} if action == "preflight" else {}),
         }
     )
     # The hash map is compiled from package resources, never caller JSON/code.
@@ -328,6 +345,7 @@ def setup_runtime(
             "new_reservations",
             "new_simulations",
         }
+        | ({"environment_observation"} if action == "preflight" else set())
         or (
             type(result["schema_version"]) is not int
             or result["schema_version"] != 1
@@ -357,9 +375,23 @@ def setup_runtime(
         or not 0 <= counter["count"] <= environment.limits.spectre_attempts
         or type(counter["result_reserved_bytes"]) is not int
         or not 0 <= counter["result_reserved_bytes"] <= environment.limits.result_reserved_bytes
-        or (action == "inspect" and result["changed_files"] != 0)
-        or (action == "activate" and not result["active"])
+        or (action in ("inspect", "preflight") and result["changed_files"] != 0)
+        or (action in ("activate", "update") and not result["active"])
         or (action == "revoke" and result["active"])
     ):
         raise NativeSetupRemoteRejected("native_setup_receipt_scope")
+    if action == "preflight":
+        from cadence_mcp_bridge.environments import EnvironmentObservation, qualify_observation
+
+        try:
+            result["environment_preflight"] = qualify_observation(
+                environment,
+                raw_profile,
+                EnvironmentObservation.model_validate_json(
+                    _canonical(result.pop("environment_observation"))
+                ),
+                nonce,
+            )
+        except ValueError:
+            raise NativeSetupRemoteRejected("native_preflight_observation_binding") from None
     return {**result, "remote_contact": True}

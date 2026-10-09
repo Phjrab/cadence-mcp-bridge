@@ -187,7 +187,7 @@ def domain(profile, anchor):
     domain_sha = digest(
         canonical(
             {
-                "hostname": profile["host"]["hostname"].lower(),
+                "hostname": profile["host"]["hostname"].lower().rstrip("."),
                 "architecture": profile["host"]["architecture"],
             }
         )

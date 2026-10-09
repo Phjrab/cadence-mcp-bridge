@@ -127,4 +127,3 @@ Hosted exact PR152 remains pending and PR142 final review/CI is still in progres
 Release remains BLOCKED; DC automatic reader, other five analyses, Sweep/spec,
 actual Codex and GREL07/08 acceptance remain. Continue existing directGREL02–08
 and conditional integration authority without renewed routine approval.
-

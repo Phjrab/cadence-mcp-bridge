@@ -1,3 +1,26 @@
+## Six fresh standard VM analyses checkpoint, 2026-10-09
+
+Two distinct new registered QA circuits completed DC/AC/TRAN plus automatic
+extraction and bounded result retrieval through the same native core/template.
+Actual UID500; effective inputs and protected OA/state/library/model checks PASS.
+Corrected immutable update15-stage/3-update/repeat0 preserves earlier failed DC,
+old bundles/grants, same journals/resource lock and existing ledger. Both successful
+and failed same-ID requests after process restart add no execution/reservation.
+Product `native-runtime preflight` PASS/read-only; retained preflight/9-source Py26
+grammar/seven legacy controls and home-index content/metadata conservation PASS.
+Current ledger89 /10,738,466,816 bytes;16GiB remaining6,441,402,368 bytes.
+This continuation6 successful runs/768MiB; including preceding failure7/896MiB.
+The original20job/2.5GiB scope accounts for that spent failure before the new grant.
+
+Local relevant tests/static/security/install checks are distinct from exact hosted
+CI and actual Codex. PR142 finala032a0f review and both hosted checks PASS; normally merged
+through239a1949923fdae210d50e1232b6b7b41e60c7de. PR152 remains
+draft. Generic native1D Sweep/spec, second batch, actual Codex, GREL07 matrix,
+ordered normal integration and exact GREL08 candidate remain. Release BLOCKED;
+no tag/Release/upload consent. Continue directly authorized02–08/16GiB and
+conditional merges without routine reapproval. See NATIVE_UPDATE_AND_RESULTS_V1.md.
+Earlier dated checkpoints remain preserved historical evidence.
+
 # Fixed authenticated native provider: implementation checkpoint
 
 Support is the professor-provided standard VM or equivalent installation, existing

@@ -750,3 +750,17 @@ def test_tran_saved_grid_cannot_have_gaps_above_the_declared_maxstep(operator, a
     with pytest.raises(OperationRejected) as exc:
         project_frame(*args, frame_for(args, body))
     assert exc.value.reason == "reader_tran_saved_step_exceeds_declared_maxstep"
+
+
+def test_registered_selectors_bind_verified_standard_vm_psf_aliases(operator):
+    from cadence_mcp_bridge import _native_rendering
+
+    _, _, _, reader, op, _ = reader_for(operator)
+    text = _native_rendering.reader(
+        "/managed/jobs", "dc", reader.model_dump(mode="json"), op, "a" * 64, "b" * 64, "c" * 64
+    ).decode()
+    assert 'mcpGenericScalar("/in" "in")' in text
+    assert 'mcpGenericScalar("/out" "out")' in text
+    assert 'mcpGenericScalar("/VDD/PLUS" "VDD:p")' in text
+    # Alias selection is compiled only from registered selectors; no expression.
+    assert "unless(data data=getData(alias))" in text
