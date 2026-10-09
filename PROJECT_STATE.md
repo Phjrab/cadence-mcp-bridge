@@ -1,3 +1,15 @@
+## Descriptor snapshot stability correction, 2026-10-09
+
+The subsequent review identified content/metadata change during ACL collection.
+Held snapshots now check trailing stat including ctime, repeat the content hash
+and check final descriptor stability. Same-length content replacement followed
+by restored original mtime during ACL observation rejects before chmod. Actual
+UID500/Python2.6 synthetic interruption/repeat and4 descriptor races pass; real
+ledger94/11,409,555,456 unchanged. Local59 checks/9 Windows POSIX skips plus
+Ruff/mypy72 pass. Exact installed32-state package preservation passes; final hosted review/CI
+pending for this source; no vendor/admin/simulation change. Existing authority/publication
+gate and all prior evidence remain preserved.
+
 ## Held-descriptor integrity correction, 2026-10-09
 
 A subsequent independent review found path snapshot/final-open ACL race exposure.
