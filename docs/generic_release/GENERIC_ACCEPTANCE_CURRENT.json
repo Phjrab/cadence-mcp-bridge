@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-10-09",
+  "generic_release_gate": "BLOCKED",
+  "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
+  "other_hosts_versions_pdks": "DEFERRED",
+  "source_checkpoint": "f6845f435fdbaf0ad8885fcb914cc776216cf0b0",
+  "later_scope_correction": "LOCAL_VALIDATED_FINAL_CI_PENDING",
+  "live_native_bundle_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
+  "publication_authorized": false,
+  "resource": {
+    "attempts_observed": 94,
+    "reserved_bytes_observed": 11409555456,
+    "result_ceiling_bytes": 17179869184,
+    "remaining_bytes": 5770313728,
+    "spectre_ceiling": 500,
+    "same_change_corrections_ceiling": 20,
+    "new_simulations_this_continuation": 0,
+    "new_reservations_this_continuation": 0
+  },
+  "mandatory": [
+    {
+      "id": "G01",
+      "status": "PARTIAL_INSTALLED_SYNTHETIC",
+      "evidence_scope": "Packaged starter, CLI/helpers, isolated offline/SDK installation pass; artifact-only actual operator flow still required."
+    },
+    {
+      "id": "G02",
+      "status": "ACTUAL_SETTINGS_PASS_FINAL_CANDIDATE_PENDING",
+      "evidence_scope": "Two new registered sources and six routes use the same core/template; no legacy fallback."
+    },
+    {
+      "id": "G03",
+      "status": "ACTUAL_PASS_PRIOR_NATIVE_BUNDLE",
+      "evidence_scope": "Ordinary UID500 native preflight/install/update pass; approved metadata repairs preserve file contents; final candidate requalification pending."
+    },
+    {
+      "id": "G04",
+      "status": "IMPLEMENTED_WITH_ACTUAL_V1_CONFIRMATION",
+      "evidence_scope": "Operator-only confirmation retains global ledger; v2 pairs/recovery have actual Python2.6 synthetic evidence, new live v2 grant not yet qualified."
+    },
+    {
+      "id": "G05",
+      "status": "ACTUAL_TWO_SOURCES_PASS",
+      "evidence_scope": "New inverter and comparator registrations; six product read-only observations and exact reassembly."
+    },
+    {
+      "id": "G06",
+      "status": "ACTUAL_SIX_ANALYSES_PASS_PRIOR_BUNDLE",
+      "evidence_scope": "Each source completed fresh DC/AC/TRAN with the same native worker."
+    },
+    {
+      "id": "G07",
+      "status": "ACTUAL_EFFECTIVE_INPUT_PASS_PRIOR_BUNDLE",
+      "evidence_scope": "All six analyses and five sweep points passed effective inputs; corrected scope parser needs final deployed qualification."
+    },
+    {
+      "id": "G08",
+      "status": "ACTUAL_AUTOMATIC_EXTRACTION_PASS_PRIOR_BUNDLE",
+      "evidence_scope": "New scalar/transfer/TRAN facts plus registered gain/power extracted without circuit-specific helpers."
+    },
+    {
+      "id": "G09",
+      "status": "ACTUAL_DC3_AC2_SWEEP_PASS_PRIOR_BUNDLE",
+      "evidence_scope": "Bounded DC3 and independent AC2 points completed; parent retry adds no dispatch/reservation."
+    },
+    {
+      "id": "G10",
+      "status": "ACTUAL_SECOND_BATCH_PASS",
+      "evidence_scope": "First batch followed by independent second sweep batch under the same retained accounting."
+    },
+    {
+      "id": "G11",
+      "status": "PARTIAL_ACTUAL_AND_SYNTHETIC",
+      "evidence_scope": "Actual same-ID success/failure retries and new-process replay add0; partial write/response loss/update/authority cases synthetically tested on VM."
+    },
+    {
+      "id": "G12",
+      "status": "PARTIAL_POSIX_AND_VM_LOCK",
+      "evidence_scope": "Public Ubuntu independent flock/process-death tests and VM live-lock rejection; no simultaneous EDA execution introduced."
+    },
+    {
+      "id": "G13",
+      "status": "PASS_LOCAL_COMPATIBILITY_FINAL_CANDIDATE_PENDING",
+      "evidence_scope": "Original22 declarations/85 legacy schemas/registries retained; final candidate legacy evidence recheck required."
+    },
+    {
+      "id": "G14",
+      "status": "PARTIAL_CLEAN_HOST_CONTEXT",
+      "evidence_scope": "Separate QA context/default SETUP_REQUIRED/packaged templates pass; complete artifact-only actual operator workflow pending."
+    },
+    {
+      "id": "G15",
+      "status": "BLOCKED_HUMAN_APP_CONNECTION_RESTART",
+      "evidence_scope": "QA connection registered; actual loaded legacy namespace remains. New actual app job0, new-job query/restart not verified."
+    },
+    {
+      "id": "G16",
+      "status": "PARTIAL_CI_AND_SAME_VERSION_PRESERVATION",
+      "evidence_scope": "Public hosted synthetic CI and43+20-state reinstall/uninstall pass. Candidate upgrade/downgrade remains unqualified."
+    },
+    {
+      "id": "G17",
+      "status": "PARTIAL_CURATED_ARTIFACT_AUDIT",
+      "evidence_scope": "Wheel/sdist allowlist/license/notices/secrets scans pass; exact final release files and GitHub source archives pending."
+    },
+    {
+      "id": "G18",
+      "status": "IMPLEMENTED_FINAL_OPERATOR_WALKTHROUGH_PENDING",
+      "evidence_scope": "Packaged install/enroll/run/retry/update guide has installed command validation; complete fresh operator walkthrough pending."
+    },
+    {
+      "id": "G19",
+      "status": "NOT_READY",
+      "evidence_scope": "No release candidate version/commit/artifact set is frozen; exact publication approval has not been requested."
+    }
+  ],
+  "conditional": {
+    "destructive_storage": "DISABLED_FRESH_GENERIC_PATH_LEGACY_EVIDENCE_SEPARATE",
+    "active_simulator_termination": "UNSUPPORTED_PENDING_ONLY",
+    "pm_offset_general_slew_other_pvt": "UNQUALIFIED_OR_UNSUPPORTED",
+    "claude_real_app": "DEFERRED"
+  },
+  "references": [
+    "NATIVE_ENROLLMENT_V1.md",
+    "NATIVE_UPDATE_AND_RESULTS_V1.md",
+    "NATIVE_SWEEP_SPEC_V1.md",
+    "NATIVE_RESUME_BOUNDARY.md",
+    "GREL_07_RESULT.md"
+  ]
+}

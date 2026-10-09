@@ -1,3 +1,29 @@
+## Closed-scope dialect and acceptance matrix checkpoint, 2026-10-09
+
+The second independent PR145 P1 extends the scope correction: library/section,
+protected/conditional/braced/language-switch forms and case-variant scope keywords
+reject before control extraction. Supported lowercase subckt/inline-subckt static
+circuits remain valid. Shared native parser115 local tests PASS/one POSIX skip,
+Ruff/mypy94 PASS; actual normal-user Python2.6/POSIX15 synthetic recovery/authority/
+scope scenarios PASS. All six actual baseline routes again reassemble byte-identical
+registration5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190.
+Live ledger94/11,409,555,456 and original bundle/grant/journals remain unchanged;
+new simulations/reservations/admin permission changes0. This is not newly deployed
+native or actual-client acceptance.
+
+Exact post-correction wheel/sdist allowlist/license/notices and isolated starter/
+CLI/SDK96/bootstrap/reinstall/uninstall43+20-state preservation PASS. Original22
+legacy declarations/85 schemas/registry1-8 compatibility audit PASS. f6845f4's four
+hosted Windows/Ubuntu checks and automated no-major-issues review PASS; this later
+scope correction requires its own final hosted/review receipt. PR152 stays draft.
+GENERIC_ACCEPTANCE_CURRENT.json distinguishes all19 mandatory gates, prior actual
+bundle evidence, synthetic installation/recovery, pending clean actual operator/
+Codex connection/new-job/restart, final upgrade/downgrade and candidate artifacts.
+No exact release candidate is frozen; generic release remains BLOCKED. Continuous
+GREL02-08/conditional normal merges/retained16GiB authority remains active and final
+exact-candidate tag/Release/upload requires separate public approval. Earlier
+checkpoint receipts below remain preserved at their original source scope.
+
 ## Current native enrollment and reviewed authority checkpoint, 2026-10-09
 
 Continuous direct GREL02-08, conditional normal related-PR merges and the current
