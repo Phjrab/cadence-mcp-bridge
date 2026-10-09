@@ -465,3 +465,22 @@ def test_effective_input_rejects_unbalanced_subcircuit_scope(operator, static):
     with pytest.raises(OperationRejected) as error:
         verify_effective_input(context, plan, registration, str(uuid4()), data)
     assert error.value.reason in {"spectre_scope_unsupported", "spectre_scoped_inputs_unsupported"}
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize(
+    "static",
+    [
+        "library Models\nsection NN\n" + RC + "\nendsection NN\nendlibrary Models",
+        "SUBCKT Small (in out)\n" + RC + "\nENDS Small",
+        "INLINE subckt Small (in out)\n" + RC + "\nends Small",
+        "if (Enabled) {\n" + RC + "\n}",
+        "simulator lang=spice\n.subckt Small in out\n.ends Small",
+        "protect\n" + RC + "\nendprotect",
+    ],
+)
+def test_effective_input_rejects_other_scope_dialects_before_extraction(operator, analysis, static):
+    context, plan, registration, data = setup(operator, analysis, static)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason == "spectre_scope_unsupported"

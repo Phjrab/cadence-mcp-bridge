@@ -385,6 +385,31 @@ def verify_effective_input(
     scopes: list[str] = []
     for line in _statements(data):
         words = line.split()
+        # Only the supported lowercase subcircuit dialect may form a scope.
+        # Library/section, conditional/braced and language-switch constructs cannot
+        # be opaque static lines while controls are extracted as top-level input.
+        if (
+            any(token in line for token in ("{", "}"))
+            or words[0].lower()
+            in (
+                "library",
+                "section",
+                "endlibrary",
+                "endsection",
+                "if",
+                "else",
+                "elseif",
+                "endif",
+                "protect",
+                "endprotect",
+                "simulator",
+            )
+            or any(
+                word.lower() in ("subckt", "ends", "inline") and word != word.lower()
+                for word in words[:2]
+            )
+        ):
+            raise OperationRejected("spectre_scope_unsupported")
         opening = words[1:] if words[0] == "inline" else words
         if opening and opening[0] == "subckt":
             if len(opening) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_#-]{0,63}", opening[1]):
