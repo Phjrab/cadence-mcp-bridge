@@ -154,7 +154,8 @@
     "actual_operator_uid": 500,
     "items": 332,
     "required_changes": 0,
-    "scope": "READONLY_NO_NEW_ADMIN_CHANGE"
+    "scope": "READONLY_NO_NEW_ADMIN_CHANGE",
+    "helper_scope": "FINAL_STABLE_DESCRIPTOR_OBSERVATION_READONLY"
   },
   "actual_qa_local_plan": {
     "plan_sha256": "a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e",
@@ -176,6 +177,9 @@
     "repeat": true,
     "contents_metadata_restored": true,
     "scope": "SYNTHETIC_NOT_VENDOR_REPAIR",
-    "actual_ledger_preserved": true
-  }
+    "actual_ledger_preserved": true,
+    "held_descriptor_races": 4,
+    "intra_snapshot_restored_mtime_drift_rejected": true
+  },
+  "completed_result_size_evidence": "REQUIRED_MISSING_OR_NULL_REJECTS_FINAL_NATIVE_ROLLOUT_PENDING"
 }

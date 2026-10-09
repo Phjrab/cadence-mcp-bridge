@@ -90,27 +90,43 @@ def acl(fd):
 def snapshot(path):
     fd = open_fixed(path)
     try:
-        info = os.fstat(fd)
-        if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
-            raise ValueError("file_type")
-        result = {
-            "path": path, "dev": info.st_dev, "ino": info.st_ino,
-            "uid": info.st_uid, "gid": info.st_gid,
-            "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
-            "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
-            "mode": stat.S_IMODE(info.st_mode),
-            "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
-            "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
-            "acl": acl(fd),
-        }
-        check = os.lstat(path)
-        if (check.st_dev, check.st_ino, check.st_mode) != (
-            info.st_dev, info.st_ino, info.st_mode
-        ) or os.path.realpath(path) != path:
-            raise ValueError("race")
-        return result
+        return snapshot_descriptor(path, fd)
     finally:
         os.close(fd)
+
+
+def snapshot_descriptor(path, fd):
+    info = os.fstat(fd)
+    if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+        raise ValueError("file_type")
+    result = {
+        "path": path, "dev": info.st_dev, "ino": info.st_ino,
+        "uid": info.st_uid, "gid": info.st_gid,
+        "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
+        "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
+        "mode": stat.S_IMODE(info.st_mode),
+        "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
+        "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
+        "acl": acl(fd),
+    }
+    # ACL tools run while the descriptor is held. Reject changes during that
+    # observation, including restored mtimes or unchanged file length.
+    trailing = os.fstat(fd)
+    stability = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                 "st_size", "st_mtime", "st_ctime")
+    if any(getattr(info, key) != getattr(trailing, key) for key in stability):
+        raise ValueError("snapshot_race")
+    if result["sha256"] is not None and file_hash(fd) != result["sha256"]:
+        raise ValueError("snapshot_race")
+    final = os.fstat(fd)
+    if any(getattr(trailing, key) != getattr(final, key) for key in stability):
+        raise ValueError("snapshot_race")
+    check = os.lstat(path)
+    if (check.st_dev, check.st_ino, check.st_mode) != (
+        info.st_dev, info.st_ino, info.st_mode
+    ) or os.path.realpath(path) != path:
+        raise ValueError("race")
+    return result
 
 
 def normalize_acl(value):
@@ -270,6 +286,10 @@ def _mutate_locked(request, rollback=False):
                 raise ValueError("prechange_identity")
             if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
                 raise ValueError("prechange_hardlink")
+            held = snapshot_descriptor(old["path"], fd)
+            if any(not metadata_equal(key, held[key], now[key]) for key in held
+                   if key != "acl") or normalize_acl(held["acl"]) != normalize_acl(now["acl"]):
+                raise ValueError("prechange_descriptor_drift")
             os.fchmod(fd, target_mode)
             if normalize_acl(acl(fd)) != normalize_acl(target_acl):
                 proc = subprocess.Popen(

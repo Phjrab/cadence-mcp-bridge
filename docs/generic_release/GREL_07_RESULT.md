@@ -1,3 +1,42 @@
+## Descriptor observation stability correction, 2026-10-09
+
+Latest independent repair review identified content changes during ACL collection.
+The fixed held snapshot now checks trailing descriptor identity/mode/owner/size/
+mtime/ctime, repeats the content hash and checks final descriptor stability before
+allowing metadata mutation. A Linux regression restores the old mtime after a
+same-length content change during ACL observation and requires rejection before
+chmod. Actual UID500/Python2.6 synthetic apply/rollback/repeat and all4 descriptor
+races pass, with actual94/11,409,555,456 ledger unchanged. No vendor repair or EDA.
+Related78 host checks/8 Windows skips, Ruff/mypy94 and exact installed96-schema/
+43+20-state conservation pass; final hosted review/CI pending for this source.
+Current actual read-only332-target installation inventory passes with0 changes. Existing direct16GiB/
+GREL02-08/conditional normal merge authority and final publication gate persist.
+The locally prepared older18feb71 runtime remains inactive; exact new immutable
+bundle, final deployed/app qualification and candidate acceptance remain required.
+
+## Required completed-size and held-descriptor corrections, 2026-10-09
+
+Latest review additionally required completed-size evidence in successful native
+payloads. The provider now rejects missing/null evidence; a valid historical
+pre-terminal receipt cannot bypass the reservation check. New worker read-only
+retrieval computes this evidence without rewriting retained receipts. Pre-update
+runtime responses lacking it reject rather than claiming bounded success; update
+and requalify the explicit native runtime. The legacy85 tools remain unchanged.
+
+Repair now rechecks protected contents/metadata and normalized ACL through the
+held descriptor immediately before mutation. Three actual UID500/Python2.6
+synthetic named/default-ACL/content races reject before chmod; interrupted apply/
+rollback and repeat still preserve original fixture contents/metadata. Real
+ledger94/11,409,555,456 bytes remains unchanged; no vendor/admin/simulation changes.
+Relevant78 host checks/7 Windows POSIX skips and separate78 bootstrap checks/10
+skips pass; mypy94 passes. Final installed package, exact hosted tests/review and
+corrected deployed/app requalification remain pending. The local prepared18feb71
+bundle predates this descriptor correction and is not activated. Replace it with
+an immutable new bundle after exact source review, retaining all prior artifacts,
+the same journals/resource domain and only the existing8-job/1GiB scoped remainder.
+Current16GiB/GREL02-08/conditional normal merge authority and final public-candidate
+approval remain binding; generic release still BLOCKED, no exactRC.
+
 ## Current review corrections and retained-resource checkpoint, 2026-10-09
 
 Latest checked main98710153a167e103c2955b1c5c82612eb2864038 normally merges

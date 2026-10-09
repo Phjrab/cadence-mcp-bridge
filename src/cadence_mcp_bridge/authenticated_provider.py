@@ -78,7 +78,7 @@ class NativeResultPayload(EnvironmentModel):
     ade: AdeExecutionRegistration
     reader: GenericReaderRegistration
     frame: Annotated[str, Field(max_length=65536)]
-    completed_size: CompletedJobSize | None = None
+    completed_size: CompletedJobSize
 
 
 class AuthenticatedOperatorProvider:
@@ -291,7 +291,7 @@ class AuthenticatedOperatorProvider:
             > plan.request.result_reservation_bytes
         ):
             raise OperationRejected("native_provider_result_binding_mismatch")
-        if data.completed_size is not None and (
+        if (
             max(data.completed_size.logical_bytes, data.completed_size.allocated_bytes)
             > plan.request.result_reservation_bytes
             or data.completed_size.logical_bytes < receipt.logical_bytes
@@ -318,13 +318,12 @@ class AuthenticatedOperatorProvider:
             allocated_bytes=receipt.allocated_bytes,
             originals_preserved=receipt.originals_preserved,
         )
-        if data.completed_size is not None:
-            projected.update(
-                logical_bytes=data.completed_size.logical_bytes,
-                allocated_bytes=data.completed_size.allocated_bytes,
-                completed_tree_fingerprint=data.completed_size.tree_fingerprint,
-                size_observation="COMPLETED_JOB_READONLY",
-            )
+        projected.update(
+            logical_bytes=data.completed_size.logical_bytes,
+            allocated_bytes=data.completed_size.allocated_bytes,
+            completed_tree_fingerprint=data.completed_size.tree_fingerprint,
+            size_observation="COMPLETED_JOB_READONLY",
+        )
         return observation, projected
 
 

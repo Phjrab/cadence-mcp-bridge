@@ -60,6 +60,7 @@ def retrieval(operator, monkeypatch):
         ade=ade.model_dump(mode="json"),
         reader=reader.model_dump(mode="json"),
         frame=frame.decode("ascii"),
+        completed_size=dict(logical_bytes=1024, allocated_bytes=12288, tree_fingerprint="d" * 64),
     )
     provider = wire.AuthenticatedOperatorProvider(
         context,
@@ -183,5 +184,22 @@ async def test_completed_job_size_includes_terminal_files_and_stays_bounded(retr
         assert result["allocated_bytes"] == size["allocated_bytes"]
         assert result["size_observation"] == "COMPLETED_JOB_READONLY"
         assert result["completed_tree_fingerprint"] == "d" * 64
+    assert calls == ["result"]
+    assert not provider.context.binding.analysis_journal.exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("missing", [True, False])
+async def test_result_requires_completed_tree_size_even_with_valid_historical_receipt(
+    retrieval, missing
+):
+    provider, plan, op, data, calls = retrieval
+    if missing:
+        del data["completed_size"]
+    else:
+        data["completed_size"] = None
+    with pytest.raises(OperationRejected) as error:
+        await provider.result(op, plan)
+    assert error.value.reason == "native_provider_result_invalid"
     assert calls == ["result"]
     assert not provider.context.binding.analysis_journal.exists()
