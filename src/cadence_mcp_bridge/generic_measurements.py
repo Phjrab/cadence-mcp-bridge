@@ -471,12 +471,10 @@ def _ac_axis(inputs: AcInputs) -> tuple[float, ...]:
 def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tuple[int, ...]:
     selected: list[int] = []
     for text in frequencies:
-        freq = float(text)
+        freq = float(format(float(text), ".16g"))
         matches = [i for i, x in enumerate(axes) if x == freq]
         if not matches:
-            matches = [
-                i for i, x in enumerate(axes) if math.isclose(x, freq, rel_tol=1e-12, abs_tol=0)
-            ]
+            matches = [i for i, _ in enumerate(axes) if _matches_ac_axis(freq, axes, i)]
         if len(matches) != 1:
             raise OperationRejected("reader_gain_sample_unavailable")
         index = matches[0]
@@ -484,6 +482,20 @@ def _sample_indices(frequencies: tuple[str, ...], axes: tuple[float, ...]) -> tu
             raise OperationRejected("reader_gain_sample_reused")
         selected.append(index)
     return tuple(selected)
+
+
+def _matches_ac_axis(actual: float, expected_axes: tuple[float, ...], index: int) -> bool:
+    expected = expected_axes[index]
+    gaps = []
+    if index > 0:
+        gaps.append(expected - expected_axes[index - 1])
+    if index + 1 < len(expected_axes):
+        gaps.append(expected_axes[index + 1] - expected)
+    # Axes are compared in the extractor's %.16g representation. Numerical
+    # tolerance must not consume a neighboring serialized sample's interval.
+    # Narrow but representable grids keep disjoint acceptance bands.
+    tolerance = min(abs(expected) * 1e-12, min(gaps) / 4)
+    return math.isclose(actual, expected, rel_tol=0, abs_tol=tolerance)
 
 
 def _transfer(
@@ -495,14 +507,13 @@ def _transfer(
     inputs = ade.inputs
     if inputs.analysis != "ac":
         raise OperationRejected("reader_ac_interval_invalid")
-    expected_axes = _ac_axis(inputs)
-    if not math.isclose(axes[0], expected_axes[0], rel_tol=1e-12, abs_tol=0) or not math.isclose(
-        axes[-1], expected_axes[-1], rel_tol=1e-12, abs_tol=0
+    expected_axes = tuple(float(format(x, ".16g")) for x in _ac_axis(inputs))
+    if not _matches_ac_axis(axes[0], expected_axes, 0) or not _matches_ac_axis(
+        axes[-1], expected_axes, len(expected_axes) - 1
     ):
         raise OperationRejected("reader_ac_interval_invalid")
     if len(axes) != len(expected_axes) or any(
-        not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=0)
-        for actual, expected in zip(axes, expected_axes, strict=True)
+        not _matches_ac_axis(actual, expected_axes, index) for index, actual in enumerate(axes)
     ):
         raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
     assert reader.transfer is not None

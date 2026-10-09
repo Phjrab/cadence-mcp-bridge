@@ -14,7 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, PrivateAttr, TypeAdapter, field_validator, model_validator
 
 from cadence_mcp_bridge.environments import _closed_json
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -59,6 +59,8 @@ class NumericRegion(VariableModel):
 
 
 class OperatorGrant(VariableModel):
+    _source_document: bytes | None = PrivateAttr(default=None)
+
     schema_version: Literal[1]
     grant_id: LogicalId
     authorization_source: Literal["explicit_operator_record"]
@@ -103,6 +105,34 @@ class OperatorGrant(VariableModel):
         if self.valid_from_unix >= self.valid_until_unix:
             raise ValueError("positive authority lifetime required")
         return self
+
+
+class DesignAnalysisScope(VariableModel):
+    design_id: LogicalId
+    analysis: Literal["dc", "ac", "tran"]
+
+
+class ScopedOperatorGrant(OperatorGrant):
+    # Versioned narrowing preserves existing v1 grant bytes/replay and their
+    # documented all-design/all-analysis authority; v2 pairs never form a product.
+    schema_version: Literal[2]  # type: ignore[assignment]
+    design_analyses: Annotated[tuple[DesignAnalysisScope, ...], Field(min_length=1, max_length=48)]
+
+    @model_validator(mode="after")
+    def paired_scope(self) -> Self:
+        pairs = {(s.design_id, s.analysis) for s in self.design_analyses}
+        if len(pairs) != len(self.design_analyses):
+            raise ValueError("duplicate design analysis scope")
+        if {s.design_id for s in self.design_analyses} != set(self.design_ids) or {
+            s.analysis for s in self.design_analyses
+        } != set(self.analyses):
+            raise ValueError("paired authority differs from declared scope")
+        return self
+
+
+GRANT_DOCUMENT: TypeAdapter[OperatorGrant | ScopedOperatorGrant] = TypeAdapter(
+    OperatorGrant | ScopedOperatorGrant
+)
 
 
 class ExplicitValue(VariableValue):
@@ -170,7 +200,23 @@ def load_grant(path: Path, expected_sha256: str) -> tuple[OperatorGrant, str]:
     digest = hashlib.sha256(data).hexdigest()
     if digest != expected_sha256:
         raise OperationRejected("stale_grant_digest")
-    return OperatorGrant.model_validate_json(data), digest
+    grant = GRANT_DOCUMENT.validate_json(data)
+    grant._source_document = data
+    return grant, digest
+
+
+def verify_grant_binding(grant: OperatorGrant, digest: str) -> None:
+    # Loaded retained documents keep their exact byte digest. A direct caller may
+    # supply canonical JSON's digest, but never an unrelated reviewed hash.
+    raw = grant._source_document
+    if raw is None:
+        matched = digest == canonical_digest(grant)
+    else:
+        matched = hashlib.sha256(raw).hexdigest() == digest and canonical_digest(
+            GRANT_DOCUMENT.validate_json(raw)
+        ) == canonical_digest(grant)
+    if not matched:
+        raise OperationRejected("grant_document_digest_mismatch")
 
 
 def match_grant(context: ExecutionContext, grant: OperatorGrant, now: int) -> None:
@@ -204,6 +250,7 @@ def prepare_plan(
     request: OperationRequest,
     now: int,
 ) -> OperationPlan:
+    verify_grant_binding(grant, digest)
     match_grant(context, grant, now)
     if request.design_id not in grant.design_ids or "submit" not in grant.actions:
         raise OperationRejected("authority_scope_denied")
@@ -217,7 +264,15 @@ def prepare_plan(
         ),
         None,
     )
-    if contract is None or contract.analysis not in grant.analyses:
+    if (
+        contract is None
+        or contract.analysis not in grant.analyses
+        or (
+            isinstance(grant, ScopedOperatorGrant)
+            and (request.design_id, contract.analysis)
+            not in {(scope.design_id, scope.analysis) for scope in grant.design_analyses}
+        )
+    ):
         raise OperationRejected("analysis_scope_denied")
     if request.result_reservation_bytes > grant.result_reserved_bytes_limit:
         raise OperationRejected("reservation_exceeds_authority")
@@ -270,6 +325,9 @@ def inspect_authority(context: ExecutionContext, path: Path, digest: str) -> dic
         "remaining_remote_attempts": None,
         "remaining_remote_reserved_bytes": None,
         "operator_authenticity": "NOT_ATTESTED",
+        "scope_semantics": "explicit_design_analysis_pairs"
+        if isinstance(grant, ScopedOperatorGrant)
+        else "legacy_v1_all_designs_all_analyses",
         "remote_ledger": "NOT_ASSESSED",
         "execution_authorized": False,
         "remote_contact": False,

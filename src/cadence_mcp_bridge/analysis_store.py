@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -51,12 +52,16 @@ class AnalysisStore:
                 raise ConfigurationError("Analysis journal is unavailable")
             for suffix in ("-journal", "-wal", "-shm"):
                 sidecar = self.path.with_name(self.path.name + suffix)
+                # SQLite removes its own rollback journal after commit. A single
+                # lstat avoids exists/is_file/stat races during another writer.
+                try:
+                    metadata = sidecar.lstat()
+                except FileNotFoundError:
+                    continue
                 if (
-                    sidecar.is_symlink()
+                    not stat.S_ISREG(metadata.st_mode)
                     or sidecar.is_junction()
-                    or (
-                        sidecar.exists() and (not sidecar.is_file() or sidecar.stat().st_nlink != 1)
-                    )
+                    or metadata.st_nlink not in (0, 1)
                 ):
                     raise ConfigurationError("Analysis journal is unavailable")
             new = False

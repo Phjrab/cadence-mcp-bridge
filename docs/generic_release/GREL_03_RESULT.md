@@ -1,3 +1,22 @@
+## Final grant and concurrent journal corrections, 2026-10-09
+
+At latest worktree source, prepare_plan and pending cancellation check that the
+actual grant object matches its recorded document digest. Loaded v1/v2 grants keep
+exact original byte hashes; a model_copy cannot expand authority while claiming
+the original reviewed digest. Direct API callers must supply canonical JSON's
+actual digest. The exact serialized historic documents and remote accounting stay
+unchanged. Local descriptions do not create OS-operator confirmation.
+
+A hosted Windows push check at da10e616 failed one concurrent admission test,
+while the PR check passed. The sidecar pre-open guard now uses a single lstat;
+a SQLite rollback journal removed by another committing writer is absence, not
+corruption. Regular-file/no-link checks remain for present sidecars, and linked
+or nonregular sidecars still reject without repair/deletion. Deterministic removed
+sidecar tests plus concurrent admission, forged grant and cancellation regressions
+pass:131 related tests, Ruff/mypy68 and installed19-file preservation PASS.
+Final hosted checks and independent review remain required before normal merge.
+No new VM operation/reservation, grant reset or publication occurred.
+
 ## Active legacy classification correction, 2026-10-08
 
 PR150 P2 feedback corrected: all retained IDs, including unmarked legacy jobs,
