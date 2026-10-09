@@ -241,6 +241,7 @@ def export_client_config(
                     loaded.binding.sweep_journal,
                     getattr(loaded.binding, "native_provider_binding", None),
                     getattr(loaded.binding, "operator_grant", None),
+                    getattr(loaded.binding, "native_specifications", None),
                 )
                 if value is not None
             )

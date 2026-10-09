@@ -67,7 +67,7 @@ def configured(operator, tmp_path, monkeypatch):
 async def test_operator_only_conditional_schema_and_no_server_start_side_effects(configured):
     server, service, request, settings, grant_path = configured
     tools = {t.name: t for t in await server.list_tools()}
-    assert len(tools) == 90 and set(tools) >= NAMES
+    assert len(tools) == 96 and set(tools) >= NAMES
     snapshot = json.loads(
         (
             Path(__file__).resolve().parents[2]

@@ -6,8 +6,8 @@ historical VM. Hash-bound environment/design/PDK contexts select the backend and
 separate journals; unqualified operator execution remains blocked. Existing
 explicit serve client fragments retain legacy compatibility. See the
 [operator runtime workflow](docs/generic_release/RUNTIME_CONTEXT_V1.md).
-Runner bootstrap, new-circuit DC/AC/TRAN and repeatable Sweep are still required
-before general release; this phase does not lower that acceptance target.
+The current feature validates bootstrap and new-circuit DC/AC/TRAN/Sweep on the
+standard VM; clean artifact-only onboarding and actual Codex remain release gates.
 
 A safe, bounded, client-independent MCP server connecting MCP clients to
 registered Cadence Virtuoso/ADE/Spectre capabilities. The validated execution
@@ -23,8 +23,9 @@ The current feature implements fixed authenticated admission and a common owned
 OA/ADE/netlist/Spectre/result worker. The native-runtime schema/bundle CLI exports
 a hash-bound runtime locally. Explicit operator stage/activate/inspect/revoke
 CLI actions are implemented. In the current feature, two new standard-VM circuits
-completed fresh DC/AC/TRAN with automatic extraction. Native Sweep/specification
-and actual Codex qualification remain incomplete; general release is blocked.
+completed fresh DC/AC/TRAN with automatic extraction. Native DC3-point and a separate AC2-point Sweep and QA-only Specification
+evaluation also passed on that VM. Exact installed onboarding and actual Codex
+qualification remain incomplete; general release is blocked.
 See [provider evidence and remaining gates](docs/generic_release/AUTHENTICATED_NATIVE_PROVIDER_V1.md).
 
 ## Coexisting operator runner
@@ -866,3 +867,7 @@ files or granting execution. The old profile-bound `environment qualify` is kept
 for its exact original deployment. Normal users run the MCP server and Cadence;
 setup helpers remain explicit operator actions. See
 [native update and actual six-analysis evidence](docs/generic_release/NATIVE_UPDATE_AND_RESULTS_V1.md).
+
+Registered native1D coordination and QA result/specification evidence, operator CLI
+commands, replay and output bounds are documented in the
+[native Sweep/spec workflow](docs/generic_release/NATIVE_SWEEP_SPEC_V1.md).

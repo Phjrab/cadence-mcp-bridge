@@ -54,6 +54,8 @@ class ContextBinding(EnvironmentModel):
     native_provider_sha256: Digest | None = None
     operator_grant: Path | None = None
     operator_grant_sha256: Digest | None = None
+    native_specifications: Path | None = None
+    native_specifications_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def native_binding_complete(self) -> ContextBinding:
@@ -65,6 +67,8 @@ class ContextBinding(EnvironmentModel):
         )
         if any(v is not None for v in values) and any(v is None for v in values):
             raise ValueError("complete explicit native provider/grant bindings required")
+        if (self.native_specifications is None) != (self.native_specifications_sha256 is None):
+            raise ValueError("complete specification catalog binding required")
         return self
 
 
@@ -188,7 +192,8 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
                 raise RuntimeRejected("absolute_contract_paths_required")
             native_paths = tuple(
                 p
-                for p in (binding.native_provider_binding, binding.operator_grant)
+                for p in (binding.native_provider_binding, binding.operator_grant,
+                          binding.native_specifications)
                 if p is not None
             )
             if any(not p.is_absolute() for p in native_paths):

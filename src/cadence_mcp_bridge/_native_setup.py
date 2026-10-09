@@ -98,6 +98,41 @@ def read(path):
         stream.close()
 
 
+def write_atomic_record(path, value, accounting):
+    """Publish only complete/fsynced records under the existing lifetime flock.
+
+    Interrupted private candidates remain evidence. Retry creates another bounded
+    candidate instead of deleting or parsing a truncated final-path authority record.
+    """
+    raw = canonical(value)
+    if len(raw) > ASSET_LIMIT:
+        raise ValueError("native_setup_record_size")
+    parent = os.path.dirname(path)
+    private(parent, directory=True)
+    if os.path.lexists(path):
+        if read(path) != raw:
+            raise ValueError("native_setup_record_conflict")
+        return
+    name = ".native-record-" + hashlib.sha256(os.urandom(32)).hexdigest()
+    candidate = os.path.join(parent, name)
+    fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 384)
+    try:
+        offset = 0
+        while offset < len(raw):
+            wrote = os.write(fd, raw[offset:])
+            if wrote <= 0:
+                raise ValueError("native_setup_record_short_write")
+            offset += wrote
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    accounting.sync_directory(parent)
+    if read(candidate) != raw or os.path.lexists(path):
+        raise ValueError("native_setup_record_publish_conflict")
+    os.rename(candidate, path)
+    accounting.sync_directory(parent)
+
+
 def modules(assets):
     if __package__:
         from cadence_mcp_bridge import _shared_reservations as accounting
@@ -375,7 +410,7 @@ def apply(request, expected, known):
                         if read(pending) != raw_pointer:
                             raise ValueError("native_setup_update_pending_conflict")
                     else:
-                        installer.exclusive(pending, raw_pointer)
+                        write_atomic_record(pending, pointer, accounting)
                         accounting.sync_directory(root)
                     if "replacement_metadata" in update_record:
                         if metadata(pending) != update_record["replacement_metadata"]:
@@ -383,7 +418,7 @@ def apply(request, expected, known):
                     else:
                         update_record["replacement_metadata"] = metadata(pending)
                 if not os.path.lexists(update_path):
-                    accounting.write_new(update_path, update_record)
+                    write_atomic_record(update_path, update_record, accounting)
                     changed += 1
             wanted = {
                 "schema_version": 1,
@@ -395,7 +430,7 @@ def apply(request, expected, known):
                 raise ValueError("native_setup_authority_conflict")
             directory(history_dir, accounting)
             if history is None:
-                accounting.write_new(history_path, wanted)
+                write_atomic_record(history_path, wanted, accounting)
                 changed += 1
                 history = wanted
             if not active:
@@ -409,7 +444,7 @@ def apply(request, expected, known):
                     if metadata(pointer_path) != update_record["replacement_metadata"]:
                         raise ValueError("native_setup_update_replacement_metadata_drift")
                 else:
-                    accounting.write_new(pointer_path, pointer)
+                    write_atomic_record(pointer_path, pointer, accounting)
                 changed += 1
                 active = True
         if request["action"] == "revoke":

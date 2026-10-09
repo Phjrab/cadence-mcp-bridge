@@ -1,3 +1,31 @@
+## Native Sweep and specification checkpoint, 2026-10-09
+
+Two explicit native1D batches completed on the current standard VM: DC3 points
+then an independent AC2 points, same core/template/authority and retained ledger.
+All5 fresh jobs passed effective inputs, automatic extraction and bounded result
+collection. New-process same-parent submit/advance after success dispatched0 and
+reserved0. Product native preflight PASS at UID500. Latest actual ledger94 /
+11,409,555,456 bytes; remaining5,770,313,728 of16GiB. This continuation5 runs/640MiB;
+all current generic validation12 attempts/1536MiB includes retained failed128MiB.
+
+QA-only targets on fresh sweep results produced PASS, deliberately failing FAIL,
+NOT_EVALUATED with no target, and CONDITION_MISMATCH for another point's inputs.
+No real amplifier goal was invented. Source/native library/model guards remain.
+Current new operator MCP/CLI Sweep/spec implementation is not yet exact installed
+or actual Codex qualification. Independent PR152 P2 exposed partial record-write
+recovery: fixed atomic complete-record publication preserves interrupted candidates;
+actual Py26/POSIX9 synthetic scenarios PASS with real ledger unchanged. This is not
+new Cadence execution evidence. Final hosted review/CI still required.
+
+PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.
+PR144 refreshed parent normal merge2decbfe; final review/CI pending. Existing local
+changes/old history/results/locks/grants stay preserved. General release BLOCKED:
+fresh operator registration/installed onboarding, actual Codex, remaining normal
+PR integration/operational matrix and exactGREL08 candidate still required.
+Continue directGREL02–08/16GiB/conditional merge authority without phase reapproval.
+Tag/Release/upload still requires approval of the exact finished candidate.
+See NATIVE_SWEEP_SPEC_V1.md; earlier checkpoints below are preserved history.
+
 ## Six fresh standard VM analyses checkpoint, 2026-10-09
 
 Two distinct new registered QA circuits completed DC/AC/TRAN plus automatic

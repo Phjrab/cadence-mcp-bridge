@@ -11,7 +11,7 @@
     "GREL-07",
     "GREL-08"
   ],
-  "phase_status": "TWO_NEW_CIRCUITS_SIX_NATIVE_ANALYSES_AUTOMATIC_EXTRACTION_PASS_SWEEP_SPEC_APP_PENDING",
+  "phase_status": "TWO_NEW_CIRCUITS_SIX_ANALYSES_AND_NATIVE_DC3_AC2_SWEEPS_SPEC_PASS_INSTALLED_APP_PENDING",
   "branch": "feat/grel-03-authenticated-provider",
   "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/151",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
@@ -38,8 +38,8 @@
     "actual_py26_grammar_sources": 9
   },
   "execution": {
-    "new_simulations": 7,
-    "new_reservations": 7,
+    "new_simulations": 12,
+    "new_reservations": 12,
     "production_provider": "ACTUAL_TWO_REGISTERED_CIRCUITS_DC_AC_TRAN_INPUT_EXECUTION_READER_RESULT_PASS",
     "public_dispatch": "IMPLEMENTED_CONDITIONAL_EXPLICIT_PROVIDER_GRANT_SYNTHETIC_SDK_ONLY",
     "existing_domain_migration": "ACTUAL_VM_NORMAL_USER_APPLY_REPEAT_PASS_NO_EXECUTION_AUTHORITY",
@@ -162,13 +162,17 @@
         "extraction_receipt_sha256": "586c387606fe80916666cc7aa584d25f51e20ffc034f39163b44b07864710f65"
       }
     ],
-    "actual_codex": "NOT_RUN_CURRENT_CANDIDATE_APP"
+    "actual_codex": "NOT_RUN_CURRENT_CANDIDATE_APP",
+    "native_sweep": "ACTUAL_DC3_THEN_AC2_INDEPENDENT_BATCHES_PASS",
+    "native_specification": "ACTUAL_SWEEP_QA_PASS_FAIL_TARGETLESS_CONDITION_MISMATCH_PASS",
+    "same_parent_restart": "ACTUAL_PRODUCT_CLI_SAME_ID_LOOKUP_ADVANCE_NO_NEW_RUN_OR_RESERVATION",
+    "atomic_record_recovery": "ACTUAL_PY26_POSIX_SYNTHETIC9_CASES_PASS_REAL_LEDGER_PRESERVED"
   },
   "resources": {
-    "attempts": 89,
-    "reserved_result_bytes": 10738466816,
+    "attempts": 94,
+    "reserved_result_bytes": 11409555456,
     "ceiling_result_bytes": 17179869184,
-    "approved_remaining_bytes": 6441402368,
+    "approved_remaining_bytes": 5770313728,
     "fresh_read_required_before_admission": true,
     "reset_refund_increase_authorized": false,
     "current_preparation_storage": {
@@ -229,12 +233,24 @@
     "current_affected_passed": 211,
     "current_affected_platform_skips": 29,
     "actual_postcheck": "RETAINED_PREFLIGHT_EIGHT_ASSET_PY26_GRAMMAR_SEVEN_CONTROLS_INDEX_METADATA_EQUAL",
-    "source_scoped_package": "PASS_BEFORE_FINAL_EXPORTER_JOURNAL_REVIEW_CORRECTION_PENDING_RETEST"
+    "source_scoped_package": "PASS_BEFORE_FINAL_EXPORTER_JOURNAL_REVIEW_CORRECTION_PENDING_RETEST",
+    "current_sweep_spec_checks": {
+      "related_passed": 113,
+      "platform_skips": 25,
+      "ruff": "PASS",
+      "mypy_source_files": 92,
+      "security_passed": 18,
+      "dependency_audit": "PASS_UTF8_RETRY",
+      "installed_native_schemas": 96,
+      "installed_preserved_files": 43,
+      "installed_preserved_migration_files": 20,
+      "hosted_ci": "PENDING_FINAL_COMMIT"
+    }
   },
   "next_work": [
-    "generic native1D Sweep and registered Specification connection",
-    "second batch and actual Codex submit/read/restart",
-    "GREL07 operational matrix and ordered conditional normal PR integration",
+    "Artifact-only native registration fingerprints and fresh-operator enrollment",
+    "Exact installed candidate and actual Codex submit/read/restart",
+    "GREL07 operational matrix and ordered reviewed normal PR integration",
     "GREL08 exact candidate/version/artifacts/rights/install checks; final publication consent"
   ],
   "excluded": [
@@ -916,6 +932,138 @@
         "actual_postcheck": "RETAINED_PREFLIGHT_EIGHT_ASSET_PY26_GRAMMAR_SEVEN_CONTROLS_INDEX_METADATA_EQUAL",
         "source_scoped_package": "PASS_BEFORE_FINAL_EXPORTER_JOURNAL_REVIEW_CORRECTION_PENDING_RETEST"
       }
+    },
+    {
+      "checkpoint": "BEFORE_NATIVE_SWEEP_SPEC",
+      "phase_status": "TWO_NEW_CIRCUITS_SIX_NATIVE_ANALYSES_AUTOMATIC_EXTRACTION_PASS_SWEEP_SPEC_APP_PENDING",
+      "execution": {
+        "new_simulations": 7,
+        "new_reservations": 7,
+        "production_provider": "ACTUAL_TWO_REGISTERED_CIRCUITS_DC_AC_TRAN_INPUT_EXECUTION_READER_RESULT_PASS",
+        "public_dispatch": "IMPLEMENTED_CONDITIONAL_EXPLICIT_PROVIDER_GRANT_SYNTHETIC_SDK_ONLY",
+        "existing_domain_migration": "ACTUAL_VM_NORMAL_USER_APPLY_REPEAT_PASS_NO_EXECUTION_AUTHORITY",
+        "identity_manifest_sha256": "cfd037cd4db24359614baa9f5e465bd24176f34151ee252e462016cdd2a6ef36",
+        "prior_identity_manifest_sha256": "d1b82e1653d60cafc2c0d313c297ac249541e7a1b721bd346212e5025b773e22",
+        "legacy_ids_sealed": 3,
+        "fresh_initialization_on_current_vm": "DENIED_EXISTING_DOMAIN_PRESERVED",
+        "normal_user_existing_index_register_repeat": "PASS",
+        "operator_confirmation": "ACTUAL_UID500_CONFIRM_PASS_WITH_DIRECT_USER_DELEGATION",
+        "confirmation_helper_staging": "ACTUAL_NORMAL_USER_STAGE_REPEAT_PASS_NO_GRANT_OR_RUNTIME_CHANGE",
+        "staged_helper_sha256": "ec9b52fe7cdc01a3e1f5a09cabb82279abb0ebff99e420488458cbd3cd238d80",
+        "new_helper_files": 5,
+        "new_helper_content_bytes": 78678,
+        "owned_copy": "ACTUAL_COMMON_OWNED_COPY_SIX_SUCCESSFUL_JOBS",
+        "native_runtime_setup": "ACTUAL_INACTIVE_STAGE_REPEAT_INSPECT_PASS_PREVIOUS_2f1501f_SYNTHETIC_REGISTRATION",
+        "native_runtime_activation": "ACTUAL_UID500_CURRENT15_FILE_STAGE_ACTIVATE_REPEAT_PASS_NO_JOBS_AT_CHECKPOINT",
+        "native_operator_cli": "SUBMIT_RECONCILE_RESULT_PENDING_CANCEL_IMPLEMENTED_INSTALLED_PARSE_SYNTHETIC_WIRE",
+        "native_result_retrieval": "ACTUAL_SIX_TERMINAL_INPUT_READER_FRAME_PSF_VERIFIED_RESULTS_PASS",
+        "inactive_staged_runtime": {
+          "source": "2f1501f",
+          "manifest_sha256": "ec77e0cbc3382b2252d0439c85bd274b7369b0e560fb9f274371fba239f6e29a",
+          "changed_files": 14,
+          "content_bytes": 210413,
+          "repeat_changed_files": 0,
+          "active": false,
+          "registration": "ABSENT_SYNTHETIC_SOURCE_ZERO_PROVENANCE_UNQUALIFIED_PDK_DO_NOT_ACTIVATE"
+        },
+        "post_stage_controls_index_ledger": "PASS_EQUAL_CONTENT_AND_METADATA_TO_PRE_STAGE",
+        "new_ade_source_copies": {
+          "actual_source_circuits": 2,
+          "new_files": 42,
+          "content_bytes": 57818,
+          "originals_preserved": true,
+          "scope": "DISTINCT_CURRENT_VM_NONAMPLIFIER_CIRCUIT_STATES_WORKER_RUNS_NOT_YET_QUALIFIED"
+        },
+        "actual_qa_source_preparation": "PASS_TWO_NEW_OWNED_SOURCES_CHECK_AND_SAVE_CORRECTED_STATES",
+        "actual_netlisting": {
+          "generated_inputs": 6,
+          "circuits": 2,
+          "analyses": [
+            "dc",
+            "ac",
+            "tran"
+          ],
+          "template": "COMMON_PRODUCTION_BODY_WITH_DIAGNOSTIC_MARKERS_ERROR_BOUNDARY",
+          "source_snapshots_preserved": true,
+          "hierarchy_metadata_attestation": "INCOMPLETE_LOCK_RECOVERY_ARTIFACT_PRESERVED",
+          "spectre_runs": 0
+        },
+        "model_dependency_qualification": "ACTUAL_UID500_PY26_SEVEN_FILE_NN_CLOSURE_TRUST_PASS_RUNTIME_WHOLE_GRAPH_BINDING_LOCAL_TESTED",
+        "actual_source_dependency_observation": {
+          "status": "PASS_ACTUAL_NORMAL_USER_READ_ONLY_TWO_EQUAL_SNAPSHOTS",
+          "libraries": 5,
+          "entries": 6759,
+          "content_bytes": 37456230,
+          "lock_recovery_artifacts": "PRESERVED_OBSERVED_NOT_COPIED_OR_DELETED",
+          "native_execution": "NOT_RUN"
+        },
+        "qualified_local_registration": {
+          "circuits": 2,
+          "routes": 6,
+          "model_files_per_route": 7,
+          "libraries_per_route": 5,
+          "native_active": false,
+          "manifest_sha256": "ed870cc54ddd7c0b0541ede715d4f25aa71122e563e2a58bf428ce31421fdd67"
+        },
+        "current_runtime": {
+          "manifest_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
+          "previous_manifest_sha256": "ed870cc54ddd7c0b0541ede715d4f25aa71122e563e2a58bf428ce31421fdd67",
+          "stage_files": 15,
+          "update_files": 3,
+          "repeat_files": 0,
+          "initial_remaining_grant_attempts": 19,
+          "initial_remaining_grant_bytes": 2550136832,
+          "same_journals_and_resource_lock": true
+        },
+        "first_new_dc": "SPECTRE_EFFECTIVE_INPUT_PASS_AUTOMATIC_EXTRACTION_FAILED_RESERVED128MIB_PRESERVED",
+        "same_id_restart": "PASS_SUCCESS_AND_FAILURE_IN_NEW_SERVICE_PROCESS_NO_ADDITIONAL_EXECUTION_OR_RESERVATION",
+        "successful_native_analyses": [
+          {
+            "design_id": "qa-inverter",
+            "analysis": "dc",
+            "operation_id": "887a0071-5c5b-4cf1-ae4b-86f99fc7dd12",
+            "plan_sha256": "a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e",
+            "extraction_receipt_sha256": "e5acf8d17e8d66f2dc1e4c469f7820814d8f5e6abebbc0fad194e18fc4035f9f"
+          },
+          {
+            "design_id": "qa-inverter",
+            "analysis": "ac",
+            "operation_id": "b2500fec-81bf-4821-85f7-25c917d7920a",
+            "plan_sha256": "a441520f9c142a571442a535b48b774a9ccb082608df84adfd4d1dad90075dd0",
+            "extraction_receipt_sha256": "eb6c5cd70bb328055826af515ce81b6d40f767138b3b9010700719115d52707f"
+          },
+          {
+            "design_id": "qa-inverter",
+            "analysis": "tran",
+            "operation_id": "0b792d0a-5f1b-40fb-8092-73545595db86",
+            "plan_sha256": "8d878f2c02fdbbf94e5e9eaf8f3fb461a28527d9884b8f044b52f729cbb91608",
+            "extraction_receipt_sha256": "7c7a4612adc0742a35f023d5cd02b4a346c02f54e7d86ed9bf18d863b3f6c53a"
+          },
+          {
+            "design_id": "qa-comparator",
+            "analysis": "dc",
+            "operation_id": "12569352-a58d-4f77-8f34-c56c1162ae8a",
+            "plan_sha256": "7a7d8196e6f14897355e8fce87aa1498af50c7a0d0c76160823b38f5e5a22b81",
+            "extraction_receipt_sha256": "52a5143c03f19f29d5bbf476236770987915fdcbd24735270625aa8704146848"
+          },
+          {
+            "design_id": "qa-comparator",
+            "analysis": "ac",
+            "operation_id": "294bbc03-3a92-4282-88e4-789ffcc73260",
+            "plan_sha256": "b05d1496912ade5c8ae8de792bb084f1393501273f2d5831ff9a815af42130a4",
+            "extraction_receipt_sha256": "80472293c261a6deeb0f67628ae22692d5981b393cb74112b68ce746a80f2f40"
+          },
+          {
+            "design_id": "qa-comparator",
+            "analysis": "tran",
+            "operation_id": "e1f9cf09-1ae0-41c3-b59d-16b8a7c3413c",
+            "plan_sha256": "17aeb707d0d8512dabfabab40ec16722d4bb36aa323fbfa9328c54556102257b",
+            "extraction_receipt_sha256": "586c387606fe80916666cc7aa584d25f51e20ffc034f39163b44b07864710f65"
+          }
+        ],
+        "actual_codex": "NOT_RUN_CURRENT_CANDIDATE_APP"
+      },
+      "resource_policy": {}
     }
   ],
   "provider_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/152",
@@ -923,5 +1071,48 @@
   "feature_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/152",
   "latest_user_instruction": "2026-10-09 direct user instruction; this document records but does not mint authority",
   "conditional_merge_authority": "related GREL PR142\u2013152 and corrective PRs after actual PR acceptance, CI/review/security/package/protection gates",
-  "latest_native_receipt": "NATIVE_UPDATE_AND_RESULTS_V1.md"
+  "latest_native_receipt": "NATIVE_UPDATE_AND_RESULTS_V1.md",
+  "latest_main": "6ad3c1781c986e3e23184cc900b56e5b39d0e892",
+  "latest_resource_observation": {
+    "attempts": 94,
+    "reserved_bytes": 11409555456,
+    "result_ceiling_bytes": 17179869184,
+    "remaining_bytes": 5770313728,
+    "current_generic_scope_spent_attempts": 12,
+    "current_generic_scope_spent_reserved_bytes": 1610612736,
+    "new_simulations_from_specification_and_retries": 0
+  },
+  "checkpoint_history": [
+    {
+      "scope": "prior_resources_and_next_work_before_sweep_closeout",
+      "resources": {
+        "attempts": 89,
+        "reserved_result_bytes": 10738466816,
+        "ceiling_result_bytes": 17179869184,
+        "approved_remaining_bytes": 6441402368,
+        "fresh_read_required_before_admission": true,
+        "reset_refund_increase_authorized": false,
+        "current_preparation_storage": {
+          "roots": 13,
+          "regular_files": 927,
+          "logical_bytes": 2223116,
+          "file_allocated_bytes": 4993024,
+          "directory_allocated_bytes_included": false,
+          "filesystem_available_bytes": 25677615104
+        },
+        "approved_ceiling_result_bytes": 17179869184,
+        "observed_enforced_ceiling_result_bytes": 17179869184,
+        "one_scoped_increase_authorized": true,
+        "migration_status": "ACTUAL_NORMAL_USER_APPLY_REPEAT_PASS_LEDGER_UNCHANGED",
+        "policy_sha256": "1625e131118a0c0b4ff466c567d8a79bcb050dbf798505c23685e7b5604adac0",
+        "filesystem_available_bytes": 25677393920
+      },
+      "next_work": [
+        "generic native1D Sweep and registered Specification connection",
+        "second batch and actual Codex submit/read/restart",
+        "GREL07 operational matrix and ordered conditional normal PR integration",
+        "GREL08 exact candidate/version/artifacts/rights/install checks; final publication consent"
+      ]
+    }
+  ]
 }

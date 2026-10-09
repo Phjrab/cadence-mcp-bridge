@@ -106,15 +106,15 @@ def test_partial_setup_restarts_without_overwrite_or_new_ledger(prepared, monkey
     root, request, expected, known = prepared
     if phase == "activate":
         setup.apply(request, expected, known)
-        original = accounting.write_new
+        original = setup.write_atomic_record
         calls = []
 
-        def fail(path, value):
-            original(path, value)
+        def fail(path, value, ledger):
+            original(path, value, ledger)
             calls.append(path)
             raise OSError("synthetic lost activation reply")
 
-        monkeypatch.setattr(accounting, "write_new", fail)
+        monkeypatch.setattr(setup, "write_atomic_record", fail)
     else:
         original = installer.exclusive
         calls = []
@@ -130,8 +130,8 @@ def test_partial_setup_restarts_without_overwrite_or_new_ledger(prepared, monkey
         setup.apply(dict(request, action=phase), expected, known)
     after = snapshot(root)
     monkeypatch.setattr(
-        accounting if phase == "activate" else installer,
-        "write_new" if phase == "activate" else "exclusive",
+        setup if phase == "activate" else installer,
+        "write_atomic_record" if phase == "activate" else "exclusive",
         original,
     )
     result = setup.apply(dict(request, action=phase), expected, known)
@@ -320,20 +320,17 @@ def test_update_preserves_old_assets_history_and_counters_and_repeats(prepared):
 @pytest.mark.parametrize("failure", ["pending", "receipt", "history", "rename"])
 def test_partial_update_resumes_without_spend(prepared, monkeypatch, failure):
     root, request, expected, previous, known = replacement(prepared)
-    original = (
-        installer.exclusive
-        if failure == "pending"
-        else os.rename
-        if failure == "rename"
-        else accounting.write_new
-    )
-    module = installer if failure == "pending" else os if failure == "rename" else accounting
-    name = "exclusive" if failure == "pending" else "rename" if failure == "rename" else "write_new"
+    original = os.rename if failure == "rename" else setup.write_atomic_record
+    module = os if failure == "rename" else setup
+    name = "rename" if failure == "rename" else "write_atomic_record"
 
-    def interrupted(path, value):
-        original(path, value)
+    def interrupted(path, value, *args):
+        original(path, value, *args)
         if (
-            failure in ("pending", "rename")
+            failure == "rename"
+            and value.endswith("active-native-provider.json")
+            or failure == "pending"
+            and "pending" in path
             or failure == "receipt"
             and "native-provider-updates" in path
             or failure == "history"
@@ -463,3 +460,36 @@ def test_host_preflight_verifies_exact_fresh_package_observation(
         assert result["environment_preflight"]["status"] == "qualified_environment_preflight"
         assert result["new_reservations"] == result["new_simulations"] == 0
         assert "environment_observation" not in result
+
+
+@pytest.mark.skipif(os.name != "posix", reason="atomic Linux record publication")
+@pytest.mark.parametrize(
+    "directory", ["native-provider-updates", "native-provider-history", "pending"]
+)
+def test_interrupted_record_write_preserves_partial_evidence_and_retries(
+    tmp_path, monkeypatch, directory
+):
+    root = tmp_path / directory
+    root.mkdir(mode=0o700)
+    final = root / "record.json"
+    original = os.write
+    value = {"schema_version": 1, "record": "synthetic-fixed-record"}
+
+    def partial(fd, raw):
+        original(fd, raw[:5])
+        raise OSError("synthetic interruption inside record write")
+
+    monkeypatch.setattr(os, "write", partial)
+    with pytest.raises(OSError):
+        setup.write_atomic_record(str(final), value, accounting)
+    assert not final.exists()
+    retained = {p: p.read_bytes() for p in root.iterdir()}
+    assert len(retained) == 1
+    monkeypatch.setattr(os, "write", original)
+    setup.write_atomic_record(str(final), value, accounting)
+    assert setup.closed(final.read_bytes()) == value
+    for path, raw in retained.items():
+        assert path.read_bytes() == raw
+    before = snapshot(root)
+    setup.write_atomic_record(str(final), value, accounting)
+    assert snapshot(root) == before

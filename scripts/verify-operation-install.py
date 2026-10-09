@@ -730,7 +730,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             async with Client(params) as client:
                 tools = (await client.list_tools()).tools
                 names = {tool.name for tool in tools}
-                assert len(names) == 90 and "cadence_submit_operation" in names
+                assert len(names) == 96 and "cadence_submit_operation" in names
                 planned = await client.call_tool(
                     "cadence_plan_operation",
                     {"request": input_plan.request.model_dump(mode="json")},
@@ -748,7 +748,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
         "durable_admission": "NOT_RUN",
-        "installed_conditional_native_stdio": "PASS90_SCHEMA_LOCAL_PLAN_RESTART_NO_TRANSPORT",
+        "installed_conditional_native_stdio": "PASS96_SCHEMA_LOCAL_PLAN_RESTART_NO_TRANSPORT",
         "installed_native_operation_forms": "PASS_PARSE_AND_PRECONTACT_DENIAL_ONLY",
         "installed_confirmation_helper_export": "PASS_LOCAL_NO_AUTHORITY_OR_SSH",
         "installed_owned_copy": "SYNTHETIC_FILES_ONLY_NOT_NATIVE_OA",

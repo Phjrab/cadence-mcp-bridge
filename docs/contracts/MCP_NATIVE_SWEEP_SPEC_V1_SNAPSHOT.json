@@ -1,0 +1,1190 @@
+{
+  "schema_version": 1,
+  "tools": {
+    "cadence_advance_native_sweep": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": null
+      },
+      "description": "Admit at most one untouched point after preceding points succeed. Stops at unknown outcome/failure; existing UUID retries never resend.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "NativeSweepQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "sweep_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeSweepQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeSweepQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_advance_native_sweepArguments",
+        "type": "object"
+      },
+      "name": "cadence_advance_native_sweep",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "PLANNED",
+              "PARTIAL",
+              "RUNNING",
+              "STOPPED",
+              "SUCCEEDED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "sweep_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Sweep Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_sha256",
+          "state",
+          "points"
+        ],
+        "title": "NativeSweepStatus",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_evaluate_native_specification": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Evaluate an operator-registered target against exact native plan/reader conditions. Targetless is NOT_EVALUATED; failed jobs remain errors. No target selection, simulation or optimization.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "NativeSpecificationQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_contract_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Contract Sha256",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Expected Plan Sha256"
+              },
+              "operation_id": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Operation Id"
+              },
+              "spec_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Spec Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "spec_id",
+              "expected_contract_sha256"
+            ],
+            "title": "NativeSpecificationQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeSpecificationQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_evaluate_native_specificationArguments",
+        "type": "object"
+      },
+      "name": "cadence_evaluate_native_specification",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contract Sha256",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "measurement_result_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Measurement Result Sha256"
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Id"
+          },
+          "spec_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Spec Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PASS",
+              "FAIL",
+              "NOT_EVALUATED",
+              "MISSING_MEASUREMENT",
+              "CONDITION_MISMATCH",
+              "UNQUALIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "V",
+              "W",
+              "dB"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "spec_id",
+          "contract_sha256",
+          "operation_id",
+          "status",
+          "unit"
+        ],
+        "title": "NativeSpecificationResult",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_native_sweep_result": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Read bounded integrity-verified results from a completed sweep. No simulation/extraction retry, budget refund or raw file download.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "NativeSweepQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "sweep_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeSweepQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeSweepQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_native_sweep_resultArguments",
+        "type": "object"
+      },
+      "name": "cadence_native_sweep_result",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "requested_values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requested Values",
+            "type": "array"
+          },
+          "sweep_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Sweep Id",
+            "type": "string"
+          },
+          "variable_id": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Variable Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_sha256",
+          "variable_id",
+          "requested_values",
+          "points"
+        ],
+        "title": "NativeSweepResult",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_native_sweep_status": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Reconcile registered sweep points without starting new work.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "NativeSweepQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "sweep_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "expected_plan_sha256"
+            ],
+            "title": "NativeSweepQuery",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeSweepQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_native_sweep_statusArguments",
+        "type": "object"
+      },
+      "name": "cadence_native_sweep_status",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "PLANNED",
+              "PARTIAL",
+              "RUNNING",
+              "STOPPED",
+              "SUCCEEDED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "sweep_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Sweep Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_sha256",
+          "state",
+          "points"
+        ],
+        "title": "NativeSweepStatus",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_plan_native_sweep": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Plan up to16 explicit registered values on one qualified axis. Independent points use existing native authority/accounting. No dispatch.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "NativeOperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              },
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "NativeOperationRequest",
+            "type": "object"
+          },
+          "NativeSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "template": {
+                "$ref": "#/$defs/NativeOperationRequest"
+              },
+              "values": {
+                "items": {
+                  "maxLength": 48,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "variable_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Variable Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "template",
+              "variable_id",
+              "values"
+            ],
+            "title": "NativeSweepRequest",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/NativeSweepRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_plan_native_sweepArguments",
+        "type": "object"
+      },
+      "name": "cadence_plan_native_sweep",
+      "outputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "NativeOperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              },
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "NativeOperationRequest",
+            "type": "object"
+          },
+          "NativeSweepPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "accounting": {
+                "const": "existing_native_operations_no_additional_ledger",
+                "default": "existing_native_operations_no_additional_ledger",
+                "title": "Accounting",
+                "type": "string"
+              },
+              "initial_condition": {
+                "const": "independent",
+                "default": "independent",
+                "title": "Initial Condition",
+                "type": "string"
+              },
+              "points": {
+                "items": {
+                  "$ref": "#/$defs/OperationPlan"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Points",
+                "type": "array"
+              },
+              "request": {
+                "$ref": "#/$defs/NativeSweepRequest"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "request",
+              "points"
+            ],
+            "title": "NativeSweepPlan",
+            "type": "object"
+          },
+          "NativeSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "template": {
+                "$ref": "#/$defs/NativeOperationRequest"
+              },
+              "values": {
+                "items": {
+                  "maxLength": 48,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "variable_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Variable Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "template",
+              "variable_id",
+              "values"
+            ],
+            "title": "NativeSweepRequest",
+            "type": "object"
+          },
+          "OperationPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "accounting": {
+                "const": "existing_remote_shared_ledger_no_reset",
+                "default": "existing_remote_shared_ledger_no_reset",
+                "title": "Accounting",
+                "type": "string"
+              },
+              "analysis": {
+                "enum": [
+                  "dc",
+                  "ac",
+                  "tran"
+                ],
+                "title": "Analysis",
+                "type": "string"
+              },
+              "attempt_cost": {
+                "const": 1,
+                "default": 1,
+                "title": "Attempt Cost",
+                "type": "integer"
+              },
+              "design_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Design Sha256",
+                "type": "string"
+              },
+              "environment_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Environment Sha256",
+                "type": "string"
+              },
+              "grant_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Grant Sha256",
+                "type": "string"
+              },
+              "ledger_ref": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Ledger Ref",
+                "type": "string"
+              },
+              "pdk_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Pdk Sha256",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/OperationRequest"
+              },
+              "resource_domain_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Resource Domain Sha256",
+                "type": "string"
+              },
+              "runner_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Runner Sha256",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "resource_domain_sha256",
+              "runner_sha256",
+              "ledger_ref",
+              "environment_sha256",
+              "design_sha256",
+              "pdk_sha256",
+              "grant_sha256",
+              "request",
+              "analysis"
+            ],
+            "title": "OperationPlan",
+            "type": "object"
+          },
+          "OperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              },
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "OperationRequest",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          },
+          "plan": {
+            "$ref": "#/$defs/NativeSweepPlan"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "point_count": {
+            "title": "Point Count",
+            "type": "integer"
+          },
+          "remote_contact": {
+            "const": false,
+            "default": false,
+            "title": "Remote Contact",
+            "type": "boolean"
+          },
+          "result_reservation_bytes": {
+            "title": "Result Reservation Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan",
+          "plan_sha256",
+          "point_count",
+          "result_reservation_bytes"
+        ],
+        "title": "NativeSweepPlanned",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_submit_native_sweep": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": null
+      },
+      "description": "Persist one immutable sweep and child UUIDs. No simulator dispatch. Same sweep-ID retries only observe the existing plan.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "NativeOperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              },
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "NativeOperationRequest",
+            "type": "object"
+          },
+          "NativeSweepRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "template": {
+                "$ref": "#/$defs/NativeOperationRequest"
+              },
+              "values": {
+                "items": {
+                  "maxLength": 48,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Values",
+                "type": "array"
+              },
+              "variable_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Variable Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "template",
+              "variable_id",
+              "values"
+            ],
+            "title": "NativeSweepRequest",
+            "type": "object"
+          },
+          "NativeSweepSubmission": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/NativeSweepRequest"
+              },
+              "sweep_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Sweep Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sweep_id",
+              "expected_plan_sha256",
+              "request"
+            ],
+            "title": "NativeSweepSubmission",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "submission": {
+            "$ref": "#/$defs/NativeSweepSubmission"
+          }
+        },
+        "required": [
+          "submission"
+        ],
+        "title": "cadence_submit_native_sweepArguments",
+        "type": "object"
+      },
+      "name": "cadence_submit_native_sweep",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_reset_or_refund": {
+            "const": false,
+            "default": false,
+            "title": "Budget Reset Or Refund",
+            "type": "boolean"
+          },
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "simulation_retry": {
+            "const": false,
+            "default": false,
+            "title": "Simulation Retry",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "PLANNED",
+              "PARTIAL",
+              "RUNNING",
+              "STOPPED",
+              "SUCCEEDED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "sweep_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Sweep Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sweep_id",
+          "plan_sha256",
+          "state",
+          "points"
+        ],
+        "title": "NativeSweepStatus",
+        "type": "object"
+      },
+      "title": null
+    }
+  }
+}

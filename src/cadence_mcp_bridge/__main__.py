@@ -165,6 +165,30 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--" + field, required=True)
         if name != "inspect":
             command.add_argument("--operator-authority", required=True)
+    specification = subparsers.add_parser("native-specification", help="Registered native targets.")
+    spec_actions = specification.add_subparsers(dest="spec_action", required=True)
+    spec_actions.add_parser("schema")
+    for name in ("list", "evaluate"):
+        command = spec_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        if name == "evaluate":
+            command.add_argument("--spec-id", required=True)
+            command.add_argument("--expected-contract-sha256", required=True)
+            command.add_argument("--operation-id")
+            command.add_argument("--expected-plan-sha256")
+    sweep = subparsers.add_parser("native-sweep", help="Bounded registered native1D lifecycle.")
+    sweep_actions = sweep.add_subparsers(dest="sweep_action", required=True)
+    sweep_actions.add_parser("schema")
+    for name in ("plan", "submit", "advance", "status", "result"):
+        command = sweep_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        if name in ("plan", "submit"):
+            command.add_argument("--request", type=Path, required=True)
+        if name != "plan":
+            command.add_argument("--sweep-id", required=True)
+            command.add_argument("--expected-plan-sha256", required=True)
     native = subparsers.add_parser(
         "native-runtime", help="Explicit operator fixed native runtime export/setup; no grant."
     )
@@ -390,6 +414,87 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         print(json.dumps(reader_result, sort_keys=True, allow_nan=False))
         return 0
+    if arguments.command == "native-specification":
+        import asyncio
+
+        from cadence_mcp_bridge.errors import BridgeError
+        from cadence_mcp_bridge.native_service import NativeOperationService
+        from cadence_mcp_bridge.native_specifications import (
+            NativeSpecificationCatalog,
+            NativeSpecificationQuery,
+            NativeSpecificationSupervisor,
+        )
+        from cadence_mcp_bridge.runtime_context import load_runtime
+        try:
+            if arguments.spec_action == "schema":
+                spec_result = NativeSpecificationCatalog.model_json_schema()
+            else:
+                context = next((c for c in load_runtime(arguments.settings.resolve())
+                                if c.binding.context_id == arguments.context), None)
+                if context is None:
+                    raise ValueError("unknown_context")
+                specifications = NativeSpecificationSupervisor(NativeOperationService(context))
+                if arguments.spec_action == "list":
+                    spec_result = specifications.listing()
+                else:
+                    spec_result = asyncio.run(specifications.result(NativeSpecificationQuery(
+                        spec_id=arguments.spec_id,
+                        expected_contract_sha256=arguments.expected_contract_sha256,
+                        operation_id=arguments.operation_id,
+                        expected_plan_sha256=arguments.expected_plan_sha256))).model_dump(mode="json")
+        except (BridgeError, ValueError, OSError):
+            print(json.dumps(
+                {"status":"NATIVE_SPECIFICATION_REJECTED", "execution_authorized":False}))
+            return 1
+        print(json.dumps(spec_result, sort_keys=True, allow_nan=False))
+        return 0
+    if arguments.command == "native-sweep":
+        import asyncio
+
+        from cadence_mcp_bridge.errors import BridgeError
+        from cadence_mcp_bridge.native_service import NativeOperationService
+        from cadence_mcp_bridge.native_sweeps import (
+            NativeSweepQuery,
+            NativeSweepRequest,
+            NativeSweepSubmission,
+            NativeSweepSupervisor,
+        )
+        from cadence_mcp_bridge.operator_operations import bounded_document
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        async def run_sweep() -> dict[str, object]:
+            if arguments.sweep_action == "schema":
+                return NativeSweepRequest.model_json_schema()
+            context = next((c for c in load_runtime(arguments.settings.resolve())
+                            if c.binding.context_id == arguments.context), None)
+            if context is None:
+                raise ValueError("unknown_context")
+            native = NativeOperationService(context)
+            supervisor = NativeSweepSupervisor(native)
+            if arguments.sweep_action in ("plan", "submit"):
+                request = NativeSweepRequest.model_validate_json(
+                    bounded_document(arguments.request))
+            if arguments.sweep_action == "plan":
+                return (await supervisor.plan(request)).model_dump(mode="json")
+            query = NativeSweepQuery(sweep_id=arguments.sweep_id,
+                                     expected_plan_sha256=arguments.expected_plan_sha256)
+            if arguments.sweep_action == "submit":
+                result = await supervisor.submit(NativeSweepSubmission(
+                    **query.model_dump(), request=request))
+            elif arguments.sweep_action == "advance":
+                result = await supervisor.advance(query)
+            elif arguments.sweep_action == "status":
+                result = await supervisor.status(query)
+            else:
+                return (await supervisor.result(query)).model_dump(mode="json")
+            return result.model_dump(mode="json")
+        try:
+            result = asyncio.run(run_sweep())
+        except (BridgeError, ValueError, OSError):
+            print(json.dumps({"status": "NATIVE_SWEEP_REJECTED", "execution_authorized": False}))
+            return 1
+        print(json.dumps(result, sort_keys=True, allow_nan=False))
+        return 0
     if arguments.command == "native-runtime":
         from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle, setup_runtime
         from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -410,7 +515,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 context = next(
                     (
                         c
-                        for c in load_runtime(arguments.settings)
+                        for c in load_runtime(arguments.settings.resolve())
                         if c.binding.context_id == arguments.context
                     ),
                     None,
@@ -456,7 +561,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 context = next(
                     (
                         c
-                        for c in load_runtime(arguments.settings)
+                        for c in load_runtime(arguments.settings.resolve())
                         if c.binding.context_id == arguments.context
                     ),
                     None,
@@ -501,7 +606,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 operation_result = model.model_json_schema()
             else:
-                contexts = load_runtime(arguments.settings)
+                contexts = load_runtime(arguments.settings.resolve())
                 context = next(
                     (c for c in contexts if c.binding.context_id == arguments.context), None
                 )
