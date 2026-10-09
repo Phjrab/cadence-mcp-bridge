@@ -1,3 +1,23 @@
+## Exact rollback interruption recovery, 2026-10-09
+
+The latest review of3b678d2 found an interrupted rollback metadata state missing
+from the fixed helper. Chmod now computes access owner/mask-or-group/other bits
+from the exact requested mode while preserving named/default entries. Only
+rollback accepts the exact original-mode/restricted-ACL intermediate state;
+unexpected metadata and all protected content/identity drift still reject.
+The Linux fixture interrupts both apply and rollback, resumes and repeats each,
+then checks original contents and metadata. Local59 repair/bootstrap checks pass/
+5 Windows skips; Ruff/mypy72 pass. Actual UID500/Python2.6 synthetic apply/rollback
+interruption/repeat restores exact contents/ACL/mode/identity, with the real94/
+11,409,555,456-byte ledger unchanged. This is not a new vendor metadata repair.
+Exact installed32-state package preservation passes; final hosted review/CI
+remain pending for this source.
+
+Latest main98710153a167e103c2955b1c5c82612eb2864038 includes normal PR142-147
+merges. Existing16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues; public exact-candidate approval remains required. Prior receipts and
+policies are historical and retained. No new simulation/reservation/admin change.
+
 ## Current direct-user authority and retained state, 2026-10-09
 
 The latest direct user authorization permits continuous GREL02-08, minimum
