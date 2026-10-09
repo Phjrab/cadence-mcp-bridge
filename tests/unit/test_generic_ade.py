@@ -484,3 +484,28 @@ def test_effective_input_rejects_other_scope_dialects_before_extraction(operator
     with pytest.raises(OperationRejected) as error:
         verify_effective_input(context, plan, registration, str(uuid4()), data)
     assert error.value.reason == "spectre_scope_unsupported"
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "PARAMETERS ExampleBiasN=2",
+        "Parameters ExampleBiasN=2",
+        "extra AC start=10 stop=1000000 dec=10",
+        "extra Dc save=all",
+        "extra TRAN stop=0.004 maxstep=0.00001 method=trap",
+        "extra noise start=10 stop=1000000 dec=10",
+        "extra NOISE start=10 stop=1000000 dec=10",
+        "extra sweep param=ExampleBiasN start=1 stop=2 step=0.1",
+        "alt alter param=ExampleBiasN value=2",
+        "alt ALTER param=ExampleBiasN value=2",
+    ],
+)
+def test_effective_input_rejects_registered_static_hidden_controls(operator, analysis, extra):
+    # The extra statement is intentionally included in the approved static hash:
+    # fingerprint equality must not hide override/analysis/control semantics.
+    context, plan, registration, data = setup(operator, analysis, RC + "\n" + extra)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason == "spectre_control_unsupported"

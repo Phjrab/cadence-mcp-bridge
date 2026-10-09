@@ -410,6 +410,42 @@ def verify_effective_input(
             )
         ):
             raise OperationRejected("spectre_scope_unsupported")
+        # Keyword case cannot turn a second control into trusted static content.
+        if words[0].lower() in ("parameters", "include") and words[0] != words[0].lower():
+            raise OperationRejected("spectre_control_unsupported")
+        kind = words[1].lower() if len(words) > 1 else ""
+        if (kind in ("dc", "ac", "tran") and words[1] != kind) or kind in (
+            "noise",
+            "pz",
+            "sp",
+            "stb",
+            "xf",
+            "sens",
+            "dcmatch",
+            "acmatch",
+            "montecarlo",
+            "sweep",
+            "pss",
+            "pac",
+            "pnoise",
+            "pxf",
+            "pstb",
+            "pdisto",
+            "qpss",
+            "qpac",
+            "qpnoise",
+            "qpxf",
+            "hb",
+            "hbac",
+            "hbnoise",
+            "hbstb",
+            "hbxf",
+            "envlp",
+            "alter",
+            "altergroup",
+            "paramset",
+        ):
+            raise OperationRejected("spectre_control_unsupported")
         opening = words[1:] if words[0] == "inline" else words
         if opening and opening[0] == "subckt":
             if len(opening) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_#-]{0,63}", opening[1]):

@@ -1,3 +1,19 @@
+## Extracted-control case and hidden-analysis correction, 2026-10-09
+
+The third independent PR145 P1 exposed PARAMETERS and uppercase DC/AC/TRAN being
+misclassified as static despite overrides/extra analyses. The comparator now rejects
+case variants of extracted controls plus unsupported noise/periodic/sweep/alter
+analysis controls before static fingerprint comparison. Regression explicitly binds
+the harmful extra statement into the same approved static hash; equality cannot
+prove the control is harmless. Supported lowercase DC/AC/TRAN remains unchanged.
+Local238 related tests/Ruff/mypy69 and exact installed CLI/SDK/bootstrap/reinstall/
+uninstall19-state preservation PASS. Final hosted CI and independent review remain
+required before conditionally authorized normal merge. Earlier667e007 CI successes
+remain historical because its review found this blocker. No new execution or quota
+reservation occurs; current GREL02-08/retained16GiB authority is unchanged and exact
+public release approval remains separate. Equivalent common native correction is
+validated on ordinary-user actual Python2.6 in draftPR152; no runtime update yet.
+
 ## Reviewed parent integration checkpoint, 2026-10-09
 
 Current direct user authority permits continuous GREL02-08 and conditional normal
