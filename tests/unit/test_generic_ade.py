@@ -23,7 +23,7 @@ from cadence_mcp_bridge.generic_ade import (
     template_sha256,
     verify_effective_input,
 )
-from cadence_mcp_bridge.operator_operations import OperationRejected, prepare_plan
+from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant, prepare_plan
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 operator = operator_fixture
@@ -35,7 +35,7 @@ MOS = "M0 (out gate 0 0) nch w=0.000002 l=0.0000001\nV0 (gate 0) vsource dc=1"
 def setup(operator, analysis="ac", static=RC):
     context, grant, request, _ = operator
     request = request.model_copy(update={"analysis_id": "example-" + analysis})
-    plan = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    plan = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     profile = context.contracts.designs.profile(request.design_id)
     variables = context.contracts.designs.variable_set(request.design_id)
     inputs = (
@@ -285,6 +285,7 @@ def cli_args(operator, tmp_path, analysis="ac"):
     request_path.write_text(request.model_dump_json(), encoding="utf-8")
     # Recompute plan for the real byte digest of the local grant file.
     grant_digest = hashlib.sha256(grant_path.read_bytes()).hexdigest()
+    grant, _ = load_grant(grant_path, grant_digest)
     plan = prepare_plan(context, grant, grant_digest, request, int(time.time()))
     reg_path.write_text(registration.model_dump_json(), encoding="utf-8")
     return [
