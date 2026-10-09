@@ -1,3 +1,25 @@
+## Current GREL04 parameter-scope review correction, 2026-10-09
+
+Current direct user authority allows continuous GREL02-08, normal conditional
+related PR merges and the current managed VM retained16GiB ceiling. Spectre500,
+corrections20, disk floors, original/vendor contents, results and journals remain
+binding. Exact-candidate tag/Release/upload still requires final public approval.
+Earlier overlays below are historical and do not cancel that direct authority.
+
+Latest PR145 e90b786 hosted checks passed, but independent review found a P1:
+extracting nested parameters as global values could accept moved top-level input.
+The corrected local comparator tracks named subckt/inline-subckt scopes, preserves
+static structure and rejects nested parameter/include/analysis controls or unbalanced
+scope. Top-level parameters with ordinary static subcircuits remain supported.
+Regression covers DC/AC/TRAN and inline subcircuits. Related190 PASS, Ruff/mypy69
+PASS. Exact corrected installation/hosted checks/review remain pending. This compiler
+alone is native-unqualified and never authorizes or dispatches a simulation.
+
+PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c2a93eb4.
+Existing changes and evidence are retained. This correction adds0 simulations and0
+reservations. Actual standard-VM execution is tracked separately in PR152; actual
+Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+
 ## GREL04 normal integration refresh, 2026-10-09
 
 PR144 normally merged as eda060e1a1a984134e25490839c60ec2c2a93eb4 after exact

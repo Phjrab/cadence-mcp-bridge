@@ -382,7 +382,27 @@ def verify_effective_input(
     includes: list[tuple[str, str]] = []
     analyses: list[tuple[str, str]] = []
     static: list[str] = []
+    scopes: list[str] = []
     for line in _statements(data):
+        words = line.split()
+        opening = words[1:] if words[0] == "inline" else words
+        if opening and opening[0] == "subckt":
+            if len(opening) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_#-]{0,63}", opening[1]):
+                raise OperationRejected("spectre_scope_unsupported")
+            scopes.append(opening[1])
+            static.append(line)
+            continue
+        if words[0] == "ends":
+            if not scopes or len(words) > 2 or (len(words) == 2 and words[1] != scopes[-1]):
+                raise OperationRejected("spectre_scope_unsupported")
+            scopes.pop()
+            static.append(line)
+            continue
+        if scopes and (
+            line.startswith(("parameters ", "include "))
+            or re.match(r"[A-Za-z][A-Za-z0-9_]* (dc|ac|tran)(?: |$)", line)
+        ):
+            raise OperationRejected("spectre_scoped_inputs_unsupported")
         if line.startswith("parameters "):
             for pair in line.split()[1:]:
                 match = re.fullmatch(r"([A-Za-z][A-Za-z0-9_#-]{0,63})=(.+)", pair)
@@ -405,6 +425,8 @@ def verify_effective_input(
                 analyses.append((match[1], match[2] or ""))
             else:
                 static.append(line)
+    if scopes:
+        raise OperationRejected("spectre_scope_unsupported")
     variables = context.contracts.designs.variable_set(plan.request.design_id)
     bindings = {v.logical_id: v.cadence_binding for v in variables.variables} if variables else {}
     expected_parameters = {bindings[v.logical_id]: v.value for v in plan.request.values}

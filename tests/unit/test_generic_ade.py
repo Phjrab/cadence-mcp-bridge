@@ -437,3 +437,31 @@ def test_zero_variable_inputs_do_not_inherit_parameters(operator):
         verify_effective_input(changed, plan, registration, str(uuid4()), data)["parameter_count"]
         == 0
     )
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize("opening", ["subckt Small (in out)", "inline subckt Small (in out)"])
+def test_effective_input_rejects_moving_parameters_inside_subcircuit(operator, analysis, opening):
+    static = opening + "\n" + RC + "\nends Small"
+    context, plan, registration, data = setup(operator, analysis, static)
+    assert (
+        verify_effective_input(context, plan, registration, str(uuid4()), data)["parameter_count"]
+        == 2
+    )
+    parameter_line = b"parameters ExampleBiasN=1 ExampleBiasP=1\n"
+    changed = data.replace(parameter_line, b"").replace(
+        (opening + "\n").encode(), (opening + "\n").encode() + parameter_line
+    )
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), changed)
+    assert error.value.reason == "spectre_scoped_inputs_unsupported"
+
+
+@pytest.mark.parametrize(
+    "static", ["ends", "subckt Small (in out)", "subckt Small (in out)\nends Other"]
+)
+def test_effective_input_rejects_unbalanced_subcircuit_scope(operator, static):
+    context, plan, registration, data = setup(operator, static=static)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason in {"spectre_scope_unsupported", "spectre_scoped_inputs_unsupported"}
