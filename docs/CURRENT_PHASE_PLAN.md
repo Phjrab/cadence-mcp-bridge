@@ -35,6 +35,29 @@ reservation occurs; current GREL02-08/retained16GiB authority is unchanged and e
 public release approval remains separate. Equivalent common native correction is
 validated on ordinary-user actual Python2.6 in draftPR152; no runtime update yet.
 
+## Reviewed parent integration checkpoint, 2026-10-09
+
+Current direct user authority permits continuous GREL02-08 and conditional normal
+related PR integration. Managed-VM16GiB/Spectre500/corrections20 retains all actual
+consumption and history; it is not a fresh-user default. Publication of any exact
+candidate still needs final public approval. Earlier exclusions below are history.
+
+PR146 normally integrated current main/lifecycle/grant-byte binding and PR145's
+closed Spectre scope correction. Both sides of documentation conflicts are preserved.
+Existing sealed shared-reservation implementation is unchanged. Four earlier review
+issues are covered by post-reservation historical marker floors, exact legacy
+count/byte conservation and independent per-operation identity seals; missing jobs/
+seals fail closed even for128MiB or cancelling variable deltas. No new ledger,
+reservation refund, operator approval or native worker activation is introduced.
+Local304 related tests PASS/five POSIX/symlink skips, Ruff/mypy70 PASS. An initial
+console-script collection missed the repository script package; rerun under the
+repository import path passed without source changes. Exact package/public hosted
+checks and refreshed automated review follow. This is still an unqualified provider
+foundation; actual terminal/provider/policy confirmation and16GiB managed VM
+execution are separately tracked in draftPR152. No new VM execution/reservation.
+Latest checked main eda060e; PR145667e007 final review/CI remains pending. Ordered
+merge must wait for that parent. Clean actual operator/app and exactRC remain BLOCKED.
+
 ## Closed Spectre scope dialect correction, 2026-10-09
 
 The second independent PR145 P1 identified library/section and keyword-case scopes
@@ -69,6 +92,63 @@ PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c
 Existing changes and evidence are retained. This correction adds0 simulations and0
 reservations. Actual standard-VM execution is tracked separately in PR152; actual
 Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+
+## GREL-03 sealed accounting source receipt, 2026-10-08
+
+Sourceccd01ab in PR146: hosted Windows2544 PASS/four POSIX skips and Ubuntu73
+PASS/no skips. Local230 PASS/five OS skips; Ruff/mypy70/security18/audit/85 schemas,
+matching78/79-member artifacts and installed32-state preservation PASS. Actual
+Python2.6 is grammar-only. Automatic review no new findings/bot+1, not formal
+approval. Existing counter/lock with migration-bound immutable identity seals and
+conservation implemented; production provider/operator confirmation/real migration/
+terminal workers/native trust/new circuits/extraction/Sweep/clean app incomplete.
+Main553276d and unrelated OCN preserved. Generic release BLOCKED;02–07/895MiB
+continues. Native side effects0; no protected repairs/merge/GREL08/publication.
+Exact source-scoped receipts: docs/generic_release/GREL_03_SHARED_RESERVATIONS_RESULT.md.
+Historical overlays below remain history.
+
+## GREL-03 immutable reservation identity correction, 2026-10-08
+
+Second independent P1 corrected with an immutable identity index and mandatory
+hash-bound operator migration anchor, under the same existing counter/domain/lock.
+No separate mutable budget total, worker, counter initialization/reset or migration
+writer. Lost128MiB/cancelling records, missing seals/anchors, class conflicts and
+unlisted post-migration increments fail closed. Related230 PASS/five skips/47.04s,
+Ruff/mypy70 and actual Python2.6 grammar-only PASS. Final exact-source package/CI/
+review pending in PR146; older receipts below remain history. Production provider/
+real migration/renewal/native trust/jobs/extraction/Sweep/clean client incomplete.
+No native side effects/protected repairs/budget increases/merge/GREL08/publication.
+Continuous02–07/895MiB persists. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
+## GREL-03 shared-counter conservation correction, 2026-10-08
+
+Independent P1 and two P2 marker findings corrected: retain valid old22–24
+markers, reject pre-reservation values, and conserve count/byte pairs against
+fixed legacy increments plus immutable generic variable reservations. Duplicate
+slots, missing variable records and mixed legacy/new increments are tested.
+Related220 PASS/five skips/38.77s, Ruff/mypy70 and five-asset actual Python2.6
+grammar-only PASS. Final exact-source package/CI/review pending in PR146;
+earlier source/package receipts below remain historical. No native side effects,
+protected repairs/budget reset/increase/merge/GREL08/publication. Continuous
+02–07/895MiB remains; production provider/trust/jobs/extraction/Sweep/clean client
+remain incomplete. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
+## GREL-03 shared-reservation source checkpoint, 2026-10-08
+
+Tested source52b5452 in PR146: hosted Windows2527 PASS/four POSIX skips and
+Ubuntu56 PASS/no skips. Local related213 PASS/five OS skips; Ruff/mypy70,
+security18/audit/85 schemas, matching78/79-member artifacts and installed29-state
+preservation PASS. Actual Python2.6 evidence is grammar-only, not module execution.
+Existing-domain transaction asset, compiled-input identity and corrected historical
+marker compatibility are implemented; schema2 carries it and schema1 remains readable.
+Independent P1/P2 marker corrections implemented; source52b5452 receipts
+below are historical after the latest22-marker floor correction. Related214
+PASS/five skips, Ruff/mypy70/Python2.6 grammar PASS; final package/CI/review pending. PR146 ready/unmerged.
+Production provider/operator authenticity/native jobs/extraction/Sweep/clean client
+remain incomplete; vendor trust still blocked. Continuous02–07/895MiB persists.
+No native side effects, protected repair, budget reset/increase, merge/GREL08/
+publication. Exact source-scoped history: GREL_03_SHARED_RESERVATIONS_RESULT.md.
+Historical overlays below retain their original source/scope.
 
 ## GREL-04 source/package/review checkpoint, 2026-10-08
 

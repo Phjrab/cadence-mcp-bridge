@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -221,6 +222,67 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     command(["deactivate", str(managed), digest], standalone=True)
     assert (managed / "active-runner.json").read_bytes() == active
     assert (managed / "runner-revoked.json").exists()
+    # Installed accounting asset, against actual disposable state files only.
+    # These fictional bindings are test data and never confer remote authority.
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    asset = managed / "runtime" / digest / "reservations.py"
+    assert asset.read_bytes() == Path(accounting.__file__).read_bytes()
+    assert (
+        json.loads((managed / "runtime" / digest / "manifest.json").read_bytes())["schema_version"]
+        == 2
+    )
+    (managed / "sim-mcp-v2-jobs").mkdir(mode=0o700)
+    (managed / accounting.JOBS).mkdir(mode=0o700)
+    (managed / accounting.REGISTRY).mkdir(mode=0o700)
+    migration = {
+        "schema_version": 1,
+        "root_sha256": accounting.digest(str(managed.resolve()).encode("utf-8")),
+        "resource_domain_sha256": "a" * 64,
+        "ledger_ref": accounting.LEDGER,
+        "baseline": {
+            "campaign_id": "AUTO-PHASE-01",
+            "count": 82,
+            "result_reserved_bytes": 9798942720,
+        },
+        "legacy_operation_ids": [],
+    }
+    accounting.write_new(str(managed / accounting.REGISTRY / "manifest.json"), migration)
+    (managed / "run.lock").write_bytes(b"")
+    os.chmod(managed / "run.lock", 0o600)
+    accounting.write_new(
+        str(managed / accounting.LEDGER),
+        {"campaign_id": "AUTO-PHASE-01", "count": 82, "result_reserved_bytes": 9798942720},
+    )
+    synthetic_binding = {
+        "root_sha256": accounting.digest(str(managed.resolve()).encode("utf-8")),
+        "resource_domain_sha256": "a" * 64,
+        "ledger_ref": accounting.LEDGER,
+        "grant_sha256": "b" * 64,
+        "runner_sha256": "c" * 64,
+        "plan_sha256": "d" * 64,
+        "execution_input_sha256": "1" * 64,
+        "identity_manifest_sha256": accounting.digest(accounting.canonical(migration)),
+        "expires_at": int(time.time()) + 600,
+        "max_attempts": 2,
+        "max_reserved_bytes": 33554432,
+        "reserve_bytes": 16777216,
+        "disk_floor_bytes": 0,
+    }
+    for _ in range(2):
+        operation = str(uuid4())
+        work = managed / accounting.JOBS / operation / "work"
+        work.mkdir(mode=0o700, parents=True)
+        receipt = accounting.reserve(str(managed), operation, synthetic_binding)
+        reserved = snapshot(managed)
+        assert accounting.lookup(str(managed), operation, synthetic_binding) == receipt
+        assert accounting.reserve(str(managed), operation, synthetic_binding) == receipt
+        assert snapshot(managed) == reserved
+    assert accounting.read(str(managed / accounting.LEDGER)) == {
+        "campaign_id": "AUTO-PHASE-01",
+        "count": 84,
+        "result_reserved_bytes": 9832497152,
+    }
     assert all(snapshot(state).get(name) == value for name, value in before.items())
     AnalysisStore(analysis_path).require(identity, "synthetic-design", "synthetic-dc", "a" * 64)
     (workspace / "preservation.json").write_text(
@@ -238,6 +300,8 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "live_migration": "UNSUPPORTED",
         "journal_replay_preserved": True,
         "generic_append_only_lifecycle_preserved": "SYNTHETIC_WITHOUT_NATIVE_PROVIDER",
+        "installed_existing_counter_two_batches_replay": "DISPOSABLE_ACTUAL_FILES_ONLY",
+        "bootstrap_manifest_schema": 2,
         "remote_contact": False,
         "new_simulations": 0,
         "execution_authorized": False,

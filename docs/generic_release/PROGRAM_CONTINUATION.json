@@ -9,11 +9,11 @@
     "GREL-06",
     "GREL-07"
   ],
-  "current_phase": "GREL-04-independent-local-inputs",
-  "phase_status": "PARTIAL_GENERIC_INPUTS_NATIVE_TRUST_AND_PROVIDER_BLOCKED",
-  "branch": "feat/grel-04-generic-ade-inputs",
+  "current_phase": "GREL-03-shared-reservation-transactions",
+  "phase_status": "PARTIAL_ACCOUNTING_PROVIDER_NATIVE_TRUST_BLOCKED",
+  "branch": "feat/grel-03-shared-reservations",
   "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
-  "parent_feature": "455b05a",
+  "parent_feature": "81aebdd",
   "new_simulations": 0,
   "new_reservations": 0,
   "approved_remaining_reserved_bytes": 938475520,
@@ -24,20 +24,21 @@
   "grel08_authorized": false,
   "native_blocker": "executable_permissions_actual_group_or_other_writable_vendor_chain",
   "remote_deployments": 0,
-  "report": "GREL_04_RESULT.md",
+  "report": "GREL_03_SHARED_RESERVATIONS_RESULT.md",
   "next_phase_authorized": true,
   "next_phase": "GREL03-production-provider-and-GREL04-native-copy-API-then-GREL05-06",
-  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/145",
+  "pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/146",
   "reports": [
     "GREL_02_RESULT.md",
     "GREL_03_RESULT.md",
     "GREL_07_RESULT.md",
-    "GREL_04_RESULT.md"
+    "GREL_04_RESULT.md",
+    "GREL_03_SHARED_RESERVATIONS_RESULT.md"
   ],
-  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/144",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/145",
   "blocked_phases": {
     "GREL-02": "positive_native_trust",
-    "GREL-03": "native_provider_and_operator_attestation_not_implemented",
+    "GREL-03": "authentic_production_provider_and_terminal_worker_receipts_absent",
     "GREL-04": "local_generic_input_compiler_implemented_native_provider_copy_API_execution_unqualified",
     "GREL-05": "new_job_measurement_and_sweep_not_implemented",
     "GREL-06": "clean_actual_app_new_job_not_run"
@@ -69,9 +70,15 @@
     "current_lifecycle_plus_one_observed_utc": "2026-10-07T23:46:04Z",
     "primary_preservation_review": "SQLITE_SIDECAR_LINK_AND_JUNCTION_GUARDS_SYNTHETIC_VERIFIED",
     "current_input_source": "a3f5fb89840d2a83b661115509f878b63f80cf39_BOT_PLUS_ONE_NO_FINDINGS_NOT_FORMAL_APPROVED",
-    "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z"
+    "current_input_plus_one_observed_utc": "2026-10-08T00:39:30Z",
+    "shared_reservations": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "status": "BOT_PLUS_ONE_NO_NEW_FINDINGS_NOT_FORMAL_APPROVED",
+      "completed_utc": "2026-10-08T02:07:49.781251Z",
+      "plus_one_observed_utc": "2026-10-08T02:07:54Z"
+    }
   },
-  "local_input_snapshot_sha256": "004be6a3f0c6b11fa1a9778fa865bf6d5503623b1b209cc2f360c142445e4ac9",
+  "local_input_snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
   "historical_validation_before_durable_lifecycle": {
     "hosted_ci": {
       "historical_tested_source": "46c56a535bc91028372f30bb7474b3fff4bf1b7e",
@@ -125,7 +132,8 @@
     "extraction_recovery": "NOT_IMPLEMENTED",
     "renewal": "NOT_IMPLEMENTED",
     "pending_cancellation": "SYNTHETIC_PROVIDER_ONLY_NO_NATIVE_TERMINATION",
-    "budget_reset_or_refund": false
+    "budget_reset_or_refund": false,
+    "shared_counter_transactions": "SHIPPED_INTERNAL_EXISTING_DOMAIN_ASSET_NO_AUTHORITY_OR_DISPATCH"
   },
   "historical_d67df77_ci": {
     "tested_source": "d67df772dd11e6af0237c36149248bd2fb556027",
@@ -145,7 +153,7 @@
     "unit_warnings": 56,
     "unit_seconds": 260.78
   },
-  "final_source_checkpoint": "GREL04_LOCAL_GENERIC_INPUTS_PARTIAL_NOT_NATIVE_RELEASE",
+  "final_source_checkpoint": "GREL03_SHARED_COUNTER_ACCOUNTING_PARTIAL_NOT_NATIVE_RELEASE",
   "historical_grel03_hosted_ci": {
     "tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
     "run": 37703731751,
@@ -173,6 +181,51 @@
   },
   "historical_grel03_tested_source": "a7fcf455462a040b5ac1bb8ca789341a0217cdb3",
   "hosted_ci": {
+    "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+    "run": 37716014588,
+    "job": 113112518632,
+    "conclusion": "PASS",
+    "unit_passed": 2544,
+    "unit_skipped": 4,
+    "unit_warnings": 56,
+    "unit_seconds": 256.31,
+    "posix_run": 37716014588,
+    "posix_job": 113112518763,
+    "posix_passed": 73,
+    "posix_skipped": 0,
+    "posix_seconds": 3.05,
+    "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+    "artifact_bytes_match_local": true,
+    "preserved_synthetic_files": 32
+  },
+  "local_validation": {
+    "affected_passed": 230,
+    "skipped": 5,
+    "seconds": 47.04,
+    "source_typecheck_files": 70,
+    "security_passed": 18,
+    "security_seconds": 1.07,
+    "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+    "preserved_synthetic_state_files": 32,
+    "input_files": 325,
+    "unexpected_input_drift": 0,
+    "snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
+    "wheel_sha256": "c29788ab8ce5bbfb6c85f6a242e042306249f3af1557e739a8de6fd2b5518b61",
+    "sdist_sha256": "9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26",
+    "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION"
+  },
+  "grel04_inputs": {
+    "implementation": "OPERATOR_ONLY_FIXED_ADE_L_INPUT_TEMPLATE_AND_BOUNDED_SPECTRE_COMPARISON",
+    "execution_authorized": false,
+    "native_source_copy_attested": false,
+    "native_model_bytes_attested": false,
+    "native_api_qualification": "NOT_RUN",
+    "production_provider": "NOT_IMPLEMENTED",
+    "native_dispatch": "DISABLED"
+  },
+  "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
+  "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+  "historical_grel04_hosted_ci": {
     "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39",
     "run": 37708446152,
     "job": 113088339472,
@@ -188,7 +241,7 @@
     "review_completed_utc": "2026-10-08T00:39:27.449797Z",
     "review_plus_one_observed_utc": "2026-10-08T00:39:30Z"
   },
-  "local_validation": {
+  "historical_grel04_local_validation": {
     "scoped_passed": 165,
     "adjacent_passed": 121,
     "adjacent_os_symlink_skips": 2,
@@ -213,15 +266,151 @@
     "final_checkout_snapshot_sha256": "77feae150e4a89481dd321c6e24aca00ded42693b140ff0ed0dece8dda630d38",
     "final_artifacts": "BYTE_IDENTICAL_TO_HOSTED_SOURCE_ARTIFACTS"
   },
-  "grel04_inputs": {
-    "implementation": "OPERATOR_ONLY_FIXED_ADE_L_INPUT_TEMPLATE_AND_BOUNDED_SPECTRE_COMPARISON",
-    "execution_authorized": false,
-    "native_source_copy_attested": false,
-    "native_model_bytes_attested": false,
-    "native_api_qualification": "NOT_RUN",
-    "production_provider": "NOT_IMPLEMENTED",
-    "native_dispatch": "DISABLED"
+  "shared_reservations": {
+    "implementation": "EXISTING_COUNTER_RUN_LOCK_NATIVE_JOB_MARKERS",
+    "remote_installed": false,
+    "counter_initialization": false,
+    "budget_reset_or_refund": false,
+    "production_provider": false,
+    "public_dispatch": false,
+    "bootstrap_schema": 2,
+    "legacy_schema_one_verification": true,
+    "all_own_reservations_inflight": true,
+    "immutable_identity_index": true,
+    "operator_provisioned_migration_anchor_required": true,
+    "migration_authority": "NOT_IMPLEMENTED",
+    "new_mutable_budget_total": false
   },
-  "ancestor_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/143",
-  "tested_source": "a3f5fb89840d2a83b661115509f878b63f80cf39"
+  "historical_shared_3928377": {
+    "tested_source": "3928377ea52626011edcabc17a24c342e5f2fc29",
+    "local_validation": {
+      "affected_passed": 213,
+      "skipped": 5,
+      "seconds": 19.33,
+      "source_typecheck_files": 70,
+      "mcp_full_schemas": 85,
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
+      "final_package_security": "PENDING_CORRECTED_SOURCE",
+      "security_passed": 18,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 29,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "wheel_sha256": null,
+      "sdist_sha256": null
+    },
+    "hosted_posix_passed": 50,
+    "posix_job": 113098868426,
+    "posix_run": 37711604247,
+    "independent_review": "P1_PRE32_MARKERS_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "historical_shared_52b5452": {
+    "hosted_ci": {
+      "tested_source": "52b5452664411152b84e114332507f745918800d",
+      "run": 37712345189,
+      "job": 113100964367,
+      "conclusion": "PASS",
+      "unit_passed": 2527,
+      "unit_skipped": 4,
+      "unit_warnings": 56,
+      "unit_seconds": 211.49,
+      "posix_run": 37712341835,
+      "posix_job": 113101014540,
+      "posix_passed": 56,
+      "posix_skipped": 0,
+      "posix_seconds": 0.99,
+      "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+      "artifact_bytes_match_local": true
+    },
+    "local_validation": {
+      "affected_passed": 214,
+      "skipped": 5,
+      "seconds": 20.46,
+      "source_typecheck_files": 70,
+      "mcp_full_schemas": 85,
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION",
+      "final_package_security": "PENDING_SECOND_REVIEW_CORRECTION",
+      "security_passed": 18,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 29,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "wheel_sha256": "e09be827e092ac614759c4fce42a2c4a4057f9ea4c43b95c381114e65b7a482f",
+      "sdist_sha256": "908db5556babfef92be92acffabb608db047bc7becace43600fca460ea5da819",
+      "security_seconds": 1.13
+    },
+    "independent_review": "P1_FIXED_P2_RESERVED_MARKER_PRE_BASELINE_FOUND"
+  },
+  "historical_shared_e2eb709": {
+    "tested_source": "e2eb7097c316e77891dd44169e7f2c8ebbff9e41",
+    "related_passed": 214,
+    "skipped": 5,
+    "seconds": 19.59,
+    "posix_passed": 57,
+    "posix_run": 37713363856,
+    "posix_job": 113104162309,
+    "package_security": "PASS_SOURCE_SCOPED",
+    "preserved_files": 29,
+    "wheel_sha256": "49f0cb76f9d7cf4235546bd7a3389ff4b1b0790d0f9bc3443a4fd25e34833a73",
+    "sdist_sha256": "16781d2cea8cae2731900318524ab82b96072a1925e608750b37405e83a09313",
+    "independent_review": "P2_COUNT_BYTE_RELATION_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "historical_shared_e1a6437": {
+    "tested_source": "e1a64371fc834d520b5d127e0655fd068adadf9d",
+    "local_related_passed": 220,
+    "local_skipped": 5,
+    "local_seconds": 38.77,
+    "posix_passed": 63,
+    "posix_seconds": 2.13,
+    "posix_run": 37714270397,
+    "posix_job": 113107040363,
+    "package_security": "PASS_SOURCE_SCOPED",
+    "preserved_files": 29,
+    "wheel_sha256": "a781d7e5c4f9d169e298ccb83980a6f66f2b9e1b9b71e6d3279bf2a6e7302409",
+    "sdist_sha256": "c95b88fa2e4af881d64d9ceeccee33d5a7c2f85e9a5560ccbae5491c987261c8",
+    "independent_review": "P1_IDENTITY_LOSS_FOUND_CORRECTED_NEXT_SOURCE"
+  },
+  "current_shared_source_checkpoint": {
+    "source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+    "local": {
+      "affected_passed": 230,
+      "skipped": 5,
+      "seconds": 47.04,
+      "source_typecheck_files": 70,
+      "security_passed": 18,
+      "security_seconds": 1.07,
+      "dependency_audit": "NO_KNOWN_VULNERABILITIES",
+      "preserved_synthetic_state_files": 32,
+      "input_files": 325,
+      "unexpected_input_drift": 0,
+      "snapshot_sha256": "1b25a326fc952047bb3b42ff705679c2b0a7d0656b61727e52b766af9de189f9",
+      "wheel_sha256": "c29788ab8ce5bbfb6c85f6a242e042306249f3af1557e739a8de6fd2b5518b61",
+      "sdist_sha256": "9a68547f504e39581a6a2726062522f4079d3bf5c8b21d982d43017cf7985c26",
+      "native_py26": "PASS_GRAMMAR_ONLY_NO_ASSET_EXECUTION"
+    },
+    "hosted": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "run": 37716014588,
+      "job": 113112518632,
+      "conclusion": "PASS",
+      "unit_passed": 2544,
+      "unit_skipped": 4,
+      "unit_warnings": 56,
+      "unit_seconds": 256.31,
+      "posix_run": 37716014588,
+      "posix_job": 113112518763,
+      "posix_passed": 73,
+      "posix_skipped": 0,
+      "posix_seconds": 3.05,
+      "evidence_scope": "HOSTED_WINDOWS_UBUNTU_DISPOSABLE_OS_FILES_NOT_CADENCE",
+      "artifact_bytes_match_local": true,
+      "preserved_synthetic_files": 32
+    },
+    "review": {
+      "tested_source": "ccd01ab3572d6170580a7cecf7e4cbc64a96e0eb",
+      "status": "BOT_PLUS_ONE_NO_NEW_FINDINGS_NOT_FORMAL_APPROVED",
+      "completed_utc": "2026-10-08T02:07:49.781251Z",
+      "plus_one_observed_utc": "2026-10-08T02:07:54Z"
+    }
+  }
 }

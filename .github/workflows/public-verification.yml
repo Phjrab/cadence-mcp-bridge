@@ -47,3 +47,27 @@ jobs:
         run: .venv/Scripts/python.exe -I -X utf8 scripts/verify-release-readiness.py
       - name: Curated artifacts, installed protocol, bootstrap and state preservation
         run: ./scripts/verify-package.ps1
+
+  posix-shared-reservations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: "1"
+      UV_NO_PROGRESS: "1"
+    steps:
+      - name: Checkout reviewed event commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          submodules: false
+          set-safe-directory: false
+      - name: Install fixed uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.12.6"
+          checksum: "8681d8921e7d520fb368991dcf5f9c1905b80f5bf2a265a0ed085c8d8e342477"
+          enable-cache: false
+      - name: Install locked public dependencies
+        run: uv sync --locked --all-groups --python 3.12.10
+      - name: Actual files, process death and independent POSIX flock
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py -q --basetemp "$HOME/grel-reservation-tests"

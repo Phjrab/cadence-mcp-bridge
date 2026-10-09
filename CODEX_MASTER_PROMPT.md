@@ -1,3 +1,60 @@
+## GREL-03 sealed accounting source receipt, 2026-10-08
+
+Sourceccd01ab in PR146: hosted Windows2544 PASS/four POSIX skips and Ubuntu73
+PASS/no skips. Local230 PASS/five OS skips; Ruff/mypy70/security18/audit/85 schemas,
+matching78/79-member artifacts and installed32-state preservation PASS. Actual
+Python2.6 is grammar-only. Automatic review no new findings/bot+1, not formal
+approval. Existing counter/lock with migration-bound immutable identity seals and
+conservation implemented; production provider/operator confirmation/real migration/
+terminal workers/native trust/new circuits/extraction/Sweep/clean app incomplete.
+Main553276d and unrelated OCN preserved. Generic release BLOCKED;02–07/895MiB
+continues. Native side effects0; no protected repairs/merge/GREL08/publication.
+Exact source-scoped receipts: docs/generic_release/GREL_03_SHARED_RESERVATIONS_RESULT.md.
+Historical overlays below remain history.
+
+## GREL-03 immutable reservation identity correction, 2026-10-08
+
+Second independent P1 corrected with an immutable identity index and mandatory
+hash-bound operator migration anchor, under the same existing counter/domain/lock.
+No separate mutable budget total, worker, counter initialization/reset or migration
+writer. Lost128MiB/cancelling records, missing seals/anchors, class conflicts and
+unlisted post-migration increments fail closed. Related230 PASS/five skips/47.04s,
+Ruff/mypy70 and actual Python2.6 grammar-only PASS. Final exact-source package/CI/
+review pending in PR146; older receipts below remain history. Production provider/
+real migration/renewal/native trust/jobs/extraction/Sweep/clean client incomplete.
+No native side effects/protected repairs/budget increases/merge/GREL08/publication.
+Continuous02–07/895MiB persists. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
+## GREL-03 shared-counter conservation correction, 2026-10-08
+
+Independent P1 and two P2 marker findings corrected: retain valid old22–24
+markers, reject pre-reservation values, and conserve count/byte pairs against
+fixed legacy increments plus immutable generic variable reservations. Duplicate
+slots, missing variable records and mixed legacy/new increments are tested.
+Related220 PASS/five skips/38.77s, Ruff/mypy70 and five-asset actual Python2.6
+grammar-only PASS. Final exact-source package/CI/review pending in PR146;
+earlier source/package receipts below remain historical. No native side effects,
+protected repairs/budget reset/increase/merge/GREL08/publication. Continuous
+02–07/895MiB remains; production provider/trust/jobs/extraction/Sweep/clean client
+remain incomplete. See GREL_03_SHARED_RESERVATIONS_RESULT.md.
+
+## GREL-03 shared-reservation source checkpoint, 2026-10-08
+
+Tested source52b5452 in PR146: hosted Windows2527 PASS/four POSIX skips and
+Ubuntu56 PASS/no skips. Local related213 PASS/five OS skips; Ruff/mypy70,
+security18/audit/85 schemas, matching78/79-member artifacts and installed29-state
+preservation PASS. Actual Python2.6 evidence is grammar-only, not module execution.
+Existing-domain transaction asset, compiled-input identity and corrected historical
+marker compatibility are implemented; schema2 carries it and schema1 remains readable.
+Independent P1/P2 marker corrections implemented; source52b5452 receipts
+below are historical after the latest22-marker floor correction. Related214
+PASS/five skips, Ruff/mypy70/Python2.6 grammar PASS; final package/CI/review pending. PR146 ready/unmerged.
+Production provider/operator authenticity/native jobs/extraction/Sweep/clean client
+remain incomplete; vendor trust still blocked. Continuous02–07/895MiB persists.
+No native side effects, protected repair, budget reset/increase, merge/GREL08/
+publication. Exact source-scoped history: GREL_03_SHARED_RESERVATIONS_RESULT.md.
+Historical overlays below retain their original source/scope.
+
 ## GREL-04 source/package/review checkpoint, 2026-10-08
 
 Sourcea3f5fb8 in PR145 (stacked on unmerged144): hosted2473 PASS/no skips;

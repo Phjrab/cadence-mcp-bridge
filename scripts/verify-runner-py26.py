@@ -12,7 +12,13 @@ from pathlib import Path
 
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
-ASSETS = ("_runner_bootstrap.py", "_generic_runner.py", "_runner_launcher.py", "_runner_trust.py")
+ASSETS = (
+    "_runner_bootstrap.py",
+    "_generic_runner.py",
+    "_runner_launcher.py",
+    "_runner_trust.py",
+    "_shared_reservations.py",
+)
 CHECK = (
     "import ast,sys; data=sys.stdin.read(262145); assert len(data)<=262144; "
     "ast.parse(data); sys.stdout.write('PY26_SYNTAX_OK')"

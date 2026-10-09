@@ -538,7 +538,11 @@ cadence-mcp-bridge runner verify --target existing-private-root --expected-plan-
 ~~~
 
 Review the generated manifest hash, byte inventory, private profile and target.
-The bundle contains operator paths and is private. The target must be a reviewed
+The bundle contains operator paths and is private. New bundles use schema2 and
+include the hash-bound internal shared-counter accounting asset. Schema1 history
+remains verifiable. The asset has no public command and requires a production
+provider's independent operator/job/resource attestation; it cannot authorize
+execution or initialize/reset a budget. The target must be a reviewed
 existing owned directory with no links and safe permissions. The hash directory
 is exclusive: partial installs and drift remain preserved and blocked, never
 overwritten or silently retried. Successful repeated install verifies all bytes.

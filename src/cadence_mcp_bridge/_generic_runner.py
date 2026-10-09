@@ -14,8 +14,11 @@ def trusted_directory_chain(path):
     current = os.path.abspath(path)
     while True:
         info = os.lstat(current)
-        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, os.getuid())
-                or info.st_mode & 18):
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid not in (0, os.getuid())
+            or info.st_mode & 18
+        ):
             raise ValueError("runner_directory_permissions")
         parent = os.path.dirname(current)
         if parent == current:
@@ -45,11 +48,13 @@ def main():
     if len(raw) > 262144 or hashlib.sha256(raw).hexdigest() != sys.argv[2]:
         raise ValueError("runner_manifest_binding")
     manifest = json.loads(raw.decode("ascii"))
+    if type(manifest.get("schema_version")) is not int or manifest["schema_version"] != 2:
+        raise ValueError("runner_manifest_version")
     if set(manifest.get("files", {})) != set(
-        ("profile.json", "probe.py", "runner.py", "launcher.py")
+        ("profile.json", "probe.py", "runner.py", "launcher.py", "reservations.py")
     ):
         raise ValueError("runner_manifest_shape")
-    for name in ("profile.json", "probe.py", "runner.py", "launcher.py"):
+    for name in ("profile.json", "probe.py", "runner.py", "launcher.py", "reservations.py"):
         path = directory + "/" + name
         info = os.lstat(path)
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or os.path.realpath(path) != path:
@@ -67,7 +72,7 @@ def main():
         }:
             raise ValueError("runner_asset_drift")
     if set(os.listdir(directory)) != set(
-        ("profile.json", "probe.py", "runner.py", "launcher.py", "manifest.json")
+        ("profile.json", "probe.py", "runner.py", "launcher.py", "reservations.py", "manifest.json")
     ):
         raise ValueError("runner_inventory")
     import probe
