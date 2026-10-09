@@ -14,7 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, TypeAdapter, field_validator, model_validator
+from pydantic import Field, PrivateAttr, TypeAdapter, field_validator, model_validator
 
 from cadence_mcp_bridge.environments import _closed_json
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -59,6 +59,8 @@ class NumericRegion(VariableModel):
 
 
 class OperatorGrant(VariableModel):
+    _source_document: bytes | None = PrivateAttr(default=None)
+
     schema_version: Literal[1]
     grant_id: LogicalId
     authorization_source: Literal["explicit_operator_record"]
@@ -198,7 +200,23 @@ def load_grant(path: Path, expected_sha256: str) -> tuple[OperatorGrant, str]:
     digest = hashlib.sha256(data).hexdigest()
     if digest != expected_sha256:
         raise OperationRejected("stale_grant_digest")
-    return GRANT_DOCUMENT.validate_json(data), digest
+    grant = GRANT_DOCUMENT.validate_json(data)
+    grant._source_document = data
+    return grant, digest
+
+
+def verify_grant_binding(grant: OperatorGrant, digest: str) -> None:
+    # Loaded retained documents keep their exact byte digest. A direct caller may
+    # supply canonical JSON's digest, but never an unrelated reviewed hash.
+    raw = grant._source_document
+    if raw is None:
+        matched = digest == canonical_digest(grant)
+    else:
+        matched = hashlib.sha256(raw).hexdigest() == digest and canonical_digest(
+            GRANT_DOCUMENT.validate_json(raw)
+        ) == canonical_digest(grant)
+    if not matched:
+        raise OperationRejected("grant_document_digest_mismatch")
 
 
 def match_grant(context: ExecutionContext, grant: OperatorGrant, now: int) -> None:
@@ -232,6 +250,7 @@ def prepare_plan(
     request: OperationRequest,
     now: int,
 ) -> OperationPlan:
+    verify_grant_binding(grant, digest)
     match_grant(context, grant, now)
     if request.design_id not in grant.design_ids or "submit" not in grant.actions:
         raise OperationRejected("authority_scope_denied")

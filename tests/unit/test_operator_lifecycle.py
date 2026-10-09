@@ -26,6 +26,7 @@ from cadence_mcp_bridge.operator_operations import (
     OperationRejected,
     prepare_plan,
 )
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 operator = operator_fixture
 
@@ -114,7 +115,7 @@ class SyntheticProvider:
 @pytest.fixture
 def lifecycle(operator):
     context, grant, request, settings = operator
-    plan = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    plan = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     provider = SyntheticProvider(context)
     store = AnalysisStore(context.binding.analysis_journal)
     return OperatorLifecycle(context, store, provider), provider, grant, request, plan, settings
@@ -125,7 +126,9 @@ async def test_missing_provider_cannot_create_journal_or_lock(lifecycle):
     coordinator, _, grant, request, plan, _ = lifecycle
     blocked = OperatorLifecycle(coordinator.context, coordinator.store)
     with pytest.raises(OperationRejected, match="Operator operation rejected") as error:
-        await blocked.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+        await blocked.submit(
+            str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert error.value.reason == "trusted_native_provider_required"
     assert not coordinator.store.path.exists() and not coordinator.context.lock_path.exists()
 
@@ -137,14 +140,18 @@ async def test_response_loss_restart_is_lookup_only_no_double_charge(lifecycle, 
     identity = str(uuid4())
     provider.loss = loss
     with pytest.raises(ConnectionError):
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
     used = (provider.attempts, provider.reserved)
     restarted = OperatorLifecycle(
         coordinator.context, AnalysisStore(coordinator.store.path), provider
     )
     for _ in range(3):
-        result = await restarted.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        result = await restarted.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
         assert result.progress.phase == ("RESERVED" if loss == "after" else "UNKNOWN_OUTCOME")
     assert provider.calls == [identity] and (provider.attempts, provider.reserved) == used
     assert provider.authorizations == 1
@@ -154,13 +161,13 @@ async def test_response_loss_restart_is_lookup_only_no_double_charge(lifecycle, 
 async def test_two_batches_same_provider_preserve_existing_cumulative_usage(lifecycle):
     coordinator, provider, grant, request, plan, _ = lifecycle
     first = str(uuid4())
-    await coordinator.submit(first, grant, "c" * 64, request, plan.plan_sha256)
+    await coordinator.submit(first, grant, canonical_digest(grant), request, plan.plan_sha256)
     provider.jobs[first] = provider.observe(first, plan, "SUCCEEDED", 2)
     assert (await coordinator.reconcile(first, plan.plan_sha256)).progress.phase == "SUCCEEDED"
     second = str(uuid4())
     await OperatorLifecycle(
         coordinator.context, AnalysisStore(coordinator.store.path), provider
-    ).submit(second, grant, "c" * 64, request, plan.plan_sha256)
+    ).submit(second, grant, canonical_digest(grant), request, plan.plan_sha256)
     assert provider.calls == [first, second]
     assert provider.attempts == 84 and provider.reserved == 9798942720 + 2 * 134217728
     assert provider.grant_used == 2
@@ -191,7 +198,9 @@ async def test_authoritative_accounting_denial_precedes_admission(lifecycle, cha
     coordinator, provider, grant, request, plan, _ = lifecycle
     provider.gate_changes = changes
     with pytest.raises(OperationRejected) as error:
-        await coordinator.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert error.value.reason == reason
     assert not coordinator.store.path.exists() and not provider.calls
     assert (provider.attempts, provider.reserved) == (82, 9798942720)
@@ -202,7 +211,9 @@ async def test_completed_read_and_retry_survive_expired_grant(lifecycle):
     coordinator, provider, grant, request, plan, settings = lifecycle
     identity = str(uuid4())
     provider.phase = "SUCCEEDED"
-    result = await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    result = await coordinator.submit(
+        identity, grant, canonical_digest(grant), request, plan.plan_sha256
+    )
     expired = grant.model_copy(update={"status": "revoked", "valid_until_unix": 2})
     assert (
         await coordinator.submit(identity, expired, "d" * 64, request, plan.plan_sha256) == result
@@ -219,10 +230,14 @@ async def test_pending_local_cancel_wins_before_send_and_replay_does_not_dispatc
     coordinator, provider, grant, request, plan, _ = lifecycle
     identity = str(uuid4())
     assert coordinator.store.admit_operation(identity, plan)
-    result = await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+    result = await coordinator.cancel_pending(
+        identity, plan.plan_sha256, grant, canonical_digest(grant)
+    )
     assert result.progress.phase == "CANCELLED"
     assert (
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     ) == result
     assert provider.calls == [] and provider.cancellations == 1 and provider.reserved == 9798942720
 
@@ -231,10 +246,10 @@ async def test_pending_local_cancel_wins_before_send_and_replay_does_not_dispatc
 async def test_remote_pending_cancel_retains_consumed_reservation(lifecycle):
     coordinator, provider, grant, request, plan, _ = lifecycle
     identity = str(uuid4())
-    await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    await coordinator.submit(identity, grant, canonical_digest(grant), request, plan.plan_sha256)
     before = provider.reserved
     assert (
-        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, canonical_digest(grant))
     ).progress.phase == "CANCELLED"
     assert provider.cancellations == 1 and provider.reserved == before
 
@@ -245,9 +260,9 @@ async def test_active_or_unknown_cancel_never_calls_termination(lifecycle, phase
     coordinator, provider, grant, request, plan, _ = lifecycle
     identity = str(uuid4())
     provider.phase = phase
-    await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    await coordinator.submit(identity, grant, canonical_digest(grant), request, plan.plan_sha256)
     with pytest.raises(OperationRejected) as error:
-        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, canonical_digest(grant))
     assert error.value.reason == "pending_state_unconfirmed_or_active"
     assert provider.cancellations == 0
 
@@ -332,7 +347,9 @@ async def test_cancelled_coroutine_keeps_intent_for_restart(lifecycle):
 
     provider.accept = cancelled
     with pytest.raises(asyncio.CancelledError):
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
     assert (
         await coordinator.reconcile(identity, plan.plan_sha256)
@@ -353,7 +370,9 @@ async def test_expiry_while_awaiting_authorization_denies_admission(lifecycle, m
 
     provider.authorize = delayed
     with pytest.raises(OperationRejected) as error:
-        await coordinator.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert error.value.reason == "authority_inactive"
     assert not coordinator.store.path.exists() and not provider.calls
 
@@ -373,7 +392,9 @@ async def test_wrong_remote_identity_retains_intent_for_lookup(lifecycle, field,
     provider.wrong_reply = {field: value}
     identity = str(uuid4())
     with pytest.raises(OperationRejected) as error:
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     assert error.value.reason == "provider_operation_identity_mismatch"
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
     assert provider.calls == [identity]
@@ -396,13 +417,13 @@ async def test_shared_domain_lock_serializes_clients_while_provider_awaits(lifec
 
     provider.accept = held
     task = asyncio.create_task(
-        coordinator.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+        coordinator.submit(str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256)
     )
     await entered.wait()
     try:
         with pytest.raises(RuntimeRejected):
             await OperatorLifecycle(coordinator.context, coordinator.store, provider).submit(
-                str(uuid4()), grant, "c" * 64, request, plan.plan_sha256
+                str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256
             )
         assert provider.authorizations == 1
     finally:
@@ -416,12 +437,14 @@ async def test_two_client_journals_use_same_authoritative_provider_identity(life
 
     coordinator, provider, grant, request, plan, _ = lifecycle
     identity = str(uuid4())
-    first = await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    first = await coordinator.submit(
+        identity, grant, canonical_digest(grant), request, plan.plan_sha256
+    )
     journal = coordinator.store.path.with_name("second-client.sqlite3")
     binding = coordinator.context.binding.model_copy(update={"analysis_journal": journal})
     context = replace(coordinator.context, binding=binding)
     second = await OperatorLifecycle(context, AnalysisStore(journal), provider).submit(
-        identity, grant, "c" * 64, request, plan.plan_sha256
+        identity, grant, canonical_digest(grant), request, plan.plan_sha256
     )
     assert first.plan == second.plan and first.operation_id == second.operation_id
     assert provider.attempts == 83 and provider.reserved == 9798942720 + 134217728
@@ -495,7 +518,7 @@ async def test_locally_admitted_cancellation_observes_other_clients_active_job(l
     coordinator.store.admit_operation(identity, plan)
     provider.jobs[identity] = provider.observe(identity, plan, "RUNNING")
     with pytest.raises(OperationRejected) as error:
-        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, canonical_digest(grant))
     assert error.value.reason == "pending_state_unconfirmed_or_active"
     assert provider.cancellations == 0
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "RUNNING"
@@ -514,10 +537,12 @@ async def test_pending_cancellation_response_loss_leaves_lookup_only_intent(life
 
     provider.cancel_pending = lost
     with pytest.raises(ConnectionError):
-        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, canonical_digest(grant))
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
     assert (
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     ).progress.phase == "CANCELLED"
     assert provider.calls == [] and provider.cancellations == 1
     assert provider.reserved == 9798942720
@@ -550,15 +575,21 @@ async def test_crash_after_atomic_admission_before_send_can_be_tombstoned(lifecy
 
     monkeypatch.setattr(coordinator.store, "admit_operation", committed_then_crashed)
     with pytest.raises(SystemExit):
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
     record = coordinator.read(identity, plan.plan_sha256)
     assert record.progress.phase == "UNKNOWN_OUTCOME" and record.event_count == 2
     assert not provider.calls and not provider.jobs
     restarted = OperatorLifecycle(
         coordinator.context, AnalysisStore(coordinator.store.path), provider
     )
-    assert (await restarted.submit(identity, grant, "c" * 64, request, plan.plan_sha256)) == record
-    cancelled = await restarted.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+    assert (
+        await restarted.submit(identity, grant, canonical_digest(grant), request, plan.plan_sha256)
+    ) == record
+    cancelled = await restarted.cancel_pending(
+        identity, plan.plan_sha256, grant, canonical_digest(grant)
+    )
     assert cancelled.progress.phase == "CANCELLED" and provider.cancellations == 1
     assert (provider.attempts, provider.reserved) == (82, 9798942720)
     assert not provider.calls
@@ -574,14 +605,16 @@ async def test_absent_lookup_never_authorizes_cancel_of_actual_active_remote_job
     provider.loss = "after"
     provider.phase = "RUNNING"
     with pytest.raises(ConnectionError):
-        await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await coordinator.submit(
+            identity, grant, canonical_digest(grant), request, plan.plan_sha256
+        )
 
     async def missing(identity, plan):
         return None
 
     provider.lookup = missing
     with pytest.raises(OperationRejected) as error:
-        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, "c" * 64)
+        await coordinator.cancel_pending(identity, plan.plan_sha256, grant, canonical_digest(grant))
     assert error.value.reason == "remote_pending_state_denied"
     assert provider.jobs[identity].progress.phase == "RUNNING"
     assert coordinator.read(identity, plan.plan_sha256).progress.phase == "UNKNOWN_OUTCOME"
@@ -625,13 +658,17 @@ async def test_disk_floor_covers_inflight_and_new_reservation(lifecycle, extra_h
     identity = str(uuid4())
     if extra_headroom == 0:
         with pytest.raises(OperationRejected) as error:
-            await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+            await coordinator.submit(
+                identity, grant, canonical_digest(grant), request, plan.plan_sha256
+            )
         assert error.value.reason == "authoritative_disk_floor_denied"
         assert not coordinator.store.path.exists() and not provider.calls
         assert (provider.attempts, provider.reserved) == (82, 9798942720)
     else:
         assert (
-            await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+            await coordinator.submit(
+                identity, grant, canonical_digest(grant), request, plan.plan_sha256
+            )
         ).progress.phase == "RESERVED"
         assert provider.calls == [identity]
 
@@ -686,7 +723,9 @@ async def test_remote_replay_in_second_local_journal_after_capacity_exhausted(li
 
     coordinator, provider, grant, request, plan, _ = lifecycle
     identity = str(uuid4())
-    first = await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    first = await coordinator.submit(
+        identity, grant, canonical_digest(grant), request, plan.plan_sha256
+    )
     provider.gate_changes.update(cumulative_attempts=500, cumulative_reserved_bytes=10737418240)
     second_path = tmp_path / "second-client.sqlite3"
     second_context = replace(
@@ -695,7 +734,9 @@ async def test_remote_replay_in_second_local_journal_after_capacity_exhausted(li
     )
     second = OperatorLifecycle(second_context, AnalysisStore(second_path), provider)
     counts = (provider.attempts, provider.reserved, provider.authorizations, len(provider.calls))
-    replay = await second.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    replay = await second.submit(
+        identity, grant, canonical_digest(grant), request, plan.plan_sha256
+    )
     assert replay.progress == first.progress
     assert (
         provider.attempts,
@@ -704,7 +745,7 @@ async def test_remote_replay_in_second_local_journal_after_capacity_exhausted(li
         len(provider.calls),
     ) == counts
     with pytest.raises(OperationRejected) as error:
-        await second.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+        await second.submit(str(uuid4()), grant, canonical_digest(grant), request, plan.plan_sha256)
     assert error.value.reason == "authoritative_budget_exhausted"
     assert (provider.attempts, provider.reserved, len(provider.calls)) == (
         counts[0],
@@ -727,5 +768,21 @@ async def test_remote_identity_conflict_never_creates_second_journal(lifecycle, 
     )
     second = OperatorLifecycle(context, AnalysisStore(path), provider)
     with pytest.raises(OperationRejected):
-        await second.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+        await second.submit(identity, grant, canonical_digest(grant), request, plan.plan_sha256)
     assert not path.exists() and not provider.authorizations and not provider.calls
+
+
+@pytest.mark.asyncio
+async def test_forged_cancel_action_rejected_before_provider(lifecycle):
+    coordinator, provider, grant, request, _, _ = lifecycle
+    narrow = grant.model_copy(update={"actions": ("submit",)})
+    digest = canonical_digest(narrow)
+    plan = prepare_plan(coordinator.context, narrow, digest, request, int(time.time()))
+    identity = str(uuid4())
+    coordinator.store.admit_operation(identity, plan)
+    broader = narrow.model_copy(update={"actions": ("submit", "cancel_pending")})
+    with pytest.raises(OperationRejected) as error:
+        await coordinator.cancel_pending(identity, plan.plan_sha256, broader, digest)
+    assert error.value.reason == "grant_document_digest_mismatch"
+    assert provider.authorizations == 0 and provider.cancellations == 0
+    assert provider.reserved == 9798942720

@@ -1,3 +1,14 @@
+## PR144 final identity/SQLite correction checkpoint, 2026-10-09
+
+Grant object/document hash binding is enforced before planning and pending
+cancellation. Exact historic v1/v2 document hashes are preserved. Hosted da10e616
+push failed concurrent admission on a vanished SQLite sidecar; one-lstat guard
+fix preserves hardlink/type rejection.131 related local tests, Ruff/mypy68 and
+installed19-file reinstall/uninstall conservation PASS. Final hosted CI/review
+pending; do not merge on the earlier passing PR check alone. General native
+acceptance remains a separate unmerged PR152 track. Direct GREL02–08/16GiB and
+conditional normal-merge authority continue; no tag/Release/upload consent.
+
 ## PR144 remote identity recovery checkpoint, 2026-10-09
 
 Fixed remote duplicate lookup now precedes fresh-spend capacity checks, preserving
