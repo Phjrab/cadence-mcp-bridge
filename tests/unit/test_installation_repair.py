@@ -366,3 +366,39 @@ def test_held_descriptor_rejects_drift_after_path_snapshot(tmp_path, monkeypatch
             "expected_plan_sha256": prepared["plan_sha256"],
             "operator_authority": "SYNTHETIC-ONLY"})
     assert stat.S_IMODE(target.stat().st_mode) == 0o777
+
+
+@pytest.mark.skipif(os.name != "posix", reason="requires held Linux descriptor/ACL operations")
+def test_descriptor_snapshot_rejects_content_change_during_acl_collection(tmp_path, monkeypatch):
+    if shutil.which("getfacl") is None:
+        pytest.skip("ACL utility absent")
+    target = tmp_path / "code"
+    target.write_bytes(b"synthetic immutable code")
+    target.chmod(0o777)
+    prepared = repair.plan({
+        "installation_roots": [str(tmp_path)], "paths": [str(target)], "links": [],
+        "profile_sha256": "a" * 64, "resource_lock": str(tmp_path / "lock"),
+    })
+    real_acl = repair.acl
+    reads = 0
+
+    def race(fd):
+        nonlocal reads
+        value = real_acl(fd)
+        reads += 1
+        if reads == 3:
+            saved = target.stat()
+            target.write_bytes(b"x" * len(target.read_bytes()))
+            os.utime(target, ns=(saved.st_atime_ns, saved.st_mtime_ns))
+        return value
+
+    def denied(*args):
+        raise AssertionError("intra-snapshot drift reached chmod")
+
+    monkeypatch.setattr(repair, "acl", race)
+    monkeypatch.setattr(repair.os, "fchmod", denied)
+    with pytest.raises(ValueError, match="snapshot_race"):
+        repair._mutate_locked({"plan": prepared["plan"],
+            "expected_plan_sha256": prepared["plan_sha256"],
+            "operator_authority": "SYNTHETIC-ONLY"})
+    assert stat.S_IMODE(target.stat().st_mode) == 0o777

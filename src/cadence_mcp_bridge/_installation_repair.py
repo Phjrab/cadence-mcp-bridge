@@ -108,6 +108,18 @@ def snapshot_descriptor(path, fd):
         "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
         "acl": acl(fd),
     }
+    # ACL tools run while the descriptor is held. Reject changes during that
+    # observation, including restored mtimes or unchanged file length.
+    trailing = os.fstat(fd)
+    stability = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                 "st_size", "st_mtime", "st_ctime")
+    if any(getattr(info, key) != getattr(trailing, key) for key in stability):
+        raise ValueError("snapshot_race")
+    if result["sha256"] is not None and file_hash(fd) != result["sha256"]:
+        raise ValueError("snapshot_race")
+    final = os.fstat(fd)
+    if any(getattr(trailing, key) != getattr(final, key) for key in stability):
+        raise ValueError("snapshot_race")
     check = os.lstat(path)
     if (check.st_dev, check.st_ino, check.st_mode) != (
         info.st_dev, info.st_ino, info.st_mode
