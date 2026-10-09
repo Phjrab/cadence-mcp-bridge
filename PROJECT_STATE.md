@@ -1,3 +1,29 @@
+## GREL03 integration refresh, 2026-10-09
+
+PR142 and143 normally merged; latest main6ad3c1781c986e3e23184cc900b56e5b39d0e892.
+This branch integrates parent routing/context checks while retaining its own short
+Windows test path, installed lifecycle/bootstrap and state-preservation gates.
+The synthetic PowerShell lock-holder readiness wait retains parent's45s allowance;
+production lock denial is unchanged. Current direct user permits conditional normal
+related PR merges, continuousGREL02–08 and current-VM16GiB, with consumed records
+preserved. Dated exclusions below are history. Public tag/Release still unapproved.
+Refreshed affected tests, Ruff/mypy68 and exact isolated package/context/bootstrap/
+reinstall/uninstall19-file preservation PASS; hosted exact-head checks and final
+review remain required. Old a7fcf45 receipts remain history.
+
+## GREL02 integration refresh, 2026-10-09
+
+PR142 normally merged as239a1949923fdae210d50e1232b6b7b41e60c7de after final
+review and exact hosted checks. PR143 retargeted to main and receives that parent
+through a normal merge without history rewrite. Routing/hostname/journal snapshot
+fixes and installed context verifier are preserved. Affected85 tests PASS/two
+OS skips, Ruff/mypy66 and exact isolated package/context/CLI/uninstall PASS.
+Bootstrap behavior is covered by the affected tests; this refreshed artifact did
+not run a reinstall-state preservation test. Final hosted checks and review still required before PR143 merge.
+No new VM simulation or reservation from this repository integration refresh.
+Earlier dated restrictions below are historical under the latest direct user's
+conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+
 ## Final durable lifecycle source checkpoint, 2026-10-08
 
 Tested sourcea7fcf45: hosted2423 PASS/no skips/56 warnings; local153 related PASS/
