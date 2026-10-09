@@ -21,7 +21,7 @@ from cadence_mcp_bridge import __main__ as cli
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.config import BridgeConfig, OperatorTransport
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
-from cadence_mcp_bridge.onboarding import export_client_config
+from cadence_mcp_bridge.onboarding import OnboardingRejected, export_client_config
 from cadence_mcp_bridge.runtime_context import (
     RuntimeRejected,
     create_operator_service,
@@ -530,8 +530,197 @@ def test_explicit_legacy_launch_ignores_inherited_operator_mode(
         if key.startswith("CADENCE_MCP_"):
             monkeypatch.delenv(key)
     monkeypatch.setenv("CADENCE_MCP_RUNTIME_MODE", "operator")
+    monkeypatch.setenv("CADENCE_MCP_RUNTIME_SETTINGS_PATH", "unused-operator-settings.json")
+    monkeypatch.setenv("CADENCE_MCP_RUNTIME_CONTEXT_ID", "operator-session")
     selected = []
     factory = MagicMock(side_effect=lambda config: selected.append(config) or MagicMock())
     monkeypatch.setattr(server, "OpenSshBackend", factory)
     server.create_default_server()
     assert selected[0].runtime_mode == "legacy_reference"
+    assert selected[0].runtime_settings_path is None
+    assert selected[0].runtime_context_id is None
+
+
+@pytest.mark.parametrize("conflict", [False, True])
+@pytest.mark.parametrize("suffix", ["", "."])
+def test_case_variant_hostnames_share_domain_and_policy(tmp_path, conflict, suffix):
+    settings = make_settings(tmp_path, shared=True)
+    data = json.loads(settings.read_bytes())
+    binding = data["contexts"][1]
+    env_path = Path(binding["environment_profile"])
+    env = json.loads(env_path.read_bytes())
+    env["host"]["hostname"] = env["host"]["hostname"].upper() + suffix
+    if conflict:
+        binding["ledger_ref"] = "different-ledger"
+    env_path.write_text(json.dumps(env), encoding="utf-8")
+    binding["environment_sha256"] = hashlib.sha256(env_path.read_bytes()).hexdigest()
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    if conflict:
+        with pytest.raises(RuntimeRejected) as error:
+            load_runtime(settings)
+        assert error.value.reason == "shared_resource_policy_conflict"
+    else:
+        first, second = load_runtime(settings)
+        assert first.resource_domain_sha256 == second.resource_domain_sha256
+        assert first.lock_path == second.lock_path
+        with resource_lock(first), pytest.raises(RuntimeRejected), resource_lock(second):
+            pytest.fail("hostname case bypassed the shared lock")
+
+
+@pytest.mark.parametrize("reserved", ["analysis", "sweep", "lock"])
+def test_export_denies_other_context_reserved_paths(settings, reserved):
+    first, second = load_runtime(settings)
+    output = {
+        "analysis": second.binding.analysis_journal,
+        "sweep": second.binding.sweep_journal,
+        "lock": second.lock_path,
+    }[reserved]
+    assert not output.exists()
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            output,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("cross_context", [False, True])
+def test_hardlinked_journals_rejected_without_mutating_state(settings, cross_context):
+    first, second = load_runtime(settings)
+    original = first.binding.analysis_journal
+    alias = second.binding.analysis_journal if cross_context else first.binding.sweep_journal
+    original.write_bytes(b"retained synthetic journal")
+    os.link(original, alias)
+    with pytest.raises(RuntimeRejected) as error:
+        load_runtime(settings)
+    assert error.value.reason == "journal_invalid"
+    assert original.read_bytes() == alias.read_bytes() == b"retained synthetic journal"
+
+
+@pytest.mark.parametrize("field", ["analysis_journal", "sweep_journal"])
+def test_export_denies_lexical_alias_of_other_context_journal(settings, field):
+    first, second = load_runtime(settings)
+    reserved = getattr(second.binding, field)
+    sub = reserved.parent / "lexical-sub"
+    sub.mkdir()
+    data = json.loads(settings.read_bytes())
+    data["contexts"][1][field] = str(sub / ".." / reserved.name)
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            reserved,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert not reserved.exists()
+
+
+def test_export_accepts_selected_context_normalized_journals(settings):
+    first = load_runtime(settings)[0]
+    sub = first.binding.analysis_journal.parent / "lexical-selected"
+    sub.mkdir()
+    data = json.loads(settings.read_bytes())
+    for field in ("analysis_journal", "sweep_journal"):
+        path = getattr(first.binding, field)
+        data["contexts"][0][field] = str(sub / ".." / path.name)
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    output = first.binding.analysis_journal.parent / "normalized-client.json"
+    export_client_config(
+        first.binding.environment_profile,
+        first.binding.design_registry,
+        first.binding.pdk_registry,
+        first.binding.analysis_journal,
+        output,
+        format="mcp-json",
+        sweep_journal=first.binding.sweep_journal,
+        runtime_settings=settings,
+        context_id=first.binding.context_id,
+    )
+    assert output.is_file()
+    assert not first.binding.analysis_journal.exists()
+    assert not first.binding.sweep_journal.exists()
+
+
+def test_export_binds_one_complete_runtime_snapshot(settings, monkeypatch):
+    import cadence_mcp_bridge.runtime_context as runtime
+
+    first, second = load_runtime(settings)
+    reserved = second.binding.analysis_journal
+    original = runtime.load_runtime
+    calls = []
+
+    def rewritten_after_read(path):
+        contexts = original(path)
+        calls.append(path)
+        data = json.loads(path.read_bytes())
+        data["contexts"] = data["contexts"][:1]
+        replacement = path.with_suffix(".replacement")
+        replacement.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(replacement, path)
+        return contexts
+
+    monkeypatch.setattr(runtime, "load_runtime", rewritten_after_read)
+    with pytest.raises(OnboardingRejected):
+        export_client_config(
+            first.binding.environment_profile,
+            first.binding.design_registry,
+            first.binding.pdk_registry,
+            first.binding.analysis_journal,
+            reserved,
+            format="mcp-json",
+            sweep_journal=first.binding.sweep_journal,
+            runtime_settings=settings,
+            context_id=first.binding.context_id,
+        )
+    assert len(calls) == 1
+    assert not reserved.exists()
+
+
+def test_cli_resolve_reports_same_selected_snapshot(settings, monkeypatch, capsys):
+    import cadence_mcp_bridge.runtime_context as runtime
+
+    first = load_runtime(settings)[0]
+    design_id = first.contracts.designs.designs[0].design_id
+    original = runtime.load_runtime
+    calls = []
+
+    def replaced_after_load(path):
+        found = original(path)
+        calls.append(path)
+        replacement = path.with_suffix(".next")
+        replacement.write_text('{"invalid_new_snapshot": true}', encoding="utf-8")
+        os.replace(replacement, path)
+        return found
+
+    monkeypatch.setattr(runtime, "load_runtime", replaced_after_load)
+    assert (
+        cli.main(
+            [
+                "runtime",
+                "resolve",
+                "--settings",
+                str(settings),
+                "--context",
+                first.binding.context_id,
+                "--design-id",
+                design_id,
+            ]
+        )
+        == 0
+    )
+    observed = json.loads(capsys.readouterr().out)
+    assert observed["context_sha256"] == first.context_sha256
+    assert len(calls) == 1
