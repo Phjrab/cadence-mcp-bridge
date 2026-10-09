@@ -1,3 +1,26 @@
+## Reviewed parent integration checkpoint, 2026-10-09
+
+Current direct user authority permits continuous GREL02-08 and conditional normal
+related PR integration. Managed-VM16GiB/Spectre500/corrections20 retains all actual
+consumption and history; it is not a fresh-user default. Publication of any exact
+candidate still needs final public approval. Earlier exclusions below are history.
+
+PR146 normally integrated current main/lifecycle/grant-byte binding and PR145's
+closed Spectre scope correction. Both sides of documentation conflicts are preserved.
+Existing sealed shared-reservation implementation is unchanged. Four earlier review
+issues are covered by post-reservation historical marker floors, exact legacy
+count/byte conservation and independent per-operation identity seals; missing jobs/
+seals fail closed even for128MiB or cancelling variable deltas. No new ledger,
+reservation refund, operator approval or native worker activation is introduced.
+Local304 related tests PASS/five POSIX/symlink skips, Ruff/mypy70 PASS. An initial
+console-script collection missed the repository script package; rerun under the
+repository import path passed without source changes. Exact package/public hosted
+checks and refreshed automated review follow. This is still an unqualified provider
+foundation; actual terminal/provider/policy confirmation and16GiB managed VM
+execution are separately tracked in draftPR152. No new VM execution/reservation.
+Latest checked main eda060e; PR145667e007 final review/CI remains pending. Ordered
+merge must wait for that parent. Clean actual operator/app and exactRC remain BLOCKED.
+
 ## Closed Spectre scope dialect correction, 2026-10-09
 
 The second independent PR145 P1 identified library/section and keyword-case scopes
