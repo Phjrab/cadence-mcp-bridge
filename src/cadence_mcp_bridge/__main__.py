@@ -86,6 +86,24 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--expected-grant-sha256", required=True)
         if name == "plan":
             command.add_argument("--request", type=Path, required=True)
+    ade = subparsers.add_parser("ade-input", help="Local ADE L artifacts; no native execution.")
+    ade_actions = ade.add_subparsers(dest="ade_action", required=True)
+    ade_actions.add_parser("schema")
+    for name in ("compile", "verify-input"):
+        command = ade_actions.add_parser(name)
+        command.add_argument("--settings", type=Path, required=True)
+        command.add_argument("--context", required=True)
+        command.add_argument("--grant", type=Path, required=True)
+        command.add_argument("--expected-grant-sha256", required=True)
+        command.add_argument("--request", type=Path, required=True)
+        command.add_argument("--registration", type=Path, required=True)
+        command.add_argument("--expected-registration-sha256", required=True)
+        command.add_argument("--operation-id", required=True)
+        command.add_argument("--expected-plan-sha256", required=True)
+        if name == "compile":
+            command.add_argument("--output", type=Path, required=True)
+        else:
+            command.add_argument("--native-input", type=Path, required=True)
     runner = subparsers.add_parser(
         "runner", help="Fixed installed runner content workflow; no simulation."
     )
@@ -159,6 +177,49 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "ade-input":
+        from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, operator_inputs
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+
+        try:
+            if arguments.ade_action == "schema":
+                ade_result = AdeExecutionRegistration.model_json_schema()
+            else:
+                ade_result = operator_inputs(
+                    arguments.settings,
+                    arguments.context,
+                    arguments.grant,
+                    arguments.expected_grant_sha256,
+                    arguments.request,
+                    arguments.registration,
+                    arguments.expected_registration_sha256,
+                    arguments.operation_id,
+                    arguments.expected_plan_sha256,
+                    getattr(arguments, "output", None),
+                    getattr(arguments, "native_input", None),
+                )
+        except (
+            OSError,
+            ValueError,
+            ConfigurationError,
+            InvalidInputError,
+            RecursionError,
+        ) as failure:
+            print(
+                json.dumps(
+                    {
+                        "status": "ADE_INPUT_REJECTED",
+                        "reason": failure.reason
+                        if isinstance(failure, OperationRejected)
+                        else "ade_document_invalid",
+                        "execution_authorized": False,
+                        "remote_contact": False,
+                    }
+                )
+            )
+            return 1
+        print(json.dumps(ade_result, sort_keys=True))
+        return 0
     if arguments.command == "operation":
         from cadence_mcp_bridge import operator_operations as operations
         from cadence_mcp_bridge.runtime_context import load_runtime

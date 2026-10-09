@@ -1,3 +1,86 @@
+## Closed static-input grammar checkpoint, 2026-10-09
+
+The final control boundary accepts only ordinary port-list component instances,
+plain/parenthesized lowercase subckt and inline-subckt declarations, matched ends,
+global/save node lists and named options/info assignments as static statements.
+Unknown named commands reject before static-hash comparison. Reserved analysis
+masters also reject in port-list form, including PSP/QPSP/HBSP/QPSTB and keyword
+case variants. Protection pragmas reject before comments are discarded. Unsupported
+model/initial-condition dialects fail closed rather than being promoted by a hash.
+The standard VM's existing PDK includes and exact source/model fingerprints remain
+separately bound; no PDK/vendor/source contents were changed.
+
+Local237 related input/operations/lifecycle tests PASS; Ruff and mypy69 PASS.
+Exact isolated package/CLI/SDK/bootstrap/reinstall/uninstall PASS with19 operator
+state files preserved. The corresponding common native parser in draftPR152 has
+actual UID500/Python2.6 synthetic coverage and preserves all six real registrations;
+this parent feature does not itself establish live execution authority. Hosted
+final-head CI and independent review remain required. Release BLOCKED, no RC or
+publication. Latest direct02–08/16GiB/conditional merge authority remains active;
+older historical exclusions below do not override it.
+
+## Extracted-control case and hidden-analysis correction, 2026-10-09
+
+The third independent PR145 P1 exposed PARAMETERS and uppercase DC/AC/TRAN being
+misclassified as static despite overrides/extra analyses. The comparator now rejects
+case variants of extracted controls plus unsupported noise/periodic/sweep/alter
+analysis controls before static fingerprint comparison. Regression explicitly binds
+the harmful extra statement into the same approved static hash; equality cannot
+prove the control is harmless. Supported lowercase DC/AC/TRAN remains unchanged.
+Local238 related tests/Ruff/mypy69 and exact installed CLI/SDK/bootstrap/reinstall/
+uninstall19-state preservation PASS. Final hosted CI and independent review remain
+required before conditionally authorized normal merge. Earlier667e007 CI successes
+remain historical because its review found this blocker. No new execution or quota
+reservation occurs; current GREL02-08/retained16GiB authority is unchanged and exact
+public release approval remains separate. Equivalent common native correction is
+validated on ordinary-user actual Python2.6 in draftPR152; no runtime update yet.
+
+## Closed Spectre scope dialect correction, 2026-10-09
+
+The second independent PR145 P1 identified library/section and keyword-case scopes
+that could remain opaque while controls were extracted globally. Supported parsing
+now permits only lowercase named subckt/inline-subckt scopes, and rejects other
+library/section/protected/conditional/braced/language-switch constructs and scope
+keyword case variants before comparing fingerprints. DC/AC/TRAN regression covers
+all those cases. Existing six actual native baselines remain supported by the same
+common parser correction in PR152. No scope is inferred from an opaque static hash.
+Earlier limited scope correction receipts below are preserved as superseded evidence.
+Current GREL02-08/conditional merge/retained16GiB authority is unchanged; no new
+simulation or reservation or publication occurs. Exact corrected gates follow.
+
+## Current GREL04 parameter-scope review correction, 2026-10-09
+
+Current direct user authority allows continuous GREL02-08, normal conditional
+related PR merges and the current managed VM retained16GiB ceiling. Spectre500,
+corrections20, disk floors, original/vendor contents, results and journals remain
+binding. Exact-candidate tag/Release/upload still requires final public approval.
+Earlier overlays below are historical and do not cancel that direct authority.
+
+Latest PR145 e90b786 hosted checks passed, but independent review found a P1:
+extracting nested parameters as global values could accept moved top-level input.
+The corrected local comparator tracks named subckt/inline-subckt scopes, preserves
+static structure and rejects nested parameter/include/analysis controls or unbalanced
+scope. Top-level parameters with ordinary static subcircuits remain supported.
+Regression covers DC/AC/TRAN and inline subcircuits. Related190 PASS, Ruff/mypy69
+PASS. Exact corrected installation/hosted checks/review remain pending. This compiler
+alone is native-unqualified and never authorizes or dispatches a simulation.
+
+PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c2a93eb4.
+Existing changes and evidence are retained. This correction adds0 simulations and0
+reservations. Actual standard-VM execution is tracked separately in PR152; actual
+Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+
+## GREL04 normal integration refresh, 2026-10-09
+
+PR144 normally merged as eda060e1a1a984134e25490839c60ec2c2a93eb4 after exact
+hosted checks and final automated review, no unresolved findings or branch rules.
+Its local2446 PASS/7 OS skips is separate from formal GitHub approval.
+This branch retains GREL04 input compilation and integrates final grant/identity/
+journal protection changes. New grant binding requires synthetic tests to use the
+actual canonical or loaded byte digest. Existing docs/checkpoints remain history.
+Final affected checks, installed preservation, hosted CI and review are required
+before PR145 normal merge. No VM simulation/reservation or public publication.
+
 ## PR144 final identity/SQLite correction checkpoint, 2026-10-09
 
 Grant object/document hash binding is enforced before planning and pending
@@ -51,6 +134,30 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+## GREL-04 source/package/review checkpoint, 2026-10-08
+
+Sourcea3f5fb8 in PR145 (stacked on unmerged144): hosted2473 PASS/no skips;
+local2466 PASS/seven OS symlink skips. Ruff/mypy69/security18/dependency/85 schemas/
+curated matching artifacts/installed CLI/bootstrap/19-state preservation PASS.
+Independent bot+1/no findings is not formal approval. Operator-only generic ADE L
+input compilation/comparison is implemented; native provider/copy/API/jobs/
+extraction/Sweep/clean actual client remain incomplete. Latest main553276d and
+82/9,798,942,720 shared counters preserved. Native trust still blocked by latest
+executable_permissions check, not rerun here. Continuous02–07/895MiB persists;
+no protected repairs/simulations/reservations/deployments/deletions/merge/GREL08/
+publication. Exact receipts and ordered remaining work: GREL_04_RESULT.md and
+NATIVE_RESUME_BOUNDARY.md. Historical overlays below retain their original scope.
+
+## GREL-04 generic-input implementation, 2026-10-08
+
+Continuous02–07/895MiB authorization persists. Latest main553276d unchanged;
+GREL03 PR144 remains unmerged. New stacked feat/grel-04-generic-ade-inputs adds
+operator-only ADE L input compilation/verification, no native dispatch. Local
+checks and exact receipts are recorded in docs/generic_release/GREL_04_RESULT.md.
+Native trust/provider/copy/API/new DCACtran/extraction/Sweep/clean app remain
+incomplete. General release BLOCKED. No simulations/reservations/deployments/
+deletions/protected repairs/merge/GREL08/publication. Historical overlays below
+remain scoped evidence; do not promote synthetic inputs to native qualification.
 
 ## Final durable lifecycle source checkpoint, 2026-10-08
 

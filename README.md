@@ -16,6 +16,35 @@ reference is Windows to the registered `cadence-vm` environment. The active oper
 the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
+## Generic ADE input preparation (native execution unqualified)
+
+The installed package includes `cadence-mcp-bridge ade-input schema`, `compile`
+and `verify-input`. These operator-only commands prepare private ADE L job inputs
+and compare a bounded local Spectre input with explicit registered variables,
+model sections, analysis settings and reviewed circuit/stimulus/load fingerprints.
+See the [full workflow and native limitations](docs/generic_release/GENERIC_ADE_INPUTS_V1.md)
+in the repository. They do not contact Cadence, reserve capacity or authorize jobs.
+
+After configuring the existing hash-bound runtime and local operation plan,
+create an operator-reviewed registration using `ade-input schema`. It requires
+the exact design-profile/variable-set, protected source/state and reviewed static
+input hashes, protected model references, and typed DC/AC/TRAN settings. The CLI
+requires `--settings`, `--context`, `--grant`, `--expected-grant-sha256`,
+`--request`, `--registration`, `--expected-registration-sha256`, `--operation-id`
+and `--expected-plan-sha256`. Add `--output NEW_DIRECTORY` for `compile`, or
+`--native-input INPUT_SCS` for `verify-input`. Use `--help` for shell-ready syntax.
+The exclusive output contains `netlist.ocn`, `registration.json`, `manifest.json`;
+existing output and failed partial artifacts are preserved. Do not run the script
+until a trusted native provider has attested the owned copy, source/state/model
+bytes, operator authority and the additional `execution_input_sha256` identity.
+
+Only ADE L with `owned_copy_only` is supported by this compiler. Native API/copy
+qualification remains pending. The initial verifier accepts a deliberately narrow
+single-line ASCII Spectre dialect; unsupported formatting and scalar expressions
+are rejected. Local input matches explicitly retain native-attestation false.
+Actual new-circuit DC/AC/TRAN, automatic extraction, Sweep and clean-client
+execution remain required for general release.
+
 ## Release scope
 
 The [current release readiness assessment](docs/RELEASE_READINESS_V3.md) separates
