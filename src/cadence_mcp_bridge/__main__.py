@@ -209,7 +209,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if context is None:
                         raise RuntimeRejected("setup_required")
                     context.resolve(arguments.design_id)
-                observation = runtime_observation(config)
+                    observation = context.observation()
+                else:
+                    observation = runtime_observation(config)
         except (OSError, ValueError, ConfigurationError, InvalidInputError) as failure:
             print(
                 json.dumps(

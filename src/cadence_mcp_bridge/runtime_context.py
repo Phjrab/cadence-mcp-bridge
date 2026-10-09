@@ -137,7 +137,7 @@ def _journal(path: Path) -> Path:
     value = _local_path(path)
     if not path.is_absolute() or not value.parent.is_dir():
         raise RuntimeRejected("journal_parent_required")
-    if value.exists() and not value.is_file():
+    if value.exists() and (not value.is_file() or value.stat().st_nlink != 1):
         raise RuntimeRejected("journal_invalid")
     return value
 
@@ -192,7 +192,10 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
             design_ids.update(current_ids)
             # Alias, context ID, username and managed-root changes do not create extra capacity.
             domain = _digest(
-                {"hostname": profile.host.hostname, "architecture": profile.host.architecture}
+                {
+                    "hostname": profile.host.hostname.lower().rstrip("."),
+                    "architecture": profile.host.architecture,
+                }
             )
             domain_binding = (binding.ledger_ref, profile.limits)
             if domain in domains and domains[domain] != domain_binding:

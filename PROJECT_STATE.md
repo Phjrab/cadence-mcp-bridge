@@ -1,3 +1,15 @@
+## GREL02 integration refresh, 2026-10-09
+
+PR142 normally merged as239a1949923fdae210d50e1232b6b7b41e60c7de after final
+review and exact hosted checks. PR143 retargeted to main and receives that parent
+through a normal merge without history rewrite. Routing/hostname/journal snapshot
+fixes and installed context verifier are preserved. Affected85 tests PASS/two
+OS skips, Ruff/mypy66 and exact isolated package/bootstrap/reinstall/uninstall
+preservation PASS. Final hosted checks and review still required before PR143 merge.
+No new VM simulation or reservation from this repository integration refresh.
+Earlier dated restrictions below are historical under the latest direct user's
+conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+
 ## GREL-02 through GREL-07 continuous user delegation, 2026-10-07
 
 The user now explicitly authorizes GREL-02,03,04,05,06,07 continuously.
