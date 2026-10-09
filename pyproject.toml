@@ -81,6 +81,8 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 
 "src/cadence_mcp_bridge/_native_setup.py" = ["UP", "I", "SIM", "B"]
 
+"src/cadence_mcp_bridge/_registration_probe.py" = ["UP", "I", "SIM", "B", "F821"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

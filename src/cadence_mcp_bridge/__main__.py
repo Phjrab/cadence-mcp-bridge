@@ -34,6 +34,7 @@ from cadence_mcp_bridge.onboarding import (
     OnboardingRejected,
     configured_registries_valid,
     export_client_config,
+    export_starter,
     verify_contracts,
 )
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry, load_pdk_registry, register_pdk_adapters
@@ -58,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "serve-operator", help="Serve an explicit operator context; no legacy fallback."
     )
+    starter = subparsers.add_parser(
+        "operator-starter", help="Export packaged fictional templates and guide."
+    )
+    starter.add_argument("--output", type=Path, required=True)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -189,6 +194,23 @@ def build_parser() -> argparse.ArgumentParser:
         if name != "plan":
             command.add_argument("--sweep-id", required=True)
             command.add_argument("--expected-plan-sha256", required=True)
+    enrollment = subparsers.add_parser(
+        "native-registration", help="Operator-only read-only OA/ADE/dependency fingerprints."
+    )
+    enrollment_actions = enrollment.add_subparsers(dest="enrollment_action", required=True)
+    enrollment_actions.add_parser("schema")
+    enrollment_observe = enrollment_actions.add_parser("observe")
+    for field in ("settings", "request", "output"):
+        enrollment_observe.add_argument("--" + field, type=Path, required=True)
+    enrollment_observe.add_argument("--context", required=True)
+    enrollment_assemble = enrollment_actions.add_parser("assemble")
+    enrollment_assemble.add_argument("--settings", type=Path, required=True)
+    enrollment_assemble.add_argument("--context", required=True)
+    enrollment_assemble.add_argument("--identity-manifest-sha256", required=True)
+    enrollment_assemble.add_argument("--output", type=Path, required=True)
+    for field in ("request", "record", "reader-definition"):
+        enrollment_assemble.add_argument("--" + field, type=Path, required=True, action="append")
+    enrollment_actions.add_parser("reader-schema")
     native = subparsers.add_parser(
         "native-runtime", help="Explicit operator fixed native runtime export/setup; no grant."
     )
@@ -324,6 +346,54 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-starter":
+        try:
+            result = export_starter(arguments.output)
+        except (OSError, ValueError):
+            print(json.dumps(dict(status="rejected", reason="starter_output_invalid")))
+            return 1
+        print(json.dumps(result, sort_keys=True))
+        return 0
+    if arguments.command == "native-registration":
+        from cadence_mcp_bridge.native_registration import (
+            ReaderDefinition,
+            RegistrationProbeRequest,
+            assemble,
+            operator_observe,
+        )
+        from cadence_mcp_bridge.operator_operations import OperationRejected
+        from cadence_mcp_bridge.runtime_context import load_runtime
+
+        try:
+            if arguments.enrollment_action == "schema":
+                enrollment_result = RegistrationProbeRequest.model_json_schema()
+            elif arguments.enrollment_action == "reader-schema":
+                enrollment_result = ReaderDefinition.model_json_schema()
+            else:
+                contexts = load_runtime(arguments.settings.resolve())
+                context = next(
+                    (c for c in contexts if c.binding.context_id == arguments.context), None
+                )
+                if context is None:
+                    raise OperationRejected("unknown_context_id")
+                if arguments.enrollment_action == "assemble":
+                    enrollment_result = assemble(
+                        context,
+                        arguments.request,
+                        arguments.record,
+                        arguments.reader_definition,
+                        arguments.identity_manifest_sha256,
+                        arguments.output.resolve(),
+                    )
+                else:
+                    enrollment_result = operator_observe(
+                        context, arguments.request.resolve(), arguments.output.resolve()
+                    )
+        except (OSError, ValueError, KeyError):
+            print(json.dumps({"status": "blocked", "reason": "native_registration_invalid"}))
+            return 1
+        print(json.dumps(enrollment_result, sort_keys=True))
+        return 0
     if arguments.command == "ade-input":
         from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, operator_inputs
         from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -425,26 +495,41 @@ def main(argv: Sequence[str] | None = None) -> int:
             NativeSpecificationSupervisor,
         )
         from cadence_mcp_bridge.runtime_context import load_runtime
+
         try:
             if arguments.spec_action == "schema":
                 spec_result = NativeSpecificationCatalog.model_json_schema()
             else:
-                context = next((c for c in load_runtime(arguments.settings.resolve())
-                                if c.binding.context_id == arguments.context), None)
+                context = next(
+                    (
+                        c
+                        for c in load_runtime(arguments.settings.resolve())
+                        if c.binding.context_id == arguments.context
+                    ),
+                    None,
+                )
                 if context is None:
                     raise ValueError("unknown_context")
                 specifications = NativeSpecificationSupervisor(NativeOperationService(context))
                 if arguments.spec_action == "list":
                     spec_result = specifications.listing()
                 else:
-                    spec_result = asyncio.run(specifications.result(NativeSpecificationQuery(
-                        spec_id=arguments.spec_id,
-                        expected_contract_sha256=arguments.expected_contract_sha256,
-                        operation_id=arguments.operation_id,
-                        expected_plan_sha256=arguments.expected_plan_sha256))).model_dump(mode="json")
+                    spec_result = asyncio.run(
+                        specifications.result(
+                            NativeSpecificationQuery(
+                                spec_id=arguments.spec_id,
+                                expected_contract_sha256=arguments.expected_contract_sha256,
+                                operation_id=arguments.operation_id,
+                                expected_plan_sha256=arguments.expected_plan_sha256,
+                            )
+                        )
+                    ).model_dump(mode="json")
         except (BridgeError, ValueError, OSError):
-            print(json.dumps(
-                {"status":"NATIVE_SPECIFICATION_REJECTED", "execution_authorized":False}))
+            print(
+                json.dumps(
+                    {"status": "NATIVE_SPECIFICATION_REJECTED", "execution_authorized": False}
+                )
+            )
             return 1
         print(json.dumps(spec_result, sort_keys=True, allow_nan=False))
         return 0
@@ -465,22 +550,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         async def run_sweep() -> dict[str, object]:
             if arguments.sweep_action == "schema":
                 return NativeSweepRequest.model_json_schema()
-            context = next((c for c in load_runtime(arguments.settings.resolve())
-                            if c.binding.context_id == arguments.context), None)
+            context = next(
+                (
+                    c
+                    for c in load_runtime(arguments.settings.resolve())
+                    if c.binding.context_id == arguments.context
+                ),
+                None,
+            )
             if context is None:
                 raise ValueError("unknown_context")
             native = NativeOperationService(context)
             supervisor = NativeSweepSupervisor(native)
             if arguments.sweep_action in ("plan", "submit"):
                 request = NativeSweepRequest.model_validate_json(
-                    bounded_document(arguments.request))
+                    bounded_document(arguments.request)
+                )
             if arguments.sweep_action == "plan":
                 return (await supervisor.plan(request)).model_dump(mode="json")
-            query = NativeSweepQuery(sweep_id=arguments.sweep_id,
-                                     expected_plan_sha256=arguments.expected_plan_sha256)
+            query = NativeSweepQuery(
+                sweep_id=arguments.sweep_id, expected_plan_sha256=arguments.expected_plan_sha256
+            )
             if arguments.sweep_action == "submit":
-                result = await supervisor.submit(NativeSweepSubmission(
-                    **query.model_dump(), request=request))
+                result = await supervisor.submit(
+                    NativeSweepSubmission(**query.model_dump(), request=request)
+                )
             elif arguments.sweep_action == "advance":
                 result = await supervisor.advance(query)
             elif arguments.sweep_action == "status":
@@ -488,6 +582,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 return (await supervisor.result(query)).model_dump(mode="json")
             return result.model_dump(mode="json")
+
         try:
             result = asyncio.run(run_sweep())
         except (BridgeError, ValueError, OSError):

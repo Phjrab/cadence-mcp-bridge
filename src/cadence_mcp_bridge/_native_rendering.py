@@ -369,10 +369,7 @@ def static_fingerprint(lines):
     return hashlib.sha256(("\n".join(lines) + "\n").encode("ascii")).hexdigest()
 
 
-def effective_input(data, expected_parameters, expected_includes, inputs, static_sha):
-    # The fixed worker must obtain expected primitives from confirmed registration,
-    # never from the candidate netlist. Native source/model attestation is separate.
-    digest(static_sha)
+def partition_input(data):
     parameters, includes, analyses, static = {}, [], [], []
     for line in statements(data):
         if line.startswith("parameters "):
@@ -397,6 +394,14 @@ def effective_input(data, expected_parameters, expected_includes, inputs, static
                 analyses.append((found.group(1), found.group(2) or ""))
             else:
                 static.append(line)
+    return parameters, includes, analyses, static
+
+
+def effective_input(data, expected_parameters, expected_includes, inputs, static_sha):
+    # The fixed worker must obtain expected primitives from confirmed registration,
+    # never from the candidate netlist. Native source/model attestation is separate.
+    digest(static_sha)
+    parameters, includes, analyses, static = partition_input(data)
     if parameters != expected_parameters:
         raise ValueError("spectre_explicit_parameters_mismatch")
     if includes != list(expected_includes):

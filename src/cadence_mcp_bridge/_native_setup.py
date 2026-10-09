@@ -460,7 +460,7 @@ def apply(request, expected, known):
                 if closed(read(revoked)) != value:
                     raise ValueError("native_setup_revocation_conflict")
             else:
-                accounting.write_new(revoked, value)
+                write_atomic_record(revoked, value, accounting)
                 changed += 1
         if os.path.lexists(revoked):
             value = closed(read(revoked))

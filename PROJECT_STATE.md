@@ -1,3 +1,16 @@
+## Product enrollment checkpoint, 2026-10-09
+
+Fixed read-only observe/assemble handles two new circuits and six actual DC/AC/TRAN
+registrations without circuit-specific helpers; exact prior registration matches.
+The package includes operator starter templates and setup/update/recovery guide.
+Actual Py26/POSIX10 synthetic update/revocation scenarios PASS; existing real
+ledger94/11,409,555,456 bytes remains. New simulations/reservations0. Related local
+148 PASS/33 OS skips, Ruff/mypy94 PASS; final package/security/hosted/review pending.
+Actual Codex QA connection Restart, fresh installed operator lifecycle and remaining
+PR integration/GREL07/08 gates remain; release BLOCKED. Continuous approved02–08/
+16GiB/conditional normal merges continue. No tag/Release/upload approval.
+Details: docs/generic_release/NATIVE_ENROLLMENT_V1.md. Prior checkpoints are history.
+
 ## Native Sweep and specification checkpoint, 2026-10-09
 
 Two explicit native1D batches completed on the current standard VM: DC3 points

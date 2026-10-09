@@ -1,3 +1,13 @@
+## Standard VM operator starter (qualification in progress)
+
+The installed wheel includes a setup, update and recovery guide and fictional,
+non-executing templates. Export them without a repository checkout or private
+checkpoint using `python -m cadence_mcp_bridge operator-starter --output NEW_DIRECTORY`.
+Use `native-registration observe`/`assemble` to bind your owned ADE input and
+registered signals to the common runner. The supported release target is the
+professor-provided CentOS/Cadence/PDK VM in personal VMware. Actual final candidate
+and Codex client qualification remain incomplete; no public release is declared.
+
 # Cadence MCP Bridge
 
 GREL-01 adds an explicit operator runtime foundation. A bare CLI launch or

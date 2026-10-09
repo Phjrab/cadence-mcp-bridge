@@ -60,6 +60,24 @@ async def verify(
     if process.stdout.strip() != expected_version:
         raise ValueError("installed CLI version disagrees")
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
+    starter = workspace / "packaged-starter"
+    exported = cli(["operator-starter", "--output", str(starter)], workspace)
+    if set(exported["files"]) != {"README.md", "environment.json", "designs.json", "pdks.json"}:
+        raise ValueError("installed starter files missing")
+    local = cli(
+        [
+            "verify",
+            "--profile",
+            str(starter / "environment.json"),
+            "--design-registry",
+            str(starter / "designs.json"),
+            "--pdk-registry",
+            str(starter / "pdks.json"),
+        ],
+        workspace,
+    )
+    if local["status"] != "consistent_local_contracts" or local["remote_contact"]:
+        raise ValueError("installed starter does not validate offline")
     paths = {name: workspace / (name + ".json") for name in ("environment", "designs", "pdks")}
     for name, path in paths.items():
         with path.open("xb") as stream:

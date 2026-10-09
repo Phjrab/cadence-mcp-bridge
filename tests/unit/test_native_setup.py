@@ -464,7 +464,7 @@ def test_host_preflight_verifies_exact_fresh_package_observation(
 
 @pytest.mark.skipif(os.name != "posix", reason="atomic Linux record publication")
 @pytest.mark.parametrize(
-    "directory", ["native-provider-updates", "native-provider-history", "pending"]
+    "directory", ["native-provider-updates", "native-provider-history", "pending", "revoked"]
 )
 def test_interrupted_record_write_preserves_partial_evidence_and_retries(
     tmp_path, monkeypatch, directory
