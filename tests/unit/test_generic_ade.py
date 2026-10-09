@@ -23,7 +23,7 @@ from cadence_mcp_bridge.generic_ade import (
     template_sha256,
     verify_effective_input,
 )
-from cadence_mcp_bridge.operator_operations import OperationRejected, prepare_plan
+from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant, prepare_plan
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 operator = operator_fixture
@@ -35,7 +35,7 @@ MOS = "M0 (out gate 0 0) nch w=0.000002 l=0.0000001\nV0 (gate 0) vsource dc=1"
 def setup(operator, analysis="ac", static=RC):
     context, grant, request, _ = operator
     request = request.model_copy(update={"analysis_id": "example-" + analysis})
-    plan = prepare_plan(context, grant, "c" * 64, request, int(time.time()))
+    plan = prepare_plan(context, grant, canonical_digest(grant), request, int(time.time()))
     profile = context.contracts.designs.profile(request.design_id)
     variables = context.contracts.designs.variable_set(request.design_id)
     inputs = (
@@ -285,6 +285,7 @@ def cli_args(operator, tmp_path, analysis="ac"):
     request_path.write_text(request.model_dump_json(), encoding="utf-8")
     # Recompute plan for the real byte digest of the local grant file.
     grant_digest = hashlib.sha256(grant_path.read_bytes()).hexdigest()
+    grant, _ = load_grant(grant_path, grant_digest)
     plan = prepare_plan(context, grant, grant_digest, request, int(time.time()))
     reg_path.write_text(registration.model_dump_json(), encoding="utf-8")
     return [
@@ -436,3 +437,50 @@ def test_zero_variable_inputs_do_not_inherit_parameters(operator):
         verify_effective_input(changed, plan, registration, str(uuid4()), data)["parameter_count"]
         == 0
     )
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize("opening", ["subckt Small (in out)", "inline subckt Small (in out)"])
+def test_effective_input_rejects_moving_parameters_inside_subcircuit(operator, analysis, opening):
+    static = opening + "\n" + RC + "\nends Small"
+    context, plan, registration, data = setup(operator, analysis, static)
+    assert (
+        verify_effective_input(context, plan, registration, str(uuid4()), data)["parameter_count"]
+        == 2
+    )
+    parameter_line = b"parameters ExampleBiasN=1 ExampleBiasP=1\n"
+    changed = data.replace(parameter_line, b"").replace(
+        (opening + "\n").encode(), (opening + "\n").encode() + parameter_line
+    )
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), changed)
+    assert error.value.reason == "spectre_scoped_inputs_unsupported"
+
+
+@pytest.mark.parametrize(
+    "static", ["ends", "subckt Small (in out)", "subckt Small (in out)\nends Other"]
+)
+def test_effective_input_rejects_unbalanced_subcircuit_scope(operator, static):
+    context, plan, registration, data = setup(operator, static=static)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason in {"spectre_scope_unsupported", "spectre_scoped_inputs_unsupported"}
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize(
+    "static",
+    [
+        "library Models\nsection NN\n" + RC + "\nendsection NN\nendlibrary Models",
+        "SUBCKT Small (in out)\n" + RC + "\nENDS Small",
+        "INLINE subckt Small (in out)\n" + RC + "\nends Small",
+        "if (Enabled) {\n" + RC + "\n}",
+        "simulator lang=spice\n.subckt Small in out\n.ends Small",
+        "protect\n" + RC + "\nendprotect",
+    ],
+)
+def test_effective_input_rejects_other_scope_dialects_before_extraction(operator, analysis, static):
+    context, plan, registration, data = setup(operator, analysis, static)
+    with pytest.raises(OperationRejected) as error:
+        verify_effective_input(context, plan, registration, str(uuid4()), data)
+    assert error.value.reason == "spectre_scope_unsupported"

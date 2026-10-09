@@ -25,6 +25,7 @@ from cadence_mcp_bridge.operator_operations import (
     OperatorGrant,
     match_grant,
     prepare_plan,
+    verify_grant_binding,
 )
 from cadence_mcp_bridge.runtime_context import ExecutionContext, resource_lock
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel
@@ -78,14 +79,11 @@ class ProviderAccounting(VariableModel):
             limits.disk_floor_bytes,
             (self.filesystem_total_bytes * limits.disk_floor_percent + 99) // 100,
         )
-        if (
-            self.filesystem_free_bytes > self.filesystem_total_bytes
-            or (
-                self.filesystem_free_bytes
-                - self.in_flight_reserved_bytes
-                - plan.request.result_reservation_bytes
-                < floor
-            )
+        if self.filesystem_free_bytes > self.filesystem_total_bytes or (
+            self.filesystem_free_bytes
+            - self.in_flight_reserved_bytes
+            - plan.request.result_reservation_bytes
+            < floor
         ):
             raise OperationRejected("authoritative_disk_floor_denied")
 
@@ -211,6 +209,19 @@ class OperatorLifecycle:
             plan = prepare_plan(self.context, grant, digest, request, int(time.time()))
             if plan.plan_sha256 != expected_plan_sha256:
                 raise OperationRejected("stale_operation_plan")
+            # A matching remote identity is existing work, even when fresh capacity
+            # is exhausted. Lookup never reserves and must precede new-spend checks.
+            observed = await provider.lookup(operation_id, plan)
+            if observed is not None:
+                candidate = DurableOperation(
+                    operation_id=operation_id,
+                    plan=plan,
+                    progress=OperationProgress(phase="UNKNOWN_OUTCOME"),
+                    event_count=2,
+                )
+                observed.check(candidate)
+                self.store.admit_operation(operation_id, plan, dispatch_intent=True)
+                return self._observe(self.read(operation_id, expected_plan_sha256), observed)
             accounting = await provider.authorize(plan, grant)
             accounting.check(self.context, grant, plan)
             # Recheck expiry immediately before durable admission; remote accept also rechecks it.
@@ -233,6 +244,7 @@ class OperatorLifecycle:
             record = self.read(operation_id, expected_plan_sha256)
             if record.progress.phase in TERMINAL_PHASES:
                 return record
+            verify_grant_binding(grant, digest)
             match_grant(self.context, grant, int(time.time()))
             if "cancel_pending" not in grant.actions or digest != record.plan.grant_sha256:
                 raise OperationRejected("pending_cancellation_authority_denied")
