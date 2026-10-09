@@ -183,7 +183,10 @@ def test_hardlinked_code_never_changes_alias(tmp_path):
 
 
 @pytest.mark.parametrize("wrong_profile", [False, True])
-def test_private_plan_binds_selected_operator_profile(tmp_path, monkeypatch, wrong_profile):
+@pytest.mark.parametrize("large_inventory", [False, True])
+def test_private_plan_binds_selected_operator_profile(
+    tmp_path, monkeypatch, wrong_profile, large_inventory
+):
     from pathlib import Path
 
     from cadence_mcp_bridge import operator_transport
@@ -194,6 +197,8 @@ def test_private_plan_binds_selected_operator_profile(tmp_path, monkeypatch, wro
     selected_hash = repair.digest(json.loads(raw))
     plan = {"scope": {"profile_sha256": "f" * 64 if wrong_profile else selected_hash},
             "records": []}
+    if large_inventory:
+        plan["records"] = [{"acl": "user::rwx\n" * 256} for _ in range(128)]
     result = {"plan": plan, "plan_sha256": repair.digest(plan),
               "readonly_compatibility_links": [],
               "dependency_scope": "wrappers_32bit_binaries_shared_library_trees",
@@ -203,8 +208,11 @@ def test_private_plan_binds_selected_operator_profile(tmp_path, monkeypatch, wro
         assert "StrictHostKeyChecking=yes" in argv
         assert argv[-1] == "inventory"
         assert data == raw
-        assert bounds == {"timeout": 60, "limit": 262144}
-        return 0, json.dumps(result).encode(), b""
+        assert bounds == {"timeout": 60, "limit": repair.LIMIT}
+        response = json.dumps(result).encode()
+        if large_inventory:
+            assert 262144 < len(response) < bounds["limit"]
+        return 0, response, b""
 
     monkeypatch.setattr(operator_transport, "run_fixed", fixed)
     monkeypatch.setattr(shutil, "which", lambda _: "ssh.exe")
