@@ -1,3 +1,14 @@
+## Retained ID serialized-capacity correction, 2026-10-09
+
+Migration inventories retain up to the bounded2048-entry scan capacity, then
+reject if the complete canonical anchor exceeds the existing8192-byte accounting
+record bound or the complete response exceeds262144 bytes. Legacy classification
+validation uses the same serialized bound; no IDs are dropped to fit.129/160-ID
+fixtures plan/apply/repeat with unchanged old bytes;240-ID over-capacity planning
+rejects without anchor writes. Local94 tests/5 Windows POSIX skips, Ruff/mypy74
+pass. Final installed package, latest parent integration, exact hosted checks and
+independent review are pending. No current-VM migration or resource reset occurs.
+
 ## Cross-version repair metadata correction, 2026-10-09
 
 A final PR148 review found fractional mtime serialization differs between
