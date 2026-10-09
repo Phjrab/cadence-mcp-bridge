@@ -1,3 +1,16 @@
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
+
 ## Descriptor snapshot stability correction, 2026-10-09
 
 The subsequent review identified content/metadata change during ACL collection.
@@ -196,6 +209,26 @@ PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c
 Existing changes and evidence are retained. This correction adds0 simulations and0
 reservations. Actual standard-VM execution is tracked separately in PR152; actual
 Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+
+## Active operator runner coexistence, 2026-10-08
+
+The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
+passed hosted Windows and Ubuntu verification. Continuous GREL02–07 and the
+895MiB remainder stay authorized. The operator route now uses a separate
+cadence-operator-runner and active-operator-runner.json while retaining the legacy
+launcher/pointer. Ordinary-user actual activation, repeat, two fresh fixed-Python
+preflights and shared run.lock contention rejection passed. No new simulations,
+reservations, owner/group changes or journal migration occurred. Existing counter
+still82 /9,798,942,720. Failure evidence remains private and retained.
+
+Same-profile preflight-launcher updates retain immutable old versions/history;
+only the compiled known preflight runner and unchanged other assets are accepted.
+This is not a native worker update gate. Production provider/operator confirmation,
+existing-domain migration/fresh provisioning, two new OA/ADE circuits, effective
+inputs/DC/AC/TRAN/extraction, generic Sweep/spec and clean actual Codex remain
+incomplete. Continue those authorized tasks; no phase approval question.
+See [coexistence workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+
 ## Current standard-VM administrator delegation and repair, 2026-10-08
 
 The user's latest direct instruction fixes release support to the professor-provided

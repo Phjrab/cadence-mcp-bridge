@@ -16,10 +16,11 @@
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
-        "ADMIN_REPAIR_V1.md"
+        "ADMIN_REPAIR_V1.md",
+        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
       ],
       "limitations": [
-        "installed immutable native runner content and direct preflight passed; coexisting activation and fresh-domain/provider bootstrap remain incomplete"
+        "installed coexisting operator runner and actual active preflight passed; fresh-domain/provider bootstrap remains incomplete"
       ]
     },
     {
@@ -44,10 +45,11 @@
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
-        "ADMIN_REPAIR_V1.md"
+        "ADMIN_REPAIR_V1.md",
+        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
       ],
       "limitations": [
-        "current executable_permissions repaired under explicit administrator delegation; general-user environment/direct immutable runner preflight passed; legacy launcher coexistence and full dynamic runtime attestation remain incomplete"
+        "current executable permissions repaired; ordinary-user active runner preflight and shared lock contention denial passed; full dynamic attestation and actual native job qualification remain incomplete"
       ]
     },
     {

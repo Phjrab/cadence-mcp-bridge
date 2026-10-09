@@ -16,8 +16,11 @@ def trusted_directory_chain(path):
     current = os.path.abspath(path)
     while True:
         info = os.lstat(current)
-        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, os.getuid())
-                or info.st_mode & 18):
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid not in (0, os.getuid())
+            or info.st_mode & 18
+        ):
             raise ValueError("runner_directory_permissions")
         parent = os.path.dirname(current)
         if parent == current:
@@ -32,7 +35,10 @@ def main():
     if os.path.realpath(root) != root:
         raise ValueError("linked_root")
     trusted_directory_chain(root)
-    path = root + "/active-runner.json"
+    operator = os.path.basename(__file__) == "cadence-operator-runner"
+    state = "active-operator-runner.json" if operator else "active-runner.json"
+    revoked = "operator-runner-revoked.json" if operator else "runner-revoked.json"
+    path = root + "/" + state
     info = os.lstat(path)
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         raise ValueError("activation_type")
@@ -44,7 +50,11 @@ def main():
     finally:
         stream.close()
     value = json.loads(raw.decode("ascii"))
-    if set(value) != set(("schema_version", "manifest_sha256")) or value["schema_version"] != 1:
+    if (
+        set(value) != set(("schema_version", "manifest_sha256"))
+        or value["schema_version"] != 1
+        or (operator and type(value["schema_version"]) is not int)
+    ):
         raise ValueError("activation_shape")
     digest = value["manifest_sha256"]
     if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
@@ -52,7 +62,7 @@ def main():
     if sys.argv[2] != digest:
         raise ValueError("selected_manifest_mismatch")
     directory = root + "/runtime/" + digest
-    if os.path.exists(root + "/runner-revoked.json") or os.path.realpath(directory) != directory:
+    if os.path.lexists(root + "/" + revoked) or os.path.realpath(directory) != directory:
         raise ValueError("runner_revoked_or_linked")
     trusted_directory_chain(directory)
     stream = open(directory + "/manifest.json", "rb")
@@ -63,6 +73,28 @@ def main():
     if len(raw) > 262144 or hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("manifest_binding")
     manifest = json.loads(raw.decode("ascii"))
+    if operator:
+        info = os.lstat(__file__)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_nlink != 1
+            or os.path.realpath(__file__) != os.path.abspath(__file__)
+            or (
+                os.name != "nt"
+                and (info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 448)
+            )
+        ):
+            raise ValueError("operator_launcher_permissions")
+        stream = open(__file__, "rb")
+        try:
+            data = stream.read(262145)
+        finally:
+            stream.close()
+        if manifest["files"]["launcher.py"] != {
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "bytes": len(data),
+        }:
+            raise ValueError("operator_launcher_drift")
     runner = directory + "/runner.py"
     info = os.lstat(runner)
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or os.path.realpath(runner) != runner:
@@ -79,7 +111,7 @@ def main():
         "bytes": len(raw),
     }:
         raise ValueError("runner_drift")
-    args = ["/usr/bin/python", "-B", runner, sys.argv[1], digest] + sys.argv[3:]
+    args = ["/usr/bin/python", "-E", "-s", "-B", runner, sys.argv[1], digest] + sys.argv[3:]
     return subprocess.call(args, shell=False, close_fds=True)
 
 
