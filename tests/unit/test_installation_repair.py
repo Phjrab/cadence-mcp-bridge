@@ -290,3 +290,18 @@ def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monk
     assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
     assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
     assert repair.metadata_equal("mtime", None, None)
+
+
+@pytest.mark.parametrize(
+    "ic,ms,expected",
+    [
+        ("/opt/cadence/IC6", "/opt/cadence/IC6x", "/opt/cadence"),
+        ("/opt/cadence/IC6x", "/opt/cadence/IC6", "/opt/cadence"),
+        ("/home/user/cadence/IC615", "/home/user/cadence/MMSIM121", "/home/user/cadence"),
+        ("/opt/ic/install", "/opt/ms/install", "/opt"),
+    ],
+)
+def test_vendor_root_prefix_does_not_drop_spectre_targets(ic, ms, expected):
+    base = repair.common_installation_root(ic, ms)
+    assert base == expected
+    assert repair.inside(ic, base) and repair.inside(ms, base)

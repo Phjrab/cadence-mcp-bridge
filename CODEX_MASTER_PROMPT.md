@@ -1,3 +1,25 @@
+## Current direct-user authority and retained state, 2026-10-09
+
+The latest direct user authorization permits continuous GREL02-08, minimum
+reversible administration on the current managed standard VM, and normal related
+PR integration after exact final review/CI/acceptance/protection gates. The current
+managed VM ceiling is16GiB (17,179,869,184 bytes), Spectre500 and same-change
+corrections20. This is not a fresh operator default. Latest read-only actual ledger
+is94 attempts/11,409,555,456 reserved bytes, remaining5,770,313,728 bytes; scoped
+remaining validation grant is8 jobs/1GiB. Preserve consumption, replay, journals,
+failures/results and historical policies. No direct main/force/admin merge bypass.
+
+Public tag/Release/upload still requires approval of one exact completed candidate.
+No reset/refund/deletion, license/vendor/PDK/original OA content changes or root
+MCP/EDA are authorized. Earlier repair-time limits, no-merge/no-GREL08 statements
+and ledger snapshots below are historical and superseded only in this scope.
+Current normal-user332-target read-only inventory passes with0 required changes;
+this continuation adds0 simulations/reservations/admin changes. General release
+remains blocked pending current deployed/fresh operator/app/operational acceptance
+and an exactRC. Code merge is separate from actual Cadence acceptance.
+
+## Historical standard-VM administrator delegation and repair, 2026-10-08
+
 ## Active operator runner coexistence, 2026-10-08
 
 The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
@@ -44,7 +66,7 @@ Environment preflight passed; installed immutable version preflight passed at
 04:49:03Z, with the legacy launcher preserved. This is not new circuit execution,
 full dependency attestation, license entitlement or production-provider authority.
 The old launcher name collides with initial generic activation; coexistence must
-be implemented without overwriting it. Latest shared ledger remains82 attempts /
+be implemented without overwriting it. Historical repair-time ledger was82 attempts /
 9,798,942,720 reserved bytes; zero new simulation reservations in this repair.
 
 Continue coexisting bootstrap, authentic existing-domain provider/migration,
