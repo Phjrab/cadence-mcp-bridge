@@ -1,3 +1,11 @@
+## PR144 remote identity recovery checkpoint, 2026-10-09
+
+Fixed remote duplicate lookup now precedes fresh-spend capacity checks, preserving
+existing remote job observation at exhausted quota without another accept. Wrong
+identity cannot create a local record. Local171 PASS/2 skips and installed19-file
+preservation PASS; final hosted review/CI pending. v2 paired scope and historical
+v1 bytes remain preserved. Continuous GREL02–08/normal merge authority remains.
+
 ## PR144 paired authority correction, 2026-10-09
 
 Final review requires explicit per-design analysis scope. Version2 paired grants

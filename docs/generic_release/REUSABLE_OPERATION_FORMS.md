@@ -120,3 +120,14 @@ under a narrow v2 grant. Missing/duplicate/outside pairs reject. Existing v1 byt
 identity/replay is preserved. Local169 PASS/2 OS skips, Ruff/mypy68 and installed
 bootstrap/reinstall/uninstall19-state preservation PASS. Final hosted CI/review
 must pass at the exact updated commit before normal merge.
+
+## Exhausted-capacity remote identity recovery, 2026-10-09
+
+A second client journal now performs fixed remote identity lookup before any
+new-spend accounting gate. A fully matching saved remote observation is persisted
+locally without accept/reservation. Wrong identity fails before journal creation;
+an absent identity must still pass all fresh capacity/disk/authority checks.
+Tests verify an existing accepted job can be read at the500-attempt/10GiB fixture
+ceiling while a new ID is denied. No existing journal is reset or replaced.
+Local171 PASS/2 OS skips, mypy68, Ruff and installed19-file preservation PASS.
+Final hosted exact-head review/CI remain required.

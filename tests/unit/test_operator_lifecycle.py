@@ -425,7 +425,7 @@ async def test_two_client_journals_use_same_authoritative_provider_identity(life
     )
     assert first.plan == second.plan and first.operation_id == second.operation_id
     assert provider.attempts == 83 and provider.reserved == 9798942720 + 134217728
-    assert provider.calls == [identity, identity]  # remote identity prevents a second reservation
+    assert provider.calls == [identity]  # second client uses lookup, never fresh dispatch
 
 
 @pytest.mark.parametrize("kind", ["revision", "regression", "terminal", "capacity"])
@@ -678,3 +678,54 @@ def test_junction_journal_parent_is_rejected_without_touching_target(lifecycle):
     with pytest.raises(ConfigurationError):
         linked_store.admit_operation(str(uuid4()), plan, dispatch_intent=True)
     assert original.path.read_bytes() == before
+
+
+@pytest.mark.asyncio
+async def test_remote_replay_in_second_local_journal_after_capacity_exhausted(lifecycle, tmp_path):
+    from dataclasses import replace
+
+    coordinator, provider, grant, request, plan, _ = lifecycle
+    identity = str(uuid4())
+    first = await coordinator.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    provider.gate_changes.update(cumulative_attempts=500, cumulative_reserved_bytes=10737418240)
+    second_path = tmp_path / "second-client.sqlite3"
+    second_context = replace(
+        coordinator.context,
+        binding=coordinator.context.binding.model_copy(update={"analysis_journal": second_path}),
+    )
+    second = OperatorLifecycle(second_context, AnalysisStore(second_path), provider)
+    counts = (provider.attempts, provider.reserved, provider.authorizations, len(provider.calls))
+    replay = await second.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    assert replay.progress == first.progress
+    assert (
+        provider.attempts,
+        provider.reserved,
+        provider.authorizations,
+        len(provider.calls),
+    ) == counts
+    with pytest.raises(OperationRejected) as error:
+        await second.submit(str(uuid4()), grant, "c" * 64, request, plan.plan_sha256)
+    assert error.value.reason == "authoritative_budget_exhausted"
+    assert (provider.attempts, provider.reserved, len(provider.calls)) == (
+        counts[0],
+        counts[1],
+        counts[3],
+    )
+
+
+@pytest.mark.asyncio
+async def test_remote_identity_conflict_never_creates_second_journal(lifecycle, tmp_path):
+    from dataclasses import replace
+
+    coordinator, provider, grant, request, plan, _ = lifecycle
+    identity = str(uuid4())
+    provider.jobs[identity] = provider.observe(str(uuid4()), plan)
+    path = tmp_path / "conflicting-client.sqlite3"
+    context = replace(
+        coordinator.context,
+        binding=coordinator.context.binding.model_copy(update={"analysis_journal": path}),
+    )
+    second = OperatorLifecycle(context, AnalysisStore(path), provider)
+    with pytest.raises(OperationRejected):
+        await second.submit(identity, grant, "c" * 64, request, plan.plan_sha256)
+    assert not path.exists() and not provider.authorizations and not provider.calls
