@@ -687,3 +687,40 @@ def test_export_binds_one_complete_runtime_snapshot(settings, monkeypatch):
         )
     assert len(calls) == 1
     assert not reserved.exists()
+
+
+def test_cli_resolve_reports_same_selected_snapshot(settings, monkeypatch, capsys):
+    import cadence_mcp_bridge.runtime_context as runtime
+
+    first = load_runtime(settings)[0]
+    design_id = first.contracts.designs.designs[0].design_id
+    original = runtime.load_runtime
+    calls = []
+
+    def replaced_after_load(path):
+        found = original(path)
+        calls.append(path)
+        replacement = path.with_suffix(".next")
+        replacement.write_text('{"invalid_new_snapshot": true}', encoding="utf-8")
+        os.replace(replacement, path)
+        return found
+
+    monkeypatch.setattr(runtime, "load_runtime", replaced_after_load)
+    assert (
+        cli.main(
+            [
+                "runtime",
+                "resolve",
+                "--settings",
+                str(settings),
+                "--context",
+                first.binding.context_id,
+                "--design-id",
+                design_id,
+            ]
+        )
+        == 0
+    )
+    observed = json.loads(capsys.readouterr().out)
+    assert observed["context_sha256"] == first.context_sha256
+    assert len(calls) == 1
