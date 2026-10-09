@@ -1,3 +1,16 @@
+## Repair inventory transport-bound correction, 2026-10-09
+
+Latest review found inventory responses larger than256KiB blocked despite the
+fixed helper's16MiB request/plan protocol. The private bounded transport now uses
+the same16MiB ceiling; timeout/host-key checks and exclusive output remain. Large
+synthetic inventories over256KiB preserve exact plan/profile binding, while the
+transport retains a finite cap. This host-only bootstrap change does not modify
+native worker/model-trust assets or authorize remote metadata mutation.
+Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact installed
+32-state preservation pass. Final exact hosted/final review remains pending.
+Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
+0 new simulations/reservations/admin changes in this PR qualification.
+
 ## Descriptor snapshot stability correction, 2026-10-09
 
 The subsequent review identified content/metadata change during ACL collection.

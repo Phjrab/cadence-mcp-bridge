@@ -99,7 +99,7 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
          "/usr/bin/python", "-B", "-c", shlex.quote(code), "inventory"],
-        data, OpenSshBackend._ssh_environment(), timeout=60, limit=262144,
+        data, OpenSshBackend._ssh_environment(), timeout=60, limit=repair.LIMIT,
     )
     if status or stderr:
         raise ValueError("repair_inventory_rejected")
