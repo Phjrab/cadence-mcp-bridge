@@ -69,5 +69,9 @@ jobs:
           enable-cache: false
       - name: Install locked public dependencies
         run: uv sync --locked --all-groups --python 3.12.10
+      - name: Install synthetic ACL test prerequisite
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y acl
       - name: Actual files, process death and independent POSIX flock
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py -q --basetemp "$HOME/grel-reservation-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py tests/unit/test_installation_repair.py -q --basetemp "$HOME/grel-reservation-tests"

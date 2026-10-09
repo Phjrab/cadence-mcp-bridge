@@ -1,3 +1,16 @@
+## Administrator repair continuation, 2026-10-08
+
+The latest explicit current-VM administrator delegation supersedes the historical
+permission exclusion below. Actual332 exact metadata targets repaired, all289
+file contents/owners/groups retained; installation SELinux331 unchanged.
+General-user environment/OCEAN startup and installed immutable runner direct
+preflight passed. Existing launcher/journals/82-attempt ledger preserved; no new
+simulation/reservation. Active generic dispatch is still blocked by legacy launcher
+coexistence and production provider/domain bootstrap, not executable_permissions.
+Other VM admins must provide their own authority; generated plans do not grant it.
+See [repair workflow and evidence](ADMIN_REPAIR_V1.md). Continuous02–07 and895MiB
+remain authorized; no per-phase/per-path question. Earlier receipts remain history.
+
 # GREL-02 runner/bootstrap checkpoint
 
 The user explicitly authorized continuous GREL-02 through GREL-07, and use of

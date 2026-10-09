@@ -1,3 +1,86 @@
+## Repair inventory transport-bound correction, 2026-10-09
+
+Latest review found inventory responses larger than256KiB blocked despite the
+fixed helper's16MiB request/plan protocol. The private bounded transport now uses
+the same16MiB ceiling; timeout/host-key checks and exclusive output remain. Large
+synthetic inventories over256KiB preserve exact plan/profile binding, while the
+transport retains a finite cap. This host-only bootstrap change does not modify
+native worker/model-trust assets or authorize remote metadata mutation.
+Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact installed
+32-state preservation pass. Final exact hosted/final review remains pending.
+Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
+0 new simulations/reservations/admin changes in this PR qualification.
+
+## Descriptor snapshot stability correction, 2026-10-09
+
+The subsequent review identified content/metadata change during ACL collection.
+Held snapshots now check trailing stat including ctime, repeat the content hash
+and check final descriptor stability. Same-length content replacement followed
+by restored original mtime during ACL observation rejects before chmod. Actual
+UID500/Python2.6 synthetic interruption/repeat and4 descriptor races pass; real
+ledger94/11,409,555,456 unchanged. Local59 checks/9 Windows POSIX skips plus
+Ruff/mypy72 pass. Exact installed32-state package preservation passes; final hosted review/CI
+pending for this source; no vendor/admin/simulation change. Existing authority/publication
+gate and all prior evidence remain preserved.
+
+## Held-descriptor integrity correction, 2026-10-09
+
+A subsequent independent review found path snapshot/final-open ACL race exposure.
+The helper now reobserves all protected content/identity/mtime/mode and normalized
+ACL on the held descriptor immediately before chmod. Unreviewed named/default
+ACL or content drift rejects before any metadata mutation. Three Linux race
+regressions and actual UID500/Python2.6 synthetic races pass; apply/rollback
+interruption/repeat still restores original fixture metadata/content. Actual
+ledger94/11,409,555,456 remains unchanged; no vendor/admin/simulation changes.
+Local59 checks/8 Windows POSIX skips, Ruff/mypy72 and exact installed32-state
+preservation pass. Final exact-head hosted review/CI remain pending. Current
+direct16GiB/GREL02-08/conditional merge authority and exact-publication gate persist.
+
+## Exact rollback interruption recovery, 2026-10-09
+
+The latest review of3b678d2 found an interrupted rollback metadata state missing
+from the fixed helper. Chmod now computes access owner/mask-or-group/other bits
+from the exact requested mode while preserving named/default entries. Only
+rollback accepts the exact original-mode/restricted-ACL intermediate state;
+unexpected metadata and all protected content/identity drift still reject.
+The Linux fixture interrupts both apply and rollback, resumes and repeats each,
+then checks original contents and metadata. Local59 repair/bootstrap checks pass/
+5 Windows skips; Ruff/mypy72 pass. Actual UID500/Python2.6 synthetic apply/rollback
+interruption/repeat restores exact contents/ACL/mode/identity, with the real94/
+11,409,555,456-byte ledger unchanged. This is not a new vendor metadata repair.
+Exact installed32-state package preservation passes; final hosted review/CI
+remain pending for this source.
+
+Latest main98710153a167e103c2955b1c5c82612eb2864038 includes normal PR142-147
+merges. Existing16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues; public exact-candidate approval remains required. Prior receipts and
+policies are historical and retained. No new simulation/reservation/admin change.
+
+## Component-aware installation boundary correction, 2026-10-09
+
+The fixed repair recipe now derives the installation base from path components,
+so sibling vendor roots whose names share a prefix keep both IC/OCEAN and MMSIM/
+Spectre targets in scope. The exact profile/executable hashes, role-specific seed
+list, no-follow descriptors, ACL/content/owner checks and bounded mutation remain.
+Local58 repair/bootstrap tests pass with5 Windows OS skips; Ruff/mypy72 and exact
+installed32-state conservation pass. Current authoritative16GiB/GREL02-08 and
+conditional normal merge overlay remains;82-attempt repair evidence is historical.
+Final exact-head hosted checks and independent review are pending. No new remote
+repair, simulation or reservation; actual generic release acceptance is separate.
+
+## Cross-version repair metadata correction, 2026-10-09
+
+A final PR148 review found fractional mtime serialization differs between
+Python2.6 and Python3. New fixed inventories encode mtimes as round-trip strings;
+content, inode, owner, group, mode and ACL checks remain separate and enforced.
+Historical numeric private records and their exact helper/digests remain preserved;
+comparison supports equivalent historical numeric mtimes without accepting drift.
+Local136 tests/5 POSIX skips, Ruff/mypy72 and exact installed32-state preservation
+pass. Actual UID500/Python2.6 fractional synthetic inventory hashes identically on
+the host; real94-attempt/11,409,555,456-byte ledger is unchanged. Final exact-head
+hosted checks and independent review are pending. No administrator change or new
+simulation/reservation was performed. This is not general release acceptance.
+
 ## Serialized AC grid correction, 2026-10-09
 
 Final review exposed valid ultra-narrow grids whose %.16g displacement exceeds
@@ -126,6 +209,42 @@ PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c
 Existing changes and evidence are retained. This correction adds0 simulations and0
 reservations. Actual standard-VM execution is tracked separately in PR152; actual
 Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+## Current standard-VM administrator delegation and repair, 2026-10-08
+
+The user's latest direct instruction fixes release support to the professor-provided
+CentOS/Cadence VM (or an equivalent reproduced installation), existing PDK and
+individual VMware use. Address/SSH keys/account/workspace/circuit/ADE/results/
+registries/journals/limits remain operator data. No developer private checkpoint
+is a fresh-install prerequisite; existing installations retain their real ledger.
+Other OS/Cadence/PDK/physical-host qualification is deferred.
+
+The user explicitly delegates minimum reversible administrator repair on the
+current managed VM. This supersedes earlier administrator/permission exclusions
+for this bounded repair only; historical statements below remain prior evidence.
+Do not request phase/per-path approval again inside the existing GREL02–07 and
+895 MiB delegation. Human authentication input is required only if actually needed.
+No GREL08/publication/merge, budget increase/reset/refund, license/content changes,
+original OA/ADE/PDK/result/journal deletion, security disabling or root MCP/EDA.
+
+Actual repair removed shared write bits from331 installation-code/ancestor items
+and one workspace ancestor (332 total). All289 file contents/owners/groups and
+331 recorded installation SELinux contexts were preserved. No chown or root
+execution was needed. Exact plans, links, ACLs, hashes, partial/repeat/rollback
+receipts are private. Root helper-only verification later changed0;
+MCP/EDA remained ordinary-user. Reapplication changed0. General-user OCEAN startup passed.
+Environment preflight passed; installed immutable version preflight passed at
+04:49:03Z, with the legacy launcher preserved. This is not new circuit execution,
+full dependency attestation, license entitlement or production-provider authority.
+The old launcher name collides with initial generic activation; coexistence must
+be implemented without overwriting it. Latest shared ledger remains82 attempts /
+9,798,942,720 reserved bytes; zero new simulation reservations in this repair.
+
+Continue coexisting bootstrap, authentic existing-domain provider/migration,
+owned new RC/MOS ADE inputs, DC/AC/TRAN/extraction, generic Sweep/spec facts and
+actual clean Codex retry/restart within GREL02–07. Release remains BLOCKED until
+those actual gates pass. See [repair boundary](generic_release/ADMIN_REPAIR_V1.md)
+and [native continuation](generic_release/NATIVE_RESUME_BOUNDARY.md).
+
 ## GREL-05 feasible-reader exact-source receipt, 2026-10-08
 
 Tested source f5a1de2 in ready/unmerged PR147: local247 related PASS/no skips;

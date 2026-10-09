@@ -16,6 +16,50 @@ reference is Windows to the registered `cadence-vm` environment. The active oper
 the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
+
+## Standard VM and operator trust repair
+
+Release development targets the professor-provided CentOS/Cadence VM (or an
+equivalent installation), its existing PDK and individual VMware use. Current
+reference observations are CentOS6.5/i686, Virtuoso IC6.1.5.500.15 and
+Spectre12.1.0.347.isr3. Each user registers their own SSH/address/key/account,
+work/circuit/ADE paths, registry, journals and resource policy. Other Cadence/PDK/
+OS/physical-host qualification is deferred. New-circuit execution remains a
+required release gate; general release is still BLOCKED.
+
+The installed CLI includes read-only `runner trust --profile environment.json
+--output trust.private.json` and `runner repair-plan --profile environment.json
+--output repair.private.json`. `runner export-repair-helper --output repair.py`
+exports the fixed helper and SHA256 without remote contact. A plan grants no
+permission. The VM's real operator/admin approves the exact list once and uses
+their existing authentication; no import/server/doctor automatically changes it.
+On this user's current VM, their2026-10-08 administrator delegation is that authority.
+
+The helper takes explicit `inventory`, `apply` or `rollback` and bounded
+private JSON on stdin. Inventory consumes the validated operator environment
+profile. Apply/rollback accept only the complete profile-bound fixed-recipe plan from
+inventory; arbitrary target lists are rejected before filesystem access. They consume
+`{ "plan": <exact object from receipt>,
+"expected_plan_sha256": <receipt hash>, "operator_authority": <actual human
+scope reference> }`. Run `python -B repair.py apply < request.private.json` on
+that guest only after preserving the exact private before-state and helper hash.
+Redirect receipts privately. It shares the existing trusted resource lock and
+never initializes/resets a budget ledger. Fresh-domain provisioning remains an
+unfinished bootstrap gate. Use normal owner privileges when enough; otherwise
+use the existing admin method for this helper, keeping MCP and Cadence non-root.
+
+Only enumerated wrapper/32-bit/shared-library code paths and exact ancestors are
+planned. No full-installation recursion, license/PDK/OA/ADE content change or
+result/journal deletion. Apply removes only group/other writes, preserves owner
+write/read/execute/traversal and hashes/owners, and rejects stale content/inodes,
+hardlinks or special modes. Named/default ACL changes are recorded. It supports
+idempotent apply, known chmod/ACL intermediate states and hash-bound rollback
+using the original request. Preserve failed/partial evidence; do not replace an
+unknown state with a new trusted baseline. Recheck environment and runner as the
+ordinary guest user afterward. Complete dynamic dependency attestation and
+new-job execution are separate gates. Full repository runbook:
+[standard VM repair](docs/generic_release/ADMIN_REPAIR_V1.md).
+
 ## Generic ADE input preparation (native execution unqualified)
 
 The installed package includes `cadence-mcp-bridge ade-input schema`, `compile`
