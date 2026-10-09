@@ -64,6 +64,11 @@ try {
         throw "Installed onboarding/stdio acceptance failed."
     }
 
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-runtime-context-install.py") `
+        --examples (Join-Path $projectRoot "docs\examples\onboarding") `
+        --workspace (Join-Path $resolvedTemporaryRoot "runtime-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed operator context acceptance failed." }
+
     & $uv pip uninstall --python $python cadence-mcp-bridge
     if ($LASTEXITCODE -ne 0) {
         throw "Package uninstall failed."

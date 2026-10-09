@@ -1,3 +1,20 @@
+## GREL-01 active general-release scope, 2026-10-07
+
+The current user selects GREL-01 only, following an attached release pack and
+fresh main revalidation through PR141/553276d. Preserve completed client/storage
+qualification, all historical circuit work and unrelated local changes. Implement
+immutable operator routing, setup/consistency checks, local context observation,
+tests, documentation and one feature PR. No remote writes, new simulation,
+installation permission changes, global client changes or publication.
+Earlier continuous-phase delegations do not extend to the new program.
+Report this phase and ask once before GREL-02; do not auto-merge or start it.
+See [runtime contract](generic_release/RUNTIME_CONTEXT_V1.md) and
+[phase result](generic_release/GREL_01_RESULT.md).
+GREL-01 local foundation is complete in feature PR #142 (unmerged).
+The next phase is GREL-02 only after a new user choice; general release remains
+BLOCKED pending runner/authority and new-circuit execution gates.
+Earlier overlays below remain dated historical records.
+
 # Current Phase Plan — Post-v1 Baseline and Capability Preparation
 
 ## CLIENT-LIFECYCLE-QUAL-01 completion gate

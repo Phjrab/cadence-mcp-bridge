@@ -143,10 +143,12 @@ async def test_version_license_model_and_schema_drift_rejected(
     project = fixture(tmp_path)
     if change == "version":
         path = project / "pyproject.toml"
-        path.write_text(path.read_text().replace('version = "1.0.0"', 'version = "1.1.0"'))
+        path.write_text(
+            path.read_text(encoding="utf-8").replace('version = "1.0.0"', 'version = "1.1.0"')
+        )
     elif change == "runtime":
         path = project / "src/cadence_mcp_bridge/__init__.py"
-        path.write_text(path.read_text().replace('"1.0.0"', '"1.1.0"'))
+        path.write_text(path.read_text(encoding="utf-8").replace('"1.0.0"', '"1.1.0"'))
     elif change == "license":
         (project / "LICENSE").write_text("altered grant")
     elif change == "notice":
@@ -165,7 +167,10 @@ async def test_version_license_model_and_schema_drift_rejected(
 async def test_removed_legacy_declaration_and_unsafe_duplicate(tmp_path: Path) -> None:
     project = fixture(tmp_path)
     path = project / "src/cadence_mcp_bridge/server.py"
-    path.write_text(path.read_text().replace("job_id: JobIdInput", "job_id: str", 1))
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("job_id: JobIdInput", "job_id: str", 1),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError):
         audit.inspect(project, await audit.inventory())
     source = '@server.tool(name="x")\ndef x(a: str) -> str: pass\n'

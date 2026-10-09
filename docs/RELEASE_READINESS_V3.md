@@ -161,7 +161,10 @@ Technical PASS is not app/scientific/legal/publication authorization.
 ## Resource and protection checkpoint
 
 This phase0 simulations/0 reservations/deployments/deletions. Last live checkpoint
-82/500 and9,798,942,720/10,737,418,240 reserved bytes; seven128MiB slots remain.
+82/500 and9,798,942,720/10,737,418,240 reserved bytes. Arithmetic correction:
+938,475,520 bytes = 895 MiB = six complete128MiB slots plus127MiB.
+GREL-01 recalculates the last recorded checkpoint; it does not reread or
+modify the live ledger and does not authorize those slots.
 Deletion never refunds historical consumption. Existing Sweep six jobs occupy
 1,105,799 logical/1,511,424 allocated bytes; this is not whole VM usage. Local
 archive/build/audit storage is separate from simulation reservation accounting.

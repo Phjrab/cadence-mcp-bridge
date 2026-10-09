@@ -25,11 +25,12 @@ from cadence_mcp_bridge.actual_diagnostics import (
 )
 from cadence_mcp_bridge.amplifier_sweeps import GRID, PROFILE, AmplifierChild, Mode
 from cadence_mcp_bridge.bandwidth_study import RefinementExtraction
-from cadence_mcp_bridge.config import BridgeConfig
+from cadence_mcp_bridge.config import BridgeConfig, OperatorTransport
 from cadence_mcp_bridge.errors import (
     AuthenticationError,
     BackendUnavailableError,
     BridgeError,
+    ConfigurationError,
     HostKeyError,
     InvalidInputError,
     OperationTimeoutError,
@@ -159,7 +160,7 @@ class OpenSshBackend:
     _SERVER_ALIVE_INTERVAL_SECONDS = 15
     _SERVER_ALIVE_COUNT_MAX = 2
 
-    def __init__(self, config: BridgeConfig) -> None:
+    def __init__(self, config: BridgeConfig | OperatorTransport) -> None:
         self._config = config
         executable = shutil.which("ssh.exe")
         if executable is None:
@@ -620,6 +621,8 @@ class OpenSshBackend:
         return self._invoke_at_path(self._config.runner_path, command.value, *arguments)
 
     def _invoke_at_path(self, runner_path: str, command: str, *arguments: str) -> str:
+        if isinstance(self._config, OperatorTransport):
+            raise ConfigurationError("RUNNER_SETUP_REQUIRED: operator runner is not attested")
         argv = [
             self._ssh_executable,
             "-o",
