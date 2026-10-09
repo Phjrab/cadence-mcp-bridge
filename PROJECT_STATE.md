@@ -1,3 +1,16 @@
+## Cross-version repair metadata correction, 2026-10-09
+
+A final PR148 review found fractional mtime serialization differs between
+Python2.6 and Python3. New fixed inventories encode mtimes as round-trip strings;
+content, inode, owner, group, mode and ACL checks remain separate and enforced.
+Historical numeric private records and their exact helper/digests remain preserved;
+comparison supports equivalent historical numeric mtimes without accepting drift.
+Local136 tests/5 POSIX skips, Ruff/mypy72 and exact installed32-state preservation
+pass. Actual UID500/Python2.6 fractional synthetic inventory hashes identically on
+the host; real94-attempt/11,409,555,456-byte ledger is unchanged. Final exact-head
+hosted checks and independent review are pending. No administrator change or new
+simulation/reservation was performed. This is not general release acceptance.
+
 ## Serialized AC grid correction, 2026-10-09
 
 Final review exposed valid ultra-narrow grids whose %.16g displacement exceeds
