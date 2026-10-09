@@ -1,3 +1,24 @@
+## Narrow AC grid review correction, 2026-10-09
+
+Latest PR147 review found an additional P2: relative1e-12 endpoint/full-grid
+tolerance could consume the entire spacing of a valid ultra-narrow high-frequency
+sweep, accepting a missing start/end sample. Both checks now cap tolerance at one
+quarter of the nearest declared grid gap. Regressions request only the unchanged
+endpoint and demonstrate the other missing boundary still rejects. Exact close
+neighbors and normal16-digit serialized endpoints remain supported.
+Local350 related tests PASS/4 Windows POSIX skips, Ruff/mypy71 PASS; exact isolated
+wheel/sdist/CLI/SDK/bootstrap/reinstall/uninstall32-state preservation PASS.
+Current PR152 host reader also reprojects both retained actual AC results identically;
+that is prior-bundle result evidence, not fresh candidate simulation/app acceptance.
+All ten earlier findings remain implemented with distinct regressions. Final exact
+hosted CI and fresh independent review are still required before conditional merge.
+
+PR145 and146 normally merged asbdcba004 and5a85beb; current main5a85beb. Direct
+GREL02-08/retained16GiB/conditional related merge authority continues; consumption,
+replay and history are retained. No new VM jobs/admin changes/reservations. This
+foundation remains native-unqualified, release BLOCKED and exact publication approval
+separate. Earlier dated restrictions below are preserved historical checkpoints.
+
 # GREL-05 generic reader implementation checkpoint
 
 Status PARTIAL; generic native release BLOCKED. Continuous GREL02–07 and existing
