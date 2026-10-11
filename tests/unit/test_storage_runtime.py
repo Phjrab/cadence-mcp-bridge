@@ -38,6 +38,7 @@ def test_reference_runtime_is_complete_deterministic_and_packaged() -> None:
     assert payloads[prefix + "storage.py"] == Path(worker.__file__).read_bytes()
     assert b'"$RUNTIME/storage.py" "$2" "$3"' in payloads["run.sh"]
     assert b'"$RUNTIME/manifest.json"' in payloads["run.sh"]
+    assert b'exec /usr/bin/python -E -s -B ' in payloads["run.sh"]
 
 
 @pytest.mark.parametrize("pin", ["", "a" * 63, "A" * 64, "a" * 64 + ";echo", "$(id)"])
@@ -113,11 +114,17 @@ def exact_posix_runtime(tmp_path: Path) -> tuple[Path, Path, str]:
     return root, version / "runtime" / pin / "storage.py", pin
 
 
-def standalone(root: Path, script: Path, action: str = "inventory", request: Any = None) -> Any:
+def standalone(
+    root: Path, script: Path, action: str = "inventory", request: Any = None,
+    environment: dict[str, str] | None = None,
+) -> Any:
     # Exact deployment code is loaded as a script, with no package import path.
     # Bind only the disposable test root and isolated account-home fixture.
     harness = """
 import json, runpy, sys
+assert sys.flags.ignore_environment == 1
+assert sys.flags.no_user_site == 1
+assert sys.dont_write_bytecode
 namespace = runpy.run_path(sys.argv[1], run_name='fixed_standalone_test')
 assert namespace['__package__'] == ''
 globals_ = namespace['main'].__globals__
@@ -133,9 +140,9 @@ sys.argv = args
 namespace['main']()
 """
     return subprocess.run(
-        [sys.executable, "-I", "-B", "-c", harness, str(script), str(root), action,
+        [sys.executable, "-E", "-s", "-B", "-c", harness, str(script), str(root), action,
          worker.canonical({} if request is None else request).hex()],
-        capture_output=True, check=False, timeout=30,
+        capture_output=True, check=False, timeout=30, env=environment, cwd=script.parent,
     )
 
 
@@ -247,3 +254,26 @@ def test_exact_standalone_cleanup_dry_run_keeps_payload_ledger_and_restart(
         assert outcome["reservation_refunded_bytes"] == 0
     assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
     assert not list((root / worker.CONTROL / "operations").iterdir())
+
+
+
+def test_exact_standalone_ignores_python_environment_and_user_site(
+    exact_posix_runtime: tuple[Path, Path, str], tmp_path: Path,
+) -> None:
+    root, script, _pin = exact_posix_runtime
+    overrides = tmp_path / "untrusted-python"
+    overrides.mkdir(mode=0o700)
+    marker = overrides / "executed.private"
+    malicious = f"open({str(marker)!r}, 'w').write('untrusted')\nraise RuntimeError('override')\n"
+    for name in ("sitecustomize.py", "usercustomize.py", "json.py", "hashlib.py", "types.py"):
+        (overrides / name).write_text(malicious, encoding="utf-8")
+    environment = dict(os.environ)
+    environment.update(PYTHONPATH=str(overrides), PYTHONUSERBASE=str(overrides),
+                       PYTHONSTARTUP=str(overrides / "sitecustomize.py"))
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    reply = standalone(root, script, environment=environment)
+    assert reply.returncode == 0, reply.stderr.decode()
+    assert not marker.exists()
+    parsed = StorageSnapshot.model_validate_json(reply.stdout)
+    assert parsed.result_ceiling_bytes == 131072 and parsed.spectre_attempts == 0
+    assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}

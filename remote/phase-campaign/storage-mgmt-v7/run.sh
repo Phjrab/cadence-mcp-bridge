@@ -13,4 +13,4 @@ cd "$VERSION"
 sha256sum -c manifest.sha256 >/dev/null 2>&1 || exit 69
 RUNTIME="$VERSION/runtime/$1"
 [ "$(sha256sum "$RUNTIME/manifest.json" | cut -d ' ' -f 1)" = "$1" ] || exit 69
-exec /usr/bin/python -B "$RUNTIME/storage.py" "$2" "$3"
+exec /usr/bin/python -E -s -B "$RUNTIME/storage.py" "$2" "$3"

@@ -19,7 +19,8 @@ The packaged pure `reference_storage_bundle()` constructs `run.sh` and exactly
 manifest binds the two asset bytes and fixed reference managed root. The closed
 launcher verifies the outer deployment hashes and exact operator-configured pin,
 accepts only inventory/cleanup plus bounded hexadecimal JSON, and runs storage
-with Python bytecode writing disabled. Before accounting import, the worker checks
+with the standard profile flags `-E -s -B`: Python environment overrides and
+user-site imports are disabled, and no bytecode is written. Before accounting import, the worker checks
 the manifest kind/version/location, trusted ancestors, file ownership/link/mode,
 size and hashes. Missing, altered, writable or wrongly named assets reject.
 No CWD/PYTHONPATH helper fallback or arbitrary path/shell endpoint exists.
@@ -53,3 +54,42 @@ Current direct authority remains GREL02-08 candidate preparation, conditional
 normal related-PR merges and the validation VM's retained16GiB/500/20 ceiling.
 Other installations keep their registered budgets; counters/history are preserved.
 Public tag/Release/assets still require final exact-candidate approval.
+
+
+## Import isolation review correction
+
+Review4239887478 at b83726a found the initial v7 launcher used only `-B`.
+Its exact standalone/accounting/descriptor and installed43+20-state tests passed,
+but those checks did not qualify startup isolation against PYTHONPATH/user-site
+code. The corrected launcher and explicit deployment compile use `-E -s -B`,
+matching the standard-VM reference invocation. The real standalone fixture uses
+these exact flags, asserts interpreter environment/user-site/bytecode flags, and
+injects malicious sitecustomize/usercustomize/json/hashlib/types environment
+modules; none may execute or shadow the fixed runtime. Previous b837 package and
+Ubuntu396-pass receipts remain source-scoped history, not this corrected gate.
+No VM/deployment/actual ledger/admin/reservation changes occurred. Hosted checks,
+exact corrected package and refreshed review remain required.
+
+
+## Shared named-lock identity correction
+
+Independent root review found that a held descriptor alone did not prove the
+named resource lock/root remained current and privately owned. The shared fix
+from ece0b328 is included in standalone storage: pin the UID-owned0700 root and
+single-link UID-owned0600 run.lock with owner/group/content metadata, reopen the
+named root/lock and compare identities before and after flock, activation checks
+and completion. Busy read-only inventory receives the same checks. Cleanup checks
+again before operation intent creation, payload quarantine rename and unlink.
+Replacement, hard-linking, owner/mode/content drift rejects; partial quarantine
+and UNKNOWN receipts are preserved and no cumulative reservation is refunded.
+No generic group/provider/model or retained16-policy source was imported from that
+root change. Native-generic consumption remains fail-closed in this legacy worker.
+
+Portable shared/storage104 PASS/16 Windows Linux skips and Ruff/mypy78 PASS are
+local source evidence. Four additional real Linux inode/nofollow/flock races are
+included in Ubuntu CI with the existing exact standalone fixture. Earlier15a
+Ubuntu397-pass/zero-skip isolation result is retained as its source history.
+The storage asset and runtime manifest pin change again; old bundle/native
+receipts do not qualify this correction. No actual VM/deployment/result/ledger/
+admin/reservation/simulation changes occurred. Exact source package, hosted
+checks, final parent integration and refreshed review remain separate gates.
