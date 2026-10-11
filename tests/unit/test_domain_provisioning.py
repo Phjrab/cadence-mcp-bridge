@@ -589,3 +589,32 @@ def test_memory_loaded_migration_preserves_stdlib_first_entry_and_filters_bundle
     assert sys.path[0] == stdlib
     assert all(Path(entry or ".").resolve() != output for entry in sys.path)
     assert module._VALIDATED_HELPERS is None
+
+
+@pytest.mark.parametrize("missing", ["environment", "user-site"])
+def test_direct_migration_requires_isolated_python_before_untrusted_imports(tmp_path, missing):
+    import subprocess
+    import sys
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    search = tmp_path / "untrusted-search"
+    search.mkdir()
+    marker = tmp_path / "unreviewed-hook-executed"
+    shadow = ("from pathlib import Path\nPath(" + repr(str(marker)) +
+              ").write_text('executed')\nraise RuntimeError('unreviewed-hook')\n")
+    (search / "hashlib.py").write_text(shadow, encoding="utf-8")
+    environment = dict(os.environ, PYTHONPATH=str(search), PYTHONUSERBASE=str(search))
+    flags = ["-s", "-B"] if missing == "environment" else ["-E", "-B"]
+    result = subprocess.run(
+        [sys.executable, *flags, str(output / "migration.py"),
+         "inventory-existing", "a" * 64],
+        cwd=output, input=b"{}", capture_output=True, timeout=15, check=False,
+        env=environment,
+    )
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert result.stderr.replace(b"\r\n", b"\n") == (
+        b"OPERATOR_DOMAIN_MIGRATION_ISOLATED_PYTHON_REQUIRED\n"
+    )
+    assert not marker.exists()

@@ -4,6 +4,9 @@
 import sys
 
 if __name__ == "__main__":
+    if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+        sys.stderr.write("OPERATOR_DOMAIN_MIGRATION_ISOLATED_PYTHON_REQUIRED\n")
+        sys.exit(1)
     # Native fixed transport uses -E -s. Drop scriptdir/empty entries before the
     # first filesystem-backed stdlib import; staging files are never import code.
     if sys.path:

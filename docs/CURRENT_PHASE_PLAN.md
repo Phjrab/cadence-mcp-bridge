@@ -1,3 +1,26 @@
+## Selected runtime namespace durability, 2026-10-11
+
+Fresh independent finding4240331189 is corrected: activation fsyncs the selected
+version and runtime parent before any launcher or active pointer publication,
+then validates the exact manifest/assets again. Exact retries repeat both
+barriers. Actual POSIX fsync-order coverage is extended; four portable cases
+inject repeated version/runtime barrier failure in initial and exact activation,
+and another replaces runtime bytes during the last barrier. Pointer/history and
+failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PASS.
+Hosted actual POSIX and fresh final review/package remain separate pending gates.
+This correction performs no actual VM activation, EDA or accounting mutation.
+
+## Direct migration interpreter isolation, 2026-10-11
+
+Fresh independent finding4240335186 is corrected before filesystem-backed imports:
+direct migration startup requires ignore_environment and no_user_site flags,
+otherwise a bounded explicit isolated-interpreter error exits without migration.
+Memory-loaded authenticated composition retains its existing import boundary.
+Two exported-helper child tests omit each flag with absolute PYTHONPATH and
+PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
+Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
+package and final independent review remain gates. No VM/accounting mutation.
+
 ## Fixed stdin inventory and isolated operator invocation, 2026-10-11
 
 The latest independent P1 review4240265879 is addressed in the primary README
