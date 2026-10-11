@@ -1169,6 +1169,9 @@ def inventory(profile):
             if canonical_directory in visited_directories:
                 continue
             visited_directories.add(canonical_directory)
+            # Empty loader-visible directories are code namespace too: do not
+            # leave them shared-writable merely because no .so exists yet.
+            add(current)
             observed = library_directory_snapshot(current)
             directories, filenames = [], []
             for name in observed[1]:
