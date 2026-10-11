@@ -204,12 +204,36 @@ def storage_lock_guard(io, root_path, root, lock):
             raise ValueError("storage root permissions")
         return [info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode]
 
-    def lock_state(fd):
+    def lock_metadata(fd):
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
                 or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
             raise ValueError("storage lock permissions")
-        return metadata(fd) + [info.st_uid, info.st_gid]
+        if not 0 <= info.st_size <= 4096:
+            raise ValueError("storage lock content bound")
+        # Existing fixed launchers use O_TRUNC before trying flock. Truncating an
+        # already empty lock changes mtime/ctime without changing its identity.
+        # Bind actual bounded bytes instead; artifact metadata stays unchanged.
+        return [info.st_dev, info.st_ino, info.st_uid, info.st_gid,
+                info.st_mode, info.st_nlink, info.st_size]
+
+    def lock_state(fd):
+        before = lock_metadata(fd)
+        offset = os.lseek(fd, 0, os.SEEK_CUR)
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            blocks, count = [], 0
+            while count <= 4096:
+                block = os.read(fd, 4097 - count)
+                if not block:
+                    break
+                blocks.append(block)
+                count += len(block)
+            if count > 4096 or count != before[-1] or lock_metadata(fd) != before:
+                raise ValueError("storage lock content drift")
+            return before + [hashlib.sha256(b"".join(blocks)).hexdigest()]
+        finally:
+            os.lseek(fd, offset, os.SEEK_SET)
 
     pinned_root, pinned_lock = directory_state(root), lock_state(lock)
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import subprocess
 import sys
 from types import SimpleNamespace
 
@@ -168,3 +169,132 @@ def test_real_named_root_and_lock_drift_after_flock_never_reaches_inventory(
     assert before_counter == (actual_root / "sim-mcp-v2-jobs/counter.json").read_bytes()
     assert stat.S_ISREG((actual_root / "run.lock").stat().st_mode)
     assert not list((actual_root / w.CONTROL / "operations").iterdir())
+
+
+def timestamp_only_drift(io, path, monkeypatch):
+    original = w.os.fstat
+
+    def changed(fd):
+        info = original(fd)
+        if io.paths.get(fd) != path / "run.lock":
+            return info
+        values = vars(info).copy()
+        values["st_mtime"] += 100
+        values["st_ctime"] += 100
+        return SimpleNamespace(**values)
+
+    monkeypatch.setattr(w.os, "fstat", changed)
+
+
+@pytest.mark.parametrize("boundary", ["flock", "activation", "completion"])
+def test_lock_timestamp_only_changes_do_not_reject_unchanged_content(
+    fresh_store, monkeypatch, boundary,
+):
+    io = fixed_dispatch(fresh_store, monkeypatch)
+    _io, _root, path = fresh_store
+    snapshot = w.snapshot
+
+    def change():
+        timestamp_only_drift(io, path, monkeypatch)
+
+    def lock(*_args):
+        if boundary == "flock":
+            change()
+
+    def before():
+        if boundary == "activation":
+            change()
+
+    def inventory(*args, **kwargs):
+        result = snapshot(*args, **kwargs)
+        if boundary == "completion":
+            change()
+        return result
+
+    sys.modules["fcntl"].flock = lock
+    monkeypatch.setattr(w, "snapshot", inventory)
+    result = w.execute_fixed(str(path), "inventory", {}, before=before)
+    assert result["coverage_complete"]
+    assert not list((path / w.CONTROL / "operations").iterdir())
+
+
+def test_same_size_lock_content_drift_is_rejected(fresh_store, monkeypatch):
+    fixed_dispatch(fresh_store, monkeypatch)
+    _io, _root, path = fresh_store
+    lock = path / "run.lock"
+    lock.write_bytes(b"first")
+
+    def before():
+        lock.write_bytes(b"other")
+
+    with pytest.raises(ValueError, match="storage lock"):
+        w.execute_fixed(str(path), "inventory", {}, before=before)
+    assert not list((path / w.CONTROL / "operations").iterdir())
+
+
+def test_lock_hash_work_is_bounded_before_flock(fresh_store, monkeypatch):
+    fixed_dispatch(fresh_store, monkeypatch)
+    _io, _root, path = fresh_store
+    (path / "run.lock").write_bytes(b"x" * 4097)
+    sys.modules["fcntl"].flock = lambda *_args: pytest.fail("flock reached")
+    with pytest.raises(ValueError, match="storage lock content bound"):
+        w.execute_fixed(str(path), "inventory", {})
+
+
+def test_timestamp_change_between_quarantine_and_unlink_completes_cleanup(
+    fresh_store, monkeypatch,
+):
+    io, _root, path = fresh_store
+    identity = register(fresh_store)
+    request = request_for(fresh_store, identity)
+    approve(fresh_store, request)
+    fixed_dispatch(fresh_store, monkeypatch)
+    original = io.rename
+    before_counter = (path / "sim-mcp-v2-jobs/counter.json").read_bytes()
+
+    def rename(*args):
+        original(*args)
+        timestamp_only_drift(io, path, monkeypatch)
+
+    io.rename = rename
+    result = w.execute_fixed(str(path), "cleanup", request)
+    assert result["state"] == "COMPLETE"
+    assert result["reservation_refunded_bytes"] == 0
+    assert not (path / w.SPOOL / identity / "payload.bin").exists()
+    operation = path / w.CONTROL / "operations" / request["operation_id"]
+    assert not list((operation / "quarantine").iterdir())
+    assert before_counter == (path / "sim-mcp-v2-jobs/counter.json").read_bytes()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Real Linux shell O_TRUNC and independent flock")
+def test_real_phase_style_empty_lock_truncation_contention_preserves_inventory(
+    exact_posix_runtime, monkeypatch,
+):
+    root, _script, _pin = exact_posix_runtime
+    (root / "run.lock").write_bytes(b"")
+    monkeypatch.setattr(w.PosixIO, "account_home", lambda _self: str(root))
+    monkeypatch.setattr(w, "active_eda", lambda _root: False)
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    observed = []
+
+    def contender():
+        lock = root / "run.lock"
+        original = lock.stat()
+        reply = subprocess.run(
+            ["bash", "-c", 'exec 9>"$1"; flock -n 9', "phase-contender", str(lock)],
+            capture_output=True, timeout=10, check=False,
+        )
+        assert reply.returncode == 1, reply.stderr.decode()
+        current = lock.stat()
+        assert (current.st_dev, current.st_ino, current.st_size) == (
+            original.st_dev, original.st_ino, 0,
+        )
+        assert (current.st_mtime_ns, current.st_ctime_ns) != (
+            original.st_mtime_ns, original.st_ctime_ns,
+        )
+        observed.append(True)
+
+    result = w.execute_fixed(str(root), "inventory", {}, before=contender)
+    assert observed == [True] and result["coverage_complete"]
+    assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    assert not list((root / w.CONTROL / "operations").iterdir())
