@@ -733,3 +733,31 @@ def test_fixed_migration_entry_late_replacement_cannot_gain_new_manifest_identit
     with pytest.raises(ValueError, match="migration_asset_binding"):
         entry.run(str(output), "inventory-existing", result["manifest_sha256"])
     assert replaced == [True] and not marker.exists()
+
+
+def test_prepare_retains_manifest_bound_entry_during_package_resource_replacement(
+    tmp_path, monkeypatch
+):
+    profile = tmp_path / "environment.json"
+    profile.write_bytes((Path(__file__).resolve().parents[2] /
+                         "docs/examples/onboarding/environment.json").read_bytes())
+    original = domain_provisioning.contents
+    retained = []
+
+    def contents():
+        assets, raw, expected = original()
+        retained.append(domain_provisioning._entry_from_assets(assets))
+        # Any subsequent resource read must not influence executing entry bytes.
+        monkeypatch.setattr(domain_provisioning, "files", lambda *a: pytest.fail("reopened entry"))
+        return assets, raw, expected
+
+    def transport(environment, payload, expected, action, output, entry_source=None):
+        assert entry_source == retained[0] and "migration_entry_source_binding" in entry_source
+        return {"status": "SYNTHETIC_RETAINED_ENTRY"}
+
+    monkeypatch.setattr(domain_provisioning, "contents", contents)
+    monkeypatch.setattr(domain_provisioning, "_transport", transport)
+    expected = original()[2]
+    assert domain_provisioning.prepare(profile, tmp_path / "plan", expected)["status"] == (
+        "SYNTHETIC_RETAINED_ENTRY"
+    )

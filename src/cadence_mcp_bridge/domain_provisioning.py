@@ -79,6 +79,22 @@ def contents(setup: bool = False) -> tuple[dict[str, bytes], bytes, str]:
     return assets, raw, hashlib.sha256(raw).hexdigest()
 
 
+
+def _entry_from_assets(assets: dict[str, bytes]) -> str:
+    # This source was retained when the expected manifest was built. Never
+    # reopen an installed package resource between binding and remote startup.
+    prefix = b"exec /usr/bin/python -E -s -B -c "
+    suffix = b' "${0%/*}" "$1" "$expected"\n'
+    launcher = assets["domain-operator.sh"]
+    if launcher.count(prefix) != 1 or not launcher.endswith(suffix):
+        raise ValueError("fixed_domain_entry_shape")
+    quoted = launcher.split(prefix, 1)[1][:-len(suffix)].decode("ascii")
+    entry = shlex.split(quoted)
+    if len(entry) != 1:
+        raise ValueError("fixed_domain_entry_shape")
+    return entry[0]
+
+
 def export(output: Path, setup: bool = False) -> dict[str, object]:
     output = _local_path(output)
     assets, manifest, digest = contents(setup)
@@ -101,7 +117,7 @@ def prepare(
     profile: Path, output: Path, expected_helper_sha256: str, seal: bool = False
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
-    _, _, expected = contents()
+    assets, _, expected = contents()
     if expected_helper_sha256 != expected:
         raise ValueError("helper_package_binding_mismatch")
     raw_profile: bytes = _canonical(json.loads(data))
@@ -111,13 +127,18 @@ def prepare(
         expected,
         "inventory-legacy-seal" if seal else "inventory-existing",
         output,
+        _entry_from_assets(assets),
     )
 
 
 def _transport(
-    environment: EnvironmentProfile, payload: bytes, expected: str, action: str, output: Path
+    environment: EnvironmentProfile, payload: bytes, expected: str, action: str, output: Path,
+    entry_source: str | None = None,
 ) -> dict[str, object]:
     output = _local_path(output)
+    if (action in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
+            and entry_source is None):
+        raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
         raise ValueError("exclusive_receipt_parent_required")
     executable = shutil.which("ssh.exe")
@@ -147,7 +168,7 @@ def _transport(
     )
     command = (
         ["/usr/bin/python", "-E", "-s", "-B", "-c",
-         shlex.quote(files("cadence_mcp_bridge").joinpath("_domain_entry.py").read_text()),
+         shlex.quote(entry_source or ""),
          environment.paths.managed_root + "/operator-helpers/" + expected]
         if helper_name == "domain-operator.sh"
         else ["/usr/bin/python", "-E", "-s", "-B", helper_path]
@@ -209,7 +230,7 @@ def apply_existing(
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
-    _, _, expected = contents()
+    assets, _, expected = contents()
     if expected != expected_helper_sha256:
         raise ValueError("helper_package_binding_mismatch")
     raw = installer.regular(str(_local_path(plan)))  # type: ignore[no-untyped-call]
@@ -240,6 +261,7 @@ def apply_existing(
         expected,
         "seal-existing" if seal else "apply-existing",
         output,
+        _entry_from_assets(assets),
     )
 
 
