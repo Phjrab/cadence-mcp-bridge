@@ -93,7 +93,7 @@ profile. Apply/rollback accept only the complete profile-bound fixed-recipe plan
 inventory; arbitrary target lists are rejected before filesystem access. They consume
 `{ "plan": <exact object from receipt>,
 "expected_plan_sha256": <receipt hash>, "operator_authority": <actual human
-scope reference> }`. Run `python -B repair.py apply < request.private.json` on
+scope reference> }`. Run `/usr/bin/python -E -s -B repair.py apply < request.private.json` on
 that guest only after preserving the exact private before-state and helper hash.
 Redirect receipts privately. It shares the existing trusted resource lock and
 never initializes/resets a budget ledger. Fresh-domain provisioning remains an

@@ -1,3 +1,26 @@
+## Fixed stdin inventory and isolated operator invocation, 2026-10-11
+
+The latest independent P1 review4240265879 is addressed in the primary README
+and current runbook apply/rollback commands: use /usr/bin/python -E -s -B.
+Direct helper startup also rejects missing environment/user-site isolation before
+filesystem-backed imports. Two portable tests supply absolute search-hook values;
+neither unreviewed marker executes. This cannot repair an already compromised
+system startup hook; standard VM/system interpreter trust remains required.
+
+Actual root-installed inventory uncovered host WinError206 before SSH creation:
+the package helper now exceeds the Windows command-line limit. Repair-plan uses
+a small fixed package bootstrap plus bounded stdin source/request framing. It
+hashes exact installed helper bytes before compile/evaluation, keeps the fixed
+inventory-only dispatch and16MiB/60s transport limits, and rejects a source over
+128KiB or a changed source. No arbitrary-code/path/shell MCP input is introduced;
+only the immutable installed resource supplies this internal source. Portable
+owned child tests use a >32KiB helper, short command and same-size byte tampering.
+All failed harness/line-ending/escaping attempts remain preserved, with no actual
+VM/admin/simulation/reservation changes. Updated exact hosted/package/review and
+root installed actual inventory are still mandatory; previous receipts are history.
+Current16GiB/500/20,GREL02-08 and conditional normal merge continue. Public posting
+remains subject to one approval of the identical final qualified candidate.
+
 ## Final model observation and actual native storage layout, 2026-10-11
 
 Fresh root review4240255939/4240255943/4240255947 is corrected. Normal-user
