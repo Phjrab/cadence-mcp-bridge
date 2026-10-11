@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import math
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from cadence_mcp_bridge.analog_measurements import AnalogResult
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.power_measurements import PowerCounter
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    require_same_resource_policy,
+)
 from cadence_mcp_bridge.variable_contracts import Digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
@@ -189,7 +192,7 @@ class OffsetRun(ContractModel):
     psf_sha256: Digest
     frame_sha256: Digest
     scalars: OffsetScalars
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     new_simulation: bool
     warnings: Annotated[int, Field(ge=0, le=2)]
     notices: Annotated[int, Field(ge=0, le=16)]
@@ -199,6 +202,11 @@ class OffsetRun(ContractModel):
 class OffsetExtraction(ContractModel):
     schema_version: Literal[1]
     cases: tuple[OffsetRun, OffsetRun, OffsetRun, OffsetRun, OffsetRun]
+
+    @model_validator(mode="after")
+    def shared_policy(self) -> Self:
+        require_same_resource_policy(tuple(case.counter for case in self.cases))
+        return self
 
 
 class OffsetDiagnostics(ContractModel):

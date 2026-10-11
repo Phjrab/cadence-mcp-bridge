@@ -9,7 +9,10 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge.analog_measurements import AnalogResult
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.power_measurements import PowerCounter
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    require_same_resource_policy,
+)
 from cadence_mcp_bridge.variable_contracts import Digest
 
 REFERENCE_OPERATION = "eca78308-8af8-4810-b848-94c0ad936afe"
@@ -129,7 +132,7 @@ class StepRun(ContractModel):
     psf_sha256: Digest
     frame_sha256: Digest
     summary: StepSummary
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     warnings: Annotated[int, Field(ge=0, le=2)]
     notices: Annotated[int, Field(ge=0, le=100)]
     protected_unchanged: Literal[True]
@@ -141,6 +144,7 @@ class StepExtraction(ContractModel):
 
     @model_validator(mode="after")
     def complete_study(self) -> Self:
+        require_same_resource_policy(tuple(run.counter for run in self.cases))
         if tuple(r.summary.case for r in self.cases) != ("coarse", "medium", "fine", "fast"):
             raise ValueError("ordered distinct fixed cases required")
         for index, run in enumerate(self.cases):

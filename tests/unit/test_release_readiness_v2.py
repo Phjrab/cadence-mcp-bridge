@@ -28,6 +28,8 @@ def fixture(tmp_path: Path) -> Path:
         "src/cadence_mcp_bridge/__init__.py",
         "src/cadence_mcp_bridge/models.py",
         "src/cadence_mcp_bridge/measurement_models.py",
+        "docs/contracts/MCP_FRESH_POLICY_CONSUMER_V1_SNAPSHOT.json",
+        "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json",
         "docs/contracts/MCP_V1_COMPATIBILITY_SNAPSHOT.json",
         "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json",
         "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json",
@@ -191,3 +193,68 @@ def test_oversized_baseline_rejected(tmp_path: Path) -> None:
     path.write_bytes(b" " * (2 * 1024**2 + 1))
     with pytest.raises(ValueError):
         audit.read_json(path)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["empty", "source", "extra", "history", "new-output"])
+async def test_explicit_fresh_output_transition_cannot_hide_drift(
+    tmp_path: Path, change: str,
+) -> None:
+    project = fixture(tmp_path)
+    path = project / "docs/contracts/MCP_FRESH_POLICY_CONSUMER_V1_SNAPSHOT.json"
+    data = json.loads(path.read_bytes())
+    if change == "empty":
+        data["tools"] = {}
+    elif change == "source":
+        data["source_before"] = "0" * 40
+    elif change == "extra":
+        data["tools"]["cadence_health"] = {}
+    elif change == "history":
+        data["historical_tool_sha256"]["cadence_storage_summary"] = "0" * 64
+    else:
+        data["tools"]["cadence_storage_summary"]["outputSchema"] = {}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="fresh policy consumer"):
+        audit.inspect(project, await audit.inventory())
+
+
+@pytest.mark.asyncio
+async def test_current_fresh_output_drift_and_historical_substitution_rejected(
+    tmp_path: Path,
+) -> None:
+    schemas = await audit.inventory()
+    schemas["cadence_storage_summary"]["outputSchema"] = {}
+    with pytest.raises(ValueError, match="fresh policy consumer"):
+        audit.inspect(ROOT, schemas)
+    project = fixture(tmp_path)
+    path = project / "docs/contracts/MCP_BANDWIDTH_STUDY_V1_SNAPSHOT.json"
+    data = json.loads(path.read_bytes())
+    data["tools"]["cadence_bandwidth_study_result"]["outputSchema"] = {}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="bandwidth study"):
+        audit.inspect(project, await audit.inventory())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["empty", "source", "extra", "prior", "history", "new-output"])
+async def test_standard_vm_consumer_transition_is_exact_and_history_bound(
+    tmp_path: Path, change: str,
+) -> None:
+    project = fixture(tmp_path)
+    path = project / "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json"
+    data = json.loads(path.read_bytes())
+    if change == "empty":
+        data["tools"] = {}
+    elif change == "source":
+        data["source_before"] = "0" * 40
+    elif change == "extra":
+        data["tools"]["cadence_health"] = {}
+    elif change == "prior":
+        data["prior_snapshot_sha256"] = "0" * 64
+    elif change == "history":
+        data["previous_tool_sha256"]["cadence_storage_summary"] = "0" * 64
+    else:
+        data["tools"]["cadence_storage_summary"]["outputSchema"] = {}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="standard-VM fresh policy consumer"):
+        audit.inspect(project, await audit.inventory())

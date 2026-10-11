@@ -29,6 +29,18 @@ ROOT = Path(__file__).resolve().parents[1]
 TAG_COMMIT = "8a0d44fab90e2095cc39322baef60fc09d741cd6"
 SNAPSHOT_COMMIT = "4ea17e2641f316ec0899c9c91f8bea97c6b4086f"
 RUNTIME_CONFIG_COMMIT = "b015b7151239e5613f8960fa896b8422b0b680aa"
+FRESH_CONSUMER_SNAPSHOT_SHA256 = "2c4beca566fc4d12ff155a0a73ddc69cdbde2d972da36817480cae1db821d728"
+STANDARD_VM_CONSUMER_SNAPSHOT_SHA256 = (
+    "6e25c9863bc2787748c8d1aaf79396291474555b57f16ee41d2113f9e288a154"
+)
+FRESH_CONSUMER_TOOLS = {
+    "cadence_amplifier_sweep_result",
+    "cadence_bandwidth_study_result",
+    "cadence_evaluate_amplifier_specifications",
+    "cadence_offset_study_result",
+    "cadence_slew_study_result",
+    "cadence_storage_summary",
+}
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
 
 
@@ -54,6 +66,12 @@ def read_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("audit object required")
     return value
+
+
+def schema_digest(value: object) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
 
 
 def declarations(source: str) -> dict[str, dict[str, str]]:
@@ -101,6 +119,59 @@ async def inventory() -> dict[str, dict[str, Any]]:
 
 def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Check current contracts, not live app/remote/legal or publication authority."""
+    fresh = read_json(project / "docs/contracts/MCP_FRESH_POLICY_CONSUMER_V1_SNAPSHOT.json")
+    if (
+        schema_digest(fresh) != FRESH_CONSUMER_SNAPSHOT_SHA256
+        or type(fresh.get("schema_version")) is not int
+        or fresh.get("schema_version") != 1
+        or fresh.get("source_before") != "96370fdd778cb9c39e5df560a4c1d873f4a50ad1"
+        or fresh.get("scope") != "registered_fresh_policy_output_consumers_only"
+        or set(fresh.get("tools", {})) != FRESH_CONSUMER_TOOLS
+        or set(fresh.get("historical_tool_sha256", {})) != FRESH_CONSUMER_TOOLS
+    ):
+        raise ValueError("unreviewed fresh policy consumer schema drift")
+
+    standard = read_json(
+        project / "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json"
+    )
+    if (
+        schema_digest(standard) != STANDARD_VM_CONSUMER_SNAPSHOT_SHA256
+        or type(standard.get("schema_version")) is not int
+        or standard.get("schema_version") != 2
+        or standard.get("source_before") != "7808aa8041a9ceeba872ff94a199f63b5cbfbf0a"
+        or standard.get("prior_snapshot_sha256") != FRESH_CONSUMER_SNAPSHOT_SHA256
+        or standard.get("scope")
+        != "registered_fresh_and_retained_v6_policy_output_consumers_only"
+        or set(standard.get("tools", {})) != FRESH_CONSUMER_TOOLS
+        or set(standard.get("previous_tool_sha256", {})) != FRESH_CONSUMER_TOOLS
+        or any(
+            standard["previous_tool_sha256"][name] != schema_digest(fresh["tools"][name])
+            or schemas.get(name) != standard["tools"][name]
+            or {key: value for key, value in fresh["tools"][name].items() if key != "outputSchema"}
+            != {
+                key: value for key, value in standard["tools"][name].items()
+                if key != "outputSchema"
+            }
+            for name in FRESH_CONSUMER_TOOLS
+        )
+    ):
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+
+    def reviewed_schema(name: str, tool: dict[str, Any]) -> bool:
+        if name in FRESH_CONSUMER_TOOLS:
+            # Pin both sides of this explicit output-only transition. Historical
+            # snapshots stay unchanged and unrelated schemas must still match.
+            return (
+                schema_digest(tool) == fresh["historical_tool_sha256"][name]
+                and schemas.get(name) == standard["tools"][name]
+                and {key: value for key, value in tool.items() if key != "outputSchema"}
+                == {
+                    key: value for key, value in standard["tools"][name].items()
+                    if key != "outputSchema"
+                }
+            )
+        return schemas.get(name) == tool
+
     legacy = read_json(project / "docs/contracts/MCP_V1_COMPATIBILITY_SNAPSHOT.json")
     snapshot = read_json(project / "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json")
     addition = read_json(project / "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json")
@@ -117,7 +188,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or set(spec_addition.get("tools", {})) != {
             "cadence_amplifier_specification_catalog", "cadence_evaluate_amplifier_specifications",
         }
-        or any(schemas.get(n) != t for n, t in spec_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in spec_addition["tools"].items())
     ):
         raise ValueError("unreviewed amplifier specification schema drift")
     if (
@@ -129,7 +200,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             "cadence_amplifier_sweep_status", "cadence_amplifier_sweep_result",
             "cadence_cancel_amplifier_sweep",
         }
-        or any(schemas.get(n) != t for n, t in amplifier_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in amplifier_addition["tools"].items())
     ):
         raise ValueError("unreviewed amplifier sweep schema drift")
     if (
@@ -137,7 +208,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or offset_addition.get("schema_version") != 1
         or offset_addition.get("source_main") != "09339c48c692f6e00e53b36adc725516b54b4daf"
         or set(offset_addition.get("tools", {})) != {"cadence_offset_study_result"}
-        or any(schemas.get(n) != t for n, t in offset_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in offset_addition["tools"].items())
     ):
         raise ValueError("unreviewed offset study schema drift")
     slew_addition = read_json(project / "docs/contracts/MCP_SLEW_STUDY_V1_SNAPSHOT.json")
@@ -146,7 +217,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or slew_addition.get("schema_version") != 1
         or slew_addition.get("source_main") != "b49d826448c1ddab2a2b3d4e176d07db3462412d"
         or set(slew_addition.get("tools", {})) != {"cadence_slew_study_result"}
-        or any(schemas.get(n) != t for n, t in slew_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in slew_addition["tools"].items())
     ):
         raise ValueError("unreviewed step study schema drift")
     if (
@@ -154,7 +225,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or bandwidth_addition.get("schema_version") != 1
         or bandwidth_addition.get("source_main") != "d97d9934341d382c1131ee1f5d61ab8cc75ace38"
         or set(bandwidth_addition.get("tools", {})) != {"cadence_bandwidth_study_result"}
-        or any(schemas.get(n) != t for n, t in bandwidth_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in bandwidth_addition["tools"].items())
     ):
         raise ValueError("unreviewed bandwidth study schema drift")
     if (
@@ -167,7 +238,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             "cadence_evaluate_specification_v2",
             "cadence_runtime_info_v2",
         }
-        or any(schemas.get(n) != t for n, t in binding_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in binding_addition["tools"].items())
     ):
         raise ValueError("unreviewed versioned measurement binding schema drift")
     if (
@@ -176,7 +247,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or power_addition.get("source_main") != "8009060edc076ccacb371c45d8f8fb3a335b150f"
         or set(power_addition.get("tools", {}))
         != {"cadence_describe_power_measurement", "cadence_power_measurement_result"}
-        or any(schemas.get(n) != t for n, t in power_addition["tools"].items())
+        or any(not reviewed_schema(n, t) for n, t in power_addition["tools"].items())
     ):
         raise ValueError("unreviewed power schema drift")
     if (
@@ -194,7 +265,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or snapshot.get("source_main") != SNAPSHOT_COMMIT
         or not isinstance(snapshot.get("tools"), dict)
         or len(snapshot["tools"]) != 69
-        or any(schemas.get(name) != tool for name, tool in snapshot["tools"].items())
+        or any(not reviewed_schema(name, tool) for name, tool in snapshot["tools"].items())
     ):
         raise ValueError("current full tool schema inventory differs from reviewed snapshot")
     if (
@@ -215,7 +286,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(amplifier_addition["tools"])
             | set(spec_addition["tools"])
         )
-        or any(schemas.get(name) != tool for name, tool in addition["tools"].items())
+        or any(not reviewed_schema(name, tool) for name, tool in addition["tools"].items())
     ):
         raise ValueError("unreviewed additive tool or runtime metadata schema drift")
     source = (project / "src/cadence_mcp_bridge/server.py").read_text(encoding="utf-8")
@@ -285,7 +356,9 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         "registry_schemas": 8,
         "package_version": __version__,
         "license": "Apache-2.0",
-        "conditional_semver_recommendation": "v1.1.0",
+        "conditional_semver_recommendation": "requires_behavior_and_migration_review",
+        "reviewed_fresh_policy_output_transitions": sorted(FRESH_CONSUMER_TOOLS),
+        "resource_consumer_transition_version": 2,
         "comparison_scope": "declarations_shared_models_current_schemas_not_universal_behavior",
         "publication_authorized": False,
         "unverified_external_gates": [
