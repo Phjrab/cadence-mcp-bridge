@@ -1,3 +1,24 @@
+## Whole repair protocol and omitted ancestor checks, 2026-10-11
+
+Fresh PR148 review found valid large-ACL plans exceeding the whole16MiB protocol
+and unsafe ancestors above the fixed vendor base being omitted. The standalone
+helper now bounds aggregate records, the complete inventory response and canonical
+apply/rollback envelope (including newline and maximum allowed authority text)
+before action. Oversized plans fail closed rather than expanding the private cap.
+Unlisted ancestors above vendor/workspace roots are checked read-only through
+no-follow descriptors to/. Unsafe ancestors reject; exact repair targets and their
+content/owner protection do not expand to user or system ancestor trees.
+Local167 relevant checks PASS/10 Windows POSIX skips; Ruff/mypy72 and isolated
+package/CLI/bootstrap/reinstall/uninstall32-state preservation PASS. Complete Linux
+synthetic recipe coverage checks the omitted writable ancestor without changing it,
+then proves healthy ancestors stay outside the target set. Exact current-VM
+read-only inventory, hosted checks and final independent review remain pending.
+The helper is also shipped as native modeltrust.py, so its bytes change. Preserve
+bf6c20 and prior runtime evidence; qualify the exact updated native bundle before
+candidate acceptance. This fix performs0 VM contacts/admin changes/simulations/
+reservations. Earlier observations remain history; active16GiB/500/20, continuous
+GREL02-08 and conditional normal merge authority and exact-publication gate persist.
+
 ## Real repair transport boundary correction, 2026-10-11
 
 Final PR148 review found that bootstrap's16MiB request still met the general
