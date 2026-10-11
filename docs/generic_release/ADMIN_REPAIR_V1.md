@@ -1,3 +1,49 @@
+## Fixed stdin inventory and isolated operator invocation, 2026-10-11
+
+The latest independent P1 review4240265879 is addressed in the primary README
+and current runbook apply/rollback commands: use /usr/bin/python -E -s -B.
+Direct helper startup also rejects missing environment/user-site isolation before
+filesystem-backed imports. Two portable tests supply absolute search-hook values;
+neither unreviewed marker executes. This cannot repair an already compromised
+system startup hook; standard VM/system interpreter trust remains required.
+
+Actual root-installed inventory uncovered host WinError206 before SSH creation:
+the package helper now exceeds the Windows command-line limit. Repair-plan uses
+a small fixed package bootstrap plus bounded stdin source/request framing. It
+hashes exact installed helper bytes before compile/evaluation, keeps the fixed
+inventory-only dispatch and16MiB/60s transport limits, and rejects a source over
+128KiB or a changed source. No arbitrary-code/path/shell MCP input is introduced;
+only the immutable installed resource supplies this internal source. Portable
+owned child tests use a >32KiB helper, short command and same-size byte tampering.
+All failed harness/line-ending/escaping attempts remain preserved, with no actual
+VM/admin/simulation/reservation changes. Updated exact hosted/package/review and
+root installed actual inventory are still mandatory; previous receipts are history.
+Current16GiB/500/20,GREL02-08 and conditional normal merge continue. Public posting
+remains subject to one approval of the identical final qualified candidate.
+
+## External-parent and startup trust correction, 2026-10-11
+
+Fresh8a325b0 review4240230641/4240230643 found two narrower trust gaps. The
+external collector now reopens the full named no-follow parent after the final
+fixed leaf read, rejecting ancestor detach while a held leaf directory survives.
+An external-only nested library now contributes its canonical in-installation
+parent chain to the exact repair plan; external target files remain excluded.
+A parent that resolves outside the fixed installation rejects instead of expanding
+mutation scope. Existing content/owner/read/execute/ACL and rollback protections
+remain. Apply/rollback timing and nested-parent recovery have dedicated Linux
+regressions; Windows startup shadows are portable separate evidence.
+
+Read-only repair-plan now uses the reference -E -s -B Python flags. The exported
+helper removes script/CWD paths using builtin sys before filesystem-backed imports;
+retained memory-loaded modules preserve their legitimate stdlib paths. Use
+`/usr/bin/python -E -s -B repair.py apply` or `rollback` for explicitly authorized
+operator/admin execution. Import, doctor and planning still perform no repair.
+Historical -B-only instructions/helper receipts stay historical, not the current
+recommended invocation. Current VM16GiB/500/20 and continuousGREL02-08 delegation
+persist; package/hosted/fresh review/final actual installed gates are pending.
+This correction itself performs no actual VM/admin mutation/reservation/simulation.
+Public tag/Release/upload still requires final exact-candidate approval.
+
 ## Held external-link observation correction, 2026-10-11
 
 Fresh exact c0b4b69 review found separate pathname reads could retain a stale
@@ -446,7 +492,7 @@ After the actual operator approves these targets, preserve an application reques
 
 `plan` above is an object, not a string in a real request. Use the exported helper
 on the guest with its system Python2.6, from a verified private operator/admin copy:
-`python -B repair.py apply < apply-request.private.json`. Record private stdout
+`/usr/bin/python -E -s -B repair.py apply < apply-request.private.json`. Record private stdout
 JSONL and stderr. Use normal ownership privileges if sufficient; otherwise use
 existing legitimate administrator authentication for this helper only. Keep MCP,
 SSH/EDA executions, copies, extraction and journals as the ordinary guest user.
@@ -480,7 +526,7 @@ descriptors to address just that directory; regression tests cover this behavior
 Retain the original plan: repeating apply checks all content again and changes
 only unfinished items. Exact known intermediate chmod/ACL states are accepted;
 other partial states reject for investigation. To restore precisely the original
-mode/ACL, use `python -B repair.py rollback < apply-request.private.json` under
+mode/ACL, use `/usr/bin/python -E -s -B repair.py rollback < apply-request.private.json` under
 actual operator authority. Rollback requires the existing authenticated exact
 applied-plan receipt as well as matching inode/owner/content and
 before/after/known-intermediate metadata; it cannot restore arbitrary substituted
