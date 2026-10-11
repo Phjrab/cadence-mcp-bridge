@@ -408,3 +408,24 @@ def test_memory_loaded_setup_preserves_legitimate_first_import_path(tmp_path, mo
     loaded.__package__ = ""
     exec(compile((output / "setup.py").read_bytes(), loaded.__file__, "exec"), loaded.__dict__)
     assert sys.path[0] == stdlib
+
+
+@pytest.mark.parametrize("name", ["base64", "hashlib", "json", "os", "stat"])
+def test_fixed_c_staging_scrubs_ssh_working_directory_before_imports(tmp_path, name):
+    import subprocess
+    import sys
+    from importlib.resources import files
+
+    marker = tmp_path / "unreviewed-staging-import"
+    (tmp_path / (name + ".py")).write_text(
+        "open(" + ascii(str(marker)) + ", 'w').write('executed')\n"
+        "raise RuntimeError('unreviewed-working-directory')\n", encoding="utf-8",
+    )
+    source = files("cadence_mcp_bridge").joinpath("_setup_stage.py").read_text(encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", "-c", source, "a" * 64],
+        cwd=tmp_path, input=b"{}", capture_output=True, check=False, timeout=15,
+    )
+    assert result.returncode == 1 and not result.stdout
+    assert result.stderr.replace(b"\r\n", b"\n") == b"STANDARD_VM_SETUP_STAGING_REJECTED\n"
+    assert not marker.exists()

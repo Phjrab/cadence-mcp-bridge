@@ -201,7 +201,7 @@ async def test_storage_supervisor_and_sdk_report_registered_lower_ceiling(consum
     assert backend.executions == 0
 
 
-@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset", "amplifier"])
+@pytest.mark.parametrize("kind", ["power", "bandwidth", "bias", "slew", "offset", "amplifier"])
 def test_fresh_result_cannot_claim_zero_unadmitted_observation(kind: str) -> None:
     value = receipt(kind)
     counters(value)[0].update(count=0, result_reserved_bytes=0)

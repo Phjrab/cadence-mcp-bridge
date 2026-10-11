@@ -1,3 +1,22 @@
+## Staging startup and positive power admission, 2026-10-11
+
+Independent review4240427687/4240427689 is corrected. The fixed -c setup staging
+source now removes CWD/script entries using builtin sys before importing base64,
+hashlib, json or other filesystem dependencies, and requires isolated Python
+flags. Memory-loaded imports preserve trusted stdlib entries. Five real child
+process tests place marker-bearing shadows in the SSH-equivalent CWD; all reject
+the invalid payload without importing those files or creating any remote state.
+
+PowerExtraction now applies the shared positive fresh-reservation guard, including
+direct OpenSSH model validation. A fresh count0/bytes0 result cannot qualify;
+legacy power counter serialization remains unchanged. The cross-consumer zero
+counter regression now includes power. Windows fresh/power/consumer144 PASS,
+official Ruff/mypy78 PASS. Exact current hosted, installed, security and refreshed
+independent review remain gates; no actual VM, journal, reservation or simulation
+changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
+integration remain authorized. Final exact public-candidate approval is separate.
+Earlier histories, policy versions, failed evidence and original state remain.
+
 ## Python isolation before interpreter startup, 2026-10-11
 
 Independent P1 review4240357276 is addressed by a manifest-bound fixed POSIX
