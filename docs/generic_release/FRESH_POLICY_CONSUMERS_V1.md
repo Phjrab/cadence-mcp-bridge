@@ -247,3 +247,21 @@ package-v2 test. An earlier attempt to copy the temporary artifacts occurred aft
 the verifier's expected cleanup; that local copy failure changed no package/source
 or remote data. Its empty private destination remains preserved. The rebuilt
 private artifacts and their audit are retained under a new destination.
+
+## Corrected real-POSIX cleanup test input, 2026-10-11
+
+The e94d784 Ubuntu consumer check observed87 PASS and one failed cleanup fixture.
+Its empty `{}` payload was correctly rejected by the closed cleanup request
+validator before reaching flock; the inventory real-lock test passed. This was a
+fixture defect, not a production lock-policy relaxation or native job failure.
+The regression now prepares the existing registered-artifact cleanup plan before
+reservation and sends its canonical encoded valid request. The expected
+`active EDA lock` assertion therefore observes the intended contention path.
+The unskipped fixed-main regression also runs inventory and cleanup with expected
+EAGAIN/EACCES and unexpected EIO, so Windows validates that input boundary.
+
+Corrected Windows storage-worker49 PASS /three platform skips /8.93s; Ruff and
+whitespace checks PASS. The production asset and all package files remain unchanged
+from e94d784; its exact installed-package/deterministic distribution hashes above
+still identify these code bytes. POSIX rerun and refreshed review/CI remain pending;
+the prior failed CI is retained and is not claimed as PASS. No real data changes.

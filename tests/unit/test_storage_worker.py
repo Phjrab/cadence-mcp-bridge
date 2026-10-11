@@ -729,13 +729,16 @@ def test_busy_inventory_still_denies_malformed_counter_and_unknown_policy(
 
 
 @pytest.mark.parametrize("lock_errno", [errno.EAGAIN, errno.EACCES, errno.EIO])
+@pytest.mark.parametrize("operation", ["inventory", "cleanup"])
 def test_fixed_main_only_expected_contention_uses_partial_inventory(
     fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str], lock_errno: int,
+    capsys: pytest.CaptureFixture[str], lock_errno: int, operation: str,
 ) -> None:
     import sys
 
     io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
     (path / "sim-mcp-v2-jobs/counter.json.ade-tmp").write_bytes(b"uncommitted")
     calls = []
 
@@ -748,10 +751,14 @@ def test_fixed_main_only_expected_contention_uses_partial_inventory(
     ))
     monkeypatch.setattr(w, "PosixIO", lambda: io)
     monkeypatch.setattr(w, "ROOT", str(path))
-    monkeypatch.setattr(sys, "argv", ["fixed-storage", "inventory", "7b7d"])
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
     before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
     if lock_errno == errno.EIO:
         with pytest.raises(OSError):
+            w.main()
+        assert capsys.readouterr().out == ""
+    elif operation == "cleanup":
+        with pytest.raises(ValueError, match="active EDA lock"):
             w.main()
         assert capsys.readouterr().out == ""
     else:
@@ -775,13 +782,15 @@ def test_fixed_main_real_reservation_lock_does_not_audit_an_incomplete_transacti
     from cadence_mcp_bridge import _shared_reservations as accounting
 
     io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
     original_write = accounting.write_new
     observations = []
     identity = str(uuid4())
     (path / accounting.JOBS / identity / "work").mkdir(parents=True, mode=0o700)
     monkeypatch.setattr(w, "PosixIO", lambda: io)
     monkeypatch.setattr(w, "ROOT", str(path))
-    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, "7b7d"])
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
 
     def paused_write(filename: str, value: Any) -> None:
         original_write(filename, value)
