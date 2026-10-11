@@ -10,6 +10,7 @@ import json
 import os
 import stat
 import sys
+import types
 
 LIMIT = 262144
 FILES = (
@@ -150,7 +151,32 @@ def activation(profile, expected):
         raise ValueError("native_runtime_revoked")
 
 
-def history_guard(profile, expected, identity):
+MODULES = (
+    "reservations", "installer", "probe", "confirmation", "storage", "copying",
+    "rendering", "operations", "gate", "worker", "modeltrust",
+)
+
+
+def verified_modules(here, assets, names=MODULES):
+    # Assets have already passed the complete manifest/descriptor checks. Never
+    # import a cached namesake, reopen executable paths or create bytecode.
+    loaded = {}
+    for name in names:
+        if name not in MODULES:
+            raise ValueError("native_runtime_module_name")
+        module = types.ModuleType(name)
+        module.__file__ = here + "/" + name + ".py"
+        module.__dict__["__package__"] = None
+        loaded[name] = module
+    for name in names:
+        sys.modules[name] = loaded[name]
+    for name in names:
+        module = loaded[name]
+        eval(compile(assets[name + ".py"], module.__file__, "exec"), module.__dict__)
+    return loaded
+
+
+def history_guard(profile, expected, identity, confirmation):
     history = closed(read(
         profile["paths"]["managed_root"] + "/native-provider-history/" + expected + ".json"
     ))
@@ -162,9 +188,7 @@ def history_guard(profile, expected, identity):
         or history["identity_manifest_sha256"] != identity
     ):
         raise ValueError("native_runtime_activation_history")
-    # Only the reviewed confirmation parser is loaded from the validated bundle.
-    import confirmation
-
+    # The parser was explicitly loaded from authenticated bundle bytes.
     confirmation.authority_reference(history["operator_authority"])
 
 
@@ -180,15 +204,17 @@ def storage_dispatch(here, expected, assets, profile, request, action):
         raise ValueError("native_storage_request_binding")
     if action == "storage_inventory" and request["payload"] != {}:
         raise ValueError("native_storage_inventory_arguments")
-    sys.path.insert(0, here)
-    import storage
+    loaded = verified_modules(
+        here, assets, ("reservations", "installer", "probe", "confirmation", "storage"),
+    )
+    storage = loaded["storage"]
 
     def before():
         # Recheck installed identity and activation inside the existing flock.
         # Busy inventory remains read-only and protected; cleanup cannot proceed.
         validate(expected)
         activation(profile, expected)
-        history_guard(profile, expected, identity)
+        history_guard(profile, expected, identity, loaded["confirmation"])
 
     result = storage.execute_fixed(
         profile["paths"]["managed_root"],
@@ -242,19 +268,9 @@ def main():
     registration = closed(assets["registration.json"])
     if request["identity_manifest_sha256"] != registration["identity_manifest_sha256"]:
         raise ValueError("native_runtime_accounting_anchor")
-    # Import only verified fixed members; Python -B forbids extra bytecode files.
-    sys.path.insert(0, here)
-    import reservations
-    import confirmation
-    import probe
-    import storage
-    import copying
-    import rendering
-    import installer
-    import operations
-    import gate
-    import worker
-    import modeltrust
+    loaded = verified_modules(here, assets)
+    (reservations, installer, probe, confirmation, storage, copying, rendering,
+     operations, gate, worker, modeltrust) = (loaded[name] for name in MODULES)
 
     bound_gate = gate.ConfirmedGate(
         profile,
@@ -266,7 +282,7 @@ def main():
         lambda: activation(profile, expected),
         modeltrust,
     )
-    history_guard(profile, expected, registration["identity_manifest_sha256"])
+    history_guard(profile, expected, registration["identity_manifest_sha256"], confirmation)
     eda = worker.EdaWorker(bound_gate, operations, rendering, copying, installer)
     coordinator = operations.NativeCoordinator(
         profile["paths"]["managed_root"], reservations, bound_gate, operations.ForkWorker(eda.run)

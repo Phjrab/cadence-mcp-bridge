@@ -140,12 +140,14 @@ def test_dispatch_passes_only_trusted_profile_root_and_locked_guard(monkeypatch,
         events.append("inventory")
         return {"bounded": True}
 
-    monkeypatch.setitem(sys.modules, "storage", SimpleNamespace(execute_fixed=execute))
+    monkeypatch.setattr(dispatch, "verified_modules", lambda *_a, **_kw: {
+        "storage": SimpleNamespace(execute_fixed=execute), "confirmation": object(),
+    })
     monkeypatch.setattr(dispatch, "validate", lambda sha: events.append(("validate", sha)))
     monkeypatch.setattr(
         dispatch, "activation", lambda p, sha: events.append(("activation", p, sha)),
     )
-    monkeypatch.setattr(dispatch, "history_guard", lambda p, sha, identity: events.append(
+    monkeypatch.setattr(dispatch, "history_guard", lambda p, sha, identity, parser: events.append(
         ("history", p, sha, identity)))
     request = dict(schema_version=1, action="storage_inventory",
                    identity_manifest_sha256="a" * 64, payload={})
@@ -171,3 +173,53 @@ def test_dispatch_routes_storage_without_operation_plan_or_simulator(monkeypatch
     dispatch.main()
     assert len(calls) == 1 and calls[0][-2:] == (request, "storage_inventory")
     assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("names", [dispatch.MODULES, (
+    "reservations", "installer", "probe", "confirmation", "storage",
+)])
+def test_verified_asset_modules_replace_cached_names_and_use_exact_bytes(monkeypatch, names):
+    assets = {}
+    for name in names:
+        monkeypatch.setitem(sys.modules, name, SimpleNamespace(
+            execute_fixed=lambda *_a, **_k: pytest.fail("cached module executed"),
+        ))
+        assets[name + ".py"] = (
+            "import sys\nassert __package__ is None\n"
+            "assert sys.modules[__name__].__dict__ is globals()\n"
+            f"verified_marker = {name!r}\n"
+        ).encode("ascii")
+    # No source path need exist: all execution uses previously authenticated bytes.
+    modules = dispatch.verified_modules("/fixed/verified/runtime", assets, names)
+    for name in names:
+        assert modules[name] is sys.modules[name]
+        assert modules[name].verified_marker == name
+        assert modules[name].__file__ == "/fixed/verified/runtime/" + name + ".py"
+
+
+def test_storage_dispatch_uses_authenticated_asset_not_cached_namesake(monkeypatch, capsys):
+    root, expected = "/operator-specific/managed", "c" * 64
+    profile = {"paths": {"managed_root": root}}
+    names = ("reservations", "installer", "probe", "confirmation", "storage")
+    assets = {name + ".py": b"" for name in names}
+    assets["registration.json"] = dispatch.canonical(dict(identity_manifest_sha256="a" * 64))
+    assets["storage.py"] = b"""
+def execute_fixed(root, action, request, before, native_generic):
+    assert root == '/operator-specific/managed'
+    assert action == 'inventory' and request == {} and native_generic
+    before()
+    return {'verified_asset': True}
+"""
+    for name in names:
+        monkeypatch.setitem(sys.modules, name, SimpleNamespace(
+            execute_fixed=lambda *_a, **_k: pytest.fail("cached storage bypass"),
+        ))
+    monkeypatch.setattr(dispatch, "validate", lambda _sha: None)
+    monkeypatch.setattr(dispatch, "activation", lambda *_a: None)
+    monkeypatch.setattr(dispatch, "history_guard", lambda *_a: None)
+    request = dict(schema_version=1, action="storage_inventory",
+                   identity_manifest_sha256="a" * 64, payload={})
+    dispatch.storage_dispatch("/verified-runtime", expected, assets, profile, request,
+                              "storage_inventory")
+    reply = json.loads(capsys.readouterr().out)
+    assert reply["payload"] == {"verified_asset": True}

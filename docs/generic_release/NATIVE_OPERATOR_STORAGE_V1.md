@@ -1,3 +1,21 @@
+## Authenticated native module loading checkpoint
+
+The dispatcher loads all fixed internal executable assets explicitly from their
+manifest-verified bytes. A cached top-level module from a system startup hook
+cannot replace storage, confirmation or another native component. Compilation
+uses the bound installed filename for diagnostics and creates no bytecode; no
+caller module name, script or path is accepted. Regressions poison the cached
+module names and prove both the complete loader and storage route use verified
+bytes. Local affected75 PASS/31 Windows POSIX skips; mypy96 PASS. Final hosted
+checks/review and exact installed/VM qualification remain required.
+
+Fixed run.lock guards retain device/inode/UID/GID/mode/nlink/size and a bounded
+content hash. They intentionally exclude only timestamps: existing reviewed
+launchers truncate an empty lock before testing flock, which legitimately
+changes mtime/ctime while preserving identity and bytes. Contents, metadata
+permissions, fixed names and artifact fingerprints remain protected. New
+regressions cover normal contention and same-size content substitution.
+
 ## Fixed storage lock checkpoint
 
 The storage worker now pins the ordinary user's private root and a regular,
