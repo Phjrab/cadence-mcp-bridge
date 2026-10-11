@@ -1,3 +1,29 @@
+## Operator revocation directory durability, 2026-10-11
+
+PR149's final P2 found that an fsynced revocation file could lose its directory
+entry after power loss. Operator deactivation now fsyncs the managed directory
+before reporting success, including an exact existing marker left by interruption.
+A failed directory sync propagates; retry retains the original marker inode,
+active pointer, historical versions and resource state, then repeats the barrier.
+The existing resource lock, identity/permissions checks and drift rejection remain.
+
+Local related226 tests PASS/15 Windows platform skips, Ruff/mypy72, security18,
+locked dependency audit and85-schema compatibility PASS. The three new POSIX
+regressions inspect real fsync descriptors/order and inject new/existing-marker
+sync failure before success, then verify recovery/repeat without replacement.
+They run in the existing Ubuntu operator CI; exact hosted checks and independent
+review of this final source remain pending. Matching curated artifacts and isolated
+installed protocol/bootstrap/coexistence/reinstall/uninstall preserve43 synthetic
+state files. Synthetic/Windows evidence does not attest native POSIX durability.
+
+The shipped installer bytes change; any later native bundle containing this helper
+requires its own exact hash/qualification. Worker, launcher, profile and shared
+reservation assets are unchanged. This correction performs0 VM contacts, metadata
+changes, simulations or reservations; existing real journals/ledger/replay remain.
+Direct16GiB/500/20, continuous GREL02-08 and conditional normal feature-PR merge
+authority persist. Release is still blocked; exact public tag/Release/upload needs
+final user approval. Prior dated boundaries and observations below are history.
+
 ## Real repair transport boundary correction, 2026-10-11
 
 Final PR148 review found that bootstrap's16MiB request still met the general

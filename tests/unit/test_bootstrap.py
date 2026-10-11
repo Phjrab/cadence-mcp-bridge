@@ -436,6 +436,93 @@ def test_operator_deactivation_is_repeatable_preserves_bytes_and_blocks_reactiva
     assert (target / "runner-revoked.json").read_bytes() == b"historical-revocation"
 
 
+def test_operator_deactivation_syncs_file_and_directory_before_success(operator_bound, monkeypatch):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX revocation directory durability")
+    _, target, digest = operator_bound
+    installer.operator_activation(str(target), digest)
+    original_fsync = os.fsync
+    directory_identity = (target.stat().st_dev, target.stat().st_ino)
+    synced = []
+
+    def observed_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            assert (info.st_dev, info.st_ino) == directory_identity
+            synced.append("managed_directory")
+        else:
+            assert stat.S_ISREG(info.st_mode)
+            synced.append("revocation_file")
+        original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", observed_fsync)
+    expected = {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert synced == ["revocation_file", "managed_directory"]
+    revoked = target / "operator-runner-revoked.json"
+    contents = revoked.read_bytes()
+    identity = (revoked.stat().st_dev, revoked.stat().st_ino)
+    synced.clear()
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert synced == ["managed_directory"]
+    assert revoked.read_bytes() == contents
+    assert (revoked.stat().st_dev, revoked.stat().st_ino) == identity
+
+
+@pytest.mark.parametrize("already_exists", [False, True])
+def test_operator_deactivation_directory_sync_failure_preserves_and_recovers(
+    operator_bound, monkeypatch, already_exists
+):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX revocation directory durability")
+    _, target, digest = operator_bound
+    installer.operator_activation(str(target), digest)
+    if already_exists:
+        installer.operator_deactivate(str(target), digest)
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    original_fsync = os.fsync
+    directory_identity = (target.stat().st_dev, target.stat().st_ino)
+    attempted = []
+
+    def interrupted_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            assert (info.st_dev, info.st_ino) == directory_identity
+            attempted.append("managed_directory")
+            raise OSError("simulated directory sync failure before success")
+        attempted.append("revocation_file")
+        original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", interrupted_fsync)
+    with pytest.raises(OSError, match="directory sync failure before success"):
+        installer.operator_deactivate(str(target), digest)
+    assert attempted == (
+        ["managed_directory"] if already_exists else ["revocation_file", "managed_directory"]
+    )
+    for name, content in before.items():
+        assert (target / name).read_bytes() == content
+    revoked = target / "operator-runner-revoked.json"
+    assert revoked.read_bytes() == (target / "active-operator-runner.json").read_bytes()
+    retained = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    identity = (revoked.stat().st_dev, revoked.stat().st_ino)
+    monkeypatch.setattr(os, "fsync", original_fsync)
+    expected = {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == retained
+    assert (revoked.stat().st_dev, revoked.stat().st_ino) == identity
+    with pytest.raises(ValueError, match="operator_runner_revoked"):
+        installer.operator_activation(str(target), digest)
+
+
 def test_operator_wrong_manifest_and_active_jobs_deny_before_writes(operator_bound):
     _, target, digest = operator_bound
     (target / "execution.lock").write_bytes(b"unresolved")

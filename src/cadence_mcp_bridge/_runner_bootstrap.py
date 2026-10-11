@@ -350,6 +350,9 @@ def operator_deactivate(target, expected):
                 raise ValueError("operator_revocation_drift")
         else:
             exclusive(revoked, canonical(active))
+        # A durable file alone does not persist its new directory entry. Repeat
+        # this barrier for an exact marker left by an interrupted deactivation.
+        _sync_directory(target)
         return {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
     finally:
         if fd is not None:
