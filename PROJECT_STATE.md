@@ -1,3 +1,14 @@
+## Direct migration interpreter isolation, 2026-10-11
+
+Fresh independent finding4240335186 is corrected before filesystem-backed imports:
+direct migration startup requires ignore_environment and no_user_site flags,
+otherwise a bounded explicit isolated-interpreter error exits without migration.
+Memory-loaded authenticated composition retains its existing import boundary.
+Two exported-helper child tests omit each flag with absolute PYTHONPATH and
+PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
+Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
+package and final independent review remain gates. No VM/accounting mutation.
+
 ## Fixed stdin inventory and isolated operator invocation, 2026-10-11
 
 The latest independent P1 review4240265879 is addressed in the primary README
