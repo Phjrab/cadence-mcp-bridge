@@ -1,3 +1,16 @@
+## PR151 current safety-parent refresh, 2026-10-11
+
+Current source normally integrates150206fe0b: initial executable pins, retained
+validated helper bytes and reviewed installed-fixture correction, with148 fixed
+recipe completion membership. The151 early fresh-policy correction retains all
+legacy/scientific protections. Exact3d74b50 isolated installed disposable-ledger
+1/2 amplifier/power/SDK consumers PASS; its new Linux parser fixture initially
+failed only on host ssh.exe availability and now explicitly stubs that unused
+executable lookup. No actual transport or supported platform behavior changed.
+Final related/package/hosted/review and pending parent membership corrections are
+separate gates. General release stays BLOCKED; current delegated limits/history
+remain preserved, and exact public-candidate approval is still required.
+
 ## PR151 early fresh-domain result admission correction, 2026-10-11
 
 Fresh review4239953763 found legacy absolute counter formulas still active in
@@ -84,6 +97,57 @@ receipts are in docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md. No VM contact
 real initialization/journal/reservation, simulation or protected metadata change.
 Native acceptance and final RC remain separate pending gates; prior records below
 are historical, including superseded merge/GREL08/resource exclusions.
+## Retained validated migration helpers, 2026-10-11
+
+Fresh review P2 identified a path-import gap after source manifest verification.
+The standalone helper now compiles only the exact retained, bounded bytes for
+fixed reservations/installer/probe module names after ALL asset hashes pass.
+It neither rereads helper paths nor uses cached helper modules. Failed validation
+clears retained authority; standalone calls before validation reject. Package
+internal synthetic calls keep normal imports and do not attest a native install.
+Replacement of each helper after read plus cached-module poisoning:29 PASS/1
+Windows POSIX skip; Ruff PASS. Exact installed/hosted/fresh review gates are
+pending. Counter, replay, retained job history and the VM have not been changed.
+
+## Initial-pin installed package evidence, 2026-10-11
+
+Exact newly changed bootstrap/fixture source passed curated wheel80/sdist81,
+locked clean installation,85 stdio schemas across three templates, two isolated
+operator contexts, operation acceptance, bootstrap/update/revocation and43-file
+synthetic journal/accounting/replay preservation across reinstall and uninstall.
+Wheel SHA256:f80d49af490e3361df846dbe048c062ed9c553e3a35797c31febfb00adb0b0b2.
+Sdist SHA256:e2ed47c7fd1dd63c2b33bbab982738155b29ff332375899502295e3d0364253b.
+These hashes predate the latest repair-parent integration; new final source
+requires its own package receipt. No native/VM qualification is inferred.
+Mypy72 PASS. A Windows pip-api locale failure was retained and strict locked
+security audit is being rerun with UTF8 enabled; checks are not bypassed.
+
+## Initial activation reviewed executable binding, 2026-10-11
+
+Fresh review P1 identified that initial activation checked a caller-rehashed
+manifest without independent executable authentication. Initial operator
+activation and preflight updates now bind ALL four executable assets (launcher,
+runner, probe and reservation helper) to reviewed package SHA256 pins, normalized
+only for checkout line endings. Profile bytes remain per-operator configuration.
+Self-rehashed replace/append-code/append-comment attacks for every executable
+reject without pointer, launcher, file inode or history mutation. Current bundle
+pins match exact package assets:bootstrap82 PASS/12 Windows OS skips; Ruff PASS.
+Synthetic update history is now explicitly prepared in disposable test state;
+current activation refuses those old modified bytes. Prior installed43-file
+preservation passed the fixture correction; exact newly changed shipped-source
+package/hosted/fresh review verification is pending. No native job or VM change.
+
+## Installed reviewed-launcher fixture correction, 2026-10-11
+
+The complete installed bootstrap verifier now builds explicitly synthetic prior
+launcher history and updates toward the unmodified reviewed package executable,
+then repeats and revokes that exact current identity. It asserts installed new
+launcher bytes equal the package bundle while legacy activation remains unchanged.
+The obsolete arbitrary synthetic NEXT comment is no longer a positive fixture.
+This corrects acceptance code for the new pin; all shipped source assets remain
+byte-identical to c32d246/ca2476. Exact full installed verification is pending and
+must pass before main integration. No native execution or reservation occurs.
+
 ## PR149 reviewed executable binding correction, 2026-10-11
 
 Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
@@ -106,6 +170,31 @@ local source correction only: VM/admin/EDA/ledger side effects0. Prior receipts,
 open PRs, history, grants and cumulative consumption remain preserved. Continue
 currentGREL02-08/16GiB conditional integration; public candidate approval remains.
 See OPERATOR_RUNNER_COEXISTENCE_V1.md. Earlier dated records remain history.
+
+## Completion fixed-recipe membership correction, 2026-10-11
+
+Fresh exact169f4a6 review found that completion only reobserved original paths;
+new or renamed .so members in a fixed code root could escape that path list. The
+final completion check now uses a registered fixed recipe selector to reenumerate
+its full scope, requires exact original scope equality, and verifies all content/
+identity/mode/ACL records from that fresh inventory. Original path/link validation
+is retained. Arbitrary recipe IDs/directories/globs cannot select a new scope.
+The standard installation selector is explicit; the separate registered model
+recipe in the parent must retain its exact profile/model_include binding.
+
+Three portable selector cases and24 complete owned Linux cases cover create and
+rename across IC/Spectre/OA library roots for apply/rollback, no-op and postchange
+completion. New shared-writable .so evidence is preserved without mutation, and
+no complete event is emitted. The owned recovery fixture now regenerates its
+synthetic inventory records honestly after metadata changes. Prior exact169f
+hosted Linux249 PASS/0skip and installed32-state preservation remain history.
+Updated-source connected171 PASS/131 Windows POSIX/symlink skips; Ruff/mypy72/
+security18/strict locked audit/85 schemas and exact wheel/sdist/license/content/
+installed32-state preservation PASS. Updated exact hosted/fresh review/current-VM
+read-only inventory gates remain pending.0 current-VM/admin/simulation/reservation
+activity; prior helpers/artifacts/receipts and cumulative ledgers are preserved.
+Current user16GiB/500/20,GREL02-08/conditional normal merge delegation persists;
+public tag/Release/upload still needs exact-candidate final approval.
 
 ## Final receipt content observation namespace correction, 2026-10-11
 
