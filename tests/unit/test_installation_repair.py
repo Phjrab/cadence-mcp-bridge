@@ -215,7 +215,7 @@ def test_private_plan_binds_selected_operator_profile(
     response_file = tmp_path / "synthetic-inventory-response.json"
     response_file.write_bytes(response)
     request_file = tmp_path / "synthetic-inventory-request.json"
-    request_file.write_bytes(raw)
+    request_file.write_bytes(Path(repair.__file__).read_bytes() + raw)
     real_process = subprocess.Popen
 
     def synthetic_inventory(argv, *args, **kwargs):
@@ -1943,3 +1943,152 @@ def test_actual_external_binding_rechecked_after_internal_target_hashes(
             assert path.stat().st_mode == baseline[str(path)][1]
         else:
             assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)
+
+
+@pytest.mark.parametrize("name", ["json", "hashlib", "stat", "os", "subprocess"])
+def test_direct_repair_ignores_unlisted_stdlib_shadow(tmp_path, name):
+    output = tmp_path / "helper"
+    output.mkdir()
+    exported = output / "repair.py"
+    bootstrap.export_repair_helper(exported)
+    marker = tmp_path / "unreviewed-repair-code"
+    (output / (name + ".py")).write_text(
+        "from pathlib import Path\nPath(" + ascii(str(marker)) +
+        ").write_text('executed')\nraise RuntimeError('must-not-import')\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", str(exported), "inventory"],
+        cwd=output, input=b"{}", capture_output=True, timeout=15, check=False,
+    )
+    assert result.returncode == 1 and not result.stderr
+    assert json.loads(result.stdout)["event"] == "rejected"
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+def test_external_parent_chain_reopened_after_fixed_leaf_read(
+    actual_recipe_layout, monkeypatch, rollback, stage
+):
+    import inspect
+    from pathlib import Path
+
+    shared, _, _, code_paths, profile = actual_recipe_layout
+    code_paths[0].chmod(0o777)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib"
+    external = shared / "preserved-external-library"
+    external.write_bytes(b"synthetic external code, never mutated")
+    link = directory / "unreviewed-external.so"
+    link.symlink_to(external)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    if rollback or stage == "no-op":
+        repair.mutate(request)
+    if rollback and stage == "no-op":
+        repair.mutate(request, True)
+    external_before = (external.read_bytes(), external.stat().st_mode)
+    events, active, injected = [], False, False
+    real_lstat = repair.os.lstat
+    ancestor = directory.parent
+    detached = ancestor.with_name("preserved-detached-ancestor")
+
+    def lstat(path, *args, **kwargs):
+        nonlocal injected
+        value = real_lstat(path, *args, **kwargs)
+        caller = inspect.currentframe().f_back
+        if (active and not injected and str(path) == str(link) and
+                caller.f_code.co_name == "external_link_record"):
+            ancestor.rename(detached)
+            injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == ("validated" if stage == "no-op" else "changed"):
+            active = True
+
+    monkeypatch.setattr(repair.os, "lstat", lstat)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="external_link_race"):
+        repair.mutate(request, rollback)
+    assert injected and detached.exists() and not link.exists()
+    assert external_before == (external.read_bytes(), external.stat().st_mode)
+    assert not any(event["event"] == "complete" for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_external_only_library_parent_is_exact_repair_target(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    shared, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    nested = ic / "tools.lnx86/lib/external-only/nested"
+    nested.mkdir(parents=True)
+    nested.parent.chmod(0o777)
+    nested.chmod(0o777)
+    external = shared / "preserved-external-library"
+    external.write_bytes(b"external bytes outside all mutation paths")
+    external.chmod(0o777)
+    (nested / "unreviewed-external.so").symlink_to(external)
+    prepared = repair.inventory(profile)
+    paths = prepared["plan"]["scope"]["paths"]
+    assert str(nested) in paths and str(nested.parent) in paths
+    assert str(external) not in paths
+    external_before = (external.read_bytes(), external.stat().st_mode)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    assert stat.S_IMODE(nested.stat().st_mode) == 0o755
+    assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        assert stat.S_IMODE(nested.stat().st_mode) == 0o777
+        assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
+    assert external_before == (external.read_bytes(), external.stat().st_mode)
+
+
+@pytest.mark.parametrize("variable", ["PYTHONPATH", "PYTHONUSERBASE"])
+def test_repair_rejects_unisolated_python_before_absolute_search_hook(tmp_path, variable):
+    exported = tmp_path / "repair.py"
+    bootstrap.export_repair_helper(exported)
+    hook = tmp_path / "unreviewed-hook"
+    hook.mkdir()
+    marker = tmp_path / "unreviewed-executed"
+    (hook / "hashlib.py").write_text(
+        "from pathlib import Path\nPath(" + ascii(str(marker)) + ").write_text('executed')\n",
+        encoding="utf-8",
+    )
+    environment = dict(os.environ)
+    environment[variable] = str(hook)
+    result = subprocess.run(
+        [sys.executable, "-B", str(exported), "inventory"],
+        env=environment, input=b"{}", capture_output=True, timeout=15, check=False,
+    )
+    assert result.returncode == 1 and not result.stdout
+    assert result.stderr.splitlines() == [b"INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED"]
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("tampered", [False, True])
+def test_large_fixed_inventory_helper_uses_short_command_and_bound_stdin(tampered):
+    source = b"# owned synthetic filler\n" * 2000 + (
+        b"import sys\ndef main():\n"
+        b"    assert sys.stdin.read() == '{\"private\":true}'\n"
+        b"    sys.stdout.write('SYNTHETIC_FIXED_INVENTORY_PASS')\n"
+    )
+    assert 32768 < len(source) < 131072
+    code = bootstrap._repair_inventory_script(source)
+    assert len(code) < 8192
+    supplied = source[:-1] + b"x" if tampered else source
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", "-c", code, "inventory"],
+        input=supplied + b'{"private":true}', capture_output=True, timeout=15, check=False,
+    )
+    if tampered:
+        assert result.returncode == 1 and not result.stdout
+        assert result.stderr.splitlines() == [b"INSTALLATION_REPAIR_SOURCE_REJECTED"]
+    else:
+        assert result.returncode == 0 and not result.stderr
+        assert result.stdout == b"SYNTHETIC_FIXED_INVENTORY_PASS"
