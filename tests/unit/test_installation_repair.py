@@ -513,8 +513,10 @@ def test_unlisted_ancestors_checked_to_root_without_mutation(monkeypatch, unsafe
             repair.verify_unlisted_ancestors(roots)
 
 
-@pytest.mark.skipif(os.name != "posix", reason="requires actual Linux installation ancestry")
-def test_actual_recipe_rejects_unlisted_writable_parent_and_preserves_it():
+@pytest.fixture
+def actual_recipe_layout():
+    if os.name != "posix":
+        pytest.skip("requires actual Linux installation ancestry")
     import platform
     import pwd
     import tempfile
@@ -560,21 +562,157 @@ def test_actual_recipe_rejects_unlisted_writable_parent_and_preserves_it():
             "paths": {"protected_roots": [str(root)], "workspace_root": str(workspace),
                       "managed_root": str(workspace / ".cadence_mcp")},
         }
-        shared.chmod(0o775)
-        before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+        managed = workspace / ".cadence_mcp"
+        managed.mkdir(mode=0o700)
+        (managed / "run.lock").write_bytes(b"owned synthetic reservation lock")
+        (managed / "run.lock").chmod(0o600)
+        yield shared, root, workspace, code_paths, profile
+
+
+def test_actual_recipe_rejects_unlisted_writable_parent_and_preserves_it(actual_recipe_layout):
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    shared.chmod(0o775)
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+        repair.inventory(profile)
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o775
+    assert before == {
+        str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+    }
+    # Correct only this owned synthetic fixture; the recipe itself stays
+    # read-only and never selects ancestors beyond its exact two roots.
+    shared.chmod(0o755)
+    result = repair.inventory(profile)
+    assert str(shared) not in result["plan"]["scope"]["paths"]
+    assert str(root) in result["plan"]["scope"]["paths"]
+    assert str(workspace) in result["plan"]["scope"]["paths"]
+    assert before == {
+        str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+    }
+
+
+@pytest.mark.parametrize("race", ["recipe-to-lock", "held-target", "changed", "no-op"])
+def test_actual_recipe_rejects_ancestor_drift_during_apply(actual_recipe_layout, monkeypatch, race):
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o755 if race == "no-op" else 0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    events, validated, target_reads = [], False, 0
+    real_inventory, real_snapshot = repair.inventory, repair.snapshot_descriptor
+
+    def inventory(selected):
+        result = real_inventory(selected)
+        if race == "recipe-to-lock":
+            shared.chmod(0o775)
+        return result
+
+    def snapshot(path, fd):
+        nonlocal target_reads
+        result = real_snapshot(path, fd)
+        if validated and path == str(target):
+            target_reads += 1
+            if race == "held-target" and target_reads == 2:
+                shared.chmod(0o775)
+        return result
+
+    def emit(value):
+        nonlocal validated
+        events.append(value)
+        if value["event"] == "validated":
+            validated = True
+            if race == "no-op":
+                shared.chmod(0o775)
+        if value["event"] == "changed" and race == "changed":
+            shared.chmod(0o775)
+
+    monkeypatch.setattr(repair, "inventory", inventory)
+    monkeypatch.setattr(repair, "snapshot_descriptor", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+        repair.mutate(request)
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o775
+    assert all(event["event"] != "complete" for event in events)
+    assert target.read_bytes() == before[str(target)][0]
+    changed = [event for event in events if event["event"] == "changed"]
+    assert len(changed) == (1 if race == "changed" else 0)
+    if race == "changed":
+        assert stat.S_IMODE(target.stat().st_mode) == 0o755
+    else:
+        assert before == {
+            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+        }
+    assert str(shared) not in prepared["plan"]["scope"]["paths"]
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("race", ["held-target", "changed", "no-op", "none"])
+def test_apply_rechecks_omitted_ancestors_at_mutation_and_completion(monkeypatch, rollback, race):
+    from types import SimpleNamespace
+
+    row = {
+        "path": "/operator/cadence/code", "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+        "kind": "file", "sha256": "a" * 64, "size": 3, "mtime": "1",
+        "reason": "remove_shared_code_write_preserve_content_owner_rx", "mode": 0o777,
+        "acl": "user::rwx\ngroup::rwx\nother::rwx\n", "after_mode": 0o755,
+        "after_acl": "user::rwx\ngroup::r-x\nother::r-x\n",
+    }
+    roots = ["/operator/cadence", "/operator/work"]
+    original = {"scope": {"installation_roots": roots}, "records": [row]}
+    now = copy.deepcopy(row)
+    if rollback != (race == "no-op"):
+        now.update(mode=row["after_mode"], acl=row["after_acl"])
+    unsafe, mutations, checks, events = False, [], [], []
+
+    def emit(value):
+        nonlocal unsafe
+        events.append(value["event"])
+        if (race == "changed" and value["event"] == "changed") or (
+            race == "no-op" and value["event"] == "validated"
+        ):
+            unsafe = True
+
+    def held(path, fd):
+        nonlocal unsafe
+        assert path == row["path"]
+        if race == "held-target":
+            unsafe = True
+        return {key: value for key, value in now.items() if key not in (
+            "reason", "after_mode", "after_acl"
+        )}
+
+    def ancestors(selected):
+        assert selected == roots
+        checks.append(selected)
+        if unsafe:
+            raise ValueError("unlisted_ancestor_trust")
+
+    def chmod(fd, mode):
+        mutations.append(mode)
+        now.update(mode=mode, acl=row["acl"] if rollback else row["after_acl"])
+
+    monkeypatch.setattr(repair, "plan", lambda scope: {"plan": {"records": [now]}})
+    monkeypatch.setattr(repair, "snapshot", lambda path: copy.deepcopy(now))
+    monkeypatch.setattr(repair, "snapshot_descriptor", held)
+    monkeypatch.setattr(repair, "verify_unlisted_ancestors", ancestors)
+    monkeypatch.setattr(repair, "open_fixed", lambda path: 100)
+    monkeypatch.setattr(repair.os, "fstat", lambda fd: SimpleNamespace(
+        st_dev=1, st_ino=2, st_mode=stat.S_IFREG | now["mode"], st_nlink=1
+    ))
+    monkeypatch.setattr(repair.os, "close", lambda fd: None)
+    monkeypatch.setattr(repair.os, "fchmod", chmod, raising=False)
+    monkeypatch.setattr(repair, "acl", lambda fd: now["acl"])
+    monkeypatch.setattr(repair, "emit", emit)
+    request = {"plan": original, "expected_plan_sha256": repair.digest(original),
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if race == "none":
+        repair._mutate_locked(request, rollback)
+        assert events[-1] == "complete"
+        assert len(checks) == 2
+    else:
         with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
-            repair.inventory(profile)
-        assert stat.S_IMODE(shared.stat().st_mode) == 0o775
-        assert before == {
-            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
-        }
-        # Correct only this owned synthetic fixture; the recipe itself stays
-        # read-only and never selects ancestors beyond its exact two roots.
-        shared.chmod(0o755)
-        result = repair.inventory(profile)
-        assert str(shared) not in result["plan"]["scope"]["paths"]
-        assert str(root) in result["plan"]["scope"]["paths"]
-        assert str(workspace) in result["plan"]["scope"]["paths"]
-        assert before == {
-            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
-        }
+            repair._mutate_locked(request, rollback)
+        assert "complete" not in events
+    assert len(mutations) == (1 if race in ("changed", "none") else 0)

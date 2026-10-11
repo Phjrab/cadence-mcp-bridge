@@ -326,6 +326,10 @@ def _mutate_locked(request, rollback=False):
             if any(not metadata_equal(key, held[key], now[key]) for key in held
                    if key != "acl") or normalize_acl(held["acl"]) != normalize_acl(now["acl"]):
                 raise ValueError("prechange_descriptor_drift")
+            # Recipe discovery precedes the resource lock; unrelated filesystem
+            # tools do not obey that lock. Recheck omitted trust ancestors at
+            # the last held-target observation before each metadata mutation.
+            verify_unlisted_ancestors(original["scope"]["installation_roots"])
             os.fchmod(fd, target_mode)
             if normalize_acl(acl(fd)) != normalize_acl(target_acl):
                 proc = subprocess.Popen(
@@ -345,6 +349,9 @@ def _mutate_locked(request, rollback=False):
             raise ValueError("postchange_metadata")
         changes += 1
         emit({"event": "changed", "before": now, "after": final})
+    # Also cover drift after the last change and idempotent/no-op application.
+    # Unsafe outside-scope ancestors remain untouched and cannot yield completion.
+    verify_unlisted_ancestors(original["scope"]["installation_roots"])
     emit({"event": "complete", "changed": changes, "content_preserved": True,
           "owner_group_preserved": True, "execution_authorized": False})
 

@@ -1,3 +1,27 @@
+## Repair application ancestor race correction, 2026-10-11
+
+Fresh PR148 review identified omitted-ancestor permission drift between recipe
+inventory and application under the resource lock. The fixed helper now reopens
+and checks the no-follow ancestor chain immediately before each held-target chmod
+and before completion, including idempotent/no-op apply and rollback. Unsafe
+outside-scope paths reject without adding mutation targets; drift after an actual
+change retains partial receipts and cannot produce a complete event. This does not
+make concurrent administrator filesystem activity atomic; the operator must
+stabilize the external ancestor and resume the preserved exact plan.
+Portable apply/rollback regressions cover prechange, postchange and no-op drift.
+Complete owned Linux fixtures exercise recipe-to-lock and held-target races plus
+postchange/no-op rejection without modifying omitted ancestors through the helper.
+Local157 relevant checks PASS/18 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist distribution,
+installed CLI/SDK/bootstrap and reinstall/uninstall32-state preservation PASS.
+Retained wheel SHA256 is54807b0e4d181ed9d6b9e62ac1340b4aa9f014bf332e0b9bdefb1fa5c6de9495;
+helper SHA256 is9a6da270a65bdffaa2b50369ea862ec35b6c61f427fbea05e56e24ec036626cf.
+Final hosted Linux/Windows, refreshed review and actual standard-VM read-only
+inventory remain pending. modeltrust helper bytes change again; preserve
+bf6c20 and all earlier evidence until exact updated native qualification. This fix
+adds0 VM contacts/admin changes/simulations/reservations. Current16GiB/500/20,
+continuous GREL02-08, conditional normal merge and exact-publication gate persist.
+
 ## PR148/149 integrated-source receipt, 2026-10-11
 
 Normal merge c649853d5b1a36f41818badda3150b8fcd650650 incorporates parent
