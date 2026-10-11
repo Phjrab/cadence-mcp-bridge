@@ -170,6 +170,47 @@ PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
 
+## Empty library code namespace protection, 2026-10-11
+
+Review4240540555 is corrected: every bounded traversed directory is an exact
+metadata target, including an empty loader-visible directory with no .so file.
+The helper preserves all names/content/owner/read/execute and removes only shared
+write permissions. Two owned Linux apply/repeat/rollback cases retain original
+code bytes and verify empty namespace metadata. Current standard-VM exact target
+count must be refreshed; the earlier448/112 observation is retained historical
+evidence, not a claim about this changed recipe. No actual administrator change,
+reservation or Cadence execution occurs in this source correction.
+
+## Actual standard-VM Tcl/Tk dependency roles, 2026-10-11
+
+Read-only latest i686 inventory exposed four standard Tcl/Tk library aliases,
+whose intermediate share/lib/tcltk/tcl8.4 and tk8.4 aliases resolve to a shared
+08.49 directory. The fixed recipe now binds those exact compatibility roles and
+intermediate links, traverses each canonical script directory once with bounded
+readdir64, and includes sourced .tcl/.tm/.msg/tclIndex code. Other nested directory
+aliases, code-role escapes and excluded64/license/data/doc/sample trees reject.
+No generic recursive installation scope or platform abstraction is introduced.
+
+Actual UID500/Python2.6 read-only inventory PASS:448 exact targets,112 new mode
+changes required (0777 to0755). The observed prior336 targets remain; contents,
+owner/group and old receipts are not overwritten. Additional repair has NOT been
+applied. The earlier four SuSE-directory changes are already completed history.
+Owned Linux direct/shared intermediate aliases cover apply/repeat/rollback and
+code-role rejection; final hosted/package/review and exact installed qualification
+remain gates. This observation adds0 simulations,0 reservations and0 admin changes.
+
+## Preallocation-bounded library enumeration, 2026-10-11
+
+Independent finding4240505088 identified that os.listdir/os.walk allocate whole
+name lists before posthoc limits. The repair recipe now reads Linux readdir64
+through an independently opened directory stream, stops at MAX_ITEMS+1 and
+bounds aggregate pending directory paths. It retains fixed digests and uses the
+same dirent64 offsets as the existing storage implementation on i686/x86_64.
+It does not depend on Python3-only scandir or expand supported EDA platforms.
+An owned stream regression forbids listdir/walk and exercises limit/recovery;
+Windows86 PASS/225 OS skips, exact hosted POSIX and current i686 VM remain gates.
+No actual VM/admin/ledger/reservation/simulation change occurs in this correction.
+
 ## Canonical library digest correction, 2026-10-11
 
 Exact ce23e43 hosted POSIX checks failed because the membership collector passed

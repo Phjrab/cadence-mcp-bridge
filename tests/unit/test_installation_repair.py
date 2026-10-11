@@ -2323,10 +2323,101 @@ def test_library_membership_signature_hashes_canonical_bytes_once(monkeypatch):
     monkeypatch.setattr(repair.os, "fstat", lambda fd: directory)
     monkeypatch.setattr(repair.os, "lstat", lambda path: directory)
     monkeypatch.setattr(repair.os, "close", lambda fd: None)
-    monkeypatch.setattr(repair.os, "listdir", lambda path: ["b.so", "a.so"])
+    monkeypatch.setattr(repair, "bounded_directory_names", lambda fd: ["a.so", "b.so"])
     monkeypatch.setattr(repair, "descriptor_path", lambda fd: "/owned")
     signature, names = repair.library_directory_snapshot("/owned")
     expected = ("/owned", [1, 2, directory.st_mode, 500, 500, 2, 4096, "1.25", "2.5"],
                 ["a.so", "b.so"], [])
     assert signature == hashlib.sha256(repair.canonical(expected)).hexdigest()
     assert names == ["a.so", "b.so"]
+
+
+def test_library_stream_rejects_before_materializing_oversized_directory(actual_recipe_layout,
+                                                                       monkeypatch):
+    shared, _, _, _, _ = actual_recipe_layout
+    directory = shared / "owned-bounded-stream"
+    directory.mkdir()
+    for index in range(9):
+        (directory / f"entry-{index}").write_bytes(b"synthetic")
+    monkeypatch.setattr(repair, "MAX_ITEMS", 8)
+    monkeypatch.setattr(repair.os, "listdir", lambda *a: pytest.fail("unbounded listdir"))
+    monkeypatch.setattr(repair.os, "walk", lambda *a, **kw: pytest.fail("unbounded walk"))
+    with pytest.raises(ValueError, match="library_membership_limit"):
+        repair.library_directory_snapshot(str(directory))
+    monkeypatch.setattr(repair, "MAX_ITEMS", 9)
+    signature, names = repair.library_directory_snapshot(str(directory))
+    assert len(signature) == 64 and len(names) == 9
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("shared_target", [False, True])
+def test_standard_vm_tcl_aliases_enumerate_sourced_code_exactly(
+    actual_recipe_layout, rollback, shared_target
+):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    scripts = []
+    for stem in ("tcl", "tk"):
+        entry = ic / "share/lib/tcltk" / (stem + "8.4")
+        target = entry.parent / "08.49" if shared_target else entry
+        target.mkdir(parents=True, exist_ok=True)
+        if shared_target:
+            entry.symlink_to("08.49", target_is_directory=True)
+        script = target / (stem + "-init.tcl")
+        script.write_bytes(b"# synthetic sourced code; never executed\n")
+        script.chmod(0o777)
+        scripts.append(script)
+        (ic / "tools.lnx86/lib" / (stem + "8.4")).symlink_to(entry, target_is_directory=True)
+        (ic / "tools.lnx86/lib" / stem).symlink_to(stem + "8.4", target_is_directory=True)
+    original = {str(p): p.read_bytes() for p in code_paths + scripts}
+    prepared = repair.inventory(profile)
+    for script in scripts:
+        assert str(script) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    assert all(stat.S_IMODE(p.stat().st_mode) == 0o755 for p in scripts)
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert all(stat.S_IMODE(p.stat().st_mode) == 0o777 for p in scripts)
+    assert original == {str(p): p.read_bytes() for p in code_paths + scripts}
+
+
+def test_standard_vm_tcl_alias_cannot_expand_to_other_installation_code(actual_recipe_layout):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    (ic / "tools.lnx86/lib/tcl").symlink_to(ic / "tools.lnx86/bin", target_is_directory=True)
+    with pytest.raises(ValueError, match="library_directory_alias_not_enumerated"):
+        repair.inventory(profile)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_empty_traversed_library_namespace_is_exact_repair_target(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib/empty-code-namespace/nested"
+    directory.mkdir(parents=True)
+    directory.parent.chmod(0o777)
+    directory.chmod(0o777)
+    before = {str(p): p.read_bytes() for p in code_paths}
+    prepared = repair.inventory(profile)
+    assert str(directory) in prepared["plan"]["scope"]["paths"]
+    assert str(directory.parent) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o755
+    assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o777
+        assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o777
+    assert before == {str(p): p.read_bytes() for p in code_paths}
