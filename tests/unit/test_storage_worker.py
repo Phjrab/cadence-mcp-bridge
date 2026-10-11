@@ -46,6 +46,7 @@ class TestIO:
                 )
             return SimpleNamespace(
                 st_dev=s.st_dev,
+                st_gid=s.st_gid,
                 st_ino=s.st_ino,
                 st_mode=mode,
                 st_nlink=s.st_nlink,

@@ -69,3 +69,27 @@ modules; none may execute or shadow the fixed runtime. Previous b837 package and
 Ubuntu396-pass receipts remain source-scoped history, not this corrected gate.
 No VM/deployment/actual ledger/admin/reservation changes occurred. Hosted checks,
 exact corrected package and refreshed review remain required.
+
+
+## Shared named-lock identity correction
+
+Independent root review found that a held descriptor alone did not prove the
+named resource lock/root remained current and privately owned. The shared fix
+from ece0b328 is included in standalone storage: pin the UID-owned0700 root and
+single-link UID-owned0600 run.lock with owner/group/content metadata, reopen the
+named root/lock and compare identities before and after flock, activation checks
+and completion. Busy read-only inventory receives the same checks. Cleanup checks
+again before operation intent creation, payload quarantine rename and unlink.
+Replacement, hard-linking, owner/mode/content drift rejects; partial quarantine
+and UNKNOWN receipts are preserved and no cumulative reservation is refunded.
+No generic group/provider/model or retained16-policy source was imported from that
+root change. Native-generic consumption remains fail-closed in this legacy worker.
+
+Portable shared/storage104 PASS/16 Windows Linux skips and Ruff/mypy78 PASS are
+local source evidence. Four additional real Linux inode/nofollow/flock races are
+included in Ubuntu CI with the existing exact standalone fixture. Earlier15a
+Ubuntu397-pass/zero-skip isolation result is retained as its source history.
+The storage asset and runtime manifest pin change again; old bundle/native
+receipts do not qualify this correction. No actual VM/deployment/result/ledger/
+admin/reservation/simulation changes occurred. Exact source package, hosted
+checks, final parent integration and refreshed review remain separate gates.
