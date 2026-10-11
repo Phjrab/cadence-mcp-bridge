@@ -1,3 +1,42 @@
+## Initial-pin installed package evidence, 2026-10-11
+
+Exact newly changed bootstrap/fixture source passed curated wheel80/sdist81,
+locked clean installation,85 stdio schemas across three templates, two isolated
+operator contexts, operation acceptance, bootstrap/update/revocation and43-file
+synthetic journal/accounting/replay preservation across reinstall and uninstall.
+Wheel SHA256:f80d49af490e3361df846dbe048c062ed9c553e3a35797c31febfb00adb0b0b2.
+Sdist SHA256:e2ed47c7fd1dd63c2b33bbab982738155b29ff332375899502295e3d0364253b.
+These hashes predate the latest repair-parent integration; new final source
+requires its own package receipt. No native/VM qualification is inferred.
+Mypy72 PASS. A Windows pip-api locale failure was retained and strict locked
+security audit is being rerun with UTF8 enabled; checks are not bypassed.
+
+## Initial activation reviewed executable binding, 2026-10-11
+
+Fresh review P1 identified that initial activation checked a caller-rehashed
+manifest without independent executable authentication. Initial operator
+activation and preflight updates now bind ALL four executable assets (launcher,
+runner, probe and reservation helper) to reviewed package SHA256 pins, normalized
+only for checkout line endings. Profile bytes remain per-operator configuration.
+Self-rehashed replace/append-code/append-comment attacks for every executable
+reject without pointer, launcher, file inode or history mutation. Current bundle
+pins match exact package assets:bootstrap82 PASS/12 Windows OS skips; Ruff PASS.
+Synthetic update history is now explicitly prepared in disposable test state;
+current activation refuses those old modified bytes. Prior installed43-file
+preservation passed the fixture correction; exact newly changed shipped-source
+package/hosted/fresh review verification is pending. No native job or VM change.
+
+## Installed reviewed-launcher fixture correction, 2026-10-11
+
+The complete installed bootstrap verifier now builds explicitly synthetic prior
+launcher history and updates toward the unmodified reviewed package executable,
+then repeats and revokes that exact current identity. It asserts installed new
+launcher bytes equal the package bundle while legacy activation remains unchanged.
+The obsolete arbitrary synthetic NEXT comment is no longer a positive fixture.
+This corrects acceptance code for the new pin; all shipped source assets remain
+byte-identical to c32d246/ca2476. Exact full installed verification is pending and
+must pass before main integration. No native execution or reservation occurs.
+
 ## PR149 reviewed executable binding correction, 2026-10-11
 
 Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
