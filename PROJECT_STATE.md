@@ -125,6 +125,27 @@ PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
 
+## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
+
+Review4240588448/4240588451 is corrected: native library exclusion names apply
+only outside the two fixed Tcl/Tk source roots. Every descendant directory and
+regular source file there is bound. Compatibility records share an aggregate
+count and conservative serialized-byte budget, checked before retention for
+external and internal links; duplicate internal bindings do not consume new
+credit. Windows90 repair tests PASS/246 POSIX skips, static72 PASS; ten owned
+Linux descendant apply/repeat/rollback cases require hosted evidence. No current
+VM permission change or simulation occurred. Prior569/233 inventory is history
+until this exact helper performs a new read-only inventory.
+
+## Relocated installation fixture correction, 2026-10-11
+
+Exact0c83 Linux CI found one fixture failure after394 passing tests: moving the
+owned vendor tree left three absolute directory aliases pointing to its old
+location. The relocation regression now retargets only those three disposable
+fixture aliases before testing the final-tools-segment production logic. No
+production trust rule is weakened and no actual VM file is changed. Historical
+failed CI remains; exact follow-up hosted validation is required.
+
 ## Complete sourced-file roles and final tool segment, 2026-10-11
 
 Review4240563319/4240572996 is corrected. Vendor roots derive from the final
