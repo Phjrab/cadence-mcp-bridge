@@ -962,6 +962,43 @@ def external_link_record(path, expected_resolved):
         os.close(parent_fd)
 
 
+def bounded_directory_names(fd):
+    # Linux dirent64 has fixed offsets on the supported i686 VM and x86_64 CI.
+    # Consume at most MAX_ITEMS+1 entries, never os.listdir/os.walk allocation.
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.fdopendir.argtypes, libc.fdopendir.restype = [ctypes.c_int], ctypes.c_void_p
+    libc.readdir64.argtypes, libc.readdir64.restype = [ctypes.c_void_p], ctypes.c_void_p
+    libc.closedir.argtypes, libc.closedir.restype = [ctypes.c_void_p], ctypes.c_int
+    duplicate = os.open(descriptor_path(fd), os.O_RDONLY | os.O_DIRECTORY)
+    stream = libc.fdopendir(duplicate)
+    if not stream:
+        os.close(duplicate)
+        raise OSError(ctypes.get_errno(), "library_directory_stream")
+    names, total = [], 0
+    try:
+        while True:
+            ctypes.set_errno(0)
+            entry = libc.readdir64(stream)
+            if not entry:
+                if ctypes.get_errno():
+                    raise OSError(ctypes.get_errno(), "library_directory_stream")
+                break
+            length = ctypes.c_ushort.from_address(entry + 16).value
+            if not 20 <= length <= 280:
+                raise ValueError("library_directory_record")
+            raw = ctypes.string_at(entry + 19, length - 19).split(b"\x00", 1)[0]
+            if raw in (b".", b".."):
+                continue
+            total += len(raw)
+            if len(names) >= MAX_ITEMS or total > LIMIT:
+                raise ValueError("library_membership_limit")
+            names.append(raw.decode("utf-8"))
+        return sorted(names)
+    finally:
+        libc.closedir(stream)
+
+
 def library_directory_snapshot(path):
     lexical = lexical_parent_snapshot(path)
     resolved = os.path.realpath(path)
@@ -972,7 +1009,7 @@ def library_directory_snapshot(path):
         before = os.fstat(fd)
         if not stat.S_ISDIR(before.st_mode):
             raise ValueError("library_membership_race")
-        names = sorted(os.listdir(descriptor_path(fd)))
+        names = bounded_directory_names(fd)
         if len(names) > MAX_ITEMS or sum(len(name) for name in names) > LIMIT:
             raise ValueError("library_membership_limit")
         values = tuple(getattr(before, key) for key in fields)
@@ -1002,6 +1039,50 @@ def library_directory_snapshot(path):
         return hashlib.sha256(raw).hexdigest(), names
     finally:
         os.close(fd)
+
+
+def library_directory_metadata(path):
+    """Metadata-only trailing guard, after all directory membership scans."""
+    lexical = lexical_parent_snapshot(path)
+    resolved = os.path.realpath(path)
+    fd = open_fixed(resolved)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISDIR(before.st_mode):
+            raise ValueError("library_membership_race")
+        values = tuple(getattr(before, key) for key in fields)
+        named = open_fixed(resolved)
+        try:
+            if values != tuple(getattr(os.fstat(named), key) for key in fields):
+                raise ValueError("library_membership_race")
+        finally:
+            os.close(named)
+        if (os.path.realpath(path) != resolved or lexical_parent_snapshot(path) != lexical or
+                values != tuple(getattr(os.lstat(path), key) for key in fields)):
+            raise ValueError("library_membership_race")
+        return digest((resolved, values, lexical))
+    finally:
+        os.close(fd)
+
+
+def retain_compatibility_record(records, observed, usage, key=None):
+    """Bound retained link metadata before accumulating another full record."""
+    previous = records.get(key) if key is not None else None
+    count = usage[0] + (0 if previous is not None else 1)
+    # External records occur both inside and outside the serialized plan. The
+    # same conservative charge also bounds internal records and compact links.
+    size = usage[1] + 2 * len(canonical(observed))
+    if previous is not None:
+        size -= 2 * len(canonical(previous))
+    if count > MAX_ITEMS or size > LIMIT:
+        raise ValueError("inventory_compatibility_limit")
+    if key is None:
+        records.append(observed)
+    else:
+        records[key] = observed
+    usage[:] = [count, size]
 
 
 def installation(profile):
@@ -1043,7 +1124,7 @@ def installation(profile):
                 raise ValueError("executable_drift")
         finally:
             os.close(fd)
-        roots.append(os.path.realpath(path.split("/tools", 1)[0]))
+        roots.append(os.path.realpath(path.rsplit("/tools", 1)[0]))
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
@@ -1085,9 +1166,20 @@ def inventory(profile):
         ms + "/tools.lnx86/ktl/lib", ms + "/tools.lnx86/nif/lib",
         ms + "/tools.lnx86/pub/lib", ms + "/tools.lnx86/vmor/lib",
     )
+    # Observed standard-VM Tcl/Tk compatibility aliases expose sourced code.
+    # Only these fixed roles may escape the32-bit shared-library directories.
+    script_entries = (ic + "/share/lib/tcltk/tcl8.4", ic + "/share/lib/tcltk/tk8.4")
+    script_roots = tuple(os.path.realpath(path) for path in script_entries)
+    if not all(inside(root, ic + "/share/lib/tcltk") for root in script_roots):
+        raise ValueError("standard_vm_tcl_script_scope")
+    code_roots += script_roots
+    script_aliases = dict((name, script_roots[0 if name.startswith("tcl") else 1])
+                          for name in ("tcl", "tcl8.4", "tk", "tk8.4"))
+    visited_directories = set()
     exact_code = set((ic + "/tools.lnx86/.oawrap", ic + "/tools.lnx86/.cdnWrapper_pscompat"))
     paths, links, external = set(), {}, []
     internal, library_directories = {}, {}
+    compatibility_usage = [0, 0]
 
     def add(path):
         if not os.path.lexists(path):
@@ -1105,7 +1197,8 @@ def inventory(profile):
                 paths.add(parent)
             if len(paths) > MAX_ITEMS:
                 raise ValueError("scope_size")
-            external.append(external_link_record(path, resolved))
+            retain_compatibility_record(
+                external, external_link_record(path, resolved), compatibility_usage)
             return
         if os.path.isfile(resolved) and resolved not in exact_code and not any(
                 inside(resolved, code_root) for code_root in code_roots):
@@ -1120,7 +1213,7 @@ def inventory(profile):
                 paths.add(parent)
             observed = external_link_record(path, resolved)
             links[path] = {"path": path, "target": observed["target"], "resolved": resolved}
-            internal[path] = observed
+            retain_compatibility_record(internal, observed, compatibility_usage, path)
         paths.add(resolved)
         while resolved != base:
             resolved = os.path.dirname(resolved)
@@ -1132,22 +1225,50 @@ def inventory(profile):
         add(seed)
     for code in (ic + "/tools.lnx86/lib", ic + "/oa/lib", ms + "/tools.lnx86/lib"):
         add(code)
-        for current, directories, filenames in os.walk(code, followlinks=False):
+        pending = [code]
+        while pending:
+            current = pending.pop()
+            canonical_directory = os.path.realpath(current)
+            if canonical_directory in visited_directories:
+                continue
+            visited_directories.add(canonical_directory)
+            # Empty loader-visible directories are code namespace too: do not
+            # leave them shared-writable merely because no .so exists yet.
+            add(current)
             observed = library_directory_snapshot(current)
-            if observed[1] != sorted(directories + filenames):
-                raise ValueError("library_membership_race")
+            directories, filenames = [], []
+            for name in observed[1]:
+                (directories if os.path.isdir(current + "/" + name) else filenames).append(name)
             library_directories[current] = observed[0]
             if len(library_directories) > MAX_ITEMS:
                 raise ValueError("library_membership_limit")
-            directories[:] = [d for d in directories if "64" not in d and d not in (
-                "license", "data", "doc", "samples")]
-            # This fixed32-bit recipe does not enumerate aliased subtrees.
-            # Never silently authenticate their unvisited loader-visible files.
-            if any(os.path.islink(current + "/" + name) for name in directories):
-                raise ValueError("library_directory_alias_not_enumerated")
+            sourced_script = any(inside(current, root) for root in script_roots)
+            if not sourced_script:
+                directories[:] = [d for d in directories if "64" not in d and d not in (
+                    "license", "data", "doc", "samples")]
+            children = []
+            for name in directories:
+                child = current + "/" + name
+                if os.path.islink(child):
+                    expected = script_aliases.get(name)
+                    if (current != ic + "/tools.lnx86/lib" or expected is None or
+                            os.path.realpath(child) != expected):
+                        raise ValueError("library_directory_alias_not_enumerated")
+                    add(child)
+                    # Bind the intermediate share/lib compatibility aliases too.
+                    for script_entry in script_entries:
+                        if os.path.realpath(script_entry) == expected:
+                            add(script_entry)
+                    child = expected
+                children.append(child)
             for name in filenames:
-                if ".so" in name:
+                # Tcl source/package indexes can name files of any extension.
+                # All regular content in the fixed sourced-code roots is bound.
+                if ".so" in name or sourced_script:
                     add(current + "/" + name)
+            if len(pending) + len(directories) + len(library_directories) > MAX_ITEMS:
+                raise ValueError("library_membership_limit")
+            pending.extend(children)
     workspace = valid_path(profile["paths"]["workspace_root"])
     if os.path.realpath(workspace) != workspace:
         raise ValueError("workspace_link")
@@ -1182,8 +1303,15 @@ def inventory(profile):
     # The walk's yielded names can be stale even when all selected target bytes
     # are unchanged. Reobserve every traversed directory after ALL target and
     # link observations, retaining excluded directory names without traversing.
+    trailing_metadata = {}
     for path, observed in sorted(library_directories.items()):
+        trailing_metadata[path] = library_directory_metadata(path)
         if library_directory_snapshot(path)[0] != observed:
+            raise ValueError("library_membership_race")
+    # A later membership scan must not invalidate an earlier directory. No
+    # content/name scan follows this complete union's metadata-only guard.
+    for path, observed in sorted(trailing_metadata.items()):
+        if library_directory_metadata(path) != observed:
             raise ValueError("library_membership_race")
     return bounded
 

@@ -115,6 +115,16 @@ changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
 integration remain authorized. Final exact public-candidate approval is separate.
 Earlier histories, policy versions, failed evidence and original state remain.
 
+## Bounded retained-job migration scan, 2026-10-11
+
+Review4240586372 is corrected: retained job names stream through the fixed
+Python2.6-compatible Linux dirent64 reader and are rejected at the2049th entry
+or aggregate byte limit before sorting. The directory descriptor and named
+identity are rechecked and streams close on rejection. Windows host fixtures use
+bounded scandir. Migration45 Windows tests PASS/six POSIX skips, static76 PASS;
+actual owned oversized Linux directory evidence still requires hosted checks.
+No existing ledger/journal or actual VM state is mutated by this source fix.
+
 ## Retained manifest-bound migration entry, 2026-10-11
 
 Fresh finding4240529796 identified a second installed-resource read between
@@ -231,6 +241,90 @@ Two exported-helper child tests omit each flag with absolute PYTHONPATH and
 PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
+
+## Complete directory-union trailing observation, 2026-10-11
+
+Review4240623183 is corrected: metadata signatures are retained around the final
+membership pass and every traversed directory is reobserved after all membership
+scans. Creation/rename in an earlier directory during a later scan rejects before
+completion. No further content or membership scan follows that trailing guard;
+this is bounded filesystem observation, not atomic exclusion of external tools.
+Four owned Linux apply/rollback timing regressions preserve targets and failure
+evidence. Exact hosted/installed checks remain required. No VM mutation or run.
+
+## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
+
+Review4240588448/4240588451 is corrected: native library exclusion names apply
+only outside the two fixed Tcl/Tk source roots. Every descendant directory and
+regular source file there is bound. Compatibility records share an aggregate
+count and conservative serialized-byte budget, checked before retention for
+external and internal links; duplicate internal bindings do not consume new
+credit. Windows90 repair tests PASS/246 POSIX skips, static72 PASS; ten owned
+Linux descendant apply/repeat/rollback cases require hosted evidence. No current
+VM permission change or simulation occurred. Prior569/233 inventory is history
+until this exact helper performs a new read-only inventory.
+
+## Relocated installation fixture correction, 2026-10-11
+
+Exact0c83 Linux CI found one fixture failure after394 passing tests: moving the
+owned vendor tree left three absolute directory aliases pointing to its old
+location. The relocation regression now retargets only those three disposable
+fixture aliases before testing the final-tools-segment production logic. No
+production trust rule is weakened and no actual VM file is changed. Historical
+failed CI remains; exact follow-up hosted validation is required.
+
+## Complete sourced-file roles and final tool segment, 2026-10-11
+
+Review4240563319/4240572996 is corrected. Vendor roots derive from the final
+/tools segment, preserving equivalent layouts with a tools-named ancestor.
+Inside the two fixed Tcl/Tk sourced-code roots all regular content is selected:
+Tcl indexes can source .itcl/.itk or extensionless files, so extensions cannot be
+used as a trust boundary. No installation-wide walk or external/PDK/license
+content mutation is admitted. Three source-role and one relocated-layout owned
+POSIX regressions are included. The previous451/115 normal-user inventory is
+retained history; this exact recipe's VM count and final gates must be refreshed.
+No actual admin metadata, contents, ledger, reservation or simulation changes.
+
+## Empty library code namespace protection, 2026-10-11
+
+Review4240540555 is corrected: every bounded traversed directory is an exact
+metadata target, including an empty loader-visible directory with no .so file.
+The helper preserves all names/content/owner/read/execute and removes only shared
+write permissions. Two owned Linux apply/repeat/rollback cases retain original
+code bytes and verify empty namespace metadata. Current standard-VM exact target
+count must be refreshed; the earlier448/112 observation is retained historical
+evidence, not a claim about this changed recipe. No actual administrator change,
+reservation or Cadence execution occurs in this source correction.
+
+## Actual standard-VM Tcl/Tk dependency roles, 2026-10-11
+
+Read-only latest i686 inventory exposed four standard Tcl/Tk library aliases,
+whose intermediate share/lib/tcltk/tcl8.4 and tk8.4 aliases resolve to a shared
+08.49 directory. The fixed recipe now binds those exact compatibility roles and
+intermediate links, traverses each canonical script directory once with bounded
+readdir64, and includes sourced .tcl/.tm/.msg/tclIndex code. Other nested directory
+aliases, code-role escapes and excluded64/license/data/doc/sample trees reject.
+No generic recursive installation scope or platform abstraction is introduced.
+
+Actual UID500/Python2.6 read-only inventory PASS:448 exact targets,112 new mode
+changes required (0777 to0755). The observed prior336 targets remain; contents,
+owner/group and old receipts are not overwritten. Additional repair has NOT been
+applied. The earlier four SuSE-directory changes are already completed history.
+Owned Linux direct/shared intermediate aliases cover apply/repeat/rollback and
+code-role rejection; final hosted/package/review and exact installed qualification
+remain gates. This observation adds0 simulations,0 reservations and0 admin changes.
+
+## Preallocation-bounded library enumeration, 2026-10-11
+
+Independent finding4240505088 identified that os.listdir/os.walk allocate whole
+name lists before posthoc limits. The repair recipe now reads Linux readdir64
+through an independently opened directory stream, stops at MAX_ITEMS+1 and
+bounds aggregate pending directory paths. It retains fixed digests and uses the
+same dirent64 offsets as the existing storage implementation on i686/x86_64.
+It does not depend on Python3-only scandir or expand supported EDA platforms.
+An owned stream regression forbids listdir/walk and exercises limit/recovery;
+Windows86 PASS/225 OS skips, exact hosted POSIX and current i686 VM remain gates.
+No actual VM/admin/ledger/reservation/simulation change occurs in this correction.
 
 ## Canonical library digest correction, 2026-10-11
 

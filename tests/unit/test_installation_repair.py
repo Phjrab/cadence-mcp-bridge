@@ -2365,10 +2365,258 @@ def test_library_membership_signature_hashes_canonical_bytes_once(monkeypatch):
     monkeypatch.setattr(repair.os, "fstat", lambda fd: directory)
     monkeypatch.setattr(repair.os, "lstat", lambda path: directory)
     monkeypatch.setattr(repair.os, "close", lambda fd: None)
-    monkeypatch.setattr(repair.os, "listdir", lambda path: ["b.so", "a.so"])
+    monkeypatch.setattr(repair, "bounded_directory_names", lambda fd: ["a.so", "b.so"])
     monkeypatch.setattr(repair, "descriptor_path", lambda fd: "/owned")
     signature, names = repair.library_directory_snapshot("/owned")
     expected = ("/owned", [1, 2, directory.st_mode, 500, 500, 2, 4096, "1.25", "2.5"],
                 ["a.so", "b.so"], [])
     assert signature == hashlib.sha256(repair.canonical(expected)).hexdigest()
     assert names == ["a.so", "b.so"]
+
+
+def test_library_stream_rejects_before_materializing_oversized_directory(actual_recipe_layout,
+                                                                       monkeypatch):
+    shared, _, _, _, _ = actual_recipe_layout
+    directory = shared / "owned-bounded-stream"
+    directory.mkdir()
+    for index in range(9):
+        (directory / f"entry-{index}").write_bytes(b"synthetic")
+    monkeypatch.setattr(repair, "MAX_ITEMS", 8)
+    monkeypatch.setattr(repair.os, "listdir", lambda *a: pytest.fail("unbounded listdir"))
+    monkeypatch.setattr(repair.os, "walk", lambda *a, **kw: pytest.fail("unbounded walk"))
+    with pytest.raises(ValueError, match="library_membership_limit"):
+        repair.library_directory_snapshot(str(directory))
+    monkeypatch.setattr(repair, "MAX_ITEMS", 9)
+    signature, names = repair.library_directory_snapshot(str(directory))
+    assert len(signature) == 64 and len(names) == 9
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("shared_target", [False, True])
+def test_standard_vm_tcl_aliases_enumerate_sourced_code_exactly(
+    actual_recipe_layout, rollback, shared_target
+):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    scripts = []
+    for stem in ("tcl", "tk"):
+        entry = ic / "share/lib/tcltk" / (stem + "8.4")
+        target = entry.parent / "08.49" if shared_target else entry
+        target.mkdir(parents=True, exist_ok=True)
+        if shared_target:
+            entry.symlink_to("08.49", target_is_directory=True)
+        script = target / (stem + "-init.tcl")
+        script.write_bytes(b"# synthetic sourced code; never executed\n")
+        script.chmod(0o777)
+        scripts.append(script)
+        (ic / "tools.lnx86/lib" / (stem + "8.4")).symlink_to(entry, target_is_directory=True)
+        (ic / "tools.lnx86/lib" / stem).symlink_to(stem + "8.4", target_is_directory=True)
+    original = {str(p): p.read_bytes() for p in code_paths + scripts}
+    prepared = repair.inventory(profile)
+    for script in scripts:
+        assert str(script) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    assert all(stat.S_IMODE(p.stat().st_mode) == 0o755 for p in scripts)
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert all(stat.S_IMODE(p.stat().st_mode) == 0o777 for p in scripts)
+    assert original == {str(p): p.read_bytes() for p in code_paths + scripts}
+
+
+def test_standard_vm_tcl_alias_cannot_expand_to_other_installation_code(actual_recipe_layout):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    (ic / "tools.lnx86/lib/tcl").symlink_to(ic / "tools.lnx86/bin", target_is_directory=True)
+    with pytest.raises(ValueError, match="library_directory_alias_not_enumerated"):
+        repair.inventory(profile)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_empty_traversed_library_namespace_is_exact_repair_target(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib/empty-code-namespace/nested"
+    directory.mkdir(parents=True)
+    directory.parent.chmod(0o777)
+    directory.chmod(0o777)
+    before = {str(p): p.read_bytes() for p in code_paths}
+    prepared = repair.inventory(profile)
+    assert str(directory) in prepared["plan"]["scope"]["paths"]
+    assert str(directory.parent) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o755
+    assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o777
+        assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o777
+    assert before == {str(p): p.read_bytes() for p in code_paths}
+
+
+@pytest.mark.parametrize("name", ["package.itcl", "package.itk", "extensionless-source"])
+def test_fixed_tcl_code_roles_include_any_sourceable_filename(actual_recipe_layout, name):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = ic / "share/lib/tcltk/tcl8.4"
+    target.mkdir(parents=True)
+    script = target / name
+    script.write_bytes(b"# synthetic sourceable file\n")
+    script.chmod(0o777)
+    (ic / "tools.lnx86/lib/tcl").symlink_to(target, target_is_directory=True)
+    prepared = repair.inventory(profile)
+    assert str(script) in prepared["plan"]["scope"]["paths"]
+    repair.mutate(_receipt_request(prepared))
+    assert stat.S_IMODE(script.stat().st_mode) == 0o755
+    assert script.read_bytes() == b"# synthetic sourceable file\n"
+
+
+def test_fixed_vendor_roots_use_final_tools_segment(actual_recipe_layout):
+    from pathlib import Path
+
+    shared, _, _, _, profile = actual_recipe_layout
+    source = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0]).parent
+    parent = shared / "tools"
+    parent.mkdir()
+    destination = parent / "cadence"
+    source.rename(destination)
+    # The owned fixture uses absolute installation aliases. Preserve their
+    # internal relationship after relocation rather than leave dangling links
+    # to the old test installation.
+    for relative in ('IC615/tools', 'MMSIM121/tools', 'IC615/oa'):
+        alias = destination / relative
+        target = alias.readlink()
+        assert str(target).startswith(str(source) + '/')
+        alias.unlink()
+        alias.symlink_to(str(target).replace(str(source), str(destination), 1),
+                         target_is_directory=True)
+
+    def relocate(value):
+        if isinstance(value, str):
+            return value.replace(str(source), str(destination))
+        if isinstance(value, dict):
+            return {key: relocate(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [relocate(item) for item in value]
+        return value
+
+    prepared = repair.inventory(relocate(profile))
+    assert prepared["plan"]["recipe_id"] == "standard-vm-trust-v1"
+    assert any(str(destination) in path for path in prepared["plan"]["scope"]["paths"])
+
+
+@pytest.mark.parametrize("name", ["data", "doc", "samples", "license", "package64"])
+@pytest.mark.parametrize("rollback", [False, True])
+def test_fixed_tcl_descendants_do_not_use_native_library_exclusions(
+    actual_recipe_layout, name, rollback
+):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = ic / "share/lib/tcltk/tcl8.4"
+    directory = target / name
+    directory.mkdir(parents=True)
+    script = directory / "source.itcl"
+    script.write_bytes(b"# owned fixture, never executed\n")
+    directory.chmod(0o777)
+    script.chmod(0o777)
+    (ic / "tools.lnx86/lib/tcl").symlink_to(target, target_is_directory=True)
+    prepared = repair.inventory(profile)
+    assert {str(directory), str(script)} <= set(prepared["plan"]["scope"]["paths"])
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    for path in (directory, script):
+        assert stat.S_IMODE(path.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        for path in (directory, script):
+            assert stat.S_IMODE(path.stat().st_mode) == 0o777
+    assert script.read_bytes() == b"# owned fixture, never executed\n"
+
+
+@pytest.mark.parametrize("kind", ["external", "internal"])
+@pytest.mark.parametrize("bound", ["count", "bytes"])
+def test_compatibility_records_are_bounded_before_retaining(monkeypatch, kind, bound):
+    records = [] if kind == "external" else {}
+    usage = [0, 0]
+    record = {"path": "/owned/alias", "resolved": "/trusted/library", "metadata": [1, 2]}
+    size = 2 * len(repair.canonical(record))
+    monkeypatch.setattr(repair, "MAX_ITEMS", 1 if bound == "count" else 20)
+    monkeypatch.setattr(repair, "LIMIT", size if bound == "bytes" else size * 20)
+    repair.retain_compatibility_record(records, record, usage,
+                                       None if kind == "external" else record["path"])
+    before, before_usage = records.copy(), usage[:]
+    with pytest.raises(ValueError, match="inventory_compatibility_limit"):
+        repair.retain_compatibility_record(records, record, usage,
+                                           None if kind == "external" else "/owned/second")
+    assert records == before and usage == before_usage
+    if kind == "internal":
+        repair.retain_compatibility_record(records, record, usage, record["path"])
+        assert records == before and usage == before_usage
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", ["create", "rename"])
+def test_earlier_directory_changes_during_later_final_membership_scan_reject(
+    actual_recipe_layout, monkeypatch, rollback, drift
+):
+    from pathlib import Path
+
+    shared, _, _, code_paths, profile = actual_recipe_layout
+    code_paths[0].chmod(0o777)
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    earlier = ic / "oa/lib/late-unreviewed.so"
+    later = str(ic / "tools.lnx86/lib")
+    pending = shared / "preserved-pending-library"
+    raw = b"owned synthetic library, never executed"
+    if drift == "rename":
+        pending.write_bytes(raw)
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    real_snapshot = repair.library_directory_snapshot
+    active, injected, calls, events = False, False, {}, []
+
+    def snapshot(path):
+        nonlocal injected
+        value = real_snapshot(path)
+        if active:
+            calls[path] = calls.get(path, 0) + 1
+            if path == later and calls[path] == 2 and not injected:
+                if drift == "rename":
+                    pending.rename(earlier)
+                else:
+                    earlier.write_bytes(raw)
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair, "library_directory_snapshot", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="library_membership_race"):
+        repair.mutate(request, rollback)
+    assert injected and earlier.read_bytes() == raw
+    assert not any(event["event"] in {"complete", "changed"} for event in events)
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
