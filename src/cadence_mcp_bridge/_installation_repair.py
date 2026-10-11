@@ -1035,6 +1035,24 @@ def library_directory_snapshot(path):
         os.close(fd)
 
 
+def retain_compatibility_record(records, observed, usage, key=None):
+    """Bound retained link metadata before accumulating another full record."""
+    previous = records.get(key) if key is not None else None
+    count = usage[0] + (0 if previous is not None else 1)
+    # External records occur both inside and outside the serialized plan. The
+    # same conservative charge also bounds internal records and compact links.
+    size = usage[1] + 2 * len(canonical(observed))
+    if previous is not None:
+        size -= 2 * len(canonical(previous))
+    if count > MAX_ITEMS or size > LIMIT:
+        raise ValueError("inventory_compatibility_limit")
+    if key is None:
+        records.append(observed)
+    else:
+        records[key] = observed
+    usage[:] = [count, size]
+
+
 def inventory(profile):
     """Standard-VM recipe; address/account/install roots come from operator data.
 
@@ -1074,7 +1092,7 @@ def inventory(profile):
                 raise ValueError("executable_drift")
         finally:
             os.close(fd)
-        roots.append(os.path.realpath(path.split("/tools", 1)[0]))
+        roots.append(os.path.realpath(path.rsplit("/tools", 1)[0]))
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
@@ -1118,6 +1136,7 @@ def inventory(profile):
     exact_code = set((ic + "/tools.lnx86/.oawrap", ic + "/tools.lnx86/.cdnWrapper_pscompat"))
     paths, links, external = set(), {}, []
     internal, library_directories = {}, {}
+    compatibility_usage = [0, 0]
 
     def add(path):
         if not os.path.lexists(path):
@@ -1135,7 +1154,8 @@ def inventory(profile):
                 paths.add(parent)
             if len(paths) > MAX_ITEMS:
                 raise ValueError("scope_size")
-            external.append(external_link_record(path, resolved))
+            retain_compatibility_record(
+                external, external_link_record(path, resolved), compatibility_usage)
             return
         if os.path.isfile(resolved) and resolved not in exact_code and not any(
                 inside(resolved, code_root) for code_root in code_roots):
@@ -1150,7 +1170,7 @@ def inventory(profile):
                 paths.add(parent)
             observed = external_link_record(path, resolved)
             links[path] = {"path": path, "target": observed["target"], "resolved": resolved}
-            internal[path] = observed
+            retain_compatibility_record(internal, observed, compatibility_usage, path)
         paths.add(resolved)
         while resolved != base:
             resolved = os.path.dirname(resolved)
@@ -1179,8 +1199,10 @@ def inventory(profile):
             library_directories[current] = observed[0]
             if len(library_directories) > MAX_ITEMS:
                 raise ValueError("library_membership_limit")
-            directories[:] = [d for d in directories if "64" not in d and d not in (
-                "license", "data", "doc", "samples")]
+            sourced_script = any(inside(current, root) for root in script_roots)
+            if not sourced_script:
+                directories[:] = [d for d in directories if "64" not in d and d not in (
+                    "license", "data", "doc", "samples")]
             children = []
             for name in directories:
                 child = current + "/" + name
@@ -1197,8 +1219,8 @@ def inventory(profile):
                     child = expected
                 children.append(child)
             for name in filenames:
-                sourced_script = (any(inside(current, root) for root in script_roots) and
-                                  (name.endswith((".tcl", ".tm", ".msg")) or name == "tclIndex"))
+                # Tcl source/package indexes can name files of any extension.
+                # All regular content in the fixed sourced-code roots is bound.
                 if ".so" in name or sourced_script:
                     add(current + "/" + name)
             if len(pending) + len(directories) + len(library_directories) > MAX_ITEMS:

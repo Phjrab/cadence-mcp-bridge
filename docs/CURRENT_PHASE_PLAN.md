@@ -53,6 +53,16 @@ changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
 integration remain authorized. Final exact public-candidate approval is separate.
 Earlier histories, policy versions, failed evidence and original state remain.
 
+## Bounded retained-job migration scan, 2026-10-11
+
+Review4240586372 is corrected: retained job names stream through the fixed
+Python2.6-compatible Linux dirent64 reader and are rejected at the2049th entry
+or aggregate byte limit before sorting. The directory descriptor and named
+identity are rechecked and streams close on rejection. Windows host fixtures use
+bounded scandir. Migration45 Windows tests PASS/six POSIX skips, static76 PASS;
+actual owned oversized Linux directory evidence still requires hosted checks.
+No existing ledger/journal or actual VM state is mutated by this source fix.
+
 ## Retained manifest-bound migration entry, 2026-10-11
 
 Fresh finding4240529796 identified a second installed-resource read between
@@ -169,6 +179,39 @@ Two exported-helper child tests omit each flag with absolute PYTHONPATH and
 PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
+
+## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
+
+Review4240588448/4240588451 is corrected: native library exclusion names apply
+only outside the two fixed Tcl/Tk source roots. Every descendant directory and
+regular source file there is bound. Compatibility records share an aggregate
+count and conservative serialized-byte budget, checked before retention for
+external and internal links; duplicate internal bindings do not consume new
+credit. Windows90 repair tests PASS/246 POSIX skips, static72 PASS; ten owned
+Linux descendant apply/repeat/rollback cases require hosted evidence. No current
+VM permission change or simulation occurred. Prior569/233 inventory is history
+until this exact helper performs a new read-only inventory.
+
+## Relocated installation fixture correction, 2026-10-11
+
+Exact0c83 Linux CI found one fixture failure after394 passing tests: moving the
+owned vendor tree left three absolute directory aliases pointing to its old
+location. The relocation regression now retargets only those three disposable
+fixture aliases before testing the final-tools-segment production logic. No
+production trust rule is weakened and no actual VM file is changed. Historical
+failed CI remains; exact follow-up hosted validation is required.
+
+## Complete sourced-file roles and final tool segment, 2026-10-11
+
+Review4240563319/4240572996 is corrected. Vendor roots derive from the final
+/tools segment, preserving equivalent layouts with a tools-named ancestor.
+Inside the two fixed Tcl/Tk sourced-code roots all regular content is selected:
+Tcl indexes can source .itcl/.itk or extensionless files, so extensions cannot be
+used as a trust boundary. No installation-wide walk or external/PDK/license
+content mutation is admitted. Three source-role and one relocated-layout owned
+POSIX regressions are included. The previous451/115 normal-user inventory is
+retained history; this exact recipe's VM count and final gates must be refreshed.
+No actual admin metadata, contents, ledger, reservation or simulation changes.
 
 ## Empty library code namespace protection, 2026-10-11
 

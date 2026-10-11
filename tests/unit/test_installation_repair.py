@@ -2421,3 +2421,108 @@ def test_empty_traversed_library_namespace_is_exact_repair_target(actual_recipe_
         assert stat.S_IMODE(directory.stat().st_mode) == 0o777
         assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o777
     assert before == {str(p): p.read_bytes() for p in code_paths}
+
+
+@pytest.mark.parametrize("name", ["package.itcl", "package.itk", "extensionless-source"])
+def test_fixed_tcl_code_roles_include_any_sourceable_filename(actual_recipe_layout, name):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = ic / "share/lib/tcltk/tcl8.4"
+    target.mkdir(parents=True)
+    script = target / name
+    script.write_bytes(b"# synthetic sourceable file\n")
+    script.chmod(0o777)
+    (ic / "tools.lnx86/lib/tcl").symlink_to(target, target_is_directory=True)
+    prepared = repair.inventory(profile)
+    assert str(script) in prepared["plan"]["scope"]["paths"]
+    repair.mutate(_receipt_request(prepared))
+    assert stat.S_IMODE(script.stat().st_mode) == 0o755
+    assert script.read_bytes() == b"# synthetic sourceable file\n"
+
+
+def test_fixed_vendor_roots_use_final_tools_segment(actual_recipe_layout):
+    from pathlib import Path
+
+    shared, _, _, _, profile = actual_recipe_layout
+    source = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0]).parent
+    parent = shared / "tools"
+    parent.mkdir()
+    destination = parent / "cadence"
+    source.rename(destination)
+    # The owned fixture uses absolute installation aliases. Preserve their
+    # internal relationship after relocation rather than leave dangling links
+    # to the old test installation.
+    for relative in ('IC615/tools', 'MMSIM121/tools', 'IC615/oa'):
+        alias = destination / relative
+        target = alias.readlink()
+        assert str(target).startswith(str(source) + '/')
+        alias.unlink()
+        alias.symlink_to(str(target).replace(str(source), str(destination), 1),
+                         target_is_directory=True)
+
+    def relocate(value):
+        if isinstance(value, str):
+            return value.replace(str(source), str(destination))
+        if isinstance(value, dict):
+            return {key: relocate(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [relocate(item) for item in value]
+        return value
+
+    prepared = repair.inventory(relocate(profile))
+    assert prepared["plan"]["recipe_id"] == "standard-vm-trust-v1"
+    assert any(str(destination) in path for path in prepared["plan"]["scope"]["paths"])
+
+
+@pytest.mark.parametrize("name", ["data", "doc", "samples", "license", "package64"])
+@pytest.mark.parametrize("rollback", [False, True])
+def test_fixed_tcl_descendants_do_not_use_native_library_exclusions(
+    actual_recipe_layout, name, rollback
+):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = ic / "share/lib/tcltk/tcl8.4"
+    directory = target / name
+    directory.mkdir(parents=True)
+    script = directory / "source.itcl"
+    script.write_bytes(b"# owned fixture, never executed\n")
+    directory.chmod(0o777)
+    script.chmod(0o777)
+    (ic / "tools.lnx86/lib/tcl").symlink_to(target, target_is_directory=True)
+    prepared = repair.inventory(profile)
+    assert {str(directory), str(script)} <= set(prepared["plan"]["scope"]["paths"])
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    for path in (directory, script):
+        assert stat.S_IMODE(path.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        for path in (directory, script):
+            assert stat.S_IMODE(path.stat().st_mode) == 0o777
+    assert script.read_bytes() == b"# owned fixture, never executed\n"
+
+
+@pytest.mark.parametrize("kind", ["external", "internal"])
+@pytest.mark.parametrize("bound", ["count", "bytes"])
+def test_compatibility_records_are_bounded_before_retaining(monkeypatch, kind, bound):
+    records = [] if kind == "external" else {}
+    usage = [0, 0]
+    record = {"path": "/owned/alias", "resolved": "/trusted/library", "metadata": [1, 2]}
+    size = 2 * len(repair.canonical(record))
+    monkeypatch.setattr(repair, "MAX_ITEMS", 1 if bound == "count" else 20)
+    monkeypatch.setattr(repair, "LIMIT", size if bound == "bytes" else size * 20)
+    repair.retain_compatibility_record(records, record, usage,
+                                       None if kind == "external" else record["path"])
+    before, before_usage = records.copy(), usage[:]
+    with pytest.raises(ValueError, match="inventory_compatibility_limit"):
+        repair.retain_compatibility_record(records, record, usage,
+                                           None if kind == "external" else "/owned/second")
+    assert records == before and usage == before_usage
+    if kind == "internal":
+        repair.retain_compatibility_record(records, record, usage, record["path"])
+        assert records == before and usage == before_usage

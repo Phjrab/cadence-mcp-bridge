@@ -761,3 +761,48 @@ def test_prepare_retains_manifest_bound_entry_during_package_resource_replacemen
     assert domain_provisioning.prepare(profile, tmp_path / "plan", expected)["status"] == (
         "SYNTHETIC_RETAINED_ENTRY"
     )
+
+
+@pytest.mark.parametrize("bound", ["count", "bytes"])
+def test_migration_job_names_stop_before_unbounded_materialization(monkeypatch, bound):
+    consumed, closed = [], []
+
+    def entries(path):
+        try:
+            for i in range(10000):
+                consumed.append(i)
+                yield "x" * 16
+        finally:
+            closed.append(path)
+
+    monkeypatch.setattr(migration, "job_directory_entries", entries)
+    if bound == "bytes":
+        monkeypatch.setattr(migration, "LIMIT", 32)
+    with pytest.raises(ValueError, match="migration_inventory_limit"):
+        migration.bounded_job_names("/owned/jobs")
+    assert len(consumed) == (2049 if bound == "count" else 3)
+    assert closed == ["/owned/jobs"]
+
+
+def test_migration_job_scan_never_calls_listdir(domain, monkeypatch):
+    root, value, _, _ = domain
+
+    def forbidden(path):
+        raise AssertionError("unbounded listdir")
+
+    monkeypatch.setattr(migration.os, "listdir", forbidden)
+    observed = migration.snapshot(str(root))
+    assert len(observed["native_jobs"]) == 1
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual Linux bounded dirent64")
+def test_actual_migration_directory_limit_preserves_entries(tmp_path, monkeypatch):
+    jobs = tmp_path / "jobs"
+    jobs.mkdir(mode=0o700)
+    for i in range(2049):
+        (jobs / f"owned-{i:04d}").touch(mode=0o600)
+    monkeypatch.setattr(migration.os, "listdir", lambda path: pytest.fail("unbounded listdir"))
+    with pytest.raises(ValueError, match="migration_inventory_limit"):
+        migration.bounded_job_names(str(jobs))
+    with os.scandir(jobs) as entries:
+        assert sum(1 for _ in entries) == 2049

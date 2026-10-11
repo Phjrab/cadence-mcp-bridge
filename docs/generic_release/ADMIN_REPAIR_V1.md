@@ -1,3 +1,27 @@
+## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
+
+Review4240588448/4240588451 is corrected: native library exclusion names apply
+only outside the two fixed Tcl/Tk source roots. Every descendant directory and
+regular source file there is bound. Compatibility records share an aggregate
+count and conservative serialized-byte budget, checked before retention for
+external and internal links; duplicate internal bindings do not consume new
+credit. Windows90 repair tests PASS/246 POSIX skips, static72 PASS; ten owned
+Linux descendant apply/repeat/rollback cases require hosted evidence. No current
+VM permission change or simulation occurred. Prior569/233 inventory is history
+until this exact helper performs a new read-only inventory.
+
+## Complete sourced-file roles and final tool segment, 2026-10-11
+
+Review4240563319/4240572996 is corrected. Vendor roots derive from the final
+/tools segment, preserving equivalent layouts with a tools-named ancestor.
+Inside the two fixed Tcl/Tk sourced-code roots all regular content is selected:
+Tcl indexes can source .itcl/.itk or extensionless files, so extensions cannot be
+used as a trust boundary. No installation-wide walk or external/PDK/license
+content mutation is admitted. Three source-role and one relocated-layout owned
+POSIX regressions are included. The previous451/115 normal-user inventory is
+retained history; this exact recipe's VM count and final gates must be refreshed.
+No actual admin metadata, contents, ledger, reservation or simulation changes.
+
 ## Empty library code namespace protection, 2026-10-11
 
 Review4240540555 is corrected: every bounded traversed directory is an exact
