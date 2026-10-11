@@ -274,10 +274,25 @@ def metadata_equal(key, before, after):
     return before == after
 
 
-def verify_completed_targets(original, rollback):
+def completion_inventory(original):
+    # Only the registered fixed installation recipe can enumerate new members;
+    # no caller directory, glob or code path is accepted as a completion recipe.
+    if original.get("recipe_id") != "standard-vm-trust-v1":
+        raise ValueError("fixed_profile_recipe_required")
+    return inventory(original["profile"])["plan"]
+
+
+def verify_completed_targets(original, rollback, recipe_guard=False):
     # Recompute the whole exact recipe so skipped and previously processed targets
     # cannot escape final content/identity/ACL checks. plan() also rechecks links.
     final = plan(original["scope"])["plan"]
+    if recipe_guard:
+        # Refresh membership as well as stored paths. A new/renamed shared object
+        # must not escape the original exact target scope, including on a no-op.
+        fresh = completion_inventory(original)
+        if fresh["scope"] != original["scope"]:
+            raise ValueError("completion_recipe_scope")
+        final = fresh
     if len(final["records"]) != len(original["records"]):
         raise ValueError("completion_record_count")
     for old, now in zip(original["records"], final["records"]):
@@ -422,7 +437,7 @@ def _mutate_locked(request, rollback=False, receipt_guard=False, resource_guard=
         emit({"event": "changed", "before": now, "after": final})
     # Also cover drift after the last change and idempotent/no-op application.
     # Reobserve all exact targets and links, not only the omitted ancestor chain.
-    verify_completed_targets(original, rollback)
+    verify_completed_targets(original, rollback, receipt_guard)
     # Unsafe outside-scope ancestors remain untouched and cannot yield completion.
     verify_unlisted_ancestors(original["scope"]["installation_roots"])
     if receipt_guard:
