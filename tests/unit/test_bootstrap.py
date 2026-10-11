@@ -1260,7 +1260,7 @@ def test_operator_runtime_revalidated_after_last_namespace_barrier(operator_boun
 
 @pytest.mark.parametrize("phase", ["initial", "partial", "complete"])
 @pytest.mark.parametrize("barrier", ["version", "runtime"])
-def test_update_runtime_barrier_preserves_all_states_and_retries(
+def test_operator_update_runtime_barrier_preserves_all_states_and_retries(
     operator_update_pair, monkeypatch, phase, barrier
 ):
     _, target, previous, expected = operator_update_pair
@@ -1308,7 +1308,9 @@ def test_update_runtime_barrier_preserves_all_states_and_retries(
     } == completed
 
 
-def test_update_rechecks_next_runtime_after_directory_sync(operator_update_pair, monkeypatch):
+def test_operator_update_rechecks_next_runtime_after_directory_sync(
+    operator_update_pair, monkeypatch
+):
     _, target, previous, expected = operator_update_pair
     version = target / "runtime" / expected
     pointer = (target / "active-operator-runner.json").read_bytes()
