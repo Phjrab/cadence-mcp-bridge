@@ -62,6 +62,11 @@ def contents(setup: bool = False) -> tuple[dict[str, bytes], bytes, str]:
         name: files("cadence_mcp_bridge").joinpath(source).read_bytes()
         for name, source in sources.items()
     }
+    if not setup:
+        entry = files("cadence_mcp_bridge").joinpath("_domain_entry.py").read_text()
+        assets["domain-operator.sh"] = assets["domain-operator.sh"].replace(
+            b"__CADENCE_DOMAIN_ENTRY__", shlex.quote(entry).encode("ascii")
+        )
     manifest = {
         "schema_version": 1,
         "kind": "STANDARD_VM_DOMAIN_SETUP_HELPER" if setup else "EXISTING_DOMAIN_OPERATOR_HELPER",
@@ -140,8 +145,13 @@ def _transport(
         if helper_name == "domain-operator.sh"
         else environment.paths.workspace_root + "/.cadence_mcp-setup/" + expected + "/setup.py"
     )
-    command = (["/bin/sh", helper_path] if helper_name == "domain-operator.sh"
-               else ["/usr/bin/python", "-E", "-s", "-B", helper_path])
+    command = (
+        ["/usr/bin/python", "-E", "-s", "-B", "-c",
+         shlex.quote(files("cadence_mcp_bridge").joinpath("_domain_entry.py").read_text()),
+         environment.paths.managed_root + "/operator-helpers/" + expected]
+        if helper_name == "domain-operator.sh"
+        else ["/usr/bin/python", "-E", "-s", "-B", helper_path]
+    )
     argv = [
         executable,
         "-o",

@@ -17,6 +17,23 @@ changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
 integration remain authorized. Final exact public-candidate approval is separate.
 Earlier histories, policy versions, failed evidence and original state remain.
 
+## Executing migration byte binding, 2026-10-11
+
+Independent finding4240481575 is addressed by a package-supplied fixed Python
+entry. Supported CLI transport sends that reviewed source with -E -s -B -c,
+checks the caller's package-bound manifest pin and retains/authenticates
+migration.py before compiling it. The executing migration hash is compared again
+to the retained validated asset before loading helpers or publishing records.
+No mutable migration pathname is loaded by Python before authentication. The
+exported closed shell wrapper embeds the same fixed entry for explicit operator
+invocation; the CLI does not execute mutable remote wrapper bytes.
+
+Three owned POSIX cases cover source replacement, both source+manifest replacement,
+and post-read replacement. They must pass hosted Linux; Windows41 PASS/5 OS skips.
+The previous real user-site startup control remains. Earlier helper/source/logs
+and actual journals are retained; this source change does not contact or mutate
+VM, reserve results or run Cadence. Final exact review/package/VM gates remain.
+
 ## Python isolation before interpreter startup, 2026-10-11
 
 Independent P1 review4240357276 is addressed by a manifest-bound fixed POSIX
