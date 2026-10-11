@@ -7,6 +7,9 @@ import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from typing import Any
 
+_FIXED_LIMIT = 1048576
+_REPAIR_INVENTORY_LIMIT = 16777216
+
 
 def run_fixed(
     argv: list[str],
@@ -16,7 +19,27 @@ def run_fixed(
     timeout: float = 30,
     limit: int = 32768,
 ) -> tuple[int, bytes, bytes]:
-    if len(request) > limit or not 1 <= limit <= 1048576 or not 0 < timeout <= 60:
+    return _run_bounded(argv, request, environment, timeout, limit, _FIXED_LIMIT)
+
+
+def run_repair_inventory(
+    argv: list[str], request: bytes, environment: dict[str, str]
+) -> tuple[int, bytes, bytes]:
+    """Private repair inventory protocol; callers cannot vary its finite bounds."""
+    return _run_bounded(
+        argv, request, environment, 60, _REPAIR_INVENTORY_LIMIT, _REPAIR_INVENTORY_LIMIT
+    )
+
+
+def _run_bounded(
+    argv: list[str],
+    request: bytes,
+    environment: dict[str, str],
+    timeout: float,
+    limit: int,
+    ceiling: int,
+) -> tuple[int, bytes, bytes]:
+    if len(request) > limit or not 1 <= limit <= ceiling or not 0 < timeout <= 60:
         raise ValueError("fixed_transport_bounds")
     process = subprocess.Popen(
         argv,

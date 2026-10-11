@@ -89,7 +89,7 @@ def prepare_repair(
     import shutil
 
     from cadence_mcp_bridge import _installation_repair as repair
-    from cadence_mcp_bridge.operator_transport import run_fixed
+    from cadence_mcp_bridge.operator_transport import run_repair_inventory
     from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
     environment, data = load_environment(_local_path(profile))
@@ -109,11 +109,11 @@ def prepare_repair(
         payload = json.dumps({"profile": json.loads(data),
             "model_include": include.model_dump(mode="json")}, sort_keys=True).encode("ascii")
         action = "inventory-models"
-    status, stdout, stderr = run_fixed(
+    status, stdout, stderr = run_repair_inventory(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
          "/usr/bin/python", "-B", "-c", shlex.quote(code), action],
-        payload, OpenSshBackend._ssh_environment(), timeout=60, limit=262144,
+        payload, OpenSshBackend._ssh_environment(),
     )
     if status or stderr:
         raise ValueError("repair_inventory_rejected")
