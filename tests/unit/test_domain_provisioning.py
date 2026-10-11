@@ -568,3 +568,24 @@ def test_standalone_migration_startup_cannot_import_unlisted_bundle_stdlib_shado
     assert result.returncode == 1
     assert result.stderr.replace(b"\r\n", b"\n") == b"OPERATOR_DOMAIN_MIGRATION_REJECTED\n"
     assert not marker.exists()
+
+
+
+def test_memory_loaded_migration_preserves_stdlib_first_entry_and_filters_bundle_aliases(
+    tmp_path, monkeypatch,
+):
+    import sys
+    import types
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    stdlib = str(Path(os.__file__).resolve().parent)
+    monkeypatch.chdir(output)
+    monkeypatch.setattr(sys, "path", [stdlib, str(output), "", ".", *sys.path])
+    module = types.ModuleType("migration")
+    module.__file__ = str(output / "migration.py")
+    module.__package__ = ""
+    exec(compile((output / "migration.py").read_bytes(), module.__file__, "exec"), module.__dict__)
+    assert sys.path[0] == stdlib
+    assert all(Path(entry or ".").resolve() != output for entry in sys.path)
+    assert module._VALIDATED_HELPERS is None
