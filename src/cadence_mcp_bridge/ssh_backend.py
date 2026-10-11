@@ -185,8 +185,14 @@ class OpenSshBackend:
         )
         if len(raw) > 8192:
             raise InvalidInputError("storage request bound exceeded")
-        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
-        return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
+        if isinstance(self._config, OperatorTransport):
+            raise ConfigurationError("RUNNER_SETUP_REQUIRED: operator storage is not attested")
+        pin = self._config.reference_storage_manifest_sha256
+        if pin is None:
+            runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
+            return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
+        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v7/run.sh"
+        return await asyncio.to_thread(self._invoke_at_path, runner, pin, action, raw.hex())
 
     async def health(self) -> HealthReport:
         payload = await self._invoke_json(_RunnerCommand.HEALTH)

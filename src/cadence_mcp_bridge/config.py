@@ -33,6 +33,9 @@ class BridgeConfig(BaseSettings):
     analysis_journal_path: Path | None = None
     sweep_journal_path: Path | None = None
     amplifier_specification_registry_path: Path | None = None
+    reference_storage_manifest_sha256: Annotated[
+        str, Field(pattern=r"^[0-9a-f]{64}$")
+    ] | None = None
     remote_root: str = "/home/buet/cds_work/.cadence_mcp"
     runner_path: str = "/home/buet/cds_work/.cadence_mcp/bin/cadence-runner"
     connect_timeout_seconds: Annotated[int, Field(ge=1, le=60)] = 10
@@ -85,6 +88,8 @@ class BridgeConfig(BaseSettings):
             or self.runner_path != BridgeConfig.model_fields["runner_path"].default
         ):
             raise ValueError("operator transport must resolve from its environment")
+        if self.runtime_mode == "operator" and self.reference_storage_manifest_sha256 is not None:
+            raise ValueError("reference storage pin requires explicit legacy reference mode")
         expected_prefix = f"{self.remote_root}/bin/"
         if not self.runner_path.startswith(expected_prefix):
             raise ValueError("runner_path must be contained in remote_root/bin")

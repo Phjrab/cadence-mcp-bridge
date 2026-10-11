@@ -195,7 +195,7 @@ def metadata(fd):
     ]
 
 
-def read_json(io, parent, name, limit, private=False):
+def read_json(io, parent, name, limit, private=False, canonical_ledger=False):
     fd = io.open(parent, name)
     try:
         s = os.fstat(fd)
@@ -209,6 +209,10 @@ def read_json(io, parent, name, limit, private=False):
         value = json.loads(raw.decode("ascii"))
         if private and raw.strip() != canonical(value):
             raise ValueError("canonical operator metadata required")
+        if canonical_ledger and raw.strip() not in (
+            canonical(value), json.dumps(value, sort_keys=True).encode("ascii")
+        ):
+            raise ValueError("canonical cumulative ledger required")
         return value
     finally:
         os.close(fd)
@@ -284,7 +288,7 @@ def payload_fingerprint(io, parent, hash_budget=None):
         os.close(fd)
 
 
-def active_eda(root):
+def active_eda(root, native_generic=False):
     # Non-destructive inventory can still report active storage. Deletes hold run.lock.
     process = subprocess.Popen(
         ["ps", "-eo", "comm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True
@@ -296,7 +300,7 @@ def active_eda(root):
         return True
     return any(
         os.path.lexists(root + "/" + relative + "/active")
-        for group, relative, _retention in GROUPS
+        for group, relative, _retention in storage_groups(native_generic)
         if group != "disposable"
     )
 
@@ -353,11 +357,14 @@ def append_artifact(artifacts, aggregates, item):
     frames.append([item["artifact_id"], item["fingerprint"]])
 
 
-def fresh_ledger(io, root, counter):
+def fresh_ledger(io, root, counter, lock_held=True):
     """Authenticate schema2 policy at the pinned root and audit conserved slots.
 
-    This internal consumer assumes its caller holds the existing run.lock, like
-    snapshot/cleanup. It never acquires another flock, reserves or repairs.
+    Multi-file conservation is audited only while the caller holds run.lock.
+    Lock-contended read-only inventory validates the immutable registered policy
+    and physical committed counter, but cannot attest transactional conservation.
+    That snapshot is active/partial and has no deletion candidates or authority.
+    This consumer never acquires another flock, reserves or repairs.
     Standalone generic bundles must hash-verify reservations.py before import.
     The historical standalone worker never loads it for a legacy counter.
     """
@@ -441,9 +448,19 @@ def fresh_ledger(io, root, counter):
             manifest = read_json(io, source, "manifest.json", 262144, private=True)
             if (
                 type(manifest) is not dict or type(manifest.get("schema_version")) is not int
-                or manifest["schema_version"] != 3
                 or digest(manifest) != os.path.basename(directory)
             ):
+                raise ValueError("fresh storage fixed asset manifest")
+            if manifest["schema_version"] == 1:
+                exact(manifest, "schema_version kind managed_root files")
+                if (
+                    manifest["kind"] != "REFERENCE_STORAGE_RUNTIME"
+                    or manifest["managed_root"] != "/home/buet/cds_work/.cadence_mcp"
+                    or type(manifest["files"]) is not dict
+                    or set(manifest["files"]) != set(("storage.py", "reservations.py"))
+                ):
+                    raise ValueError("fresh storage reference manifest")
+            elif manifest["schema_version"] != 3:
                 raise ValueError("fresh storage fixed asset manifest")
             for name in ("storage.py", "reservations.py"):
                 fd = io.open(source, name)
@@ -473,26 +490,54 @@ def fresh_ledger(io, root, counter):
         "identity_manifest_sha256": digest(anchor),
     }
     anchor = accounting.identity_manifest(path, binding)
-    audited, records = accounting.state(path, binding)
-    if canonical(counter) != canonical(audited):
-        raise ValueError("storage ledger changed during observation")
+    accounting.counter_shape(counter, anchor)
+    if (
+        counter["count"] < anchor["baseline"]["count"]
+        or counter["result_reserved_bytes"] < anchor["baseline"]["result_reserved_bytes"]
+        or (counter["count"] == 0) != (counter["result_reserved_bytes"] == 0)
+        or counter["result_reserved_bytes"] < counter["count"]
+    ):
+        raise ValueError("storage committed ledger integrity")
     policy = accounting.effective_policy(path, anchor)
     if anchor["schema_version"] == 1:
         policy = dict(
             policy, campaign_id="AUTO-PHASE-01", policy_sha256=accounting.RESULT_POLICY_SHA
         )
+    if not lock_held:
+        return policy
+    audited, records = accounting.state(path, binding)
+    if canonical(counter) != canonical(audited):
+        raise ValueError("storage ledger changed during observation")
     return policy
 
 
-def snapshot(io, root, is_active):
+def storage_groups(native_generic=False):
+    # Both generations remain protected under the unchanged logical native group.
+    if native_generic:
+        return GROUPS + (("native", "native-grel-v1-jobs", "REPLAY_REQUIRED"),)
+    return GROUPS
+
+
+def merge_coverage(coverage, reasons, group, previous, reason):
+    priority = {"MISSING": 0, "SCANNED": 1, "PARTIAL": 2, "BLOCKED": 3}
+    if previous is not None and priority[previous] > priority[coverage[group]]:
+        coverage[group], reasons[group] = previous, reason
+
+
+def snapshot(io, root, is_active, lock_held=True, native_generic=False):
     artifacts, coverage = [], {}
     reasons = {}
     aggregates = {}
-    complete = True
+    complete = lock_held
+    is_active = is_active or not lock_held
     scanned = 0
     hash_budget = [0]
-    for group, relative, retention in GROUPS:
-        budget = [0]
+    budgets = {}
+    for group, relative, retention in storage_groups(native_generic):
+        # Sharing the native logical budget retains the original six-group bound.
+        budget = budgets.setdefault(group, [0])
+        starting_nodes = budget[0]
+        previous, previous_reason = coverage.get(group), reasons.get(group)
         try:
             parent = io.open(root, relative, directory=True)
         except OSError as exc:
@@ -500,6 +545,7 @@ def snapshot(io, root, is_active):
             reasons[group] = "missing" if exc.errno == errno.ENOENT else "io_unavailable"
             if exc.errno != errno.ENOENT:
                 complete = False
+            merge_coverage(coverage, reasons, group, previous, previous_reason)
             continue
         try:
             coverage[group] = "SCANNED"
@@ -511,7 +557,9 @@ def snapshot(io, root, is_active):
                     coverage[group], complete = "PARTIAL", False
                     reasons[group] = "scan_limit" if budget[0] >= MAX_NODES else "artifact_limit"
                     break
-                identity = "sa-" + digest([group, name])
+                identity = "sa-" + digest(
+                    [group, relative, name] if relative == "native-grel-v1-jobs" else [group, name]
+                )
                 disposition = retention
                 analysis, extracted = "unknown", None
                 replay, evidence = retention == "REPLAY_REQUIRED", retention == "EVIDENCE_REQUIRED"
@@ -535,7 +583,24 @@ def snapshot(io, root, is_active):
                     elif group in ("native", "diagnostic", "pvt", "headroom") and UUID.match(name):
                         leaf = io.open(parent, name, directory=True)
                         try:
-                            request = read_json(io, leaf, "request.json", 2048)
+                            if relative == "native-grel-v1-jobs":
+                                work = private_directory(io, leaf, "work")
+                                try:
+                                    operation = private_directory(io, work, "operation")
+                                    try:
+                                        request = read_json(
+                                            io, operation, "admission.json", 65536, private=True
+                                        )
+                                    finally:
+                                        os.close(operation)
+                                finally:
+                                    os.close(work)
+                                if (request.get("operation_id") != name or
+                                        request.get("plan_sha256") != digest(request["plan"])):
+                                    raise ValueError("native storage admission identity")
+                                request = request["plan"]
+                            else:
+                                request = read_json(io, leaf, "request.json", 2048)
                             if request.get("analysis") in ("dc", "ac", "tran"):
                                 analysis = request["analysis"]
                         finally:
@@ -614,7 +679,8 @@ def snapshot(io, root, is_active):
             reasons[group] = "directory_unavailable_or_bounded"
         finally:
             os.close(parent)
-            scanned += budget[0]
+            scanned += budget[0] - starting_nodes
+            merge_coverage(coverage, reasons, group, previous, previous_reason)
     for key in sorted(aggregates):
         item, frames = aggregates[key]
         item["fingerprint"] = digest(frames)
@@ -623,11 +689,11 @@ def snapshot(io, root, is_active):
         raise ValueError("storage group response bound")
     counter_root = io.open(root, "sim-mcp-v2-jobs", directory=True)
     try:
-        counter = read_json(io, counter_root, "counter.json", 2048)
+        counter = read_json(io, counter_root, "counter.json", 2048, canonical_ledger=True)
     finally:
         os.close(counter_root)
     exact(counter, "campaign_id count result_reserved_bytes")
-    policy = fresh_ledger(io, root, counter)
+    policy = fresh_ledger(io, root, counter, lock_held)
     if policy is None:
         if (
             counter["campaign_id"] != "AUTO-PHASE-01"
@@ -795,7 +861,7 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         os.close(spool)
 
 
-def cleanup(io, root, request, is_active):
+def cleanup(io, root, request, is_active, native_generic=False):
     validate_cleanup(request)
     control = private_directory(io, root, CONTROL)
     operations = private_directory(io, control, "operations")
@@ -821,7 +887,7 @@ def cleanup(io, root, request, is_active):
                 )
             finally:
                 os.close(record)
-        s = snapshot(io, root, is_active)
+        s = snapshot(io, root, is_active, native_generic=native_generic)
         p = plan(s, request["selection"])
         if p["plan_sha256"] != request["plan_sha256"]:
             raise ValueError("cleanup plan changed")
@@ -929,6 +995,52 @@ def cleanup(io, root, request, is_active):
         os.close(control)
 
 
+def execute_fixed(root_path, action, request, before=None, native_generic=False):
+    """Internal trusted-root dispatcher; main exposes no caller path.
+
+    Exact activation checks run under the actual held lock, or before a busy
+    read-only inventory. Cleanup contention never invokes the callback.
+    """
+    if action not in ("inventory", "cleanup"):
+        raise ValueError("unsupported storage action")
+    if action == "inventory":
+        exact(request, "")
+    else:
+        validate_cleanup(request)
+    io = PosixIO()
+    root = io.root(root_path)
+    try:
+        import fcntl
+
+        lock = io.open(root, "run.lock")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError as failure:
+            if failure.errno not in (errno.EAGAIN, errno.EACCES):
+                raise
+            if action == "cleanup":
+                raise ValueError("active EDA lock")
+            if before is not None:
+                before()
+            value = snapshot(io, root, True, lock_held=False, native_generic=native_generic)
+        else:
+            if before is not None:
+                before()
+            active = (active_eda(root_path, native_generic=True)
+                      if native_generic else active_eda(root_path))
+            if action == "inventory":
+                value = snapshot(io, root, active, native_generic=native_generic)
+            else:
+                value = cleanup(io, root, request, active, native_generic=native_generic)
+        finally:
+            os.close(lock)
+        if len(canonical(value)) > 65536:
+            raise ValueError("storage response bound")
+        return value
+    finally:
+        os.close(root)
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("inventory", "cleanup"):
         raise ValueError("unsupported storage action")
@@ -936,38 +1048,8 @@ def main():
     if not re.match(r"^[0-9a-f]{2,16384}$", encoded) or len(encoded) % 2:
         raise ValueError("bounded encoded request required")
     request = json.loads(binascii.unhexlify(encoded).decode("ascii"))
-    if sys.argv[1] == "inventory":
-        exact(request, "")
-    else:
-        validate_cleanup(request)
-    io = PosixIO()
-    root = io.root(ROOT)
-    try:
-        import fcntl
-
-        # Existing run.lock serializes EDA and cleanup; inventory is nonblocking too.
-        lock = io.open(root, "run.lock")
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
-            if sys.argv[1] == "cleanup":
-                raise ValueError("active EDA lock")
-            value = snapshot(io, root, True)
-        else:
-            active = active_eda(ROOT)
-            if sys.argv[1] == "inventory":
-                exact(request, "")
-                value = snapshot(io, root, active)
-            else:
-                value = cleanup(io, root, request, active)
-        finally:
-            os.close(lock)
-        raw = canonical(value)
-        if len(raw) > 65536:
-            raise ValueError("storage response bound")
-        sys.stdout.write(raw.decode("ascii") + "\n")
-    finally:
-        os.close(root)
+    value = execute_fixed(ROOT, sys.argv[1], request)
+    sys.stdout.write(canonical(value).decode("ascii") + "\n")
 
 
 if __name__ == "__main__":

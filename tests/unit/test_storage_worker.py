@@ -639,7 +639,8 @@ def test_fresh_standalone_legacy_deployment_cannot_import_cwd_code(
     assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
 
 
-def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store):
+@pytest.mark.parametrize("lock_held", [True, False])
+def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store, lock_held):
     from pydantic import TypeAdapter
 
     from cadence_mcp_bridge import _shared_reservations as a
@@ -671,7 +672,9 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store):
     policy_path = path / a.REGISTRY / a.RESULT_POLICY_FILE
     policy_path.write_bytes(a.canonical(upgrade))
     before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
-    snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False))
+    snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False, lock_held=lock_held))
+    assert snapshot.active_eda is (not lock_held)
+    assert snapshot.coverage_complete is lock_held
     assert snapshot.contract_version == 3 and snapshot.result_ceiling_bytes == 17179869184
     assert snapshot.snapshot_id == snapshot_digest(snapshot)
     power = TypeAdapter(RegisteredPowerCounter).validate_python(
@@ -682,5 +685,258 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store):
     upgrade["policy_sha256"] = "0" * 64
     policy_path.write_bytes(a.canonical(upgrade))
     with pytest.raises(ValueError, match="retained_policy_binding"):
-        w.snapshot(io, root, False)
+        w.snapshot(io, root, False, lock_held=lock_held)
     assert a.read(str(path / a.LEDGER)) == baseline
+
+
+def fresh_binding(path: Path) -> dict[str, Any]:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    anchor = accounting.read(str(path / accounting.REGISTRY / "manifest.json"))
+    return dict(
+        root_sha256=anchor["root_sha256"], resource_domain_sha256="a" * 64,
+        ledger_ref=accounting.LEDGER,
+        identity_manifest_sha256=accounting.digest(accounting.canonical(anchor)),
+        grant_sha256="b" * 64, runner_sha256="c" * 64, plan_sha256="d" * 64,
+        execution_input_sha256="e" * 64, expires_at=4000000000,
+        max_attempts=2, max_reserved_bytes=131072, reserve_bytes=65536, disk_floor_bytes=0,
+    )
+
+
+def test_busy_inventory_during_each_reservation_write_is_read_only_and_protected(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    register(fresh_store)
+    identity = str(uuid4())
+    (path / accounting.JOBS / identity / "work").mkdir(parents=True, mode=0o700)
+    original_write = accounting.write_new
+    observations = []
+    lock_path = path / "run.lock"
+    lock_before = lock_path.read_bytes()
+
+    def paused_write(filename: str, value: Any) -> None:
+        original_write(filename, value)
+        # Windows byte-range locking prevents reading this exact held lock file.
+        # Its identity/metadata are checked during observation and bytes afterward.
+        lock_metadata = lock_path.stat()
+        before = {
+            leaf: leaf.read_bytes() for leaf in path.rglob("*")
+            if leaf.is_file() and leaf != lock_path
+        }
+        result = w.snapshot(io, root, False, lock_held=False)
+        parsed = StorageSnapshot.model_validate(result)
+        assert parsed.snapshot_id == snapshot_digest(parsed)
+        assert parsed.active_eda and not parsed.coverage_complete
+        assert parsed.result_ceiling_bytes == 131072
+        assert parsed.reserved_result_bytes == parsed.spectre_attempts * 65536
+        assert all(item.deletion_status == "PROTECTED_OR_UNKNOWN" for item in parsed.artifacts)
+        assert all(item.active_dependency for item in parsed.artifacts)
+        assert before == {
+            leaf: leaf.read_bytes() for leaf in path.rglob("*")
+            if leaf.is_file() and leaf != lock_path
+        }
+        assert lock_metadata == lock_path.stat()
+        observations.append((Path(filename).name, parsed.spectre_attempts))
+        if Path(filename).name != "reservation-receipt.json":
+            # The strict transaction audit is still required by spending/cleanup.
+            with pytest.raises(ValueError):
+                w.snapshot(io, root, False)
+
+    monkeypatch.setattr(accounting, "write_new", paused_write)
+    accounting.reserve(str(path), identity, fresh_binding(path))
+    assert lock_before == lock_path.read_bytes()
+    assert observations == [
+        ("counter.json.ade-tmp", 0), (identity + ".json", 0),
+        ("reservation-intent.json", 0), ("attempt-reserved", 0),
+        ("reservation-receipt.json", 1),
+    ]
+    final = w.snapshot(io, root, False)
+    assert final["coverage_complete"] and not final["active_eda"]
+    assert final["spectre_attempts"] == 1 and final["reserved_result_bytes"] == 65536
+
+
+@pytest.mark.parametrize("change", [
+    "campaign", "ceiling", "bool", "orphan-bytes", "missing-bytes", "duplicate", "index", "anchor",
+])
+def test_busy_inventory_still_denies_malformed_counter_and_unknown_policy(
+    fresh_store: tuple[TestIO, int, Path], change: str,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    io, root, path = fresh_store
+    counter = accounting.read(str(path / accounting.LEDGER))
+    if change == "campaign":
+        counter["campaign_id"] = str(uuid4())
+    elif change == "ceiling":
+        counter.update(count=1, result_reserved_bytes=131073)
+    elif change == "bool":
+        counter["count"] = False
+    elif change == "orphan-bytes":
+        counter["result_reserved_bytes"] = 1
+    elif change == "missing-bytes":
+        counter["count"] = 1
+    elif change == "index":
+        (path / ".cadence_mcp-domain" / "manifest.json").write_bytes(b"{}")
+    elif change == "anchor":
+        (path / accounting.REGISTRY / "manifest.json").write_bytes(b"{}")
+    raw = accounting.canonical(counter)
+    if change == "duplicate":
+        raw = raw[:-1] + b',"count":0}'
+    (path / accounting.LEDGER).write_bytes(raw)
+    before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+    with pytest.raises(ValueError):
+        w.snapshot(io, root, True, lock_held=False)
+    assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+
+
+@pytest.mark.parametrize("lock_errno", [errno.EAGAIN, errno.EACCES, errno.EIO])
+@pytest.mark.parametrize("operation", ["inventory", "cleanup"])
+def test_fixed_main_only_expected_contention_uses_partial_inventory(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str], lock_errno: int, operation: str,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
+    (path / "sim-mcp-v2-jobs/counter.json.ade-tmp").write_bytes(b"uncommitted")
+    calls = []
+
+    def contended(fd: int, mode: int) -> None:
+        calls.append((fd, mode))
+        raise OSError(lock_errno, "synthetic lock failure")
+
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(
+        flock=contended, LOCK_EX=2, LOCK_NB=4,
+    ))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "ROOT", str(path))
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
+    before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+    if lock_errno == errno.EIO:
+        with pytest.raises(OSError):
+            w.main()
+        assert capsys.readouterr().out == ""
+    elif operation == "cleanup":
+        with pytest.raises(ValueError, match="active EDA lock"):
+            w.main()
+        assert capsys.readouterr().out == ""
+    else:
+        w.main()
+        output = json.loads(capsys.readouterr().out)
+        assert output["active_eda"] and not output["coverage_complete"]
+        assert output["spectre_attempts"] == output["reserved_result_bytes"] == 0
+        assert output["result_ceiling_bytes"] == 131072
+    assert len(calls) == 1
+    assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Requires real POSIX flock; covered by Ubuntu CI")
+@pytest.mark.parametrize("operation", ["inventory", "cleanup"])
+def test_fixed_main_real_reservation_lock_does_not_audit_an_incomplete_transaction(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str], operation: str,
+) -> None:
+    import sys
+
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
+    original_write = accounting.write_new
+    observations = []
+    identity = str(uuid4())
+    (path / accounting.JOBS / identity / "work").mkdir(parents=True, mode=0o700)
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "ROOT", str(path))
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
+
+    def paused_write(filename: str, value: Any) -> None:
+        original_write(filename, value)
+        if Path(filename).name != "counter.json.ade-tmp":
+            return
+        before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+        # reserve() is holding its actual flock; main opens the same lock independently.
+        if operation == "cleanup":
+            with pytest.raises(ValueError, match="active EDA lock"):
+                w.main()
+            assert capsys.readouterr().out == ""
+        else:
+            w.main()
+            observed = json.loads(capsys.readouterr().out)
+            assert observed["active_eda"] and not observed["coverage_complete"]
+            assert observed["spectre_attempts"] == observed["reserved_result_bytes"] == 0
+            assert observed["result_ceiling_bytes"] == 131072
+        assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+        observations.append(operation)
+
+    monkeypatch.setattr(accounting, "write_new", paused_write)
+    accounting.reserve(str(path), identity, fresh_binding(path))
+    assert observations == [operation]
+
+
+@pytest.mark.parametrize("busy", [False, True])
+def test_fixed_dispatcher_checks_activation_after_actual_lock_decision(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch, busy: bool,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    sequence = []
+
+    def lock(fd: int, mode: int) -> None:
+        sequence.append("lock")
+        if busy:
+            raise OSError(errno.EAGAIN, "active transaction")
+
+    def before() -> None:
+        assert sequence == ["lock"]
+        sequence.append("activation")
+
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(flock=lock, LOCK_EX=2, LOCK_NB=4))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "active_eda", lambda root: False)
+    original = w.snapshot
+
+    def observe(*args: Any, **kwargs: Any) -> Any:
+        assert sequence == ["lock", "activation"]
+        assert kwargs["native_generic"] is False
+        sequence.append("snapshot")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(w, "snapshot", observe)
+    before_bytes = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    result = w.execute_fixed(str(path), "inventory", {}, before=before)
+    assert sequence == ["lock", "activation", "snapshot"]
+    assert result["coverage_complete"] is (not busy)
+    assert before_bytes == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+def test_fixed_dispatcher_failed_activation_prevents_inventory_and_cleanup(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store))
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(
+        flock=lambda *_args: None, LOCK_EX=2, LOCK_NB=4,
+    ))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+
+    def denied() -> None:
+        raise ValueError("exact activation drift")
+
+    monkeypatch.setattr(w, "snapshot", lambda *_args, **_kw: pytest.fail("snapshot reached"))
+    monkeypatch.setattr(w, "cleanup", lambda *_args, **_kw: pytest.fail("cleanup reached"))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    for action, payload in (("inventory", {}), ("cleanup", request)):
+        with pytest.raises(ValueError, match="activation drift"):
+            w.execute_fixed(str(path), action, payload, before=denied)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}

@@ -1,3 +1,5 @@
+## Active PR151 standalone deployment correction, 2026-10-11
+
 ## Whole receipt durability and named-chain correction, 2026-10-11
 
 Fresh review of f4e0084 found a receipt file could be detached or replaced during
@@ -475,22 +477,60 @@ historical; no older administrator exclusion cancels the user's current delegati
 
 ## Active operator runner coexistence, 2026-10-08
 
-The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
-passed hosted Windows and Ubuntu verification. Continuous GREL02–07 and the
-895MiB remainder stay authorized. The operator route now uses a separate
-cadence-operator-runner and active-operator-runner.json while retaining the legacy
-launcher/pointer. Ordinary-user actual activation, repeat, two fresh fixed-Python
-preflights and shared run.lock contention rejection passed. No new simulations,
-reservations, owner/group changes or journal migration occurred. Existing counter
-still82 /9,798,942,720. Failure evidence remains private and retained.
+Fresh review exposed a missing production accounting helper/manifest in the
+historical v6 storage deployment. A separate hash-bound v7 deployment and exact
+operator-configured pin now provide storage.py/reservations.py plus a canonical
+manifest, with no import/startup/doctor provisioning. The shared trusted-root
+execute_fixed dispatcher validates activation after held/busy lock decisions;
+legacy native_generic=True remains fail-closed pending the qualified consumer.
+Windows portable60 PASS/11 skips, Ruff and mypy78 PASS are source evidence;
+real standalone Linux/hosted/package/security/review gates are pending.
+No VM/deployment/simulation/reservation/actual ledger/admin change occurs.
+General release remains BLOCKED. See [exact runtime](docs/generic_release/REFERENCE_STORAGE_RUNTIME_V7.md) for routing, protection
+and qualification scope. Current retained16GiB/500/20, GREL02-08 and conditional
+normal integration delegation remains; exact publication still needs approval.
+Historical source receipts and authority records below remain preserved.
 
-Same-profile preflight-launcher updates retain immutable old versions/history;
-only the compiled known preflight runner and unchanged other assets are accepted.
-This is not a native worker update gate. Production provider/operator confirmation,
-existing-domain migration/fresh provisioning, two new OA/ADE circuits, effective
-inputs/DC/AC/TRAN/extraction, generic Sweep/spec and clean actual Codex remain
-incomplete. Continue those authorized tasks; no phase approval question.
-See [coexistence workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+## Active PR151 lock-contended inventory correction, 2026-10-11
+
+The current direct user delegation allows GREL02-08 candidate preparation,
+conditional normal integration of reviewed related PRs, and the validation VM's
+16 GiB retained reservation ceiling. Existing attempts/corrections/reservations
+remain retained. Public tag/Release/assets publication still needs the final
+exact-candidate approval. Earlier exclusions and resource observations below
+remain historical and do not override that delegation.
+
+PR151 now distinguishes lock-contended read-only storage inventory from a
+lock-held conservation audit. Only expected fixed-main inventory flock contention
+uses the partial route: authenticate the immutable registered domain/policy and
+last committed physical counter, mark coverage incomplete and artifacts active/
+protected, and offer no deletion candidates. Cleanup, spending and lock-held
+inventory keep the full multi-file audit; unexpected lock failures reject.
+This is local synthetic source/package work, with no VM contact, actual journal/
+ledger change, reservation, simulation or metadata repair. The native storage
+asset changes identity and needs exact new-bundle qualification; prior native
+receipts do not qualify this correction. Release and exact candidate remain
+BLOCKED. See [consumer correction](docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md)
+for source-scoped test/package receipts. Independent final review/CI remain gates.
+Historical sections below keep their original source scope.
+## Fixed receipt namespace read-race correction, 2026-10-11
+
+Fresh review of7fb77b7 found that a directory could be detached during a receipt
+read or fsync while its held descriptor still authenticated the old file. The
+helper now reopens the fixed managed parent and verifies its exact UID-owned
+0700 directory entry after receipt reads and durability operations. Detached or
+substituted entries reject before chmod/completion; their evidence is preserved.
+Six complete Linux recipe cases race read, file fsync and directory fsync during
+both immediate rollback prechange and idempotent apply completion checks.
+Previous7fb local179/43skips, hosted Ubuntu176/no skips, all four hosted checks and
+installed32-state package preservation PASS remain that source's history.
+Updated-source local179 related PASS/49 Windows POSIX skips, Ruff/mypy72 PASS.
+Final updated-source security/audit/package/hosted/refreshed review gates are pending.
+No VM contact/admin/simulation/reservation, target expansion, authority grant or
+protection bypass occurs. Prior exact helper/bundle/ledger records are retained;
+updated modeltrust native qualification remains separate. Current16GiB/500/20,
+continuous GREL02-08 and conditional normal integration remain authorized;
+public tag/Release/upload requires exact-candidate approval.
 
 ## Current standard-VM administrator delegation and repair, 2026-10-08
 
@@ -529,6 +569,46 @@ No VM contact, administrator change, simulation or reservation occurs in this fi
 Latest root-observed ledger102/12,483,297,280 is historical to this local correction;
 active16GiB/500/20,GREL02-08 and conditional normal PR integration remain authorized.
 Public tag/Release/upload still requires approval of an exact completed candidate.
+
+## Atomic operator state and exact parent integration, 2026-10-11
+
+Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
+repair parent 9c311b0a6c14d06bb5abc92bb59ec1039497e339 and atomic operator-state
+correction 14e7e0c. Initial active-pointer and revocation publication now writes a
+private mode-600 exclusive candidate under the existing lifetime resource lock,
+handles short writes, fsyncs the file and directory, checks complete bytes and
+absence of a conflicting final marker, then renames and fsyncs the directory.
+Failed candidates remain evidence; an exact retry uses a new candidate, and
+repeating a completed marker preserves its inode. General exclusive export and
+historical launcher-collision behavior remain unchanged. This is the existing
+trusted-owner/lock contract, not protection against hostile same-UID editing.
+
+Related tests: 273 PASS / 28 Windows platform skips in 40.74s; Ruff/mypy 72 files,
+security 18, strict locked audit and 85-schema compatibility PASS. New activation
+and deactivation tests interrupt writes, file fsync and publication, preserve
+partial candidates and unrelated final collisions, and recover exact requests.
+POSIX directory barriers run in the Ubuntu operator suite; Windows synthetic
+evidence does not attest native POSIX behavior. Exact installed CLI/SDK/bootstrap,
+reinstall and uninstall preserve 43 disposable synthetic state files.
+
+Audited wheel (80 members) SHA256:
+80de927e51d66c64978ef85f6dcfc5fde04cf683ac5327c5ee1c25ba27e5c85f;
+sdist (81 members):
+63afe42904a73c686a02eb6d1a06113301749042546cc7242007c6ff353d4ce1.
+Shipped installer SHA256:
+1627bf45fd93c738830ea64f33a1fe3eea2a50032151e7b7a33f42f14f1e8425 (20,979 bytes);
+repair/modeltrust helper:
+8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+These are test artifacts, not an accepted release candidate. Exact final hosted
+checks and fresh review remain pending. A native bundle with these changed assets
+requires renewed exact qualification; bf6c20 and all prior evidence are retained.
+
+General private transport remains 256 KiB; repair inventory alone uses 16 MiB.
+This integration performs 0 VM contacts, administrator changes, simulations or
+reservations. Existing real consumption, journals, replay and protected originals
+remain preserved. Direct 16 GiB / 500 / 20, continuous GREL02-08 and conditional
+normal related feature-PR merge authority persist. Exact public tag/Release/upload
+still requires final user approval. Earlier receipts remain source-scoped history.
 
 ## Whole-target completion integrity correction, 2026-10-11
 
@@ -633,6 +713,19 @@ Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact install
 Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
 0 new simulations/reservations/admin changes in this PR qualification.
 
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
+
 ## Descriptor snapshot stability correction, 2026-10-09
 
 The subsequent review identified content/metadata change during ACL collection.
@@ -699,6 +792,28 @@ remains blocked pending current deployed/fresh operator/app/operational acceptan
 and an exactRC. Code merge is separate from actual Cadence acceptance.
 
 ## Historical standard-VM administrator delegation and repair, 2026-10-08
+
+## Active operator runner coexistence, 2026-10-08
+
+The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
+passed hosted Windows and Ubuntu verification. Continuous GREL02–07 and the
+895MiB remainder stay authorized. The operator route now uses a separate
+cadence-operator-runner and active-operator-runner.json while retaining the legacy
+launcher/pointer. Ordinary-user actual activation, repeat, two fresh fixed-Python
+preflights and shared run.lock contention rejection passed. No new simulations,
+reservations, owner/group changes or journal migration occurred. Existing counter
+still82 /9,798,942,720. Failure evidence remains private and retained.
+
+Same-profile preflight-launcher updates retain immutable old versions/history;
+only the compiled known preflight runner and unchanged other assets are accepted.
+This is not a native worker update gate. Production provider/operator confirmation,
+existing-domain migration/fresh provisioning, two new OA/ADE circuits, effective
+inputs/DC/AC/TRAN/extraction, generic Sweep/spec and clean actual Codex remain
+incomplete. Continue those authorized tasks; no phase approval question.
+See [coexistence workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+
+## Current standard-VM administrator delegation and repair, 2026-10-08
+
 
 The user's latest direct instruction fixes release support to the professor-provided
 CentOS/Cadence VM (or an equivalent reproduced installation), existing PDK and
