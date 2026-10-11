@@ -353,10 +353,17 @@ class OperatorService:
         self.context = context
         self._backend = backend
         self.native_operations = None
+        self.native_storage = None
         if context is not None and context.binding.native_provider_binding is not None:
             from cadence_mcp_bridge.native_service import NativeOperationService
 
             self.native_operations = NativeOperationService(context)
+            from cadence_mcp_bridge.native_storage import NativeStorageBackend
+            from cadence_mcp_bridge.storage import StorageSupervisor
+
+            self.native_storage = StorageSupervisor(NativeStorageBackend(
+                self.native_operations.provider, self.native_operations.current,
+            ))
         self.designs: RegistryBase = (
             DesignRegistry(schema_version=1, designs=())
             if context is None
@@ -376,6 +383,26 @@ class OperatorService:
             )
 
         return blocked
+
+    def _storage(self) -> Any:
+        if self.native_storage is None:
+            raise ConfigurationError("RUNNER_SETUP_REQUIRED: native storage binding required")
+        return self.native_storage
+
+    async def storage_summary(self) -> Any:
+        return await self._storage().summary()
+
+    async def list_storage_artifacts(self, request: Any) -> Any:
+        return await self._storage().page(request)
+
+    async def describe_storage_artifact(self, request: Any) -> Any:
+        return await self._storage().describe(request)
+
+    async def plan_storage_cleanup(self, request: Any) -> Any:
+        return await self._storage().plan(request)
+
+    async def execute_storage_cleanup(self, request: Any) -> Any:
+        return await self._storage().execute(request)
 
     async def list_designs(self) -> Any:
         return self.designs.listing()

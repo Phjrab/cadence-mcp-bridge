@@ -150,6 +150,60 @@ def activation(profile, expected):
         raise ValueError("native_runtime_revoked")
 
 
+def history_guard(profile, expected, identity):
+    history = closed(read(
+        profile["paths"]["managed_root"] + "/native-provider-history/" + expected + ".json"
+    ))
+    if (
+        set(history) != set(("schema_version", "manifest_sha256",
+                            "identity_manifest_sha256", "operator_authority"))
+        or type(history["schema_version"]) is not int or history["schema_version"] != 1
+        or history["manifest_sha256"] != expected
+        or history["identity_manifest_sha256"] != identity
+    ):
+        raise ValueError("native_runtime_activation_history")
+    # Only the reviewed confirmation parser is loaded from the validated bundle.
+    import confirmation
+
+    confirmation.authority_reference(history["operator_authority"])
+
+
+def storage_dispatch(here, expected, assets, profile, request, action):
+    registration = closed(assets["registration.json"])
+    identity = registration["identity_manifest_sha256"]
+    if (
+        set(request) != set(("schema_version", "action", "identity_manifest_sha256", "payload"))
+        or type(request["schema_version"]) is not int or request["schema_version"] != 1
+        or request["action"] != action or request["identity_manifest_sha256"] != identity
+        or type(request["payload"]) is not dict or len(canonical(request["payload"])) > 8192
+    ):
+        raise ValueError("native_storage_request_binding")
+    if action == "storage_inventory" and request["payload"] != {}:
+        raise ValueError("native_storage_inventory_arguments")
+    sys.path.insert(0, here)
+    import storage
+
+    def before():
+        # Recheck installed identity and activation inside the existing flock.
+        # Busy inventory remains read-only and protected; cleanup cannot proceed.
+        validate(expected)
+        activation(profile, expected)
+        history_guard(profile, expected, identity)
+
+    result = storage.execute_fixed(
+        profile["paths"]["managed_root"],
+        "inventory" if action == "storage_inventory" else "cleanup",
+        request["payload"], before=before, native_generic=True,
+    )
+    raw = canonical(dict(
+        schema_version=1, runtime_manifest_sha256=expected,
+        identity_manifest_sha256=identity, action=action, payload=result,
+    ))
+    if len(raw) > LIMIT:
+        raise ValueError("native_runtime_response_size")
+    sys.stdout.write(raw.decode("ascii") + "\n")
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[2] not in (
         "authorize",
@@ -157,11 +211,16 @@ def main():
         "lookup",
         "cancel_pending",
         "result",
+        "storage_inventory",
+        "storage_cleanup",
     ):
         raise ValueError("native_runtime_fixed_action")
     expected, action = sys.argv[1:]
     here, manifest, assets, profile = validate(expected)
     request = closed(sys.stdin.read(LIMIT + 1).encode("ascii"))
+    if action in ("storage_inventory", "storage_cleanup"):
+        storage_dispatch(here, expected, assets, profile, request, action)
+        return
     if (
         set(request)
         != set(
@@ -207,21 +266,7 @@ def main():
         lambda: activation(profile, expected),
         modeltrust,
     )
-    history = closed(
-        read(profile["paths"]["managed_root"] + "/native-provider-history/" + expected + ".json")
-    )
-    if (
-        set(history)
-        != set(
-            ("schema_version", "manifest_sha256", "identity_manifest_sha256", "operator_authority")
-        )
-        or type(history["schema_version"]) is not int
-        or history["schema_version"] != 1
-        or history["manifest_sha256"] != expected
-        or history["identity_manifest_sha256"] != registration["identity_manifest_sha256"]
-    ):
-        raise ValueError("native_runtime_activation_history")
-    confirmation.authority_reference(history["operator_authority"])
+    history_guard(profile, expected, registration["identity_manifest_sha256"])
     eda = worker.EdaWorker(bound_gate, operations, rendering, copying, installer)
     coordinator = operations.NativeCoordinator(
         profile["paths"]["managed_root"], reservations, bound_gate, operations.ForkWorker(eda.run)
