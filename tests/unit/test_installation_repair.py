@@ -7,6 +7,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 
 import pytest
 
@@ -204,17 +205,29 @@ def test_private_plan_binds_selected_operator_profile(
               "dependency_scope": "wrappers_32bit_binaries_shared_library_trees",
               "native_runtime_attestation": "NOT_ATTESTED"}
 
-    def fixed(argv, data, env, **bounds):
+    response = json.dumps(result).encode()
+    if large_inventory:
+        assert 262144 < len(response) < repair.LIMIT
+    response_file = tmp_path / "synthetic-inventory-response.json"
+    response_file.write_bytes(response)
+    request_file = tmp_path / "synthetic-inventory-request.json"
+    request_file.write_bytes(raw)
+    real_process = subprocess.Popen
+
+    def synthetic_inventory(argv, *args, **kwargs):
         assert "StrictHostKeyChecking=yes" in argv
         assert argv[-1] == "inventory"
-        assert data == raw
-        assert bounds == {"timeout": 60, "limit": repair.LIMIT}
-        response = json.dumps(result).encode()
-        if large_inventory:
-            assert 262144 < len(response) < bounds["limit"]
-        return 0, response, b""
+        # Substitute only the owned child executable. The actual transport's
+        # request/timeout/output bound validation and pipe handling still run.
+        return real_process(
+            [sys.executable, "-c",
+             "import pathlib,sys; "
+             "assert sys.stdin.buffer.read()==pathlib.Path(sys.argv[2]).read_bytes(); "
+             "sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())",
+             str(response_file), str(request_file)], *args, **kwargs
+        )
 
-    monkeypatch.setattr(operator_transport, "run_fixed", fixed)
+    monkeypatch.setattr(operator_transport.subprocess, "Popen", synthetic_inventory)
     monkeypatch.setattr(shutil, "which", lambda _: "ssh.exe")
     output = tmp_path / "plan.private.json"
     if wrong_profile:

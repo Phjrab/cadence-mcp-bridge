@@ -1,3 +1,21 @@
+## Real repair transport boundary correction, 2026-10-11
+
+Final PR148 review found that bootstrap's16MiB request still met the general
+transport's256KiB ceiling before SSH. Repair planning now uses a dedicated internal
+16MiB/60-second inventory transport. General fixed calls retain their256KiB ceiling
+and32KiB default, strict host keys and bounded pipes. No public MCP input or tool
+is added; planning remains read-only and exclusive, without approval creation.
+The profile-bound small/large inventory tests now run the real transport against
+owned synthetic child processes. Exact16MiB output succeeds; oversized input,
+stdout and stderr reject. Related71 tests PASS/9 Windows POSIX skips; Ruff/mypy72,
+security18/locked dependency audit and85-schema compatibility PASS. Exact isolated
+package build/installed CLI/bootstrap/reinstall/uninstall preserves32 synthetic
+state files. Exact final hosted checks and refreshed independent review are pending.
+This host-only fix changes no native worker/helper bytes and performs0 VM contacts,
+admin changes, simulations or reservations. Earlier ledger snapshots remain
+historical; admission must read the latest actual ledger. Direct16GiB/GREL02-08/
+conditional normal merge authority and exact-publication approval gate remain.
+
 ## Repair inventory transport-bound correction, 2026-10-09
 
 Latest review found inventory responses larger than256KiB blocked despite the
