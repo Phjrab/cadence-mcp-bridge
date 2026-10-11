@@ -669,7 +669,11 @@ def test_actual_recipe_rejects_ancestor_drift_during_apply(actual_recipe_layout,
     monkeypatch.setattr(repair, "inventory", inventory)
     monkeypatch.setattr(repair, "snapshot_descriptor", snapshot)
     monkeypatch.setattr(repair, "emit", emit)
-    with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+    # The new receipt chain guard catches the recipe-to-lock race before target
+    # validation; later races still reach the exact prechange/completion guard.
+    reason = ("repair_receipt_ancestor_trust" if race == "recipe-to-lock"
+              else "unlisted_ancestor_trust")
+    with pytest.raises(ValueError, match=reason):
         repair.mutate(request)
     assert stat.S_IMODE(shared.stat().st_mode) == 0o775
     assert all(event["event"] != "complete" for event in events)

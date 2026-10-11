@@ -37,6 +37,7 @@ BLOCKED. See [consumer correction](generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
 
+
 ## Whole receipt durability and named-chain correction, 2026-10-11
 
 Fresh review of f4e0084 found a receipt file could be detached or replaced during
@@ -48,6 +49,14 @@ its entry read; every named ancestor to/ is checked and reopened for identity,
 owner/group/mode drift. Unlisted writable ancestors reject. An exact planned
 workspace before/after/known-intermediate state is allowed so authorized workspace
 repair and rollback still work; no other shared-write exception is introduced.
+Exact8952b7 hosted Linux reached212 PASS with one existing fixture assertion
+expecting the later ancestor reason. The new receipt ancestor guard correctly
+rejects that recipe-to-lock race earlier, before target validation/mutation. The
+fixture now expects that exact earlier reason and retains all protected-state and
+no-completion assertions. Production helper/artifact bytes are unchanged; exact
+corrected hosted/independent review/current-VM inventory gates remain pending.
+
+
 First apply still publishes/verifies the full exact receipt before any target
 mutation, and every target's immediate prechange and completion reauthenticate it.
 
