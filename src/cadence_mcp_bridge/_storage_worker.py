@@ -432,9 +432,19 @@ def fresh_ledger(io, root, counter, lock_held=True):
             manifest = read_json(io, source, "manifest.json", 262144, private=True)
             if (
                 type(manifest) is not dict or type(manifest.get("schema_version")) is not int
-                or manifest["schema_version"] != 3
                 or digest(manifest) != os.path.basename(directory)
             ):
+                raise ValueError("fresh storage fixed asset manifest")
+            if manifest["schema_version"] == 1:
+                exact(manifest, "schema_version kind managed_root files")
+                if (
+                    manifest["kind"] != "REFERENCE_STORAGE_RUNTIME"
+                    or manifest["managed_root"] != "/home/buet/cds_work/.cadence_mcp"
+                    or type(manifest["files"]) is not dict
+                    or set(manifest["files"]) != set(("storage.py", "reservations.py"))
+                ):
+                    raise ValueError("fresh storage reference manifest")
+            elif manifest["schema_version"] != 3:
                 raise ValueError("fresh storage fixed asset manifest")
             for name in ("storage.py", "reservations.py"):
                 fd = io.open(source, name)
@@ -480,7 +490,9 @@ def fresh_ledger(io, root, counter, lock_held=True):
     return anchor["policy"]
 
 
-def snapshot(io, root, is_active, lock_held=True):
+def snapshot(io, root, is_active, lock_held=True, native_generic=False):
+    if native_generic:
+        raise ValueError("native generic storage consumer qualification required")
     artifacts, coverage = [], {}
     reasons = {}
     aggregates = {}
@@ -792,7 +804,7 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         os.close(spool)
 
 
-def cleanup(io, root, request, is_active):
+def cleanup(io, root, request, is_active, native_generic=False):
     validate_cleanup(request)
     control = private_directory(io, root, CONTROL)
     operations = private_directory(io, control, "operations")
@@ -818,7 +830,7 @@ def cleanup(io, root, request, is_active):
                 )
             finally:
                 os.close(record)
-        s = snapshot(io, root, is_active)
+        s = snapshot(io, root, is_active, native_generic=native_generic)
         p = plan(s, request["selection"])
         if p["plan_sha256"] != request["plan_sha256"]:
             raise ValueError("cleanup plan changed")
@@ -926,6 +938,51 @@ def cleanup(io, root, request, is_active):
         os.close(control)
 
 
+def execute_fixed(root_path, action, request, before=None, native_generic=False):
+    """Internal trusted-root dispatcher; main exposes no caller path.
+
+    Exact activation checks run under the actual held lock, or before a busy
+    read-only inventory. Cleanup contention never invokes the callback.
+    """
+    if action not in ("inventory", "cleanup"):
+        raise ValueError("unsupported storage action")
+    if action == "inventory":
+        exact(request, "")
+    else:
+        validate_cleanup(request)
+    io = PosixIO()
+    root = io.root(root_path)
+    try:
+        import fcntl
+
+        lock = io.open(root, "run.lock")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError as failure:
+            if failure.errno not in (errno.EAGAIN, errno.EACCES):
+                raise
+            if action == "cleanup":
+                raise ValueError("active EDA lock")
+            if before is not None:
+                before()
+            value = snapshot(io, root, True, lock_held=False, native_generic=native_generic)
+        else:
+            if before is not None:
+                before()
+            active = active_eda(root_path)
+            if action == "inventory":
+                value = snapshot(io, root, active, native_generic=native_generic)
+            else:
+                value = cleanup(io, root, request, active, native_generic=native_generic)
+        finally:
+            os.close(lock)
+        if len(canonical(value)) > 65536:
+            raise ValueError("storage response bound")
+        return value
+    finally:
+        os.close(root)
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("inventory", "cleanup"):
         raise ValueError("unsupported storage action")
@@ -933,40 +990,8 @@ def main():
     if not re.match(r"^[0-9a-f]{2,16384}$", encoded) or len(encoded) % 2:
         raise ValueError("bounded encoded request required")
     request = json.loads(binascii.unhexlify(encoded).decode("ascii"))
-    if sys.argv[1] == "inventory":
-        exact(request, "")
-    else:
-        validate_cleanup(request)
-    io = PosixIO()
-    root = io.root(ROOT)
-    try:
-        import fcntl
-
-        # Existing run.lock serializes EDA and cleanup; inventory is nonblocking too.
-        lock = io.open(root, "run.lock")
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError as failure:
-            if failure.errno not in (errno.EAGAIN, errno.EACCES):
-                raise
-            if sys.argv[1] == "cleanup":
-                raise ValueError("active EDA lock")
-            value = snapshot(io, root, True, lock_held=False)
-        else:
-            active = active_eda(ROOT)
-            if sys.argv[1] == "inventory":
-                exact(request, "")
-                value = snapshot(io, root, active)
-            else:
-                value = cleanup(io, root, request, active)
-        finally:
-            os.close(lock)
-        raw = canonical(value)
-        if len(raw) > 65536:
-            raise ValueError("storage response bound")
-        sys.stdout.write(raw.decode("ascii") + "\n")
-    finally:
-        os.close(root)
+    value = execute_fixed(ROOT, sys.argv[1], request)
+    sys.stdout.write(canonical(value).decode("ascii") + "\n")
 
 
 if __name__ == "__main__":

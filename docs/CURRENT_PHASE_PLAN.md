@@ -1,3 +1,19 @@
+## Active PR151 standalone deployment correction, 2026-10-11
+
+Fresh review exposed a missing production accounting helper/manifest in the
+historical v6 storage deployment. A separate hash-bound v7 deployment and exact
+operator-configured pin now provide storage.py/reservations.py plus a canonical
+manifest, with no import/startup/doctor provisioning. The shared trusted-root
+execute_fixed dispatcher validates activation after held/busy lock decisions;
+legacy native_generic=True remains fail-closed pending the qualified consumer.
+Windows portable60 PASS/11 skips, Ruff and mypy78 PASS are source evidence;
+real standalone Linux/hosted/package/security/review gates are pending.
+No VM/deployment/simulation/reservation/actual ledger/admin change occurs.
+General release remains BLOCKED. See [exact runtime](generic_release/REFERENCE_STORAGE_RUNTIME_V7.md) for routing, protection
+and qualification scope. Current retained16GiB/500/20, GREL02-08 and conditional
+normal integration delegation remains; exact publication still needs approval.
+Historical source receipts and authority records below remain preserved.
+
 ## Active PR151 lock-contended inventory correction, 2026-10-11
 
 The current direct user delegation allows GREL02-08 candidate preparation,

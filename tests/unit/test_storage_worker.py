@@ -814,3 +814,64 @@ def test_fixed_main_real_reservation_lock_does_not_audit_an_incomplete_transacti
     monkeypatch.setattr(accounting, "write_new", paused_write)
     accounting.reserve(str(path), identity, fresh_binding(path))
     assert observations == [operation]
+
+
+@pytest.mark.parametrize("busy", [False, True])
+def test_fixed_dispatcher_checks_activation_after_actual_lock_decision(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch, busy: bool,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    sequence = []
+
+    def lock(fd: int, mode: int) -> None:
+        sequence.append("lock")
+        if busy:
+            raise OSError(errno.EAGAIN, "active transaction")
+
+    def before() -> None:
+        assert sequence == ["lock"]
+        sequence.append("activation")
+
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(flock=lock, LOCK_EX=2, LOCK_NB=4))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "active_eda", lambda root: False)
+    original = w.snapshot
+
+    def observe(*args: Any, **kwargs: Any) -> Any:
+        assert sequence == ["lock", "activation"]
+        assert kwargs["native_generic"] is False
+        sequence.append("snapshot")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(w, "snapshot", observe)
+    before_bytes = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    result = w.execute_fixed(str(path), "inventory", {}, before=before)
+    assert sequence == ["lock", "activation", "snapshot"]
+    assert result["coverage_complete"] is (not busy)
+    assert before_bytes == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+def test_fixed_dispatcher_failed_activation_prevents_inventory_and_cleanup(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store))
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(
+        flock=lambda *_args: None, LOCK_EX=2, LOCK_NB=4,
+    ))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+
+    def denied() -> None:
+        raise ValueError("exact activation drift")
+
+    monkeypatch.setattr(w, "snapshot", lambda *_args, **_kw: pytest.fail("snapshot reached"))
+    monkeypatch.setattr(w, "cleanup", lambda *_args, **_kw: pytest.fail("cleanup reached"))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    for action, payload in (("inventory", {}), ("cleanup", request)):
+        with pytest.raises(ValueError, match="activation drift"):
+            w.execute_fixed(str(path), action, payload, before=denied)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
