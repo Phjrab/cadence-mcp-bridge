@@ -21,8 +21,10 @@ from cadence_mcp_bridge.power_measurements import (
     RegisteredPowerCounter,
     SignedSource,
     delivered_power,
+    require_fresh_reservation_sequence,
     require_same_resource_policy,
 )
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
 from cadence_mcp_bridge.sweeps import (
     SweepPlan,
@@ -224,7 +226,9 @@ class AmplifierChild(ContractModel):
             != SOURCES[self.analysis]
         ):
             raise ValueError("compiled deterministic child and original source required")
-        if not 77 <= self.counter.count <= 82 or self.counter.result_reserved_bytes != (
+        if isinstance(self.counter, FreshResourceCounter):
+            require_fresh_reservation_sequence((self.counter,))
+        elif not 77 <= self.counter.count <= 82 or self.counter.result_reserved_bytes != (
             8993636352 + (self.counter.count - 76) * 128 * 1024**2
         ):
             raise ValueError("phase reservation identity")

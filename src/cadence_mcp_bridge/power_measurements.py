@@ -117,6 +117,24 @@ def require_same_resource_policy(counters: tuple[RegisteredPowerCounter, ...]) -
         raise ValueError("shared registered resource policy required")
 
 
+def require_fresh_reservation_sequence(counters: tuple[RegisteredPowerCounter, ...]) -> None:
+    """Fresh observations use their policy and positive consecutive admissions.
+
+    No historical campaign offset or per-attempt byte amount is inherited. The
+    registered policy bounds each typed counter; actual transaction conservation
+    remains a runner/ledger check, not authority conferred by this result parser.
+    """
+    require_same_resource_policy(counters)
+    if not counters or not isinstance(counters[0], FreshResourceCounter):
+        return
+    if counters[0].count == 0:
+        raise ValueError("fresh result requires a positive admitted counter")
+    for previous, current in zip(counters, counters[1:], strict=False):
+        if (current.count != previous.count + 1
+                or current.result_reserved_bytes <= previous.result_reserved_bytes):
+            raise ValueError("fresh consecutive reservation sequence required")
+
+
 class PowerExtraction(ContractModel):
     schema_version: Literal[1]
     job_id: OperationId

@@ -1,20 +1,11 @@
-> Current evidence supersedes earlier dated counts below: exact40c/bf6 six
-> new-circuit DC/AC/TRAN routes and fresh-host new DC CLI PASS; ledger102 /
-> 12,483,297,280 bytes. Earlier grants are fully consumed. New app submission
-> and final replacement assets remain pending. Development metadata is2.0.0.
-
-> Integrated development metadata now selects2.0.0 for the breaking bare-launch
-> migration and reviewed newer policy outputs. Exact2.0.0 installed artifacts,
-> final native/app gates and a frozen commit/hash set are still pending. Earlier
-> references to1.0.0 tested wheels remain historical, not2.0.0 acceptance.
-
 # Release candidate preparation, 2026-10-11
 
 Status: **NOT_FROZEN / NOT_RC_READY / GENERIC_RELEASE_GATE=BLOCKED**.
 Provisional next version: **2.0.0**. No candidate commit, distribution hashes,
-tag or public release exists. Package metadata, runtime and currently tested
-artifacts remain **1.0.0**. The current documentation checkpoint is
-`2267f6255be1a4ef61d0bb5d86a51b036090058d`; it is not an exact release candidate.
+tag or public release exists. Development package/runtime/lock metadata agree on
+**2.0.0**. The initial versioned installed rehearsal atc76dbcba passed; final
+parent corrections change assets and require fresh exact-code/package qualification.
+The actual VM/app still runs historical40c/bf6, not the final development source.
 
 ## Why 2.0.0 is the provisional recommendation
 
@@ -73,8 +64,8 @@ OCEAN standalone version was not observed. Recheck the actual installation;
 these values are observations, not identities to hardcode. Other hosts, Cadence
 versions and PDKs remain deferred.
 
-Exact installed source40c879b and native bundlebf6c20 have five fresh inverter/
-comparator DC/AC/TRAN routes plus a later bounded two-point AC1D Sweep, automatic
+Historical installed source40c879b and native bundlebf6c20 have all six inverter/
+comparator DC/AC/TRAN routes plus a bounded two-point AC1D Sweep, automatic
 extraction, effective-input and protected-original checks. Earlier same-VM
 DC/AC/TRAN and DC3/AC2 Sweep evidence remains at its original bundle scope.
 Actual Codex latest-bundle status/result reads pass. A fresh empty local journal
@@ -82,15 +73,20 @@ context retains the same remote domain and ledger; same-ID remote lookup adds
 zero execution or reservation. That is current-VM host-context/replay evidence,
 not a fresh blank-VM installation or a new app submission.
 
-The latest observed ledger is101 attempts and12,349,079,552 reserved bytes under
-500 attempts/16GiB (17,179,869,184 bytes); same-change corrections20 remain.
-The separately confirmed remaining experimental scope is one job/128MiB for the
-pending fresh app DC submission. Read the latest ledger, scope and disk floor
-before admission. The grant remainder is not the global unspent capacity. No
+Latest read-only ledger observation is102 attempts and12,483,297,280 reserved bytes
+under500 attempts/16GiB (17,179,869,184 bytes), leaving4,696,571,904 bytes.
+Earlier20-job scope and the replacement three-attempt grant are fully consumed.
+The final source has a separate prepared maximum8-job/1GiB plan under the same
+direct user delegation; its exact grant/bundle is not yet minted or installed.
+Same-change correction20 and all history remain; verify the actual correction
+record, latest ledger and disk floor before admission. Grant scope and global
+unspent capacity are different bounds. No
 result deletion, refund, accounting reset or automatic quota increase is allowed.
 
-Fresh app submit/query/same-ID retry/connection restart remains incomplete.
-Actual authentication or platform operations cannot be replaced by an SDK test.
+The user completed Codex restart. Historical40c/bf6 actual app same-ID status,
+retry and results retain event_count6 and add0 execution/reservation. A new final
+app job and final configured-provider reconnect remain incomplete. Actual client
+operations cannot be replaced by an SDK test.
 The outstanding repair-helper and installer PR corrections change native assets;
 therefore bf6c20 execution evidence does not automatically qualify their final
 replacement bundle. Final ordered PR integration, exact candidate requalification,
@@ -103,7 +99,10 @@ their hashes, including generic durable success/admission and legacy success/
 failed/unknown results. Restored40c refuses repeat admission; old v1 rejects
 `serve-operator`. Both wheels still report1.0.0. This is an installed distinct-code
 rehearsal, **not final 1.0.0-to-2.0.0 qualification** and not actual VM/app evidence.
-Repeat the cycle with the final versioned artifact and supported dependency sets.
+A later versioned c76dbcba1.0 ->2.0 ->1.0 ->2.0 installed rehearsal preserved the
+same eight synthetic files with current locked dependencies. Both rehearsals are
+historical source-specific host evidence; repeat with the final artifact, and keep
+VM/app qualification separate.
 
 ## Proposed exact artifact allowlist
 

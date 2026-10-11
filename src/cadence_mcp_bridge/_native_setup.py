@@ -6,12 +6,27 @@ preflight and legacy runtime controls are never replaced.
 """
 
 # mypy: ignore-errors
+import sys
+
+# Fixed direct entry points exclude script/CWD imports before any library import.
+# Compiled asset modules are bound explicitly by their verified parent loader.
+if __name__ == "__main__":
+    _entry_search = sys.path[0] if sys.path else None
+    sys.path[:] = [p for p in sys.path if p and p != _entry_search]
+
+import os
+
+if __name__ == "__main__":
+    _entry_directories = set((os.path.realpath(os.getcwd()),))
+    if "__file__" in globals():
+        _entry_directories.add(os.path.realpath(os.path.dirname(os.path.abspath(__file__))))
+    sys.path[:] = [p for p in sys.path if os.path.isabs(p) and
+                  os.path.realpath(p) not in _entry_directories]
+
 import base64
 import hashlib
 import json
-import os
 import stat
-import sys
 import types
 
 LIMIT = 1048576
@@ -143,6 +158,11 @@ def modules(assets):
         return accounting, installer, probe, confirmation
     # Only fixed code hashes from the installed operator package are accepted
     # before memory loading. Nothing supplies an unbound script/module name.
+    directory = os.path.dirname(os.path.abspath(globals().get("__file__", "native-setup")))
+    # Remove every bundle/CWD alias before compiled code imports transitive libraries.
+    unsafe = set((os.path.realpath(directory), os.path.realpath(os.getcwd())))
+    sys.path[:] = [p for p in sys.path if p and os.path.isabs(p) and
+                  os.path.realpath(p) not in unsafe]
     loaded = {}
     for name in ("installer", "probe", "reservations", "confirmation"):
         module = types.ModuleType(name)

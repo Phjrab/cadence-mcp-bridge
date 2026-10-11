@@ -5,12 +5,27 @@ that authority. Import, doctor, server startup and inspection never confirm.
 """
 
 # mypy: ignore-errors
+import sys
+
+# Fixed direct entry points exclude script/CWD imports before any library import.
+# Compiled asset modules are bound explicitly by their verified parent loader.
+if __name__ == "__main__":
+    _entry_search = sys.path[0] if sys.path else None
+    sys.path[:] = [p for p in sys.path if p and p != _entry_search]
+
+import os
+
+if __name__ == "__main__":
+    _entry_directories = set((os.path.realpath(os.getcwd()),))
+    if "__file__" in globals():
+        _entry_directories.add(os.path.realpath(os.path.dirname(os.path.abspath(__file__))))
+    sys.path[:] = [p for p in sys.path if os.path.isabs(p) and
+                  os.path.realpath(p) not in _entry_directories]
+
 import hashlib
 import json
-import os
 import re
 import stat
-import sys
 import time
 import types
 from decimal import Decimal
@@ -152,6 +167,10 @@ def validate_assets(expected):
         assets[name] = data
     # Retain authenticated bytes; cached names and later file replacement must
     # not change which code authorizes an operator confirmation.
+    # Remove every bundle/CWD alias before compiled code imports transitive libraries.
+    unsafe = set((os.path.realpath(directory), os.path.realpath(os.getcwd())))
+    sys.path[:] = [p for p in sys.path if p and os.path.isabs(p) and
+                  os.path.realpath(p) not in unsafe]
     loaded = {}
     for name in ("reservations", "installer", "probe"):
         module = types.ModuleType(name)

@@ -1,3 +1,22 @@
+## Fresh consumer and native import isolation integration, 2026-10-11
+
+PR151's positive fresh1..N accounting consumers are normally integrated while
+root retained16GiB counters and native model/storage paths are preserved. Connected
+consumer checks298 PASS/no skips. Initial activation/update independently pin
+the root's reviewed reservation source (normalized959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372);
+this differs from the source-specific parent pins because retained policy/seal
+and root accounting are preserved, not replaced or reset.
+
+Native provider/setup/confirmation direct entry points now remove script/CWD
+imports before library imports and exclude canonical bundle/CWD aliases again
+before verified helper compilation.20 portable checks pass, including actual
+shadow json/hashlib/stat/os files and a post-inventory platform.py transitive
+shadow. No OS Python update, system-site disable or remote state changes occur.
+Final connected/package/hosted review, exact updated installation and actual
+new-circuit/app qualification remain gates. Release is BLOCKED. Continue direct
+GREL02-08/16GiB/500/20 and conditional normal integration without routine approval;
+public tag/Release/upload still requires the exact final candidate approval.
+
 ## Held-byte operator confirmation helpers, 2026-10-11
 
 Independent follow-up inspection found the operator-confirmation helper verified

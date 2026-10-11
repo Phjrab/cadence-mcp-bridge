@@ -104,7 +104,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         assert setup.apply_fresh(request, setup_digest)["ledger_initialized"] is True
         anchor = accounting.read(str(fresh_root / accounting.REGISTRY / "manifest.json"))
         assert anchor["baseline"]["count"] == 0
-        from uuid import uuid4
+        from uuid import NAMESPACE_URL, uuid4, uuid5
 
         binding = {
             "root_sha256": anchor["root_sha256"],
@@ -125,6 +125,8 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
 
         from mcp import Client
 
+        from cadence_mcp_bridge.amplifier_sweeps import DEFINITION_SHA, REVISION, AmplifierChild
+        from cadence_mcp_bridge.bias_range import SOURCES
         from cadence_mcp_bridge.power_measurements import (
             REFERENCE_OPERATION,
             SOURCE_SET,
@@ -149,6 +151,25 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             )))
             assert extracted.counter.count == counter["count"]
             assert extracted.counter.model_dump()["policy"] == anchor["policy"]
+            if counter["count"]:
+                # Use the actual disposable fresh ledger's early1/2 observations.
+                # Scientific frame is synthetic; this is installed parser evidence.
+                point = AmplifierChild.model_validate(dict(
+                    schema_version=2, definition_sha256=DEFINITION_SHA, revision_id=REVISION,
+                    job_id=uuid5(NAMESPACE_URL, "installed-fresh-amplifier-counter"),
+                    plan_hash="a" * 64, analysis="dc", requested_vbiasn_v="0.319",
+                    input_sha256="a" * 64, psf_sha256="b" * 64, frame_sha256="c" * 64,
+                    source_job_id=SOURCES["dc"][0], source_input_sha256=SOURCES["dc"][1],
+                    source_psf_sha256=SOURCES["dc"][2],
+                    counter=dict(counter, policy=anchor["policy"]),
+                    protected_unchanged=True, warnings=0, notices=0,
+                    scalars=dict(Vop=0.4, Vom=0.3, Vp=0.5, Vm=0.5, VDD=1,
+                                 Vbiasn=0.319, Vbiasp=0.702),
+                    sources=[dict(source_id=identity, role=role,
+                                  voltage_v=0.319 if identity == "bias-n" else voltage,
+                                  current_a=0) for identity, role, voltage in SOURCE_SET],
+                ))
+                assert point.counter.model_dump() == dict(counter, policy=anchor["policy"])
             snapshot = StorageSnapshot.model_validate(dict(
                 contract_version=2, snapshot_id="a" * 64, artifacts=[], coverage_complete=True,
                 group_coverage={}, filesystem_free_bytes=10485760, filesystem_total_bytes=20971520,
@@ -208,6 +229,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "fresh_zero_policy_two_batches": "DISPOSABLE_FILES_ONLY_NOT_SIMULATIONS",
         "fresh_storage_and_power_counter_contracts": "PASS_SYNTHETIC_POLICY_BOUND",
         "fresh_production_power_extraction_and_sdk_storage_summary": "PASS_SYNTHETIC_POLICY_BOUND",
+        "fresh_early_installed_amplifier_disposable_counter": "PASS_SYNTHETIC_FRAME",
     }
 
 

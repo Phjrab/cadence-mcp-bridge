@@ -1,3 +1,22 @@
+## Fresh consumer and native import isolation integration, 2026-10-11
+
+PR151's positive fresh1..N accounting consumers are normally integrated while
+root retained16GiB counters and native model/storage paths are preserved. Connected
+consumer checks298 PASS/no skips. Initial activation/update independently pin
+the root's reviewed reservation source (normalized959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372);
+this differs from the source-specific parent pins because retained policy/seal
+and root accounting are preserved, not replaced or reset.
+
+Native provider/setup/confirmation direct entry points now remove script/CWD
+imports before library imports and exclude canonical bundle/CWD aliases again
+before verified helper compilation.20 portable checks pass, including actual
+shadow json/hashlib/stat/os files and a post-inventory platform.py transitive
+shadow. No OS Python update, system-site disable or remote state changes occur.
+Final connected/package/hosted review, exact updated installation and actual
+new-circuit/app qualification remain gates. Release is BLOCKED. Continue direct
+GREL02-08/16GiB/500/20 and conditional normal integration without routine approval;
+public tag/Release/upload still requires the exact final candidate approval.
+
 ## Held-byte operator confirmation helpers, 2026-10-11
 
 Independent follow-up inspection found the operator-confirmation helper verified
@@ -44,6 +63,52 @@ receipts;95 PASS/15 Windows skips, full Ruff and mypy96 PASS. Final hosted/revie
 parent148-151 corrections and exact installed/VM/app qualification remain.
 No new VM/admin change, simulation, reservation or publication occurred.
 General release BLOCKED;2.0.0 remains development metadata, not a frozen RC.
+
+## PR151 current safety-parent refresh, 2026-10-11
+
+Current source normally integrates150206fe0b: initial executable pins, retained
+validated helper bytes and reviewed installed-fixture correction, with148 fixed
+recipe completion membership. The151 early fresh-policy correction retains all
+legacy/scientific protections. Exact3d74b50 isolated installed disposable-ledger
+1/2 amplifier/power/SDK consumers PASS; its new Linux parser fixture initially
+failed only on host ssh.exe availability and now explicitly stubs that unused
+executable lookup. No actual transport or supported platform behavior changed.
+Final related/package/hosted/review and pending parent membership corrections are
+separate gates. General release stays BLOCKED; current delegated limits/history
+remain preserved, and exact public-candidate approval is still required.
+
+## PR151 early fresh-domain result admission correction, 2026-10-11
+
+Fresh review4239953763 found legacy absolute counter formulas still active in
+amplifier/bias/step/offset consumers, missed by historical-valued fresh fixtures.
+The current correction branches only accounting semantics: policy-bounded early
+positive counters and consecutive increasing composite observations, preserving
+legacy formulas and all scientific/source checks. Fixtures now use1..N fresh
+counts and low registered budgets, real fixed SSH parsers/offset diagnostics and
+installed early1/2 disposable-ledger amplifier observations. These are synthetic
+source/package checks, not current-VM acceptance. Latest parent149/150 security
+corrections, exact package/hosted/fresh review remain gates. Current user authority
+and all previous evidence remain; public exact-candidate approval is separate.
+No VM/admin/deployment/actual journal/ledger/reservation/simulation changes occur.
+
+## PR151 current standalone correction and parent integration, 2026-10-11
+
+Review4239919242 is fixed by binding the private named resource lock's inode,
+ownership/mode/link count/size and at most4096 actual content bytes. Existing
+fixed launchers' O_TRUNC of an empty lock can change timestamps without corrupting
+it; only lock mtime/ctime are excluded. Same-size content drift and all namespace/
+permission/link checks still reject. Artifact metadata protection is unchanged.
+
+Exact8c8389e Ubuntu actual files/flock/standalone463 PASS with zero POSIX skips,
+Windows portable consumers119 PASS/17 OS skips, Ruff/mypy78 PASS and exact
+isolated installed85-tool43+20-state preservation PASS are source evidence.
+Current source additionally merges latest150ca2476, including148 final receipt
+namespace and149 independently compiled launcher binding. This integrated source
+needs refreshed hosted/security/package/review gates; previous receipts remain
+source-specific history. No VM contact/admin/deployment/actual journal/ledger/
+reservation/simulation changes occurred. General release and exact RC stay BLOCKED.
+Current user16GiB/500/20,GREL02-08 and conditional normal PR integration authority
+continues; public tag/Release/assets still require exact-candidate approval.
 
 ## Active PR151 standalone deployment correction, 2026-10-11
 
@@ -98,6 +163,7 @@ receipts are in docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md. No VM contact
 real initialization/journal/reservation, simulation or protected metadata change.
 Native acceptance and final RC remain separate pending gates; prior records below
 are historical, including superseded merge/GREL08/resource exclusions.
+
 
 ## Retained validated migration helpers, 2026-10-11
 

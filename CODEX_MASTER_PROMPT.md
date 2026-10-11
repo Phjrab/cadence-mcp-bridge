@@ -1,3 +1,36 @@
+
+## PR151 current safety-parent refresh, 2026-10-11
+
+Current source normally integrates150206fe0b: initial executable pins, retained
+validated helper bytes and reviewed installed-fixture correction, with148 fixed
+recipe completion membership. The151 early fresh-policy correction retains all
+legacy/scientific protections. Exact3d74b50 isolated installed disposable-ledger
+1/2 amplifier/power/SDK consumers PASS; its new Linux parser fixture initially
+failed only on host ssh.exe availability and now explicitly stubs that unused
+executable lookup. No actual transport or supported platform behavior changed.
+Final related/package/hosted/review and pending parent membership corrections are
+separate gates. General release stays BLOCKED; current delegated limits/history
+remain preserved, and exact public-candidate approval is still required.
+
+## PR151 current standalone correction and parent integration, 2026-10-11
+
+Review4239919242 is fixed by binding the private named resource lock's inode,
+ownership/mode/link count/size and at most4096 actual content bytes. Existing
+fixed launchers' O_TRUNC of an empty lock can change timestamps without corrupting
+it; only lock mtime/ctime are excluded. Same-size content drift and all namespace/
+permission/link checks still reject. Artifact metadata protection is unchanged.
+
+Exact8c8389e Ubuntu actual files/flock/standalone463 PASS with zero POSIX skips,
+Windows portable consumers119 PASS/17 OS skips, Ruff/mypy78 PASS and exact
+isolated installed85-tool43+20-state preservation PASS are source evidence.
+Current source additionally merges latest150ca2476, including148 final receipt
+namespace and149 independently compiled launcher binding. This integrated source
+needs refreshed hosted/security/package/review gates; previous receipts remain
+source-specific history. No VM contact/admin/deployment/actual journal/ledger/
+reservation/simulation changes occurred. General release and exact RC stay BLOCKED.
+Current user16GiB/500/20,GREL02-08 and conditional normal PR integration authority
+continues; public tag/Release/assets still require exact-candidate approval.
+
 ## Active PR151 standalone deployment correction, 2026-10-11
 
 ## Held target and fixed resource-lock race correction, 2026-10-11
@@ -546,6 +579,7 @@ receipts do not qualify this correction. Release and exact candidate remain
 BLOCKED. See [consumer correction](docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
+
 
 ## Completion fixed-recipe membership correction, 2026-10-11
 

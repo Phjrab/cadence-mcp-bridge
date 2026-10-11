@@ -5,11 +5,26 @@ operator activation record is mandatory for admission; lookup cannot dispatch.
 """
 
 # mypy: ignore-errors
+import sys
+
+# Fixed direct entry points exclude script/CWD imports before any library import.
+# Compiled asset modules are bound explicitly by their verified parent loader.
+if __name__ == "__main__":
+    _entry_search = sys.path[0] if sys.path else None
+    sys.path[:] = [p for p in sys.path if p and p != _entry_search]
+
+import os
+
+if __name__ == "__main__":
+    _entry_directories = set((os.path.realpath(os.getcwd()),))
+    if "__file__" in globals():
+        _entry_directories.add(os.path.realpath(os.path.dirname(os.path.abspath(__file__))))
+    sys.path[:] = [p for p in sys.path if os.path.isabs(p) and
+                  os.path.realpath(p) not in _entry_directories]
+
 import hashlib
 import json
-import os
 import stat
-import sys
 import types
 
 LIMIT = 262144
@@ -160,6 +175,11 @@ MODULES = (
 def verified_modules(here, assets, names=MODULES):
     # Assets have already passed the complete manifest/descriptor checks. Never
     # import a cached namesake, reopen executable paths or create bytecode.
+    directory = here
+    # Remove every bundle/CWD alias before compiled code imports transitive libraries.
+    unsafe = set((os.path.realpath(directory), os.path.realpath(os.getcwd())))
+    sys.path[:] = [p for p in sys.path if p and os.path.isabs(p) and
+                  os.path.realpath(p) not in unsafe]
     loaded = {}
     for name in names:
         if name not in MODULES:
