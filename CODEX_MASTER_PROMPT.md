@@ -1,3 +1,43 @@
+## Atomic operator state and exact parent integration, 2026-10-11
+
+Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
+repair parent 9c311b0a6c14d06bb5abc92bb59ec1039497e339 and atomic operator-state
+correction 14e7e0c. Initial active-pointer and revocation publication now writes a
+private mode-600 exclusive candidate under the existing lifetime resource lock,
+handles short writes, fsyncs the file and directory, checks complete bytes and
+absence of a conflicting final marker, then renames and fsyncs the directory.
+Failed candidates remain evidence; an exact retry uses a new candidate, and
+repeating a completed marker preserves its inode. General exclusive export and
+historical launcher-collision behavior remain unchanged. This is the existing
+trusted-owner/lock contract, not protection against hostile same-UID editing.
+
+Related tests: 273 PASS / 28 Windows platform skips in 40.74s; Ruff/mypy 72 files,
+security 18, strict locked audit and 85-schema compatibility PASS. New activation
+and deactivation tests interrupt writes, file fsync and publication, preserve
+partial candidates and unrelated final collisions, and recover exact requests.
+POSIX directory barriers run in the Ubuntu operator suite; Windows synthetic
+evidence does not attest native POSIX behavior. Exact installed CLI/SDK/bootstrap,
+reinstall and uninstall preserve 43 disposable synthetic state files.
+
+Audited wheel (80 members) SHA256:
+80de927e51d66c64978ef85f6dcfc5fde04cf683ac5327c5ee1c25ba27e5c85f;
+sdist (81 members):
+63afe42904a73c686a02eb6d1a06113301749042546cc7242007c6ff353d4ce1.
+Shipped installer SHA256:
+1627bf45fd93c738830ea64f33a1fe3eea2a50032151e7b7a33f42f14f1e8425 (20,979 bytes);
+repair/modeltrust helper:
+8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+These are test artifacts, not an accepted release candidate. Exact final hosted
+checks and fresh review remain pending. A native bundle with these changed assets
+requires renewed exact qualification; bf6c20 and all prior evidence are retained.
+
+General private transport remains 256 KiB; repair inventory alone uses 16 MiB.
+This integration performs 0 VM contacts, administrator changes, simulations or
+reservations. Existing real consumption, journals, replay and protected originals
+remain preserved. Direct 16 GiB / 500 / 20, continuous GREL02-08 and conditional
+normal related feature-PR merge authority persist. Exact public tag/Release/upload
+still requires final user approval. Earlier receipts remain source-scoped history.
+
 ## Whole-target completion integrity correction, 2026-10-11
 
 Fresh PR148 review found no-op targets and already processed targets could drift
