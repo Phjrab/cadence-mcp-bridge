@@ -422,6 +422,120 @@ def test_operator_launcher_collision_fails_without_overwrite(operator_bound):
     assert not (target / "active-operator-runner.json").exists()
 
 
+def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound, monkeypatch):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX activation directory durability")
+    _, target, digest = operator_bound
+    original_fsync = os.fsync
+    original_publish = installer._publish_operator_state
+    binary_identity = ((target / "bin").stat().st_dev, (target / "bin").stat().st_ino)
+    target_identity = (target.stat().st_dev, target.stat().st_ino)
+    events = []
+
+    def observed_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            identity = (info.st_dev, info.st_ino)
+            assert identity in (binary_identity, target_identity)
+            events.append(
+                "binary_directory" if identity == binary_identity else "managed_directory"
+            )
+        else:
+            assert stat.S_ISREG(info.st_mode)
+            events.append("file")
+        original_fsync(fd)
+
+    def observed_publish(path, value):
+        assert events[-1] == "binary_directory"
+        events.append("pointer_publish")
+        return original_publish(path, value)
+
+    monkeypatch.setattr(os, "fsync", observed_fsync)
+    monkeypatch.setattr(installer, "_publish_operator_state", observed_publish)
+    installer.operator_activation(str(target), digest)
+    assert events == [
+        "file",
+        "binary_directory",
+        "pointer_publish",
+        "file",
+        "managed_directory",
+        "managed_directory",
+        "managed_directory",
+    ]
+    pointer = target / "active-operator-runner.json"
+    identity = (pointer.stat().st_dev, pointer.stat().st_ino)
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    events.clear()
+    assert (
+        installer.operator_activation(str(target), digest)["status"]
+        == "EXISTING_EXACT_OPERATOR_ACTIVATION"
+    )
+    assert events == ["binary_directory", "managed_directory"]
+    assert (pointer.stat().st_dev, pointer.stat().st_ino) == identity
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == before
+
+
+@pytest.mark.parametrize("prior_state", ["absent", "launcher_only", "complete", "pointer_only"])
+def test_operator_activation_launcher_directory_sync_failure_preserves_and_recovers(
+    operator_bound, monkeypatch, prior_state
+):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX activation directory durability")
+    _, target, digest = operator_bound
+    launcher = target / "bin/cadence-operator-runner"
+    pointer = target / "active-operator-runner.json"
+    if prior_state == "launcher_only":
+        installer.exclusive(
+            str(launcher), (target / "runtime" / digest / "launcher.py").read_bytes(), 0o700
+        )
+    elif prior_state in ("complete", "pointer_only"):
+        installer.operator_activation(str(target), digest)
+        if prior_state == "pointer_only":
+            launcher.unlink()  # Disposable interrupted-installation fixture only.
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    original_fsync = os.fsync
+    binary_identity = ((target / "bin").stat().st_dev, (target / "bin").stat().st_ino)
+    attempted = []
+
+    def interrupted_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            assert (info.st_dev, info.st_ino) == binary_identity
+            attempted.append("binary_directory")
+            raise OSError("simulated launcher directory sync failure before pointer")
+        attempted.append("launcher_file")
+        original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", interrupted_fsync)
+    with pytest.raises(OSError, match="launcher directory sync failure before pointer"):
+        installer.operator_activation(str(target), digest)
+    assert attempted == (
+        ["launcher_file", "binary_directory"]
+        if prior_state in ("absent", "pointer_only")
+        else ["binary_directory"]
+    )
+    assert pointer.exists() == (prior_state in ("complete", "pointer_only"))
+    assert not list(target.glob(".operator-state-*"))
+    for name, raw in before.items():
+        assert (target / name).read_bytes() == raw
+    assert launcher.read_bytes() == (target / "runtime" / digest / "launcher.py").read_bytes()
+    launcher_identity = (launcher.stat().st_dev, launcher.stat().st_ino)
+    monkeypatch.setattr(os, "fsync", original_fsync)
+    assert installer.operator_activation(str(target), digest)["execution_authorized"] is False
+    assert installer.operator_activation(str(target), digest)["execution_authorized"] is False
+    assert (launcher.stat().st_dev, launcher.stat().st_ino) == launcher_identity
+    for name, raw in before.items():
+        assert (target / name).read_bytes() == raw
+
+
 def test_operator_deactivation_is_repeatable_preserves_bytes_and_blocks_reactivation(
     operator_bound,
 ):
@@ -566,7 +680,9 @@ def test_operator_state_inside_write_failure_retains_candidate_and_recovers(
         return original_write(fd, raw)
 
     def interrupted_fsync(fd):
-        if failure == "fsync":
+        import stat
+
+        if failure == "fsync" and stat.S_ISREG(installer.os.fstat(fd).st_mode):
             raise OSError("simulated state fsync failure")
         return original_fsync(fd)
 
