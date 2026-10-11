@@ -1,3 +1,22 @@
+## Fixed receipt namespace read-race correction, 2026-10-11
+
+Fresh review of7fb77b7 found that a directory could be detached during a receipt
+read or fsync while its held descriptor still authenticated the old file. The
+helper now reopens the fixed managed parent and verifies its exact UID-owned
+0700 directory entry after receipt reads and durability operations. Detached or
+substituted entries reject before chmod/completion; their evidence is preserved.
+Six complete Linux recipe cases race read, file fsync and directory fsync during
+both immediate rollback prechange and idempotent apply completion checks.
+Previous7fb local179/43skips, hosted Ubuntu176/no skips, all four hosted checks and
+installed32-state package preservation PASS remain that source's history.
+Updated-source local179 related PASS/49 Windows POSIX skips, Ruff/mypy72 PASS.
+Final updated-source security/audit/package/hosted/refreshed review gates are pending.
+No VM contact/admin/simulation/reservation, target expansion, authority grant or
+protection bypass occurs. Prior exact helper/bundle/ledger records are retained;
+updated modeltrust native qualification remains separate. Current16GiB/500/20,
+continuous GREL02-08 and conditional normal integration remain authorized;
+public tag/Release/upload requires exact-candidate approval.
+
 ## Authenticated rollback provenance correction, 2026-10-11
 
 Fresh PR148 review found that a caller could change both the private plan and its
