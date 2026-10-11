@@ -1078,7 +1078,8 @@ def test_operator_update_completed_retry_syncs_actual_parent_directories(
     _, target, previous, expected = operator_update_pair
     installer.operator_preflight_update(str(target), expected, previous)
     history = target / "operator-activation-history"
-    paths = [target, history, target / "bin"]
+    version = target / "runtime" / expected
+    paths = [version, version.parent, target, history, target / "bin"]
     identities = {(p.stat().st_dev, p.stat().st_ino): p for p in paths}
     original = os.fsync
     observed = []
@@ -1093,7 +1094,7 @@ def test_operator_update_completed_retry_syncs_actual_parent_directories(
 
     monkeypatch.setattr(os, "fsync", synced)
     installer.operator_preflight_update(str(target), expected, previous)
-    assert observed == [target, history, target / "bin", target, history]
+    assert observed == [version, version.parent, target, history, target / "bin", target, history]
 
 
 @pytest.mark.parametrize("name", ["transition.json", "launcher.pending"])
@@ -1255,3 +1256,75 @@ def test_operator_runtime_revalidated_after_last_namespace_barrier(operator_boun
     assert not (target / "bin/cadence-operator-runner").exists()
     assert (version / "launcher.py").read_bytes() == replacement
     assert preserved != replacement
+
+
+@pytest.mark.parametrize("phase", ["initial", "partial", "complete"])
+@pytest.mark.parametrize("barrier", ["version", "runtime"])
+def test_operator_update_runtime_barrier_preserves_all_states_and_retries(
+    operator_update_pair, monkeypatch, phase, barrier
+):
+    _, target, previous, expected = operator_update_pair
+    replace = installer._replace_operator_file
+    if phase == "partial":
+        def interrupted(source, destination):
+            if destination.endswith("active-operator-runner.json"):
+                raise OSError("synthetic interrupted pointer publication")
+            return replace(source, destination)
+        monkeypatch.setattr(installer, "_replace_operator_file", interrupted)
+        with pytest.raises(OSError, match="interrupted pointer"):
+            installer.operator_preflight_update(str(target), expected, previous)
+        monkeypatch.setattr(installer, "_replace_operator_file", replace)
+    elif phase == "complete":
+        installer.operator_preflight_update(str(target), expected, previous)
+    before = {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    }
+    version = target / "runtime" / expected
+    fail_path = version if barrier == "version" else version.parent
+    sync, calls = installer._sync_directory, []
+
+    def interrupted_sync(path):
+        calls.append(Path(path))
+        if Path(path) == fail_path:
+            raise OSError("synthetic next-runtime barrier failure")
+        sync(path)
+
+    monkeypatch.setattr(installer, "_sync_directory", interrupted_sync)
+    for _ in range(2):
+        with pytest.raises(OSError, match="next-runtime barrier"):
+            installer.operator_preflight_update(str(target), expected, previous)
+        assert {
+            p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+            for p in target.rglob("*") if p.is_file()
+        } == before
+    assert calls == ([version] if barrier == "version" else [version, version.parent]) * 2
+    monkeypatch.setattr(installer, "_sync_directory", sync)
+    installer.operator_preflight_update(str(target), expected, previous)
+    completed = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    installer.operator_preflight_update(str(target), expected, previous)
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == completed
+
+
+def test_operator_update_rechecks_next_runtime_after_directory_sync(
+    operator_update_pair, monkeypatch
+):
+    _, target, previous, expected = operator_update_pair
+    version = target / "runtime" / expected
+    pointer = (target / "active-operator-runner.json").read_bytes()
+    launcher = (target / "bin/cadence-operator-runner").read_bytes()
+    sync = installer._sync_directory
+
+    def replaced(path):
+        sync(path)
+        if Path(path) == version.parent:
+            (version / "launcher.py").write_bytes(b"unreviewed bytes; never executed")
+
+    monkeypatch.setattr(installer, "_sync_directory", replaced)
+    with pytest.raises(ValueError):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert (target / "active-operator-runner.json").read_bytes() == pointer
+    assert (target / "bin/cadence-operator-runner").read_bytes() == launcher
+    assert not (target / "operator-activation-history").exists()

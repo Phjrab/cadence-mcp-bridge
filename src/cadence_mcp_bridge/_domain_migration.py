@@ -7,7 +7,9 @@ if __name__ == "__main__":
     if not sys.flags.ignore_environment or not sys.flags.no_user_site:
         sys.stderr.write("OPERATOR_DOMAIN_MIGRATION_ISOLATED_PYTHON_REQUIRED\n")
         sys.exit(1)
-    # Native fixed transport uses -E -s. Drop scriptdir/empty entries before the
+    # The fixed shell launcher supplies -E -s BEFORE interpreter startup. This
+    # guard only rejects unsupported direct invocation; it cannot stop a startup
+    # hook that ran before this script. Drop scriptdir/empty entries before the
     # first filesystem-backed stdlib import; staging files are never import code.
     if sys.path:
         del sys.path[0]
@@ -23,7 +25,7 @@ import json
 import stat
 
 LIMIT = 262144
-MEMBERS = ("migration.py", "reservations.py", "installer.py", "probe.py")
+MEMBERS = ("domain-operator.sh", "migration.py", "reservations.py", "installer.py", "probe.py")
 _VALIDATED_HELPERS = None
 
 

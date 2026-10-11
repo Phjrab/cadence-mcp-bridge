@@ -18,6 +18,7 @@ from cadence_mcp_bridge.operator_transport import run_fixed
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 SOURCES = {
+    "domain-operator.sh": "_domain_operator.sh",
     "migration.py": "_domain_migration.py",
     "reservations.py": "_shared_reservations.py",
     "installer.py": "_runner_bootstrap.py",
@@ -52,7 +53,11 @@ def _closed_document(data: bytes) -> None:
 
 
 def contents(setup: bool = False) -> tuple[dict[str, bytes], bytes, str]:
-    sources = {**SOURCES, "setup.py": "_fresh_domain.py"} if setup else SOURCES
+    sources = (
+        {**{name: source for name, source in SOURCES.items() if name != "domain-operator.sh"},
+         "setup.py": "_fresh_domain.py"}
+        if setup else SOURCES
+    )
     assets = {
         name: files("cadence_mcp_bridge").joinpath(source).read_bytes()
         for name, source in sources.items()
@@ -125,16 +130,18 @@ def _transport(
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
     helper_name = (
-        "migration.py"
+        "domain-operator.sh"
         if action
         in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
         else "setup.py"
     )
     helper_path = (
-        environment.paths.managed_root + "/operator-helpers/" + expected + "/migration.py"
-        if helper_name == "migration.py"
+        environment.paths.managed_root + "/operator-helpers/" + expected + "/domain-operator.sh"
+        if helper_name == "domain-operator.sh"
         else environment.paths.workspace_root + "/.cadence_mcp-setup/" + expected + "/setup.py"
     )
+    command = (["/bin/sh", helper_path] if helper_name == "domain-operator.sh"
+               else ["/usr/bin/python", "-E", "-s", "-B", helper_path])
     argv = [
         executable,
         "-o",
@@ -144,11 +151,7 @@ def _transport(
         "-o",
         "ConnectTimeout=10",
         environment.ssh_alias,
-        "/usr/bin/python",
-        "-E",
-        "-s",
-        "-B",
-        helper_path,
+        *command,
         action,
         expected,
     ]
