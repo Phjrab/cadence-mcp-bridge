@@ -423,3 +423,158 @@ def test_descriptor_snapshot_rejects_content_change_during_acl_collection(tmp_pa
             "expected_plan_sha256": prepared["plan_sha256"],
             "operator_authority": "SYNTHETIC-ONLY"})
     assert stat.S_IMODE(target.stat().st_mode) == 0o777
+
+
+@pytest.mark.parametrize("count", [240, 257])
+def test_valid_large_acl_plan_has_whole_protocol_bound(monkeypatch, count):
+    acl = "user::rwx\n" + "".join(f"user:{10000000 + i}:rwx\n" for i in range(1810))
+    acl += "group::rwx\nmask::rwx\nother::rwx\n"
+    assert 32000 < len(acl.encode()) <= 32768
+
+    def record(path):
+        return {"path": path, "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+                "kind": "directory", "sha256": None, "size": None, "mtime": None,
+                "mode": 0o777, "acl": acl}
+
+    monkeypatch.setattr(repair, "snapshot", record)
+    monkeypatch.setattr(repair.os.path, "realpath", lambda path: path)
+    request = {"installation_roots": ["/synthetic/cadence"],
+               "paths": [f"/synthetic/cadence/dir-{i:04d}" for i in range(count)],
+               "links": [], "profile_sha256": "a" * 64,
+               "resource_lock": "/synthetic/work/.cadence_mcp/run.lock"}
+    if count == 257:
+        with pytest.raises(ValueError, match="inventory_serialized_limit"):
+            repair.plan(request)
+    else:
+        result = repair.plan(request)
+        assert len(result["plan"]["records"]) == count
+        assert 15_000_000 < len(repair.canonical(result)) + 1 <= repair.LIMIT
+        maximum_request = {"plan": result["plan"],
+                           "expected_plan_sha256": result["plan_sha256"],
+                           "operator_authority": "💥" * 512}
+        assert len(repair.canonical(maximum_request)) + 1 <= repair.LIMIT
+
+
+def test_inventory_envelope_growth_rejects_even_when_records_fit():
+    result = {"plan": {"records": [], "profile": {}}, "plan_sha256": "a" * 64,
+              "readonly_compatibility_links": ["x" * repair.LIMIT]}
+    with pytest.raises(ValueError, match="inventory_serialized_limit"):
+        repair.bounded_inventory(result)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_oversized_mutation_request_rejects_before_inventory_or_lock(monkeypatch, rollback):
+    def denied(*args, **kwargs):
+        raise AssertionError("oversized request touched installation or lock")
+
+    monkeypatch.setattr(repair, "inventory", denied)
+    monkeypatch.setattr(repair, "open_fixed", denied)
+    request = {"plan": {"padding": "x" * repair.LIMIT},
+               "expected_plan_sha256": "a" * 64, "operator_authority": "fixture"}
+    with pytest.raises(ValueError, match="request_limit"):
+        repair.mutate(request, rollback)
+
+
+@pytest.mark.parametrize("unsafe", [None, "/srv/shared", "/home/student", "/"])
+def test_unlisted_ancestors_checked_to_root_without_mutation(monkeypatch, unsafe):
+    from types import SimpleNamespace
+
+    paths = {}
+    observed = []
+
+    def open_directory(path, *args):
+        descriptor = len(paths) + 100
+        paths[descriptor] = path
+        observed.append(path)
+        return descriptor
+
+    def info(descriptor):
+        return SimpleNamespace(st_mode=0o40775 if paths[descriptor] == unsafe else 0o40755)
+
+    def denied(*args, **kwargs):
+        raise AssertionError("read-only ancestor check attempted mutation")
+
+    monkeypatch.setattr(repair, "open_fixed", open_directory)
+    monkeypatch.setattr(repair.os, "open", open_directory)
+    monkeypatch.setattr(repair.os, "fstat", info)
+    monkeypatch.setattr(repair.os, "close", lambda descriptor: None)
+    monkeypatch.setattr(repair.os, "fchmod", denied, raising=False)
+    monkeypatch.setattr(repair.os, "O_NOFOLLOW", 0, raising=False)
+    monkeypatch.setattr(repair.os, "O_NONBLOCK", 0, raising=False)
+    monkeypatch.setattr(repair.os, "O_DIRECTORY", 0, raising=False)
+    monkeypatch.setattr(repair.subprocess, "Popen", denied)
+    roots = ["/srv/shared/cadence", "/home/student/workspace"]
+    if unsafe is None:
+        repair.verify_unlisted_ancestors(roots)
+        assert set(observed) == {"/", "/srv", "/srv/shared", "/home", "/home/student"}
+        assert not set(roots).intersection(observed)
+    else:
+        with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+            repair.verify_unlisted_ancestors(roots)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="requires actual Linux installation ancestry")
+def test_actual_recipe_rejects_unlisted_writable_parent_and_preserves_it():
+    import platform
+    import pwd
+    import tempfile
+    from pathlib import Path
+
+    if shutil.which("getfacl") is None:
+        pytest.skip("ACL utilities absent")
+    # Use a disposable owned home subtree: /tmp is itself writable and would
+    # correctly block the fixed recipe before the controlled shared ancestor.
+    with tempfile.TemporaryDirectory(prefix="cadence-mcp-ancestry-", dir=Path.home()) as owned:
+        shared = Path(owned) / "shared"
+        root, workspace = shared / "cadence", shared / "workspace"
+        ic, ms = root / "IC615", root / "MMSIM121"
+        code_paths = [ic / "share/bin" / name for name in (
+            "cdnWrapperWithOA2010", ".cdnWrapper_core", ".cdnWrapper_argv_parsing",
+            ".cdnWrapper_dev", ".cdnWrapper_help", ".cdnWrapper_cwlg", ".cdsWrapperLib")]
+        code_paths += [ic / "tools.lnx86" / name for name in (
+            ".oawrap", ".cdnWrapper_pscompat", "dfII/bin/ocean", "dfII/bin/virtuoso",
+            "dfII/bin/32bit/virtuoso", "bin/cds_plat", "bin/cds_plat.dat")]
+        code_paths += [ic / "share/dfII/bin/.dfII_init", ms / "tools.lnx86/bin/spectre",
+                       ms / "tools.lnx86/spectre/bin/32bit/spectre",
+                       ms / "tools.lnx86/bin/.preHostEnvCheck"]
+        for path in code_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"synthetic code, never executed")
+        for path in [ic / "tools.lnx86/lib", ic / "oa_v22.41.029/lib", ms / "tools.lnx86/lib"]:
+            path.mkdir(parents=True)
+        (ic / "tools").symlink_to(ic / "tools.lnx86", target_is_directory=True)
+        (ms / "tools").symlink_to(ms / "tools.lnx86", target_is_directory=True)
+        (ic / "oa").symlink_to(ic / "oa_v22.41.029", target_is_directory=True)
+        workspace.mkdir()
+        profile = {
+            "schema_version": 1,
+            "host": {"hostname": platform.node(), "os": platform.system(),
+                     "architecture": platform.machine(),
+                     "python_version": platform.python_version(),
+                     "user": pwd.getpwuid(os.getuid()).pw_name},
+            "tools": {name: {"path": str(path),
+                             "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                      for name, path in [("virtuoso", ic / "tools/dfII/bin/virtuoso"),
+                                         ("ocean", ic / "tools/dfII/bin/ocean"),
+                                         ("spectre", ms / "tools/bin/spectre")]},
+            "paths": {"protected_roots": [str(root)], "workspace_root": str(workspace),
+                      "managed_root": str(workspace / ".cadence_mcp")},
+        }
+        shared.chmod(0o775)
+        before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+        with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+            repair.inventory(profile)
+        assert stat.S_IMODE(shared.stat().st_mode) == 0o775
+        assert before == {
+            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+        }
+        # Correct only this owned synthetic fixture; the recipe itself stays
+        # read-only and never selects ancestors beyond its exact two roots.
+        shared.chmod(0o755)
+        result = repair.inventory(profile)
+        assert str(shared) not in result["plan"]["scope"]["paths"]
+        assert str(root) in result["plan"]["scope"]["paths"]
+        assert str(workspace) in result["plan"]["scope"]["paths"]
+        assert before == {
+            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+        }

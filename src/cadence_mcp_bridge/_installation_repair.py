@@ -185,6 +185,7 @@ def plan(request):
     if paths != sorted(set(paths)):
         raise ValueError("duplicate_or_unsorted")
     records = []
+    record_bytes = 0
     for path in paths:
         valid_path(path)
         if not any(inside(path, root) for root in roots):
@@ -197,6 +198,9 @@ def plan(request):
         record["after_mode"] = record["mode"] & ~18
         record["after_acl"] = restricted_acl(record["acl"])
         record["reason"] = "remove_shared_code_write_preserve_content_owner_rx"
+        record_bytes += len(canonical(record)) + 1
+        if record_bytes > LIMIT:
+            raise ValueError("inventory_serialized_limit")
         records.append(record)
     for link in request["links"]:
         if set(link) != set(("path", "target", "resolved")):
@@ -214,7 +218,40 @@ def plan(request):
         "operation": "remove_022_and_default_acl_writes",
         "content_authority": "NONE", "execution_authorized": False,
     }
-    return {"plan": result, "plan_sha256": digest(result)}
+    return bounded_inventory({"plan": result, "plan_sha256": digest(result)})
+
+
+def bounded_inventory(result):
+    # Count the actual whole response including its terminal newline, and leave
+    # room for the largest allowed authority string in a canonical apply/rollback
+    # request. Individual target/ACL bounds alone do not bound the full plan.
+    request = {"plan": result["plan"], "expected_plan_sha256": result["plan_sha256"],
+               "operator_authority": u"\U0001f4a5" * 512}
+    if len(canonical(result)) + 1 > LIMIT or len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("inventory_serialized_limit")
+    return result
+
+
+def verify_unlisted_ancestors(roots):
+    # These directories are deliberately outside the exact mutation recipe.
+    # Check them read-only, including /, rather than silently expanding targets.
+    ancestors = set()
+    for root in roots:
+        parent = os.path.dirname(root)
+        while True:
+            ancestors.add(parent)
+            if parent == "/":
+                break
+            parent = os.path.dirname(parent)
+    for path in sorted(ancestors):
+        fd = (os.open("/", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY)
+              if path == "/" else open_fixed(path))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISDIR(info.st_mode) or info.st_mode & 18:
+                raise ValueError("unlisted_ancestor_trust")
+        finally:
+            os.close(fd)
 
 
 def emit(value):
@@ -314,6 +351,8 @@ def _mutate_locked(request, rollback=False):
 
 
 def mutate(request, rollback=False):
+    if len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("request_limit")
     original = request["plan"]
     if original.get("schema_version") != 2 or original.get("recipe_id") != "standard-vm-trust-v1":
         raise ValueError("fixed_profile_recipe_required")
@@ -469,6 +508,7 @@ def inventory(profile):
     # never its contents, is selected, and healthy metadata remains a no-op.
     paths.add(workspace)
     mutation_roots = [base, workspace]
+    verify_unlisted_ancestors(mutation_roots)
     result = plan({"installation_roots": mutation_roots, "paths": sorted(paths),
                    "links": sorted(links.values(), key=lambda x: x["path"]),
                    "profile_sha256": digest(profile),
@@ -480,7 +520,7 @@ def inventory(profile):
     result["readonly_compatibility_links"] = external
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
     result["native_runtime_attestation"] = "NOT_ATTESTED"
-    return result
+    return bounded_inventory(result)
 
 
 def main():
