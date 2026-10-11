@@ -1,3 +1,42 @@
+## Fresh host new DC and repair inventory checkpoint, 2026-10-11
+
+A new operation submitted through exact installed40c/bf6 CLI from the exported
+fresh host settings passed OA copy/netlisting, effective inputs, Spectre,
+automatic DC extraction and completed-tree result size. The host has separate
+local journals and retains the existing remote domain/ledger and local resource
+lock. New-process same-ID submit after success adds0 dispatch/reservation;
+original developer analysis/sweep journal hashes remain identical. This completes
+the currentbf6 six routes over two QA circuits, alongside its independent AC2
+Sweep. It proves fresh host CLI execution, not a fresh blank VM or actual app job.
+
+After-run normal UID500 native preflight PASS. Latest ledger102 attempts /
+12,483,297,280 reserved bytes; remaining4,696,571,904 bytes (4479MiB) of16GiB.
+This Oct11 continuation3 executions/384MiB; generic verification20 attempts/
+2560MiB includes19 successes and1 retained failed128MiB. The retained original
+20-job scope and latest v2 remainder3/384MiB are fully spent. Any additional
+final-code validation needs a new explicit bounded experiment/grant under the
+existing direct GREL02-08/16GiB delegation, retaining all previous consumption;
+do not reset, refund or claim an unspent old scope. No new budget is requested.
+
+Exact PR148eb62 installed repair-helper read-only inventory passes332 targets,
+normalized required changes0 and identical historical target contents/metadata.
+The actual response is173064 bytes; larger16MiB-bound pipe cases are synthetic.
+New chmod/chown/ACL writes0. Local comparison/JSON-driver errors rejected before
+simulation and their private evidence remains; they are not failed Cadence jobs.
+
+The user cannot restart the QA MCP connection. Its actual local plan returns
+`authority_inactive`; new configuration/grant reload and new app submit/restart
+are unobserved. Actual app jobs0, gate remains pending, no repeat restart request.
+PR148-152 final parent integration/review/CI is in progress. Repair/installer
+changes alter native assets and require exact replacement qualification; bf6
+results stay historical after replacement. Six newer result schemas will have a
+reviewed fresh-policy delta; original22 compatibility must remain exact.
+
+Release remains BLOCKED. Version2.0.0 is proposed for the breaking bare-launch
+migration; current package metadata is still1.0.0 and no exact RC is frozen.
+Continue independent approved work; tag/Release/upload requires the final exact
+candidate's public approval. Earlier checkpoints and policies remain history.
+
 ## Installed execution and retained-scope resume, 2026-10-11
 
 The exact installed source40c879b102bdc0a83fe8d199c26b615eb5d7252f produced

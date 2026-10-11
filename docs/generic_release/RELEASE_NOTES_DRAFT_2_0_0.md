@@ -50,10 +50,10 @@ claim that a QA circuit meets an invented performance goal or is optimal.
 
 Current actual standard-VM evidence includes two distinct inverter/comparator
 sources, fresh DC/AC/TRAN with automatic extraction on prior qualified bundles,
-and five routes plus AC two-point Sweep on exact installed40c/bf6c20. Effective
+and all six routes plus AC two-point Sweep on exact installed40c/bf6c20. Effective
 inputs and original/source/model protections passed. Same-ID/new-process replay
 adds no execution/reservation. Actual Codex latest-bundle status/result reads and
-an empty-local-journal same-domain replay passed. **A fresh actual app submission
+an empty-local-journal same-domain replay and fresh-host NEW inverter DC CLI passed. **A fresh actual app submission
 and restart acceptance are still pending.** Final repair-helper/installer changes
 alter native assets, so these observations must not be relabeled as acceptance
 of an untested replacement bundle or an exact2.0.0 candidate.
@@ -76,8 +76,8 @@ startup do not provision or perform administrator repair automatically.
 
 The managed validation VM currently has an authorized16GiB cumulative result
 ceiling, Spectre500 and same-change corrections20. Those are that VM's policy,
-not defaults for another user. Current observations101 attempts and
-12,349,079,552 reserved bytes are preserved; each new admission must read current
+not defaults for another user. Current observations102 attempts and
+12,483,297,280 reserved bytes are preserved; each new admission must read current
 accounting and authority. Failures remain charged. Disk floors and per-job size
 limits stay active. The physical allowance conservatively includes all retained
 native reservations after completion, so admission can stop before the measured

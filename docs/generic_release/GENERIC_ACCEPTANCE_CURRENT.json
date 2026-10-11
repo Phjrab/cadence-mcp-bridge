@@ -9,22 +9,22 @@
   "live_native_bundle_sha256": "bf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9",
   "publication_authorized": false,
   "resource": {
-    "attempts_observed": 101,
-    "reserved_bytes_observed": 12349079552,
+    "attempts_observed": 102,
+    "reserved_bytes_observed": 12483297280,
     "result_ceiling_bytes": 17179869184,
-    "remaining_bytes": 4830789632,
+    "remaining_bytes": 4696571904,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
-    "new_simulations_this_continuation": 2,
-    "new_reservations_this_continuation": 268435456,
-    "reserved_mib_observed": 11777,
-    "remaining_mib": 4607
+    "new_simulations_this_continuation": 3,
+    "new_reservations_this_continuation": 402653184,
+    "reserved_mib_observed": 11905,
+    "remaining_mib": 4479
   },
   "mandatory": [
     {
       "id": "G01",
-      "status": "PARTIAL_EXACT_INSTALLED_ACTUAL",
-      "evidence_scope": "Exported starter and ordinary-user installed flow pass; full fresh operator new submission and final candidate pending."
+      "status": "ACTUAL_EXACT_INSTALLED_FRESH_HOST_CLI_PASS_FINAL_APP_CANDIDATE_PENDING",
+      "evidence_scope": "Exported artifact starter with separate local journals submits NEW inverter DC using retained remote domain and resource lock; no developer journal dependency. App/final candidate pending."
     },
     {
       "id": "G02",
@@ -39,7 +39,7 @@
     {
       "id": "G04",
       "status": "ACTUAL_V2_RETAINED_SCOPE_CONFIRMATION_PASS",
-      "evidence_scope": "Expired old scope retained;17 of20 deducted before new paired v2 remainder3/384MiB. AC2 consumes2, old confirmation/ledger/replay preserved."
+      "evidence_scope": "Expired old scope retained;17 of20 deducted before v2 remainder3/384MiB. AC2 consumes2 and fresh-host DC1; scope now fully spent. Old confirmations/ledger/replay preserved."
     },
     {
       "id": "G05",
@@ -48,18 +48,18 @@
     },
     {
       "id": "G06",
-      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_OF_SIX_PASS",
-      "evidence_scope": "Currentbf6 inverter AC/TRAN and comparator DC/AC/TRAN pass; inverter DC/app fresh submission pending. Earlier six analyses remain prior-bundle evidence."
+      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_PASS_FINAL_CANDIDATE_PENDING",
+      "evidence_scope": "Currentbf6 two registered sources complete all six DC/AC/TRAN routes with effective inputs, automatic extraction, bounded completed results; final replacement candidate pending."
     },
     {
       "id": "G07",
-      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_ROUTES_AND_AC2_INPUTS_PASS",
-      "evidence_scope": "Fresh five route jobs and bounded AC2 points verify effective inputs and source/library/model integrity."
+      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_AND_AC2_INPUTS_PASS",
+      "evidence_scope": "Currentbf6 all six route jobs and AC2 points verify effective inputs and protected source/library/model integrity."
     },
     {
       "id": "G08",
-      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_ROUTES_AND_AC2_EXTRACTION_PASS",
-      "evidence_scope": "Installed same core/template produces scalar/transfer/TRAN facts and completed-tree bounded results; no circuit-specific extractor."
+      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_AND_AC2_EXTRACTION_PASS",
+      "evidence_scope": "Currentbf6 installed common worker extracts DC/AC/TRAN plus AC2 with bounded completed-tree size, without circuit-specific helpers."
     },
     {
       "id": "G09",
@@ -88,13 +88,13 @@
     },
     {
       "id": "G14",
-      "status": "PARTIAL_FRESH_HOST_ACTUAL_REMOTE_REPLAY",
-      "evidence_scope": "Separate artifact-exported host settings and initially absent journals reconstruct existing remote job without developer journal access or spend. New fresh-host submission pending; existing VM ledger retained."
+      "status": "ACTUAL_FRESH_HOST_NEW_JOB_AND_REPLAY_PASS_FINAL_CANDIDATE_PENDING",
+      "evidence_scope": "Artifact-exported host settings with separate local journals submit new inverter DC and reconstruct remote history; developer journal hashes remain unchanged. Existing VM ledger retained, not a new zero-history domain."
     },
     {
       "id": "G15",
-      "status": "PARTIAL_ACTUAL_CURRENT_NATIVE_QUERY_APP_RESTART_UNAVAILABLE",
-      "evidence_scope": "Codex successfully queried currentbf6 completed comparator TRAN status and bounded results. New app submission and restart retry remain pending; user currently cannot restart."
+      "status": "PARTIAL_ACTUAL_QUERY_AUTHORITY_INACTIVE_RESTART_UNAVAILABLE",
+      "evidence_scope": "Actual Codex currentbf6 status/result reads pass; local new plan returns authority_inactive. User cannot restart; no new app submit/restart acceptance or config reload claimed."
     },
     {
       "id": "G16",
@@ -155,7 +155,11 @@
     "items": 332,
     "required_changes": 0,
     "scope": "READONLY_NO_NEW_ADMIN_CHANGE",
-    "helper_scope": "FINAL_STABLE_DESCRIPTOR_OBSERVATION_READONLY"
+    "helper_scope": "EXACT_INSTALLED_READONLY_TARGET_AND_UNLISTED_ANCESTOR_TRUST",
+    "source_commit": "eb62a6e945052f06aa32af367e1239efa27bed5c",
+    "response_bytes": 173064,
+    "historical_target_content_metadata_equal": true,
+    "large_response_case": "SYNTHETIC_REAL_PIPE_NOT_THIS_ACTUAL_INVENTORY"
   },
   "actual_qa_local_plan": {
     "plan_sha256": "a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e",
@@ -197,7 +201,10 @@
     "new_process_retry_extra_reserved_bytes": 0,
     "fresh_empty_host_journal_replay": "PASS_NO_SPEND",
     "actual_app_new_jobs": 0,
-    "scope": "CURRENT_STANDARD_VM_NOT_FINAL_CANDIDATE"
+    "scope": "CURRENT_STANDARD_VM_NOT_FINAL_CANDIDATE",
+    "six_routes": "PASS",
+    "fresh_host_new_dc_cli": "PASS",
+    "developer_journal_hashes_preserved": true
   },
   "authority_remainder": {
     "schema_version": 2,
@@ -206,11 +213,17 @@
     "retained_spent_before_new_grant": 17,
     "new_grant_attempt_limit": 3,
     "new_grant_reserved_bytes_limit": 402653184,
-    "new_grant_spent_attempts": 2,
-    "new_grant_spent_bytes": 268435456,
-    "remaining_attempts": 1,
-    "remaining_bytes": 134217728,
+    "new_grant_spent_attempts": 3,
+    "new_grant_spent_bytes": 402653184,
+    "remaining_attempts": 0,
+    "remaining_bytes": 0,
     "budget_reset_or_refund": false
   },
-  "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope."
+  "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope.",
+  "actual_qa_local_plan_after_restart_unavailable": {
+    "remote_contact": false,
+    "new_app_jobs": 0,
+    "reason": "authority_inactive",
+    "restart": "USER_CURRENTLY_UNAVAILABLE"
+  }
 }
