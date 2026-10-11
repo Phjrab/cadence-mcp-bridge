@@ -125,6 +125,16 @@ PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
 
+## Complete directory-union trailing observation, 2026-10-11
+
+Review4240623183 is corrected: metadata signatures are retained around the final
+membership pass and every traversed directory is reobserved after all membership
+scans. Creation/rename in an earlier directory during a later scan rejects before
+completion. No further content or membership scan follows that trailing guard;
+this is bounded filesystem observation, not atomic exclusion of external tools.
+Four owned Linux apply/rollback timing regressions preserve targets and failure
+evidence. Exact hosted/installed checks remain required. No VM mutation or run.
+
 ## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
 
 Review4240588448/4240588451 is corrected: native library exclusion names apply
