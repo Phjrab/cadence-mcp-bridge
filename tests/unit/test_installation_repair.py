@@ -1371,3 +1371,273 @@ def test_actual_detached_managed_parent_rejected_after_named_entry_read(
     assert changed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
     assert (detached / receipt.parent.name / receipt.name).exists()
     assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+@pytest.mark.parametrize(
+    "drift", [None, "held-mode", "held-link", "named-inode", "named-parent", "final-entry"]
+)
+def test_resource_lock_binds_held_inode_parent_and_final_fixed_entry(monkeypatch, drift):
+    from types import SimpleNamespace
+
+    lock = "/operator/work/.cadence_mcp/run.lock"
+    row = dict(st_dev=1, st_ino=2, st_mode=stat.S_IFREG | 0o600, st_uid=500,
+               st_gid=500, st_nlink=1, st_size=0, st_mtime=1, st_ctime=1)
+    parent_row = dict(row, st_ino=3, st_mode=stat.S_IFDIR | 0o700, st_nlink=2)
+    expected, parent_expected = SimpleNamespace(**row), SimpleNamespace(**parent_row)
+    observed = {10: dict(row), 11: dict(parent_row), 20: dict(row), 21: dict(parent_row)}
+    if drift == "held-mode":
+        observed[10]["st_mode"] |= 0o020
+    elif drift == "held-link":
+        observed[10]["st_nlink"] = 2
+    elif drift == "named-inode":
+        observed[20]["st_ino"] = 9
+    elif drift == "named-parent":
+        observed[21]["st_ino"] = 9
+    entries = {lock: dict(observed[20]), os.path.dirname(lock): dict(observed[21])}
+    if drift == "final-entry":
+        entries[lock]["st_ino"] = 9
+    closed = []
+    monkeypatch.setattr(repair.os, "fstat", lambda fd: SimpleNamespace(**observed[fd]))
+    monkeypatch.setattr(repair, "open_fixed", lambda path: 20 if path == lock else 21)
+    monkeypatch.setattr(repair.os, "lstat", lambda path: SimpleNamespace(**entries[path]))
+    monkeypatch.setattr(repair.os.path, "realpath", lambda path: path)
+    monkeypatch.setattr(repair.os, "close", closed.append)
+    if drift is None:
+        repair.verify_resource_lock(lock, 10, 11, expected, parent_expected)
+    else:
+        reason = "resource_lock_drift" if drift.startswith("held-") else "resource_lock_binding"
+        with pytest.raises(ValueError, match=reason):
+            repair.verify_resource_lock(lock, 10, 11, expected, parent_expected)
+    assert closed == ([] if drift and drift.startswith("held-") else [20, 21])
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize(
+    "race", ["before-snapshot", "after-snapshot", "after-receipt", "last-snapshot"]
+)
+def test_actual_recipe_rejects_hardlink_before_target_mutation(
+    actual_recipe_layout, monkeypatch, rollback, race
+):
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target, alias = code_paths[0], shared / "outside-reviewed-alias"
+    target.chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if rollback:
+        repair.mutate(request)
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    events, validated, reads, linked = [], False, 0, False
+    real_snapshot, real_receipt = repair.snapshot_descriptor, repair.verify_applied_receipt
+
+    def add_link():
+        nonlocal linked
+        if not linked:
+            os.link(target, alias)
+            linked = True
+
+    def snapshot(path, fd):
+        nonlocal reads
+        selected = validated and path == str(target)
+        if selected:
+            reads += 1
+        if selected and reads == 2 and race == "before-snapshot":
+            add_link()
+        result = real_snapshot(path, fd)
+        if selected and ((reads == 2 and race == "after-snapshot") or
+                         (reads == 3 and race == "last-snapshot")):
+            add_link()
+        return result
+
+    def receipt(selected):
+        real_receipt(selected)
+        if validated and race == "after-receipt":
+            add_link()
+
+    def emit(value):
+        nonlocal validated
+        events.append(value)
+        if value["event"] == "validated":
+            validated = True
+
+    monkeypatch.setattr(repair, "snapshot_descriptor", snapshot)
+    monkeypatch.setattr(repair, "verify_applied_receipt", receipt)
+    monkeypatch.setattr(repair, "emit", emit)
+    reason = "prechange_hardlink" if race == "last-snapshot" else "hardlinked_code"
+    with pytest.raises(ValueError, match=reason):
+        repair.mutate(request, rollback)
+    assert linked and target.stat().st_nlink == 2
+    assert before == {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    assert (alias.read_bytes(), alias.stat().st_mode) == before[str(target)]
+    assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize(
+    "race", ["open", "flock", "receipt", "held-target", "last-target", "no-op", "changed"]
+)
+def test_actual_recipe_rejects_detached_resource_lock(
+    actual_recipe_layout, monkeypatch, rollback, race
+):
+    import fcntl
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if rollback or race == "no-op":
+        repair.mutate(request)
+    if rollback and race == "no-op":
+        repair.mutate(request, True)
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    lock = Path(prepared["plan"]["scope"]["resource_lock"])
+    detached = lock.with_name("preserved-detached-run.lock")
+    original_lock = lock.read_bytes()
+    events, validated, reads, replaced, second_fd = [], False, 0, False, None
+    real_open, real_flock = repair.open_fixed, fcntl.flock
+    real_receipt, real_snapshot = repair.authenticate_applied_plan, repair.snapshot_descriptor
+
+    def replace():
+        nonlocal replaced, second_fd
+        if replaced:
+            return
+        lock.rename(detached)
+        lock.write_bytes(original_lock)
+        lock.chmod(0o600)
+        # Demonstrate a second real flock can acquire this replacement inode.
+        second_fd = os.open(lock, os.O_RDONLY)
+        real_flock(second_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        replaced = True
+
+    def open_fixed(path):
+        fd = real_open(path)
+        if path == str(lock) and race == "open":
+            replace()
+        return fd
+
+    def flock(fd, operation):
+        real_flock(fd, operation)
+        if race == "flock":
+            replace()
+
+    def receipt(selected, selected_rollback):
+        real_receipt(selected, selected_rollback)
+        if race == "receipt":
+            replace()
+
+    def snapshot(path, fd):
+        nonlocal reads
+        result = real_snapshot(path, fd)
+        if validated and path == str(target):
+            reads += 1
+            if ((race == "held-target" and reads == 2) or
+                    (race == "last-target" and reads == 3)):
+                replace()
+        return result
+
+    def emit(value):
+        nonlocal validated
+        events.append(value)
+        if value["event"] == "validated":
+            validated = True
+            if race == "no-op":
+                replace()
+        if value["event"] == "changed" and race == "changed":
+            replace()
+
+    monkeypatch.setattr(repair, "open_fixed", open_fixed)
+    monkeypatch.setattr(fcntl, "flock", flock)
+    monkeypatch.setattr(repair, "authenticate_applied_plan", receipt)
+    monkeypatch.setattr(repair, "snapshot_descriptor", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    try:
+        with pytest.raises(ValueError, match="resource_lock_(drift|binding)"):
+            repair.mutate(request, rollback)
+    finally:
+        if second_fd is not None:
+            os.close(second_fd)
+    assert replaced and lock.stat().st_ino != detached.stat().st_ino
+    assert lock.read_bytes() == detached.read_bytes() == original_lock
+    assert not any(event["event"] == "complete" for event in events)
+    changes = [event for event in events if event["event"] == "changed"]
+    assert len(changes) == (1 if race == "changed" else 0)
+    if race == "changed":
+        assert target.read_bytes() == before[str(target)][0]
+        assert stat.S_IMODE(target.stat().st_mode) == (0o777 if rollback else 0o755)
+    else:
+        assert before == {
+            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+        }
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", ["hardlink", "detached-lock"])
+def test_actual_recipe_rechecks_target_and_lock_before_acl_mutation(
+    actual_recipe_layout, monkeypatch, rollback, drift
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    subprocess.run(["setfacl", "-m", "u:501:rwx,g::rwx,m::rwx", str(target)], check=True)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if rollback:
+        repair.mutate(request)
+    before = repair.snapshot(str(target))
+    expected_mode = 0o777 if rollback else 0o755
+    expected_acl = repair.chmod_acl(before["acl"], expected_mode)
+    others = {str(path): (path.read_bytes(), path.stat().st_mode)
+              for path in code_paths if path != target}
+    lock = Path(prepared["plan"]["scope"]["resource_lock"])
+    events, validated, interrupted = [], False, False
+    real_acl, real_process = repair.acl, repair.subprocess.Popen
+
+    def acl(fd):
+        nonlocal interrupted
+        result = real_acl(fd)
+        if (validated and not interrupted and os.fstat(fd).st_ino == target.stat().st_ino and
+                stat.S_IMODE(os.fstat(fd).st_mode) == expected_mode):
+            if drift == "hardlink":
+                os.link(target, shared / "preserved-outside-alias")
+            else:
+                old = lock.read_bytes()
+                lock.rename(lock.with_name("preserved-detached-run.lock"))
+                lock.write_bytes(old)
+                lock.chmod(0o600)
+            interrupted = True
+        return result
+
+    def process(argv, *args, **kwargs):
+        if argv[0].endswith("setfacl"):
+            raise AssertionError("intervening drift reached ACL mutation")
+        return real_process(argv, *args, **kwargs)
+
+    def emit(value):
+        nonlocal validated
+        events.append(value)
+        if value["event"] == "validated":
+            validated = True
+
+    monkeypatch.setattr(repair, "acl", acl)
+    monkeypatch.setattr(repair.subprocess, "Popen", process)
+    monkeypatch.setattr(repair, "emit", emit)
+    reason = "hardlinked_code" if drift == "hardlink" else "resource_lock_(drift|binding)"
+    with pytest.raises(ValueError, match=reason):
+        repair.mutate(request, rollback)
+    assert interrupted
+    assert stat.S_IMODE(target.stat().st_mode) == expected_mode
+    assert target.read_bytes() == code_paths[1].read_bytes()
+    fd = repair.open_fixed(str(target))
+    try:
+        assert repair.normalize_acl(real_acl(fd)) == repair.normalize_acl(expected_acl)
+    finally:
+        os.close(fd)
+    assert others == {str(path): (path.read_bytes(), path.stat().st_mode)
+                      for path in code_paths if path != target}
+    assert not any(event["event"] in ("changed", "complete") for event in events)

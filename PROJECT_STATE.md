@@ -64,6 +64,38 @@ real initialization/journal/reservation, simulation or protected metadata change
 Native acceptance and final RC remain separate pending gates; prior records below
 are historical, including superseded merge/GREL08/resource exclusions.
 
+## Held target and fixed resource-lock race correction, 2026-10-11
+
+Fresh exact-e169 review found two remaining prechange windows: a new regular-file
+hardlink could appear between the earlier nlink check and held snapshot, and a
+renamed/replaced run.lock could leave flock protecting a detached inode. Held
+snapshots now reject regular nlink !=1 without changing historical plan schema.
+After receipt/ancestor/resource-lock checks, the helper repeats the whole target
+observation and its immediate link-count check before chmod. The separate setfacl
+mutation repeats those guards and authenticates the exact chmod intermediate ACL.
+
+Flock now retains its parent descriptor, verifies the fixed lock/parent named
+entries and held metadata after acquisition and receipt admission, before target
+mutation, and at completion including no-op/rollback. Fixed names are rechecked
+again after all reads. Detached, substituted, relinked or metadata-drifted locks
+reject; failed/partial evidence is retained. Six portable and26 complete owned
+Linux cases cover both apply/rollback, hardlink timing, real independently acquired
+replacement flock, no-op/postchange drift, and drift between chmod and setfacl.
+These are last-observation guards, not atomic exclusion of external filesystem
+operations. Lock contents, mutation targets, transport limits and authority do not
+expand. Administrator/MCP execution separation and authenticated receipts persist.
+
+Updated-source Ruff/mypy72 PASS; connected Windows repair/bootstrap/transport/context
+checks168 PASS/103 POSIX/symlink skips. Secret scan/security18, strict locked audit
+and85 schemas PASS. Exact wheel/sdist source/license/content and isolated installed
+CLI/SDK/context/operation/bootstrap plus reinstall/uninstall32-state preservation
+PASS. Hosted Linux/Windows, refreshed independent review and exact current-VM
+read-only332-target inventory are separate pending final gates. The initial local audit failed on a CP949 child-process decode and is
+rerun under explicit UTF8; this is not a dependency or VM modification. Prior
+helper bundles/artifacts and all exact source-specific results remain historical.
+No current-VM contact/admin/simulation/reservation has occurred in this correction.
+Active16GiB/500/20,GREL02-08 and conditional normal PR merge remain authorized;
+public tag/Release/upload still requires exact-candidate approval.
 
 ## Whole receipt durability and named-chain correction, 2026-10-11
 
