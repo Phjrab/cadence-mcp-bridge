@@ -6,16 +6,31 @@ Operator registration/consent are separate canonical mode-600 records.
 
 from __future__ import with_statement
 
+import sys
+
+# Standalone/runtime execution must not resolve stdlib from unmanifested files
+# beside this script or from the working directory. Use only the builtin sys
+# module before removing that startup entry; normal installed package imports
+# leave the host application's import paths unchanged.
+if not globals().get("__package__"):
+    if sys.path:
+        del sys.path[0]
+    sys.path[:] = [entry for entry in sys.path if entry]
+import os
+
+if not globals().get("__package__"):
+    _storage_asset_root = os.path.normcase(os.path.realpath(os.path.dirname(__file__)))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != _storage_asset_root]
+
 import binascii
 import ctypes
 import errno
 import hashlib
 import json
-import os
 import re
 import stat
 import subprocess
-import sys
 import time
 
 ROOT = "/home/buet/cds_work/.cadence_mcp"
@@ -534,6 +549,10 @@ def fresh_ledger(io, root, counter, lock_held=True):
                     os.close(fd)
         finally:
             os.close(source)
+        # Keep transitive stdlib resolution outside all bundle aliases as well.
+        bundle_path = os.path.normcase(os.path.realpath(directory))
+        sys.path[:] = [entry for entry in sys.path
+                       if os.path.normcase(os.path.realpath(entry or os.curdir)) != bundle_path]
         import types
 
         # Evaluate exactly the authenticated descriptor bytes. Do not reopen a
