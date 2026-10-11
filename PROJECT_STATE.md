@@ -182,6 +182,7 @@ Native acceptance and final RC remain separate pending gates; prior records belo
 are historical, including superseded merge/GREL08/resource exclusions.
 
 
+
 ## Retained migration composition startup boundary, 2026-10-11
 
 A retained migration module can be compiled by the new-install provider with an
@@ -230,6 +231,7 @@ internal synthetic calls keep normal imports and do not attest a native install.
 Replacement of each helper after read plus cached-module poisoning:29 PASS/1
 Windows POSIX skip; Ruff PASS. Exact installed/hosted/fresh review gates are
 pending. Counter, replay, retained job history and the VM have not been changed.
+
 
 ## Initial-pin installed package evidence, 2026-10-11
 
