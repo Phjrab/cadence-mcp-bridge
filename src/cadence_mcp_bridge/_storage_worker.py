@@ -516,7 +516,15 @@ def fresh_ledger(io, root, counter, lock_held=True):
             ):
                 raise ValueError("fresh storage fixed asset manifest")
             if manifest["schema_version"] == 1:
-                exact(manifest, "schema_version kind managed_root files")
+                # Historical pinned manifests remain readable by the retained
+                # worker; new pinned entry identity is explicit, never implied.
+                keys = "schema_version kind managed_root files"
+                if "entry_sha256" in manifest:
+                    keys += " entry_sha256"
+                    if not isinstance(manifest["entry_sha256"], STRINGS) or not DIGEST.match(
+                            manifest["entry_sha256"]):
+                        raise ValueError("fresh storage entry binding")
+                exact(manifest, keys)
                 if (
                     manifest["kind"] != "REFERENCE_STORAGE_RUNTIME"
                     or manifest["managed_root"] != "/home/buet/cds_work/.cadence_mcp"

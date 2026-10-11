@@ -383,3 +383,27 @@ def test_pinned_entry_compiles_only_retained_authenticated_worker(
     monkeypatch.setattr(entry, "read", read)
     entry.run(str(script.parent), pin, "inventory", "7b7d")
     assert replaced == [True] and marker.read_text() == "authenticated"
+
+
+def test_checked_in_storage_launcher_matches_generated_authenticated_entry():
+    _, payloads = reference_storage_bundle()
+    root = Path(__file__).resolve().parents[2]
+    launcher = root / "remote/phase-campaign/storage-mgmt-v7/run.sh"
+    assert launcher.read_bytes() == payloads["run.sh"]
+
+
+async def test_pinned_backend_preserves_manifest_bound_entry_without_resource_reread(monkeypatch):
+    from cadence_mcp_bridge import ssh_backend
+    from cadence_mcp_bridge.storage_runtime import reference_storage_entry
+
+    monkeypatch.setattr(ssh_backend.shutil, "which", lambda _: "ssh")
+    pin, payloads = reference_storage_bundle()
+    expected = reference_storage_entry(payloads)
+    manifest = json.loads(payloads[f"runtime/{pin}/manifest.json"])
+    assert manifest["entry_sha256"] == hashlib.sha256(expected.encode("ascii")).hexdigest()
+    backend = OpenSshBackend(BridgeConfig(reference_storage_manifest_sha256=pin))
+    monkeypatch.setattr(ssh_backend, "reference_storage_bundle", lambda: (pin, payloads))
+    invoke = Mock(return_value="{}")
+    monkeypatch.setattr(backend, "_invoke_at_path", invoke)
+    assert await backend._storage_request("inventory", {}) == "{}"
+    assert shlex.split(invoke.call_args.args[5]) == [expected]
