@@ -7,6 +7,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 
 import pytest
 
@@ -154,6 +155,13 @@ def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch, ad
     repair.mutate(request)
     assert stat.S_IMODE(code.stat().st_mode) == 0o755
     assert code.read_bytes() == b"synthetic immutable code"
+    with monkeypatch.context() as patch:
+        patch.setattr(subprocess, "Popen", fail_acl_once)
+        with pytest.raises(OSError):
+            repair.mutate(request, rollback=True)
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o777
+    assert "default:group::r-x" in repair.snapshot(str(directory))["acl"]
+    repair.mutate(request, rollback=True)
     repair.mutate(request, rollback=True)
     for record in result["plan"]["records"]:
         actual = repair.snapshot(record["path"])
@@ -176,7 +184,10 @@ def test_hardlinked_code_never_changes_alias(tmp_path):
 
 
 @pytest.mark.parametrize("wrong_profile", [False, True])
-def test_private_plan_binds_selected_operator_profile(tmp_path, monkeypatch, wrong_profile):
+@pytest.mark.parametrize("large_inventory", [False, True])
+def test_private_plan_binds_selected_operator_profile(
+    tmp_path, monkeypatch, wrong_profile, large_inventory
+):
     from pathlib import Path
 
     from cadence_mcp_bridge import operator_transport
@@ -187,19 +198,36 @@ def test_private_plan_binds_selected_operator_profile(tmp_path, monkeypatch, wro
     selected_hash = repair.digest(json.loads(raw))
     plan = {"scope": {"profile_sha256": "f" * 64 if wrong_profile else selected_hash},
             "records": []}
+    if large_inventory:
+        plan["records"] = [{"acl": "user::rwx\n" * 256} for _ in range(128)]
     result = {"plan": plan, "plan_sha256": repair.digest(plan),
               "readonly_compatibility_links": [],
               "dependency_scope": "wrappers_32bit_binaries_shared_library_trees",
               "native_runtime_attestation": "NOT_ATTESTED"}
 
-    def fixed(argv, data, env, **bounds):
+    response = json.dumps(result).encode()
+    if large_inventory:
+        assert 262144 < len(response) < repair.LIMIT
+    response_file = tmp_path / "synthetic-inventory-response.json"
+    response_file.write_bytes(response)
+    request_file = tmp_path / "synthetic-inventory-request.json"
+    request_file.write_bytes(raw)
+    real_process = subprocess.Popen
+
+    def synthetic_inventory(argv, *args, **kwargs):
         assert "StrictHostKeyChecking=yes" in argv
         assert argv[-1] == "inventory"
-        assert data == raw
-        assert bounds == {"timeout": 60, "limit": 262144}
-        return 0, json.dumps(result).encode(), b""
+        # Substitute only the owned child executable. The actual transport's
+        # request/timeout/output bound validation and pipe handling still run.
+        return real_process(
+            [sys.executable, "-c",
+             "import pathlib,sys; "
+             "assert sys.stdin.buffer.read()==pathlib.Path(sys.argv[2]).read_bytes(); "
+             "sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())",
+             str(response_file), str(request_file)], *args, **kwargs
+        )
 
-    monkeypatch.setattr(operator_transport, "run_fixed", fixed)
+    monkeypatch.setattr(operator_transport.subprocess, "Popen", synthetic_inventory)
     monkeypatch.setattr(shutil, "which", lambda _: "ssh.exe")
     output = tmp_path / "plan.private.json"
     if wrong_profile:
@@ -290,3 +318,492 @@ def test_fractional_mtime_inventory_uses_cross_python_stable_json(tmp_path, monk
     assert repair.metadata_equal("mtime", path.stat().st_mtime, record["mtime"])
     assert not repair.metadata_equal("mtime", path.stat().st_mtime + 0.01, record["mtime"])
     assert repair.metadata_equal("mtime", None, None)
+
+
+@pytest.mark.parametrize(
+    "ic,ms,expected",
+    [
+        ("/opt/cadence/IC6", "/opt/cadence/IC6x", "/opt/cadence"),
+        ("/opt/cadence/IC6x", "/opt/cadence/IC6", "/opt/cadence"),
+        ("/home/user/cadence/IC615", "/home/user/cadence/MMSIM121", "/home/user/cadence"),
+        ("/opt/ic/install", "/opt/ms/install", "/opt"),
+    ],
+)
+def test_vendor_root_prefix_does_not_drop_spectre_targets(ic, ms, expected):
+    base = repair.common_installation_root(ic, ms)
+    assert base == expected
+    assert repair.inside(ic, base) and repair.inside(ms, base)
+
+
+def test_rollback_chmod_intermediate_preserves_restricted_named_and_default_acl():
+    before = "user::rwx\nuser:501:rwx\ngroup::rwx\nmask::rwx\nother::rwx\n"
+    before += "default:user::rwx\ndefault:group::rwx\ndefault:other::rwx\n"
+    after = repair.restricted_acl(before)
+    interim = repair.chmod_acl(after, 0o777)
+    assert "mask::rwx\n" in interim
+    assert "other::rwx\n" in interim
+    assert "default:group::r-x\n" in interim
+    assert repair.normalize_acl(interim) != repair.normalize_acl(before)
+    assert repair.normalize_acl(interim) != repair.normalize_acl(after)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="requires held Linux descriptor/ACL operations")
+@pytest.mark.parametrize("drift", ["named-acl", "default-acl", "contents"])
+def test_held_descriptor_rejects_drift_after_path_snapshot(tmp_path, monkeypatch, drift):
+    if shutil.which("getfacl") is None or shutil.which("setfacl") is None:
+        pytest.skip("ACL utilities absent")
+    target = tmp_path / "code"
+    if drift == "default-acl":
+        target.mkdir()
+    else:
+        target.write_bytes(b"synthetic immutable code")
+    target.chmod(0o777)
+    prepared = repair.plan({
+        "installation_roots": [str(tmp_path)], "paths": [str(target)], "links": [],
+        "profile_sha256": "a" * 64, "resource_lock": str(tmp_path / "lock"),
+    })
+    real_open = repair.open_fixed
+    opens = 0
+
+    def race(path):
+        nonlocal opens
+        fd = real_open(path)
+        opens += 1
+        if opens == 3:
+            if drift == "contents":
+                target.write_bytes(b"x" * len(target.read_bytes()))
+            else:
+                entry = "d:u:501:r-x" if drift == "default-acl" else "u:501:r-x"
+                subprocess.run(["setfacl", "-m", entry, str(target)], check=True)
+        return fd
+
+    def denied(*args):
+        raise AssertionError("unreviewed descriptor drift reached chmod")
+
+    monkeypatch.setattr(repair, "open_fixed", race)
+    monkeypatch.setattr(repair.os, "fchmod", denied)
+    with pytest.raises(ValueError, match="prechange_descriptor_drift"):
+        repair._mutate_locked({"plan": prepared["plan"],
+            "expected_plan_sha256": prepared["plan_sha256"],
+            "operator_authority": "SYNTHETIC-ONLY"})
+    assert stat.S_IMODE(target.stat().st_mode) == 0o777
+
+
+@pytest.mark.skipif(os.name != "posix", reason="requires held Linux descriptor/ACL operations")
+def test_descriptor_snapshot_rejects_content_change_during_acl_collection(tmp_path, monkeypatch):
+    if shutil.which("getfacl") is None:
+        pytest.skip("ACL utility absent")
+    target = tmp_path / "code"
+    target.write_bytes(b"synthetic immutable code")
+    target.chmod(0o777)
+    prepared = repair.plan({
+        "installation_roots": [str(tmp_path)], "paths": [str(target)], "links": [],
+        "profile_sha256": "a" * 64, "resource_lock": str(tmp_path / "lock"),
+    })
+    real_acl = repair.acl
+    reads = 0
+
+    def race(fd):
+        nonlocal reads
+        value = real_acl(fd)
+        reads += 1
+        if reads == 3:
+            saved = target.stat()
+            target.write_bytes(b"x" * len(target.read_bytes()))
+            os.utime(target, ns=(saved.st_atime_ns, saved.st_mtime_ns))
+        return value
+
+    def denied(*args):
+        raise AssertionError("intra-snapshot drift reached chmod")
+
+    monkeypatch.setattr(repair, "acl", race)
+    monkeypatch.setattr(repair.os, "fchmod", denied)
+    with pytest.raises(ValueError, match="snapshot_race"):
+        repair._mutate_locked({"plan": prepared["plan"],
+            "expected_plan_sha256": prepared["plan_sha256"],
+            "operator_authority": "SYNTHETIC-ONLY"})
+    assert stat.S_IMODE(target.stat().st_mode) == 0o777
+
+
+@pytest.mark.parametrize("count", [240, 257])
+def test_valid_large_acl_plan_has_whole_protocol_bound(monkeypatch, count):
+    acl = "user::rwx\n" + "".join(f"user:{10000000 + i}:rwx\n" for i in range(1810))
+    acl += "group::rwx\nmask::rwx\nother::rwx\n"
+    assert 32000 < len(acl.encode()) <= 32768
+
+    def record(path):
+        return {"path": path, "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+                "kind": "directory", "sha256": None, "size": None, "mtime": None,
+                "mode": 0o777, "acl": acl}
+
+    monkeypatch.setattr(repair, "snapshot", record)
+    monkeypatch.setattr(repair.os.path, "realpath", lambda path: path)
+    request = {"installation_roots": ["/synthetic/cadence"],
+               "paths": [f"/synthetic/cadence/dir-{i:04d}" for i in range(count)],
+               "links": [], "profile_sha256": "a" * 64,
+               "resource_lock": "/synthetic/work/.cadence_mcp/run.lock"}
+    if count == 257:
+        with pytest.raises(ValueError, match="inventory_serialized_limit"):
+            repair.plan(request)
+    else:
+        result = repair.plan(request)
+        assert len(result["plan"]["records"]) == count
+        assert 15_000_000 < len(repair.canonical(result)) + 1 <= repair.LIMIT
+        maximum_request = {"plan": result["plan"],
+                           "expected_plan_sha256": result["plan_sha256"],
+                           "operator_authority": "💥" * 512}
+        assert len(repair.canonical(maximum_request)) + 1 <= repair.LIMIT
+
+
+def test_inventory_envelope_growth_rejects_even_when_records_fit():
+    result = {"plan": {"records": [], "profile": {}}, "plan_sha256": "a" * 64,
+              "readonly_compatibility_links": ["x" * repair.LIMIT]}
+    with pytest.raises(ValueError, match="inventory_serialized_limit"):
+        repair.bounded_inventory(result)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_oversized_mutation_request_rejects_before_inventory_or_lock(monkeypatch, rollback):
+    def denied(*args, **kwargs):
+        raise AssertionError("oversized request touched installation or lock")
+
+    monkeypatch.setattr(repair, "inventory", denied)
+    monkeypatch.setattr(repair, "open_fixed", denied)
+    request = {"plan": {"padding": "x" * repair.LIMIT},
+               "expected_plan_sha256": "a" * 64, "operator_authority": "fixture"}
+    with pytest.raises(ValueError, match="request_limit"):
+        repair.mutate(request, rollback)
+
+
+@pytest.mark.parametrize("unsafe", [None, "/srv/shared", "/home/student", "/"])
+def test_unlisted_ancestors_checked_to_root_without_mutation(monkeypatch, unsafe):
+    from types import SimpleNamespace
+
+    paths = {}
+    observed = []
+
+    def open_directory(path, *args):
+        descriptor = len(paths) + 100
+        paths[descriptor] = path
+        observed.append(path)
+        return descriptor
+
+    def info(descriptor):
+        return SimpleNamespace(st_mode=0o40775 if paths[descriptor] == unsafe else 0o40755)
+
+    def denied(*args, **kwargs):
+        raise AssertionError("read-only ancestor check attempted mutation")
+
+    monkeypatch.setattr(repair, "open_fixed", open_directory)
+    monkeypatch.setattr(repair.os, "open", open_directory)
+    monkeypatch.setattr(repair.os, "fstat", info)
+    monkeypatch.setattr(repair.os, "close", lambda descriptor: None)
+    monkeypatch.setattr(repair.os, "fchmod", denied, raising=False)
+    monkeypatch.setattr(repair.os, "O_NOFOLLOW", 0, raising=False)
+    monkeypatch.setattr(repair.os, "O_NONBLOCK", 0, raising=False)
+    monkeypatch.setattr(repair.os, "O_DIRECTORY", 0, raising=False)
+    monkeypatch.setattr(repair.subprocess, "Popen", denied)
+    roots = ["/srv/shared/cadence", "/home/student/workspace"]
+    if unsafe is None:
+        repair.verify_unlisted_ancestors(roots)
+        assert set(observed) == {"/", "/srv", "/srv/shared", "/home", "/home/student"}
+        assert not set(roots).intersection(observed)
+    else:
+        with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+            repair.verify_unlisted_ancestors(roots)
+
+
+@pytest.fixture
+def actual_recipe_layout():
+    if os.name != "posix":
+        pytest.skip("requires actual Linux installation ancestry")
+    import platform
+    import pwd
+    import tempfile
+    from pathlib import Path
+
+    if shutil.which("getfacl") is None:
+        pytest.skip("ACL utilities absent")
+    # Use a disposable owned home subtree: /tmp is itself writable and would
+    # correctly block the fixed recipe before the controlled shared ancestor.
+    with tempfile.TemporaryDirectory(prefix="cadence-mcp-ancestry-", dir=Path.home()) as owned:
+        shared = Path(owned) / "shared"
+        root, workspace = shared / "cadence", shared / "workspace"
+        ic, ms = root / "IC615", root / "MMSIM121"
+        code_paths = [ic / "share/bin" / name for name in (
+            "cdnWrapperWithOA2010", ".cdnWrapper_core", ".cdnWrapper_argv_parsing",
+            ".cdnWrapper_dev", ".cdnWrapper_help", ".cdnWrapper_cwlg", ".cdsWrapperLib")]
+        code_paths += [ic / "tools.lnx86" / name for name in (
+            ".oawrap", ".cdnWrapper_pscompat", "dfII/bin/ocean", "dfII/bin/virtuoso",
+            "dfII/bin/32bit/virtuoso", "bin/cds_plat", "bin/cds_plat.dat")]
+        code_paths += [ic / "share/dfII/bin/.dfII_init", ms / "tools.lnx86/bin/spectre",
+                       ms / "tools.lnx86/spectre/bin/32bit/spectre",
+                       ms / "tools.lnx86/bin/.preHostEnvCheck"]
+        for path in code_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"synthetic code, never executed")
+        for path in [ic / "tools.lnx86/lib", ic / "oa_v22.41.029/lib", ms / "tools.lnx86/lib"]:
+            path.mkdir(parents=True)
+        (ic / "tools").symlink_to(ic / "tools.lnx86", target_is_directory=True)
+        (ms / "tools").symlink_to(ms / "tools.lnx86", target_is_directory=True)
+        (ic / "oa").symlink_to(ic / "oa_v22.41.029", target_is_directory=True)
+        workspace.mkdir()
+        profile = {
+            "schema_version": 1,
+            "host": {"hostname": platform.node(), "os": platform.system(),
+                     "architecture": platform.machine(),
+                     "python_version": platform.python_version(),
+                     "user": pwd.getpwuid(os.getuid()).pw_name},
+            "tools": {name: {"path": str(path),
+                             "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                      for name, path in [("virtuoso", ic / "tools/dfII/bin/virtuoso"),
+                                         ("ocean", ic / "tools/dfII/bin/ocean"),
+                                         ("spectre", ms / "tools/bin/spectre")]},
+            "paths": {"protected_roots": [str(root)], "workspace_root": str(workspace),
+                      "managed_root": str(workspace / ".cadence_mcp")},
+        }
+        managed = workspace / ".cadence_mcp"
+        managed.mkdir(mode=0o700)
+        (managed / "run.lock").write_bytes(b"owned synthetic reservation lock")
+        (managed / "run.lock").chmod(0o600)
+        yield shared, root, workspace, code_paths, profile
+
+
+def test_actual_recipe_rejects_unlisted_writable_parent_and_preserves_it(actual_recipe_layout):
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    shared.chmod(0o775)
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+        repair.inventory(profile)
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o775
+    assert before == {
+        str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+    }
+    # Correct only this owned synthetic fixture; the recipe itself stays
+    # read-only and never selects ancestors beyond its exact two roots.
+    shared.chmod(0o755)
+    result = repair.inventory(profile)
+    assert str(shared) not in result["plan"]["scope"]["paths"]
+    assert str(root) in result["plan"]["scope"]["paths"]
+    assert str(workspace) in result["plan"]["scope"]["paths"]
+    assert before == {
+        str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+    }
+
+
+@pytest.mark.parametrize("race", ["recipe-to-lock", "held-target", "changed", "no-op"])
+def test_actual_recipe_rejects_ancestor_drift_during_apply(actual_recipe_layout, monkeypatch, race):
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o755 if race == "no-op" else 0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    before = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    events, validated, target_reads = [], False, 0
+    real_inventory, real_snapshot = repair.inventory, repair.snapshot_descriptor
+
+    def inventory(selected):
+        result = real_inventory(selected)
+        if race == "recipe-to-lock":
+            shared.chmod(0o775)
+        return result
+
+    def snapshot(path, fd):
+        nonlocal target_reads
+        result = real_snapshot(path, fd)
+        if validated and path == str(target):
+            target_reads += 1
+            if race == "held-target" and target_reads == 2:
+                shared.chmod(0o775)
+        return result
+
+    def emit(value):
+        nonlocal validated
+        events.append(value)
+        if value["event"] == "validated":
+            validated = True
+            if race == "no-op":
+                shared.chmod(0o775)
+        if value["event"] == "changed" and race == "changed":
+            shared.chmod(0o775)
+
+    monkeypatch.setattr(repair, "inventory", inventory)
+    monkeypatch.setattr(repair, "snapshot_descriptor", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+        repair.mutate(request)
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o775
+    assert all(event["event"] != "complete" for event in events)
+    assert target.read_bytes() == before[str(target)][0]
+    changed = [event for event in events if event["event"] == "changed"]
+    assert len(changed) == (1 if race == "changed" else 0)
+    if race == "changed":
+        assert stat.S_IMODE(target.stat().st_mode) == 0o755
+    else:
+        assert before == {
+            str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths
+        }
+    assert str(shared) not in prepared["plan"]["scope"]["paths"]
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("race", ["held-target", "changed", "no-op", "none"])
+def test_apply_rechecks_omitted_ancestors_at_mutation_and_completion(monkeypatch, rollback, race):
+    from types import SimpleNamespace
+
+    row = {
+        "path": "/operator/cadence/code", "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+        "kind": "file", "sha256": "a" * 64, "size": 3, "mtime": "1",
+        "reason": "remove_shared_code_write_preserve_content_owner_rx", "mode": 0o777,
+        "acl": "user::rwx\ngroup::rwx\nother::rwx\n", "after_mode": 0o755,
+        "after_acl": "user::rwx\ngroup::r-x\nother::r-x\n",
+    }
+    roots = ["/operator/cadence", "/operator/work"]
+    original = {"scope": {"installation_roots": roots}, "records": [row]}
+    now = copy.deepcopy(row)
+    if rollback != (race == "no-op"):
+        now.update(mode=row["after_mode"], acl=row["after_acl"])
+    unsafe, mutations, checks, events = False, [], [], []
+
+    def emit(value):
+        nonlocal unsafe
+        events.append(value["event"])
+        if (race == "changed" and value["event"] == "changed") or (
+            race == "no-op" and value["event"] == "validated"
+        ):
+            unsafe = True
+
+    def held(path, fd):
+        nonlocal unsafe
+        assert path == row["path"]
+        if race == "held-target":
+            unsafe = True
+        return {key: value for key, value in now.items() if key not in (
+            "reason", "after_mode", "after_acl"
+        )}
+
+    def ancestors(selected):
+        assert selected == roots
+        checks.append(selected)
+        if unsafe:
+            raise ValueError("unlisted_ancestor_trust")
+
+    def chmod(fd, mode):
+        mutations.append(mode)
+        now.update(mode=mode, acl=row["acl"] if rollback else row["after_acl"])
+
+    monkeypatch.setattr(repair, "plan", lambda scope: {"plan": {"records": [now]}})
+    monkeypatch.setattr(repair, "snapshot", lambda path: copy.deepcopy(now))
+    monkeypatch.setattr(repair, "snapshot_descriptor", held)
+    monkeypatch.setattr(repair, "verify_unlisted_ancestors", ancestors)
+    monkeypatch.setattr(repair, "open_fixed", lambda path: 100)
+    monkeypatch.setattr(repair.os, "fstat", lambda fd: SimpleNamespace(
+        st_dev=1, st_ino=2, st_mode=stat.S_IFREG | now["mode"], st_nlink=1
+    ))
+    monkeypatch.setattr(repair.os, "close", lambda fd: None)
+    monkeypatch.setattr(repair.os, "fchmod", chmod, raising=False)
+    monkeypatch.setattr(repair, "acl", lambda fd: now["acl"])
+    monkeypatch.setattr(repair, "emit", emit)
+    request = {"plan": original, "expected_plan_sha256": repair.digest(original),
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if race == "none":
+        repair._mutate_locked(request, rollback)
+        assert events[-1] == "complete"
+        assert len(checks) == 2
+    else:
+        with pytest.raises(ValueError, match="unlisted_ancestor_trust"):
+            repair._mutate_locked(request, rollback)
+        assert "complete" not in events
+    assert len(mutations) == (1 if race in ("changed", "none") else 0)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", [None, "mode", "acl", "content", "owner", "count"])
+def test_completion_requires_whole_exact_requested_target_state(monkeypatch, rollback, drift):
+    old = {
+        "path": "/operator/cadence/code", "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+        "kind": "file", "sha256": "a" * 64, "size": 3, "mtime": "1",
+        "reason": "remove_shared_code_write_preserve_content_owner_rx", "mode": 0o777,
+        "acl": "user::rwx\ngroup::rwx\nother::rwx\n", "after_mode": 0o755,
+        "after_acl": "user::rwx\ngroup::r-x\nother::r-x\n",
+    }
+    original = {"scope": {"paths": [old["path"]]}, "records": [old]}
+    now = copy.deepcopy(old)
+    if not rollback:
+        now.update(mode=old["after_mode"], acl=old["after_acl"])
+    if drift == "mode":
+        now["mode"] ^= 0o020
+    elif drift == "acl":
+        now["acl"] += "user:501:r-x\n"
+    elif drift == "content":
+        now["sha256"] = "b" * 64
+    elif drift == "owner":
+        now["uid"] += 1
+    records = [] if drift == "count" else [now]
+    calls = []
+
+    def final_plan(scope):
+        calls.append(scope)
+        return {"plan": {"records": records}}
+
+    monkeypatch.setattr(repair, "plan", final_plan)
+    if drift is None:
+        repair.verify_completed_targets(original, rollback)
+    else:
+        reason = "completion_metadata" if drift in ("mode", "acl") else (
+            "completion_record_count" if drift == "count" else "completion_protected_drift"
+        )
+        with pytest.raises(ValueError, match=reason):
+            repair.verify_completed_targets(original, rollback)
+    assert calls == [original["scope"]]
+
+
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["mode", "acl", "contents", "link"])
+def test_actual_completion_rechecks_skipped_and_processed_recipe(
+    actual_recipe_layout, monkeypatch, stage, drift
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    if shutil.which("setfacl") is None:
+        pytest.skip("ACL utilities absent")
+    target = code_paths[0]
+    target.chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if stage == "no-op":
+        repair.mutate(request)
+    events = []
+    before_content = target.read_bytes()
+
+    def emit(value):
+        events.append(value)
+        if value["event"] != ("validated" if stage == "no-op" else "changed"):
+            return
+        if drift == "mode":
+            target.chmod(0o775)
+        elif drift == "acl":
+            subprocess.run(["setfacl", "-m", "u:501:r--", str(target)], check=True)
+        elif drift == "contents":
+            target.write_bytes(b"x" * len(before_content))
+        else:
+            # Change only the text of an owned link; its resolved code is unchanged.
+            link = Path(profile["tools"]["virtuoso"]["path"]).parents[2]
+            link.unlink()
+            link.symlink_to("tools.lnx86", target_is_directory=True)
+
+    monkeypatch.setattr(repair, "emit", emit)
+    reason = {"mode": "completion_metadata", "acl": "completion_metadata",
+              "contents": "completion_protected_drift", "link": "link_drift"}[drift]
+    with pytest.raises(ValueError, match=reason):
+        repair.mutate(request)
+    assert all(event["event"] != "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o755
+    if drift != "contents":
+        assert target.read_bytes() == before_content

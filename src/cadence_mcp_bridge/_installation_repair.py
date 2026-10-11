@@ -89,27 +89,43 @@ def acl(fd):
 def snapshot(path):
     fd = open_fixed(path)
     try:
-        info = os.fstat(fd)
-        if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
-            raise ValueError("file_type")
-        result = {
-            "path": path, "dev": info.st_dev, "ino": info.st_ino,
-            "uid": info.st_uid, "gid": info.st_gid,
-            "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
-            "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
-            "mode": stat.S_IMODE(info.st_mode),
-            "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
-            "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
-            "acl": acl(fd),
-        }
-        check = os.lstat(path)
-        if (check.st_dev, check.st_ino, check.st_mode) != (
-            info.st_dev, info.st_ino, info.st_mode
-        ) or os.path.realpath(path) != path:
-            raise ValueError("race")
-        return result
+        return snapshot_descriptor(path, fd)
     finally:
         os.close(fd)
+
+
+def snapshot_descriptor(path, fd):
+    info = os.fstat(fd)
+    if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+        raise ValueError("file_type")
+    result = {
+        "path": path, "dev": info.st_dev, "ino": info.st_ino,
+        "uid": info.st_uid, "gid": info.st_gid,
+        "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
+        "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
+        "mode": stat.S_IMODE(info.st_mode),
+        "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
+        "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
+        "acl": acl(fd),
+    }
+    # ACL tools run while the descriptor is held. Reject changes during that
+    # observation, including restored mtimes or unchanged file length.
+    trailing = os.fstat(fd)
+    stability = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                 "st_size", "st_mtime", "st_ctime")
+    if any(getattr(info, key) != getattr(trailing, key) for key in stability):
+        raise ValueError("snapshot_race")
+    if result["sha256"] is not None and file_hash(fd) != result["sha256"]:
+        raise ValueError("snapshot_race")
+    final = os.fstat(fd)
+    if any(getattr(trailing, key) != getattr(final, key) for key in stability):
+        raise ValueError("snapshot_race")
+    check = os.lstat(path)
+    if (check.st_dev, check.st_ino, check.st_mode) != (
+        info.st_dev, info.st_ino, info.st_mode
+    ) or os.path.realpath(path) != path:
+        raise ValueError("race")
+    return result
 
 
 def normalize_acl(value):
@@ -138,10 +154,19 @@ def chmod_acl(before, mode):
     has_mask = any(line.startswith("mask::") for line in lines)
     result = []
     for line in lines:
-        if line.startswith("other::"):
-            line = "other::" + line.split(":")[-1].replace("w", "-")
-        elif line.startswith("mask::") or (not has_mask and line.startswith("group::")):
-            line = line.rsplit(":", 1)[0] + ":" + line.split(":")[-1].replace("w", "-")
+        role = line.split(":", 1)[0]
+        shift = None
+        if line.startswith("user::"):
+            shift = 6
+        elif line.startswith("other::"):
+            shift = 0
+        elif role == "mask" or (not has_mask and line.startswith("group::")):
+            shift = 3
+        if shift is not None:
+            bits = (mode >> shift) & 7
+            perms = "".join(flag if bits & bit else "-"
+                            for flag, bit in (("r", 4), ("w", 2), ("x", 1)))
+            line = line.rsplit(":", 1)[0] + ":" + perms
         result.append(line)
     return "\n".join(result) + "\n"
 
@@ -160,6 +185,7 @@ def plan(request):
     if paths != sorted(set(paths)):
         raise ValueError("duplicate_or_unsorted")
     records = []
+    record_bytes = 0
     for path in paths:
         valid_path(path)
         if not any(inside(path, root) for root in roots):
@@ -172,6 +198,9 @@ def plan(request):
         record["after_mode"] = record["mode"] & ~18
         record["after_acl"] = restricted_acl(record["acl"])
         record["reason"] = "remove_shared_code_write_preserve_content_owner_rx"
+        record_bytes += len(canonical(record)) + 1
+        if record_bytes > LIMIT:
+            raise ValueError("inventory_serialized_limit")
         records.append(record)
     for link in request["links"]:
         if set(link) != set(("path", "target", "resolved")):
@@ -189,7 +218,40 @@ def plan(request):
         "operation": "remove_022_and_default_acl_writes",
         "content_authority": "NONE", "execution_authorized": False,
     }
-    return {"plan": result, "plan_sha256": digest(result)}
+    return bounded_inventory({"plan": result, "plan_sha256": digest(result)})
+
+
+def bounded_inventory(result):
+    # Count the actual whole response including its terminal newline, and leave
+    # room for the largest allowed authority string in a canonical apply/rollback
+    # request. Individual target/ACL bounds alone do not bound the full plan.
+    request = {"plan": result["plan"], "expected_plan_sha256": result["plan_sha256"],
+               "operator_authority": u"\U0001f4a5" * 512}
+    if len(canonical(result)) + 1 > LIMIT or len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("inventory_serialized_limit")
+    return result
+
+
+def verify_unlisted_ancestors(roots):
+    # These directories are deliberately outside the exact mutation recipe.
+    # Check them read-only, including /, rather than silently expanding targets.
+    ancestors = set()
+    for root in roots:
+        parent = os.path.dirname(root)
+        while True:
+            ancestors.add(parent)
+            if parent == "/":
+                break
+            parent = os.path.dirname(parent)
+    for path in sorted(ancestors):
+        fd = (os.open("/", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY)
+              if path == "/" else open_fixed(path))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISDIR(info.st_mode) or info.st_mode & 18:
+                raise ValueError("unlisted_ancestor_trust")
+        finally:
+            os.close(fd)
 
 
 def emit(value):
@@ -204,6 +266,23 @@ def metadata_equal(key, before, after):
         before = "%.17g" % before if isinstance(before, float) else before
         after = "%.17g" % after if isinstance(after, float) else after
     return before == after
+
+
+def verify_completed_targets(original, rollback):
+    # Recompute the whole exact recipe so skipped and previously processed targets
+    # cannot escape final content/identity/ACL checks. plan() also rechecks links.
+    final = plan(original["scope"])["plan"]
+    if len(final["records"]) != len(original["records"]):
+        raise ValueError("completion_record_count")
+    for old, now in zip(original["records"], final["records"]):
+        invariant = ("path", "dev", "ino", "uid", "gid", "kind",
+                     "sha256", "size", "mtime", "reason")
+        if any(not metadata_equal(key, old[key], now[key]) for key in invariant):
+            raise ValueError("completion_protected_drift")
+        target_mode = old["mode"] if rollback else old["after_mode"]
+        target_acl = old["acl"] if rollback else old["after_acl"]
+        if now["mode"] != target_mode or normalize_acl(now["acl"]) != normalize_acl(target_acl):
+            raise ValueError("completion_metadata")
 
 
 def _mutate_locked(request, rollback=False):
@@ -235,7 +314,10 @@ def _mutate_locked(request, rollback=False):
         intermediate = (now["mode"] == old["after_mode"] and
                         normalize_acl(now["acl"]) ==
                         normalize_acl(chmod_acl(old["acl"], old["after_mode"])))
-        if not (before or after or intermediate):
+        rollback_intermediate = (rollback and now["mode"] == old["mode"] and
+            normalize_acl(now["acl"]) ==
+            normalize_acl(chmod_acl(old["after_acl"], old["mode"])))
+        if not (before or after or intermediate or rollback_intermediate):
             raise ValueError("unexpected_metadata")
         allowed.append((old, now, before, after))
     emit({"event": "validated", "plan_sha256": request["expected_plan_sha256"],
@@ -257,6 +339,14 @@ def _mutate_locked(request, rollback=False):
                 raise ValueError("prechange_identity")
             if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
                 raise ValueError("prechange_hardlink")
+            held = snapshot_descriptor(old["path"], fd)
+            if any(not metadata_equal(key, held[key], now[key]) for key in held
+                   if key != "acl") or normalize_acl(held["acl"]) != normalize_acl(now["acl"]):
+                raise ValueError("prechange_descriptor_drift")
+            # Recipe discovery precedes the resource lock; unrelated filesystem
+            # tools do not obey that lock. Recheck omitted trust ancestors at
+            # the last held-target observation before each metadata mutation.
+            verify_unlisted_ancestors(original["scope"]["installation_roots"])
             os.fchmod(fd, target_mode)
             if normalize_acl(acl(fd)) != normalize_acl(target_acl):
                 proc = subprocess.Popen(
@@ -276,12 +366,19 @@ def _mutate_locked(request, rollback=False):
             raise ValueError("postchange_metadata")
         changes += 1
         emit({"event": "changed", "before": now, "after": final})
+    # Also cover drift after the last change and idempotent/no-op application.
+    # Reobserve all exact targets and links, not only the omitted ancestor chain.
+    verify_completed_targets(original, rollback)
+    # Unsafe outside-scope ancestors remain untouched and cannot yield completion.
+    verify_unlisted_ancestors(original["scope"]["installation_roots"])
     emit({"event": "complete", "changed": changes, "content_preserved": True,
           "owner_group_preserved": True, "execution_authorized": False})
 
 
 
 def mutate(request, rollback=False):
+    if len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("request_limit")
     original = request["plan"]
     if original.get("schema_version") != 2 or original.get("recipe_id") != "standard-vm-trust-v1":
         raise ValueError("fixed_profile_recipe_required")
@@ -314,6 +411,16 @@ def mutate(request, rollback=False):
     finally:
         os.close(fd)
 
+
+
+def common_installation_root(ic, ms):
+    # commonprefix compares characters; vendor root names can share a prefix.
+    components = []
+    for left, right in zip(ic.split("/"), ms.split("/")):
+        if left != right:
+            break
+        components.append(left)
+    return "/".join(components) or "/"
 
 
 def inventory(profile):
@@ -359,7 +466,7 @@ def inventory(profile):
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
-    base = os.path.commonprefix([ic + "/", ms + "/"]).rstrip("/")
+    base = common_installation_root(ic, ms)
     if not os.path.isdir(base) or base.count("/") < 2:
         raise ValueError("installation_common_root")
     protected = profile["paths"]["protected_roots"]
@@ -427,6 +534,7 @@ def inventory(profile):
     # never its contents, is selected, and healthy metadata remains a no-op.
     paths.add(workspace)
     mutation_roots = [base, workspace]
+    verify_unlisted_ancestors(mutation_roots)
     result = plan({"installation_roots": mutation_roots, "paths": sorted(paths),
                    "links": sorted(links.values(), key=lambda x: x["path"]),
                    "profile_sha256": digest(profile),
@@ -438,7 +546,7 @@ def inventory(profile):
     result["readonly_compatibility_links"] = external
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
     result["native_runtime_attestation"] = "NOT_ATTESTED"
-    return result
+    return bounded_inventory(result)
 
 
 def main():

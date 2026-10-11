@@ -392,19 +392,19 @@ def test_operator_activation_coexists_and_repeat_preserves_history(operator_boun
 
 def test_operator_partial_activation_resumes_exact_launcher(operator_bound, monkeypatch):
     _, target, digest = operator_bound
-    original = installer.exclusive
+    original = installer._publish_operator_state
 
-    def interrupted(path, content, mode=384):
+    def interrupted(path, value):
         if path.endswith("active-operator-runner.json"):
             raise OSError("simulated interruption before pointer")
-        return original(path, content, mode)
+        return original(path, value)
 
-    monkeypatch.setattr(installer, "exclusive", interrupted)
+    monkeypatch.setattr(installer, "_publish_operator_state", interrupted)
     with pytest.raises(OSError, match="interruption"):
         installer.operator_activation(str(target), digest)
     assert (target / "bin/cadence-operator-runner").exists()
     assert not (target / "active-operator-runner.json").exists()
-    monkeypatch.setattr(installer, "exclusive", original)
+    monkeypatch.setattr(installer, "_publish_operator_state", original)
     assert (
         installer.operator_activation(str(target), digest)["status"]
         == "OPERATOR_ACTIVATION_RECORDED_NOT_QUALIFIED"
@@ -434,6 +434,198 @@ def test_operator_deactivation_is_repeatable_preserves_bytes_and_blocks_reactiva
     with pytest.raises(ValueError, match="operator_runner_revoked"):
         installer.operator_activation(str(target), digest)
     assert (target / "runner-revoked.json").read_bytes() == b"historical-revocation"
+
+
+def test_operator_deactivation_syncs_file_and_directory_before_success(operator_bound, monkeypatch):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX revocation directory durability")
+    _, target, digest = operator_bound
+    installer.operator_activation(str(target), digest)
+    original_fsync = os.fsync
+    directory_identity = (target.stat().st_dev, target.stat().st_ino)
+    synced = []
+
+    def observed_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            assert (info.st_dev, info.st_ino) == directory_identity
+            synced.append("managed_directory")
+        else:
+            assert stat.S_ISREG(info.st_mode)
+            synced.append("revocation_file")
+        original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", observed_fsync)
+    expected = {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert synced == [
+        "revocation_file",
+        "managed_directory",
+        "managed_directory",
+        "managed_directory",
+    ]
+    revoked = target / "operator-runner-revoked.json"
+    contents = revoked.read_bytes()
+    identity = (revoked.stat().st_dev, revoked.stat().st_ino)
+    synced.clear()
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert synced == ["managed_directory"]
+    assert revoked.read_bytes() == contents
+    assert (revoked.stat().st_dev, revoked.stat().st_ino) == identity
+
+
+@pytest.mark.parametrize("already_exists", [False, True])
+def test_operator_deactivation_directory_sync_failure_preserves_and_recovers(
+    operator_bound, monkeypatch, already_exists
+):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX revocation directory durability")
+    _, target, digest = operator_bound
+    installer.operator_activation(str(target), digest)
+    if already_exists:
+        installer.operator_deactivate(str(target), digest)
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    original_fsync = os.fsync
+    directory_identity = (target.stat().st_dev, target.stat().st_ino)
+    attempted = []
+
+    def interrupted_fsync(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            assert (info.st_dev, info.st_ino) == directory_identity
+            attempted.append("managed_directory")
+            if already_exists or attempted.count("managed_directory") == 2:
+                raise OSError("simulated directory sync failure before success")
+            return original_fsync(fd)
+        attempted.append("revocation_file")
+        original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", interrupted_fsync)
+    with pytest.raises(OSError, match="directory sync failure before success"):
+        installer.operator_deactivate(str(target), digest)
+    assert attempted == (
+        ["managed_directory"]
+        if already_exists
+        else ["revocation_file", "managed_directory", "managed_directory"]
+    )
+    for name, content in before.items():
+        assert (target / name).read_bytes() == content
+    revoked = target / "operator-runner-revoked.json"
+    assert revoked.read_bytes() == (target / "active-operator-runner.json").read_bytes()
+    retained = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    identity = (revoked.stat().st_dev, revoked.stat().st_ino)
+    monkeypatch.setattr(os, "fsync", original_fsync)
+    expected = {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert installer.operator_deactivate(str(target), digest) == expected
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == retained
+    assert (revoked.stat().st_dev, revoked.stat().st_ino) == identity
+    with pytest.raises(ValueError, match="operator_runner_revoked"):
+        installer.operator_activation(str(target), digest)
+
+
+@pytest.mark.parametrize("action", ["activate", "deactivate"])
+@pytest.mark.parametrize("failure", ["write", "fsync", "publish"])
+def test_operator_state_inside_write_failure_retains_candidate_and_recovers(
+    operator_bound, monkeypatch, action, failure
+):
+    _, target, digest = operator_bound
+    if action == "deactivate":
+        installer.operator_activation(str(target), digest)
+    else:
+        # The interrupted record follows the complete launcher, as in known recovery.
+        installer.exclusive(
+            str(target / "bin/cadence-operator-runner"),
+            (target / "runtime" / digest / "launcher.py").read_bytes(),
+            0o700,
+        )
+    name = "active-operator-runner.json" if action == "activate" else "operator-runner-revoked.json"
+    final = target / name
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    function = (
+        installer.operator_activation if action == "activate" else installer.operator_deactivate
+    )
+    original_write, original_fsync, original_rename = (
+        installer.os.write,
+        installer.os.fsync,
+        installer.os.rename,
+    )
+
+    def interrupted_write(fd, raw):
+        if failure == "write":
+            original_write(fd, raw[:7])
+            raise OSError("simulated partial state write")
+        return original_write(fd, raw)
+
+    def interrupted_fsync(fd):
+        if failure == "fsync":
+            raise OSError("simulated state fsync failure")
+        return original_fsync(fd)
+
+    def interrupted_publish(source, destination):
+        if failure == "publish":
+            raise OSError("simulated state publication failure")
+        return original_rename(source, destination)
+
+    monkeypatch.setattr(installer.os, "write", interrupted_write)
+    monkeypatch.setattr(installer.os, "fsync", interrupted_fsync)
+    monkeypatch.setattr(installer.os, "rename", interrupted_publish)
+    with pytest.raises(OSError, match="simulated"):
+        function(str(target), digest)
+    assert not final.exists()
+    candidates = list(target.glob(".operator-state-*"))
+    assert len(candidates) == 1
+    retained = {p.name: p.read_bytes() for p in candidates}
+    if failure == "write":
+        assert len(candidates[0].read_bytes()) == 7
+    for path, raw in before.items():
+        assert (target / path).read_bytes() == raw
+    monkeypatch.setattr(installer.os, "write", original_write)
+    monkeypatch.setattr(installer.os, "fsync", original_fsync)
+    monkeypatch.setattr(installer.os, "rename", original_rename)
+    result = function(str(target), digest)
+    assert result["execution_authorized"] is False
+    inode = (final.stat().st_dev, final.stat().st_ino)
+    function(str(target), digest)
+    assert (final.stat().st_dev, final.stat().st_ino) == inode
+    assert {p.name: p.read_bytes() for p in target.glob(".operator-state-*")} == retained
+    expected = installer.canonical({"schema_version": 1, "manifest_sha256": digest})
+    assert final.read_bytes() == expected
+
+
+@pytest.mark.parametrize("action", ["activate", "deactivate"])
+def test_operator_state_publish_collision_preserves_unrelated_marker(
+    operator_bound, monkeypatch, action
+):
+    _, target, digest = operator_bound
+    if action == "deactivate":
+        installer.operator_activation(str(target), digest)
+    name = "active-operator-runner.json" if action == "activate" else "operator-runner-revoked.json"
+    final = target / name
+    original_write = installer.os.write
+
+    def colliding_write(fd, raw):
+        wrote = original_write(fd, raw)
+        final.write_bytes(b"unrelated marker")
+        final.chmod(0o600)
+        return wrote
+
+    monkeypatch.setattr(installer.os, "write", colliding_write)
+    function = (
+        installer.operator_activation if action == "activate" else installer.operator_deactivate
+    )
+    with pytest.raises(ValueError, match="operator_state_publish_conflict"):
+        function(str(target), digest)
+    assert final.read_bytes() == b"unrelated marker"
+    assert len(list(target.glob(".operator-state-*"))) == 1
 
 
 def test_operator_wrong_manifest_and_active_jobs_deny_before_writes(operator_bound):

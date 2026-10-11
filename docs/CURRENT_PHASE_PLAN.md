@@ -1,3 +1,260 @@
+## Atomic operator state and exact parent integration, 2026-10-11
+
+Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
+repair parent 9c311b0a6c14d06bb5abc92bb59ec1039497e339 and atomic operator-state
+correction 14e7e0c. Initial active-pointer and revocation publication now writes a
+private mode-600 exclusive candidate under the existing lifetime resource lock,
+handles short writes, fsyncs the file and directory, checks complete bytes and
+absence of a conflicting final marker, then renames and fsyncs the directory.
+Failed candidates remain evidence; an exact retry uses a new candidate, and
+repeating a completed marker preserves its inode. General exclusive export and
+historical launcher-collision behavior remain unchanged. This is the existing
+trusted-owner/lock contract, not protection against hostile same-UID editing.
+
+Related tests: 273 PASS / 28 Windows platform skips in 40.74s; Ruff/mypy 72 files,
+security 18, strict locked audit and 85-schema compatibility PASS. New activation
+and deactivation tests interrupt writes, file fsync and publication, preserve
+partial candidates and unrelated final collisions, and recover exact requests.
+POSIX directory barriers run in the Ubuntu operator suite; Windows synthetic
+evidence does not attest native POSIX behavior. Exact installed CLI/SDK/bootstrap,
+reinstall and uninstall preserve 43 disposable synthetic state files.
+
+Audited wheel (80 members) SHA256:
+80de927e51d66c64978ef85f6dcfc5fde04cf683ac5327c5ee1c25ba27e5c85f;
+sdist (81 members):
+63afe42904a73c686a02eb6d1a06113301749042546cc7242007c6ff353d4ce1.
+Shipped installer SHA256:
+1627bf45fd93c738830ea64f33a1fe3eea2a50032151e7b7a33f42f14f1e8425 (20,979 bytes);
+repair/modeltrust helper:
+8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+These are test artifacts, not an accepted release candidate. Exact final hosted
+checks and fresh review remain pending. A native bundle with these changed assets
+requires renewed exact qualification; bf6c20 and all prior evidence are retained.
+
+General private transport remains 256 KiB; repair inventory alone uses 16 MiB.
+This integration performs 0 VM contacts, administrator changes, simulations or
+reservations. Existing real consumption, journals, replay and protected originals
+remain preserved. Direct 16 GiB / 500 / 20, continuous GREL02-08 and conditional
+normal related feature-PR merge authority persist. Exact public tag/Release/upload
+still requires final user approval. Earlier receipts remain source-scoped history.
+
+## Whole-target completion integrity correction, 2026-10-11
+
+Fresh PR148 review found no-op targets and already processed targets could drift
+after their earlier observation without preventing a complete receipt. The helper
+now recomputes the whole exact recipe immediately before completion. Every target's
+content/hash, identity, owner/group, size/mtime, requested mode and normalized ACL
+must match; original links are revalidated by the recipe. Partial receipts remain
+preserved on rejection. Omitted-ancestor rechecks, mutation scope, caps and explicit
+authority remain unchanged; outside administrator activity is not made atomic.
+Twelve portable completion cases cover apply/rollback, protected and metadata drift
+and record count. Eight owned Linux cases cover no-op/previously processed mode,
+ACL, content and same-resolution link drift, requiring rejection without complete.
+Local169 relevant tests PASS/26 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist license/
+content audit and installed CLI/SDK/bootstrap/reinstall/uninstall32-state
+preservation PASS. Retained wheel SHA256 is68f6e31be5e403237e9ec77f1408fe6f45646a850d487786c8f53b6aac9b4083;
+helper SHA256 is8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+Final hosted Linux/Windows and refreshed independent review remain pending. Prior
+installed eb62 current-VM UID500 read-only inventory PASS (332 targets,0 changes,
+173064-byte response, historical exact targets/content/metadata preserved) remains
+that source's evidence. Updated helper/modeltrust needs exact installed/current-VM
+qualification; preserve bf6c20 and all prior bundles/results.
+Root's latest actual ledger observation is102 attempts/12,483,297,280 reserved
+bytes. Earlier94 and82 snapshots below are history. This fix performs0 VM contacts,
+admin changes, simulations or reservations. Active16GiB/500/20, continuous GREL02-08,
+conditional normal merge and final exact-publication authorization gate persist.
+
+## Repair application ancestor race correction, 2026-10-11
+
+Fresh PR148 review identified omitted-ancestor permission drift between recipe
+inventory and application under the resource lock. The fixed helper now reopens
+and checks the no-follow ancestor chain immediately before each held-target chmod
+and before completion, including idempotent/no-op apply and rollback. Unsafe
+outside-scope paths reject without adding mutation targets; drift after an actual
+change retains partial receipts and cannot produce a complete event. This does not
+make concurrent administrator filesystem activity atomic; the operator must
+stabilize the external ancestor and resume the preserved exact plan.
+Portable apply/rollback regressions cover prechange, postchange and no-op drift.
+Complete owned Linux fixtures exercise recipe-to-lock and held-target races plus
+postchange/no-op rejection without modifying omitted ancestors through the helper.
+Local157 relevant checks PASS/18 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist distribution,
+installed CLI/SDK/bootstrap and reinstall/uninstall32-state preservation PASS.
+Retained wheel SHA256 is54807b0e4d181ed9d6b9e62ac1340b4aa9f014bf332e0b9bdefb1fa5c6de9495;
+helper SHA256 is9a6da270a65bdffaa2b50369ea862ec35b6c61f427fbea05e56e24ec036626cf.
+Final hosted Linux/Windows, refreshed review and actual standard-VM read-only
+inventory remain pending. modeltrust helper bytes change again; preserve
+bf6c20 and all earlier evidence until exact updated native qualification. This fix
+adds0 VM contacts/admin changes/simulations/reservations. Current16GiB/500/20,
+continuous GREL02-08, conditional normal merge and exact-publication gate persist.
+
+## PR148/149 integrated-source receipt, 2026-10-11
+
+Normal merge c649853d5b1a36f41818badda3150b8fcd650650 incorporates parent
+3360d0e5c0f1af28140475516f1861b54db9fb68 and operator revocation durability
+correction a2fc3d880aafdf845b35ff30ae8e3cc27b3d982e. Both documentation histories
+are retained. Integrated related235 checks PASS/16 Windows platform skips;
+Ruff/mypy72, security18/locked audit/85-schema compatibility and installed43-state
+package/reinstall/uninstall preservation PASS. Audited wheel80 members SHA256
+80a40eebc288e8368dec463f6f3baad641a610d7d3e86e5cfd531ac49272fa86;
+sdist81 members af5a65792553ec2a7afb5cb5906f06d0abfa625292a699848346b90618585f0c.
+These are test artifact identities, not an accepted release candidate. Exact hosted
+checks and independent review remain pending. A subsequent parent review identified
+another omitted-ancestor race whose correction still needs normal integration and
+renewed qualification. Updated installer/modeltrust bytes have no current-VM
+qualification in this receipt; prior native bundle/evidence remains preserved.
+This integration has0 VM contacts/admin changes/simulations/reservations and does
+not grant publication authority. Earlier source-scoped receipts remain history.
+
+## Operator revocation directory durability, 2026-10-11
+
+PR149's final P2 found that an fsynced revocation file could lose its directory
+entry after power loss. Operator deactivation now fsyncs the managed directory
+before reporting success, including an exact existing marker left by interruption.
+A failed directory sync propagates; retry retains the original marker inode,
+active pointer, historical versions and resource state, then repeats the barrier.
+The existing resource lock, identity/permissions checks and drift rejection remain.
+
+Local related226 tests PASS/15 Windows platform skips, Ruff/mypy72, security18,
+locked dependency audit and85-schema compatibility PASS. The three new POSIX
+regressions inspect real fsync descriptors/order and inject new/existing-marker
+sync failure before success, then verify recovery/repeat without replacement.
+They run in the existing Ubuntu operator CI; exact hosted checks and independent
+review of this final source remain pending. Matching curated artifacts and isolated
+installed protocol/bootstrap/coexistence/reinstall/uninstall preserve43 synthetic
+state files. Synthetic/Windows evidence does not attest native POSIX durability.
+
+The shipped installer bytes change; any later native bundle containing this helper
+requires its own exact hash/qualification. Worker, launcher, profile and shared
+reservation assets are unchanged. This correction performs0 VM contacts, metadata
+changes, simulations or reservations; existing real journals/ledger/replay remain.
+Direct16GiB/500/20, continuous GREL02-08 and conditional normal feature-PR merge
+authority persist. Release is still blocked; exact public tag/Release/upload needs
+final user approval. Prior dated boundaries and observations below are history.
+
+## Whole repair protocol and omitted ancestor checks, 2026-10-11
+
+Fresh PR148 review found valid large-ACL plans exceeding the whole16MiB protocol
+and unsafe ancestors above the fixed vendor base being omitted. The standalone
+helper now bounds aggregate records, the complete inventory response and canonical
+apply/rollback envelope (including newline and maximum allowed authority text)
+before action. Oversized plans fail closed rather than expanding the private cap.
+Unlisted ancestors above vendor/workspace roots are checked read-only through
+no-follow descriptors to/. Unsafe ancestors reject; exact repair targets and their
+content/owner protection do not expand to user or system ancestor trees.
+Local167 relevant checks PASS/10 Windows POSIX skips; Ruff/mypy72 and isolated
+package/CLI/bootstrap/reinstall/uninstall32-state preservation PASS. Complete Linux
+synthetic recipe coverage checks the omitted writable ancestor without changing it,
+then proves healthy ancestors stay outside the target set. Exact current-VM
+read-only inventory, hosted checks and final independent review remain pending.
+The helper is also shipped as native modeltrust.py, so its bytes change. Preserve
+bf6c20 and prior runtime evidence; qualify the exact updated native bundle before
+candidate acceptance. This fix performs0 VM contacts/admin changes/simulations/
+reservations. Earlier observations remain history; active16GiB/500/20, continuous
+GREL02-08 and conditional normal merge authority and exact-publication gate persist.
+
+## Real repair transport boundary correction, 2026-10-11
+
+Final PR148 review found that bootstrap's16MiB request still met the general
+transport's256KiB ceiling before SSH. Repair planning now uses a dedicated internal
+16MiB/60-second inventory transport. General fixed calls retain their256KiB ceiling
+and32KiB default, strict host keys and bounded pipes. No public MCP input or tool
+is added; planning remains read-only and exclusive, without approval creation.
+The profile-bound small/large inventory tests now run the real transport against
+owned synthetic child processes. Exact16MiB output succeeds; oversized input,
+stdout and stderr reject. Related71 tests PASS/9 Windows POSIX skips; Ruff/mypy72,
+security18/locked dependency audit and85-schema compatibility PASS. Exact isolated
+package build/installed CLI/bootstrap/reinstall/uninstall preserves32 synthetic
+state files. Exact final hosted checks and refreshed independent review are pending.
+This host-only fix changes no native worker/helper bytes and performs0 VM contacts,
+admin changes, simulations or reservations. Earlier ledger snapshots remain
+historical; admission must read the latest actual ledger. Direct16GiB/GREL02-08/
+conditional normal merge authority and exact-publication approval gate remain.
+
+## Repair inventory transport-bound correction, 2026-10-09
+
+Latest review found inventory responses larger than256KiB blocked despite the
+fixed helper's16MiB request/plan protocol. The private bounded transport now uses
+the same16MiB ceiling; timeout/host-key checks and exclusive output remain. Large
+synthetic inventories over256KiB preserve exact plan/profile binding, while the
+transport retains a finite cap. This host-only bootstrap change does not modify
+native worker/model-trust assets or authorize remote metadata mutation.
+Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact installed
+32-state preservation pass. Final exact hosted/final review remains pending.
+Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
+0 new simulations/reservations/admin changes in this PR qualification.
+
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
+
+## Descriptor snapshot stability correction, 2026-10-09
+
+The subsequent review identified content/metadata change during ACL collection.
+Held snapshots now check trailing stat including ctime, repeat the content hash
+and check final descriptor stability. Same-length content replacement followed
+by restored original mtime during ACL observation rejects before chmod. Actual
+UID500/Python2.6 synthetic interruption/repeat and4 descriptor races pass; real
+ledger94/11,409,555,456 unchanged. Local59 checks/9 Windows POSIX skips plus
+Ruff/mypy72 pass. Exact installed32-state package preservation passes; final hosted review/CI
+pending for this source; no vendor/admin/simulation change. Existing authority/publication
+gate and all prior evidence remain preserved.
+
+## Held-descriptor integrity correction, 2026-10-09
+
+A subsequent independent review found path snapshot/final-open ACL race exposure.
+The helper now reobserves all protected content/identity/mtime/mode and normalized
+ACL on the held descriptor immediately before chmod. Unreviewed named/default
+ACL or content drift rejects before any metadata mutation. Three Linux race
+regressions and actual UID500/Python2.6 synthetic races pass; apply/rollback
+interruption/repeat still restores original fixture metadata/content. Actual
+ledger94/11,409,555,456 remains unchanged; no vendor/admin/simulation changes.
+Local59 checks/8 Windows POSIX skips, Ruff/mypy72 and exact installed32-state
+preservation pass. Final exact-head hosted review/CI remain pending. Current
+direct16GiB/GREL02-08/conditional merge authority and exact-publication gate persist.
+
+## Exact rollback interruption recovery, 2026-10-09
+
+The latest review of3b678d2 found an interrupted rollback metadata state missing
+from the fixed helper. Chmod now computes access owner/mask-or-group/other bits
+from the exact requested mode while preserving named/default entries. Only
+rollback accepts the exact original-mode/restricted-ACL intermediate state;
+unexpected metadata and all protected content/identity drift still reject.
+The Linux fixture interrupts both apply and rollback, resumes and repeats each,
+then checks original contents and metadata. Local59 repair/bootstrap checks pass/
+5 Windows skips; Ruff/mypy72 pass. Actual UID500/Python2.6 synthetic apply/rollback
+interruption/repeat restores exact contents/ACL/mode/identity, with the real94/
+11,409,555,456-byte ledger unchanged. This is not a new vendor metadata repair.
+Exact installed32-state package preservation passes; final hosted review/CI
+remain pending for this source.
+
+Latest main98710153a167e103c2955b1c5c82612eb2864038 includes normal PR142-147
+merges. Existing16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues; public exact-candidate approval remains required. Prior receipts and
+policies are historical and retained. No new simulation/reservation/admin change.
+
+## Component-aware installation boundary correction, 2026-10-09
+
+The fixed repair recipe now derives the installation base from path components,
+so sibling vendor roots whose names share a prefix keep both IC/OCEAN and MMSIM/
+Spectre targets in scope. The exact profile/executable hashes, role-specific seed
+list, no-follow descriptors, ACL/content/owner checks and bounded mutation remain.
+Local58 repair/bootstrap tests pass with5 Windows OS skips; Ruff/mypy72 and exact
+installed32-state conservation pass. Current authoritative16GiB/GREL02-08 and
+conditional normal merge overlay remains;82-attempt repair evidence is historical.
+Final exact-head hosted checks and independent review are pending. No new remote
+repair, simulation or reservation; actual generic release acceptance is separate.
+
 ## Retained ID serialized-capacity correction, 2026-10-09
 
 Migration inventories retain up to the bounded2048-entry scan capacity, then
@@ -31,7 +288,7 @@ before unique sample selection. The quarter-gap bound remains disjoint; missing
 boundaries and collapsed serialized grids still reject before execution. Both
 reviewer counterexamples pass compile/projection regression, with both endpoints
 selected. Local352 tests/4 POSIX skips, Ruff/mypy71 and exact isolated wheel/sdist/
-installed32-state preservation pass. Final hosted checks and review are refreshed.
+installed32-state preservation pass. Final exact-head hosted checks and independent review are pending.
 No new native deployment, simulation or reservation; publication remains blocked.
 Earlier receipts below retain their historical source scope.
 
