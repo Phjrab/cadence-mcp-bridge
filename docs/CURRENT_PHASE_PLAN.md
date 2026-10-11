@@ -1,3 +1,13 @@
+## Retained manifest-bound migration entry, 2026-10-11
+
+Fresh finding4240529796 identified a second installed-resource read between
+helper manifest binding and transport. prepare/apply now retain the entry source
+from the exact manifest-bound exported launcher and pass it directly to transport.
+No later resource/path read can substitute executing -c bytes. A portable package
+replacement regression rejects any reopened resource and checks exact retained
+source delivery. Windows42 PASS/5 POSIX skips; Ruff/mypy76 PASS. Actual VM/ledger/
+metadata and reservations remain unchanged; final updated exact gates apply.
+
 ## Executing migration byte binding, 2026-10-11
 
 Independent finding4240481575 is addressed by a package-supplied fixed Python
