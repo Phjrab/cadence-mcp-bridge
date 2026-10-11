@@ -1169,3 +1169,201 @@ def test_actual_receipt_namespace_rechecked_after_read_and_durability(
     assert renamed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
     assert (detached / receipt.name).read_bytes() == preserved
     assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("syscall", ["file-fsync", "directory-fsync"])
+@pytest.mark.parametrize("drift", ["rename", "unlink", "replace", "contents"])
+def test_actual_receipt_file_rechecked_after_durability(
+    actual_recipe_layout, monkeypatch, rollback, syscall, drift
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    receipt = _receipt_path(prepared)
+    original = receipt.read_bytes()
+    inode, directory_inode = receipt.stat().st_ino, receipt.parent.stat().st_ino
+    original_fsync, original_receipt = os.fsync, repair.read_receipt
+    calls, active, changed = 0, False, False
+    events = []
+    evidence = receipt.with_name("preserved-prior-receipt.json")
+
+    def read_receipt(*args):
+        nonlocal calls, active
+        calls += 1
+        active = calls == 2
+        return original_receipt(*args)
+
+    def fsync(fd):
+        nonlocal changed
+        expected = inode if syscall == "file-fsync" else directory_inode
+        if active and not changed and os.fstat(fd).st_ino == expected:
+            changed = True
+            if drift == "contents":
+                before = receipt.stat()
+                receipt.chmod(0o600)
+                receipt.write_bytes(original.replace(b"observed-before", b"fabricat-before"))
+                receipt.chmod(0o400)
+                os.utime(receipt, ns=(before.st_atime_ns, before.st_mtime_ns))
+            elif drift == "unlink":
+                # Retain fixture evidence separately before simulating external
+                # unlink; the production helper never deletes failed receipts.
+                evidence.write_bytes(original)
+                receipt.unlink()
+            else:
+                receipt.rename(evidence)
+                if drift == "replace":
+                    receipt.write_bytes(original)
+                    receipt.chmod(0o400)
+        return original_fsync(fd)
+
+    monkeypatch.setattr(repair, "read_receipt", read_receipt)
+    monkeypatch.setattr(repair.os, "fsync", fsync)
+    monkeypatch.setattr(repair, "emit", events.append)
+    with pytest.raises(
+        ValueError, match="repair_receipt_race|repair_receipt_binding|repair_receipt_directory_race"
+    ):
+        repair.mutate(request, rollback)
+    assert changed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert not any(event["event"] in ("changed", "complete") for event in events)
+    if drift != "contents":
+        assert evidence.read_bytes() == original
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("syscall", ["file-fsync", "directory-fsync"])
+@pytest.mark.parametrize("ancestor", ["unlisted-middle", "selected-workspace"])
+def test_actual_receipt_named_parent_chain_rechecked_after_durability(
+    actual_recipe_layout, monkeypatch, rollback, syscall, ancestor
+):
+    shared, _, workspace, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    receipt = _receipt_path(prepared)
+    file_inode, directory_inode = receipt.stat().st_ino, receipt.parent.stat().st_ino
+    real_fsync, real_receipt = os.fsync, repair.read_receipt
+    calls, active, changed = 0, False, False
+    events = []
+
+    def read_receipt(*args):
+        nonlocal calls, active
+        calls += 1
+        active = calls == 2
+        return real_receipt(*args)
+
+    def fsync(fd):
+        nonlocal changed
+        inode = file_inode if syscall == "file-fsync" else directory_inode
+        if active and not changed and os.fstat(fd).st_ino == inode:
+            changed = True
+            (shared if ancestor == "unlisted-middle" else workspace).chmod(0o775)
+        return real_fsync(fd)
+
+    monkeypatch.setattr(repair, "read_receipt", read_receipt)
+    monkeypatch.setattr(repair.os, "fsync", fsync)
+    monkeypatch.setattr(repair, "emit", events.append)
+    with pytest.raises(
+        ValueError, match="repair_receipt_ancestor_trust|repair_receipt_ancestor_drift"
+    ):
+        repair.mutate(request, rollback)
+    assert changed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert receipt.read_bytes() == repair.receipt_bytes(prepared["plan"])
+    assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+def test_actual_receipt_allows_only_exact_planned_workspace_before_state(actual_recipe_layout):
+    _, _, workspace, paths, profile = actual_recipe_layout
+    workspace.chmod(0o777)
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    assert stat.S_IMODE(workspace.stat().st_mode) == 0o755
+    repair.mutate(request, rollback=True)
+    assert stat.S_IMODE(workspace.stat().st_mode) == 0o777
+    assert stat.S_IMODE(paths[0].stat().st_mode) == 0o777
+    assert _receipt_path(prepared).read_bytes() == repair.receipt_bytes(prepared["plan"])
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("syscall", ["file-fsync", "directory-fsync"])
+def test_actual_receipt_directory_metadata_rechecked_after_durability(
+    actual_recipe_layout, monkeypatch, rollback, syscall
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    receipt = _receipt_path(prepared)
+    file_inode, directory_inode = receipt.stat().st_ino, receipt.parent.stat().st_ino
+    real_fsync, real_receipt = os.fsync, repair.read_receipt
+    calls, active, changed = 0, False, False
+    events = []
+
+    def read_receipt(*args):
+        nonlocal calls, active
+        calls += 1
+        active = calls == 2
+        return real_receipt(*args)
+
+    def fsync(fd):
+        nonlocal changed
+        inode = file_inode if syscall == "file-fsync" else directory_inode
+        if active and not changed and os.fstat(fd).st_ino == inode:
+            changed = True
+            (receipt.parent / "preserved-external-entry").write_bytes(b"external synthetic drift")
+        return real_fsync(fd)
+
+    monkeypatch.setattr(repair, "read_receipt", read_receipt)
+    monkeypatch.setattr(repair.os, "fsync", fsync)
+    monkeypatch.setattr(repair, "emit", events.append)
+    with pytest.raises(ValueError, match="repair_receipt_directory_race"):
+        repair.mutate(request, rollback)
+    assert changed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert (receipt.parent / "preserved-external-entry").exists()
+    assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_actual_detached_managed_parent_rejected_after_named_entry_read(
+    actual_recipe_layout, monkeypatch, rollback
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    receipt = _receipt_path(prepared)
+    managed = receipt.parent.parent
+    detached = managed.with_name("preserved-detached-managed-root")
+    real_lstat, real_receipt = os.lstat, repair.read_receipt
+    calls, active, changed = 0, False, False
+    events = []
+
+    def read_receipt(*args):
+        nonlocal calls, active
+        calls += 1
+        active = calls == 2
+        return real_receipt(*args)
+
+    def lstat(path, *args, **kwargs):
+        nonlocal changed
+        result = real_lstat(path, *args, **kwargs)
+        if active and not changed and str(path).endswith("/" + receipt.parent.name):
+            changed = True
+            managed.rename(detached)
+        return result
+
+    monkeypatch.setattr(repair, "read_receipt", read_receipt)
+    monkeypatch.setattr(repair.os, "lstat", lstat)
+    monkeypatch.setattr(repair, "emit", events.append)
+    with pytest.raises((ValueError, OSError)):
+        repair.mutate(request, rollback)
+    assert changed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert (detached / receipt.parent.name / receipt.name).exists()
+    assert not any(event["event"] in ("changed", "complete") for event in events)
