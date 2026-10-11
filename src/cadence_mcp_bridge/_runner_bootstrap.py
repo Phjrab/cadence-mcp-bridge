@@ -410,9 +410,27 @@ def _retain_exact(path, data, mode=384):
     if os.path.lexists(path):
         if regular(path) != data:
             raise ValueError("operator_update_history_drift")
+        # Full bytes can remain after a failed file fsync too. Pin and resync
+        # that exact existing inode before its directory durability barrier.
+        named = os.lstat(path)
+        # Windows _commit needs a writable descriptor; no write is performed.
+        flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
+        fd = os.open(path, flags | getattr(os, "O_NOFOLLOW", 0) |
+                     getattr(os, "O_NONBLOCK", 0))
+        try:
+            held = os.fstat(fd)
+            if tuple(named) != tuple(held):
+                raise ValueError("operator_update_history_drift")
+            os.fsync(fd)
+            if (tuple(held) != tuple(os.fstat(fd)) or
+                    tuple(held) != tuple(os.lstat(path)) or regular(path) != data):
+                raise ValueError("operator_update_history_drift")
+        finally:
+            os.close(fd)
     else:
         exclusive(path, data, mode)
-        _sync_directory(os.path.dirname(path))
+    # Exact entries can survive a failed directory fsync; recovery repeats it.
+    _sync_directory(os.path.dirname(path))
 
 
 def _replace_operator_file(source, target):
@@ -445,6 +463,11 @@ def operator_preflight_update(target, expected, previous):
             os.path.join(target, "operator-runner-revoked.json")
         ):
             raise ValueError("active_or_revoked_operator_runner")
+        history = os.path.join(target, "operator-activation-history")
+        reverse = digest((expected + "-" + previous).encode("ascii"))
+        if any(os.path.lexists(os.path.join(history, reverse + suffix))
+               for suffix in (".json", ".complete.json")):
+            raise ValueError("operator_update_reverse_history")
         before = {"schema_version": 1, "manifest_sha256": previous}
         after = {"schema_version": 1, "manifest_sha256": expected}
         state = os.path.join(target, "active-operator-runner.json")
@@ -459,11 +482,10 @@ def operator_preflight_update(target, expected, previous):
             raise ValueError("operator_update_state_drift")
         if current == after and actual != new_files["launcher.py"]:
             raise ValueError("operator_update_state_drift")
-        history = os.path.join(target, "operator-activation-history")
         if not os.path.exists(history):
             os.mkdir(history, 448)
-            _sync_directory(target)
         directory(history)
+        _sync_directory(target)
         key = digest((previous + "-" + expected).encode("ascii"))
         record = {
             "schema_version": 1,
@@ -487,12 +509,13 @@ def operator_preflight_update(target, expected, previous):
             if os.name != "nt" and stat.S_IMODE(os.stat(pending).st_mode) != 448:
                 raise ValueError("operator_update_pending_permissions")
             _replace_operator_file(pending, launcher)
-            _sync_directory(os.path.dirname(launcher))
+        # Repeat after an interrupted rename/fsync even when bytes already match.
+        _sync_directory(os.path.dirname(launcher))
         if current != after:
             pending = os.path.join(target, "operator-pointer-update.pending")
             _retain_exact(pending, canonical(after))
             _replace_operator_file(pending, state)
-            _sync_directory(target)
+        _sync_directory(target)
         _retain_exact(os.path.join(history, key + ".complete.json"), canonical(record))
         return {
             "status": "OPERATOR_PREFLIGHT_UPDATE_RECORDED",

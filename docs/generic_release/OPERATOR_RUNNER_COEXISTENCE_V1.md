@@ -1,3 +1,22 @@
+## Directed preflight update and retry durability, 2026-10-11
+
+An A-to-B preflight transition now rejects a later B-to-A request when forward
+transition or completion history exists, including interrupted forward updates.
+It retains the active pointer, launcher and all history without minting reverse
+receipts. Exact retry repeats the file and parent-directory durability barriers
+for retained evidence/completion/pending records and the bin/managed-root barriers
+for an already-renamed launcher or pointer before advancing or reporting success.
+A prior fsync error is never converted to success by matching cached bytes alone.
+
+New disposable regressions cover completed/partial opposite calls, two consecutive
+failures and exact recovery at transition, launcher, pointer and completion, and
+retained-file fsync failures without inode replacement. Windows bootstrap66 PASS/
+12 platform skips. Ubuntu verifies actual repeated directory descriptors/order;
+final relevant/package/hosted checks and fresh review remain pending. These are
+source-scoped local tests, not a native activation, new EDA run or release PASS.
+Prior helper/package receipts below remain historical and are not reused as the
+exact qualification of these changed installer bytes. No VM/journal/budget change.
+
 ## Atomic operator state and exact parent integration, 2026-10-11
 
 Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest

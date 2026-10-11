@@ -937,3 +937,160 @@ def test_operator_lock_rechecks_path_after_flock(tmp_path, monkeypatch):
         installer._operator_lock(str(root))
     assert (root / "preserved-lock").read_bytes() == b"original lock"
     assert lock.read_bytes() == b"replacement lock"
+
+
+@pytest.mark.parametrize("completed", [False, True])
+def test_operator_update_rejects_opposite_transition_before_new_history(
+    operator_update_pair, monkeypatch, completed,
+):
+    _, target, previous, expected = operator_update_pair
+    original = installer._replace_operator_file
+    if not completed:
+        def interrupted(source, destination):
+            if destination.endswith("active-operator-runner.json"):
+                raise OSError("interrupted forward pointer")
+            return original(source, destination)
+        monkeypatch.setattr(installer, "_replace_operator_file", interrupted)
+        with pytest.raises(OSError, match="interrupted forward"):
+            installer.operator_preflight_update(str(target), expected, previous)
+        monkeypatch.setattr(installer, "_replace_operator_file", original)
+    else:
+        installer.operator_preflight_update(str(target), expected, previous)
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError, match="operator_update_reverse_history"):
+        installer.operator_preflight_update(str(target), previous, expected)
+    assert {
+        p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+    } == before
+    reverse = installer.digest((expected + "-" + previous).encode("ascii"))
+    assert not (target / "operator-activation-history" / (reverse + ".json")).exists()
+    assert not (target / "operator-activation-history" / (reverse + ".complete.json")).exists()
+
+
+@pytest.mark.parametrize("phase", ["transition", "launcher", "pointer", "completion"])
+def test_operator_update_retries_failed_durability_barrier_before_advancing(
+    operator_update_pair, monkeypatch, phase,
+):
+    _, target, previous, expected = operator_update_pair
+    history = target / "operator-activation-history"
+    key = installer.digest((previous + "-" + expected).encode("ascii"))
+    evidence = history / (key + ".json")
+    complete = history / (key + ".complete.json")
+    pointer = target / "active-operator-runner.json"
+    launcher = target / "bin/cadence-operator-runner"
+    old_launcher = (target / "runtime" / previous / "launcher.py").read_bytes()
+    new_launcher = (target / "runtime" / expected / "launcher.py").read_bytes()
+    original = installer._sync_directory
+    attempted = []
+
+    def interrupted(path):
+        current = json.loads(pointer.read_bytes())["manifest_sha256"]
+        matches = (
+            (phase == "transition" and Path(path) == history and evidence.exists()
+             and not complete.exists() and launcher.read_bytes() == old_launcher)
+            or (phase == "launcher" and Path(path) == target / "bin"
+                and launcher.read_bytes() == new_launcher and current == previous
+                and not (target / "bin/operator-launcher-update.pending").exists())
+            or (phase == "pointer" and Path(path) == target and current == expected
+                and not complete.exists())
+            or (phase == "completion" and Path(path) == history and complete.exists())
+        )
+        if matches:
+            attempted.append(phase)
+            raise OSError("interrupted " + phase + " directory sync")
+        return original(path)
+
+    monkeypatch.setattr(installer, "_sync_directory", interrupted)
+    with pytest.raises(OSError, match="interrupted " + phase):
+        installer.operator_preflight_update(str(target), expected, previous)
+    interrupted_state = {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    }
+    with pytest.raises(OSError, match="interrupted " + phase):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert attempted == [phase, phase]
+    assert {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    } == interrupted_state
+    assert json.loads(pointer.read_bytes())["manifest_sha256"] == (
+        previous if phase in ("transition", "launcher") else expected
+    )
+    if phase != "completion":
+        assert not complete.exists()
+    monkeypatch.setattr(installer, "_sync_directory", original)
+    installer.operator_preflight_update(str(target), expected, previous)
+    assert launcher.read_bytes() == new_launcher
+    assert json.loads(pointer.read_bytes())["manifest_sha256"] == expected
+    assert complete.read_bytes() == evidence.read_bytes()
+    for name, (raw, _dev, _ino) in interrupted_state.items():
+        if name not in (Path("active-operator-runner.json"), Path("bin/cadence-operator-runner")):
+            assert (target / name).read_bytes() == raw
+    completed_state = {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    }
+    installer.operator_preflight_update(str(target), expected, previous)
+    assert {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    } == completed_state
+
+
+def test_operator_update_completed_retry_syncs_actual_parent_directories(
+    operator_update_pair, monkeypatch,
+):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("POSIX update receipt and launcher directory durability")
+    _, target, previous, expected = operator_update_pair
+    installer.operator_preflight_update(str(target), expected, previous)
+    history = target / "operator-activation-history"
+    paths = [target, history, target / "bin"]
+    identities = {(p.stat().st_dev, p.stat().st_ino): p for p in paths}
+    original = os.fsync
+    observed = []
+
+    def synced(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode):
+            observed.append(identities[(info.st_dev, info.st_ino)])
+        else:
+            assert stat.S_ISREG(info.st_mode)
+        original(fd)
+
+    monkeypatch.setattr(os, "fsync", synced)
+    installer.operator_preflight_update(str(target), expected, previous)
+    assert observed == [target, history, target / "bin", target, history]
+
+
+@pytest.mark.parametrize("name", ["transition.json", "launcher.pending"])
+def test_retained_operator_update_record_retries_failed_file_sync(tmp_path, monkeypatch, name):
+    import os
+    import stat
+
+    path = tmp_path / name
+    data = b"exact durable update record"
+    original = os.fsync
+    attempted = []
+
+    def interrupted(fd):
+        assert stat.S_ISREG(os.fstat(fd).st_mode)
+        attempted.append("file")
+        raise OSError("interrupted retained file sync")
+
+    monkeypatch.setattr(os, "fsync", interrupted)
+    with pytest.raises(OSError, match="retained file sync"):
+        installer._retain_exact(str(path), data)
+    identity = (path.stat().st_dev, path.stat().st_ino)
+    with pytest.raises(OSError, match="retained file sync"):
+        installer._retain_exact(str(path), data)
+    assert attempted == ["file", "file"] and path.read_bytes() == data
+    assert (path.stat().st_dev, path.stat().st_ino) == identity
+    monkeypatch.setattr(os, "fsync", original)
+    installer._retain_exact(str(path), data)
+    assert path.read_bytes() == data
+    assert (path.stat().st_dev, path.stat().st_ino) == identity
