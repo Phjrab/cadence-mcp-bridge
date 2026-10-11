@@ -63,6 +63,17 @@ receipts are in docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md. No VM contact
 real initialization/journal/reservation, simulation or protected metadata change.
 Native acceptance and final RC remain separate pending gates; prior records below
 are historical, including superseded merge/GREL08/resource exclusions.
+## PR149 directed update durability correction, 2026-10-11
+
+Fresh review found reverse preflight transitions and missing retry fsync barriers.
+The same retained-lock update now rejects completed/partial opposite history,
+re-syncs exact retained files/parent directories and already-replaced launcher and
+pointer directories before advancing. New Windows bootstrap66 PASS/12 OS skips;
+actual POSIX order, relevant/package/hosted/final review remain pending. This is a
+local source correction only: VM/admin/EDA/ledger side effects0. Prior receipts,
+open PRs, history, grants and cumulative consumption remain preserved. Continue
+currentGREL02-08/16GiB conditional integration; public candidate approval remains.
+See OPERATOR_RUNNER_COEXISTENCE_V1.md. Earlier dated records remain history.
 
 ## Held target and fixed resource-lock race correction, 2026-10-11
 
