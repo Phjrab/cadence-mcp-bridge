@@ -9,4 +9,4 @@ esac
 expected="$2"
 [ "${#expected}" -eq 64 ] || exit 64
 case "$expected" in *[!0123456789abcdef]*) exit 64 ;; esac
-exec /usr/bin/python -E -s -B "${0%/*}/migration.py" "$1" "$expected"
+exec /usr/bin/python -E -s -B -c __CADENCE_DOMAIN_ENTRY__ "${0%/*}" "$1" "$expected"

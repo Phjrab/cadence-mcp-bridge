@@ -272,8 +272,9 @@ def test_apply_cli_fixed_transport_verifies_remote_conservation_receipt(
 
     def transport(argv, payload, environment, **bounds):
         invocations.append(argv)
-        assert argv[-4] == "/bin/sh"
-        assert argv[-3].endswith("/" + helper + "/domain-operator.sh")
+        assert argv[-8:-4] == ["-E", "-s", "-B", "-c"]
+        assert argv[-3].endswith("/" + helper)
+        assert "migration_entry_source_binding" in argv[-4]
         request = json.loads(payload)
         assert request["operator_authority"] == "synthetic scope only"
         assert bounds == {"timeout": 60, "limit": 262144}
@@ -677,7 +678,58 @@ def test_fixed_launcher_blocks_real_versioned_user_site_startup(tmp_path):
 def test_fixed_launcher_is_manifest_bound_and_closed():
     assets, raw, _ = domain_provisioning.contents()
     launcher = assets["domain-operator.sh"]
-    assert b'exec /usr/bin/python -E -s -B "${0%/*}/migration.py"' in launcher
+    assert b"exec /usr/bin/python -E -s -B -c " in launcher
+    assert b"migration_entry_source_binding" in launcher
+    assert b"__CADENCE_DOMAIN_ENTRY__" not in launcher
     assert json.loads(raw)["files"]["domain-operator.sh"] == {
         "sha256": hashlib.sha256(launcher).hexdigest(), "bytes": len(launcher),
     }
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual retained migration entry files")
+@pytest.mark.parametrize("replace_manifest", [False, True])
+def test_fixed_migration_entry_rejects_replaced_source_before_code_runs(tmp_path, replace_manifest):
+    from cadence_mcp_bridge import _domain_entry as entry
+
+    output = tmp_path / "helper"
+    result = domain_provisioning.export(output)
+    marker = tmp_path / "unreviewed-migration-executed"
+    changed = ("open(" + repr(str(marker)) + ", 'w').write('executed')\n").encode()
+    (output / "migration.py").write_bytes(changed)
+    if replace_manifest:
+        manifest = json.loads((output / "manifest.json").read_bytes())
+        manifest["files"]["migration.py"] = {"sha256": hashlib.sha256(changed).hexdigest(),
+                                               "bytes": len(changed)}
+        (output / "manifest.json").write_bytes(migration.canonical(manifest))
+    with pytest.raises(ValueError, match="migration_entry_(manifest|source)_binding"):
+        entry.run(str(output), "inventory-existing", result["manifest_sha256"])
+    assert not marker.exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual executing migration byte binding")
+def test_fixed_migration_entry_late_replacement_cannot_gain_new_manifest_identity(
+    tmp_path, monkeypatch
+):
+    from cadence_mcp_bridge import _domain_entry as entry
+
+    output = tmp_path / "helper"
+    result = domain_provisioning.export(output)
+    marker = tmp_path / "replacement-code-executed"
+    original, replaced = entry.read, []
+
+    def read(path):
+        raw = original(path)
+        if path.endswith("/migration.py"):
+            changed = ("open(" + repr(str(marker)) + ", 'w').write('executed')\n").encode()
+            (output / "migration.py").write_bytes(changed)
+            manifest = json.loads((output / "manifest.json").read_bytes())
+            manifest["files"]["migration.py"] = {"sha256": hashlib.sha256(changed).hexdigest(),
+                                                   "bytes": len(changed)}
+            (output / "manifest.json").write_bytes(migration.canonical(manifest))
+            replaced.append(True)
+        return raw
+
+    monkeypatch.setattr(entry, "read", read)
+    with pytest.raises(ValueError, match="migration_asset_binding"):
+        entry.run(str(output), "inventory-existing", result["manifest_sha256"])
+    assert replaced == [True] and not marker.exists()
