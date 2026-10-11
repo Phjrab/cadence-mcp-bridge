@@ -10,6 +10,14 @@ import sys
 LEGACY_FILES = ("profile.json", "probe.py", "runner.py", "launcher.py")
 FILES = LEGACY_FILES + ("reservations.py",)
 LIMIT = 262144
+# Independent reviewed package pins; operator manifests authenticate configuration
+# and inventory, never confer authority on caller-supplied executable bytes.
+REVIEWED_OPERATOR_SHA256 = {
+    "probe.py": "5db6297d16bfd4d60471983aa084702697c00cc0f41d8c9c908249e3925d15e2",
+    "runner.py": "aa3e40fdbce271940545bc7cd62883cb454d7c6712d229c9aa991434237bf9db",
+    "launcher.py": "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f",
+    "reservations.py": "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372",
+}
 
 
 def canonical(value):
@@ -289,6 +297,12 @@ def _operator_state(path):
     return value
 
 
+def reviewed_operator_assets(contents, action):
+    for name, expected in REVIEWED_OPERATOR_SHA256.items():
+        if digest(contents[name].replace(b"\r\n", b"\n")) != expected:
+            raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
+
+
 def operator_activation(target, expected):
     target = directory(target)
     fd = _operator_lock(target)
@@ -298,6 +312,7 @@ def operator_activation(target, expected):
         target_binding(manifest, contents, target)
         if manifest["schema_version"] != 2:
             raise ValueError("operator_manifest_version")
+        reviewed_operator_assets(contents, "activation")
         if os.path.lexists(os.path.join(target, "execution.lock")):
             raise ValueError("active_or_unresolved_jobs")
         if os.path.lexists(os.path.join(target, "operator-runner-revoked.json")):
@@ -468,11 +483,7 @@ def operator_preflight_update(target, expected, previous):
         if any(os.path.lexists(os.path.join(history, reverse + suffix))
                for suffix in (".json", ".complete.json")):
             raise ValueError("operator_update_reverse_history")
-        # Independently compiled reviewed launcher; a self-rehashed manifest
-        # cannot grant authority to replace this executable with caller code.
-        known_launcher = "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f"
-        if digest(new_files["launcher.py"].replace(b"\r\n", b"\n")) != known_launcher:
-            raise ValueError("operator_update_launcher_not_reviewed")
+        reviewed_operator_assets(new_files, "update")
         before = {"schema_version": 1, "manifest_sha256": previous}
         after = {"schema_version": 1, "manifest_sha256": expected}
         state = os.path.join(target, "active-operator-runner.json")

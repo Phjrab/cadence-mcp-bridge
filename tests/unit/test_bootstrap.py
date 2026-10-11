@@ -817,7 +817,13 @@ def operator_update_pair(operator_bound):
     (source / "manifest.json").write_bytes(raw)
     previous = hashlib.sha256(raw).hexdigest()
     bootstrap.install(source, target, previous)
-    installer.operator_activation(str(target), previous)
+    # Explicit disposable historical state, never accepted by current activation.
+    binary = target / "bin"
+    binary.mkdir(mode=0o700, exist_ok=True)
+    installer.exclusive(str(binary / "cadence-operator-runner"), launcher.read_bytes(), 0o700)
+    installer.exclusive(str(target / "active-operator-runner.json"), installer.canonical({
+        "schema_version": 1, "manifest_sha256": previous,
+    }))
     launcher.write_bytes(reviewed_launcher)
     manifest["files"]["launcher.py"] = {
         "sha256": hashlib.sha256(reviewed_launcher).hexdigest(),
@@ -1141,3 +1147,42 @@ def test_operator_update_rejects_self_rehashed_unreviewed_launcher_without_mutat
         for p in target.rglob("*") if p.is_file()
     } == before
     assert not (target / "operator-activation-history").exists()
+
+
+@pytest.mark.parametrize("name", ["probe.py", "runner.py", "launcher.py", "reservations.py"])
+@pytest.mark.parametrize("change", ["replace", "append-code", "append-comment"])
+def test_initial_operator_activation_rejects_self_rehashed_unreviewed_code(
+    operator_bound, name, change,
+):
+    source, target, _ = operator_bound
+    asset = source / name
+    value = (b"raise SystemExit('unreviewed-code')\n" if change == "replace" else
+             asset.read_bytes() + (b"\nraise SystemExit('unreviewed-code')\n"
+                                  if change == "append-code" else b"\n# unreviewed comment\n"))
+    asset.write_bytes(value)
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    manifest["files"][name] = {"sha256": hashlib.sha256(value).hexdigest(), "bytes": len(value)}
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    expected = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, expected)
+    before = {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    }
+    with pytest.raises(ValueError, match="operator_activation_.*_not_reviewed"):
+        installer.operator_activation(str(target), expected)
+    assert {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    } == before
+    assert not (target / "active-operator-runner.json").exists()
+    assert not (target / "bin/cadence-operator-runner").exists()
+
+
+def test_reviewed_operator_pins_match_exact_package_assets(prepared_bound):
+    source, target, expected = prepared_bound
+    bootstrap.install(source, target, expected)
+    manifest, contents, raw = installer.validate(str(source), expected)
+    installer.reviewed_operator_assets(contents, "activation")
+    assert set(installer.REVIEWED_OPERATOR_SHA256) == set(installer.FILES) - {"profile.json"}
