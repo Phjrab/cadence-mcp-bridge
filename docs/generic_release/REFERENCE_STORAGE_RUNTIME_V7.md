@@ -19,7 +19,8 @@ The packaged pure `reference_storage_bundle()` constructs `run.sh` and exactly
 manifest binds the two asset bytes and fixed reference managed root. The closed
 launcher verifies the outer deployment hashes and exact operator-configured pin,
 accepts only inventory/cleanup plus bounded hexadecimal JSON, and runs storage
-with Python bytecode writing disabled. Before accounting import, the worker checks
+with the standard profile flags `-E -s -B`: Python environment overrides and
+user-site imports are disabled, and no bytecode is written. Before accounting import, the worker checks
 the manifest kind/version/location, trusted ancestors, file ownership/link/mode,
 size and hashes. Missing, altered, writable or wrongly named assets reject.
 No CWD/PYTHONPATH helper fallback or arbitrary path/shell endpoint exists.
@@ -53,3 +54,18 @@ Current direct authority remains GREL02-08 candidate preparation, conditional
 normal related-PR merges and the validation VM's retained16GiB/500/20 ceiling.
 Other installations keep their registered budgets; counters/history are preserved.
 Public tag/Release/assets still require final exact-candidate approval.
+
+
+## Import isolation review correction
+
+Review4239887478 at b83726a found the initial v7 launcher used only `-B`.
+Its exact standalone/accounting/descriptor and installed43+20-state tests passed,
+but those checks did not qualify startup isolation against PYTHONPATH/user-site
+code. The corrected launcher and explicit deployment compile use `-E -s -B`,
+matching the standard-VM reference invocation. The real standalone fixture uses
+these exact flags, asserts interpreter environment/user-site/bytecode flags, and
+injects malicious sitecustomize/usercustomize/json/hashlib/types environment
+modules; none may execute or shadow the fixed runtime. Previous b837 package and
+Ubuntu396-pass receipts remain source-scoped history, not this corrected gate.
+No VM/deployment/actual ledger/admin/reservation changes occurred. Hosted checks,
+exact corrected package and refreshed review remain required.

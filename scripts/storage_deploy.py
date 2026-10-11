@@ -186,7 +186,7 @@ def deploy() -> dict[str, Any]:
         "cd "
         + stage
         + " && sha256sum -c manifest.sha256 >/dev/null"
-        + " && bash -n run.sh && /usr/bin/python -c "
+        + " && bash -n run.sh && /usr/bin/python -E -s -B -c "
         + "'compile(open(\"runtime/" + runtime_pin
         + "/storage.py\",\"rb\").read(),\"storage\",\"exec\");"
         + "compile(open(\"runtime/" + runtime_pin
