@@ -196,6 +196,67 @@ def file_metadata(value):
     }
 
 
+def job_directory_entries(path):
+    """Stream names without allocating a potentially unbounded listdir result."""
+    if os.name == "nt":
+        # Windows host tests use supported modern Python; the real VM path is
+        # the fixed Linux dirent64 reader below, compatible with Python2.6.
+        with os.scandir(path) as entries:
+            for entry in entries:
+                yield entry.name
+        return
+    import ctypes
+    accounting, _, _ = helpers()
+    before = accounting.safe(path, True)
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.fdopendir.argtypes, libc.fdopendir.restype = [ctypes.c_int], ctypes.c_void_p
+    libc.readdir64.argtypes, libc.readdir64.restype = [ctypes.c_void_p], ctypes.c_void_p
+    libc.closedir.argtypes, libc.closedir.restype = [ctypes.c_void_p], ctypes.c_int
+    stream = None
+    try:
+        if accounting.identity(os.fstat(fd)) != accounting.identity(before):
+            raise ValueError("migration_directory_drift")
+        stream = libc.fdopendir(fd)
+        if not stream:
+            raise OSError(ctypes.get_errno(), "migration_directory_stream")
+        while True:
+            ctypes.set_errno(0)
+            entry = libc.readdir64(stream)
+            if not entry:
+                if ctypes.get_errno():
+                    raise OSError(ctypes.get_errno(), "migration_directory_stream")
+                break
+            length = ctypes.c_ushort.from_address(entry + 16).value
+            if not 20 <= length <= 280:
+                raise ValueError("migration_directory_record")
+            raw = ctypes.string_at(entry + 19, length - 19).split(b"\x00", 1)[0]
+            if raw not in (b".", b".."):
+                yield raw.decode("ascii")
+        if (accounting.identity(os.fstat(fd)) != accounting.identity(before) or
+                accounting.identity(accounting.safe(path, True)) != accounting.identity(before)):
+            raise ValueError("migration_directory_drift")
+    finally:
+        if stream:
+            libc.closedir(stream)
+        else:
+            os.close(fd)
+
+
+def bounded_job_names(path):
+    names, total = [], 0
+    entries = job_directory_entries(path)
+    try:
+        for name in entries:
+            total += len(name)
+            if len(names) >= 2048 or total > LIMIT:
+                raise ValueError("migration_inventory_limit")
+            names.append(name)
+    finally:
+        entries.close()
+    return sorted(names)
+
+
 def snapshot(root):
     accounting, installer, probe = helpers()
     counter_path = root + "/" + accounting.LEDGER
@@ -211,9 +272,7 @@ def snapshot(root):
     accounting.safe(jobs, True)
     if os.path.lexists(jobs + "/active") or os.path.lexists(root + "/execution.lock"):
         raise ValueError("migration_active_or_unresolved")
-    names = sorted(os.listdir(jobs))
-    if len(names) > 2048:
-        raise ValueError("migration_inventory_limit")
+    names = bounded_job_names(jobs)
     records, slots = [], set()
     for name in names:
         if name == "control.lock":

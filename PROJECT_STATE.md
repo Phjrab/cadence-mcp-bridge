@@ -1,3 +1,13 @@
+## Bounded retained-job migration scan, 2026-10-11
+
+Review4240586372 is corrected: retained job names stream through the fixed
+Python2.6-compatible Linux dirent64 reader and are rejected at the2049th entry
+or aggregate byte limit before sorting. The directory descriptor and named
+identity are rechecked and streams close on rejection. Windows host fixtures use
+bounded scandir. Migration45 Windows tests PASS/six POSIX skips, static76 PASS;
+actual owned oversized Linux directory evidence still requires hosted checks.
+No existing ledger/journal or actual VM state is mutated by this source fix.
+
 ## Retained manifest-bound migration entry, 2026-10-11
 
 Fresh finding4240529796 identified a second installed-resource read between
