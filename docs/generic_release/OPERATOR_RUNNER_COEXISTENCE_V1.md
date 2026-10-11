@@ -1,3 +1,100 @@
+## Atomic operator state and exact parent integration, 2026-10-11
+
+Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
+repair parent 9c311b0a6c14d06bb5abc92bb59ec1039497e339 and atomic operator-state
+correction 14e7e0c. Initial active-pointer and revocation publication now writes a
+private mode-600 exclusive candidate under the existing lifetime resource lock,
+handles short writes, fsyncs the file and directory, checks complete bytes and
+absence of a conflicting final marker, then renames and fsyncs the directory.
+Failed candidates remain evidence; an exact retry uses a new candidate, and
+repeating a completed marker preserves its inode. General exclusive export and
+historical launcher-collision behavior remain unchanged. This is the existing
+trusted-owner/lock contract, not protection against hostile same-UID editing.
+
+Related tests: 273 PASS / 28 Windows platform skips in 40.74s; Ruff/mypy 72 files,
+security 18, strict locked audit and 85-schema compatibility PASS. New activation
+and deactivation tests interrupt writes, file fsync and publication, preserve
+partial candidates and unrelated final collisions, and recover exact requests.
+POSIX directory barriers run in the Ubuntu operator suite; Windows synthetic
+evidence does not attest native POSIX behavior. Exact installed CLI/SDK/bootstrap,
+reinstall and uninstall preserve 43 disposable synthetic state files.
+
+Audited wheel (80 members) SHA256:
+80de927e51d66c64978ef85f6dcfc5fde04cf683ac5327c5ee1c25ba27e5c85f;
+sdist (81 members):
+63afe42904a73c686a02eb6d1a06113301749042546cc7242007c6ff353d4ce1.
+Shipped installer SHA256:
+1627bf45fd93c738830ea64f33a1fe3eea2a50032151e7b7a33f42f14f1e8425 (20,979 bytes);
+repair/modeltrust helper:
+8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+These are test artifacts, not an accepted release candidate. Exact final hosted
+checks and fresh review remain pending. A native bundle with these changed assets
+requires renewed exact qualification; bf6c20 and all prior evidence are retained.
+
+General private transport remains 256 KiB; repair inventory alone uses 16 MiB.
+This integration performs 0 VM contacts, administrator changes, simulations or
+reservations. Existing real consumption, journals, replay and protected originals
+remain preserved. Direct 16 GiB / 500 / 20, continuous GREL02-08 and conditional
+normal related feature-PR merge authority persist. Exact public tag/Release/upload
+still requires final user approval. Earlier receipts remain source-scoped history.
+
+## PR148/149 integrated-source receipt, 2026-10-11
+
+Normal merge c649853d5b1a36f41818badda3150b8fcd650650 incorporates parent
+3360d0e5c0f1af28140475516f1861b54db9fb68 and operator revocation durability
+correction a2fc3d880aafdf845b35ff30ae8e3cc27b3d982e. Both documentation histories
+are retained. Integrated related235 checks PASS/16 Windows platform skips;
+Ruff/mypy72, security18/locked audit/85-schema compatibility and installed43-state
+package/reinstall/uninstall preservation PASS. Audited wheel80 members SHA256
+80a40eebc288e8368dec463f6f3baad641a610d7d3e86e5cfd531ac49272fa86;
+sdist81 members af5a65792553ec2a7afb5cb5906f06d0abfa625292a699848346b90618585f0c.
+These are test artifact identities, not an accepted release candidate. Exact hosted
+checks and independent review remain pending. A subsequent parent review identified
+another omitted-ancestor race whose correction still needs normal integration and
+renewed qualification. Updated installer/modeltrust bytes have no current-VM
+qualification in this receipt; prior native bundle/evidence remains preserved.
+This integration has0 VM contacts/admin changes/simulations/reservations and does
+not grant publication authority. Earlier source-scoped receipts remain history.
+
+## Operator revocation directory durability, 2026-10-11
+
+PR149's final P2 found that an fsynced revocation file could lose its directory
+entry after power loss. Operator deactivation now fsyncs the managed directory
+before reporting success, including an exact existing marker left by interruption.
+A failed directory sync propagates; retry retains the original marker inode,
+active pointer, historical versions and resource state, then repeats the barrier.
+The existing resource lock, identity/permissions checks and drift rejection remain.
+
+Local related226 tests PASS/15 Windows platform skips, Ruff/mypy72, security18,
+locked dependency audit and85-schema compatibility PASS. The three new POSIX
+regressions inspect real fsync descriptors/order and inject new/existing-marker
+sync failure before success, then verify recovery/repeat without replacement.
+They run in the existing Ubuntu operator CI; exact hosted checks and independent
+review of this final source remain pending. Matching curated artifacts and isolated
+installed protocol/bootstrap/coexistence/reinstall/uninstall preserve43 synthetic
+state files. Synthetic/Windows evidence does not attest native POSIX durability.
+
+The shipped installer bytes change; any later native bundle containing this helper
+requires its own exact hash/qualification. Worker, launcher, profile and shared
+reservation assets are unchanged. This correction performs0 VM contacts, metadata
+changes, simulations or reservations; existing real journals/ledger/replay remain.
+Direct16GiB/500/20, continuous GREL02-08 and conditional normal feature-PR merge
+authority persist. Release is still blocked; exact public tag/Release/upload needs
+final user approval. Prior dated boundaries and observations below are history.
+
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
+
 # Operator runner coexistence v1
 
 Support remains the professor-provided CentOS/Cadence VM or equivalent installation
@@ -26,6 +123,20 @@ Ordinary-owner target binding and trusted ancestor checks remain. Activation use
 the existing run.lock without creating/truncating it. Busy, unresolved execution,
 wrong-profile, wrong-content, revoked or linked state rejects. Windows content
 staging fixtures do not attest POSIX trust or durability.
+
+Activation fsyncs the launcher's bin directory before publishing a new active
+pointer. The pointer and revocation records use complete private mode-600
+candidates: write/fsync, verify, check for a conflicting final marker, rename and
+fsync the managed directory. Exact activation repeats the bin and managed-root
+barriers; exact deactivation repeats the revocation directory barrier. A failed
+barrier returns rejection before success. Recover with the same intact bundle and
+exact operation after diagnosing the storage failure. Failed private candidates
+remain evidence, and an exact retry creates a new candidate without deleting them.
+A complete exact marker retains its inode. Unrelated markers and incomplete or
+changed launcher bytes reject and remain untouched; they require investigation.
+These are trusted-owner/lifetime-lock guarantees, not atomic protection from a
+hostile process using the same account. Historical export and reference state are
+unchanged, and activation still grants no analysis or resource authority.
 
 Repeat activation verifies the same selected immutable bundle and launcher bytes;
 known launcher-before-pointer partial initial activation can resume. Unrelated

@@ -167,7 +167,7 @@ def snapshot(root):
     if os.path.lexists(jobs + "/active") or os.path.lexists(root + "/execution.lock"):
         raise ValueError("migration_active_or_unresolved")
     names = sorted(os.listdir(jobs))
-    if len(names) > 129:
+    if len(names) > 2048:
         raise ValueError("migration_inventory_limit")
     records, slots = [], set()
     for name in names:
@@ -201,7 +201,7 @@ def snapshot(root):
                 record["marker_sha256"] = digest(installer.regular(marker))
                 record["marker_metadata"] = file_metadata(marker)
         records.append(record)
-    if len(records) > 128:
+    if len(records) > 2048:
         raise ValueError("migration_inventory_limit")
     lock = accounting.safe(root + "/run.lock")
     return {
@@ -217,13 +217,13 @@ def snapshot(root):
 
 def anchor_for(value, root, current):
     accounting, installer, probe = helpers()
-    return {
+    anchor = {
         "schema_version": 1,
         "root_sha256": digest(root.encode("utf-8")),
         "resource_domain_sha256": digest(
             canonical(
                 {
-                    "hostname": value["host"]["hostname"],
+                    "hostname": value["host"]["hostname"].lower().rstrip("."),
                     "architecture": value["host"]["architecture"],
                 }
             )
@@ -232,6 +232,10 @@ def anchor_for(value, root, current):
         "baseline": current["baseline"],
         "legacy_operation_ids": sorted(record["operation_id"] for record in current["native_jobs"]),
     }
+
+    if len(accounting.canonical(anchor)) > accounting.LIMIT:
+        raise ValueError("migration_anchor_size_limit")
+    return anchor
 
 
 def plan(value, assets_sha256, seal=False):
@@ -258,12 +262,19 @@ def plan(value, assets_sha256, seal=False):
         }
         if seal:
             result["prior_anchor_sha256"] = digest(canonical(prior))
-        return {
+        response = {
             "plan": result,
             "plan_sha256": digest(canonical(result)),
             "execution_authorized": False,
             "ledger_initialized": False,
         }
+        if len(canonical(response)) > LIMIT:
+            raise ValueError("migration_plan_size_limit")
+        if seal and len(accounting.canonical({
+                "schema_version": 1, "prior_anchor_sha256": result["prior_anchor_sha256"],
+                "anchor": result["anchor"], "plan_sha256": "0" * 64})) > accounting.LIMIT:
+            raise ValueError("migration_seal_size_limit")
+        return response
     finally:
         if fd is not None:
             os.close(fd)

@@ -4,6 +4,7 @@ No import side effects or vendor execution. Plans and receipts are private.
 Only group/other write removal is supported; contents and owners never change.
 """
 # mypy: ignore-errors
+import errno
 import hashlib
 import json
 import os
@@ -89,27 +90,43 @@ def acl(fd):
 def snapshot(path):
     fd = open_fixed(path)
     try:
-        info = os.fstat(fd)
-        if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
-            raise ValueError("file_type")
-        result = {
-            "path": path, "dev": info.st_dev, "ino": info.st_ino,
-            "uid": info.st_uid, "gid": info.st_gid,
-            "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
-            "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
-            "mode": stat.S_IMODE(info.st_mode),
-            "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
-            "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
-            "acl": acl(fd),
-        }
-        check = os.lstat(path)
-        if (check.st_dev, check.st_ino, check.st_mode) != (
-            info.st_dev, info.st_ino, info.st_mode
-        ) or os.path.realpath(path) != path:
-            raise ValueError("race")
-        return result
+        return snapshot_descriptor(path, fd)
     finally:
         os.close(fd)
+
+
+def snapshot_descriptor(path, fd):
+    info = os.fstat(fd)
+    if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+        raise ValueError("file_type")
+    result = {
+        "path": path, "dev": info.st_dev, "ino": info.st_ino,
+        "uid": info.st_uid, "gid": info.st_gid,
+        "size": info.st_size if stat.S_ISREG(info.st_mode) else None,
+        "mtime": "%.17g" % info.st_mtime if stat.S_ISREG(info.st_mode) else None,
+        "mode": stat.S_IMODE(info.st_mode),
+        "kind": "file" if stat.S_ISREG(info.st_mode) else "directory",
+        "sha256": file_hash(fd) if stat.S_ISREG(info.st_mode) else None,
+        "acl": acl(fd),
+    }
+    # ACL tools run while the descriptor is held. Reject changes during that
+    # observation, including restored mtimes or unchanged file length.
+    trailing = os.fstat(fd)
+    stability = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                 "st_size", "st_mtime", "st_ctime")
+    if any(getattr(info, key) != getattr(trailing, key) for key in stability):
+        raise ValueError("snapshot_race")
+    if result["sha256"] is not None and file_hash(fd) != result["sha256"]:
+        raise ValueError("snapshot_race")
+    final = os.fstat(fd)
+    if any(getattr(trailing, key) != getattr(final, key) for key in stability):
+        raise ValueError("snapshot_race")
+    check = os.lstat(path)
+    if (check.st_dev, check.st_ino, check.st_mode) != (
+        info.st_dev, info.st_ino, info.st_mode
+    ) or os.path.realpath(path) != path:
+        raise ValueError("race")
+    return result
 
 
 def normalize_acl(value):
@@ -138,10 +155,19 @@ def chmod_acl(before, mode):
     has_mask = any(line.startswith("mask::") for line in lines)
     result = []
     for line in lines:
-        if line.startswith("other::"):
-            line = "other::" + line.split(":")[-1].replace("w", "-")
-        elif line.startswith("mask::") or (not has_mask and line.startswith("group::")):
-            line = line.rsplit(":", 1)[0] + ":" + line.split(":")[-1].replace("w", "-")
+        role = line.split(":", 1)[0]
+        shift = None
+        if line.startswith("user::"):
+            shift = 6
+        elif line.startswith("other::"):
+            shift = 0
+        elif role == "mask" or (not has_mask and line.startswith("group::")):
+            shift = 3
+        if shift is not None:
+            bits = (mode >> shift) & 7
+            perms = "".join(flag if bits & bit else "-"
+                            for flag, bit in (("r", 4), ("w", 2), ("x", 1)))
+            line = line.rsplit(":", 1)[0] + ":" + perms
         result.append(line)
     return "\n".join(result) + "\n"
 
@@ -160,6 +186,7 @@ def plan(request):
     if paths != sorted(set(paths)):
         raise ValueError("duplicate_or_unsorted")
     records = []
+    record_bytes = 0
     for path in paths:
         valid_path(path)
         if not any(inside(path, root) for root in roots):
@@ -172,6 +199,9 @@ def plan(request):
         record["after_mode"] = record["mode"] & ~18
         record["after_acl"] = restricted_acl(record["acl"])
         record["reason"] = "remove_shared_code_write_preserve_content_owner_rx"
+        record_bytes += len(canonical(record)) + 1
+        if record_bytes > LIMIT:
+            raise ValueError("inventory_serialized_limit")
         records.append(record)
     for link in request["links"]:
         if set(link) != set(("path", "target", "resolved")):
@@ -189,7 +219,40 @@ def plan(request):
         "operation": "remove_022_and_default_acl_writes",
         "content_authority": "NONE", "execution_authorized": False,
     }
-    return {"plan": result, "plan_sha256": digest(result)}
+    return bounded_inventory({"plan": result, "plan_sha256": digest(result)})
+
+
+def bounded_inventory(result):
+    # Count the actual whole response including its terminal newline, and leave
+    # room for the largest allowed authority string in a canonical apply/rollback
+    # request. Individual target/ACL bounds alone do not bound the full plan.
+    request = {"plan": result["plan"], "expected_plan_sha256": result["plan_sha256"],
+               "operator_authority": u"\U0001f4a5" * 512}
+    if len(canonical(result)) + 1 > LIMIT or len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("inventory_serialized_limit")
+    return result
+
+
+def verify_unlisted_ancestors(roots):
+    # These directories are deliberately outside the exact mutation recipe.
+    # Check them read-only, including /, rather than silently expanding targets.
+    ancestors = set()
+    for root in roots:
+        parent = os.path.dirname(root)
+        while True:
+            ancestors.add(parent)
+            if parent == "/":
+                break
+            parent = os.path.dirname(parent)
+    for path in sorted(ancestors):
+        fd = (os.open("/", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY)
+              if path == "/" else open_fixed(path))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISDIR(info.st_mode) or info.st_mode & 18:
+                raise ValueError("unlisted_ancestor_trust")
+        finally:
+            os.close(fd)
 
 
 def emit(value):
@@ -206,7 +269,24 @@ def metadata_equal(key, before, after):
     return before == after
 
 
-def _mutate_locked(request, rollback=False):
+def verify_completed_targets(original, rollback):
+    # Recompute the whole exact recipe so skipped and previously processed targets
+    # cannot escape final content/identity/ACL checks. plan() also rechecks links.
+    final = plan(original["scope"])["plan"]
+    if len(final["records"]) != len(original["records"]):
+        raise ValueError("completion_record_count")
+    for old, now in zip(original["records"], final["records"]):
+        invariant = ("path", "dev", "ino", "uid", "gid", "kind",
+                     "sha256", "size", "mtime", "reason")
+        if any(not metadata_equal(key, old[key], now[key]) for key in invariant):
+            raise ValueError("completion_protected_drift")
+        target_mode = old["mode"] if rollback else old["after_mode"]
+        target_acl = old["acl"] if rollback else old["after_acl"]
+        if now["mode"] != target_mode or normalize_acl(now["acl"]) != normalize_acl(target_acl):
+            raise ValueError("completion_metadata")
+
+
+def _mutate_locked(request, rollback=False, receipt_guard=False):
     if set(request) != set(("plan", "expected_plan_sha256", "operator_authority")):
         raise ValueError("mutation_shape")
     original = request["plan"]
@@ -235,7 +315,10 @@ def _mutate_locked(request, rollback=False):
         intermediate = (now["mode"] == old["after_mode"] and
                         normalize_acl(now["acl"]) ==
                         normalize_acl(chmod_acl(old["acl"], old["after_mode"])))
-        if not (before or after or intermediate):
+        rollback_intermediate = (rollback and now["mode"] == old["mode"] and
+            normalize_acl(now["acl"]) ==
+            normalize_acl(chmod_acl(old["after_acl"], old["mode"])))
+        if not (before or after or intermediate or rollback_intermediate):
             raise ValueError("unexpected_metadata")
         allowed.append((old, now, before, after))
     emit({"event": "validated", "plan_sha256": request["expected_plan_sha256"],
@@ -257,6 +340,16 @@ def _mutate_locked(request, rollback=False):
                 raise ValueError("prechange_identity")
             if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
                 raise ValueError("prechange_hardlink")
+            held = snapshot_descriptor(old["path"], fd)
+            if any(not metadata_equal(key, held[key], now[key]) for key in held
+                   if key != "acl") or normalize_acl(held["acl"]) != normalize_acl(now["acl"]):
+                raise ValueError("prechange_descriptor_drift")
+            # Recipe discovery precedes the resource lock; unrelated filesystem
+            # tools do not obey that lock. Recheck omitted trust ancestors at
+            # the last held-target observation before each metadata mutation.
+            verify_unlisted_ancestors(original["scope"]["installation_roots"])
+            if receipt_guard:
+                verify_applied_receipt(request)
             os.fchmod(fd, target_mode)
             if normalize_acl(acl(fd)) != normalize_acl(target_acl):
                 proc = subprocess.Popen(
@@ -276,12 +369,226 @@ def _mutate_locked(request, rollback=False):
             raise ValueError("postchange_metadata")
         changes += 1
         emit({"event": "changed", "before": now, "after": final})
+    # Also cover drift after the last change and idempotent/no-op application.
+    # Reobserve all exact targets and links, not only the omitted ancestor chain.
+    verify_completed_targets(original, rollback)
+    # Unsafe outside-scope ancestors remain untouched and cannot yield completion.
+    verify_unlisted_ancestors(original["scope"]["installation_roots"])
+    if receipt_guard:
+        verify_applied_receipt(request)
     emit({"event": "complete", "changed": changes, "content_preserved": True,
           "owner_group_preserved": True, "execution_authorized": False})
 
 
 
+def receipt_directory(original, create):
+    # This is a fixed operator-data location, never a caller-supplied receipt
+    # path. Root has a separate namespace and cannot accept a user's receipt.
+    uid = os.getuid()
+    if os.geteuid() != uid:
+        raise ValueError("repair_identity")
+    managed = os.path.dirname(original["scope"]["resource_lock"])
+    name = "trust-repair-v1-%s-%d" % ("admin" if uid == 0 else "user", uid)
+    parent = open_fixed(managed)
+    try:
+        info = os.fstat(parent)
+        if not stat.S_ISDIR(info.st_mode) or info.st_mode & 18:
+            raise ValueError("repair_receipt_parent")
+        path = "/proc/self/fd/%d/%s" % (parent, name)
+        if create:
+            try:
+                os.mkdir(path, 448)
+            except OSError as failure:
+                if failure.errno != errno.EEXIST:
+                    raise
+            # Persist the newly created directory before any target mutation.
+            os.fsync(parent)
+        try:
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_DIRECTORY)
+        except OSError as failure:
+            if failure.errno == errno.ENOENT and not create:
+                return None
+            raise
+        try:
+            entry = os.fstat(fd)
+            if (not stat.S_ISDIR(entry.st_mode) or entry.st_uid != uid or
+                    stat.S_IMODE(entry.st_mode) != 448):
+                raise ValueError("repair_receipt_directory")
+            # Reopening the fixed path must still identify the held directory.
+            check = os.lstat(path)
+            if (entry.st_dev, entry.st_ino) != (check.st_dev, check.st_ino):
+                raise ValueError("repair_receipt_directory_race")
+            result = fd
+            fd = None
+            return result
+        finally:
+            if fd is not None:
+                os.close(fd)
+    finally:
+        os.close(parent)
+
+
+def receipt_bytes(original):
+    value = {"schema_version": 1, "receipt_kind": "observed-before-explicit-apply",
+             "uid": os.getuid(), "plan_sha256": digest(original), "plan": original,
+             "approval_evidence": False}
+    data = canonical(value) + b"\n"
+    if len(data) > LIMIT:
+        raise ValueError("repair_receipt_limit")
+    return data
+
+
+def verify_receipt_namespace(original, directory):
+    # A held fd also names a detached directory. Reopen the fixed managed-root
+    # entry after receipt reads/fsyncs so detached evidence cannot authorize code
+    # mutation or completion merely because its descriptor remains usable.
+    uid = os.getuid()
+    name = "trust-repair-v1-%s-%d" % ("admin" if uid == 0 else "user", uid)
+    parent = open_fixed(os.path.dirname(original["scope"]["resource_lock"]))
+    try:
+        parent_info = os.fstat(parent)
+        if not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_mode & 18:
+            raise ValueError("repair_receipt_parent")
+        held = os.fstat(directory)
+        try:
+            linked = os.lstat("/proc/self/fd/%d/%s" % (parent, name))
+        except OSError as failure:
+            if failure.errno == errno.ENOENT:
+                raise ValueError("repair_receipt_namespace")
+            raise
+        if (not stat.S_ISDIR(linked.st_mode) or linked.st_uid != uid or
+                stat.S_IMODE(linked.st_mode) != 448 or
+                (held.st_dev, held.st_ino) != (linked.st_dev, linked.st_ino)):
+            raise ValueError("repair_receipt_namespace")
+    finally:
+        os.close(parent)
+
+
+def read_receipt(directory, name, expected, original):
+    path = "/proc/self/fd/%d/%s" % (directory, name)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError as failure:
+        if failure.errno == errno.ENOENT:
+            return False
+        raise
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.getuid() or
+                stat.S_IMODE(before.st_mode) != 256 or before.st_nlink != 1 or
+                before.st_size != len(expected)):
+            raise ValueError("repair_receipt_trust")
+        blocks, remaining = [], LIMIT + 1
+        while remaining:
+            block = os.read(fd, min(65536, remaining))
+            if not block:
+                break
+            blocks.append(block)
+            remaining -= len(block)
+        if b"".join(blocks) != expected:
+            raise ValueError("repair_receipt_binding")
+        after = os.fstat(fd)
+        keys = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                "st_size", "st_mtime", "st_ctime")
+        if any(getattr(before, key) != getattr(after, key) for key in keys):
+            raise ValueError("repair_receipt_race")
+        linked = os.lstat(path)
+        if (after.st_dev, after.st_ino) != (linked.st_dev, linked.st_ino):
+            raise ValueError("repair_receipt_race")
+        # An interrupted directory fsync is resumed before mutation is allowed.
+        os.fsync(fd)
+        os.fsync(directory)
+        verify_receipt_namespace(original, directory)
+        return True
+    finally:
+        os.close(fd)
+
+
+def publish_receipt(directory, name, data, original):
+    # Keep an interrupted candidate as private evidence. Only a fully written,
+    # fsynced, verified candidate can be linked into the exclusive final name.
+    candidate = ".candidate-" + hashlib.sha256(os.urandom(32)).hexdigest()
+    path = "/proc/self/fd/%d/%s" % (directory, candidate)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 256)
+    try:
+        offset = 0
+        while offset < len(data):
+            count = os.write(fd, data[offset:])
+            if count <= 0:
+                raise ValueError("repair_receipt_write")
+            offset += count
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    if not read_receipt(directory, candidate, data, original):
+        raise ValueError("repair_receipt_candidate")
+    final = "/proc/self/fd/%d/%s" % (directory, name)
+    # link is exclusive even when another process ignores the resource flock.
+    # An interruption before unlink leaves a rejected multi-link receipt and its
+    # evidence intact; no permissions have been changed at this point.
+    os.link(path, final)
+    os.unlink(path)
+    os.fsync(directory)
+    if not read_receipt(directory, name, data, original):
+        raise ValueError("repair_receipt_publication")
+
+
+def verify_applied_receipt(request):
+    original = request["plan"]
+    directory = receipt_directory(original, False)
+    if directory is None:
+        raise ValueError("repair_applied_receipt_required")
+    try:
+        if not read_receipt(
+            directory, digest(original) + ".json", receipt_bytes(original), original
+        ):
+            raise ValueError("repair_applied_receipt_required")
+    finally:
+        os.close(directory)
+
+
+def authenticate_applied_plan(request, rollback):
+    original = request["plan"]
+    data = receipt_bytes(original)
+    name = digest(original) + ".json"
+    directory = receipt_directory(original, False)
+    if directory is not None:
+        try:
+            if read_receipt(directory, name, data, original):
+                return
+        finally:
+            os.close(directory)
+    if rollback:
+        raise ValueError("repair_applied_receipt_required")
+    # A self-computed request digest is not provenance. The first apply must
+    # match every actually observed original record, including mode and ACL.
+    current = plan(original["scope"])["plan"]["records"]
+    if len(current) != len(original["records"]):
+        raise ValueError("repair_initial_before_required")
+    for old, now in zip(original["records"], current):
+        if set(old) != set(now):
+            raise ValueError("repair_initial_before_required")
+        for key in now:
+            same = (normalize_acl(old[key]) == normalize_acl(now[key])
+                    if key in ("acl", "after_acl") else metadata_equal(key, old[key], now[key]))
+            if not same:
+                raise ValueError("repair_initial_before_required")
+    directory = receipt_directory(original, True)
+    try:
+        # Fail closed on unexpected collision; never overwrite any receipt.
+        publish_receipt(directory, name, data, original)
+    finally:
+        os.close(directory)
+
+
 def mutate(request, rollback=False):
+    if len(canonical(request)) + 1 > LIMIT:
+        raise ValueError("request_limit")
+    if set(request) != set(("plan", "expected_plan_sha256", "operator_authority")):
+        raise ValueError("mutation_shape")
+    authority = request["operator_authority"]
+    if not isinstance(authority, TEXT) or not 1 <= len(authority) <= 512:
+        raise ValueError("operator_authority_required")
     original = request["plan"]
     if original.get("schema_version") != 2 or original.get("recipe_id") != "standard-vm-trust-v1":
         raise ValueError("fixed_profile_recipe_required")
@@ -310,10 +617,21 @@ def mutate(request, rollback=False):
         finally:
             os.close(parent_fd)
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        _mutate_locked(request, rollback)
+        authenticate_applied_plan(request, rollback)
+        _mutate_locked(request, rollback, True)
     finally:
         os.close(fd)
 
+
+
+def common_installation_root(ic, ms):
+    # commonprefix compares characters; vendor root names can share a prefix.
+    components = []
+    for left, right in zip(ic.split("/"), ms.split("/")):
+        if left != right:
+            break
+        components.append(left)
+    return "/".join(components) or "/"
 
 
 def inventory(profile):
@@ -359,7 +677,7 @@ def inventory(profile):
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
-    base = os.path.commonprefix([ic + "/", ms + "/"]).rstrip("/")
+    base = common_installation_root(ic, ms)
     if not os.path.isdir(base) or base.count("/") < 2:
         raise ValueError("installation_common_root")
     protected = profile["paths"]["protected_roots"]
@@ -427,6 +745,7 @@ def inventory(profile):
     # never its contents, is selected, and healthy metadata remains a no-op.
     paths.add(workspace)
     mutation_roots = [base, workspace]
+    verify_unlisted_ancestors(mutation_roots)
     result = plan({"installation_roots": mutation_roots, "paths": sorted(paths),
                    "links": sorted(links.values(), key=lambda x: x["path"]),
                    "profile_sha256": digest(profile),
@@ -438,7 +757,7 @@ def inventory(profile):
     result["readonly_compatibility_links"] = external
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
     result["native_runtime_attestation"] = "NOT_ATTESTED"
-    return result
+    return bounded_inventory(result)
 
 
 def main():

@@ -435,3 +435,37 @@ def test_large_retained_inventory_uses_protocol_limit_and_duplicate_rejection(
     for invalid in (b'{"x":1,"x":2}', b'{"x":NaN}', b" " * 262145):
         with pytest.raises(ValueError):
             domain_provisioning._closed_document(invalid)
+
+
+@pytest.mark.parametrize("count,allowed", [(129, True), (160, True), (240, False)])
+def test_retained_job_classification_obeys_serialized_anchor_capacity(domain, count, allowed):
+    root, _, original_id, _ = domain
+    identities = [original_id]
+    for _ in range(count - 1):
+        identity = str(uuid4())
+        (root / accounting.JOBS / identity / "work").mkdir(mode=0o700, parents=True)
+        (root / accounting.JOBS / identity).chmod(0o700)
+        identities.append(identity)
+    before = snapshot(root)
+    if not allowed:
+        with pytest.raises(ValueError, match="migration_anchor_size_limit"):
+            request(domain)
+        assert snapshot(root) == before
+        assert not (root / accounting.REGISTRY).exists()
+        return
+    req = request(domain)
+    assert req["plan"]["anchor"]["legacy_operation_ids"] == sorted(identities)
+    receipt = migration.apply(req, "a" * 64)
+    binding = dict(
+        root_sha256=req["plan"]["anchor"]["root_sha256"],
+        resource_domain_sha256=req["plan"]["anchor"]["resource_domain_sha256"],
+        ledger_ref=accounting.LEDGER,
+        identity_manifest_sha256=receipt["identity_manifest_sha256"],
+    )
+    assert accounting.identity_manifest(str(root), binding)["legacy_operation_ids"] == sorted(
+        identities
+    )
+    assert (root / accounting.REGISTRY / "manifest.json").stat().st_size <= accounting.LIMIT
+    for name, data in before.items():
+        assert (root / name).read_bytes() == data
+    assert migration.apply(req, "a" * 64)["anchor_created"] is False

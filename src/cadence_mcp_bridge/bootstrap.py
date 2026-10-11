@@ -87,7 +87,7 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     import shutil
 
     from cadence_mcp_bridge import _installation_repair as repair
-    from cadence_mcp_bridge.operator_transport import run_fixed
+    from cadence_mcp_bridge.operator_transport import run_repair_inventory
     from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
     environment, data = load_environment(_local_path(profile))
@@ -95,11 +95,11 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     if executable is None:
         raise ValueError("OpenSSH unavailable")
     code = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_text("utf-8")
-    status, stdout, stderr = run_fixed(
+    status, stdout, stderr = run_repair_inventory(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
          "/usr/bin/python", "-B", "-c", shlex.quote(code), "inventory"],
-        data, OpenSshBackend._ssh_environment(), timeout=60, limit=262144,
+        data, OpenSshBackend._ssh_environment(),
     )
     if status or stderr:
         raise ValueError("repair_inventory_rejected")
