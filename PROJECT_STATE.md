@@ -1,3 +1,30 @@
+## Resumed exact-source qualification checkpoint, 2026-10-11
+
+Codex account access and reviewed command execution are available again. The
+user's continuation retains the managed-VM16GiB/500/same-change20 and GREL02-08
+scope; it does not change another operator's defaults or publish a candidate.
+Existing source work and all policy/ledger/journal/result histories are retained.
+Read-only actual UID500 accounting still reports102 attempts/12,483,297,280
+reserved bytes; remaining4,696,571,904 bytes. The old3-attempt grant is fully spent.
+A bounded observation of17 retained policy files and3 activation histories made
+no remote changes. Historical consumed correction journals are located in the
+original autonomy-work/.codex; their counters must be preserved, not recreated.
+
+The root source integrates PR151's held-byte fresh setup and storage import
+isolation and PR148's held external-link stability correction8a325b0, retaining
+its model recipe and independently reviewed959712af reservation pin. Connected
+Windows checks240 PASS/213 POSIX or symlink skips. PR148 focused173 PASS/199 skips,
+Ruff/mypy72/security18/dependency audit and exact installed32-state preservation
+PASS; current hosted/fresh review and root exact installed/VM/app remain gates.
+Earlier3387-test run changed during execution and is not exact final-SHA proof.
+
+Current actual Codex connection still uses historical1.0.0/40c/bf6, so a final
+new app submission/retry/reconnect cannot be inferred from those old results.
+Release remains BLOCKED and no exact RC exists. Continue approved tests, normal
+feature PR integration and bounded final installed execution without routine
+reapproval. Exact-candidate GitHub tag/Release/upload requires final approval.
+Earlier dated records below remain historical source-specific evidence.
+
 ## Fresh consumer and native import isolation integration, 2026-10-11
 
 PR151's positive fresh1..N accounting consumers are normally integrated while
