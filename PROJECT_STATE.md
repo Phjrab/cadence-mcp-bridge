@@ -27,6 +27,28 @@ failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PAS
 Hosted actual POSIX and fresh final review/package remain separate pending gates.
 This correction performs no actual VM activation, EDA or accounting mutation.
 
+## Last library membership and internal-link observations, 2026-10-11
+
+Independent follow-up4240407849/4240407850 is corrected. Every traversed fixed
+library directory now binds the walk's yielded names, held/named identity and
+metadata, and reobserves membership after all selected target and link reads.
+Late .so creation/rename rejects without silently expanding mutation targets.
+Excluded directory names are retained for comparison but are never traversed.
+Internal links use the same held-leaf and lexical-parent guard as compatibility
+links, including trailing validation during plan and final inventory. No new
+external code/content authority or mutation scope is introduced. These are final
+observation guards, not atomic exclusion of independent filesystem operations.
+
+Twelve owned Linux apply/rollback completion fixtures add or rename a777 library
+after the walk during a later target hash; two retarget an internal alias after
+its fixed resolution. All unreviewed bytes and prior target states are retained.
+Windows repair/bootstrap120 PASS/220 actual-platform skips; official Ruff/mypy72
+PASS. Updated exact Linux, package/security and independent review remain gates.
+Prior770f hosted363/4 checks and installed32-state PASS are historical, not proof
+for this correction. No actual VM, simulation or reservation change occurred.
+ContinuousGREL02-08/16GiB/500/same-change20 and conditional normal integration
+remain authorized; public posting still needs exact final-candidate approval.
+
 ## Lexical compatibility ancestors, 2026-10-11
 
 Independent review4240327313 is corrected: external-link observations now retain
