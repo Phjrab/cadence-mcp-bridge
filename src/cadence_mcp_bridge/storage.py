@@ -251,7 +251,9 @@ class StorageSummary(ContractModel):
     )
     filesystem_free_bytes: Bytes
     reserved_result_bytes: Bytes
-    result_ceiling_bytes: Literal[10_737_418_240] = 10_737_418_240
+    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=10_737_418_240)] = (
+        10_737_418_240
+    )
     spectre_attempts: int
     disk_floor_bytes: Bytes
     disk_floor_status: Literal["OK", "LOW_STORAGE"]
@@ -365,6 +367,7 @@ class StorageSupervisor:
             ),
             filesystem_free_bytes=s.filesystem_free_bytes,
             reserved_result_bytes=s.reserved_result_bytes,
+            result_ceiling_bytes=s.result_ceiling_bytes,
             spectre_attempts=s.spectre_attempts,
             disk_floor_bytes=floor,
             disk_floor_status="OK" if s.filesystem_free_bytes >= floor else "LOW_STORAGE",

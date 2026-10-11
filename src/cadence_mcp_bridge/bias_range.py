@@ -10,7 +10,12 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge.actual_diagnostics import SpectrumPoint
 from cadence_mcp_bridge.designs import DesignContractRegistry, reference_contract_registry
 from cadence_mcp_bridge.models import ContractModel
-from cadence_mcp_bridge.power_measurements import PowerCounter, SignedSource, delivered_power
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    SignedSource,
+    delivered_power,
+    require_same_resource_policy,
+)
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
     RangeReview,
@@ -49,7 +54,7 @@ class BiasEndpoint(ContractModel):
     input_sha256: Digest
     psf_sha256: Digest
     frame_sha256: Digest
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     warnings: Annotated[int, Field(ge=0, le=2, strict=True)]
     notices: Literal[0]
     protected_unchanged: Literal[True]
@@ -124,6 +129,7 @@ class BiasExtraction(ContractModel):
 
     @model_validator(mode="after")
     def complete(self) -> Self:
+        require_same_resource_policy(tuple(case.counter for case in self.cases))
         if tuple(p.case for p in self.cases) != CASES:
             raise ValueError("complete ordered four-case evidence required")
         return self

@@ -121,17 +121,34 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             "reserve_bytes": 65536,
             "disk_floor_bytes": 0,
         }
-        from pydantic import TypeAdapter
+        import asyncio
 
-        from cadence_mcp_bridge.power_measurements import RegisteredPowerCounter
-        from cadence_mcp_bridge.storage import StorageSnapshot
+        from mcp import Client
+
+        from cadence_mcp_bridge.power_measurements import (
+            REFERENCE_OPERATION,
+            SOURCE_SET,
+            PowerExtraction,
+        )
+        from cadence_mcp_bridge.server import create_server
+        from cadence_mcp_bridge.service import CadenceService
+        from cadence_mcp_bridge.storage import StorageSnapshot, StorageSupervisor, snapshot_digest
 
         def verify_consumer():
             counter = accounting.read(str(fresh_root / accounting.LEDGER))
-            parsed = TypeAdapter(RegisteredPowerCounter).validate_python(
-                dict(counter, policy=anchor["policy"])
-            )
-            assert parsed.count == counter["count"]
+            # Exercise the installed production extraction model, not just its
+            # otherwise-unused type alias. Sources are synthetic zero-current frames.
+            extracted = PowerExtraction.model_validate_json(json.dumps(dict(
+                schema_version=1, job_id=REFERENCE_OPERATION, analysis="dc",
+                input_sha256="a" * 64, psf_sha256="b" * 64, frame_sha256="c" * 64,
+                sources=[dict(source_id=identity, role=role, voltage_v=voltage, current_a=0)
+                         for identity, role, voltage in SOURCE_SET],
+                status="EXTRACTED", reason=None, protected_unchanged=True,
+                counter=dict(counter, policy=anchor["policy"]),
+                new_spectre_attempts=0, new_reservation_bytes=0,
+            )))
+            assert extracted.counter.count == counter["count"]
+            assert extracted.counter.model_dump()["policy"] == anchor["policy"]
             snapshot = StorageSnapshot.model_validate(dict(
                 contract_version=2, snapshot_id="a" * 64, artifacts=[], coverage_complete=True,
                 group_coverage={}, filesystem_free_bytes=10485760, filesystem_total_bytes=20971520,
@@ -140,6 +157,29 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 ledger_policy=anchor["policy"], active_eda=False, platform_delete_primitives=True,
             ))
             assert snapshot.result_ceiling_bytes == profile["limits"]["result_reserved_bytes"]
+            snapshot = snapshot.model_copy(update={"snapshot_id": snapshot_digest(snapshot)})
+
+            class ReadOnlyStorage:
+                async def storage_snapshot(self):
+                    return snapshot
+
+                async def storage_cleanup(self, _request):
+                    raise AssertionError("Installed read-only verification cannot clean storage")
+
+            async def check_summary():
+                backend = ReadOnlyStorage()
+                summary = await StorageSupervisor(backend).summary()
+                assert summary.result_ceiling_bytes == anchor["policy"]["result_ceiling_bytes"]
+                assert summary.reserved_result_bytes == counter["result_reserved_bytes"]
+                async with Client(create_server(CadenceService(backend))) as client:
+                    result = await client.call_tool("cadence_storage_summary", {})
+                    assert not result.is_error
+                    assert result.structured_content["result_ceiling_bytes"] == (
+                        anchor["policy"]["result_ceiling_bytes"]
+                    )
+                    assert result.structured_content["spectre_attempts"] == counter["count"]
+
+            asyncio.run(check_summary())
 
         verify_consumer()
         for _ in range(2):
@@ -167,6 +207,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "native_jobs": 0,
         "fresh_zero_policy_two_batches": "DISPOSABLE_FILES_ONLY_NOT_SIMULATIONS",
         "fresh_storage_and_power_counter_contracts": "PASS_SYNTHETIC_POLICY_BOUND",
+        "fresh_production_power_extraction_and_sdk_storage_summary": "PASS_SYNTHETIC_POLICY_BOUND",
     }
 
 

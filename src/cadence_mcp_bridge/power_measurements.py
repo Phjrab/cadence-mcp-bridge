@@ -102,6 +102,16 @@ class PowerCounter(ContractModel):
 RegisteredPowerCounter = PowerCounter | FreshResourceCounter
 
 
+def require_same_resource_policy(counters: tuple[RegisteredPowerCounter, ...]) -> None:
+    """Composite receipts cannot splice observations from different domains/policies."""
+    identities = tuple(
+        (counter.campaign_id, counter.policy if isinstance(counter, FreshResourceCounter) else None)
+        for counter in counters
+    )
+    if identities and any(identity != identities[0] for identity in identities[1:]):
+        raise ValueError("shared registered resource policy required")
+
+
 class PowerExtraction(ContractModel):
     schema_version: Literal[1]
     job_id: OperationId
@@ -113,7 +123,7 @@ class PowerExtraction(ContractModel):
     status: Literal["EXTRACTED", "UNQUALIFIED"]
     reason: Literal["signed_branch_current_unavailable", "reader_error"] | None
     protected_unchanged: Literal[True]
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     new_spectre_attempts: Literal[0]
     new_reservation_bytes: Literal[0]
 

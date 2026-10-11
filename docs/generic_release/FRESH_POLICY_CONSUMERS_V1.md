@@ -1,5 +1,49 @@
 # Fresh-domain accounting consumers
 
+## Production consumer correction, 2026-10-11
+
+The current user delegation includes retained GREL02–08 candidate preparation,
+conditional normal integration of related PRs, and the current validation VM's
+16 GiB cumulative reservation ceiling. Attempts/corrections/consumed reservations
+remain retained; this VM-specific increase does not replace other operators'
+registered limits. Public tag/Release/assets publication still needs one final
+approval for an exact candidate. Earlier scope/limit statements below are history.
+
+This corrective PR151 descendant wires `RegisteredPowerCounter` into actual power,
+bandwidth, bias, slew, offset and amplifier result models used by the fixed SSH
+result parsers. UUID campaigns require their exact registered policy, strict bounded
+count/bytes and consistent zero/nonzero accounting. Composite observations must
+share the same campaign and policy. No fixed scientific definition, pinned source,
+ordered admission sequence, SSH path or executable route is broadened.
+
+Historical `PowerCounter` keeps its exact three-field serialization. Snapshot v1
+keeps its historical shape. `StorageSupervisor.summary()` now forwards the validated
+snapshot's actual result ceiling, including a smaller fresh policy, to the typed
+public summary instead of reporting the historical 10 GiB default.
+
+Six newer output schemas change: storage summary, bandwidth, slew, offset,
+amplifier sweep and amplifier specification evaluation. Their input schemas and
+annotations remain exact. The original22 tools and shared legacy models stay exact.
+Immutable historical MCP snapshots are preserved; a separate hash-pinned
+`MCP_FRESH_POLICY_CONSUMER_V1_SNAPSHOT.json` records both the exact new outputs and
+the canonical hashes of the old tool schemas. The audit rejects substituted old
+schemas, changed transition scope, extra tools and unreviewed new output drift.
+Contract audit cannot decide behavioral semver by itself; its earlier v1.1.0
+suggestion is no longer presented as a release decision.
+
+New regression checks exercise all six production model families, five fixed SSH
+result parsers, malformed/missing/over-limit policies, mixed domains/policies and
+actual SDK storage calls with zero/consumed lower-ceiling observations. Fixtures
+remain disposable synthetic frames/ledgers. This correction performs no VM contact,
+initialization, simulation, actual journal edit, reservation or metadata repair.
+Native/package/app acceptance belongs to its exact independently recorded source;
+this local correction alone does not qualify a generic release or exact candidate.
+
+The historical sections below retain source-scoped prior evidence. Their claims
+that the alias alone connected consumers and that all85 output schemas stayed
+unchanged describe the pre-correction source and are superseded for current code.
+
+
 The standard-VM support scope and direct administrator delegation remain as
 recorded in `NATIVE_RESUME_BOUNDARY.md`. Continuous GREL02–07 and the existing
 895 MiB remainder remain authorized; no merge/GREL08/publication or budget reset.
@@ -104,3 +148,36 @@ The43 operator and20 domain synthetic files remained intact. Installed fresh
 power/storage policy contracts passed. This is the final trust-guard source receipt;
 prior package logs remain historical. No actual generic storage tool or EDA job
 was executed by that package verification.
+
+
+## Production-consumer correction receipts, 2026-10-11
+
+The corrected working source descends from96370fdd778cb9c39e5df560a4c1d873f4a50ad1.
+Related412 tests PASS /two Windows symlink skips /82.58s. The new regression module
+contributes60 tests; six additional audit-delta rejection tests also pass. Ruff
+across src/scripts/tests PASS, mypy77 source modules PASS and85-tool contract audit
+PASS. All original22 full tool schemas, shared legacy models and all eight registry
+schemas retain their exact reviewed identities. All six allowed changes are output
+only; their inputs/annotations remain exact. Historical MCP snapshot files are
+unchanged. No fixed native installer/runner/accounting/storage asset is edited by
+this descendant.
+
+Security preflight inspected1055 repository files and passed; security18 tests
+PASS /1.38s; strict locked-dependency audit found no known vulnerabilities.
+Canonical build/distribution audit passed with85 wheel members /86 sdist members,
+matching code/license/notices, no unexpected/protected-content patterns and no
+imported planning content. These are local synthetic artifacts under package
+version1.0.0, not a frozen release candidate or a semantic-version upgrade receipt:
+
+- wheel SHA256: `2439ac852c5c494516b106f6fc757318f0b9be3c1cbcba4d7e2d4dc3e52601dc`
+- sdist SHA256: `cd3722e71be9d0c157273bdfaae70f9d7685f85f70f6f4f12d6a4d5006ce97cf`
+
+Installed isolated Windows/Python3.12.10 CLI/SDK, legacy22 inventory, local forms,
+bootstrap/domain verification and same-version reinstall/uninstall PASS. Installed
+`PowerExtraction` consumes the actual fresh UUID/policy counter at zero and after
+two disposable reservations; `StorageSupervisor` and typed SDK summary report the
+registered1MiB ceiling and actual retained consumption. Those disposable fixture
+reservations are not VM reservations or Spectre launches. The43 operator and20
+domain test files remained intact through reinstall and uninstall. Logs are
+private. Hosted exact-head CI/review remain separate pending gates at this receipt;
+no review thread is resolved and no merge/publication is inferred from these tests.

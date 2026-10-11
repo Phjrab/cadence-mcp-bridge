@@ -1,3 +1,18 @@
+## PR151 production fresh-policy consumer correction, 2026-10-11
+
+Current user authority includes conditional related PR integration, retained
+GREL02–08 candidate preparation and the current validation VM's retained16 GiB
+ceiling. Exact public candidate publication still requires final approval.
+This isolated corrective descendant connects typed fresh policies to actual
+power/study/amplifier parsers and forwards storage's actual registered ceiling.
+Composite policy mixing rejects. Legacy three-field counters, original22 tools,
+old schema snapshots and fixed scientific admission checks are preserved; six
+newer outputs have an explicit hash-pinned versioned delta. Tests/package/review
+receipts are in docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md. No VM contact,
+real initialization/journal/reservation, simulation or protected metadata change.
+Native acceptance and final RC remain separate pending gates; prior records below
+are historical, including superseded merge/GREL08/resource exclusions.
+
 ## Cross-version repair metadata correction, 2026-10-09
 
 A final PR148 review found fractional mtime serialization differs between
