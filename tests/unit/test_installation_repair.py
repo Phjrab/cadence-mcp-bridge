@@ -888,7 +888,7 @@ def test_exact_existing_receipt_does_not_republish_or_require_before(monkeypatch
     original = {"scope": {}, "records": []}
     opened = []
     monkeypatch.setattr(repair, "receipt_directory", lambda plan, create: 7)
-    monkeypatch.setattr(repair, "read_receipt", lambda directory, name, data: True)
+    monkeypatch.setattr(repair, "read_receipt", lambda directory, name, data, plan: True)
     monkeypatch.setattr(repair.os, "close", opened.append)
 
     def denied(*args):
@@ -1113,3 +1113,59 @@ def test_actual_detached_receipt_directory_prevents_completion(
     assert (detached / receipt.name).read_bytes() == repair.receipt_bytes(prepared["plan"])
     assert not any(event["event"] == "complete" for event in events)
     assert stat.S_IMODE(paths[0].stat().st_mode) == (0o777 if stage == "validated" else 0o755)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("race", ["read", "file-fsync", "directory-fsync"])
+def test_actual_receipt_namespace_rechecked_after_read_and_durability(
+    actual_recipe_layout, monkeypatch, rollback, race
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    receipt = _receipt_path(prepared)
+    inode, directory_inode = receipt.stat().st_ino, receipt.parent.stat().st_ino
+    preserved = receipt.read_bytes()
+    detached = receipt.parent.with_name("preserved-during-receipt-read")
+    real_read, real_fsync, real_receipt = os.read, os.fsync, repair.read_receipt
+    calls, active, renamed = 0, False, False
+    events = []
+
+    def read_receipt(*args):
+        nonlocal calls, active
+        calls += 1
+        # Initial admission authenticates the linked receipt. Detach it during
+        # the final completion check or the immediate pre-rollback chmod check.
+        active = calls == 2
+        return real_receipt(*args)
+
+    def detach(fd, directory=False):
+        nonlocal renamed
+        expected = directory_inode if directory else inode
+        if active and not renamed and os.fstat(fd).st_ino == expected:
+            receipt.parent.rename(detached)
+            renamed = True
+
+    def read(fd, limit):
+        if race == "read":
+            detach(fd)
+        return real_read(fd, limit)
+
+    def fsync(fd):
+        if race == "file-fsync":
+            detach(fd)
+        elif race == "directory-fsync":
+            detach(fd, directory=True)
+        return real_fsync(fd)
+
+    monkeypatch.setattr(repair, "read_receipt", read_receipt)
+    monkeypatch.setattr(repair.os, "read", read)
+    monkeypatch.setattr(repair.os, "fsync", fsync)
+    monkeypatch.setattr(repair, "emit", events.append)
+    with pytest.raises(ValueError, match="repair_receipt_namespace"):
+        repair.mutate(request, rollback)
+    assert renamed and stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert (detached / receipt.name).read_bytes() == preserved
+    assert not any(event["event"] in ("changed", "complete") for event in events)
