@@ -28,6 +28,24 @@ no new simulation/reservation/guest metadata change occurred in this correction.
 Release remains BLOCKED; no exact qualified candidate or publication approval.
 Earlier records below retain their original source and time scope.
 
+## Pinned storage worker entry and zero initialization fixture, 2026-10-11
+
+Independent finding4240464522 is corrected: the explicitly pinned reference
+storage backend supplies the installed fixed `_storage_entry.py` source with
+-E -s -B -c. That entry authenticates the caller's manifest pin and retained
+storage.py bytes before executing any worker code, including legacy ledgers.
+The exported launcher embeds the same bounded entry; the pinned backend does
+not execute a mutable remote launcher. Unpinned historical v6 remains an explicit
+legacy route, while fresh operator storage stays unavailable until attested.
+
+Three owned POSIX regressions cover modified worker, modified worker+manifest,
+and replacing the pathname after the authenticated source was retained. Existing
+standalone/legacy/fresh tests remain separate. Windows connected139 PASS/12 OS
+skips; Ruff/mypy80 PASS. Installed migration verification now explicitly rejects
+a fresh power result at baseline0 and checks production models after its actual
+disposable1/2 reservations. No actual VM budget/ledger/admin changes are made.
+Exact hosted, package, independent review and final VM/app remain mandatory.
+
 ## Staging startup and positive power admission, 2026-10-11
 
 Independent review4240427687/4240427689 is corrected. The fixed -c setup staging
@@ -46,6 +64,23 @@ independent review remain gates; no actual VM, journal, reservation or simulatio
 changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
 integration remain authorized. Final exact public-candidate approval is separate.
 Earlier histories, policy versions, failed evidence and original state remain.
+
+## Executing migration byte binding, 2026-10-11
+
+Independent finding4240481575 is addressed by a package-supplied fixed Python
+entry. Supported CLI transport sends that reviewed source with -E -s -B -c,
+checks the caller's package-bound manifest pin and retains/authenticates
+migration.py before compiling it. The executing migration hash is compared again
+to the retained validated asset before loading helpers or publishing records.
+No mutable migration pathname is loaded by Python before authentication. The
+exported closed shell wrapper embeds the same fixed entry for explicit operator
+invocation; the CLI does not execute mutable remote wrapper bytes.
+
+Three owned POSIX cases cover source replacement, both source+manifest replacement,
+and post-read replacement. They must pass hosted Linux; Windows41 PASS/5 OS skips.
+The previous real user-site startup control remains. Earlier helper/source/logs
+and actual journals are retained; this source change does not contact or mutate
+VM, reserve results or run Cadence. Final exact review/package/VM gates remain.
 
 ## Python isolation before interpreter startup, 2026-10-11
 
@@ -136,6 +171,36 @@ Two exported-helper child tests omit each flag with absolute PYTHONPATH and
 PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
+
+## Canonical library digest correction, 2026-10-11
+
+Exact ce23e43 hosted POSIX checks failed because the membership collector passed
+already canonical bytes through JSON canonicalization a second time. It now
+hashes those bounded canonical bytes directly. A portable regression binds the
+expected exact digest and exercises the same production function on Windows;
+owned Linux membership/alias/race cases remain required hosted evidence.
+Windows repair86 PASS/224 OS skips and Ruff/mypy72 PASS. This changes no VM,
+metadata, ledger, reservation or simulation. Earlier failed logs are preserved;
+final hosted/review/package and standard-VM inspection remain release gates.
+
+## Bounded directory membership and unvisited aliases, 2026-10-11
+
+Review4240469024/4240469027 is corrected. The current fixed32-bit recipe explicitly
+rejects selected nested library-directory symlinks instead of pretending their
+unvisited subtree is authenticated. Known top-level tools/OA compatibility aliases
+are still observed and their selected library roots walked. No excluded64-bit,
+license/data/doc/sample branch is traversed. The supported standard VM must pass
+this current read-only inventory; an unexpected alias is a concrete unsupported
+layout blocker, not a reason to waive trust or change proprietary contents.
+
+Each traversed directory now retains one64-hex membership/metadata digest rather
+than all filename and lexical-ancestor lists. Per-directory entry/serialized-byte
+limits and total directory count still apply; timestamps are encoded losslessly.
+Two owned Linux alias cases reject before mutation and one1000-entry case verifies
+bounded retained signatures and late membership detection. Updated exact hosted,
+installed standard-VM and independent review remain gates. No actual VM change,
+new simulation or reservation occurred; all prior receipt/policy evidence remains.
+Current directGREL02-08/16GiB/500/same-change20 and publication boundaries persist.
 
 ## Internal-only library directory roles, 2026-10-11
 

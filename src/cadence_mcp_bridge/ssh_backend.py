@@ -8,11 +8,13 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 from datetime import datetime
 from enum import StrEnum
+from importlib.resources import files
 from typing import Annotated, Any, Literal, TypeVar, cast
 from uuid import UUID
 
@@ -191,8 +193,12 @@ class OpenSshBackend:
         if pin is None:
             runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
             return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
-        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v7/run.sh"
-        return await asyncio.to_thread(self._invoke_at_path, runner, pin, action, raw.hex())
+        directory = self._config.remote_root + "/phase-campaign/storage-mgmt-v7/runtime/" + pin
+        entry = files("cadence_mcp_bridge").joinpath("_storage_entry.py").read_text()
+        return await asyncio.to_thread(
+            self._invoke_at_path, "/usr/bin/python", "-E", "-s", "-B", "-c",
+            shlex.quote(entry), directory, pin, action, raw.hex(),
+        )
 
     async def health(self) -> HealthReport:
         payload = await self._invoke_json(_RunnerCommand.HEALTH)

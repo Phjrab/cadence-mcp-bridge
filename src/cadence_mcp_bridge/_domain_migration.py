@@ -141,6 +141,9 @@ def validate_assets(expected):
     for name in MEMBERS:
         if manifest["files"][name] != {"sha256": digest(values[name]), "bytes": len(values[name])}:
             raise ValueError("migration_asset_content_drift")
+    executing = globals().get("_EXECUTING_MIGRATION_SHA256")
+    if executing is not None and digest(values["migration.py"]) != executing:
+        raise ValueError("migration_executing_source_drift")
     load_validated_helpers(values, directory)
     return expected
 

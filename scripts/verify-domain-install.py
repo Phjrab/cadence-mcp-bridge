@@ -140,7 +140,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             counter = accounting.read(str(fresh_root / accounting.LEDGER))
             # Exercise the installed production extraction model, not just its
             # otherwise-unused type alias. Sources are synthetic zero-current frames.
-            extracted = PowerExtraction.model_validate_json(json.dumps(dict(
+            power_frame = dict(
                 schema_version=1, job_id=REFERENCE_OPERATION, analysis="dc",
                 input_sha256="a" * 64, psf_sha256="b" * 64, frame_sha256="c" * 64,
                 sources=[dict(source_id=identity, role=role, voltage_v=voltage, current_a=0)
@@ -148,9 +148,19 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 status="EXTRACTED", reason=None, protected_unchanged=True,
                 counter=dict(counter, policy=anchor["policy"]),
                 new_spectre_attempts=0, new_reservation_bytes=0,
-            )))
-            assert extracted.counter.count == counter["count"]
-            assert extracted.counter.model_dump()["policy"] == anchor["policy"]
+            )
+            if not counter["count"]:
+                # No admitted scientific result exists at fresh initialization.
+                try:
+                    PowerExtraction.model_validate_json(json.dumps(power_frame))
+                except ValueError as error:
+                    assert "positive admitted counter" in str(error)
+                else:
+                    raise AssertionError("Unadmitted fresh power result was accepted")
+            else:
+                extracted = PowerExtraction.model_validate_json(json.dumps(power_frame))
+                assert extracted.counter.count == counter["count"]
+                assert extracted.counter.model_dump()["policy"] == anchor["policy"]
             if counter["count"]:
                 # Use the actual disposable fresh ledger's early1/2 observations.
                 # Scientific frame is synthetic; this is installed parser evidence.

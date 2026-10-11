@@ -1,3 +1,22 @@
+## Bounded directory membership and unvisited aliases, 2026-10-11
+
+Review4240469024/4240469027 is corrected. The current fixed32-bit recipe explicitly
+rejects selected nested library-directory symlinks instead of pretending their
+unvisited subtree is authenticated. Known top-level tools/OA compatibility aliases
+are still observed and their selected library roots walked. No excluded64-bit,
+license/data/doc/sample branch is traversed. The supported standard VM must pass
+this current read-only inventory; an unexpected alias is a concrete unsupported
+layout blocker, not a reason to waive trust or change proprietary contents.
+
+Each traversed directory now retains one64-hex membership/metadata digest rather
+than all filename and lexical-ancestor lists. Per-directory entry/serialized-byte
+limits and total directory count still apply; timestamps are encoded losslessly.
+Two owned Linux alias cases reject before mutation and one1000-entry case verifies
+bounded retained signatures and late membership detection. Updated exact hosted,
+installed standard-VM and independent review remain gates. No actual VM change,
+new simulation or reservation occurred; all prior receipt/policy evidence remains.
+Current directGREL02-08/16GiB/500/same-change20 and publication boundaries persist.
+
 ## Internal-only library directory roles, 2026-10-11
 
 Review4240442083 is corrected: an internal library alias now adds its canonical

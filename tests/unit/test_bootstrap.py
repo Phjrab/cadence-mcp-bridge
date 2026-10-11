@@ -11,6 +11,7 @@ from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge import bootstrap
 from cadence_mcp_bridge.__main__ import main
 
+REAL_OPERATOR_LOCK = installer._operator_lock
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs/examples/onboarding"
 
 
@@ -1331,14 +1332,26 @@ def test_operator_update_rechecks_next_runtime_after_directory_sync(
     assert not (target / "operator-activation-history").exists()
 
 
+@pytest.fixture
+def operator_preflight_pair(operator_update_pair, monkeypatch):
+    # Content-only activation fixtures disable flock. These tests exercise the
+    # actual existing-domain read lock and the updater's real exclusive lock.
+    _, target, _, _ = operator_update_pair
+    lock = target / "run.lock"
+    lock.write_bytes(b"")
+    lock.chmod(0o600)
+    monkeypatch.setattr(installer, "_operator_lock", REAL_OPERATOR_LOCK)
+    return operator_update_pair
+
+
 @pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher lifetime flock")
 def test_operator_preflight_locks_before_compiling_and_holds_through_child(
-    operator_update_pair, monkeypatch
+    operator_preflight_pair, monkeypatch
 ):
     from cadence_mcp_bridge import _operator_preflight_entry as entry
     from cadence_mcp_bridge import _runner_launcher as launcher_module
 
-    _, target, previous, expected = operator_update_pair
+    _, target, previous, expected = operator_preflight_pair
     installer.operator_preflight_update(str(target), expected, previous)
     source = (target / "bin/cadence-operator-runner").read_bytes()
     calls = []
@@ -1359,12 +1372,12 @@ def test_operator_preflight_locks_before_compiling_and_holds_through_child(
 
 @pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher loaded-byte binding")
 def test_operator_preflight_update_before_lock_loads_only_authenticated_next_bytes(
-    operator_update_pair, monkeypatch
+    operator_preflight_pair, monkeypatch
 ):
     from cadence_mcp_bridge import _operator_preflight_entry as entry
     from cadence_mcp_bridge import _runner_launcher as launcher_module
 
-    _, target, previous, expected = operator_update_pair
+    _, target, previous, expected = operator_preflight_pair
     trusted = (target / "runtime" / expected / "launcher.py").read_bytes()
     original, replaced, calls = entry.os.open, False, []
 
@@ -1387,12 +1400,12 @@ def test_operator_preflight_update_before_lock_loads_only_authenticated_next_byt
 
 @pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher package binding")
 def test_operator_preflight_rejects_other_loaded_implementation_without_child(
-    operator_update_pair, monkeypatch
+    operator_preflight_pair, monkeypatch
 ):
     from cadence_mcp_bridge import _operator_preflight_entry as entry
     from cadence_mcp_bridge import _runner_launcher as launcher_module
 
-    _, target, previous, expected = operator_update_pair
+    _, target, previous, expected = operator_preflight_pair
     trusted = (target / "runtime" / expected / "launcher.py").read_bytes()
     monkeypatch.setattr(
         launcher_module.subprocess, "call", lambda *a, **kw: pytest.fail("no child")

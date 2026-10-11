@@ -1,3 +1,14 @@
+## Current package-bound entry, 2026-10-11
+
+The supported `domain` CLI supplies its installed fixed `_domain_entry.py` source
+through `/usr/bin/python -E -s -B -c`. It authenticates the configured manifest pin
+and retained migration bytes before any migration module execution. Imported
+helpers are retained and validated separately; executing migration bytes must
+also match the validated bundle. No caller script/code/interpreter is accepted.
+Exported `domain-operator.sh` embeds the same fixed entry for explicit operator
+use. Existing versioned bundles and receipts are preserved; preparing a new
+helper never rebases consumed ledger or renews execution authority.
+
 ## Python isolation before interpreter startup, 2026-10-11
 
 Independent P1 review4240357276 is addressed by a manifest-bound fixed POSIX
