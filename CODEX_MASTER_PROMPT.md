@@ -1,3 +1,22 @@
+## PR151 current standalone correction and parent integration, 2026-10-11
+
+Review4239919242 is fixed by binding the private named resource lock's inode,
+ownership/mode/link count/size and at most4096 actual content bytes. Existing
+fixed launchers' O_TRUNC of an empty lock can change timestamps without corrupting
+it; only lock mtime/ctime are excluded. Same-size content drift and all namespace/
+permission/link checks still reject. Artifact metadata protection is unchanged.
+
+Exact8c8389e Ubuntu actual files/flock/standalone463 PASS with zero POSIX skips,
+Windows portable consumers119 PASS/17 OS skips, Ruff/mypy78 PASS and exact
+isolated installed85-tool43+20-state preservation PASS are source evidence.
+Current source additionally merges latest150ca2476, including148 final receipt
+namespace and149 independently compiled launcher binding. This integrated source
+needs refreshed hosted/security/package/review gates; previous receipts remain
+source-specific history. No VM contact/admin/deployment/actual journal/ledger/
+reservation/simulation changes occurred. General release and exact RC stay BLOCKED.
+Current user16GiB/500/20,GREL02-08 and conditional normal PR integration authority
+continues; public tag/Release/assets still require exact-candidate approval.
+
 ## Active PR151 standalone deployment correction, 2026-10-11
 
 Fresh review exposed a missing production accounting helper/manifest in the
@@ -36,6 +55,29 @@ receipts do not qualify this correction. Release and exact candidate remain
 BLOCKED. See [consumer correction](docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
+## Final receipt content observation namespace correction, 2026-10-11
+
+Fresh exact0d72108 review found that the final receipt hash ran after its earlier
+fixed-directory check. A same-UID rename during that hash left the proc-fd file
+entry readable. After the last content hash and file-entry check, read_receipt now
+reauthenticates the full fixed parent/directory namespace and repeats held file and
+directory metadata stability. No content read or fsync follows that final check.
+Four additional complete owned Linux apply/rollback cases detach the directory
+during the final hash or final file-entry lookup and retain its original evidence.
+The held-target/fixed-lock/resource_guard correction is retained; no new mutation
+scope, schemas, authority, platform abstraction or transport allowance is added.
+
+Previous0d72108 exact hosted Linux245 PASS/0skip and isolated installed32-state
+preservation PASS remain source-specific history. Updated-source connected local
+168 PASS/107 Windows POSIX/symlink skips; Ruff/mypy72/security18/strict locked audit/
+85 schemas and exact wheel/sdist/license/content/installed32-state preservation
+PASS. Exact updated hosted/fresh independent review and actual read-only332-target
+inventory remain pending gates. Current-VM contact/admin actions,
+simulations and result reservations remain0 in this correction. The user16GiB/500/
+20,GREL02-08 and conditional normal merge delegation persists; exact public tag,
+Release/upload requires the separate final approval. Earlier artifacts, failed
+review evidence, installed helpers and cumulative ledger are retained unchanged.
+
 ## Held target and fixed resource-lock race correction, 2026-10-11
 
 Fresh exact-e169 review found two remaining prechange windows: a new regular-file

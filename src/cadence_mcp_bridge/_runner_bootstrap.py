@@ -468,6 +468,11 @@ def operator_preflight_update(target, expected, previous):
         if any(os.path.lexists(os.path.join(history, reverse + suffix))
                for suffix in (".json", ".complete.json")):
             raise ValueError("operator_update_reverse_history")
+        # Independently compiled reviewed launcher; a self-rehashed manifest
+        # cannot grant authority to replace this executable with caller code.
+        known_launcher = "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f"
+        if digest(new_files["launcher.py"].replace(b"\r\n", b"\n")) != known_launcher:
+            raise ValueError("operator_update_launcher_not_reviewed")
         before = {"schema_version": 1, "manifest_sha256": previous}
         after = {"schema_version": 1, "manifest_sha256": expected}
         state = os.path.join(target, "active-operator-runner.json")
