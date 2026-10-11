@@ -68,6 +68,31 @@ receipts do not qualify this correction. Release and exact candidate remain
 BLOCKED. See [consumer correction](docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
+## External compatibility-link membership correction, 2026-10-11
+
+Fresh exact 1e685b1 review found new external .so symlinks were omitted from the
+completion plan because their read-only compatibility records lived only in the
+response envelope. The standard installation plan now authenticates the ordered
+external membership, resolved target, existence and literal symlink target under
+its plan digest and apply receipt. Initial apply/rollback and fixed completion
+re-enumeration reject missing or changed binding. External resolved targets remain
+outside every metadata mutation path. Historical unbound plans/helpers/receipts
+are preserved; the updated helper requires a fresh read-only inventory rather
+than inventing a historical before-state. The model recipe retains its separate
+explicit exact profile/model_include selector.
+
+Two portable pre-lock rejection cases and 36 complete owned Linux cases cover
+create, rename and retarget-to-the-same-resolution across IC/Spectre/OA roots,
+apply/rollback and no-op/processed states. External target bytes and metadata are
+preserved, failed evidence remains, and no complete event is emitted. Latest
+connected local checks: 173 PASS / 167 Windows POSIX or symlink skips. Ruff and
+mypy (72 files) PASS. Updated security/package/hosted/fresh-review and actual final
+installed-helper read-only inventory gates remain pending. Prior exact 1e685b1
+hosted POSIX 276 PASS / 0 skips and Windows success remain source-specific history.
+No current-VM contact, admin action, simulation or reservation occurred here.
+Active 16 GiB / 500 / 20, GREL-02 through GREL-08 and conditional normal PR merge
+authority persists. Public tag/Release/upload requires final exact-candidate approval.
+
 ## Completion fixed-recipe membership correction, 2026-10-11
 
 Fresh exact169f4a6 review found that completion only reobserved original paths;

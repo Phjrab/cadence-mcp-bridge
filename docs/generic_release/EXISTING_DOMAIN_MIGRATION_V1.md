@@ -1,3 +1,28 @@
+## Migration transitive import isolation, 2026-10-11
+
+Fresh review P2 identified that direct script launch left the staged helper
+bundle on sys.path. The retained-byte loader now removes every bundle path alias
+(including an empty/current-directory entry) before any import or compilation.
+New same-UID platform/types/subprocess files created after inventory cannot be
+resolved as dependencies of reviewed retained helpers. Fixed module names and
+complete manifest checks remain mandatory. This does not authenticate arbitrary
+caller dependencies or expand the supported standard VM. New regressions and
+exact source/installed/CI/review gates are required; prior failures are retained.
+No VM, ledger, reservation, replay, results or circuit originals changed.
+
+## GREL03 exact reservation-asset pin integration, 2026-10-11
+
+The new initial-activation pin test correctly rejected the inherited GREL02 pin
+against GREL03's already reviewed append-only legacy-seal reservation helper.
+The branch-owned compiled reservations pin now binds those exact reviewed bytes
+(normalized SHA25661c04f53fb8896c9844581ad3a6b5afec1fb8ac470c8db987e419b53eb66b905).
+The helper content and prior anchors/counters are unchanged by this correction;
+only the independent source pin follows the branch's reviewed implementation.
+Failed exact-head CI/logs are retained. The pin-match regression stays enabled,
+and affected bootstrap/combined/installed/hosted gates are rerun for new source.
+Source/review identity is not replaced by operator-supplied manifest hashes.
+No VM, journal, result, reservation or source-design changes occurred.
+
 ## Retained validated migration helpers, 2026-10-11
 
 Fresh review P2 identified a path-import gap after source manifest verification.
