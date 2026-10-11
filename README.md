@@ -1,3 +1,9 @@
+> Development metadata selects2.0.0 for the required v1 launch migration.
+> Existing intentional legacy clients add explicit `serve`; new operators configure
+> `serve-operator`. Actual standard-VM execution and app restart/replay are observed,
+> but final integrated assets and a new app submission remain release gates.
+> See the [2.0 install draft](docs/generic_release/INSTALL_DRAFT_2_0_0.md).
+
 ## Standard VM operator starter (qualification in progress)
 
 The installed wheel includes a setup, update and recovery guide and fictional,

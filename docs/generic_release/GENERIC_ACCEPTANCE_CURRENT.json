@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "PARTIAL_ACTUAL_QUERY_AUTHORITY_INACTIVE_RESTART_UNAVAILABLE",
-      "evidence_scope": "Actual Codex currentbf6 status/result reads pass; local new plan returns authority_inactive. User cannot restart; no new app submit/restart acceptance or config reload claimed."
+      "status": "PARTIAL_ACTUAL_RESTART_PLAN_STATUS_RESULT_AND_SAME_ID_REPLAY_PASS_NEW_APP_JOB_PENDING",
+      "evidence_scope": "User reported Codex restart. Actual reconnected QA tools plan exact grant93021/currentbf6, reconcile prior fresh-host DC to SUCCEEDED, same-ID submit preserves event_count6 and result retrieval verifies terminal/content/PSF/protected originals. Read-only actual ledger remains102/12,483,297,280. New app submission on a new bounded grant and final replacement assets remains pending."
     },
     {
       "id": "G16",

@@ -1,3 +1,40 @@
+## Initial versioned package rehearsal checkpoint, 2026-10-11
+
+Exact development commitc76dbcba15afb46cbd67c325d7dec7551029a3d8 built2.0.0
+wheel742dad3a8ad105a0802e8af87cde373e4e02314282e5be0c8a40bf970311f3c2 and
+curated sdist331fa1808b49cc1aef9095da7aca55c4520a9ffc4b3f845205eed8dd016ccb5f.
+Distribution member/license/secret exclusion audit and isolated installed protocol,
+context, operation, bootstrap, retained/fresh domain, reinstall/uninstall state
+conservation PASS. Original22 schemas/annotations stay equal. The installed
+conditional96-schema check is synthetic and contacts no VM.
+
+A distinct Windows/Python3.12.10 environment with current locked dependencies
+passed published1.0 -> development2.0 ->1.0 ->2.0 versioned replacement. Eight
+synthetic durable/result/replay files remain identical, restored inventories are
+exact and repeat admission is denied. Old1.0 rejects serve-operator. This is a
+host installed rehearsal, not remote/native or actual-app execution, and not the
+final candidate: newer starter migration prose and pending PR148-151 assets have
+not been incorporated in those earlier artifacts. All failed local harness/fixture
+attempts remain preserved; they did not contact VM or reserve simulation budget.
+
+Final exact-code validation has a separate pre-recorded8-attempt/1GiB maximum
+batch, including an actual app DC among the six routes and an independent two-point
+Sweep, within current continuing16GiB delegation. Its final bindings/grant are
+not minted yet. Latest actual consumption stays102/12,483,297,280; release is
+BLOCKED and public posting remains excluded. Earlier checkpoints are history.
+
+## Actual Codex restart checkpoint, 2026-10-11
+
+The user completed Codex restart. Actual QA MCP now loads the expected retained
+93021 grant andbf6 bundle. Local plan, successful status, same-ID submit and
+bounded verified result retrieval PASS; event_count remains6. A new read-only
+accounting observation remains102 /12,483,297,280 bytes. This supersedes the
+previous restart-unavailable/authority-inactive observation only for that current
+connection. No new app job ran and the three-attempt grant remains fully spent.
+Prepare the next bounded exact-code experiment and app settings together; preserve
+old grants and consumption. New actual app submission and final assets remain
+release gates. No blanket RC or release PASS is claimed. Earlier evidence stays.
+
 ## Development version and final-review checkpoint, 2026-10-11
 
 Development package/runtime/lock metadata now agree on2.0.0. The published v1

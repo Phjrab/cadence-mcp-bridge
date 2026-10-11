@@ -180,6 +180,22 @@ SDK tool negotiation alone is not actual-client acceptance.
 
 ## Update, troubleshooting and preservation
 
+Version2.0 changes the documented v1 bare launch. Existing clients that intentionally
+use the legacy reference path must preserve their configuration and add explicit
+`serve`, for example `args = ["-m", "cadence_mcp_bridge", "serve"]`. New operators
+use the explicitly configured `serve-operator` command. Missing setup returns
+SETUP_REQUIRED; do not restore an implicit developer connection to avoid migration.
+
+Preserve exact old wheels, client settings, grants, bundles and journals before
+upgrading. The v1 package does not support `serve-operator`; during a host rollback
+keep its new settings/state for recovery and use only the retained explicit legacy
+configuration if that legacy route is intended. Restore the qualified new package
+to read newer operator records. A host wheel downgrade does not attest a native
+bundle rollback or authorize new execution. Expired or consumed grants stay in
+history; replacement authority is separately bounded against actual consumption.
+After changing runtime/provider/grant bindings, review and restart the MCP
+connection once; a running server deliberately does not silently adopt new policy.
+
 Keep the exact old wheel/runtime/registration/settings and journals. Install the
 new host wheel in its isolated environment; import/startup cannot update the VM.
 Stage the new immutable bundle; use explicit `native-runtime update` with both
