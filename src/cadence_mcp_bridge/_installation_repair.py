@@ -1105,6 +1105,16 @@ def inventory(profile):
         ms + "/tools.lnx86/ktl/lib", ms + "/tools.lnx86/nif/lib",
         ms + "/tools.lnx86/pub/lib", ms + "/tools.lnx86/vmor/lib",
     )
+    # Observed standard-VM Tcl/Tk compatibility aliases expose sourced code.
+    # Only these fixed roles may escape the32-bit shared-library directories.
+    script_entries = (ic + "/share/lib/tcltk/tcl8.4", ic + "/share/lib/tcltk/tk8.4")
+    script_roots = tuple(os.path.realpath(path) for path in script_entries)
+    if not all(inside(root, ic + "/share/lib/tcltk") for root in script_roots):
+        raise ValueError("standard_vm_tcl_script_scope")
+    code_roots += script_roots
+    script_aliases = dict((name, script_roots[0 if name.startswith("tcl") else 1])
+                          for name in ("tcl", "tcl8.4", "tk", "tk8.4"))
+    visited_directories = set()
     exact_code = set((ic + "/tools.lnx86/.oawrap", ic + "/tools.lnx86/.cdnWrapper_pscompat"))
     paths, links, external = set(), {}, []
     internal, library_directories = {}, {}
@@ -1155,6 +1165,10 @@ def inventory(profile):
         pending = [code]
         while pending:
             current = pending.pop()
+            canonical_directory = os.path.realpath(current)
+            if canonical_directory in visited_directories:
+                continue
+            visited_directories.add(canonical_directory)
             observed = library_directory_snapshot(current)
             directories, filenames = [], []
             for name in observed[1]:
@@ -1164,16 +1178,29 @@ def inventory(profile):
                 raise ValueError("library_membership_limit")
             directories[:] = [d for d in directories if "64" not in d and d not in (
                 "license", "data", "doc", "samples")]
-            # This fixed32-bit recipe does not enumerate aliased subtrees.
-            # Never silently authenticate their unvisited loader-visible files.
-            if any(os.path.islink(current + "/" + name) for name in directories):
-                raise ValueError("library_directory_alias_not_enumerated")
+            children = []
+            for name in directories:
+                child = current + "/" + name
+                if os.path.islink(child):
+                    expected = script_aliases.get(name)
+                    if (current != ic + "/tools.lnx86/lib" or expected is None or
+                            os.path.realpath(child) != expected):
+                        raise ValueError("library_directory_alias_not_enumerated")
+                    add(child)
+                    # Bind the intermediate share/lib compatibility aliases too.
+                    for script_entry in script_entries:
+                        if os.path.realpath(script_entry) == expected:
+                            add(script_entry)
+                    child = expected
+                children.append(child)
             for name in filenames:
-                if ".so" in name:
+                sourced_script = (any(inside(current, root) for root in script_roots) and
+                                  (name.endswith((".tcl", ".tm", ".msg")) or name == "tclIndex"))
+                if ".so" in name or sourced_script:
                     add(current + "/" + name)
             if len(pending) + len(directories) + len(library_directories) > MAX_ITEMS:
                 raise ValueError("library_membership_limit")
-            pending.extend(current + "/" + name for name in directories)
+            pending.extend(children)
     workspace = valid_path(profile["paths"]["workspace_root"])
     if os.path.realpath(workspace) != workspace:
         raise ValueError("workspace_link")

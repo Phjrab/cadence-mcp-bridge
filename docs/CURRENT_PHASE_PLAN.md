@@ -1,3 +1,21 @@
+## Actual standard-VM Tcl/Tk dependency roles, 2026-10-11
+
+Read-only latest i686 inventory exposed four standard Tcl/Tk library aliases,
+whose intermediate share/lib/tcltk/tcl8.4 and tk8.4 aliases resolve to a shared
+08.49 directory. The fixed recipe now binds those exact compatibility roles and
+intermediate links, traverses each canonical script directory once with bounded
+readdir64, and includes sourced .tcl/.tm/.msg/tclIndex code. Other nested directory
+aliases, code-role escapes and excluded64/license/data/doc/sample trees reject.
+No generic recursive installation scope or platform abstraction is introduced.
+
+Actual UID500/Python2.6 read-only inventory PASS:448 exact targets,112 new mode
+changes required (0777 to0755). The observed prior336 targets remain; contents,
+owner/group and old receipts are not overwritten. Additional repair has NOT been
+applied. The earlier four SuSE-directory changes are already completed history.
+Owned Linux direct/shared intermediate aliases cover apply/repeat/rollback and
+code-role rejection; final hosted/package/review and exact installed qualification
+remain gates. This observation adds0 simulations,0 reservations and0 admin changes.
+
 ## Preallocation-bounded library enumeration, 2026-10-11
 
 Independent finding4240505088 identified that os.listdir/os.walk allocate whole
