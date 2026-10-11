@@ -455,18 +455,27 @@ def fresh_ledger(io, root, counter, lock_held=True):
                         or info.st_uid != os.getuid() or info.st_mode & 18 or info.st_size > 262144
                     ):
                         raise ValueError("fresh storage fixed asset trust")
+                    before = metadata(fd)
                     raw = os.read(fd, 262145)
+                    if before != metadata(fd) or len(raw) != info.st_size:
+                        raise ValueError("fresh storage fixed asset changed during read")
                     if manifest["files"][name] != {
                         "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
                     }:
                         raise ValueError("fresh storage fixed asset drift")
+                    if name == "reservations.py":
+                        accounting_raw = raw
                 finally:
                     os.close(fd)
         finally:
             os.close(source)
-        import imp
+        import types
 
-        accounting = imp.load_source("fixed_storage_accounting", directory + "/reservations.py")
+        # Evaluate exactly the authenticated descriptor bytes. Do not reopen a
+        # path, create bytecode or depend on imp (removed by host Python3.12).
+        accounting = types.ModuleType("fixed_storage_accounting")
+        accounting.__file__ = directory + "/reservations.py"
+        eval(compile(accounting_raw, accounting.__file__, "exec"), accounting.__dict__)
     binding = {
         "root_sha256": hashlib.sha256(path.encode("utf-8")).hexdigest(),
         "resource_domain_sha256": anchor.get("resource_domain_sha256"),
