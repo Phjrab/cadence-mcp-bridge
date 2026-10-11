@@ -1,3 +1,32 @@
+## Durable next-runtime update binding, 2026-10-11
+
+Independent review4240354827 is corrected: activation and preflight-only update
+share the version-directory/runtime-parent durability barrier and a full asset
+and target revalidation before launcher, pointer or transition-history writes.
+Initial, interrupted and completed exact retries repeat these barriers. Failure
+preserves current files and pointer; a substituted next runtime rejects before
+publication. Six portable failure/retry cases and one last-barrier replacement
+case pass; the POSIX completed-retry fixture checks actual directory fsync order.
+
+Connected Windows bootstrap94 PASS/12 platform skips. Exact hosted Linux,
+security/package and refreshed independent review remain gates; no actual VM,
+ledger, grant, simulation or reservation changes occur in this correction.
+Current directGREL02-08/16GiB/500/same-change20/conditional normal integration
+remain authorized. Public tag/Release/assets require the exact final approval.
+Earlier source evidence, policy and recovery histories are retained.
+
+## Selected runtime namespace durability, 2026-10-11
+
+Fresh independent finding4240331189 is corrected: activation fsyncs the selected
+version and runtime parent before any launcher or active pointer publication,
+then validates the exact manifest/assets again. Exact retries repeat both
+barriers. Actual POSIX fsync-order coverage is extended; four portable cases
+inject repeated version/runtime barrier failure in initial and exact activation,
+and another replaces runtime bytes during the last barrier. Pointer/history and
+failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PASS.
+Hosted actual POSIX and fresh final review/package remain separate pending gates.
+This correction performs no actual VM activation, EDA or accounting mutation.
+
 ## Initial-pin installed package evidence, 2026-10-11
 
 Exact newly changed bootstrap/fixture source passed curated wheel80/sdist81,

@@ -60,7 +60,8 @@ def main():
         ("confirmation.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
     )
     migration_members = set(
-        ("migration.py", "reservations.py", "installer.py", "probe.py", "manifest.json")
+        ("domain-operator.sh", "migration.py", "reservations.py", "installer.py",
+         "probe.py", "manifest.json")
     )
     migration = set(v["files"]) == migration_members
     if migration:

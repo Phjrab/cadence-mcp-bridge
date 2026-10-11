@@ -272,6 +272,8 @@ def test_apply_cli_fixed_transport_verifies_remote_conservation_receipt(
 
     def transport(argv, payload, environment, **bounds):
         invocations.append(argv)
+        assert argv[-4] == "/bin/sh"
+        assert argv[-3].endswith("/" + helper + "/domain-operator.sh")
         request = json.loads(payload)
         assert request["operator_authority"] == "synthetic scope only"
         assert bounds == {"timeout": 60, "limit": 262144}
@@ -589,3 +591,93 @@ def test_memory_loaded_migration_preserves_stdlib_first_entry_and_filters_bundle
     assert sys.path[0] == stdlib
     assert all(Path(entry or ".").resolve() != output for entry in sys.path)
     assert module._VALIDATED_HELPERS is None
+
+
+@pytest.mark.parametrize("missing", ["environment", "user-site"])
+def test_direct_migration_requires_isolated_python_before_untrusted_imports(tmp_path, missing):
+    import subprocess
+    import sys
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    search = tmp_path / "untrusted-search"
+    search.mkdir()
+    marker = tmp_path / "unreviewed-hook-executed"
+    shadow = ("from pathlib import Path\nPath(" + repr(str(marker)) +
+              ").write_text('executed')\nraise RuntimeError('unreviewed-hook')\n")
+    (search / "hashlib.py").write_text(shadow, encoding="utf-8")
+    environment = dict(os.environ, PYTHONPATH=str(search), PYTHONUSERBASE=str(search))
+    flags = ["-s", "-B"] if missing == "environment" else ["-E", "-B"]
+    result = subprocess.run(
+        [sys.executable, *flags, str(output / "migration.py"),
+         "inventory-existing", "a" * 64],
+        cwd=output, input=b"{}", capture_output=True, timeout=15, check=False,
+        env=environment,
+    )
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert result.stderr.replace(b"\r\n", b"\n") == (
+        b"OPERATOR_DOMAIN_MIGRATION_ISOLATED_PYTHON_REQUIRED\n"
+    )
+    assert not marker.exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX fixed shell startup")
+def test_fixed_launcher_blocks_real_versioned_user_site_startup(tmp_path):
+    import shlex
+    import subprocess
+    import sys
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    home = tmp_path / "isolated-home"
+    home.mkdir()
+    environment = dict(os.environ, HOME=str(home), APPDATA=str(home), USERPROFILE=str(home))
+    interpreter = sys._base_executable
+    probe = subprocess.run(
+        [interpreter, "-E", "-s", "-B", "-c",
+         "import site; print(site.getusersitepackages())"],
+        env=environment, capture_output=True, check=True,
+    )
+    user_site = Path(probe.stdout.decode().strip())
+    assert user_site.is_relative_to(home)
+    user_site.mkdir(parents=True)
+    user_marker, pth_marker = home / "usercustomize-executed", home / "pth-executed"
+    (user_site / "usercustomize.py").write_text(
+        "open(" + repr(str(user_marker)) + ", 'w').write('executed')\n", encoding="utf-8",
+    )
+    (user_site / "unreviewed.pth").write_text(
+        "import builtins; builtins.open(" + repr(str(pth_marker)) +
+        ", 'w').write('executed')\n", encoding="utf-8",
+    )
+    # Positive control proves these real versioned site hooks run before a
+    # script-level guard when -s is absent; this is disposable fixture evidence.
+    control = subprocess.run(
+        [interpreter, "-E", "-B", "-c", "pass"], env=environment,
+        capture_output=True, check=True,
+    )
+    assert not control.stdout and user_marker.exists() and pth_marker.exists()
+    user_marker.rename(home / "retained-unsafe-usercustomize-control")
+    pth_marker.rename(home / "retained-unsafe-pth-control")
+    launcher = output / "domain-operator.sh"
+    source = launcher.read_text()
+    assert source.count("/usr/bin/python") == 1
+    # Hosted fixture binds the fixed interpreter to the tested CPython; the
+    # distributed standard-VM launcher retains literal /usr/bin/python.
+    launcher.write_text(source.replace("/usr/bin/python", shlex.quote(interpreter)))
+    result = subprocess.run(
+        ["/bin/sh", str(launcher), "inventory-existing", "a" * 64],
+        env=environment, cwd=output, input=b"{}", capture_output=True, check=False,
+    )
+    assert result.returncode == 1 and not result.stdout
+    assert result.stderr == b"OPERATOR_DOMAIN_MIGRATION_REJECTED\n"
+    assert not user_marker.exists() and not pth_marker.exists()
+
+
+def test_fixed_launcher_is_manifest_bound_and_closed():
+    assets, raw, _ = domain_provisioning.contents()
+    launcher = assets["domain-operator.sh"]
+    assert b'exec /usr/bin/python -E -s -B "${0%/*}/migration.py"' in launcher
+    assert json.loads(raw)["files"]["domain-operator.sh"] == {
+        "sha256": hashlib.sha256(launcher).hexdigest(), "bytes": len(launcher),
+    }
