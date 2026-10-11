@@ -1,3 +1,21 @@
+## PR148/149 integrated-source receipt, 2026-10-11
+
+Normal merge c649853d5b1a36f41818badda3150b8fcd650650 incorporates parent
+3360d0e5c0f1af28140475516f1861b54db9fb68 and operator revocation durability
+correction a2fc3d880aafdf845b35ff30ae8e3cc27b3d982e. Both documentation histories
+are retained. Integrated related235 checks PASS/16 Windows platform skips;
+Ruff/mypy72, security18/locked audit/85-schema compatibility and installed43-state
+package/reinstall/uninstall preservation PASS. Audited wheel80 members SHA256
+80a40eebc288e8368dec463f6f3baad641a610d7d3e86e5cfd531ac49272fa86;
+sdist81 members af5a65792553ec2a7afb5cb5906f06d0abfa625292a699848346b90618585f0c.
+These are test artifact identities, not an accepted release candidate. Exact hosted
+checks and independent review remain pending. A subsequent parent review identified
+another omitted-ancestor race whose correction still needs normal integration and
+renewed qualification. Updated installer/modeltrust bytes have no current-VM
+qualification in this receipt; prior native bundle/evidence remains preserved.
+This integration has0 VM contacts/admin changes/simulations/reservations and does
+not grant publication authority. Earlier source-scoped receipts remain history.
+
 ## Operator revocation directory durability, 2026-10-11
 
 PR149's final P2 found that an fsynced revocation file could lose its directory
