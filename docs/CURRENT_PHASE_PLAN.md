@@ -1,3 +1,27 @@
+## Held-byte launcher preflight under the existing lock, 2026-10-11
+
+Review4240425695 is corrected in the supported package preflight path. A fixed
+package entry takes the existing run.lock shared flock before reading/compiling
+any launcher code, retains the lock through the child and validates named lock
+and launcher bindings at completion. The host passes the exact locally reviewed
+package launcher hash; only matching retained bytes are compiled. A process that
+started before an A-to-B update cannot execute A while authenticating path B.
+Updates continue to use the same exclusive lock, without creating a substitute.
+The entry opens existing files read-only, uses fixed preflight arguments and
+removes CWD using builtin sys before imports. No public shell/eval/path tool or
+new arbitrary-code input is introduced. Direct mutable-bin execution is not the
+new package-bound preflight qualification interface; use runner preflight CLI.
+
+Three owned POSIX fixtures cover update before source loading, update blocked
+through the child lifetime and rejection of historical launcher bytes. Four
+portable -c/CWD marker tests reject without executing unreviewed imports.
+Windows bootstrap98 PASS/15 POSIX skips and official Ruff/mypy73 PASS. Exact
+hosted POSIX/Windows, package/security and refreshed independent review remain
+required. No actual VM, administrator, ledger, simulation or reservation changes
+occurred. Existing directGREL02-08/16GiB/500/same-change20 and conditional normal
+integration remain authorized; exact public-candidate approval stays separate.
+All prior source receipts, grants, policies and failed evidence remain history.
+
 ## Durable next-runtime update binding, 2026-10-11
 
 Independent review4240354827 is corrected: activation and preflight-only update

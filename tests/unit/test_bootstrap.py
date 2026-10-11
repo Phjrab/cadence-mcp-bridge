@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -217,9 +218,9 @@ def test_preflight_selects_exact_manifest_and_preserves_permission_rejection(pre
         bootstrap.preflight(source, digest)
     assert error.value.reason == "executable_permissions"
     argv = transport.call_args.args[0]
-    assert argv[-4].endswith("/bin/cadence-operator-runner")
-    assert argv[-8:-4] == ["/usr/bin/python", "-E", "-s", "-B"]
-    assert argv[-3] == "preflight" and argv[-2] == digest and len(argv[-1]) == 32
+    assert argv[-10:-5] == ["/usr/bin/python", "-E", "-s", "-B", "-c"]
+    assert "LOCK_SH" in argv[-5] and "compile(source" in argv[-5]
+    assert argv[-3] == digest and len(argv[-2]) == 64 and len(argv[-1]) == 32
     assert "StrictHostKeyChecking=yes" in argv
     assert not list(source.glob("*.sqlite3"))
 
@@ -1328,3 +1329,97 @@ def test_operator_update_rechecks_next_runtime_after_directory_sync(
     assert (target / "active-operator-runner.json").read_bytes() == pointer
     assert (target / "bin/cadence-operator-runner").read_bytes() == launcher
     assert not (target / "operator-activation-history").exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher lifetime flock")
+def test_operator_preflight_locks_before_compiling_and_holds_through_child(
+    operator_update_pair, monkeypatch
+):
+    from cadence_mcp_bridge import _operator_preflight_entry as entry
+    from cadence_mcp_bridge import _runner_launcher as launcher_module
+
+    _, target, previous, expected = operator_update_pair
+    installer.operator_preflight_update(str(target), expected, previous)
+    source = (target / "bin/cadence-operator-runner").read_bytes()
+    calls = []
+
+    def child(args, **kwargs):
+        calls.append(args)
+        assert args[:4] == ["/usr/bin/python", "-E", "-s", "-B"]
+        with pytest.raises(ValueError, match="operator_domain_busy"):
+            installer.operator_preflight_update(str(target), expected, previous)
+        return 0
+
+    monkeypatch.setattr(launcher_module.subprocess, "call", child)
+    assert entry.run(str(target), expected, hashlib.sha256(source).hexdigest(), "a" * 32) == 0
+    assert len(calls) == 1
+    # The lifetime shared lock is released only after the bound child completes.
+    installer.operator_preflight_update(str(target), expected, previous)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher loaded-byte binding")
+def test_operator_preflight_update_before_lock_loads_only_authenticated_next_bytes(
+    operator_update_pair, monkeypatch
+):
+    from cadence_mcp_bridge import _operator_preflight_entry as entry
+    from cadence_mcp_bridge import _runner_launcher as launcher_module
+
+    _, target, previous, expected = operator_update_pair
+    trusted = (target / "runtime" / expected / "launcher.py").read_bytes()
+    original, replaced, calls = entry.os.open, False, []
+
+    def opened(path, *args, **kwargs):
+        nonlocal replaced
+        fd = original(path, *args, **kwargs)
+        if path == str(target / "run.lock") and not replaced:
+            replaced = True
+            installer.operator_preflight_update(str(target), expected, previous)
+        return fd
+
+    monkeypatch.setattr(entry.os, "open", opened)
+    monkeypatch.setattr(
+        launcher_module.subprocess, "call", lambda args, **kw: calls.append(args) or 0
+    )
+    assert entry.run(str(target), expected, hashlib.sha256(trusted).hexdigest(), "b" * 32) == 0
+    assert replaced and len(calls) == 1
+    assert calls[0][:4] == ["/usr/bin/python", "-E", "-s", "-B"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX launcher package binding")
+def test_operator_preflight_rejects_other_loaded_implementation_without_child(
+    operator_update_pair, monkeypatch
+):
+    from cadence_mcp_bridge import _operator_preflight_entry as entry
+    from cadence_mcp_bridge import _runner_launcher as launcher_module
+
+    _, target, previous, expected = operator_update_pair
+    trusted = (target / "runtime" / expected / "launcher.py").read_bytes()
+    monkeypatch.setattr(
+        launcher_module.subprocess, "call", lambda *a, **kw: pytest.fail("no child")
+    )
+    with pytest.raises(ValueError, match="preflight_launcher_binding"):
+        entry.run(str(target), expected, hashlib.sha256(trusted).hexdigest(), "c" * 32)
+    observed = json.loads((target / "active-operator-runner.json").read_bytes())
+    assert observed["manifest_sha256"] == previous
+
+
+@pytest.mark.parametrize("name", ["hashlib", "json", "os", "stat"])
+def test_operator_bound_preflight_entry_scrubs_cwd_before_import(tmp_path, name):
+    import subprocess
+    import sys
+    from importlib.resources import files
+
+    marker = tmp_path / "unreviewed-preflight-code"
+    (tmp_path / (name + ".py")).write_text(
+        "open(" + ascii(str(marker)) + ", 'w').write('executed')\n", encoding="utf-8",
+    )
+    source = files("cadence_mcp_bridge").joinpath("_operator_preflight_entry.py").read_text(
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", "-c", source], cwd=tmp_path,
+        input=b"", capture_output=True, check=False, timeout=15,
+    )
+    assert result.returncode == 1 and not result.stdout
+    assert result.stderr.splitlines() == [b"OPERATOR_PREFLIGHT_BINDING_REJECTED"]
+    assert not marker.exists()
