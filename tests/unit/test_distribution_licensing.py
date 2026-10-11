@@ -143,3 +143,17 @@ def test_content_and_metadata_mismatch_is_rejected(
         }[change]
     with pytest.raises(ValueError):
         AUDIT.inspect_artifact(archive(tmp_path, kind, files), project)
+
+
+@pytest.mark.parametrize("kind", ["wheel", "sdist"])
+@pytest.mark.parametrize("name", ["_domain_operator.sh", "unreviewed.sh"])
+def test_only_fixed_operator_shell_asset_is_distributable(
+    project: Path, tmp_path: Path, kind: str, name: str,
+) -> None:
+    (project / "src/cadence_mcp_bridge" / name).write_bytes(b"# synthetic shell asset\n")
+    artifact = archive(tmp_path, kind, entries(project, kind))
+    if name == "unreviewed.sh":
+        with pytest.raises(ValueError, match="curated allowlist"):
+            AUDIT.inspect_artifact(artifact, project)
+    else:
+        assert AUDIT.inspect_artifact(artifact, project)["source_and_notices_match"] is True
