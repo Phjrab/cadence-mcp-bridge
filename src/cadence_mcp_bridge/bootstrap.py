@@ -112,7 +112,7 @@ def prepare_repair(
     status, stdout, stderr = run_repair_inventory(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
-         "/usr/bin/python", "-B", "-c", shlex.quote(code), action],
+         "/usr/bin/python", "-E", "-s", "-B", "-c", shlex.quote(code), action],
         payload, OpenSshBackend._ssh_environment(),
     )
     if status or stderr:

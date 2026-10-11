@@ -1,3 +1,26 @@
+## External-parent and startup trust correction, 2026-10-11
+
+Fresh8a325b0 review4240230641/4240230643 found two narrower trust gaps. The
+external collector now reopens the full named no-follow parent after the final
+fixed leaf read, rejecting ancestor detach while a held leaf directory survives.
+An external-only nested library now contributes its canonical in-installation
+parent chain to the exact repair plan; external target files remain excluded.
+A parent that resolves outside the fixed installation rejects instead of expanding
+mutation scope. Existing content/owner/read/execute/ACL and rollback protections
+remain. Apply/rollback timing and nested-parent recovery have dedicated Linux
+regressions; Windows startup shadows are portable separate evidence.
+
+Read-only repair-plan now uses the reference -E -s -B Python flags. The exported
+helper removes script/CWD paths using builtin sys before filesystem-backed imports;
+retained memory-loaded modules preserve their legitimate stdlib paths. Use
+`/usr/bin/python -E -s -B repair.py apply` or `rollback` for explicitly authorized
+operator/admin execution. Import, doctor and planning still perform no repair.
+Historical -B-only instructions/helper receipts stay historical, not the current
+recommended invocation. Current VM16GiB/500/20 and continuousGREL02-08 delegation
+persist; package/hosted/fresh review/final actual installed gates are pending.
+This correction itself performs no actual VM/admin mutation/reservation/simulation.
+Public tag/Release/upload still requires final exact-candidate approval.
+
 ## Held external-link observation correction, 2026-10-11
 
 Fresh exact c0b4b69 review found separate pathname reads could retain a stale
