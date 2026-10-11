@@ -224,3 +224,59 @@ def test_trusted_model_rechecks_metadata_after_final_content_scan(
     with pytest.raises(ValueError, match="model_graph_(untrusted_metadata|metadata_drift)"):
         repair.trusted_model_graph(str(paths["top.scs"]), "NN")
     assert calls == 2 and _contents(paths) == before
+
+
+@pytest.mark.parametrize("changed", ["none", "file-mode", "ancestor-mode", "file-identity"])
+def test_gate_rechecks_first_real_model_after_disjoint_second_scan(
+    actual_recipe_layout, monkeypatch, changed
+):
+    from types import SimpleNamespace
+
+    from cadence_mcp_bridge import _native_gate as native_gate
+
+    _, root, _, _, _ = actual_recipe_layout
+    if os.getuid() == 0:
+        pytest.skip("runtime trust intentionally rejects root")
+    paths = []
+    for name in ("first", "second"):
+        directory = root / name / "models"
+        directory.mkdir(parents=True)
+        path = directory / "top.scs"
+        path.write_bytes(b"section NN\nmodel synthetic resistor r=100\nendsection NN\n")
+        path.chmod(0o644)
+        paths.append(path)
+    before = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
+
+    def graph(main, section):
+        result = repair.trusted_model_graph(main, section)
+        if main == str(paths[1]):
+            if changed == "file-mode":
+                paths[0].chmod(0o444)
+            elif changed == "ancestor-mode":
+                paths[0].parent.chmod(0o777)
+            elif changed == "file-identity":
+                content = paths[0].read_bytes()
+                paths[0].rename(paths[0].with_name("preserved-original"))
+                paths[0].write_bytes(content)
+                paths[0].chmod(0o644)
+        return result
+
+    gate = object.__new__(native_gate.ConfirmedGate)
+    gate.modeltrust = SimpleNamespace(
+        trusted_model_graph=graph, trusted_model_metadata=repair.trusted_model_metadata
+    )
+    route = {
+        "ade": {"model_includes": [
+            {"path": str(path), "section": "NN", "file_sha256": before[str(path)]}
+            for path in paths
+        ]},
+        "model_files": [{"path": path, "file_sha256": sha} for path, sha in before.items()],
+    }
+    if changed == "none":
+        gate.model_binding(route)
+    else:
+        with pytest.raises(
+            ValueError, match="(native_gate_model_metadata_drift|untrusted_metadata)"
+        ):
+            gate.model_binding(route)
+    assert {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths} == before

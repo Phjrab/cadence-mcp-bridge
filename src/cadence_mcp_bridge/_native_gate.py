@@ -229,8 +229,14 @@ class ConfirmedGate(object):
                 raise ValueError("native_gate_fixed_modeltrust_required")
             from cadence_mcp_bridge import _installation_repair as modeltrust
         observed = {}
+        metadata = {}
         for model in includes:
             graph = modeltrust.trusted_model_graph(model["path"], model["section"])
+            current_metadata = modeltrust.trusted_model_metadata(graph)
+            if any(path in metadata and metadata[path] != record
+                   for path, record in current_metadata.items()):
+                raise ValueError("native_gate_model_metadata_drift")
+            metadata.update(current_metadata)
             if graph.get(model["path"]) != model["file_sha256"]:
                 raise ValueError("native_gate_model_registration_drift")
             if any(path in observed and observed[path] != sha for path, sha in graph.items()):
@@ -238,6 +244,10 @@ class ConfirmedGate(object):
             observed.update(graph)
         if observed != expected:
             raise ValueError("native_gate_model_closure_drift")
+        # Reobserve the union after every include's content scan. Otherwise a
+        # later disjoint scan could invalidate an earlier file or ancestor.
+        if modeltrust.trusted_model_metadata(observed) != metadata:
+            raise ValueError("native_gate_model_metadata_drift")
 
     def check(self, session, plan, action):
         if type(session) is not self.accounting.ReservationSession or session.root != self.root:

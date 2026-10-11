@@ -309,7 +309,10 @@ def test_full_model_closure_binding_is_checked_before_native_spend(change):
 
     graph = {"/pdk/models/spectre/top.scs": "a" * 64, "/pdk/models/spectre/leaf.scs": "b" * 64}
     gate = object.__new__(gate_module.ConfirmedGate)
-    gate.modeltrust = SimpleNamespace(trusted_model_graph=lambda *args: graph)
+    gate.modeltrust = SimpleNamespace(
+        trusted_model_graph=lambda *args: graph,
+        trusted_model_metadata=lambda values: dict.fromkeys(values, "stable metadata"),
+    )
     route = {
         "ade": {
             "model_includes": [
@@ -382,3 +385,40 @@ def test_v2_native_record_scope_denies_unapproved_cross_product(
     else:
         with pytest.raises(ValueError, match="native_gate_confirmed_scope"):
             gate.match_record(requested, grant)
+
+
+@pytest.mark.parametrize("drift", ["none", "file-mode", "file-identity", "ancestor", "shared"])
+def test_disjoint_include_scans_recheck_whole_metadata_union(drift):
+    paths = ["/pdk/first/top.scs", "/pdk/second/top.scs"]
+    hashes = {path: str(index + 1) * 64 for index, path in enumerate(paths)}
+    metadata = {path: ("stable",) for path in paths}
+    metadata["/pdk"] = ("stable ancestor",)
+    calls = []
+
+    def graph(path, section):
+        assert section == "NN"
+        calls.append(("content", path))
+        if path == paths[1] and drift != "none":
+            metadata["/pdk" if drift == "shared" else paths[0]] = (drift,)
+        return {path: hashes[path]}
+
+    def observe(values):
+        calls.append(("metadata", tuple(values)))
+        return {**{path: metadata[path] for path in values}, "/pdk": metadata["/pdk"]}
+
+    gate = object.__new__(gate_module.ConfirmedGate)
+    gate.modeltrust = SimpleNamespace(trusted_model_graph=graph, trusted_model_metadata=observe)
+    route = {
+        "ade": {"model_includes": [
+            {"path": path, "section": "NN", "file_sha256": hashes[path]} for path in paths
+        ]},
+        "model_files": [{"path": path, "file_sha256": sha} for path, sha in hashes.items()],
+    }
+    if drift == "none":
+        gate.model_binding(route)
+    else:
+        with pytest.raises(ValueError, match="native_gate_model_metadata_drift"):
+            gate.model_binding(route)
+    assert [path for kind, path in calls if kind == "content"] == paths
+    if drift != "shared":
+        assert calls[-1] == ("metadata", tuple(paths))

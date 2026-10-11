@@ -1,3 +1,33 @@
+## Whole model-union observation and resumed inventory, 2026-10-11
+
+Independent P1 finding4240280936 is corrected: the gate retains file/ancestor
+metadata for every selected include, rejects overlapping metadata drift, then
+reobserves the complete union after all content scans. A later disjoint include
+cannot silently invalidate an earlier model's mode, identity or ancestor. No
+content scan follows the final union guard. Five portable timing cases pass;
+four actual owned POSIX-file cases are added and require hosted Linux evidence.
+Current Windows focused38 PASS/10 POSIX skips; Ruff/mypy96 PASS. These source
+checks are not actual Cadence execution or exact final installed qualification.
+
+Normal parent7696 integration preserves root model inventory and both histories.
+Fixed installed repair source now uses bounded hash/length-checked stdin framing,
+retaining program/model actions and the reviewed root reservation pin. The prior
+WinError206 inventory failure remains preserved. Exact installed read-only VM
+inventory, final native deployment/analysis/Sweep and actual new Codex job remain
+pending. The connected Codex QA runtime still reports historical1.0.0.
+
+Codex ordinary usage is available (3 percent observed), while the separate GitHub
+automatic review request6105546958 was refused by its service usage limit. No
+credits/reset/purchase was used. Final independent review remains required;
+agent self-review is not formal GitHub APPROVED. Other checks continue without
+claiming that this blocker or synthetic success qualifies a release.
+
+Current managed limits16GiB/500/same-change20 and continuousGREL02-08/conditional
+normal merge authority remain. Historical ledger102/12,483,297,280 is preserved;
+no new simulation/reservation/guest metadata change occurred in this correction.
+Release remains BLOCKED; no exact qualified candidate or publication approval.
+Earlier records below retain their original source and time scope.
+
 ## Final model observation and actual native storage layout, 2026-10-11
 
 Fresh root review4240255939/4240255943/4240255947 is corrected. Normal-user
