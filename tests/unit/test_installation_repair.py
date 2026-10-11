@@ -131,7 +131,13 @@ def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch):
     result["plan_sha256"] = repair.digest(result["plan"])
     # Only the pure recipe discovery is synthetic; all inode/ACL/lock operations
     # below are real Linux operations on disposable fixtures.
-    monkeypatch.setattr(repair, "inventory", lambda _: {"plan": result["plan"]})
+    def fixed_inventory(_):
+        fresh = repair.plan(result["plan"]["scope"])
+        fresh["plan"].update(schema_version=2, recipe_id="standard-vm-trust-v1", profile={})
+        fresh["plan_sha256"] = repair.digest(fresh["plan"])
+        return fresh
+
+    monkeypatch.setattr(repair, "inventory", fixed_inventory)
     request = {"plan": result["plan"], "expected_plan_sha256": result["plan_sha256"],
                "operator_authority": "synthetic test only"}
     real_process = subprocess.Popen
@@ -1665,3 +1671,82 @@ def test_actual_recipe_rechecks_target_and_lock_before_acl_mutation(
     assert others == {str(path): (path.read_bytes(), path.stat().st_mode)
                       for path in code_paths if path != target}
     assert not any(event["event"] in ("changed", "complete") for event in events)
+
+
+@pytest.mark.parametrize("recipe", [None, "caller-arbitrary", "standard-vm-trust-v1"])
+def test_completion_enumeration_selects_only_registered_fixed_recipe(monkeypatch, recipe):
+    calls = []
+    expected = {"scope": {"paths": ["/fixed/code"]}, "records": []}
+    monkeypatch.setattr(
+        repair, "inventory", lambda profile: calls.append(profile) or {"plan": expected}
+    )
+    original = {"recipe_id": recipe, "profile": {"fixed": "synthetic-only"}}
+    if recipe == "standard-vm-trust-v1":
+        assert repair.completion_inventory(original) is expected
+        assert calls == [original["profile"]]
+    else:
+        with pytest.raises(ValueError, match="fixed_profile_recipe_required"):
+            repair.completion_inventory(original)
+        assert not calls
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["create", "rename"])
+@pytest.mark.parametrize("library", ["ic", "spectre", "oa"])
+def test_actual_completion_reenumerates_fixed_library_membership(
+    actual_recipe_layout, monkeypatch, rollback, stage, drift, library
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    if rollback or stage == "no-op":
+        repair.mutate(request)
+    if rollback and stage == "no-op":
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    ms = Path(profile["tools"]["spectre"]["path"].split("/tools", 1)[0])
+    directory = {"ic": ic / "tools.lnx86/lib", "spectre": ms / "tools.lnx86/lib",
+                 "oa": ic / "oa/lib"}[library]
+    new_library = directory / "unreviewed-runtime.so"
+    pending = shared / "preserved-pending-library"
+    if drift == "rename":
+        pending.write_bytes(b"unreviewed synthetic shared object, never executed")
+        pending.chmod(0o777)
+    baseline = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    events, injected = [], False
+
+    def emit(value):
+        nonlocal injected
+        events.append(value)
+        if not injected and value["event"] == (
+            "validated" if stage == "no-op" else "changed"
+        ):
+            if drift == "create":
+                new_library.write_bytes(b"unreviewed synthetic shared object, never executed")
+                new_library.chmod(0o777)
+            else:
+                pending.rename(new_library)
+            injected = True
+
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="completion_recipe_scope"):
+        repair.mutate(request, rollback)
+    assert injected and new_library.exists()
+    assert new_library.read_bytes() == b"unreviewed synthetic shared object, never executed"
+    assert stat.S_IMODE(new_library.stat().st_mode) == 0o777
+    assert str(new_library.resolve()) not in prepared["plan"]["scope"]["paths"]
+    assert not any(event["event"] == "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    for path in code_paths:
+        assert path.read_bytes() == baseline[str(path)][0]
+        if path != target or stage == "no-op":
+            assert path.stat().st_mode == baseline[str(path)][1]
+        else:
+            assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)

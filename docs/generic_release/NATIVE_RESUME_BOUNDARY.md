@@ -1,3 +1,30 @@
+## Current dependency review checkpoint, 2026-10-11
+
+The actual Codex connection is restored and observes the retained operator
+catalog and successful operation with event_count6. It still runs the historical
+1.0.0/bf6 deployment and its fully consumed three-attempt grant. No new app
+submission or final-bundle qualification is implied.
+
+PR148's completion membership correction is integrated into PR152. Its fixed
+model recipe additionally reenumerates the exact bound model_include closure,
+without substituting standard program inventory or broadening protected scope.
+Connected repair/model host tests82 PASS/132 Windows POSIX skips; current Ubuntu
+model integration and updated final helper qualification remain separate gates.
+
+Fresh independent review also found initial activation executable binding and
+migration helper path reopen blockers in PR149/150, and fresh-counter consumers
+in PR151. Corrections are in progress; they are not waived for merge or VM
+activation. Existing reviewed assets/results/journals/consumed accounting remain.
+The local full unit collection error was an isolated invocation path mismatch:
+standard CI-style invocation collects correctly and is still running. This is
+not an installed production or VM defect and no protection was disabled.
+
+The next final-code batch remains the prepared maximum8 attempts/1GiB within the
+retained16GiB/500/20 direct delegation. No grant has yet been minted for that batch.
+Exact final source, package, review/CI, ordinary-user preflight, current ledger/
+disk/correction history and operator confirmation are prerequisites. Release
+remains BLOCKED; public tag/Release/upload requires final exact-candidate approval.
+
 ## Current connection and source continuation, 2026-10-11
 
 The user completed the Codex application restart. Current connected tools read

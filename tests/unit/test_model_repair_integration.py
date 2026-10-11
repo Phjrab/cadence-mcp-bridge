@@ -162,3 +162,31 @@ def test_actual_model_recipe_bounds_complete_profile_and_include_envelope(
         repair.inventory_models(dict(profile=profile, model_include=include))
     assert _contents(paths) == before
     assert not list(Path(profile["paths"]["managed_root"]).glob("trust-repair-v1-*"))
+
+
+def test_model_completion_reenumerates_only_bound_selected_closure(monkeypatch):
+    profile = {"environment_id": "synthetic-only"}
+    include = {"path": "/fixed/model.scs", "section": "NN", "file_sha256": "a" * 64}
+    original = dict(recipe_id="standard-vm-model-trust-v1", profile=profile,
+                    model_include=include)
+    expected = {"scope": {"paths": ["/fixed/model.scs"]}, "records": []}
+    calls = []
+    monkeypatch.setattr(
+        repair, "inventory_models", lambda request: calls.append(request) or {"plan": expected}
+    )
+    def forbidden(_profile):
+        raise AssertionError("model completion must not enumerate program installation")
+    monkeypatch.setattr(repair, "inventory", forbidden)
+    assert repair.completion_inventory(original) is expected
+    assert calls == [dict(profile=profile, model_include=include)]
+
+
+def test_model_completion_rejects_changed_selected_scope(monkeypatch):
+    original = dict(recipe_id="standard-vm-model-trust-v1", profile={}, model_include={},
+                    scope={"paths": ["/fixed/top.scs"]}, records=[])
+    monkeypatch.setattr(repair, "plan", lambda scope: {"plan": dict(scope=scope, records=[])})
+    monkeypatch.setattr(repair, "inventory_models", lambda request: {
+        "plan": dict(scope={"paths": ["/fixed/top.scs", "/fixed/new.scs"]}, records=[])
+    })
+    with pytest.raises(ValueError, match="completion_recipe_scope"):
+        repair.verify_completed_targets(original, False, recipe_guard=True)
