@@ -98,7 +98,7 @@ roots and already authorized limits. Do not create an alternate root to bypass
 past consumption. Imports, server startup and doctor never invoke migration.
 
 1. `cadence-mcp-bridge domain export-helper-bundle --output <new-private-directory>`
-   exports four fixed helper files and their canonical manifest. Preserve the returned
+   exports five fixed helper files (including domain-operator.sh) and their canonical manifest. Preserve the returned
    manifest SHA256. Stage that exact set under the profile's
    `managed_root/operator-helpers/<manifest-sha256>/`, owned by the guest user,
    without shared write permissions. Verify every file hash and all ancestor paths.
