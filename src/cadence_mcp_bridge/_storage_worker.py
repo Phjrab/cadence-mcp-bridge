@@ -12,7 +12,7 @@ import sys
 # beside this script or from the working directory. Use only the builtin sys
 # module before removing that startup entry; normal installed package imports
 # leave the host application's import paths unchanged.
-if not globals().get("__package__"):
+if __name__ == "__main__":
     if sys.path:
         del sys.path[0]
     sys.path[:] = [entry for entry in sys.path if entry]

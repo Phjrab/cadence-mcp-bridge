@@ -1,3 +1,20 @@
+## PR151 authenticated setup execution correction, 2026-10-11
+
+Review4239974380 found fresh setup reimported helper paths after complete asset
+validation. Standalone setup now executes only the retained authenticated bytes
+in fresh fixed module instances, ignores poisoned helper caches and gives its
+migration helper the same authenticated accounting/installer/probe instances.
+A failed revalidation clears prior authenticated state. Startup removes the script
+entry only for direct __main__ launch; memory-loaded helpers preserve legitimate
+stdlib entries. Canonical staging aliases are excluded before stdlib imports and
+retained compilation. Standalone storage follows the same startup distinction.
+Original pre-fix regression logs are retained; exact updated source/package/hosted/
+fresh-review gates remain required. This isolated branch changes no actual VM,
+admin state, journal, ledger, reservation, simulation or protected circuit content.
+Current user16GiB/500/20,GREL02-08 and conditional normal integration delegation
+remains; exact public candidate approval is separate. General release stays BLOCKED.
+Earlier source receipts and policy records below are preserved as history.
+
 ## PR151 current safety-parent refresh, 2026-10-11
 
 Current source normally integrates150206fe0b: initial executable pins, retained

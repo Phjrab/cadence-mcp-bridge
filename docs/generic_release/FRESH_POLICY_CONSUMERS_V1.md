@@ -308,3 +308,30 @@ No accounting bytes changed in this rebind; launcher/runner/probe pins and all
 self-rehash rejection checks remain. The exact source bundle pin regression must
 pass locally, installed and hosted. A new pin is not VM deployment or native
 qualification, and earlier helpers/receipts are preserved.
+
+
+## Authenticated standalone setup helper correction
+
+Fresh review4239974380 identified a validation/import gap: same-UID replacement
+of setup's reservations/installer/probe/migration paths could execute unreviewed
+code after their hashes had passed. Setup now compiles the descriptor bytes held
+by complete manifest validation, using fresh fixed modules without helper cache
+reuse. Its retained migration instance receives exactly the authenticated first
+three modules. No filename is reopened for execution. Failed asset revalidation
+clears any previous helper state and standalone helpers require that state.
+
+Canonical staging path aliases (including empty/CWD entries) are removed before
+transitive imports; direct startup drops its script entry before filesystem-backed
+imports. First-entry deletion is restricted to __main__, preserving legitimate
+stdlib locations when exact retained modules are memory-loaded by another fixed
+helper. Package imports do not provision or initialize anything.
+
+Four replaced-path/cache-poisoning regressions, three newly created transitive
+stdlib shadows, five direct startup shadows, validation-state denial and retained
+module startup fixtures exercise the boundary. The original before-log records
+12 failures/2 PASS; three real direct shadows executed before correction while
+other failures exposed the missing retained loader/state gate. Temporary fixture
+bytes remain distinct from protected VM ledgers and are not execution authority.
+Exact full source/package/hosted/fresh-review gates and actual native consumer
+acceptance remain required. Existing records and failing source-specific receipts
+are retained; no actual VM/admin/ledger/reservation/simulation changes occurred.

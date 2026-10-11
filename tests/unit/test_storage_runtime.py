@@ -300,3 +300,20 @@ def test_direct_storage_script_ignores_unmanifested_stdlib_shadows(
     assert reply.returncode == 69
     assert reply.stderr.splitlines() == [b"storage request denied or state unavailable"]
     assert b"unmanifested-storage-module-executed" not in reply.stderr
+
+
+
+def test_memory_loaded_storage_preserves_legitimate_first_import_path(tmp_path, monkeypatch):
+    import sysconfig
+    import types
+
+    pin, payloads = reference_storage_bundle()
+    runtime = tmp_path / "runtime" / pin
+    runtime.mkdir(parents=True)
+    stdlib = sysconfig.get_path("stdlib")
+    monkeypatch.setattr(sys, "path", [stdlib, *sys.path])
+    loaded = types.ModuleType("fixed_storage")
+    loaded.__file__ = str(runtime / "storage.py")
+    loaded.__package__ = ""
+    exec(compile(payloads[f"runtime/{pin}/storage.py"], loaded.__file__, "exec"), loaded.__dict__)
+    assert sys.path[0] == stdlib
