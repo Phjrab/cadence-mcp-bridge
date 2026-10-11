@@ -124,6 +124,20 @@ the existing run.lock without creating/truncating it. Busy, unresolved execution
 wrong-profile, wrong-content, revoked or linked state rejects. Windows content
 staging fixtures do not attest POSIX trust or durability.
 
+Activation fsyncs the launcher's bin directory before publishing a new active
+pointer. The pointer and revocation records use complete private mode-600
+candidates: write/fsync, verify, check for a conflicting final marker, rename and
+fsync the managed directory. Exact activation repeats the bin and managed-root
+barriers; exact deactivation repeats the revocation directory barrier. A failed
+barrier returns rejection before success. Recover with the same intact bundle and
+exact operation after diagnosing the storage failure. Failed private candidates
+remain evidence, and an exact retry creates a new candidate without deleting them.
+A complete exact marker retains its inode. Unrelated markers and incomplete or
+changed launcher bytes reject and remain untouched; they require investigation.
+These are trusted-owner/lifetime-lock guarantees, not atomic protection from a
+hostile process using the same account. Historical export and reference state are
+unchanged, and activation still grants no analysis or resource authority.
+
 Repeat activation verifies the same selected immutable bundle and launcher bytes;
 known launcher-before-pointer partial initial activation can resume. Unrelated
 launcher bytes are never replaced. Existing-domain counters, source/OA/ADE/PDK,
