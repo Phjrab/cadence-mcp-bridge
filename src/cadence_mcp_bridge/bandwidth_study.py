@@ -12,8 +12,9 @@ from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.power_measurements import (
     RegisteredPowerCounter,
-    require_same_resource_policy,
+    require_fresh_reservation_sequence,
 )
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest
 
 REFERENCE_OPERATION = "1afa2677-e264-4e80-a23d-dc722e34bb4a"
@@ -67,11 +68,11 @@ class RefinementExtraction(ContractModel):
 
     @model_validator(mode="after")
     def ordered_grids(self) -> Self:
-        require_same_resource_policy(tuple(grid.counter for grid in self.grids))
+        require_fresh_reservation_sequence(tuple(grid.counter for grid in self.grids))
         a, b = self.grids
         if a.grid != 50 or b.grid != 100:
             raise ValueError("ordered distinct grids required")
-        if (
+        if not isinstance(a.counter, FreshResourceCounter) and (
             b.counter.count != a.counter.count + 1
             or b.counter.result_reserved_bytes != a.counter.result_reserved_bytes + 128 * 1024**2
         ):
@@ -158,7 +159,7 @@ class BandwidthStudyResult(ContractModel):
 
     @model_validator(mode="after")
     def shared_policy(self) -> Self:
-        require_same_resource_policy(tuple(item.counter for item in self.refinements))
+        require_fresh_reservation_sequence(tuple(item.counter for item in self.refinements))
         return self
 
 

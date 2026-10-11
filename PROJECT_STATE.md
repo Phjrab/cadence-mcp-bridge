@@ -1,3 +1,17 @@
+## PR151 early fresh-domain result admission correction, 2026-10-11
+
+Fresh review4239953763 found legacy absolute counter formulas still active in
+amplifier/bias/step/offset consumers, missed by historical-valued fresh fixtures.
+The current correction branches only accounting semantics: policy-bounded early
+positive counters and consecutive increasing composite observations, preserving
+legacy formulas and all scientific/source checks. Fixtures now use1..N fresh
+counts and low registered budgets, real fixed SSH parsers/offset diagnostics and
+installed early1/2 disposable-ledger amplifier observations. These are synthetic
+source/package checks, not current-VM acceptance. Latest parent149/150 security
+corrections, exact package/hosted/fresh review remain gates. Current user authority
+and all previous evidence remain; public exact-candidate approval is separate.
+No VM/admin/deployment/actual journal/ledger/reservation/simulation changes occur.
+
 ## PR151 current standalone correction and parent integration, 2026-10-11
 
 Review4239919242 is fixed by binding the private named resource lock's inode,

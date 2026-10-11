@@ -72,13 +72,13 @@ def receipt(kind: str, fresh: bool = True) -> dict[str, Any]:
         "amplifier": lambda: child(CHILD, "dc", "0.319", "a" * 64, 77).model_dump(mode="json"),
     }[kind]()
     if fresh:
-        for counter in counters(value):
-            counter.update(campaign_id=CAMPAIGN, policy={
-                "campaign_id": CAMPAIGN, "attempt_ceiling": 100,
-                "result_ceiling_bytes": 10 * 1024**3,
+        for index, counter in enumerate(counters(value), start=1):
+            counter.update(campaign_id=CAMPAIGN, count=index,
+                           result_reserved_bytes=index * 65536, policy={
+                "campaign_id": CAMPAIGN, "attempt_ceiling": 10,
+                "result_ceiling_bytes": 1024**2,
             })
         if kind == "power":
-            value["counter"].update(count=1, result_reserved_bytes=65536)
             value["counter"]["policy"].update(attempt_ceiling=2, result_ceiling_bytes=131072)
     return value
 
@@ -127,8 +127,8 @@ def test_composite_receipts_cannot_mix_domains_or_registered_policies(
     value = receipt(kind)
     counter = counters(value)[-1]
     if change == "legacy":
-        counter.pop("policy")
-        counter["campaign_id"] = "AUTO-PHASE-01"
+        counter.clear()
+        counter.update(counters(receipt(kind, fresh=False))[-1])
     elif change == "campaign":
         counter["campaign_id"] = counter["policy"]["campaign_id"] = OTHER_CAMPAIGN
     else:
@@ -197,3 +197,63 @@ async def test_storage_supervisor_and_sdk_report_registered_lower_ceiling(consum
         assert output.structured_content["result_ceiling_bytes"] == 131072
         assert output.structured_content["reserved_result_bytes"] == raw["reserved_result_bytes"]
     assert backend.executions == 0
+
+
+@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset", "amplifier"])
+def test_fresh_result_cannot_claim_zero_unadmitted_observation(kind: str) -> None:
+    value = receipt(kind)
+    counters(value)[0].update(count=0, result_reserved_bytes=0)
+    with pytest.raises(ValidationError, match="positive admitted counter"):
+        MODELS[kind].model_validate(value)
+
+
+@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset"])
+@pytest.mark.parametrize("change", ["skip-count", "same-bytes", "decreased-bytes"])
+def test_fresh_composite_results_require_consecutive_increasing_reservations(
+    kind: str, change: str,
+) -> None:
+    value = receipt(kind)
+    first, second = counters(value)[:2]
+    if change == "skip-count":
+        second["count"] += 1
+    elif change == "same-bytes":
+        second["result_reserved_bytes"] = first["result_reserved_bytes"]
+    else:
+        second["result_reserved_bytes"] = first["result_reserved_bytes"] - 1
+    with pytest.raises(ValidationError, match="fresh consecutive reservation sequence"):
+        MODELS[kind].model_validate(value)
+
+
+def test_real_offset_diagnostics_consume_fresh_sequence_without_legacy_offsets() -> None:
+    from cadence_mcp_bridge.offset_study import study_diagnostics
+
+    old = study_diagnostics(OffsetExtraction.model_validate(receipt("offset", fresh=False)))
+    fresh = study_diagnostics(OffsetExtraction.model_validate(receipt("offset")))
+    assert fresh == old
+    # A valid new counter must not relax the original reused-DC provenance.
+    bad = receipt("offset")
+    bad["cases"][0]["psf_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="reuse original admitted DC"):
+        study_diagnostics(OffsetExtraction.model_validate(bad))
+
+
+@pytest.mark.parametrize("kind", ["bias", "slew", "amplifier"])
+def test_fresh_accounting_does_not_relax_scientific_or_source_checks(kind: str) -> None:
+    value = receipt(kind)
+    if kind == "bias":
+        value["cases"][0]["scalars"]["VDD"] = 0.9
+    elif kind == "slew":
+        value["cases"][0]["source_input_sha256"] = "0" * 64
+    else:
+        value["scalars"]["Vbiasn"] = 0.33
+    with pytest.raises(ValidationError):
+        MODELS[kind].model_validate(value)
+
+
+@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset"])
+def test_fresh_sequence_can_start_after_other_retained_admissions(kind: str) -> None:
+    value = receipt(kind)
+    for index, counter in enumerate(counters(value), start=1):
+        counter.update(count=index + 2, result_reserved_bytes=200000 + index * 70000)
+    parsed = MODELS[kind].model_validate(value)
+    assert counters(parsed.model_dump(mode="json")) == counters(value)

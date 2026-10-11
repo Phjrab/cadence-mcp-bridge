@@ -14,8 +14,9 @@ from cadence_mcp_bridge.power_measurements import (
     RegisteredPowerCounter,
     SignedSource,
     delivered_power,
-    require_same_resource_policy,
+    require_fresh_reservation_sequence,
 )
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
     RangeReview,
@@ -72,7 +73,9 @@ class BiasEndpoint(ContractModel):
         ):
             raise ValueError("pinned native source required")
         i = CASES.index(self.case) + 1
-        if self.counter.count != BASE_COUNT + i or self.counter.result_reserved_bytes != (
+        if isinstance(self.counter, FreshResourceCounter):
+            require_fresh_reservation_sequence((self.counter,))
+        elif self.counter.count != BASE_COUNT + i or self.counter.result_reserved_bytes != (
             BASE_BYTES + i * RESERVATION
         ):
             raise ValueError("exact cumulative admission required")
@@ -129,7 +132,7 @@ class BiasExtraction(ContractModel):
 
     @model_validator(mode="after")
     def complete(self) -> Self:
-        require_same_resource_policy(tuple(case.counter for case in self.cases))
+        require_fresh_reservation_sequence(tuple(case.counter for case in self.cases))
         if tuple(p.case for p in self.cases) != CASES:
             raise ValueError("complete ordered four-case evidence required")
         return self

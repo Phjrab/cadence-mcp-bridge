@@ -12,8 +12,9 @@ from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.power_measurements import (
     RegisteredPowerCounter,
-    require_same_resource_policy,
+    require_fresh_reservation_sequence,
 )
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
@@ -205,7 +206,7 @@ class OffsetExtraction(ContractModel):
 
     @model_validator(mode="after")
     def shared_policy(self) -> Self:
-        require_same_resource_policy(tuple(case.counter for case in self.cases))
+        require_fresh_reservation_sequence(tuple(case.counter for case in self.cases))
         return self
 
 
@@ -228,6 +229,7 @@ class OffsetDiagnostics(ContractModel):
 
 def study_diagnostics(extraction: OffsetExtraction) -> OffsetDiagnostics:
     rows = extraction.cases
+    require_fresh_reservation_sequence(tuple(row.counter for row in rows))
     names = ("zero", "minus1", "plus1", "minus05", "plus05")
     expected = (0, -1e-6, 1e-6, -0.5e-6, 0.5e-6)
     verified = True
@@ -240,8 +242,10 @@ def study_diagnostics(extraction: OffsetExtraction) -> OffsetDiagnostics:
             or r.source_input_sha256 != REFERENCE_INPUT
             or r.source_psf_sha256 != REFERENCE_PSF
             or r.new_simulation != (i != 0)
-            or r.counter.count != 68 + i
-            or r.counter.result_reserved_bytes != 7919894528 + i * 128 * 1024**2
+            or (not isinstance(r.counter, FreshResourceCounter) and (
+                r.counter.count != 68 + i
+                or r.counter.result_reserved_bytes != 7919894528 + i * 128 * 1024**2
+            ))
         ):
             raise ValueError("immutable offset cases/source/admission sequence required")
         if i == 0 and (r.psf_sha256 != REFERENCE_PSF or r.input_sha256 != REFERENCE_INPUT):

@@ -265,3 +265,33 @@ whitespace checks PASS. The production asset and all package files remain unchan
 from e94d784; its exact installed-package/deterministic distribution hashes above
 still identify these code bytes. POSIX rerun and refreshed review/CI remain pending;
 the prior failed CI is retained and is not claimed as PASS. No real data changes.
+
+
+## Early fresh-domain admission correction
+
+Exact83fccae review4239953763 found that the production counter types accepted
+fresh policies but downstream amplifier/bias/step/offset validators still applied
+historical absolute count/byte formulas. Earlier composite tests had only changed
+the campaign/policy around historical77/68/etc counters and missed this behavior.
+Those receipts and the finding remain historical; they did not qualify early
+fresh-domain result consumption.
+
+Fresh typed observations now retain their registered policy ceilings and require
+a positive admitted counter. Ordered composite studies require the same policy,
+consecutive positive counts and increasing retained reservations. They inherit no
+historical campaign offset or fixed per-job byte amount; actual ledger/grant
+conservation remains the runner's responsibility. Legacy three-field observations
+keep their exact original formulas. Source/native frame identities, effective
+inputs, grid/transition diagnostics, zero-point reuse and scientific checks remain
+unchanged. Counter observations do not authorize execution or qualify a frame.
+
+Synthetic fixtures now use actual fresh1..N counters with a1MiB registered ceiling
+and65536-byte observations, plus sequences after other retained admissions. Real
+SSH result parsers and offset diagnostics consume these observations. Zero/skip/
+nonincreasing/unbound/mixed-policy/over-ceiling cases reject, and scientific/source
+corruption still fails. Exact installed acceptance also consumes early1/2 counters
+from the actual disposable fresh ledger in the installed amplifier model. Linux
+CI includes the production fresh-policy fixture alongside the standalone suites.
+No actual VM/journal/admin/deployment/reservation/simulation changes occurred.
+Latest parent corrections, exact updated package/CI/review and separate native
+qualification remain gates; general release is BLOCKED.
