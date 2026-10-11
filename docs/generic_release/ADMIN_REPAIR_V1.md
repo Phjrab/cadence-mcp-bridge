@@ -1,3 +1,39 @@
+## Authenticated rollback provenance correction, 2026-10-11
+
+Fresh PR148 review found that a caller could change both the private plan and its
+self-computed digest to invent a more permissive pre-apply mode/ACL. The explicit
+apply path now requires all first-apply records to match the actual before-state
+and durably publishes the exact observed plan before any target mutation. The
+fixed managed-root namespace is trust-repair-v1-user-UID or trust-repair-v1-admin-0;
+no-follow owner checks,0700 directories and0400 single-link files separate normal
+users from administrators. Root never accepts a user-owned receipt. The receipt
+records observation, not human approval; the real operator delegation is still
+required. Read-only inventory/import/doctor never provision a receipt.
+
+Existing exact receipts permit interruption/retry/no-op/rollback without rewriting
+history. Missing receipts reject rollback and externally changed after/intermediate
+states; fabricated plans, changed receipts and metadata/content drift reject.
+Publication writes/fsyncs a private candidate, verifies its bytes, links exclusively
+and fsyncs the directory before mutation. Failed candidates and partial/multi-link
+publication evidence are retained. A multi-link interruption requires investigation,
+not automatic deletion or promotion. Receipt trust and the fixed directory are
+rechecked before each chmod and before completion; external filesystem activity is
+not claimed to be atomic. Resume under the same real identity. Historical repair
+helpers/plans/receipts remain archived; no automatic provenance import is provided.
+
+Portable provenance cases and complete owned Linux recipe cases cover invented
+before states, exact repeat/rollback/no-op, partial apply, forged root receipts,
+write/fsync/link/unlink interruptions and detached receipt directories. Final local
+179 related tests PASS/43 Windows POSIX skips, Ruff/mypy72/security18/strict locked
+audit and85-schema compatibility PASS. Exact package, hosted Linux/Windows and
+refreshed independent review checks remain pending.
+The helper is shipped as native modeltrust.py, so exact updated native qualification
+remains a separate gate; prior eb62/bf6c20 evidence is source-specific and preserved.
+No VM contact, administrator change, simulation or reservation occurs in this fix.
+Latest root-observed ledger102/12,483,297,280 is historical to this local correction;
+active16GiB/500/20,GREL02-08 and conditional normal PR integration remain authorized.
+Public tag/Release/upload still requires approval of an exact completed candidate.
+
 ## Whole-target completion integrity correction, 2026-10-11
 
 Fresh PR148 review found no-op targets and already processed targets could drift
@@ -243,7 +279,12 @@ accepted by the new public-distribution helper. No private archived helper is
 shipped or required for a new operator.
 
 Apply revalidates the entire hash-bound list before the first change, acquires
-the shared EDA flock, and uses no-follow descriptor traversal. It removes only
+the shared EDA flock, and uses no-follow descriptor traversal. A self-computed
+request digest is not rollback provenance: first apply must observe every exact
+original mode/ACL and publish its0400 durable receipt under the fixed UID-owned
+managed-root namespace before changing permissions. Planning remains read-only.
+Keep that receipt and run all retries/rollback under the same real identity; root
+never imports a user receipt or automatically trusts an externally restricted state. It removes only
 022 access mode bits and unnecessary default ACL write entries. Owner write,
 read, execute and directory traversal remain; no uniform755/644 or recursive
 chmod/chown is used. Named ACL writer entries are masked without expanding
@@ -255,7 +296,8 @@ Retain the original plan: repeating apply checks all content again and changes
 only unfinished items. Exact known intermediate chmod/ACL states are accepted;
 other partial states reject for investigation. To restore precisely the original
 mode/ACL, use `python -B repair.py rollback < apply-request.private.json` under
-actual operator authority. Rollback requires matching inode/owner/content and
+actual operator authority. Rollback requires the existing authenticated exact
+applied-plan receipt as well as matching inode/owner/content and
 before/after/known-intermediate metadata; it cannot restore arbitrary substituted
 files. Failure events may indicate partial application; preserve evidence and
 inspect rather than delete or blindly start another plan.
