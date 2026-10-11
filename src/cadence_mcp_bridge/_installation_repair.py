@@ -438,10 +438,62 @@ def receipt_bytes(original):
     return data
 
 
+def verify_receipt_parent_chain(original):
+    # Include every named directory to /, not just the immediate managed parent.
+    # An exact planned workspace repair may still be in its observed before or
+    # known chmod/ACL intermediate state; an unlisted writable ancestor never is.
+    selected = dict((row["path"], row) for row in original["records"]
+                    if row["kind"] == "directory")
+    current = os.path.dirname(original["scope"]["resource_lock"])
+    observed = []
+    while True:
+        fd = (os.open("/", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY)
+              if current == "/" else open_fixed(current))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISDIR(info.st_mode):
+                raise ValueError("repair_receipt_ancestor_trust")
+            observed.append((current, info))
+            if current not in selected:
+                if info.st_mode & 18:
+                    raise ValueError("repair_receipt_ancestor_trust")
+            else:
+                old, now = selected[current], snapshot_descriptor(current, fd)
+                invariant = ("path", "dev", "ino", "uid", "gid", "kind",
+                             "sha256", "size", "mtime")
+                if any(not metadata_equal(key, old[key], now[key]) for key in invariant):
+                    raise ValueError("repair_receipt_ancestor_drift")
+                candidates = ((old["mode"], old["acl"]),
+                              (old["after_mode"], old["after_acl"]),
+                              (old["after_mode"], chmod_acl(old["acl"], old["after_mode"])),
+                              (old["mode"], chmod_acl(old["after_acl"], old["mode"])))
+                if not any(now["mode"] == mode and normalize_acl(now["acl"]) ==
+                           normalize_acl(value) for mode, value in candidates):
+                    raise ValueError("repair_receipt_ancestor_drift")
+        finally:
+            os.close(fd)
+        if current == "/":
+            break
+        current = os.path.dirname(current)
+    # Reopen every named component after collection. Held ancestor descriptors
+    # must not silently remain usable after a rename or a same-resolution link.
+    for path, before in observed:
+        fd = (os.open("/", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY)
+              if path == "/" else open_fixed(path))
+        try:
+            after = os.fstat(fd)
+            if any(getattr(before, key) != getattr(after, key) for key in
+                   ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid")):
+                raise ValueError("repair_receipt_ancestor_drift")
+        finally:
+            os.close(fd)
+
+
 def verify_receipt_namespace(original, directory):
     # A held fd also names a detached directory. Reopen the fixed managed-root
     # entry after receipt reads/fsyncs so detached evidence cannot authorize code
     # mutation or completion merely because its descriptor remains usable.
+    verify_receipt_parent_chain(original)
     uid = os.getuid()
     name = "trust-repair-v1-%s-%d" % ("admin" if uid == 0 else "user", uid)
     parent = open_fixed(os.path.dirname(original["scope"]["resource_lock"]))
@@ -460,6 +512,16 @@ def verify_receipt_namespace(original, directory):
                 stat.S_IMODE(linked.st_mode) != 448 or
                 (held.st_dev, held.st_ino) != (linked.st_dev, linked.st_ino)):
             raise ValueError("repair_receipt_namespace")
+        # The managed parent can itself be detached while its proc-fd child
+        # lookup still works. Reopen its entire no-follow named path as well.
+        named = open_fixed(os.path.dirname(original["scope"]["resource_lock"]))
+        try:
+            actual = os.fstat(named)
+            if any(getattr(parent_info, key) != getattr(actual, key) for key in
+                   ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid")):
+                raise ValueError("repair_receipt_namespace")
+        finally:
+            os.close(named)
     finally:
         os.close(parent)
 
@@ -473,6 +535,7 @@ def read_receipt(directory, name, expected, original):
             return False
         raise
     try:
+        directory_before = os.fstat(directory)
         before = os.fstat(fd)
         if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.getuid() or
                 stat.S_IMODE(before.st_mode) != 256 or before.st_nlink != 1 or
@@ -499,6 +562,28 @@ def read_receipt(directory, name, expected, original):
         os.fsync(fd)
         os.fsync(directory)
         verify_receipt_namespace(original, directory)
+        directory_after = os.fstat(directory)
+        if any(getattr(directory_before, key) != getattr(directory_after, key) for key in keys):
+            raise ValueError("repair_receipt_directory_race")
+        # Durability syscalls can block while an external process changes the
+        # file or its fixed entry. Authenticate the held contents and metadata
+        # again, then require the fixed name still to identify that exact file.
+        trailing = os.fstat(fd)
+        if any(getattr(after, key) != getattr(trailing, key) for key in keys):
+            raise ValueError("repair_receipt_race")
+        if file_hash(fd) != hashlib.sha256(expected).hexdigest():
+            raise ValueError("repair_receipt_binding")
+        final = os.fstat(fd)
+        if any(getattr(trailing, key) != getattr(final, key) for key in keys):
+            raise ValueError("repair_receipt_race")
+        try:
+            linked = os.lstat(path)
+        except OSError as failure:
+            if failure.errno == errno.ENOENT:
+                raise ValueError("repair_receipt_race")
+            raise
+        if any(getattr(final, key) != getattr(linked, key) for key in keys):
+            raise ValueError("repair_receipt_race")
         return True
     finally:
         os.close(fd)

@@ -1,3 +1,36 @@
+## Whole receipt durability and named-chain correction, 2026-10-11
+
+Fresh review of f4e0084 found a receipt file could be detached or replaced during
+fsync after its earlier fixed-name check. After all file/directory fsync and
+namespace operations the helper now repeats the held receipt's complete stat,
+content hash/stability and fixed filename identity. The held receipt directory's
+full metadata must also remain stable. The fixed managed parent is reopened after
+its entry read; every named ancestor to/ is checked and reopened for identity,
+owner/group/mode drift. Unlisted writable ancestors reject. An exact planned
+workspace before/after/known-intermediate state is allowed so authorized workspace
+repair and rollback still work; no other shared-write exception is introduced.
+Exact8952b7 hosted Linux reached212 PASS with one existing fixture assertion
+expecting the later ancestor reason. The new receipt ancestor guard correctly
+rejects that recipe-to-lock race earlier, before target validation/mutation. The
+fixture now expects that exact earlier reason and retains all protected-state and
+no-completion assertions. Production helper/artifact bytes are unchanged; exact
+corrected hosted/independent review/current-VM inventory gates remain pending.
+
+First apply still publishes/verifies the full exact receipt before any target
+mutation, and every target's immediate prechange and completion reauthenticate it.
+
+Grouped owned Linux fixtures cover31 new file fsync/directory fsync cases: rename,
+unlink, identical-byte replacement, restored-mtime content change, receipt-directory
+metadata drift, selected/unlisted ancestor drift and detached managed parents, with
+apply/rollback and exact planned writable-workspace recovery. Failed evidence is
+preserved. This is last-observation validation, not atomic exclusion of external
+administrator/user filesystem tools. Previous f4 local179/49skip, hosted Linux182/
+no skips and installed32-state package PASS are history. Updated-source local
+179 related PASS/80 Windows POSIX skips and Ruff/mypy72 PASS. Final updated-source
+package/security/audit/hosted/refreshed review gates are pending.
+No VM/admin/simulation/reservation change; prior receipts/helper bundles/ledger and
+all existing active16GiB/500/20,GREL02-08,normal merge/publication boundaries persist.
+
 ## Fixed receipt namespace read-race correction, 2026-10-11
 
 Fresh review of7fb77b7 found that a directory could be detached during a receipt
