@@ -2276,3 +2276,57 @@ def test_internal_only_library_parents_are_exact_repair_targets(actual_recipe_la
         assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
     assert link_before == link.lstat()
     assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+
+
+@pytest.mark.parametrize("external", [False, True])
+def test_unvisited_nested_library_directory_alias_rejects_before_repair(
+    actual_recipe_layout, external
+):
+    from pathlib import Path
+
+    shared, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = shared / "preserved-external-directory" if external else ic / "tools.lnx86/bin"
+    if external:
+        target.mkdir()
+        (target / "unreviewed.so").write_bytes(b"synthetic unvisited code")
+    alias = ic / "tools.lnx86/lib/unvisited-directory"
+    alias.symlink_to(target, target_is_directory=True)
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    with pytest.raises(ValueError, match="library_directory_alias_not_enumerated"):
+        repair.inventory(profile)
+    assert alias.is_symlink() and target.is_dir()
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+
+
+def test_library_snapshot_retains_bounded_digest_not_aggregate_names(actual_recipe_layout):
+    shared, _, _, _, _ = actual_recipe_layout
+    directory = shared / "owned-membership-directory"
+    directory.mkdir()
+    for index in range(1000):
+        (directory / f"member-{index:04d}").write_bytes(b"synthetic")
+    signature, names = repair.library_directory_snapshot(str(directory))
+    assert len(signature) == 64 and len(names) == 1000
+    (directory / "later-member").write_bytes(b"retained synthetic")
+    assert repair.library_directory_snapshot(str(directory))[0] != signature
+
+
+def test_library_membership_signature_hashes_canonical_bytes_once(monkeypatch):
+    import hashlib
+    from types import SimpleNamespace
+
+    directory = SimpleNamespace(st_dev=1, st_ino=2, st_mode=stat.S_IFDIR | 0o755,
+        st_uid=500, st_gid=500, st_nlink=2, st_size=4096, st_mtime=1.25, st_ctime=2.5)
+    monkeypatch.setattr(repair, "lexical_parent_snapshot", lambda path: [])
+    monkeypatch.setattr(repair.os.path, "realpath", lambda path: path)
+    monkeypatch.setattr(repair, "open_fixed", lambda path: 7)
+    monkeypatch.setattr(repair.os, "fstat", lambda fd: directory)
+    monkeypatch.setattr(repair.os, "lstat", lambda path: directory)
+    monkeypatch.setattr(repair.os, "close", lambda fd: None)
+    monkeypatch.setattr(repair.os, "listdir", lambda path: ["b.so", "a.so"])
+    monkeypatch.setattr(repair, "descriptor_path", lambda fd: "/owned")
+    signature, names = repair.library_directory_snapshot("/owned")
+    expected = ("/owned", [1, 2, directory.st_mode, 500, 500, 2, 4096, "1.25", "2.5"],
+                ["a.so", "b.so"], [])
+    assert signature == hashlib.sha256(repair.canonical(expected)).hexdigest()
+    assert names == ["a.so", "b.so"]
