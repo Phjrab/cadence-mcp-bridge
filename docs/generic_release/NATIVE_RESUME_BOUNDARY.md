@@ -1,3 +1,26 @@
+## Active PR151 lock-contended inventory correction, 2026-10-11
+
+The current direct user delegation allows GREL02-08 candidate preparation,
+conditional normal integration of reviewed related PRs, and the validation VM's
+16 GiB retained reservation ceiling. Existing attempts/corrections/reservations
+remain retained. Public tag/Release/assets publication still needs the final
+exact-candidate approval. Earlier exclusions and resource observations below
+remain historical and do not override that delegation.
+
+PR151 now distinguishes lock-contended read-only storage inventory from a
+lock-held conservation audit. Only expected fixed-main inventory flock contention
+uses the partial route: authenticate the immutable registered domain/policy and
+last committed physical counter, mark coverage incomplete and artifacts active/
+protected, and offer no deletion candidates. Cleanup, spending and lock-held
+inventory keep the full multi-file audit; unexpected lock failures reject.
+This is local synthetic source/package work, with no VM contact, actual journal/
+ledger change, reservation, simulation or metadata repair. The native storage
+asset changes identity and needs exact new-bundle qualification; prior native
+receipts do not qualify this correction. Release and exact candidate remain
+BLOCKED. See [consumer correction](FRESH_POLICY_CONSUMERS_V1.md)
+for source-scoped test/package receipts. Independent final review/CI remain gates.
+Historical sections below keep their original source scope.
+
 ## Active fresh-policy consumer correction, 2026-10-08
 
 Continue the existing branch and unmerged PR151; latest main remains553276d.

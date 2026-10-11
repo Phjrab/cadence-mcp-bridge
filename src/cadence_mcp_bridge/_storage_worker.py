@@ -195,7 +195,7 @@ def metadata(fd):
     ]
 
 
-def read_json(io, parent, name, limit, private=False):
+def read_json(io, parent, name, limit, private=False, canonical_ledger=False):
     fd = io.open(parent, name)
     try:
         s = os.fstat(fd)
@@ -209,6 +209,10 @@ def read_json(io, parent, name, limit, private=False):
         value = json.loads(raw.decode("ascii"))
         if private and raw.strip() != canonical(value):
             raise ValueError("canonical operator metadata required")
+        if canonical_ledger and raw.strip() not in (
+            canonical(value), json.dumps(value, sort_keys=True).encode("ascii")
+        ):
+            raise ValueError("canonical cumulative ledger required")
         return value
     finally:
         os.close(fd)
@@ -353,11 +357,14 @@ def append_artifact(artifacts, aggregates, item):
     frames.append([item["artifact_id"], item["fingerprint"]])
 
 
-def fresh_ledger(io, root, counter):
+def fresh_ledger(io, root, counter, lock_held=True):
     """Authenticate schema2 policy at the pinned root and audit conserved slots.
 
-    This internal consumer assumes its caller holds the existing run.lock, like
-    snapshot/cleanup. It never acquires another flock, reserves or repairs.
+    Multi-file conservation is audited only while the caller holds run.lock.
+    Lock-contended read-only inventory validates the immutable registered policy
+    and physical committed counter, but cannot attest transactional conservation.
+    That snapshot is active/partial and has no deletion candidates or authority.
+    This consumer never acquires another flock, reserves or repairs.
     Standalone generic bundles must hash-verify reservations.py before import.
     The historical standalone worker never loads it for a legacy counter.
     """
@@ -456,18 +463,29 @@ def fresh_ledger(io, root, counter):
         "ledger_ref": "sim-mcp-v2-jobs/counter.json",
         "identity_manifest_sha256": digest(anchor),
     }
-    accounting.identity_manifest(path, binding)
+    manifest = accounting.identity_manifest(path, binding)
+    accounting.counter_shape(counter, manifest)
+    if (
+        counter["count"] < manifest["baseline"]["count"]
+        or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
+        or (counter["count"] == 0) != (counter["result_reserved_bytes"] == 0)
+        or counter["result_reserved_bytes"] < counter["count"]
+    ):
+        raise ValueError("storage committed ledger integrity")
+    if not lock_held:
+        return anchor["policy"]
     audited, records = accounting.state(path, binding)
     if canonical(counter) != canonical(audited):
         raise ValueError("storage ledger changed during observation")
     return anchor["policy"]
 
 
-def snapshot(io, root, is_active):
+def snapshot(io, root, is_active, lock_held=True):
     artifacts, coverage = [], {}
     reasons = {}
     aggregates = {}
-    complete = True
+    complete = lock_held
+    is_active = is_active or not lock_held
     scanned = 0
     hash_budget = [0]
     for group, relative, retention in GROUPS:
@@ -602,11 +620,11 @@ def snapshot(io, root, is_active):
         raise ValueError("storage group response bound")
     counter_root = io.open(root, "sim-mcp-v2-jobs", directory=True)
     try:
-        counter = read_json(io, counter_root, "counter.json", 2048)
+        counter = read_json(io, counter_root, "counter.json", 2048, canonical_ledger=True)
     finally:
         os.close(counter_root)
     exact(counter, "campaign_id count result_reserved_bytes")
-    policy = fresh_ledger(io, root, counter)
+    policy = fresh_ledger(io, root, counter, lock_held)
     if policy is None:
         if (
             counter["campaign_id"] != "AUTO-PHASE-01"
@@ -928,10 +946,12 @@ def main():
         lock = io.open(root, "run.lock")
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
+        except IOError as failure:
+            if failure.errno not in (errno.EAGAIN, errno.EACCES):
+                raise
             if sys.argv[1] == "cleanup":
                 raise ValueError("active EDA lock")
-            value = snapshot(io, root, True)
+            value = snapshot(io, root, True, lock_held=False)
         else:
             active = active_eda(ROOT)
             if sys.argv[1] == "inventory":

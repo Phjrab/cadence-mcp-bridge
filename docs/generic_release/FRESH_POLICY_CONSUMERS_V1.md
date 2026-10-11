@@ -181,3 +181,69 @@ reservations are not VM reservations or Spectre launches. The43 operator and20
 domain test files remained intact through reinstall and uninstall. Logs are
 private. Hosted exact-head CI/review remain separate pending gates at this receipt;
 no review thread is resolved and no merge/publication is inferred from these tests.
+
+
+## Lock-contended inventory correction, 2026-10-11
+
+Independent PR151 P2 review found that a busy read-only snapshot called the full
+conservation audit while the real reservation held run.lock between its temporary
+counter, immutable slot, intent, marker, counter rename and receipt writes. A
+legitimate active transaction could therefore reject storage inventory as corrupt.
+The fixed main now handles only EAGAIN/EACCES inventory contention with an explicit
+lock_held=False observation. Unknown lock errors and all cleanup contention reject.
+
+The partial branch still authenticates the canonical account-home index, registered
+root/domain/immutable policy anchor and physical last committed counter. It checks
+exact fields/types, campaign, ceilings, baseline and count/byte consistency. It does
+not attest multi-file conservation while another process owns that lock. Every
+artifact is active/protected, coverage is incomplete, and cleanup candidates are
+absent. Lock-held inventory, cleanup and spending retain the strict audit and disk
+checks; this is no authority, repair, reservation or bypass of a failed held audit.
+
+Disposable reservation tests pause after each write and observe the actual counter
+before/after rename. Inventory is read-only, correctly active/partial, and its
+snapshot hash validates; malformed/duplicate counters and unknown domain/policy
+still reject. Separate fixed-main tests check expected/unexpected lock errors and
+POSIX tests use reserve()'s real flock to ensure inventory succeeds only as partial
+and cleanup rejects. Windows cannot read the held lock byte during its callback;
+that fixture compares lock identity/metadata during observation and contents after
+unlock, with all other file contents compared throughout. Ubuntu runs the real
+POSIX cases. This is not an actual VM or Cadence concurrency receipt.
+
+Local related241 tests PASS /eight Windows platform skips /74.07s. The skipped
+cases include the two actual POSIX busy-lock paths, four prior reservation POSIX
+checks, one migration flock and one OS-denied symlink fixture. Ruff across
+src/scripts/tests and mypy77 source modules PASS. Contract audit85 tools and52
+schema-audit negative/regression tests PASS. Original22 declarations/models remain
+exact; the six previously reviewed output transitions and immutable snapshots are
+preserved. Security18 PASS and strict dependency audit found no known
+vulnerabilities in the retained same-source private receipt.
+
+The new native storage asset SHA256 is
+`3f3fc5079ca368804f5e1e55c2256fb90af3284799bafca03549d43f15eaf167`.
+Its immutable runtime identity changes. Prior actual Python2.6/native/app receipts
+are historical, and exact new-bundle ordinary-user qualification is required.
+No VM contact, original data/control changes, attempts, reservation bytes or
+metadata repair occurred in this correction. Final exact package and hosted
+review/CI receipts are recorded separately when observed. PR151 remains unmerged;
+no exact release candidate, formal review approval or publication is inferred.
+
+Final corrected local package receipt: build/distribution audit, isolated installed
+CLI/SDK/stdio/bootstrap/domain/form checks, same-version reinstall and uninstall
+PASS. The43 synthetic operator files and20 domain files remain intact; fresh
+production power extraction and typed SDK storage summary use the registered
+policy. This is package version1.0.0 synthetic acceptance, not semantic-version
+upgrade or exact release candidate freeze. Distribution wheel85/sdist86 members
+match source/license/notices and contain no unexpected/protected patterns or
+unreviewed imported planning content. New native simulations and real reservations0.
+Private package-v2 log and retained deterministic distributions identify this
+source; exact hosted CI and final independent review remain separate gates.
+
+- Corrected wheel SHA256: `0f9a4990f4e6322d9694845f1978091358d192476c0d2caf5de5daa90433d9b2`
+- Corrected sdist SHA256: `47563579c13e7acb22d116ec3ccab6575350cb030c305a5de4420b4b0b1d90e6`
+
+The retained deterministic rebuild has these same hashes as the exact installed
+package-v2 test. An earlier attempt to copy the temporary artifacts occurred after
+the verifier's expected cleanup; that local copy failure changed no package/source
+or remote data. Its empty private destination remains preserved. The rebuilt
+private artifacts and their audit are retained under a new destination.
