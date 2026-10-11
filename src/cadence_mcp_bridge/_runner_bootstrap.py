@@ -320,6 +320,9 @@ def operator_activation(target, expected):
                 raise ValueError("operator_launcher_collision")
         else:
             exclusive(path, launcher, 448)
+        # Persist the launcher entry before publishing an active pointer. Repeat
+        # the barrier for an exact launcher/pointer left by an interrupted run.
+        _sync_directory(binary)
         existed = os.path.lexists(state)
         if not existed:
             _publish_operator_state(state, value)
