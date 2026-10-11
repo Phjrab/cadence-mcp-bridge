@@ -1,3 +1,35 @@
+## Current restart and delegated metadata checkpoint, 2026-10-11
+
+User-confirmed Codex restart restored the QA connection; it still reports
+historical1.0.0, two operator designs and the retained journals. It does not load
+this current native source. Ordinary sandbox refresh remains unavailable; narrow
+reviewed elevated commands work without modifying platform settings.
+Latest actual read-only accounting:102 attempts/12,483,297,280 reserved bytes,
+16GiB ceiling,4,696,571,904 remaining;500 attempts/same-change20 remain. The old
+3-attempt/384MiB grant is fully consumed and is preserved. This continuation adds
+0 actual simulations/0 reservations. Correction scope must be reconciled before
+new admission; historical unrelated8/9 counts cannot be treated as native credit.
+
+The preceding delegated root3ec repair changed exactly four SuSE/SLES11 directory
+modes0777 to0755. File contents, owner/group, identities and mtime were preserved;
+mode/ctime changes are explicitly authorized differences, not identical metadata.
+Latest repair source normal-user inventory now includes fixed Tcl/Tk source roles:
+569 exact targets and233 required0777-to0755 corrections. Those additional changes
+are NOT yet applied. Earlier448/112 and451/115 inventories remain history.
+Read-only UID500/Python2.6 actual inventory passes; this is not final runtime or
+new-job qualification. Original OA/ADE, model/vendor contents, license and ledgers
+remain protected. Exact reviewed/installed helper must gate new administrator apply.
+
+Current direct user authorizes GREL02-08,16GiB and conditional normal PR integration,
+and current-VM minimum reversible administrator actions. Earlier contrary scope
+statements below are historical; no per-phase/repeated administrator approval is
+needed. Final tag/Release/upload remains unapproved until the identical candidate
+is reported. No exact qualified RC exists. Complete source review/CI/integration,
+current installed/admin/preflight, final8-job bounded validation and actual Codex
+submit/query/retry/restart, then exact release candidate checks. When a prepared
+QA configuration requires app reload, preserve state and end the turn to request
+only actual restart; resume after the user says restart complete.
+
 ## Whole model-union observation and resumed inventory, 2026-10-11
 
 Independent P1 finding4240280936 is corrected: the gate retains file/ancestor
