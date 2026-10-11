@@ -1,3 +1,14 @@
+## PR149 reviewed executable binding correction, 2026-10-11
+
+Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
+now pins new launcher bytes to the independently compiled reviewed package asset
+and rejects substitute/append-code/append-comment before state/history mutation.
+Windows bootstrap69 PASS/12 OS skips; final parent, related, exact package, hosted
+and fresh review remain pending. Earlier82b207 receipts remain source-scoped
+history. This correction has0 VM/admin/EDA/ledger side effects and preserves all
+existing evidence and delegatedGREL02-08/16GiB normal integration authority.
+Public tag/Release/upload still requires exact-candidate user approval.
+
 ## PR149 directed update durability correction, 2026-10-11
 
 Fresh review found reverse preflight transitions and missing retry fsync barriers.
