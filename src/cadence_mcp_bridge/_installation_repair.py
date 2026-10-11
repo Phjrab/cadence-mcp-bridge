@@ -230,9 +230,8 @@ def plan(request):
             raise ValueError("link_shape")
         if not any(inside(valid_path(link["path"]), r) for r in roots):
             raise ValueError("link_escape")
-        if os.readlink(link["path"]) != link["target"]:
-            raise ValueError("link_drift")
-        if os.path.realpath(link["path"]) != link["resolved"]:
+        observed = external_link_record(link["path"], link["resolved"])
+        if observed["target"] != link["target"]:
             raise ValueError("link_drift")
         if link["resolved"] not in paths:
             raise ValueError("unlisted_link_target")
@@ -957,6 +956,37 @@ def external_link_record(path, expected_resolved):
         os.close(parent_fd)
 
 
+def library_directory_snapshot(path):
+    lexical = lexical_parent_snapshot(path)
+    resolved = os.path.realpath(path)
+    fd = open_fixed(resolved)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISDIR(before.st_mode):
+            raise ValueError("library_membership_race")
+        names = sorted(os.listdir(descriptor_path(fd)))
+        if len(names) > MAX_ITEMS or sum(len(name) for name in names) > LIMIT:
+            raise ValueError("library_membership_limit")
+        values = tuple(getattr(before, key) for key in fields)
+        if values != tuple(getattr(os.fstat(fd), key) for key in fields):
+            raise ValueError("library_membership_race")
+        named = open_fixed(resolved)
+        try:
+            if values != tuple(getattr(os.fstat(named), key) for key in fields):
+                raise ValueError("library_membership_race")
+        finally:
+            os.close(named)
+        if (os.path.realpath(path) != resolved or
+                lexical_parent_snapshot(path) != lexical or
+                values != tuple(getattr(os.lstat(path), key) for key in fields)):
+            raise ValueError("library_membership_race")
+        return resolved, values, names, lexical
+    finally:
+        os.close(fd)
+
+
 def inventory(profile):
     """Standard-VM recipe; address/account/install roots come from operator data.
 
@@ -1029,6 +1059,7 @@ def inventory(profile):
     )
     exact_code = set((ic + "/tools.lnx86/.oawrap", ic + "/tools.lnx86/.cdnWrapper_pscompat"))
     paths, links, external = set(), {}, []
+    internal, library_directories = {}, {}
 
     def add(path):
         if not os.path.lexists(path):
@@ -1052,7 +1083,16 @@ def inventory(profile):
                 inside(resolved, code_root) for code_root in code_roots):
             raise ValueError("dependency_code_role_escape")
         if os.path.islink(path):
-            links[path] = {"path": path, "target": os.readlink(path), "resolved": resolved}
+            parent = os.path.realpath(os.path.dirname(path))
+            if not inside(parent, base):
+                raise ValueError("internal_link_parent_scope")
+            paths.add(parent)
+            while parent != base:
+                parent = os.path.dirname(parent)
+                paths.add(parent)
+            observed = external_link_record(path, resolved)
+            links[path] = {"path": path, "target": observed["target"], "resolved": resolved}
+            internal[path] = observed
         paths.add(resolved)
         while resolved != base:
             resolved = os.path.dirname(resolved)
@@ -1065,6 +1105,12 @@ def inventory(profile):
     for code in (ic + "/tools.lnx86/lib", ic + "/oa/lib", ms + "/tools.lnx86/lib"):
         add(code)
         for current, directories, filenames in os.walk(code, followlinks=False):
+            observed = library_directory_snapshot(current)
+            if observed[2] != sorted(directories + filenames):
+                raise ValueError("library_membership_race")
+            library_directories[current] = observed
+            if len(library_directories) > MAX_ITEMS:
+                raise ValueError("library_membership_limit")
             directories[:] = [d for d in directories if "64" not in d and d not in (
                 "license", "data", "doc", "samples")]
             for name in filenames:
@@ -1098,9 +1144,15 @@ def inventory(profile):
     bounded = bounded_inventory(result)
     # Internal target hashes/ACL tools run after member enumeration. Reobserve
     # every held-parent external binding after those reads, without mutation.
-    for link in external:
+    for link in external + list(internal.values()):
         if external_link_record(link["path"], link["resolved"]) != link:
             raise ValueError("external_link_race")
+    # The walk's yielded names can be stale even when all selected target bytes
+    # are unchanged. Reobserve every traversed directory after ALL target and
+    # link observations, retaining excluded directory names without traversing.
+    for path, observed in sorted(library_directories.items()):
+        if library_directory_snapshot(path) != observed:
+            raise ValueError("library_membership_race")
     return bounded
 
 
