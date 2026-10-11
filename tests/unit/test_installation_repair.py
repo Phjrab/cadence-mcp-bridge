@@ -1840,3 +1840,148 @@ def test_actual_completion_binds_external_library_link_membership(
             assert path.stat().st_mode == baseline[str(path)][1]
         else:
             assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["retarget", "detach-parent"])
+@pytest.mark.parametrize("observation", ["readlink", "exists", "trailing-realpath"])
+def test_actual_external_link_observation_rechecks_held_entry_and_parent(
+    actual_recipe_layout, monkeypatch, rollback, stage, drift, observation
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib"
+    external = shared / "preserved-external-library"
+    external.write_bytes(b"synthetic external code, never executed or mutated")
+    external.chmod(0o777)
+    link = directory / "unreviewed-external.so"
+    link.symlink_to(external)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    if rollback or stage == "no-op":
+        repair.mutate(request)
+    if rollback and stage == "no-op":
+        repair.mutate(request, True)
+    baseline = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    external_before = (external.read_bytes(), external.stat().st_mode)
+    events, active, injected, resolution_reads = [], False, False, 0
+    original = {"readlink": repair.os.readlink, "exists": repair.os.path.exists,
+                "trailing-realpath": repair.os.path.realpath}
+
+    def observe(path, *args, **kwargs):
+        nonlocal injected, resolution_reads
+        value = original[observation](path, *args, **kwargs)
+        if active and str(path).startswith("/proc/") and str(path).endswith("/" + link.name):
+            resolution_reads += 1
+            threshold = 2 if observation == "trailing-realpath" else 1
+            if not injected and resolution_reads == threshold:
+                if drift == "retarget":
+                    link.unlink()
+                    link.symlink_to(str(external.parent) + "/./" + external.name)
+                else:
+                    directory.rename(directory.with_name("preserved-detached-lib"))
+                    directory.mkdir()
+                    link.symlink_to(external)
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == ("validated" if stage == "no-op" else "changed"):
+            active = True
+
+    module, name = ((repair.os, "readlink") if observation == "readlink" else
+                    (repair.os.path, "exists" if observation == "exists" else "realpath"))
+    monkeypatch.setattr(module, name, observe)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="external_link_race"):
+        repair.mutate(request, rollback)
+    assert injected and link.is_symlink() and link.resolve() == external
+    assert external_before == (external.read_bytes(), external.stat().st_mode)
+    assert not any(event["event"] == "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    for path in code_paths:
+        assert path.read_bytes() == baseline[str(path)][0]
+        if path != target or stage == "no-op":
+            assert path.stat().st_mode == baseline[str(path)][1]
+        else:
+            assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["retarget", "detach-parent"])
+def test_actual_external_binding_rechecked_after_internal_target_hashes(
+    actual_recipe_layout, monkeypatch, rollback, stage, drift
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib"
+    external = shared / "preserved-external-library"
+    external.write_bytes(b"synthetic external code, never executed or mutated")
+    external.chmod(0o777)
+    link = directory / "unreviewed-external.so"
+    link.symlink_to(external)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    if rollback or stage == "no-op":
+        repair.mutate(request)
+    if rollback and stage == "no-op":
+        repair.mutate(request, True)
+    baseline = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    external_before = (external.read_bytes(), external.stat().st_mode)
+    events, active, injected, watched_reads = [], False, False, 0
+    real_hash, watched_inode = repair.file_hash, code_paths[1].stat().st_ino
+
+    def file_hash(fd):
+        nonlocal injected, watched_reads
+        value = real_hash(fd)
+        if active and os.fstat(fd).st_ino == watched_inode:
+            watched_reads += 1
+            # Two reads occur in stored-path completion validation; the next
+            # is after external collection in the full fresh fixed inventory.
+            if watched_reads == 3:
+                if drift == "retarget":
+                    link.unlink()
+                    link.symlink_to(str(external.parent) + "/./" + external.name)
+                else:
+                    directory.rename(directory.with_name("preserved-detached-lib"))
+                    directory.mkdir()
+                    link.symlink_to(external)
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == ("validated" if stage == "no-op" else "changed"):
+            active = True
+
+    monkeypatch.setattr(repair, "file_hash", file_hash)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="external_link_race"):
+        repair.mutate(request, rollback)
+    assert injected and link.is_symlink() and link.resolve() == external
+    assert external_before == (external.read_bytes(), external.stat().st_mode)
+    assert not any(event["event"] == "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    for path in code_paths:
+        assert path.read_bytes() == baseline[str(path)][0]
+        if path != target or stage == "no-op":
+            assert path.stat().st_mode == baseline[str(path)][1]
+        else:
+            assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)

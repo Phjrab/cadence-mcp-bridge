@@ -854,7 +854,68 @@ def common_installation_root(ic, ms):
     return "/".join(components) or "/"
 
 
+
+def external_link_record(path, expected_resolved):
+    # Hold a canonical no-follow parent. Python 2.6 has no dir_fd or O_PATH;
+    # proc-fd leaf operations retain the exact directory without opening vendor
+    # code or following the external target for content/metadata mutation.
+    parent_path = os.path.realpath(os.path.dirname(path))
+    parent_fd = open_fixed(parent_path)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    try:
+        parent = os.fstat(parent_fd)
+        if not stat.S_ISDIR(parent.st_mode):
+            raise ValueError("external_link_race")
+        entry = descriptor_path(parent_fd) + "/" + os.path.basename(path)
+        before = os.lstat(entry)
+        is_link = stat.S_ISLNK(before.st_mode)
+        target = os.readlink(entry) if is_link else None
+        resolved, exists = os.path.realpath(entry), os.path.exists(entry)
+        if resolved != expected_resolved:
+            raise ValueError("external_link_race")
+        result = {"path": path, "resolved": resolved, "exists": exists, "target": target,
+                  "entry": dict((key[3:], "%.17g" % getattr(before, key)
+                            if key in ("st_mtime", "st_ctime") else getattr(before, key))
+                            for key in fields),
+                  "parent": {"path": parent_path, "dev": parent.st_dev,
+                             "ino": parent.st_ino, "uid": parent.st_uid,
+                             "gid": parent.st_gid}}
+        if ((os.readlink(entry) if is_link else None) != target or
+                os.path.realpath(entry) != resolved or os.path.exists(entry) != exists):
+            raise ValueError("external_link_race")
+        named_parent = open_fixed(parent_path)
+        try:
+            named = os.fstat(named_parent)
+            if any(getattr(named, key) != getattr(parent, key) for key in fields):
+                raise ValueError("external_link_race")
+            if (os.path.realpath(os.path.dirname(path)) != parent_path or
+                    os.path.realpath(path) != resolved or
+                    (os.readlink(entry) if is_link else None) != target):
+                raise ValueError("external_link_race")
+            # Trailing no-follow entries come after the last content/resolution
+            # read. No further pathname observation follows these identity checks.
+            trailing, fixed, held_parent = os.lstat(entry), os.lstat(path), os.fstat(parent_fd)
+            if (any(getattr(trailing, key) != getattr(before, key) or
+                    getattr(fixed, key) != getattr(before, key) for key in fields) or
+                    any(getattr(held_parent, key) != getattr(parent, key) for key in fields)):
+                raise ValueError("external_link_race")
+        finally:
+            os.close(named_parent)
+        return result
+    except OSError:
+        raise ValueError("external_link_race")
+    finally:
+        os.close(parent_fd)
+
+
 def installation(profile):
+    """Standard-VM recipe; address/account/install roots come from operator data.
+
+    This covers wrappers, the 32-bit binaries and shared-library search trees.
+    It is not complete dynamic runtime attestation. Never include PDK/OA design
+    data, licenses, logs, caches, documentation or the complete installation.
+    """
     if profile.get("schema_version") != 1 or set(profile.get("tools", {})) != set(
             ("virtuoso", "ocean", "spectre")):
         raise ValueError("profile_shape")
@@ -938,9 +999,7 @@ def inventory(profile):
         resolved = os.path.realpath(path)
         if not inside(resolved, base):
             # Alternative compatibility-library links are not mutation targets.
-            external.append({"path": path, "resolved": resolved,
-                             "exists": os.path.exists(resolved),
-                             "target": os.readlink(path) if os.path.islink(path) else None})
+            external.append(external_link_record(path, resolved))
             return
         if os.path.isfile(resolved) and resolved not in exact_code and not any(
                 inside(resolved, code_root) for code_root in code_roots):
@@ -989,7 +1048,13 @@ def inventory(profile):
     result["readonly_compatibility_links"] = external
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
     result["native_runtime_attestation"] = "NOT_ATTESTED"
-    return bounded_inventory(result)
+    bounded = bounded_inventory(result)
+    # Internal target hashes/ACL tools run after member enumeration. Reobserve
+    # every held-parent external binding after those reads, without mutation.
+    for link in external:
+        if external_link_record(link["path"], link["resolved"]) != link:
+            raise ValueError("external_link_race")
+    return bounded
 
 
 def model_graph(main, section):
