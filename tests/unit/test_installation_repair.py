@@ -2451,6 +2451,16 @@ def test_fixed_vendor_roots_use_final_tools_segment(actual_recipe_layout):
     parent.mkdir()
     destination = parent / "cadence"
     source.rename(destination)
+    # The owned fixture uses absolute installation aliases. Preserve their
+    # internal relationship after relocation rather than leave dangling links
+    # to the old test installation.
+    for relative in ('IC615/tools', 'MMSIM121/tools', 'IC615/oa'):
+        alias = destination / relative
+        target = alias.readlink()
+        assert str(target).startswith(str(source) + '/')
+        alias.unlink()
+        alias.symlink_to(str(target).replace(str(source), str(destination), 1),
+                         target_is_directory=True)
 
     def relocate(value):
         if isinstance(value, str):

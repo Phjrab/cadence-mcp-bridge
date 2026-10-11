@@ -1,3 +1,12 @@
+## Relocated installation fixture correction, 2026-10-11
+
+Exact0c83 Linux CI found one fixture failure after394 passing tests: moving the
+owned vendor tree left three absolute directory aliases pointing to its old
+location. The relocation regression now retargets only those three disposable
+fixture aliases before testing the final-tools-segment production logic. No
+production trust rule is weakened and no actual VM file is changed. Historical
+failed CI remains; exact follow-up hosted validation is required.
+
 ## Complete sourced-file roles and final tool segment, 2026-10-11
 
 Review4240563319/4240572996 is corrected. Vendor roots derive from the final
