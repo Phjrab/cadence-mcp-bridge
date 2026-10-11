@@ -438,7 +438,33 @@ def receipt_bytes(original):
     return data
 
 
-def read_receipt(directory, name, expected):
+def verify_receipt_namespace(original, directory):
+    # A held fd also names a detached directory. Reopen the fixed managed-root
+    # entry after receipt reads/fsyncs so detached evidence cannot authorize code
+    # mutation or completion merely because its descriptor remains usable.
+    uid = os.getuid()
+    name = "trust-repair-v1-%s-%d" % ("admin" if uid == 0 else "user", uid)
+    parent = open_fixed(os.path.dirname(original["scope"]["resource_lock"]))
+    try:
+        parent_info = os.fstat(parent)
+        if not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_mode & 18:
+            raise ValueError("repair_receipt_parent")
+        held = os.fstat(directory)
+        try:
+            linked = os.lstat("/proc/self/fd/%d/%s" % (parent, name))
+        except OSError as failure:
+            if failure.errno == errno.ENOENT:
+                raise ValueError("repair_receipt_namespace")
+            raise
+        if (not stat.S_ISDIR(linked.st_mode) or linked.st_uid != uid or
+                stat.S_IMODE(linked.st_mode) != 448 or
+                (held.st_dev, held.st_ino) != (linked.st_dev, linked.st_ino)):
+            raise ValueError("repair_receipt_namespace")
+    finally:
+        os.close(parent)
+
+
+def read_receipt(directory, name, expected, original):
     path = "/proc/self/fd/%d/%s" % (directory, name)
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -472,12 +498,13 @@ def read_receipt(directory, name, expected):
         # An interrupted directory fsync is resumed before mutation is allowed.
         os.fsync(fd)
         os.fsync(directory)
+        verify_receipt_namespace(original, directory)
         return True
     finally:
         os.close(fd)
 
 
-def publish_receipt(directory, name, data):
+def publish_receipt(directory, name, data, original):
     # Keep an interrupted candidate as private evidence. Only a fully written,
     # fsynced, verified candidate can be linked into the exclusive final name.
     candidate = ".candidate-" + hashlib.sha256(os.urandom(32)).hexdigest()
@@ -493,7 +520,7 @@ def publish_receipt(directory, name, data):
         os.fsync(fd)
     finally:
         os.close(fd)
-    if not read_receipt(directory, candidate, data):
+    if not read_receipt(directory, candidate, data, original):
         raise ValueError("repair_receipt_candidate")
     final = "/proc/self/fd/%d/%s" % (directory, name)
     # link is exclusive even when another process ignores the resource flock.
@@ -502,7 +529,7 @@ def publish_receipt(directory, name, data):
     os.link(path, final)
     os.unlink(path)
     os.fsync(directory)
-    if not read_receipt(directory, name, data):
+    if not read_receipt(directory, name, data, original):
         raise ValueError("repair_receipt_publication")
 
 
@@ -512,7 +539,9 @@ def verify_applied_receipt(request):
     if directory is None:
         raise ValueError("repair_applied_receipt_required")
     try:
-        if not read_receipt(directory, digest(original) + ".json", receipt_bytes(original)):
+        if not read_receipt(
+            directory, digest(original) + ".json", receipt_bytes(original), original
+        ):
             raise ValueError("repair_applied_receipt_required")
     finally:
         os.close(directory)
@@ -525,7 +554,7 @@ def authenticate_applied_plan(request, rollback):
     directory = receipt_directory(original, False)
     if directory is not None:
         try:
-            if read_receipt(directory, name, data):
+            if read_receipt(directory, name, data, original):
                 return
         finally:
             os.close(directory)
@@ -547,7 +576,7 @@ def authenticate_applied_plan(request, rollback):
     directory = receipt_directory(original, True)
     try:
         # Fail closed on unexpected collision; never overwrite any receipt.
-        publish_receipt(directory, name, data)
+        publish_receipt(directory, name, data, original)
     finally:
         os.close(directory)
 
