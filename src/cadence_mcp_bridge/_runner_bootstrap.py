@@ -313,6 +313,14 @@ def operator_activation(target, expected):
         if manifest["schema_version"] != 2:
             raise ValueError("operator_manifest_version")
         reviewed_operator_assets(contents, "activation")
+        # Durable assets must precede any launcher/pointer publication. Repeat
+        # both namespace barriers for an exact retained installation on retry.
+        _sync_directory(version)
+        _sync_directory(os.path.dirname(version))
+        checked_manifest, checked_contents, checked_raw = validate(version, expected)
+        if checked_raw != raw or checked_contents != contents:
+            raise ValueError("operator_runtime_durability_drift")
+        target_binding(checked_manifest, checked_contents, target)
         if os.path.lexists(os.path.join(target, "execution.lock")):
             raise ValueError("active_or_unresolved_jobs")
         if os.path.lexists(os.path.join(target, "operator-runner-revoked.json")):
