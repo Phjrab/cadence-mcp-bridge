@@ -716,3 +716,94 @@ def test_apply_rechecks_omitted_ancestors_at_mutation_and_completion(monkeypatch
             repair._mutate_locked(request, rollback)
         assert "complete" not in events
     assert len(mutations) == (1 if race in ("changed", "none") else 0)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", [None, "mode", "acl", "content", "owner", "count"])
+def test_completion_requires_whole_exact_requested_target_state(monkeypatch, rollback, drift):
+    old = {
+        "path": "/operator/cadence/code", "dev": 1, "ino": 2, "uid": 500, "gid": 500,
+        "kind": "file", "sha256": "a" * 64, "size": 3, "mtime": "1",
+        "reason": "remove_shared_code_write_preserve_content_owner_rx", "mode": 0o777,
+        "acl": "user::rwx\ngroup::rwx\nother::rwx\n", "after_mode": 0o755,
+        "after_acl": "user::rwx\ngroup::r-x\nother::r-x\n",
+    }
+    original = {"scope": {"paths": [old["path"]]}, "records": [old]}
+    now = copy.deepcopy(old)
+    if not rollback:
+        now.update(mode=old["after_mode"], acl=old["after_acl"])
+    if drift == "mode":
+        now["mode"] ^= 0o020
+    elif drift == "acl":
+        now["acl"] += "user:501:r-x\n"
+    elif drift == "content":
+        now["sha256"] = "b" * 64
+    elif drift == "owner":
+        now["uid"] += 1
+    records = [] if drift == "count" else [now]
+    calls = []
+
+    def final_plan(scope):
+        calls.append(scope)
+        return {"plan": {"records": records}}
+
+    monkeypatch.setattr(repair, "plan", final_plan)
+    if drift is None:
+        repair.verify_completed_targets(original, rollback)
+    else:
+        reason = "completion_metadata" if drift in ("mode", "acl") else (
+            "completion_record_count" if drift == "count" else "completion_protected_drift"
+        )
+        with pytest.raises(ValueError, match=reason):
+            repair.verify_completed_targets(original, rollback)
+    assert calls == [original["scope"]]
+
+
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["mode", "acl", "contents", "link"])
+def test_actual_completion_rechecks_skipped_and_processed_recipe(
+    actual_recipe_layout, monkeypatch, stage, drift
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    if shutil.which("setfacl") is None:
+        pytest.skip("ACL utilities absent")
+    target = code_paths[0]
+    target.chmod(0o777)
+    prepared = repair.inventory(profile)
+    request = {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+               "operator_authority": "SYNTHETIC-ONLY"}
+    if stage == "no-op":
+        repair.mutate(request)
+    events = []
+    before_content = target.read_bytes()
+
+    def emit(value):
+        events.append(value)
+        if value["event"] != ("validated" if stage == "no-op" else "changed"):
+            return
+        if drift == "mode":
+            target.chmod(0o775)
+        elif drift == "acl":
+            subprocess.run(["setfacl", "-m", "u:501:r--", str(target)], check=True)
+        elif drift == "contents":
+            target.write_bytes(b"x" * len(before_content))
+        else:
+            # Change only the text of an owned link; its resolved code is unchanged.
+            link = Path(profile["tools"]["virtuoso"]["path"]).parents[2]
+            link.unlink()
+            link.symlink_to("tools.lnx86", target_is_directory=True)
+
+    monkeypatch.setattr(repair, "emit", emit)
+    reason = {"mode": "completion_metadata", "acl": "completion_metadata",
+              "contents": "completion_protected_drift", "link": "link_drift"}[drift]
+    with pytest.raises(ValueError, match=reason):
+        repair.mutate(request)
+    assert all(event["event"] != "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o755
+    if drift != "contents":
+        assert target.read_bytes() == before_content

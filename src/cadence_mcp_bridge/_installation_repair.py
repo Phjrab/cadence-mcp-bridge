@@ -268,6 +268,23 @@ def metadata_equal(key, before, after):
     return before == after
 
 
+def verify_completed_targets(original, rollback):
+    # Recompute the whole exact recipe so skipped and previously processed targets
+    # cannot escape final content/identity/ACL checks. plan() also rechecks links.
+    final = plan(original["scope"])["plan"]
+    if len(final["records"]) != len(original["records"]):
+        raise ValueError("completion_record_count")
+    for old, now in zip(original["records"], final["records"]):
+        invariant = ("path", "dev", "ino", "uid", "gid", "kind",
+                     "sha256", "size", "mtime", "reason")
+        if any(not metadata_equal(key, old[key], now[key]) for key in invariant):
+            raise ValueError("completion_protected_drift")
+        target_mode = old["mode"] if rollback else old["after_mode"]
+        target_acl = old["acl"] if rollback else old["after_acl"]
+        if now["mode"] != target_mode or normalize_acl(now["acl"]) != normalize_acl(target_acl):
+            raise ValueError("completion_metadata")
+
+
 def _mutate_locked(request, rollback=False):
     if set(request) != set(("plan", "expected_plan_sha256", "operator_authority")):
         raise ValueError("mutation_shape")
@@ -350,6 +367,8 @@ def _mutate_locked(request, rollback=False):
         changes += 1
         emit({"event": "changed", "before": now, "after": final})
     # Also cover drift after the last change and idempotent/no-op application.
+    # Reobserve all exact targets and links, not only the omitted ancestor chain.
+    verify_completed_targets(original, rollback)
     # Unsafe outside-scope ancestors remain untouched and cannot yield completion.
     verify_unlisted_ancestors(original["scope"]["installation_roots"])
     emit({"event": "complete", "changed": changes, "content_preserved": True,
