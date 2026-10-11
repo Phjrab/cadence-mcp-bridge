@@ -1,15 +1,28 @@
 """Explicit normal-user domain provisioning; no import/startup effects or dispatch."""
 
 # mypy: ignore-errors
+import sys
+
+if __name__ == "__main__":
+    # Fixed native transport uses -E -s -B. Remove startup/CWD before the
+    # first filesystem-backed import; retained module execution keeps stdlib.
+    if sys.path:
+        del sys.path[0]
+    sys.path[:] = [entry for entry in sys.path if entry]
+import os
+
+if not __package__:
+    _asset_directory = os.path.normcase(os.path.realpath(os.path.dirname(__file__)))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != _asset_directory]
 import hashlib
 import json
-import os
 import stat
-import sys
 import uuid
 
 LIMIT = 262144
 MEMBERS = ("setup.py", "migration.py", "reservations.py", "installer.py", "probe.py")
+_VALIDATED_HELPERS = None
 
 
 def canonical(value):
@@ -32,17 +45,38 @@ def closed(data):
 
 
 def helpers():
-    if __package__:
-        from cadence_mcp_bridge import _shared_reservations as accounting
-        from cadence_mcp_bridge import _runner_bootstrap as installer
-        from cadence_mcp_bridge import _environment_probe as probe
-        from cadence_mcp_bridge import _domain_migration as migration
-    else:
-        import reservations as accounting
-        import installer
-        import probe
-        import migration
+    if not __package__:
+        if _VALIDATED_HELPERS is None:
+            raise ValueError("setup_helpers_not_validated")
+        return _VALIDATED_HELPERS
+    from cadence_mcp_bridge import _shared_reservations as accounting
+    from cadence_mcp_bridge import _runner_bootstrap as installer
+    from cadence_mcp_bridge import _environment_probe as probe
+    from cadence_mcp_bridge import _domain_migration as migration
     return accounting, installer, probe, migration
+
+
+def load_validated_helpers(values, directory):
+    # Use only bytes retained by complete manifest validation. No path reopen,
+    # helper cache reuse or unmanifested transitive modules in the staging root.
+    bundle_path = os.path.normcase(os.path.realpath(directory))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != bundle_path]
+    import types
+
+    global _VALIDATED_HELPERS
+    _VALIDATED_HELPERS = None
+    modules = []
+    for name in ("reservations.py", "installer.py", "probe.py", "migration.py"):
+        module = types.ModuleType(name[:-3])
+        module.__file__ = directory + "/" + name
+        module.__package__ = ""
+        eval(compile(values[name], module.__file__, "exec"), module.__dict__)
+        modules.append(module)
+    # Migration's downstream calls share the same fully authenticated instances;
+    # they cannot reimport a path or use an unrelated cached helper module.
+    modules[3]._VALIDATED_HELPERS = tuple(modules[:3])
+    _VALIDATED_HELPERS = tuple(modules)
 
 
 def home():
@@ -52,6 +86,8 @@ def home():
 
 
 def validate_assets(expected):
+    global _VALIDATED_HELPERS
+    _VALIDATED_HELPERS = None
     # Verify ALL fixed source files before any helper import; no caller code/name.
     directory = os.path.dirname(os.path.abspath(__file__))
     if os.path.realpath(directory) != directory or len(expected) != 64:
@@ -109,6 +145,7 @@ def validate_assets(expected):
     for name in MEMBERS:
         if manifest["files"][name] != {"sha256": digest(values[name]), "bytes": len(values[name])}:
             raise ValueError("migration_asset_content_drift")
+    load_validated_helpers(values, directory)
     return expected
 
 

@@ -113,3 +113,30 @@ A real Linux shell9> contender must fail flock while exact storage inventory
 continues with all records unchanged. Windows emulation is not that Linux proof.
 No VM/actual deployment/admin/ledger/reservation/simulation change occurred; final
 parent integration, exact package, hosted checks and fresh review remain gates.
+
+
+## Standalone stdlib path correction
+
+Independent150 transitive-import review prompted the same boundary check for
+storage. Exact direct-script fixtures reproduced unmanifested json/ctypes/hashlib/
+subprocess modules beside the worker executing before its trust checks despite
+-E -s -B. Both original failure logs are retained; the Windows newline assertion
+was corrected before confirming the four actual startup-shadow failures.
+
+Standalone/runtime storage now uses only builtin sys to remove the script startup
+entry and empty/CWD entry before filesystem-backed imports, then removes all
+canonical aliases before other stdlib imports and before retained helper execution.
+Normal installed package
+imports preserve the host application's paths. The launcher flags and supported
+platform scope remain unchanged. Six exact direct packaged-script regressions
+place unmanifested stdlib-named modules in the runtime directory and require clean
+closed-dispatch denial without executing them; those portable startup checks do
+not attest real Linux filesystem operations. Exact Linux standalone fixtures and
+the changed bundle pin must be requalified. No VM/deployment/admin/ledger/result/
+reservation/simulation changes occurred; full latest-parent/package/CI/review
+gates remain pending and general release stays BLOCKED.
+
+Local storage/fresh regression210 PASS/17 Windows platform skips; managed source/
+script/test Ruff and mypy78 PASS. An accidental broad lint scan included historical
+remote campaign code and reported its pre-existing735 findings; no historical code
+was changed, and the configured CI lint scope was rerun successfully.

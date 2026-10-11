@@ -286,3 +286,125 @@ def test_replaced_or_orphan_home_index_never_reinitializes(fresh):
     with pytest.raises(ValueError, match="existing_domain_conflict"):
         setup.apply_fresh(req, "a" * 64)
     assert files(root) == before
+
+
+@pytest.mark.parametrize("changed", ["reservations.py", "installer.py", "probe.py", "migration.py"])
+def test_setup_retained_helpers_ignore_replaced_paths_and_poisoned_cache(
+    tmp_path, monkeypatch, changed,
+):
+    import sys
+    import types
+
+    from cadence_mcp_bridge import domain_provisioning
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output, True)
+    values = {name: (output / name).read_bytes() for name in setup.MEMBERS}
+    marker = tmp_path / "unreviewed-setup-code"
+    replacement = ("from pathlib import Path\nPath(" + repr(str(marker)) +
+                   ").write_text('executed')\n").encode()
+    (output / changed).write_bytes(replacement)
+    for name in ("reservations", "installer", "probe", "migration"):
+        monkeypatch.setitem(sys.modules, name, types.ModuleType("untrusted_cached_" + name))
+    monkeypatch.setattr(setup, "__package__", "")
+    monkeypatch.setattr(setup, "_VALIDATED_HELPERS", None, raising=False)
+    setup.load_validated_helpers(values, str(output))
+    retained_accounting, retained_installer, retained_probe, retained_migration = setup.helpers()
+    assert retained_installer.canonical({"checked": True}) == b'{"checked":true}'
+    retained_accounting.counter_shape({
+        "campaign_id": "AUTO-PHASE-01", "count": 82, "result_reserved_bytes": 9798942720,
+    })
+    example = Path(__file__).resolve().parents[2] / "docs/examples/onboarding/environment.json"
+    retained_probe.validate_profile(json.loads(example.read_bytes()))
+    assert retained_migration.helpers() == setup.helpers()[:3]
+    assert not marker.exists() and (output / changed).read_bytes() == replacement
+    assert all(module is not sys.modules[module.__name__] for module in setup.helpers())
+
+
+@pytest.mark.parametrize("name", ["platform", "types", "subprocess"])
+def test_setup_retained_transitive_imports_ignore_bundle_and_cwd_aliases(
+    tmp_path, monkeypatch, name,
+):
+    import sys
+
+    from cadence_mcp_bridge import domain_provisioning
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output, True)
+    values = {member: (output / member).read_bytes() for member in setup.MEMBERS}
+    marker = tmp_path / "unreviewed-setup-dependency"
+    (output / (name + ".py")).write_text(
+        "from pathlib import Path\nPath(" + repr(str(marker)) +
+        ").write_text('executed')\nraise RuntimeError('must-not-import')\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(output)
+    monkeypatch.setattr(sys, "path", [str(output), "", ".", *sys.path])
+    monkeypatch.delitem(sys.modules, name, raising=False)
+    monkeypatch.setattr(setup, "__package__", "")
+    monkeypatch.setattr(setup, "_VALIDATED_HELPERS", None, raising=False)
+    setup.load_validated_helpers(values, str(output))
+    assert len(setup.helpers()) == 4
+    assert setup.helpers()[3].helpers() == setup.helpers()[:3]
+    assert not marker.exists()
+    assert all(Path(entry or ".").resolve() != output for entry in sys.path)
+
+
+@pytest.mark.parametrize("name", ["json", "hashlib", "stat", "os", "uuid"])
+def test_direct_setup_startup_ignores_unlisted_stdlib_shadow(tmp_path, name):
+    import subprocess
+    import sys
+
+    from cadence_mcp_bridge import domain_provisioning
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output, True)
+    marker = tmp_path / "unreviewed-setup-startup"
+    (output / (name + ".py")).write_text(
+        "from pathlib import Path\nPath(" + repr(str(marker)) +
+        ").write_text('executed')\nraise RuntimeError('must-not-import')\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", str(output / "setup.py"), "plan-fresh", "a" * 64],
+        cwd=output, input=b"{}", capture_output=True, timeout=15, check=False,
+    )
+    assert result.returncode == 1
+    assert result.stderr.splitlines() == [b"STANDARD_VM_DOMAIN_SETUP_REJECTED"]
+    assert not marker.exists()
+
+
+def test_standalone_setup_requires_complete_asset_validation(monkeypatch):
+    monkeypatch.setattr(setup, "__package__", "")
+    monkeypatch.setattr(setup, "_VALIDATED_HELPERS", None, raising=False)
+    with pytest.raises(ValueError, match="setup_helpers_not_validated"):
+        setup.helpers()
+
+
+def test_failed_setup_revalidation_clears_prior_authenticated_helpers(monkeypatch):
+    monkeypatch.setattr(setup, "__package__", "")
+    monkeypatch.setattr(setup, "_VALIDATED_HELPERS", (object(), object(), object(), object()),
+                        raising=False)
+    with pytest.raises(ValueError, match="migration_asset_location"):
+        setup.validate_assets("short")
+    with pytest.raises(ValueError, match="setup_helpers_not_validated"):
+        setup.helpers()
+
+
+
+def test_memory_loaded_setup_preserves_legitimate_first_import_path(tmp_path, monkeypatch):
+    import sys
+    import sysconfig
+    import types
+
+    from cadence_mcp_bridge import domain_provisioning
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output, True)
+    stdlib = sysconfig.get_path("stdlib")
+    monkeypatch.setattr(sys, "path", [stdlib, *sys.path])
+    loaded = types.ModuleType("fixed_setup")
+    loaded.__file__ = str(output / "setup.py")
+    loaded.__package__ = ""
+    exec(compile((output / "setup.py").read_bytes(), loaded.__file__, "exec"), loaded.__dict__)
+    assert sys.path[0] == stdlib

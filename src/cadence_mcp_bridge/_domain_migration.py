@@ -3,7 +3,7 @@
 # mypy: ignore-errors
 import sys
 
-if not __package__:
+if __name__ == "__main__":
     # Native fixed transport uses -E -s. Drop scriptdir/empty entries before the
     # first filesystem-backed stdlib import; staging files are never import code.
     if sys.path:

@@ -64,6 +64,23 @@ parent148-151 corrections and exact installed/VM/app qualification remain.
 No new VM/admin change, simulation, reservation or publication occurred.
 General release BLOCKED;2.0.0 remains development metadata, not a frozen RC.
 
+## PR151 authenticated setup execution correction, 2026-10-11
+
+Review4239974380 found fresh setup reimported helper paths after complete asset
+validation. Standalone setup now executes only the retained authenticated bytes
+in fresh fixed module instances, ignores poisoned helper caches and gives its
+migration helper the same authenticated accounting/installer/probe instances.
+A failed revalidation clears prior authenticated state. Startup removes the script
+entry only for direct __main__ launch; memory-loaded helpers preserve legitimate
+stdlib entries. Canonical staging aliases are excluded before stdlib imports and
+retained compilation. Standalone storage follows the same startup distinction.
+Original pre-fix regression logs are retained; exact updated source/package/hosted/
+fresh-review gates remain required. This isolated branch changes no actual VM,
+admin state, journal, ledger, reservation, simulation or protected circuit content.
+Current user16GiB/500/20,GREL02-08 and conditional normal integration delegation
+remains; exact public candidate approval is separate. General release stays BLOCKED.
+Earlier source receipts and policy records below are preserved as history.
+
 ## PR151 current safety-parent refresh, 2026-10-11
 
 Current source normally integrates150206fe0b: initial executable pins, retained
@@ -164,6 +181,18 @@ real initialization/journal/reservation, simulation or protected metadata change
 Native acceptance and final RC remain separate pending gates; prior records below
 are historical, including superseded merge/GREL08/resource exclusions.
 
+
+## Retained migration composition startup boundary, 2026-10-11
+
+A retained migration module can be compiled by the new-install provider with an
+empty package name. Only direct __main__ startup now removes the first sys.path
+entry; memory-loaded modules retain their legitimate standard-library first
+entry. Canonical bundle/current-directory aliases remain excluded in both paths.
+A composition regression compiles the exact exported migration bytes under the
+fixed module name with legitimate stdlib plus bundle aliases and checks both
+preservation and exclusion. Prior083608 package/tests remain source-specific
+history; fresh gates apply to this one-condition production change. No native
+journal, counter, grant, budget, result or original circuit change occurred.
 
 ## Migration transitive import isolation, 2026-10-11
 

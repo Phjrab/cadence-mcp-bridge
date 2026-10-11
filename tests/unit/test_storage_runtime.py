@@ -277,3 +277,43 @@ def test_exact_standalone_ignores_python_environment_and_user_site(
     parsed = StorageSnapshot.model_validate_json(reply.stdout)
     assert parsed.result_ceiling_bytes == 131072 and parsed.spectre_attempts == 0
     assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("name", ["json", "ctypes", "hashlib", "subprocess", "platform", "types"])
+def test_direct_storage_script_ignores_unmanifested_stdlib_shadows(
+    tmp_path: Path, name: str,
+) -> None:
+    pin, payloads = reference_storage_bundle()
+    runtime = tmp_path / "runtime" / pin
+    runtime.mkdir(parents=True)
+    for asset in ("storage.py", "reservations.py", "manifest.json"):
+        (runtime / asset).write_bytes(payloads[f"runtime/{pin}/{asset}"])
+    (runtime / f"{name}.py").write_text(
+        "raise RuntimeError('unmanifested-storage-module-executed')\n", encoding="utf-8",
+    )
+    # Exact direct packaged-script startup, without a harness preloading stdlib.
+    # Fixed inventory root is unavailable here; closed dispatch must deny cleanly.
+    reply = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", str(runtime / "storage.py"), "inventory", "7b7d"],
+        cwd=runtime, capture_output=True, timeout=10, check=False,
+    )
+    assert reply.returncode == 69
+    assert reply.stderr.splitlines() == [b"storage request denied or state unavailable"]
+    assert b"unmanifested-storage-module-executed" not in reply.stderr
+
+
+
+def test_memory_loaded_storage_preserves_legitimate_first_import_path(tmp_path, monkeypatch):
+    import sysconfig
+    import types
+
+    pin, payloads = reference_storage_bundle()
+    runtime = tmp_path / "runtime" / pin
+    runtime.mkdir(parents=True)
+    stdlib = sysconfig.get_path("stdlib")
+    monkeypatch.setattr(sys, "path", [stdlib, *sys.path])
+    loaded = types.ModuleType("fixed_storage")
+    loaded.__file__ = str(runtime / "storage.py")
+    loaded.__package__ = ""
+    exec(compile(payloads[f"runtime/{pin}/storage.py"], loaded.__file__, "exec"), loaded.__dict__)
+    assert sys.path[0] == stdlib
