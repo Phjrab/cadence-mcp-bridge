@@ -993,7 +993,7 @@ def library_directory_snapshot(path):
         raw = canonical((resolved, encoded, names, ancestors))
         if len(raw) > LIMIT:
             raise ValueError("library_membership_limit")
-        return digest(raw), names
+        return hashlib.sha256(raw).hexdigest(), names
     finally:
         os.close(fd)
 

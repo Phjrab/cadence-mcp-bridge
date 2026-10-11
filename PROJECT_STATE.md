@@ -1,3 +1,14 @@
+## Canonical library digest correction, 2026-10-11
+
+Exact ce23e43 hosted POSIX checks failed because the membership collector passed
+already canonical bytes through JSON canonicalization a second time. It now
+hashes those bounded canonical bytes directly. A portable regression binds the
+expected exact digest and exercises the same production function on Windows;
+owned Linux membership/alias/race cases remain required hosted evidence.
+Windows repair86 PASS/224 OS skips and Ruff/mypy72 PASS. This changes no VM,
+metadata, ledger, reservation or simulation. Earlier failed logs are preserved;
+final hosted/review/package and standard-VM inspection remain release gates.
+
 ## Bounded directory membership and unvisited aliases, 2026-10-11
 
 Review4240469024/4240469027 is corrected. The current fixed32-bit recipe explicitly
