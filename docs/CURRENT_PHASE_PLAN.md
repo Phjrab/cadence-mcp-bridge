@@ -85,6 +85,18 @@ receipts do not qualify this correction. Release and exact candidate remain
 BLOCKED. See [consumer correction](generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
+## Retained migration composition startup boundary, 2026-10-11
+
+A retained migration module can be compiled by the new-install provider with an
+empty package name. Only direct __main__ startup now removes the first sys.path
+entry; memory-loaded modules retain their legitimate standard-library first
+entry. Canonical bundle/current-directory aliases remain excluded in both paths.
+A composition regression compiles the exact exported migration bytes under the
+fixed module name with legitimate stdlib plus bundle aliases and checks both
+preservation and exclusion. Prior083608 package/tests remain source-specific
+history; fresh gates apply to this one-condition production change. No native
+journal, counter, grant, budget, result or original circuit change occurred.
+
 ## Migration transitive import isolation, 2026-10-11
 
 Fresh review P2 identified that direct script launch left the staged helper
