@@ -11,7 +11,7 @@ from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
 
 
 def generic_job(path, identity):
-    job = path / "native-grel-v1-jobs" / identity
+    job = path / "native-mcp-v1-jobs" / identity
     operation = job / "work" / "operation"
     operation.mkdir(parents=True)
     plan = dict(analysis="dc", schema_version=1)
@@ -29,7 +29,7 @@ def test_native_old_and_generic_job_roots_share_one_protected_group_without_coll
     identity = str(uuid4())
     generic_job(path, identity)
     if old:
-        leaf = path / "native-mcp-v1-jobs" / identity
+        leaf = path / "native-mcp-v1-jobs" / str(uuid4())
         leaf.mkdir(parents=True)
         (leaf / "request.json").write_bytes(worker.canonical(dict(analysis="dc")))
     before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
@@ -46,7 +46,7 @@ def test_native_old_and_generic_job_roots_share_one_protected_group_without_coll
     assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
     legacy = worker.snapshot(io, root, False)
     assert sum(a["job_count"] for a in legacy["artifacts"] if
-               a["storage_group_id"] == "native") == int(old)
+               a["storage_group_id"] == "native") == (1 + int(old))
 
 
 def test_partial_old_native_scan_cannot_be_hidden_by_successful_generic_scan(store, monkeypatch):

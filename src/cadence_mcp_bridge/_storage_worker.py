@@ -675,7 +675,8 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
                     elif group in ("native", "diagnostic", "pvt", "headroom") and UUID.match(name):
                         leaf = io.open(parent, name, directory=True)
                         try:
-                            if relative == "native-grel-v1-jobs":
+                            if (relative == "native-grel-v1-jobs" or
+                                    group == "native" and "request.json" not in io.names(leaf)):
                                 work = private_directory(io, leaf, "work")
                                 try:
                                     operation = private_directory(io, work, "operation")

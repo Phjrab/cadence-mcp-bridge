@@ -30,8 +30,11 @@ schema rather than accepting shell, SKILL or OCEAN text from a model.
 
 Register your own SSH alias, known host key, ordinary guest account and private
 workspace. Keep host-key checking on and credentials in your SSH agent/config.
-Choose a managed root, job/result location and resource limits in environment.json;
-protected roots cover executable installations and PDK/model dependencies. Set
+Choose your private managed root and approved resource limits in environment.json.
+Set both `job_root` and `result_root` to `<managed_root>/native-mcp-v1-jobs`.
+This fixed derived directory is shared by the coordinator, confirmation and storage
+inventory; other job/result locations are rejected during new-domain setup.
+Protected roots cover executable installations and PDK/model dependencies. Set
 observed executable digests and versions. The validation VM's 16GiB ceiling is
 not a default for new operators. Zero example limits must be replaced by the
 VM operator's explicitly authorized scope. Disk floors remain required.

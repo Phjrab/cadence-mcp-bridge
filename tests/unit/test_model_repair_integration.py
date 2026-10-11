@@ -190,3 +190,37 @@ def test_model_completion_rejects_changed_selected_scope(monkeypatch):
     })
     with pytest.raises(ValueError, match="completion_recipe_scope"):
         repair.verify_completed_targets(original, False, recipe_guard=True)
+
+
+@pytest.mark.parametrize("changed", ["file-mode", "ancestor-mode", "file-identity"])
+def test_trusted_model_rechecks_metadata_after_final_content_scan(
+    model_recipe, monkeypatch, changed
+):
+    _, _, _, paths, _ = model_recipe
+    paths["shared.scs"].chmod(0o644)
+    if os.getuid() == 0:
+        pytest.skip("runtime trust intentionally rejects root")
+    before = _contents(paths)
+    original = repair.model_graph
+    calls = 0
+
+    def graph(main, section):
+        nonlocal calls
+        value = original(main, section)
+        calls += 1
+        if calls == 2:
+            if changed == "ancestor-mode":
+                paths["shared.scs"].parent.chmod(0o777)
+            elif changed == "file-mode":
+                paths["shared.scs"].chmod(0o666)
+            else:
+                original_path = paths["shared.scs"]
+                original_path.rename(original_path.with_name("preserved-original-model"))
+                original_path.write_bytes(before["shared.scs"])
+                original_path.chmod(0o644)
+        return value
+
+    monkeypatch.setattr(repair, "model_graph", graph)
+    with pytest.raises(ValueError, match="model_graph_(untrusted_metadata|metadata_drift)"):
+        repair.trusted_model_graph(str(paths["top.scs"]), "NN")
+    assert calls == 2 and _contents(paths) == before

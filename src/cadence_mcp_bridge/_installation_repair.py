@@ -1168,27 +1168,49 @@ def model_graph(main, section):
 
 
 
-def trusted_model_graph(main, section):
-    """Read-only normal-user runtime trust; unlike inventory, shared writes reject."""
-    if os.getuid() == 0:
+def trusted_model_metadata(values):
+    """Stable read-only path/ancestor metadata; no contents or permission writes."""
+    metadata = {}
+    uid = os.getuid()
+    if uid == 0:
         raise ValueError("model_graph_normal_user_required")
-    values = model_graph(main, section)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
     for path in values:
         current = path
         while True:
             info = os.lstat(current)
-            if (info.st_uid not in (0, os.getuid()) or info.st_mode & 18 or
+            if (info.st_uid not in (0, uid) or info.st_mode & 18 or
                     os.path.realpath(current) != current or
-                    (not stat.S_ISREG(info.st_mode) if current == path else
+                    (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 if current == path else
                         not stat.S_ISDIR(info.st_mode))):
                 raise ValueError("model_graph_untrusted_metadata")
+            record = tuple(getattr(info, key) for key in fields)
+            trailing = os.lstat(current)
+            if (tuple(getattr(trailing, key) for key in fields) != record or
+                    current in metadata and metadata[current] != record):
+                raise ValueError("model_graph_metadata_drift")
+            metadata[current] = record
             parent = os.path.dirname(current)
             if parent == current:
                 break
             current = parent
+    return metadata
+
+
+def trusted_model_graph(main, section):
+    """Normal-user closure trust binds metadata around the final content scan."""
+    if os.getuid() == 0:
+        raise ValueError("model_graph_normal_user_required")
+    values = model_graph(main, section)
+    before = trusted_model_metadata(values)
     if model_graph(main, section) != values:
         raise ValueError("model_graph_content_drift")
+    # No content scan follows this final namespace/type/permission observation.
+    if trusted_model_metadata(values) != before:
+        raise ValueError("model_graph_metadata_drift")
     return values
+
 
 
 def inventory_models(request):

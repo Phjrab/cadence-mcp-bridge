@@ -1,3 +1,28 @@
+## Final model observation and actual native storage layout, 2026-10-11
+
+Fresh root review4240255939/4240255943/4240255947 is corrected. Normal-user
+model trust captures stable path/ancestor identity, owner/group/mode/link/size/
+mtime/ctime around the final complete content scan, repeats readonly/type/named
+metadata checks afterward and rejects permission, identity or metadata drift.
+No content scan follows that final guard; this does not claim atomic exclusion
+of external filesystem tools. Owned Linux fixtures inject final-scan file mode,
+ancestor mode and same-byte inode replacement; original contents remain intact.
+
+The storage parser recognizes operation admission records in the coordinator's
+actual native-mcp-v1-jobs directory while preserving legacy request.json parsing
+and historical isolated-root coverage. Portable fixtures now use the actual
+producer root and distinct old/new IDs, retaining protected bytes and counters.
+The packaged guide states that job_root/result_root must both derive from the
+operator's managed root as native-mcp-v1-jobs; it does not impose a developer home.
+
+Connected Windows checks261 PASS/222 platform skips; Ruff/mypy96 are rerun after
+one fixture-only line-length correction. Exact current hosted, refreshed review,
+package, actual Py2.6/current-VM/native/app remain gates. Earlier6bc installed
+43-state/20-migration preservation and artifact hashes are source-specific history.
+No new actual simulation, reservation, admin metadata or protected model content
+change occurred. Current16GiB/500/20 and continuousGREL02-08 authority persists;
+release remains BLOCKED and public posting needs the final exact candidate approval.
+
 ## Resumed exact-source qualification checkpoint, 2026-10-11
 
 Codex account access and reviewed command execution are available again. The
