@@ -1,3 +1,65 @@
+## Installed execution and retained-scope resume, 2026-10-11
+
+The exact installed source40c879b102bdc0a83fe8d199c26b615eb5d7252f produced
+native bundlebf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9.
+Its five fresh inverter AC/TRAN and comparator DC/AC/TRAN jobs all passed
+OA/ADE copy, netlisting, effective inputs, Spectre, automatic extraction and
+read-only completed-tree size checks. Installed six-route enrollment matches the
+accepted registration semantically; pretty versus canonical JSON explains unequal
+raw bytes. No source/PDK/vendor contents were changed.
+
+The 2026-10-11 ordinary UID500 installed native preflight passes with the active
+bundle and retained counter101 /12,349,079,552 reserved bytes after an independent
+installed AC2-point Sweep. New-process same-parent submit/advance adds0 dispatch
+and0 reservation. Installed specifications over these actual AC facts return PASS,
+deliberate QA FAIL, NOT_EVALUATED and CONDITION_MISMATCH; QA bounds are validator
+tests, not invented production circuit goals. This continuation2 runs/256MiB;
+current generic validation19 attempts/2432MiB includes1 retained failed128MiB.
+The prior five-job batch is preserved execution evidence, not new spending today.
+
+The old grant expired. The latest direct user continuation and existing GREL02-08/
+16GiB delegation support a new OS-operator-confirmed v2 grant for only its retained
+remainder3 jobs/384MiB. Spent original scope1+11+5=17 of20 was deducted first.
+AC2 uses2 of those3;1 job/128MiB remains. Earlier grants, confirmations, ledger,
+replay, journals and failed records remain. No budget reset/refund/increase occurs.
+The initial local authority-ref mismatch rejected before remote confirmation and
+is preserved; the corrected explicit identity binding passes at UID500.
+
+The installed starter also creates a separate fresh host configuration with empty
+local journals while retaining the same remote domain/ledger/grant/runtime and
+existing local resource lock. Read-only remote same-ID lookup reconstructs its
+first record without reading the developer journal or spending/resending; the old
+journal remains unchanged. This is fresh host configuration against the existing
+VM, not a fresh blank VM or a new accounting domain. Actual Codex queried the
+corrected runtime's completed comparator TRAN status/result, but actual app new
+submit/restart remains incomplete: the user currently cannot restart the QA MCP.
+Do not substitute SDK/CLI/replay for that app gate or repeatedly request approval.
+
+Related PR142-147 are normally merged; latest checked main98710153a167e103c2955b1c5c82612eb2864038.
+PR148-152 remain unmerged. PR148's transport P1 has a dedicated bounded private
+transport fix and further serialized-plan/ancestor review corrections in progress.
+Changing its modeltrust helper changes a native asset: requalify the resulting
+bundle before claiming final candidate acceptance. Oldbf6 observations remain
+historical after such a change. PR149 normal-parent integrationc0c1610 passes176
+relevant tests/13 Windows skips, Ruff/mypy and installed43-state preservation;
+final parent/CI/review gates still apply. No main/force/admin-bypass merge is used.
+
+Current support is only the professor standard CentOS/Cadence/PDK VM in personal
+VMware or an equivalently reproduced installation, with operator-specific SSH/
+account/work/circuit/ADE/results/registry/journal/limits. Current VM16GiB/500/20
+is not another user's default. Remaining global reservation4,830,789,632 bytes;
+disk floors/per-job bounds and conservative retained reservations stay binding.
+No new administrator chmod/chown or vendor/model/OA/ADE content repair occurred.
+Historical STANDARD_VM_CONTINUATION/METADATA_REPAIR receipts and dated exclusion
+statements remain history, superseded only in the scope of direct user delegation.
+
+Generic release remains BLOCKED. Exact final installed bundle/app, complete fresh
+operator submission, upgrade/downgrade rehearsal, ordered reviewed normal merges,
+operational matrix and GREL08 version/commit/artifact/hash/rights checks remain.
+No exact RC or publication approval is claimed. Continue authorized independent
+work without phase reapproval; exact-candidate tag/Release/upload needs final
+public approval once ready. PyPI/MCPB/marketplace remain separate decisions.
+
 ## Descriptor observation stability correction, 2026-10-09
 
 Latest independent repair review identified content changes during ACL collection.

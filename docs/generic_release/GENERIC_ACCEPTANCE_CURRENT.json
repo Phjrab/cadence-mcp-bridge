@@ -1,30 +1,30 @@
 {
   "schema_version": 1,
-  "observed_date": "2026-10-09",
+  "observed_date": "2026-10-11",
   "generic_release_gate": "BLOCKED",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "e89d2628b74ccbd41b77c84276b5c79e1d16043b",
+  "source_checkpoint": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
   "later_scope_correction": "CLOSED_STATIC_GRAMMAR_RESERVED_ANALYSIS_MASTERS_AND_PROTECTION_PRAGMAS_LOCAL_PACKAGE_SIX_ACTUAL_PY26_INPUTS_PASS_FINAL_CI_REVIEW_PENDING",
-  "live_native_bundle_sha256": "eb6d638a0b905ddf0ff455d4998d52f3bcadb2977bd01479e9ad8063f06da175",
+  "live_native_bundle_sha256": "bf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9",
   "publication_authorized": false,
   "resource": {
-    "attempts_observed": 94,
-    "reserved_bytes_observed": 11409555456,
+    "attempts_observed": 101,
+    "reserved_bytes_observed": 12349079552,
     "result_ceiling_bytes": 17179869184,
-    "remaining_bytes": 5770313728,
+    "remaining_bytes": 4830789632,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
-    "new_simulations_this_continuation": 0,
-    "new_reservations_this_continuation": 0,
-    "reserved_mib_observed": 10881,
-    "remaining_mib": 5503
+    "new_simulations_this_continuation": 2,
+    "new_reservations_this_continuation": 268435456,
+    "reserved_mib_observed": 11777,
+    "remaining_mib": 4607
   },
   "mandatory": [
     {
       "id": "G01",
-      "status": "PARTIAL_INSTALLED_SYNTHETIC",
-      "evidence_scope": "Packaged starter, CLI/helpers, isolated offline/SDK installation pass; artifact-only actual operator flow still required."
+      "status": "PARTIAL_EXACT_INSTALLED_ACTUAL",
+      "evidence_scope": "Exported starter and ordinary-user installed flow pass; full fresh operator new submission and final candidate pending."
     },
     {
       "id": "G02",
@@ -33,38 +33,38 @@
     },
     {
       "id": "G03",
-      "status": "ACTUAL_PASS_PRIOR_NATIVE_BUNDLE",
-      "evidence_scope": "Ordinary UID500 native preflight/install/update pass; approved metadata repairs preserve file contents; final candidate requalification pending."
+      "status": "ACTUAL_CURRENT_BUNDLE_PREFLIGHT_PASS",
+      "evidence_scope": "Currentbf6 immutable update/repeat and Oct11 UID500 read-only preflight pass. Upcoming helper correction changes bundle identity; final candidate requalification pending."
     },
     {
       "id": "G04",
-      "status": "IMPLEMENTED_WITH_ACTUAL_V1_CONFIRMATION",
-      "evidence_scope": "Operator-only confirmation retains global ledger; v2 pairs/recovery have actual Python2.6 synthetic evidence, new live v2 grant not yet qualified."
+      "status": "ACTUAL_V2_RETAINED_SCOPE_CONFIRMATION_PASS",
+      "evidence_scope": "Expired old scope retained;17 of20 deducted before new paired v2 remainder3/384MiB. AC2 consumes2, old confirmation/ledger/replay preserved."
     },
     {
       "id": "G05",
-      "status": "ACTUAL_TWO_SOURCES_PASS",
-      "evidence_scope": "New inverter and comparator registrations; six product read-only observations and exact reassembly."
+      "status": "ACTUAL_EXACT_INSTALLED_TWO_SOURCES_ENROLLMENT_PASS",
+      "evidence_scope": "Six installed read-only enrollment records preserve source/ADE/library/model data; assembled JSON semantics exactly match accepted registration despite formatting."
     },
     {
       "id": "G06",
-      "status": "ACTUAL_SIX_ANALYSES_PASS_PRIOR_BUNDLE",
-      "evidence_scope": "Each source completed fresh DC/AC/TRAN with the same native worker."
+      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_OF_SIX_PASS",
+      "evidence_scope": "Currentbf6 inverter AC/TRAN and comparator DC/AC/TRAN pass; inverter DC/app fresh submission pending. Earlier six analyses remain prior-bundle evidence."
     },
     {
       "id": "G07",
-      "status": "ACTUAL_EFFECTIVE_INPUT_PASS_PRIOR_BUNDLE",
-      "evidence_scope": "All six analyses and five sweep points passed effective inputs; corrected scope parser needs final deployed qualification."
+      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_ROUTES_AND_AC2_INPUTS_PASS",
+      "evidence_scope": "Fresh five route jobs and bounded AC2 points verify effective inputs and source/library/model integrity."
     },
     {
       "id": "G08",
-      "status": "ACTUAL_AUTOMATIC_EXTRACTION_PASS_PRIOR_BUNDLE",
-      "evidence_scope": "New scalar/transfer/TRAN facts plus registered gain/power extracted without circuit-specific helpers."
+      "status": "ACTUAL_CURRENT_BUNDLE_FIVE_ROUTES_AND_AC2_EXTRACTION_PASS",
+      "evidence_scope": "Installed same core/template produces scalar/transfer/TRAN facts and completed-tree bounded results; no circuit-specific extractor."
     },
     {
       "id": "G09",
-      "status": "ACTUAL_DC3_AC2_SWEEP_PASS_PRIOR_BUNDLE",
-      "evidence_scope": "Bounded DC3 and independent AC2 points completed; parent retry adds no dispatch/reservation."
+      "status": "ACTUAL_EXACT_INSTALLED_AC2_SWEEP_RETRY_PASS",
+      "evidence_scope": "Independent currentbf6 installed AC2 completes; subprocess submit/advance retries add0. Earlier DC3/AC2 retained separately."
     },
     {
       "id": "G10",
@@ -73,8 +73,8 @@
     },
     {
       "id": "G11",
-      "status": "PARTIAL_ACTUAL_AND_SYNTHETIC",
-      "evidence_scope": "Actual same-ID success/failure retries and new-process replay add0; partial write/response loss/update/authority cases synthetically tested on VM."
+      "status": "PARTIAL_ACTUAL_RESTART_AND_FRESH_HOST_REPLAY_PASS",
+      "evidence_scope": "Actual subprocess retries and empty host-journal remote reconstruction preserve consumed budget/replay; app restart/fresh-submit pending; response-loss fixtures remain synthetic."
     },
     {
       "id": "G12",
@@ -88,18 +88,18 @@
     },
     {
       "id": "G14",
-      "status": "PARTIAL_CLEAN_HOST_CONTEXT",
-      "evidence_scope": "Separate QA context/default SETUP_REQUIRED/packaged templates pass; complete artifact-only actual operator workflow pending."
+      "status": "PARTIAL_FRESH_HOST_ACTUAL_REMOTE_REPLAY",
+      "evidence_scope": "Separate artifact-exported host settings and initially absent journals reconstruct existing remote job without developer journal access or spend. New fresh-host submission pending; existing VM ledger retained."
     },
     {
       "id": "G15",
-      "status": "PARTIAL_ACTUAL_QA_LOCAL_CONFIG_LOADED",
-      "evidence_scope": "Actual Codex QA runtime_info_v2 loads operator registry4/two designs/one PDK. Remote qualification/authority unassessed; exact corrected artifact and fresh app submit/query/retry/restart pending. New actual app jobs0."
+      "status": "PARTIAL_ACTUAL_CURRENT_NATIVE_QUERY_APP_RESTART_UNAVAILABLE",
+      "evidence_scope": "Codex successfully queried currentbf6 completed comparator TRAN status and bounded results. New app submission and restart retry remain pending; user currently cannot restart."
     },
     {
       "id": "G16",
-      "status": "PARTIAL_CI_AND_SAME_VERSION_PRESERVATION",
-      "evidence_scope": "Public hosted synthetic CI and43+20-state reinstall/uninstall pass. Candidate upgrade/downgrade remains unqualified."
+      "status": "PARTIAL_INSTALLED_PRESERVATION_UPGRADE_REHEARSAL_PENDING",
+      "evidence_scope": "Same-version reinstall/uninstall43+20-state checks pass. Published source to current installed package swap is separate; exact candidate versioned upgrade/downgrade not qualified."
     },
     {
       "id": "G17",
@@ -114,7 +114,7 @@
     {
       "id": "G19",
       "status": "NOT_READY",
-      "evidence_scope": "No release candidate version/commit/artifact set is frozen; exact publication approval has not been requested."
+      "evidence_scope": "No exact RC/version/commit/artifact set frozen. Further reviewed helper corrections change native bundle; app gate and final candidate checks pending."
     }
   ],
   "conditional": {
@@ -181,5 +181,36 @@
     "held_descriptor_races": 4,
     "intra_snapshot_restored_mtime_drift_rejected": true
   },
-  "completed_result_size_evidence": "REQUIRED_MISSING_OR_NULL_REJECTS_FINAL_NATIVE_ROLLOUT_PENDING"
+  "completed_result_size_evidence": "CURRENT_BF6_ACTUAL_COMPLETED_JOB_READONLY_PASS_FINAL_CANDIDATE_PENDING",
+  "current_installed_execution": {
+    "source_commit": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
+    "wheel_sha256": "cd6b8477931e951d8bc78ed6c2ea3ecd9bafb7595c9e8c620ed4f94cca39daae",
+    "five_routes": "PASS",
+    "ac2_sweep": "PASS",
+    "specification_controls": [
+      "PASS",
+      "FAIL",
+      "NOT_EVALUATED",
+      "CONDITION_MISMATCH"
+    ],
+    "new_process_retry_extra_attempts": 0,
+    "new_process_retry_extra_reserved_bytes": 0,
+    "fresh_empty_host_journal_replay": "PASS_NO_SPEND",
+    "actual_app_new_jobs": 0,
+    "scope": "CURRENT_STANDARD_VM_NOT_FINAL_CANDIDATE"
+  },
+  "authority_remainder": {
+    "schema_version": 2,
+    "old_grant_expired": true,
+    "original_scope_attempts": 20,
+    "retained_spent_before_new_grant": 17,
+    "new_grant_attempt_limit": 3,
+    "new_grant_reserved_bytes_limit": 402653184,
+    "new_grant_spent_attempts": 2,
+    "new_grant_spent_bytes": 268435456,
+    "remaining_attempts": 1,
+    "remaining_bytes": 134217728,
+    "budget_reset_or_refund": false
+  },
+  "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope."
 }

@@ -48,5 +48,40 @@
     "other_vm_versions_pdk_hosts": "DEFERRED"
   },
   "reference_supplies_connection_or_keys": false,
-  "reference_supplies_budget_or_execution_grant": false
+  "reference_supplies_budget_or_execution_grant": false,
+  "qualification_scope": "HISTORICAL_INITIAL_REFERENCE_CHECKPOINT_NOT_CURRENT_GENERIC_ACCEPTANCE",
+  "current_checkpoint": {
+    "observed_date": "2026-10-11",
+    "scope": "CURRENT_STANDARD_VM_EXISTING_INSTALLATION_NOT_OTHER_HOST_VERSION_OR_PDK",
+    "source_commit": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
+    "native_bundle_sha256": "bf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9",
+    "ordinary_user_preflight": "PASS_UID500",
+    "new_actual_analyses": [
+      "inverter_ac",
+      "inverter_tran",
+      "comparator_dc",
+      "comparator_ac",
+      "comparator_tran"
+    ],
+    "effective_input_automatic_extraction_protected_originals_completed_size": "PASS_FIVE_NEW_ANALYSES",
+    "actual_codex": "LATEST_BUNDLE_STATUS_AND_RESULT_READS_PASS_FRESH_SUBMIT_RETRY_RESTART_PENDING",
+    "operator_context": "EXPORTED_NEW_REGISTRIES_EXISTING_DOMAIN_AND_JOURNALS_RETAINED_NOT_DEVELOPER_JOURNAL_INDEPENDENT_ACTUAL_PASS",
+    "fresh_domain_initialization": "INSTALLED_SYNTHETIC_PASS_EXISTING_VM_CORRECTLY_DENIED",
+    "current_managed_vm_resources": {
+      "attempts_observed": 101,
+      "reserved_bytes_observed": 12349079552,
+      "result_ceiling_bytes": 17179869184,
+      "spectre_ceiling": 500,
+      "same_change_corrections_ceiling": 20,
+      "not_other_operator_defaults": true,
+      "latest_ledger_required_before_execution": true
+    },
+    "generic_release_gate": "BLOCKED_FINAL_APP_OPERATOR_UPGRADE_AND_EXACT_CANDIDATE_PENDING",
+    "publication_authorized": false,
+    "new_actual_bounded_sweep": {
+      "analysis": "ac",
+      "points": 2,
+      "new_process_parent_submit_advance_replay": "PASS_ZERO_EXTRA_DISPATCH_RESERVATION"
+    }
+  }
 }
