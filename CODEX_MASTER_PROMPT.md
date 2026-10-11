@@ -1,3 +1,39 @@
+## Authenticated rollback provenance correction, 2026-10-11
+
+Fresh PR148 review found that a caller could change both the private plan and its
+self-computed digest to invent a more permissive pre-apply mode/ACL. The explicit
+apply path now requires all first-apply records to match the actual before-state
+and durably publishes the exact observed plan before any target mutation. The
+fixed managed-root namespace is trust-repair-v1-user-UID or trust-repair-v1-admin-0;
+no-follow owner checks,0700 directories and0400 single-link files separate normal
+users from administrators. Root never accepts a user-owned receipt. The receipt
+records observation, not human approval; the real operator delegation is still
+required. Read-only inventory/import/doctor never provision a receipt.
+
+Existing exact receipts permit interruption/retry/no-op/rollback without rewriting
+history. Missing receipts reject rollback and externally changed after/intermediate
+states; fabricated plans, changed receipts and metadata/content drift reject.
+Publication writes/fsyncs a private candidate, verifies its bytes, links exclusively
+and fsyncs the directory before mutation. Failed candidates and partial/multi-link
+publication evidence are retained. A multi-link interruption requires investigation,
+not automatic deletion or promotion. Receipt trust and the fixed directory are
+rechecked before each chmod and before completion; external filesystem activity is
+not claimed to be atomic. Resume under the same real identity. Historical repair
+helpers/plans/receipts remain archived; no automatic provenance import is provided.
+
+Portable provenance cases and complete owned Linux recipe cases cover invented
+before states, exact repeat/rollback/no-op, partial apply, forged root receipts,
+write/fsync/link/unlink interruptions and detached receipt directories. Final local
+179 related tests PASS/43 Windows POSIX skips, Ruff/mypy72/security18/strict locked
+audit and85-schema compatibility PASS. Exact package, hosted Linux/Windows and
+refreshed independent review checks remain pending.
+The helper is shipped as native modeltrust.py, so exact updated native qualification
+remains a separate gate; prior eb62/bf6c20 evidence is source-specific and preserved.
+No VM contact, administrator change, simulation or reservation occurs in this fix.
+Latest root-observed ledger102/12,483,297,280 is historical to this local correction;
+active16GiB/500/20,GREL02-08 and conditional normal PR integration remain authorized.
+Public tag/Release/upload still requires approval of an exact completed candidate.
+
 ## Atomic operator state and exact parent integration, 2026-10-11
 
 Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest

@@ -108,8 +108,7 @@ def test_directory_descriptor_never_walks_child_acl(monkeypatch):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="requires Linux descriptor/ACL operations")
-@pytest.mark.parametrize("admin_identity", [False, True])
-def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch, admin_identity):
+def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch):
     if shutil.which("getfacl") is None or shutil.which("setfacl") is None:
         pytest.skip("ACL utilities absent")
     directory = tmp_path / "code-directory"
@@ -147,10 +146,7 @@ def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch, ad
         with pytest.raises(OSError):
             repair.mutate(request)
     assert stat.S_IMODE(directory.stat().st_mode) == 0o755
-    # Simulate the helper's administrator identity while OS actions remain
-    # ordinary permissions on these disposable owned files.
-    if admin_identity:
-        monkeypatch.setattr(repair.os, "getuid", lambda: 0)
+    # Resume with the same real identity: root cannot reuse a user receipt.
     repair.mutate(request)
     repair.mutate(request)
     assert stat.S_IMODE(code.stat().st_mode) == 0o755
@@ -807,3 +803,271 @@ def test_actual_completion_rechecks_skipped_and_processed_recipe(
     assert stat.S_IMODE(shared.stat().st_mode) == 0o755
     if drift != "contents":
         assert target.read_bytes() == before_content
+
+
+def _receipt_request(prepared):
+    return {"plan": prepared["plan"], "expected_plan_sha256": prepared["plan_sha256"],
+            "operator_authority": "SYNTHETIC-ONLY"}
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", ["mode", "acl", "hash", "extra-record"])
+def test_absent_receipt_never_authenticates_fabricated_original(monkeypatch, rollback, drift):
+    monkeypatch.setattr(repair.os, "getuid", lambda: 500, raising=False)
+    now = {"path": "/owned/code", "mode": 0o755,
+           "acl": "user::rwx\ngroup::r-x\nother::r-x\n", "sha256": "a" * 64,
+           "after_mode": 0o755, "after_acl": "user::rwx\ngroup::r-x\nother::r-x\n"}
+    original = {"scope": {}, "records": [copy.deepcopy(now)]}
+    if drift == "mode":
+        original["records"][0]["mode"] = 0o777
+    elif drift == "acl":
+        original["records"][0]["acl"] = "user::rwx\ngroup::rwx\nother::rwx\n"
+    elif drift == "hash":
+        original["records"][0]["sha256"] = "b" * 64
+    else:
+        original["records"].append(copy.deepcopy(now))
+    monkeypatch.setattr(repair, "receipt_directory", lambda plan, create: None)
+    monkeypatch.setattr(repair, "plan", lambda scope: {"plan": {"records": [now]}})
+
+    def denied(*args):
+        raise AssertionError("unobserved original reached receipt publication")
+
+    monkeypatch.setattr(repair, "publish_receipt", denied)
+    request = {"plan": original, "expected_plan_sha256": repair.digest(original)}
+    with pytest.raises(
+        ValueError, match="repair_applied_receipt_required|repair_initial_before_required"
+    ):
+        repair.authenticate_applied_plan(request, rollback)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_exact_existing_receipt_does_not_republish_or_require_before(monkeypatch, rollback):
+    monkeypatch.setattr(repair.os, "getuid", lambda: 500, raising=False)
+    original = {"scope": {}, "records": []}
+    opened = []
+    monkeypatch.setattr(repair, "receipt_directory", lambda plan, create: 7)
+    monkeypatch.setattr(repair, "read_receipt", lambda directory, name, data: True)
+    monkeypatch.setattr(repair.os, "close", opened.append)
+
+    def denied(*args):
+        raise AssertionError("existing receipt was rewritten")
+
+    monkeypatch.setattr(repair, "publish_receipt", denied)
+    monkeypatch.setattr(repair, "plan", denied)
+    repair.authenticate_applied_plan({"plan": original}, rollback)
+    assert opened == [7]
+
+
+def _receipt_path(prepared):
+    from pathlib import Path
+
+    uid = os.getuid()
+    managed = Path(prepared["plan"]["scope"]["resource_lock"]).parent
+    directory = managed / f"trust-repair-v1-{'admin' if uid == 0 else 'user'}-{uid}"
+    return directory / (prepared["plan_sha256"] + ".json")
+
+
+@pytest.mark.parametrize("healthy", [False, True])
+def test_actual_apply_receipt_is_durable_and_preserved_through_retry_rollback(
+    actual_recipe_layout, monkeypatch, healthy
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o755 if healthy else 0o777)
+    prepared = repair.inventory(profile)
+    receipt = _receipt_path(prepared)
+    assert not receipt.parent.exists()  # read-only inventory did not provision
+    real_fchmod = os.fchmod
+    observed = []
+
+    def checked_chmod(fd, mode):
+        assert receipt.exists()
+        assert receipt.read_bytes() == repair.receipt_bytes(prepared["plan"])
+        observed.append(mode)
+        return real_fchmod(fd, mode)
+
+    monkeypatch.setattr(repair.os, "fchmod", checked_chmod)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    info, before = receipt.stat(), receipt.read_bytes()
+    assert stat.S_IMODE(info.st_mode) == 0o400
+    assert stat.S_IMODE(receipt.parent.stat().st_mode) == 0o700
+    assert info.st_uid == os.getuid() and info.st_nlink == 1
+    repair.mutate(request)
+    repair.mutate(request, rollback=True)
+    repair.mutate(request, rollback=True)
+    assert receipt.read_bytes() == before and receipt.stat().st_ino == info.st_ino
+    assert stat.S_IMODE(paths[0].stat().st_mode) == (0o755 if healthy else 0o777)
+    assert observed == ([] if healthy else [0o755, 0o777])
+
+
+@pytest.mark.parametrize("action", ["apply", "rollback"])
+def test_actual_unobserved_after_state_rejects_without_receipt(actual_recipe_layout, action):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    paths[0].chmod(0o755)  # external change: no actual prior helper apply
+    with pytest.raises(
+        ValueError, match="repair_initial_before_required|repair_applied_receipt_required"
+    ):
+        repair.mutate(_receipt_request(prepared), rollback=action == "rollback")
+    assert stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert not _receipt_path(prepared).exists()
+
+
+def test_actual_caller_changed_plan_and_digest_cannot_expand_permissions(actual_recipe_layout):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o755)
+    prepared = repair.inventory(profile)
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    forged = copy.deepcopy(prepared["plan"])
+    row = next(row for row in forged["records"] if row["path"] == str(paths[0]))
+    row.update(mode=0o777, acl="user::rwx\ngroup::rwx\nother::rwx\n")
+    malicious = {"plan": forged, "expected_plan_sha256": repair.digest(forged),
+                 "operator_authority": "self-computed digest is not provenance"}
+    with pytest.raises(ValueError, match="repair_applied_receipt_required"):
+        repair.mutate(malicious, rollback=True)
+    assert stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    assert _receipt_path(prepared).read_bytes() == repair.receipt_bytes(prepared["plan"])
+
+
+@pytest.mark.parametrize("tamper", ["contents", "mode", "symlink", "hardlink", "directory"])
+def test_actual_untrusted_receipt_is_preserved_and_rejected(actual_recipe_layout, tamper):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    repair.mutate(_receipt_request(prepared))
+    receipt = _receipt_path(prepared)
+    if tamper == "contents":
+        receipt.chmod(0o600)
+        data = receipt.read_bytes().replace(
+            b"observed-before-explicit-apply", b"fabricat-before-explicit-apply"
+        )
+        receipt.write_bytes(data)
+        receipt.chmod(0o400)
+    elif tamper == "mode":
+        receipt.chmod(0o600)
+    elif tamper == "symlink":
+        old = receipt.with_name("preserved-original.json")
+        receipt.rename(old)
+        receipt.symlink_to(old)
+    elif tamper == "hardlink":
+        os.link(receipt, receipt.with_name("preserved-hardlink.json"))
+    else:
+        receipt.parent.chmod(0o750)
+    before = paths[0].stat().st_mode
+    with pytest.raises((ValueError, OSError)):
+        repair.mutate(_receipt_request(prepared), rollback=True)
+    assert paths[0].stat().st_mode == before and receipt.exists()
+
+
+@pytest.mark.parametrize(
+    "interruption", ["write", "file-fsync", "link", "unlink", "directory-fsync"]
+)
+def test_actual_receipt_publication_interruption_never_changes_target(
+    actual_recipe_layout, monkeypatch, interruption
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    receipt = _receipt_path(prepared)
+    original_write, original_fsync = os.write, os.fsync
+    original_link, original_unlink = os.link, os.unlink
+    interrupted = False
+
+    def write(fd, data):
+        nonlocal interrupted
+        if interruption == "write" and not interrupted:
+            interrupted = True
+            original_write(fd, data[:8])
+            raise OSError("synthetic interrupted write")
+        return original_write(fd, data)
+
+    def fsync(fd):
+        nonlocal interrupted
+        info = os.fstat(fd)
+        should_fail = (interruption == "file-fsync" and stat.S_ISREG(info.st_mode)) or (
+            interruption == "directory-fsync" and receipt.exists() and stat.S_ISDIR(info.st_mode)
+        )
+        if should_fail and not interrupted:
+            interrupted = True
+            raise OSError("synthetic interrupted fsync")
+        return original_fsync(fd)
+
+    def link(source, target):
+        nonlocal interrupted
+        if interruption == "link" and not interrupted:
+            interrupted = True
+            raise OSError("synthetic interrupted link")
+        return original_link(source, target)
+
+    def unlink(path):
+        nonlocal interrupted
+        if interruption == "unlink" and not interrupted:
+            interrupted = True
+            raise OSError("synthetic interrupted unlink")
+        return original_unlink(path)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(repair.os, "write", write)
+        patch.setattr(repair.os, "fsync", fsync)
+        patch.setattr(repair.os, "link", link)
+        patch.setattr(repair.os, "unlink", unlink)
+        with pytest.raises(OSError):
+            repair.mutate(_receipt_request(prepared))
+    assert interrupted and stat.S_IMODE(paths[0].stat().st_mode) == 0o777
+    evidence = list(receipt.parent.iterdir())
+    assert evidence  # candidates/final are never erased after a failure
+    preserved = {p.name: p.read_bytes() for p in evidence}
+    if interruption == "unlink":
+        with pytest.raises(ValueError, match="repair_receipt_trust"):
+            repair.mutate(_receipt_request(prepared))
+        assert stat.S_IMODE(paths[0].stat().st_mode) == 0o777
+    else:
+        repair.mutate(_receipt_request(prepared))
+        assert stat.S_IMODE(paths[0].stat().st_mode) == 0o755
+    for name, data in preserved.items():
+        assert (receipt.parent / name).read_bytes() == data
+
+
+def test_actual_root_namespace_rejects_user_owned_receipt(actual_recipe_layout, monkeypatch):
+    _, _, _, paths, profile = actual_recipe_layout
+    if os.getuid() == 0:
+        pytest.skip("ordinary host identity required for a forged administrator receipt")
+    prepared = repair.inventory(profile)
+    repair.mutate(_receipt_request(prepared))
+    receipt = _receipt_path(prepared)
+    forged_directory = receipt.parent.with_name("trust-repair-v1-admin-0")
+    forged_directory.mkdir(mode=0o700)
+    forged = forged_directory / receipt.name
+    forged.write_bytes(receipt.read_bytes())
+    forged.chmod(0o400)
+    monkeypatch.setattr(repair.os, "getuid", lambda: 0)
+    monkeypatch.setattr(repair.os, "geteuid", lambda: 0)
+    with pytest.raises(ValueError, match="repair_receipt_directory"):
+        repair.authenticate_applied_plan(_receipt_request(prepared), rollback=True)
+    assert forged.exists() and stat.S_IMODE(paths[0].stat().st_mode) == 0o644
+
+
+@pytest.mark.parametrize("stage", ["validated", "changed"])
+def test_actual_detached_receipt_directory_prevents_completion(
+    actual_recipe_layout, monkeypatch, stage
+):
+    _, _, _, paths, profile = actual_recipe_layout
+    paths[0].chmod(0o777)
+    prepared = repair.inventory(profile)
+    receipt = _receipt_path(prepared)
+    detached = receipt.parent.with_name("preserved-detached-receipt-directory")
+    events = []
+
+    def emit(event):
+        events.append(event)
+        if event["event"] == stage:
+            receipt.parent.rename(detached)
+
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="repair_applied_receipt_required"):
+        repair.mutate(_receipt_request(prepared))
+    assert (detached / receipt.name).read_bytes() == repair.receipt_bytes(prepared["plan"])
+    assert not any(event["event"] == "complete" for event in events)
+    assert stat.S_IMODE(paths[0].stat().st_mode) == (0o777 if stage == "validated" else 0o755)
