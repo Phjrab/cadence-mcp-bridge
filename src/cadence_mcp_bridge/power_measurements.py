@@ -152,6 +152,7 @@ class PowerExtraction(ContractModel):
 
     @model_validator(mode="after")
     def exact_inventory(self) -> Self:
+        require_fresh_reservation_sequence((self.counter,))
         for source, (identity, role, voltage) in zip(self.sources, SOURCE_SET, strict=True):
             if source.source_id != identity or source.role != role:
                 raise ValueError("complete ordered source inventory required")

@@ -1,12 +1,22 @@
 """Fixed explicit package staging asset; importing it never provisions a VM."""
 
 # mypy: ignore-errors
+import sys
+
+if __name__ == "__main__":
+    if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+        sys.stderr.write("STANDARD_VM_SETUP_ISOLATED_PYTHON_REQUIRED\n")
+        sys.exit(1)
+    # -c inserts CWD; direct scripts insert their directory. Remove it before
+    # any filesystem-backed import, preserving memory-loaded helper behavior.
+    if sys.path:
+        del sys.path[0]
+    sys.path[:] = [entry for entry in sys.path if entry]
 import base64
 import hashlib
 import json
 import os
 import stat
-import sys
 
 
 def main():

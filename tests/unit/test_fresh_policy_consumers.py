@@ -296,7 +296,7 @@ def test_retained_storage_policy_cannot_be_used_as_fresh_or_implicit_legacy() ->
     with pytest.raises(ValidationError):
         StorageSnapshot.model_validate_json(json.dumps(raw))
 
-@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset", "amplifier"])
+@pytest.mark.parametrize("kind", ["power", "bandwidth", "bias", "slew", "offset", "amplifier"])
 def test_fresh_result_cannot_claim_zero_unadmitted_observation(kind: str) -> None:
     value = receipt(kind)
     counters(value)[0].update(count=0, result_reserved_bytes=0)
