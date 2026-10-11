@@ -982,7 +982,18 @@ def library_directory_snapshot(path):
                 lexical_parent_snapshot(path) != lexical or
                 values != tuple(getattr(os.lstat(path), key) for key in fields)):
             raise ValueError("library_membership_race")
-        return resolved, values, names, lexical
+        # Retain only a fixed-size digest per directory, not all names/ancestor
+        # strings for thousands of directories on a32-bit interpreter. Encode
+        # timestamps losslessly before hashing, including lexical ancestors.
+        encoded = ["%.17g" % value if key in ("st_mtime", "st_ctime") else value
+                   for key, value in zip(fields, values)]
+        ancestors = [(prefix, ["%.17g" % value if key in ("st_mtime", "st_ctime") else value
+                      for key, value in zip(fields, observed)], target)
+                     for prefix, observed, target in lexical]
+        raw = canonical((resolved, encoded, names, ancestors))
+        if len(raw) > LIMIT:
+            raise ValueError("library_membership_limit")
+        return hashlib.sha256(raw).hexdigest(), names
     finally:
         os.close(fd)
 
@@ -1106,13 +1117,17 @@ def inventory(profile):
         add(code)
         for current, directories, filenames in os.walk(code, followlinks=False):
             observed = library_directory_snapshot(current)
-            if observed[2] != sorted(directories + filenames):
+            if observed[1] != sorted(directories + filenames):
                 raise ValueError("library_membership_race")
-            library_directories[current] = observed
+            library_directories[current] = observed[0]
             if len(library_directories) > MAX_ITEMS:
                 raise ValueError("library_membership_limit")
             directories[:] = [d for d in directories if "64" not in d and d not in (
                 "license", "data", "doc", "samples")]
+            # This fixed32-bit recipe does not enumerate aliased subtrees.
+            # Never silently authenticate their unvisited loader-visible files.
+            if any(os.path.islink(current + "/" + name) for name in directories):
+                raise ValueError("library_directory_alias_not_enumerated")
             for name in filenames:
                 if ".so" in name:
                     add(current + "/" + name)
@@ -1151,7 +1166,7 @@ def inventory(profile):
     # are unchanged. Reobserve every traversed directory after ALL target and
     # link observations, retaining excluded directory names without traversing.
     for path, observed in sorted(library_directories.items()):
-        if library_directory_snapshot(path) != observed:
+        if library_directory_snapshot(path)[0] != observed:
             raise ValueError("library_membership_race")
     return bounded
 
