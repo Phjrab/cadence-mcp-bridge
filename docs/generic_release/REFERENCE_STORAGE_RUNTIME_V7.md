@@ -93,3 +93,23 @@ The storage asset and runtime manifest pin change again; old bundle/native
 receipts do not qualify this correction. No actual VM/deployment/result/ledger/
 admin/reservation/simulation changes occurred. Exact source package, hosted
 checks, final parent integration and refreshed review remain separate gates.
+
+
+## Compatible lock contention correction
+
+Fresh review4239919242 found that existing fixed phase launchers open run.lock
+with O_TRUNC before their nonblocking flock. An unchanged empty file therefore
+gets new mtime/ctime even when the competing launcher correctly fails to acquire
+the held lock. The previous guard incorrectly denied that legitimate contention.
+
+The guard now binds dev/inode/type/mode/link count/UID/GID/size plus SHA-256 of
+at most4096 actual lock bytes, checking held and named descriptors and restoring
+the read offset. Only lock mtime/ctime are excluded. Artifact fingerprints and
+metadata protection remain unchanged. Same-size content changes, replacement,
+permissions/ownership/link drift and oversized lock content still reject.
+Timestamp-only changes at flock/activation/completion and between quarantine
+rename/unlink complete normally; content-drift UNKNOWN preservation is retained.
+A real Linux shell9> contender must fail flock while exact storage inventory
+continues with all records unchanged. Windows emulation is not that Linux proof.
+No VM/actual deployment/admin/ledger/reservation/simulation change occurred; final
+parent integration, exact package, hosted checks and fresh review remain gates.
