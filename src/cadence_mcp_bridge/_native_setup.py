@@ -150,6 +150,9 @@ def modules(assets):
         sys.modules[name] = module
         eval(compile(assets[name + ".py"], name + ".py", "exec"), module.__dict__)
         loaded[name] = module
+    loaded["confirmation"].__dict__["_VERIFIED_HELPERS"] = (
+        loaded["reservations"], loaded["installer"], loaded["probe"],
+    )
     return loaded["reservations"], loaded["installer"], loaded["probe"], loaded["confirmation"]
 
 

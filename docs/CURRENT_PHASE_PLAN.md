@@ -1,3 +1,23 @@
+## Held-byte operator confirmation helpers, 2026-10-11
+
+Independent follow-up inspection found the operator-confirmation helper verified
+its assets and then imported their paths. Standalone confirmation now compiles
+retained manifest-validated helper bytes into fixed module names and requires that
+explicit binding. A failed validation clears the earlier binding. Native setup
+and provider loading explicitly bind confirmation to the same authenticated
+accounting/installer/probe modules; later cached names cannot replace them.
+
+Connected source checks81 PASS/25 Windows POSIX skips; Ruff and mypy96 PASS. Five
+portable regressions cover cached-name substitution, post-validation path reopen,
+failed-validation reuse and both native loading routes. The Linux confirmation
+consumer includes this regression file. Updated exact package, hosted review/CI,
+actual Py2.6/preflight and final-bundle/app execution remain mandatory; historical
+native receipts do not attest this changed confirmation asset.
+
+No new grant, VM/admin mutation, simulation, reservation or publication occurred.
+Original state/evidence and currentGREL02-08/16GiB/500/20 delegation persist.
+Release remains BLOCKED; final exact-candidate tag/Release/upload requires approval.
+
 ## Current integrated repair/model completion checkpoint, 2026-10-11
 
 PR152 retains main9871015 and previous native results/consumption. Parent PR148

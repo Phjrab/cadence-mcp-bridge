@@ -173,6 +173,10 @@ def verified_modules(here, assets, names=MODULES):
     for name in names:
         module = loaded[name]
         eval(compile(assets[name + ".py"], module.__file__, "exec"), module.__dict__)
+    if "confirmation" in loaded:
+        loaded["confirmation"].__dict__["_VERIFIED_HELPERS"] = (
+            loaded["reservations"], loaded["installer"], loaded["probe"],
+        )
     return loaded
 
 

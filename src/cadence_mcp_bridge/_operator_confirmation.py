@@ -12,6 +12,7 @@ import re
 import stat
 import sys
 import time
+import types
 from decimal import Decimal
 
 try:
@@ -21,6 +22,7 @@ except NameError:
 
 LIMIT = 262144
 MEMBERS = ("confirmation.py", "reservations.py", "installer.py", "probe.py")
+_VERIFIED_HELPERS = None
 KIND = "STANDARD_VM_OPERATOR_CONFIRMATION_HELPER"
 GRANT_KEYS = (
     "schema_version",
@@ -115,6 +117,8 @@ def read_private(path):
 
 
 def validate_assets(expected):
+    global _VERIFIED_HELPERS
+    _VERIFIED_HELPERS = None
     if not matches(r"^[0-9a-f]{64}$", expected):
         raise ValueError("confirmation_helper_digest")
     directory = os.path.dirname(os.path.abspath(__file__))
@@ -140,12 +144,25 @@ def validate_assets(expected):
         )
     ):
         raise ValueError("confirmation_helper_inventory")
+    assets = {}
     for name in MEMBERS:
         data = read_private(directory + "/" + name)
         if manifest["files"][name] != {"sha256": digest(data), "bytes": len(data)}:
             raise ValueError("confirmation_helper_drift")
-    # Standalone execution imports only these already verified fixed assets.
-    sys.path[:] = [directory] + [p for p in sys.path if p and os.path.isabs(p) and p != directory]
+        assets[name] = data
+    # Retain authenticated bytes; cached names and later file replacement must
+    # not change which code authorizes an operator confirmation.
+    loaded = {}
+    for name in ("reservations", "installer", "probe"):
+        module = types.ModuleType(name)
+        module.__file__ = directory + "/" + name + ".py"
+        module.__dict__["__package__"] = None
+        loaded[name] = module
+        sys.modules[name] = module
+    for name in ("reservations", "installer", "probe"):
+        module = loaded[name]
+        eval(compile(assets[name + ".py"], module.__file__, "exec"), module.__dict__)
+    _VERIFIED_HELPERS = (loaded["reservations"], loaded["installer"], loaded["probe"])
     return expected
 
 
@@ -155,9 +172,9 @@ def helpers():
         from cadence_mcp_bridge import _runner_bootstrap as installer
         from cadence_mcp_bridge import _environment_probe as probe
     else:
-        import reservations as accounting
-        import installer
-        import probe
+        if _VERIFIED_HELPERS is None:
+            raise ValueError("confirmation_verified_helpers_required")
+        return _VERIFIED_HELPERS
     return accounting, installer, probe
 
 
