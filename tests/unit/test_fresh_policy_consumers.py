@@ -152,6 +152,8 @@ async def test_fixed_ssh_result_consumers_validate_fresh_receipts(
     if not valid:
         counters(value)[0].pop("policy")
     calls: list[tuple[Any, ...]] = []
+    # Parser-only fixture never invokes a client executable on either host OS.
+    monkeypatch.setattr("cadence_mcp_bridge.ssh_backend.shutil.which", lambda _name: "ssh.exe")
     backend = OpenSshBackend(BridgeConfig())
 
     def invoke(*args: Any) -> str:
