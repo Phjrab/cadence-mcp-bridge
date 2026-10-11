@@ -1,11 +1,23 @@
 """Fixed existing-ledger migration. Python2.6; no grant, fresh ledger or dispatch."""
 
 # mypy: ignore-errors
+import sys
+
+if not __package__:
+    # Native fixed transport uses -E -s. Drop scriptdir/empty entries before the
+    # first filesystem-backed stdlib import; staging files are never import code.
+    if sys.path:
+        del sys.path[0]
+    sys.path[:] = [entry for entry in sys.path if entry]
+import os
+
+if not __package__:
+    _asset_directory = os.path.normcase(os.path.realpath(os.path.dirname(__file__)))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != _asset_directory]
 import hashlib
 import json
-import os
 import stat
-import sys
 
 LIMIT = 262144
 MEMBERS = ("migration.py", "reservations.py", "installer.py", "probe.py")
@@ -45,6 +57,11 @@ def helpers():
 def load_validated_helpers(values, directory):
     # Compile only bytes retained by ALL manifest checks, never import a filename
     # again or reuse a caller-poisoned sys.modules helper. Fixed private names.
+    # Direct script invocation adds its directory to sys.path. Remove all aliases
+    # before ANY imports so new same-UID bundle files cannot shadow stdlib helpers.
+    bundle_path = os.path.normcase(os.path.realpath(directory))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != bundle_path]
     import types
 
     global _VALIDATED_HELPERS

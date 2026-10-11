@@ -127,13 +127,15 @@ def test_real_acl_partial_recovery_repeat_and_rollback(tmp_path, monkeypatch):
         "paths": sorted([str(directory), str(code)]), "links": [],
         "profile_sha256": "a" * 64, "resource_lock": str(lock),
     })
-    result["plan"].update(schema_version=2, recipe_id="standard-vm-trust-v1", profile={})
+    result["plan"].update(schema_version=2, recipe_id="standard-vm-trust-v1", profile={},
+                          readonly_compatibility_links=[])
     result["plan_sha256"] = repair.digest(result["plan"])
     # Only the pure recipe discovery is synthetic; all inode/ACL/lock operations
     # below are real Linux operations on disposable fixtures.
     def fixed_inventory(_):
         fresh = repair.plan(result["plan"]["scope"])
-        fresh["plan"].update(schema_version=2, recipe_id="standard-vm-trust-v1", profile={})
+        fresh["plan"].update(schema_version=2, recipe_id="standard-vm-trust-v1", profile={},
+                              readonly_compatibility_links=[])
         fresh["plan_sha256"] = repair.digest(fresh["plan"])
         return fresh
 
@@ -1740,6 +1742,94 @@ def test_actual_completion_reenumerates_fixed_library_membership(
     assert new_library.read_bytes() == b"unreviewed synthetic shared object, never executed"
     assert stat.S_IMODE(new_library.stat().st_mode) == 0o777
     assert str(new_library.resolve()) not in prepared["plan"]["scope"]["paths"]
+    assert not any(event["event"] == "complete" for event in events)
+    assert len([event for event in events if event["event"] == "changed"]) == (
+        1 if stage == "already-processed" else 0
+    )
+    for path in code_paths:
+        assert path.read_bytes() == baseline[str(path)][0]
+        if path != target or stage == "no-op":
+            assert path.stat().st_mode == baseline[str(path)][1]
+        else:
+            assert stat.S_IMODE(path.stat().st_mode) == (0o777 if rollback else 0o755)
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_fixed_apply_requires_authenticated_external_link_membership(monkeypatch, missing):
+    original = {"schema_version": 2, "recipe_id": "standard-vm-trust-v1",
+                "scope": {}, "profile": {}, "records": []}
+    if not missing:
+        original["readonly_compatibility_links"] = []
+    fresh = dict(original, readonly_compatibility_links=[{
+        "path": "/fixed/new.so", "resolved": "/outside/library", "exists": True,
+        "target": "/outside/library",
+    }])
+    monkeypatch.setattr(repair, "inventory", lambda selected: {"plan": fresh})
+    monkeypatch.setattr(repair, "open_fixed", lambda path: pytest.fail("binding reached lock"))
+    with pytest.raises(ValueError, match="fixed_external_link_binding_required"):
+        repair.mutate({"plan": original, "expected_plan_sha256": repair.digest(original),
+                       "operator_authority": "SYNTHETIC-ONLY"})
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("stage", ["no-op", "already-processed"])
+@pytest.mark.parametrize("drift", ["create", "rename", "retarget-same-resolution"])
+@pytest.mark.parametrize("library", ["ic", "spectre", "oa"])
+def test_actual_completion_binds_external_library_link_membership(
+    actual_recipe_layout, monkeypatch, rollback, stage, drift, library
+):
+    from pathlib import Path
+
+    shared, root, workspace, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    ms = Path(profile["tools"]["spectre"]["path"].split("/tools", 1)[0])
+    directory = {"ic": ic / "tools.lnx86/lib", "spectre": ms / "tools.lnx86/lib",
+                 "oa": ic / "oa/lib"}[library]
+    external = shared / "preserved-external-library"
+    external.write_bytes(b"synthetic external code, never executed or mutated")
+    external.chmod(0o777)
+    new_link = directory / "unreviewed-external.so"
+    pending = shared / "preserved-pending-link"
+    if drift == "retarget-same-resolution":
+        new_link.symlink_to(external)
+    if drift == "rename":
+        pending.symlink_to(external)
+    prepared = repair.inventory(profile)
+    assert prepared["plan"]["readonly_compatibility_links"] == (
+        prepared["readonly_compatibility_links"]
+    )
+    assert str(external) not in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    if rollback or stage == "no-op":
+        repair.mutate(request)
+    if rollback and stage == "no-op":
+        repair.mutate(request, True)
+    baseline = {str(path): (path.read_bytes(), path.stat().st_mode) for path in code_paths}
+    external_before = (external.read_bytes(), external.stat().st_mode)
+    events, injected = [], False
+
+    def emit(value):
+        nonlocal injected
+        events.append(value)
+        if not injected and value["event"] == (
+            "validated" if stage == "no-op" else "changed"
+        ):
+            if drift == "create":
+                new_link.symlink_to(external)
+            elif drift == "rename":
+                pending.rename(new_link)
+            else:
+                new_link.unlink()
+                new_link.symlink_to(str(external.parent) + "/./" + external.name)
+            injected = True
+
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="completion_external_links"):
+        repair.mutate(request, rollback)
+    assert injected and new_link.is_symlink() and new_link.resolve() == external
+    assert external_before == (external.read_bytes(), external.stat().st_mode)
     assert not any(event["event"] == "complete" for event in events)
     assert len([event for event in events if event["event"] == "changed"]) == (
         1 if stage == "already-processed" else 0

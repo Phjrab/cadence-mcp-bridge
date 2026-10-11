@@ -296,6 +296,11 @@ def verify_completed_targets(original, rollback, recipe_guard=False):
         fresh = completion_inventory(original)
         if fresh["scope"] != original["scope"]:
             raise ValueError("completion_recipe_scope")
+        if original.get("recipe_id") == "standard-vm-trust-v1" and (
+                not isinstance(original.get("readonly_compatibility_links"), list) or
+                fresh.get("readonly_compatibility_links") !=
+                original["readonly_compatibility_links"]):
+            raise ValueError("completion_external_links")
         final = fresh
     if len(final["records"]) != len(original["records"]):
         raise ValueError("completion_record_count")
@@ -801,13 +806,14 @@ def mutate(request, rollback=False):
         raise ValueError("plan_binding")
     # No caller target/mode command: recompute the fixed recipe from the bound
     # operator profile before accepting a private exact target list.
-    if original["recipe_id"] == "standard-vm-model-trust-v1":
-        expected_scope = inventory_models({"profile": original["profile"],
-            "model_include": original["model_include"]})["plan"]["scope"]
-    else:
-        expected_scope = inventory(original["profile"])["plan"]["scope"]
-    if expected_scope != original["scope"]:
+    expected_plan = completion_inventory(original)
+    if expected_plan["scope"] != original["scope"]:
         raise ValueError("fixed_recipe_scope_mismatch")
+    if original["recipe_id"] == "standard-vm-trust-v1" and (
+            not isinstance(original.get("readonly_compatibility_links"), list) or
+            expected_plan.get("readonly_compatibility_links") !=
+            original["readonly_compatibility_links"]):
+        raise ValueError("fixed_external_link_binding_required")
     import fcntl
 
     lock = original["scope"]["resource_lock"]
@@ -933,7 +939,8 @@ def inventory(profile):
         if not inside(resolved, base):
             # Alternative compatibility-library links are not mutation targets.
             external.append({"path": path, "resolved": resolved,
-                             "exists": os.path.exists(resolved)})
+                             "exists": os.path.exists(resolved),
+                             "target": os.readlink(path) if os.path.islink(path) else None})
             return
         if os.path.isfile(resolved) and resolved not in exact_code and not any(
                 inside(resolved, code_root) for code_root in code_roots):
@@ -972,6 +979,12 @@ def inventory(profile):
     result["plan"]["schema_version"] = 2
     result["plan"]["recipe_id"] = "standard-vm-trust-v1"
     result["plan"]["profile"] = profile
+    # Bind read-only external members to the authenticated plan/receipt without
+    # admitting their resolved targets into the exact metadata mutation scope.
+    # Historical plans lacking this binding require a new read-only inventory;
+    # old plans, helper bytes and receipts remain valid historical evidence.
+    external.sort(key=lambda link: (link["path"], link["resolved"]))
+    result["plan"]["readonly_compatibility_links"] = external
     result["plan_sha256"] = digest(result["plan"])
     result["readonly_compatibility_links"] = external
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
