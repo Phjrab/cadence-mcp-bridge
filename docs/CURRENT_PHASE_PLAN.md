@@ -1,3 +1,20 @@
+## Durable next-runtime update binding, 2026-10-11
+
+Independent review4240354827 is corrected: activation and preflight-only update
+share the version-directory/runtime-parent durability barrier and a full asset
+and target revalidation before launcher, pointer or transition-history writes.
+Initial, interrupted and completed exact retries repeat these barriers. Failure
+preserves current files and pointer; a substituted next runtime rejects before
+publication. Six portable failure/retry cases and one last-barrier replacement
+case pass; the POSIX completed-retry fixture checks actual directory fsync order.
+
+Connected Windows bootstrap94 PASS/12 platform skips. Exact hosted Linux,
+security/package and refreshed independent review remain gates; no actual VM,
+ledger, grant, simulation or reservation changes occur in this correction.
+Current directGREL02-08/16GiB/500/same-change20/conditional normal integration
+remain authorized. Public tag/Release/assets require the exact final approval.
+Earlier source evidence, policy and recovery histories are retained.
+
 ## Selected runtime namespace durability, 2026-10-11
 
 Fresh independent finding4240331189 is corrected: activation fsyncs the selected
