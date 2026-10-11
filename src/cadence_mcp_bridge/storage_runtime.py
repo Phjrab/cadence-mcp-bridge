@@ -35,6 +35,9 @@ def reference_storage_bundle() -> tuple[str, dict[str, bytes]]:
     pin are required. Import, server startup and doctor perform no installation.
     """
     resources = files("cadence_mcp_bridge")
+    entry = resources.joinpath("_storage_entry.py").read_bytes()
+    if b"\r" in entry or len(entry) > 262144:
+        raise ValueError("fixed storage entry bytes required")
     assets = {
         "storage.py": resources.joinpath("_storage_worker.py").read_bytes(),
         "reservations.py": resources.joinpath("_shared_reservations.py").read_bytes(),
@@ -45,6 +48,7 @@ def reference_storage_bundle() -> tuple[str, dict[str, bytes]]:
         "schema_version": 1,
         "kind": "REFERENCE_STORAGE_RUNTIME",
         "managed_root": REFERENCE_STORAGE_ROOT,
+        "entry_sha256": hashlib.sha256(entry).hexdigest(),
         "files": {
             name: {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
             for name, raw in assets.items()
@@ -58,8 +62,20 @@ def reference_storage_bundle() -> tuple[str, dict[str, bytes]]:
     return pin, {
         "run.sh": REFERENCE_STORAGE_LAUNCHER.replace(
             "__CADENCE_STORAGE_ENTRY__",
-            shlex.quote(resources.joinpath("_storage_entry.py").read_text()),
+            shlex.quote(entry.decode("ascii")),
         ).encode("ascii"),
         **{prefix + name: payload for name, payload in assets.items()},
         prefix + "manifest.json": raw,
     }
+
+
+def reference_storage_entry(payloads: dict[str, bytes]) -> str:
+    prefix = b"exec /usr/bin/python -E -s -B -c "
+    suffix = b' "$RUNTIME" "$1" "$2" "$3"\n'
+    launcher = payloads["run.sh"]
+    if launcher.count(prefix) != 1 or not launcher.endswith(suffix):
+        raise ValueError("fixed storage entry shape")
+    parts = shlex.split(launcher.split(prefix, 1)[1][:-len(suffix)].decode("ascii"))
+    if len(parts) != 1:
+        raise ValueError("fixed storage entry shape")
+    return parts[0]

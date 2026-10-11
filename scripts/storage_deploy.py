@@ -25,6 +25,7 @@ POLICY_FILES = {"policy.json": POLICY, "correction.json": CORRECTION, "scan.json
 SOURCES = tuple(POLICY_FILES.values()) + (
     ROOT / "src/cadence_mcp_bridge/_storage_worker.py",
     ROOT / "src/cadence_mcp_bridge/_shared_reservations.py",
+    ROOT / "src/cadence_mcp_bridge/_storage_entry.py",
     ROOT / "remote/phase-campaign/storage-mgmt-v7/run.sh",
 )
 

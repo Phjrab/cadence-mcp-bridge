@@ -28,6 +28,24 @@ no new simulation/reservation/guest metadata change occurred in this correction.
 Release remains BLOCKED; no exact qualified candidate or publication approval.
 Earlier records below retain their original source and time scope.
 
+## Exact launcher synchronization and retained entry pin, 2026-10-11
+
+Review4240549663 is corrected by updating the checked-in v7 launcher to match
+its generated authenticated entry exactly; the deployment drift guard remains.
+The deployment source set includes the entry. New reference manifests bind its
+SHA256; the pinned backend retains the entry from that same bundle construction
+rather than reading a resource again. A configured older v7 pin reports explicit
+STORAGE_RUNTIME_UPDATE_REQUIRED; unpinned historical v6 remains unchanged. This
+is an opt-in reference compatibility update, not fresh generic-storage acceptance.
+Historical manifests/ledgers are preserved and their existing worker schemas
+remain readable. New helper pins do not grant any deletion or simulation authority.
+
+Portable current66 PASS/12 POSIX skips; a source-deployment equality regression and
+exact retained-entry delivery regression are included. Prior isolated package
+43-state/20-migration preservation PASS belongs to482e code before this change;
+exact refreshed hosted/package/security/independent review remain required.
+No VM contact/change, deletion, reservation, refund or actual simulation occurred.
+
 ## Pinned storage worker entry and zero initialization fixture, 2026-10-11
 
 Independent finding4240464522 is corrected: the explicitly pinned reference
@@ -64,6 +82,16 @@ independent review remain gates; no actual VM, journal, reservation or simulatio
 changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
 integration remain authorized. Final exact public-candidate approval is separate.
 Earlier histories, policy versions, failed evidence and original state remain.
+
+## Retained manifest-bound migration entry, 2026-10-11
+
+Fresh finding4240529796 identified a second installed-resource read between
+helper manifest binding and transport. prepare/apply now retain the entry source
+from the exact manifest-bound exported launcher and pass it directly to transport.
+No later resource/path read can substitute executing -c bytes. A portable package
+replacement regression rejects any reopened resource and checks exact retained
+source delivery. Windows42 PASS/5 POSIX skips; Ruff/mypy76 PASS. Actual VM/ledger/
+metadata and reservations remain unchanged; final updated exact gates apply.
 
 ## Executing migration byte binding, 2026-10-11
 
