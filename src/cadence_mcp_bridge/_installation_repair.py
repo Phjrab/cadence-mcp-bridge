@@ -956,6 +956,43 @@ def external_link_record(path, expected_resolved):
         os.close(parent_fd)
 
 
+def bounded_directory_names(fd):
+    # Linux dirent64 has fixed offsets on the supported i686 VM and x86_64 CI.
+    # Consume at most MAX_ITEMS+1 entries, never os.listdir/os.walk allocation.
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.fdopendir.argtypes, libc.fdopendir.restype = [ctypes.c_int], ctypes.c_void_p
+    libc.readdir64.argtypes, libc.readdir64.restype = [ctypes.c_void_p], ctypes.c_void_p
+    libc.closedir.argtypes, libc.closedir.restype = [ctypes.c_void_p], ctypes.c_int
+    duplicate = os.open(descriptor_path(fd), os.O_RDONLY | os.O_DIRECTORY)
+    stream = libc.fdopendir(duplicate)
+    if not stream:
+        os.close(duplicate)
+        raise OSError(ctypes.get_errno(), "library_directory_stream")
+    names, total = [], 0
+    try:
+        while True:
+            ctypes.set_errno(0)
+            entry = libc.readdir64(stream)
+            if not entry:
+                if ctypes.get_errno():
+                    raise OSError(ctypes.get_errno(), "library_directory_stream")
+                break
+            length = ctypes.c_ushort.from_address(entry + 16).value
+            if not 20 <= length <= 280:
+                raise ValueError("library_directory_record")
+            raw = ctypes.string_at(entry + 19, length - 19).split(b"\x00", 1)[0]
+            if raw in (b".", b".."):
+                continue
+            total += len(raw)
+            if len(names) >= MAX_ITEMS or total > LIMIT:
+                raise ValueError("library_membership_limit")
+            names.append(raw.decode("utf-8"))
+        return sorted(names)
+    finally:
+        libc.closedir(stream)
+
+
 def library_directory_snapshot(path):
     lexical = lexical_parent_snapshot(path)
     resolved = os.path.realpath(path)
@@ -966,7 +1003,7 @@ def library_directory_snapshot(path):
         before = os.fstat(fd)
         if not stat.S_ISDIR(before.st_mode):
             raise ValueError("library_membership_race")
-        names = sorted(os.listdir(descriptor_path(fd)))
+        names = bounded_directory_names(fd)
         if len(names) > MAX_ITEMS or sum(len(name) for name in names) > LIMIT:
             raise ValueError("library_membership_limit")
         values = tuple(getattr(before, key) for key in fields)
@@ -1115,10 +1152,13 @@ def inventory(profile):
         add(seed)
     for code in (ic + "/tools.lnx86/lib", ic + "/oa/lib", ms + "/tools.lnx86/lib"):
         add(code)
-        for current, directories, filenames in os.walk(code, followlinks=False):
+        pending = [code]
+        while pending:
+            current = pending.pop()
             observed = library_directory_snapshot(current)
-            if observed[1] != sorted(directories + filenames):
-                raise ValueError("library_membership_race")
+            directories, filenames = [], []
+            for name in observed[1]:
+                (directories if os.path.isdir(current + "/" + name) else filenames).append(name)
             library_directories[current] = observed[0]
             if len(library_directories) > MAX_ITEMS:
                 raise ValueError("library_membership_limit")
@@ -1131,6 +1171,9 @@ def inventory(profile):
             for name in filenames:
                 if ".so" in name:
                     add(current + "/" + name)
+            if len(pending) + len(directories) + len(library_directories) > MAX_ITEMS:
+                raise ValueError("library_membership_limit")
+            pending.extend(current + "/" + name for name in directories)
     workspace = valid_path(profile["paths"]["workspace_root"])
     if os.path.realpath(workspace) != workspace:
         raise ValueError("workspace_link")

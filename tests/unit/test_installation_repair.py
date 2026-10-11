@@ -2323,10 +2323,27 @@ def test_library_membership_signature_hashes_canonical_bytes_once(monkeypatch):
     monkeypatch.setattr(repair.os, "fstat", lambda fd: directory)
     monkeypatch.setattr(repair.os, "lstat", lambda path: directory)
     monkeypatch.setattr(repair.os, "close", lambda fd: None)
-    monkeypatch.setattr(repair.os, "listdir", lambda path: ["b.so", "a.so"])
+    monkeypatch.setattr(repair, "bounded_directory_names", lambda fd: ["a.so", "b.so"])
     monkeypatch.setattr(repair, "descriptor_path", lambda fd: "/owned")
     signature, names = repair.library_directory_snapshot("/owned")
     expected = ("/owned", [1, 2, directory.st_mode, 500, 500, 2, 4096, "1.25", "2.5"],
                 ["a.so", "b.so"], [])
     assert signature == hashlib.sha256(repair.canonical(expected)).hexdigest()
     assert names == ["a.so", "b.so"]
+
+
+def test_library_stream_rejects_before_materializing_oversized_directory(actual_recipe_layout,
+                                                                       monkeypatch):
+    shared, _, _, _, _ = actual_recipe_layout
+    directory = shared / "owned-bounded-stream"
+    directory.mkdir()
+    for index in range(9):
+        (directory / f"entry-{index}").write_bytes(b"synthetic")
+    monkeypatch.setattr(repair, "MAX_ITEMS", 8)
+    monkeypatch.setattr(repair.os, "listdir", lambda *a: pytest.fail("unbounded listdir"))
+    monkeypatch.setattr(repair.os, "walk", lambda *a, **kw: pytest.fail("unbounded walk"))
+    with pytest.raises(ValueError, match="library_membership_limit"):
+        repair.library_directory_snapshot(str(directory))
+    monkeypatch.setattr(repair, "MAX_ITEMS", 9)
+    signature, names = repair.library_directory_snapshot(str(directory))
+    assert len(signature) == 64 and len(names) == 9

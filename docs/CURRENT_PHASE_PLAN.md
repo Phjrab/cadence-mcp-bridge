@@ -1,3 +1,15 @@
+## Preallocation-bounded library enumeration, 2026-10-11
+
+Independent finding4240505088 identified that os.listdir/os.walk allocate whole
+name lists before posthoc limits. The repair recipe now reads Linux readdir64
+through an independently opened directory stream, stops at MAX_ITEMS+1 and
+bounds aggregate pending directory paths. It retains fixed digests and uses the
+same dirent64 offsets as the existing storage implementation on i686/x86_64.
+It does not depend on Python3-only scandir or expand supported EDA platforms.
+An owned stream regression forbids listdir/walk and exercises limit/recovery;
+Windows86 PASS/225 OS skips, exact hosted POSIX and current i686 VM remain gates.
+No actual VM/admin/ledger/reservation/simulation change occurs in this correction.
+
 ## Canonical library digest correction, 2026-10-11
 
 Exact ce23e43 hosted POSIX checks failed because the membership collector passed
