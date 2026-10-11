@@ -1,3 +1,19 @@
+## Latest bounded verification checkpoint, 2026-10-11
+
+User-requested checkpoint: current source291010d normal parent integration,
+326 focused Windows PASS/293 POSIX skips, Ruff/mypy99, security18/audit and
+exact installed package/onboarding/reinstall/uninstall PASS;43 operator and20
+migration files preserved in synthetic checks. PR1482c3acbc hosted Windows/
+POSIX PASS; current-source actual UID500 inventory569 targets/233 pending mode
+changes. Actual ledger102/12,483,297,280, remaining4,696,571,904 of16GiB.
+This turn0 simulations/0 reservations/0 administrator changes. Final automatic
+review is blocked by service usage; earlier reviews are source-specific. No
+PR merge, qualified RC or publication is claimed. Historical failures remain.
+Correction20 scope, exact installed admin/native, final VM/app and GREL08 gates
+remain. No app configuration change; no restart required now. See
+[bounded checkpoint](RESUME_TEST_CHECKPOINT_20261011.md).
+Earlier checkpoints below retain their dates and scope.
+
 ## Current restart and delegated metadata checkpoint, 2026-10-11
 
 User-confirmed Codex restart restored the QA connection; it still reports
