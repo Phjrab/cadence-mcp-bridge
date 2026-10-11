@@ -1,3 +1,30 @@
+## Whole-target completion integrity correction, 2026-10-11
+
+Fresh PR148 review found no-op targets and already processed targets could drift
+after their earlier observation without preventing a complete receipt. The helper
+now recomputes the whole exact recipe immediately before completion. Every target's
+content/hash, identity, owner/group, size/mtime, requested mode and normalized ACL
+must match; original links are revalidated by the recipe. Partial receipts remain
+preserved on rejection. Omitted-ancestor rechecks, mutation scope, caps and explicit
+authority remain unchanged; outside administrator activity is not made atomic.
+Twelve portable completion cases cover apply/rollback, protected and metadata drift
+and record count. Eight owned Linux cases cover no-op/previously processed mode,
+ACL, content and same-resolution link drift, requiring rejection without complete.
+Local169 relevant tests PASS/26 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist license/
+content audit and installed CLI/SDK/bootstrap/reinstall/uninstall32-state
+preservation PASS. Retained wheel SHA256 is68f6e31be5e403237e9ec77f1408fe6f45646a850d487786c8f53b6aac9b4083;
+helper SHA256 is8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+Final hosted Linux/Windows and refreshed independent review remain pending. Prior
+installed eb62 current-VM UID500 read-only inventory PASS (332 targets,0 changes,
+173064-byte response, historical exact targets/content/metadata preserved) remains
+that source's evidence. Updated helper/modeltrust needs exact installed/current-VM
+qualification; preserve bf6c20 and all prior bundles/results.
+Root's latest actual ledger observation is102 attempts/12,483,297,280 reserved
+bytes. Earlier94 and82 snapshots below are history. This fix performs0 VM contacts,
+admin changes, simulations or reservations. Active16GiB/500/20, continuous GREL02-08,
+conditional normal merge and final exact-publication authorization gate persist.
+
 ## Repair application ancestor race correction, 2026-10-11
 
 Fresh PR148 review identified omitted-ancestor permission drift between recipe
