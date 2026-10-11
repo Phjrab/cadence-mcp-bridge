@@ -99,6 +99,11 @@ def snapshot_descriptor(path, fd):
     info = os.fstat(fd)
     if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
         raise ValueError("file_type")
+    # Reject a hardlink already present at this held observation, including one
+    # added after an earlier pathname or descriptor link-count check. Keep the
+    # historical inventory schema unchanged; trailing stability also binds nlink.
+    if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
+        raise ValueError("hardlinked_code")
     result = {
         "path": path, "dev": info.st_dev, "ino": info.st_ino,
         "uid": info.st_uid, "gid": info.st_gid,
@@ -286,7 +291,7 @@ def verify_completed_targets(original, rollback):
             raise ValueError("completion_metadata")
 
 
-def _mutate_locked(request, rollback=False, receipt_guard=False):
+def _mutate_locked(request, rollback=False, receipt_guard=False, resource_guard=None):
     if set(request) != set(("plan", "expected_plan_sha256", "operator_authority")):
         raise ValueError("mutation_shape")
     original = request["plan"]
@@ -321,6 +326,8 @@ def _mutate_locked(request, rollback=False, receipt_guard=False):
         if not (before or after or intermediate or rollback_intermediate):
             raise ValueError("unexpected_metadata")
         allowed.append((old, now, before, after))
+    if resource_guard is not None:
+        resource_guard()
     emit({"event": "validated", "plan_sha256": request["expected_plan_sha256"],
           "authority_source": authority, "count": len(allowed), "rollback": rollback})
     changes = 0
@@ -350,8 +357,52 @@ def _mutate_locked(request, rollback=False, receipt_guard=False):
             verify_unlisted_ancestors(original["scope"]["installation_roots"])
             if receipt_guard:
                 verify_applied_receipt(request)
+            if resource_guard is not None:
+                resource_guard()
+            # Receipt/ancestor/lock verification can run filesystem tools. Take
+            # another complete held-target observation after those operations,
+            # then check nlink immediately before changing this exact inode.
+            held = snapshot_descriptor(old["path"], fd)
+            if any(not metadata_equal(key, held[key], now[key]) for key in held
+                   if key != "acl") or normalize_acl(held["acl"]) != normalize_acl(now["acl"]):
+                raise ValueError("prechange_descriptor_drift")
+            if resource_guard is not None:
+                resource_guard()
+            final_info = os.fstat(fd)
+            if stat.S_ISREG(final_info.st_mode) and final_info.st_nlink != 1:
+                raise ValueError("prechange_hardlink")
+            stability = ("st_dev", "st_ino", "st_mode", "st_nlink")
+            # Real held descriptors also protect content/ACL-sensitive ctime,
+            # ownership, size and mtime across the final fixed-lock check.
+            for key in ("st_uid", "st_gid", "st_size", "st_mtime", "st_ctime"):
+                if hasattr(info, key):
+                    stability += (key,)
+            if any(getattr(final_info, key) != getattr(info, key) for key in stability):
+                raise ValueError("prechange_descriptor_drift")
             os.fchmod(fd, target_mode)
             if normalize_acl(acl(fd)) != normalize_acl(target_acl):
+                # Chmod and setfacl are separate mutations. Reject intervening
+                # target/lock/receipt drift before applying the planned ACL.
+                verify_unlisted_ancestors(original["scope"]["installation_roots"])
+                if receipt_guard:
+                    verify_applied_receipt(request)
+                if resource_guard is not None:
+                    resource_guard()
+                interim_info = os.fstat(fd)
+                interim = snapshot_descriptor(old["path"], fd)
+                if (any(not metadata_equal(key, interim[key], now[key]) for key in interim
+                        if key not in ("mode", "acl")) or interim["mode"] != target_mode or
+                        normalize_acl(interim["acl"]) !=
+                        normalize_acl(chmod_acl(now["acl"], target_mode))):
+                    raise ValueError("preacl_descriptor_drift")
+                if resource_guard is not None:
+                    resource_guard()
+                final_info = os.fstat(fd)
+                if stat.S_ISREG(final_info.st_mode) and final_info.st_nlink != 1:
+                    raise ValueError("preacl_hardlink")
+                if any(getattr(final_info, key) != getattr(interim_info, key)
+                       for key in stability):
+                    raise ValueError("preacl_descriptor_drift")
                 proc = subprocess.Popen(
                     ["/usr/bin/setfacl", "--set-file=-", "--", descriptor_path(fd)],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -376,6 +427,8 @@ def _mutate_locked(request, rollback=False, receipt_guard=False):
     verify_unlisted_ancestors(original["scope"]["installation_roots"])
     if receipt_guard:
         verify_applied_receipt(request)
+    if resource_guard is not None:
+        resource_guard()
     emit({"event": "complete", "changed": changes, "content_preserved": True,
           "owner_group_preserved": True, "execution_authorized": False})
 
@@ -666,6 +719,44 @@ def authenticate_applied_plan(request, rollback):
         os.close(directory)
 
 
+
+def verify_resource_lock(lock, fd, parent_fd, expected, parent_expected):
+    # A flock protects its inode, not a pathname. Reopen both fixed names and
+    # bind them to the held descriptors after acquisition and before every
+    # mutation/completion. External filesystem tools are still not atomic.
+    file_fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+                   "st_size", "st_mtime", "st_ctime")
+    parent_fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid")
+    held, parent = os.fstat(fd), os.fstat(parent_fd)
+    if (any(getattr(held, key) != getattr(expected, key) for key in file_fields) or
+            any(getattr(parent, key) != getattr(parent_expected, key) for key in parent_fields)):
+        raise ValueError("resource_lock_drift")
+    named_parent = open_fixed(os.path.dirname(lock))
+    try:
+        named = open_fixed(lock)
+        try:
+            current_parent, current = os.fstat(named_parent), os.fstat(named)
+            if (any(getattr(current, key) != getattr(held, key) for key in file_fields) or
+                    any(getattr(current_parent, key) != getattr(parent, key)
+                        for key in parent_fields)):
+                raise ValueError("resource_lock_binding")
+            # Recheck held metadata and final fixed entries after all reads.
+            final, final_parent = os.fstat(fd), os.fstat(parent_fd)
+            if (any(getattr(final, key) != getattr(held, key) for key in file_fields) or
+                    any(getattr(final_parent, key) != getattr(parent, key)
+                        for key in parent_fields)):
+                raise ValueError("resource_lock_drift")
+            entry, parent_entry = os.lstat(lock), os.lstat(os.path.dirname(lock))
+            if (any(getattr(entry, key) != getattr(held, key) for key in file_fields) or
+                    any(getattr(parent_entry, key) != getattr(parent, key)
+                        for key in parent_fields) or os.path.realpath(lock) != lock):
+                raise ValueError("resource_lock_binding")
+        finally:
+            os.close(named)
+    finally:
+        os.close(named_parent)
+
+
 def mutate(request, rollback=False):
     if len(canonical(request)) + 1 > LIMIT:
         raise ValueError("request_limit")
@@ -699,11 +790,16 @@ def mutate(request, rollback=False):
                     (info.st_uid not in (0, os.getuid()) and not administrator_for_owner) or
                     info.st_nlink != 1):
                 raise ValueError("resource_lock_trust")
+            def resource_guard():
+                verify_resource_lock(lock, fd, parent_fd, info, parent)
+
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            resource_guard()
+            authenticate_applied_plan(request, rollback)
+            resource_guard()
+            _mutate_locked(request, rollback, True, resource_guard)
         finally:
             os.close(parent_fd)
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        authenticate_applied_plan(request, rollback)
-        _mutate_locked(request, rollback, True)
     finally:
         os.close(fd)
 
