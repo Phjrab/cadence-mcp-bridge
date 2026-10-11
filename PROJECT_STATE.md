@@ -1,3 +1,15 @@
+## Fixed storage lock continuation, 2026-10-11
+
+PR152 preserves current main and all earlier branches/evidence. Standalone
+Python3.12 held-byte loader is integrated. Independent semantic review found
+missing fixed run.lock binding; private-root/lock trust, inode/metadata guards at
+admission, mutation and completion now prevent cleanup through a substituted
+lock. Synthetic tests retain untouched/quarantined payloads and unknown audit
+receipts;95 PASS/15 Windows skips, full Ruff and mypy96 PASS. Final hosted/review,
+parent148-151 corrections and exact installed/VM/app qualification remain.
+No new VM/admin change, simulation, reservation or publication occurred.
+General release BLOCKED;2.0.0 remains development metadata, not a frozen RC.
+
 ## Active PR151 standalone deployment correction, 2026-10-11
 
 Fresh review exposed a missing production accounting helper/manifest in the

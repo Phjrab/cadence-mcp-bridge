@@ -1,3 +1,23 @@
+## Fixed storage lock checkpoint
+
+The storage worker now pins the ordinary user's private root and a regular,
+mode600, single-link run.lock by descriptor and fixed named path. It verifies
+ownership, metadata and identity after the lock decision, after the native
+activation callback, immediately before payload rename/unlink, and before a
+response can claim completion. Lock or root drift denies the operation; a moved
+payload remains in quarantine and an interrupted cleanup retains its intent and
+unknown outcome. No retry resets a reservation or removes retained evidence.
+
+The existing standalone factor and operator transport share these checks. Busy
+inventory remains conservative and read-only. Public inputs still contain no
+path, shell, permission or administrator facility. No actual VM cleanup is part
+of this validation.
+
+Local affected tests:95 PASS,15 Windows POSIX/symlink skips; full Ruff and mypy96
+PASS. These are synthetic temporary-file tests. Exact Ubuntu nofollow/flock
+regressions, final review, current installed assets and VM inventory remain
+required. Earlier counts below retain their source-specific meaning.
+
 # Operator native storage integration
 
 Status: implementation checkpoint, final standalone integration, review, hosted

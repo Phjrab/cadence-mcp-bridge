@@ -195,6 +195,46 @@ def metadata(fd):
     ]
 
 
+def storage_lock_guard(io, root_path, root, lock):
+    """Bind the held lock to the fixed private root and named single-link file."""
+    def directory_state(fd):
+        info = os.fstat(fd)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ValueError("storage root permissions")
+        return [info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode]
+
+    def lock_state(fd):
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+            raise ValueError("storage lock permissions")
+        return metadata(fd) + [info.st_uid, info.st_gid]
+
+    pinned_root, pinned_lock = directory_state(root), lock_state(lock)
+
+    def check():
+        if directory_state(root) != pinned_root or lock_state(lock) != pinned_lock:
+            raise ValueError("held storage lock identity drift")
+        named_root = io.root(root_path)
+        try:
+            if directory_state(named_root) != pinned_root:
+                raise ValueError("named storage root identity drift")
+            named_lock = io.open(named_root, "run.lock")
+            try:
+                if lock_state(named_lock) != pinned_lock:
+                    raise ValueError("named storage lock identity drift")
+            finally:
+                os.close(named_lock)
+        finally:
+            os.close(named_root)
+        if directory_state(root) != pinned_root or lock_state(lock) != pinned_lock:
+            raise ValueError("held storage lock identity drift")
+
+    check()
+    return check
+
+
 def read_json(io, parent, name, limit, private=False, canonical_ledger=False):
     fd = io.open(parent, name)
     try:
@@ -827,7 +867,7 @@ def outcome(
     )
 
 
-def remove_leaf(io, root, quarantine, artifact, internal):
+def remove_leaf(io, root, quarantine, artifact, internal, mutation_guard=None):
     spool = private_directory(io, root, SPOOL)
     leaf = private_directory(io, spool, internal)
     try:
@@ -836,6 +876,8 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         if fingerprint != artifact["fingerprint"]:
             raise ValueError("selected artifact changed")
         # Atomic move first. A substituted leaf is preserved in quarantine, not deleted.
+        if mutation_guard is not None:
+            mutation_guard()
         io.rename(leaf, "payload.bin", quarantine, internal)
         os.fsync(leaf)
         os.fsync(quarantine)
@@ -858,6 +900,8 @@ def remove_leaf(io, root, quarantine, artifact, internal):
             if count != info[4] or h.hexdigest() != content_hash or changed != metadata(moved):
                 raise ValueError("quarantined content mismatch")
             allocated = getattr(os.fstat(moved), "st_blocks", 0) * 512
+            if mutation_guard is not None:
+                mutation_guard()
             io.unlink(quarantine, internal)
         finally:
             os.close(moved)
@@ -870,7 +914,7 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         os.close(spool)
 
 
-def cleanup(io, root, request, is_active, native_generic=False):
+def cleanup(io, root, request, is_active, native_generic=False, mutation_guard=None):
     validate_cleanup(request)
     control = private_directory(io, root, CONTROL)
     operations = private_directory(io, control, "operations")
@@ -926,6 +970,8 @@ def cleanup(io, root, request, is_active, native_generic=False):
                 raise ValueError("exact selection consent required")
         except (OSError, ValueError, KeyError):
             return outcome(request, "DENIED", [], chosen, expected)
+        if mutation_guard is not None:
+            mutation_guard()
         io.mkdir(operations, operation)
         record = private_directory(io, operations, operation)
         try:
@@ -962,7 +1008,10 @@ def cleanup(io, root, request, is_active, native_generic=False):
                             )
                         finally:
                             os.close(spool)
-                        size, blocks = remove_leaf(io, root, quarantine, artifacts[item], internal)
+                        size, blocks = remove_leaf(
+                            io, root, quarantine, artifacts[item], internal,
+                            mutation_guard=mutation_guard,
+                        )
                         logical += size
                         allocated += blocks
                         removed.append(item)
@@ -1023,24 +1072,34 @@ def execute_fixed(root_path, action, request, before=None, native_generic=False)
 
         lock = io.open(root, "run.lock")
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError as failure:
-            if failure.errno not in (errno.EAGAIN, errno.EACCES):
-                raise
-            if action == "cleanup":
-                raise ValueError("active EDA lock")
-            if before is not None:
-                before()
-            value = snapshot(io, root, True, lock_held=False, native_generic=native_generic)
-        else:
-            if before is not None:
-                before()
-            active = (active_eda(root_path, native_generic=True)
-                      if native_generic else active_eda(root_path))
-            if action == "inventory":
-                value = snapshot(io, root, active, native_generic=native_generic)
+            guard = storage_lock_guard(io, root_path, root, lock)
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except IOError as failure:
+                if failure.errno not in (errno.EAGAIN, errno.EACCES):
+                    raise
+                if action == "cleanup":
+                    raise ValueError("active EDA lock")
+                guard()
+                if before is not None:
+                    before()
+                guard()
+                value = snapshot(io, root, True, lock_held=False, native_generic=native_generic)
             else:
-                value = cleanup(io, root, request, active, native_generic=native_generic)
+                guard()
+                if before is not None:
+                    before()
+                guard()
+                active = (active_eda(root_path, native_generic=True)
+                          if native_generic else active_eda(root_path))
+                if action == "inventory":
+                    value = snapshot(io, root, active, native_generic=native_generic)
+                else:
+                    value = cleanup(
+                        io, root, request, active, native_generic=native_generic,
+                        mutation_guard=guard,
+                    )
+            guard()
         finally:
             os.close(lock)
         if len(canonical(value)) > 65536:

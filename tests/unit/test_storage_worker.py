@@ -53,6 +53,7 @@ class TestIO:
                 st_mtime=s.st_mtime,
                 st_ctime=s.st_ctime,
                 st_uid=os.getuid() if hasattr(os, "getuid") else 0,
+                st_gid=s.st_gid,
                 st_blocks=(s.st_size + 511) // 512,
             )
 
