@@ -1,3 +1,15 @@
+## Complete sourced-file roles and final tool segment, 2026-10-11
+
+Review4240563319/4240572996 is corrected. Vendor roots derive from the final
+/tools segment, preserving equivalent layouts with a tools-named ancestor.
+Inside the two fixed Tcl/Tk sourced-code roots all regular content is selected:
+Tcl indexes can source .itcl/.itk or extensionless files, so extensions cannot be
+used as a trust boundary. No installation-wide walk or external/PDK/license
+content mutation is admitted. Three source-role and one relocated-layout owned
+POSIX regressions are included. The previous451/115 normal-user inventory is
+retained history; this exact recipe's VM count and final gates must be refreshed.
+No actual admin metadata, contents, ledger, reservation or simulation changes.
+
 ## Empty library code namespace protection, 2026-10-11
 
 Review4240540555 is corrected: every bounded traversed directory is an exact
