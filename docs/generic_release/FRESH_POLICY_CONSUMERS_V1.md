@@ -295,3 +295,16 @@ CI includes the production fresh-policy fixture alongside the standalone suites.
 No actual VM/journal/admin/deployment/reservation/simulation changes occurred.
 Latest parent corrections, exact updated package/CI/review and separate native
 qualification remain gates; general release is BLOCKED.
+
+
+## Exact reviewed accounting asset binding
+
+The normally integrated initial-activation guard pins all executable bundle
+assets independently of operator-controlled profile/manifest hashes. Its parent
+reservation pin belongs to the parent's historical accounting source. PR151 binds
+that one compiled pin to its preserved reviewed fresh-accounting source instead:
+normalized SHA-25674cdd5e6f8feb795d62a9a6b8cf4995746b9d5c8666f7ffa35021d50f60906c8.
+No accounting bytes changed in this rebind; launcher/runner/probe pins and all
+self-rehash rejection checks remain. The exact source bundle pin regression must
+pass locally, installed and hosted. A new pin is not VM deployment or native
+qualification, and earlier helpers/receipts are preserved.
