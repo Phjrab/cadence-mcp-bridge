@@ -36,6 +36,17 @@ receipts do not qualify this correction. Release and exact candidate remain
 BLOCKED. See [consumer correction](generic_release/FRESH_POLICY_CONSUMERS_V1.md)
 for source-scoped test/package receipts. Independent final review/CI remain gates.
 Historical sections below keep their original source scope.
+## PR149 reviewed executable binding correction, 2026-10-11
+
+Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
+now pins new launcher bytes to the independently compiled reviewed package asset
+and rejects substitute/append-code/append-comment before state/history mutation.
+Windows bootstrap69 PASS/12 OS skips; final parent, related, exact package, hosted
+and fresh review remain pending. Earlier82b207 receipts remain source-scoped
+history. This correction has0 VM/admin/EDA/ledger side effects and preserves all
+existing evidence and delegatedGREL02-08/16GiB normal integration authority.
+Public tag/Release/upload still requires exact-candidate user approval.
+
 ## PR149 directed update durability correction, 2026-10-11
 
 Fresh review found reverse preflight transitions and missing retry fsync barriers.
@@ -47,6 +58,29 @@ local source correction only: VM/admin/EDA/ledger side effects0. Prior receipts,
 open PRs, history, grants and cumulative consumption remain preserved. Continue
 currentGREL02-08/16GiB conditional integration; public candidate approval remains.
 See OPERATOR_RUNNER_COEXISTENCE_V1.md. Earlier dated records remain history.
+
+## Final receipt content observation namespace correction, 2026-10-11
+
+Fresh exact0d72108 review found that the final receipt hash ran after its earlier
+fixed-directory check. A same-UID rename during that hash left the proc-fd file
+entry readable. After the last content hash and file-entry check, read_receipt now
+reauthenticates the full fixed parent/directory namespace and repeats held file and
+directory metadata stability. No content read or fsync follows that final check.
+Four additional complete owned Linux apply/rollback cases detach the directory
+during the final hash or final file-entry lookup and retain its original evidence.
+The held-target/fixed-lock/resource_guard correction is retained; no new mutation
+scope, schemas, authority, platform abstraction or transport allowance is added.
+
+Previous0d72108 exact hosted Linux245 PASS/0skip and isolated installed32-state
+preservation PASS remain source-specific history. Updated-source connected local
+168 PASS/107 Windows POSIX/symlink skips; Ruff/mypy72/security18/strict locked audit/
+85 schemas and exact wheel/sdist/license/content/installed32-state preservation
+PASS. Exact updated hosted/fresh independent review and actual read-only332-target
+inventory remain pending gates. Current-VM contact/admin actions,
+simulations and result reservations remain0 in this correction. The user16GiB/500/
+20,GREL02-08 and conditional normal merge delegation persists; exact public tag,
+Release/upload requires the separate final approval. Earlier artifacts, failed
+review evidence, installed helpers and cumulative ledger are retained unchanged.
 
 ## Held target and fixed resource-lock race correction, 2026-10-11
 

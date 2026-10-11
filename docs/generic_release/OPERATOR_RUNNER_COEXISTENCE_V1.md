@@ -1,3 +1,20 @@
+## Reviewed preflight replacement launcher, 2026-10-11
+
+Fresh review P1 found that equality of non-launcher assets did not authenticate
+replacement launcher code. Update now requires the new executable's normalized
+bytes to match the independently compiled reviewed package launcher SHA256
+1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f.
+A self-consistent rehashed caller bundle cannot expand this preflight update into
+arbitrary Python replacement. A different future launcher needs a reviewed source
+change of that pin; no model/operator request can supply it. Old synthetic fixture
+history is explicitly distinct from the exact reviewed replacement bytes.
+
+Disposable replace/append-code/append-comment cases reject without active pointer,
+launcher, file inode or history mutation. Bootstrap69 PASS/12 Windows OS skips;
+final relevant/package/hosted/review checks and the latest repair-parent integration
+are pending. Prior82b207 package/CI receipts are source-specific history, not this
+changed installer's qualification. No VM/admin/EDA/ledger changes or public release.
+
 ## Directed preflight update and retry durability, 2026-10-11
 
 An A-to-B preflight transition now rejects a later B-to-A request when forward

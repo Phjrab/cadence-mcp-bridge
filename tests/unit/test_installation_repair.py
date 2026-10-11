@@ -1120,7 +1120,9 @@ def test_actual_detached_receipt_directory_prevents_completion(
 
 
 @pytest.mark.parametrize("rollback", [False, True])
-@pytest.mark.parametrize("race", ["read", "file-fsync", "directory-fsync"])
+@pytest.mark.parametrize(
+    "race", ["read", "file-fsync", "directory-fsync", "final-hash", "final-file-check"]
+)
 def test_actual_receipt_namespace_rechecked_after_read_and_durability(
     actual_recipe_layout, monkeypatch, rollback, race
 ):
@@ -1134,7 +1136,8 @@ def test_actual_receipt_namespace_rechecked_after_read_and_durability(
     preserved = receipt.read_bytes()
     detached = receipt.parent.with_name("preserved-during-receipt-read")
     real_read, real_fsync, real_receipt = os.read, os.fsync, repair.read_receipt
-    calls, active, renamed = 0, False, False
+    real_hash, real_lstat = repair.file_hash, os.lstat
+    calls, active, renamed, hashed = 0, False, False, False
     events = []
 
     def read_receipt(*args):
@@ -1164,9 +1167,30 @@ def test_actual_receipt_namespace_rechecked_after_read_and_durability(
             detach(fd, directory=True)
         return real_fsync(fd)
 
+    def file_hash(fd):
+        nonlocal hashed
+        selected = active and os.fstat(fd).st_ino == inode
+        if selected and race == "final-hash":
+            detach(fd)
+        result = real_hash(fd)
+        if selected:
+            hashed = True
+        return result
+
+    def lstat(path):
+        nonlocal renamed
+        if (active and hashed and not renamed and race == "final-file-check" and
+                str(path).startswith("/proc/self/fd/") and
+                str(path).endswith("/" + receipt.name)):
+            receipt.parent.rename(detached)
+            renamed = True
+        return real_lstat(path)
+
     monkeypatch.setattr(repair, "read_receipt", read_receipt)
     monkeypatch.setattr(repair.os, "read", read)
     monkeypatch.setattr(repair.os, "fsync", fsync)
+    monkeypatch.setattr(repair, "file_hash", file_hash)
+    monkeypatch.setattr(repair.os, "lstat", lstat)
     monkeypatch.setattr(repair, "emit", events.append)
     with pytest.raises(ValueError, match="repair_receipt_namespace"):
         repair.mutate(request, rollback)

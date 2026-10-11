@@ -638,6 +638,15 @@ def read_receipt(directory, name, expected, original):
             raise
         if any(getattr(final, key) != getattr(linked, key) for key in keys):
             raise ValueError("repair_receipt_race")
+        # The final hash can block after the earlier namespace observation.
+        # Rebind the fixed directory/parent after all content and entry reads;
+        # no further content read or durability operation follows this check.
+        verify_receipt_namespace(original, directory)
+        final_file, final_directory = os.fstat(fd), os.fstat(directory)
+        if any(getattr(final, key) != getattr(final_file, key) for key in keys):
+            raise ValueError("repair_receipt_race")
+        if any(getattr(directory_before, key) != getattr(final_directory, key) for key in keys):
+            raise ValueError("repair_receipt_directory_race")
         return True
     finally:
         os.close(fd)

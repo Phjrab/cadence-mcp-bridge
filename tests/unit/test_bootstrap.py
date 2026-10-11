@@ -802,10 +802,12 @@ def test_operator_state_rejects_coerced_version_without_mutation(operator_bound,
 
 @pytest.fixture
 def operator_update_pair(operator_bound):
-    source, target, previous = operator_bound
-    installer.operator_activation(str(target), previous)
+    source, target, expected = operator_bound
     launcher = source / "launcher.py"
-    launcher.write_bytes(launcher.read_bytes() + b"\n# new synthetic preflight launcher revision\n")
+    reviewed_launcher = launcher.read_bytes()
+    # The old version is explicitly synthetic history; the new executable is
+    # exactly the current independently reviewed package asset, never arbitrary.
+    launcher.write_bytes(reviewed_launcher + b"\n# synthetic historical launcher revision\n")
     manifest = json.loads((source / "manifest.json").read_bytes())
     manifest["files"]["launcher.py"] = {
         "sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
@@ -813,7 +815,17 @@ def operator_update_pair(operator_bound):
     }
     raw = installer.canonical(manifest)
     (source / "manifest.json").write_bytes(raw)
-    expected = hashlib.sha256(raw).hexdigest()
+    previous = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, previous)
+    installer.operator_activation(str(target), previous)
+    launcher.write_bytes(reviewed_launcher)
+    manifest["files"]["launcher.py"] = {
+        "sha256": hashlib.sha256(reviewed_launcher).hexdigest(),
+        "bytes": len(reviewed_launcher),
+    }
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    assert hashlib.sha256(raw).hexdigest() == expected
     bootstrap.install(source, target, expected)
     return source, target, previous, expected
 
@@ -1094,3 +1106,38 @@ def test_retained_operator_update_record_retries_failed_file_sync(tmp_path, monk
     installer._retain_exact(str(path), data)
     assert path.read_bytes() == data
     assert (path.stat().st_dev, path.stat().st_ino) == identity
+
+
+@pytest.mark.parametrize("change", ["replace", "append-code", "append-comment"])
+def test_operator_update_rejects_self_rehashed_unreviewed_launcher_without_mutation(
+    operator_update_pair, change,
+):
+    source, target, previous, _expected = operator_update_pair
+    launcher = source / "launcher.py"
+    if change == "replace":
+        launcher.write_bytes(b"import os; os.system('arbitrary-code-must-not-execute')\n")
+    else:
+        launcher.write_bytes(launcher.read_bytes() + (
+            b"\nraise SystemExit('arbitrary-code-must-not-execute')\n"
+            if change == "append-code" else b"\n# unreviewed content\n"
+        ))
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    manifest["files"]["launcher.py"] = {
+        "sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+        "bytes": len(launcher.read_bytes()),
+    }
+    raw = installer.canonical(manifest)
+    (source / "manifest.json").write_bytes(raw)
+    expected = hashlib.sha256(raw).hexdigest()
+    bootstrap.install(source, target, expected)
+    before = {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    }
+    with pytest.raises(ValueError, match="operator_update_launcher_not_reviewed"):
+        installer.operator_preflight_update(str(target), expected, previous)
+    assert {
+        p.relative_to(target): (p.read_bytes(), p.stat().st_dev, p.stat().st_ino)
+        for p in target.rglob("*") if p.is_file()
+    } == before
+    assert not (target / "operator-activation-history").exists()
