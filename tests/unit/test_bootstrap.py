@@ -433,16 +433,21 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
     original_publish = installer._publish_operator_state
     binary_identity = ((target / "bin").stat().st_dev, (target / "bin").stat().st_ino)
     target_identity = (target.stat().st_dev, target.stat().st_ino)
+    runtime_identity = ((target / "runtime").stat().st_dev, (target / "runtime").stat().st_ino)
+    version = target / "runtime" / digest
+    version_identity = (version.stat().st_dev, version.stat().st_ino)
     events = []
 
     def observed_fsync(fd):
         info = os.fstat(fd)
         if stat.S_ISDIR(info.st_mode):
             identity = (info.st_dev, info.st_ino)
-            assert identity in (binary_identity, target_identity)
-            events.append(
-                "binary_directory" if identity == binary_identity else "managed_directory"
-            )
+            identities = {
+                binary_identity: "binary_directory", target_identity: "managed_directory",
+                runtime_identity: "runtime_directory", version_identity: "version_directory",
+            }
+            assert identity in identities
+            events.append(identities[identity])
         else:
             assert stat.S_ISREG(info.st_mode)
             events.append("file")
@@ -457,6 +462,8 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
     monkeypatch.setattr(installer, "_publish_operator_state", observed_publish)
     installer.operator_activation(str(target), digest)
     assert events == [
+        "version_directory",
+        "runtime_directory",
         "file",
         "binary_directory",
         "pointer_publish",
@@ -473,7 +480,9 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
         installer.operator_activation(str(target), digest)["status"]
         == "EXISTING_EXACT_OPERATOR_ACTIVATION"
     )
-    assert events == ["binary_directory", "managed_directory"]
+    assert events == [
+        "version_directory", "runtime_directory", "binary_directory", "managed_directory"
+    ]
     assert (pointer.stat().st_dev, pointer.stat().st_ino) == identity
     assert {
         p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
@@ -508,7 +517,9 @@ def test_operator_activation_launcher_directory_sync_failure_preserves_and_recov
     def interrupted_fsync(fd):
         info = os.fstat(fd)
         if stat.S_ISDIR(info.st_mode):
-            assert (info.st_dev, info.st_ino) == binary_identity
+            if (info.st_dev, info.st_ino) != binary_identity:
+                original_fsync(fd)
+                return
             attempted.append("binary_directory")
             raise OSError("simulated launcher directory sync failure before pointer")
         attempted.append("launcher_file")
@@ -1186,3 +1197,61 @@ def test_reviewed_operator_pins_match_exact_package_assets(prepared_bound):
     manifest, contents, raw = installer.validate(str(source), expected)
     installer.reviewed_operator_assets(contents, "activation")
     assert set(installer.REVIEWED_OPERATOR_SHA256) == set(installer.FILES) - {"profile.json"}
+
+
+@pytest.mark.parametrize("barrier", ["version", "runtime"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_operator_runtime_durability_failure_preserves_pointer_and_retries(
+    operator_bound, monkeypatch, barrier, existing
+):
+    _, target, digest = operator_bound
+    version = target / "runtime" / digest
+    pointer = target / "active-operator-runner.json"
+    if existing:
+        installer.operator_activation(str(target), digest)
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    fail_path = version if barrier == "version" else version.parent
+    original = installer._sync_directory
+    calls = []
+
+    def interrupted(path):
+        calls.append(Path(path))
+        if Path(path) == fail_path:
+            raise OSError("synthetic runtime directory barrier failure")
+        original(path)
+
+    monkeypatch.setattr(installer, "_sync_directory", interrupted)
+    for _ in range(2):
+        with pytest.raises(OSError, match="runtime directory barrier failure"):
+            installer.operator_activation(str(target), digest)
+        assert pointer.exists() == existing
+        assert {
+            p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()
+        } == before
+    assert calls == ([version] if barrier == "version" else [version, version.parent]) * 2
+    monkeypatch.setattr(installer, "_sync_directory", original)
+    assert installer.operator_activation(str(target), digest)["execution_authorized"] is False
+    assert installer.operator_activation(str(target), digest)["execution_authorized"] is False
+    for name, content in before.items():
+        assert (target / name).read_bytes() == content
+
+
+def test_operator_runtime_revalidated_after_last_namespace_barrier(operator_bound, monkeypatch):
+    _, target, digest = operator_bound
+    version = target / "runtime" / digest
+    original = installer._sync_directory
+    preserved = (version / "launcher.py").read_bytes()
+    replacement = b"synthetic replaced runtime during directory sync; never executed"
+
+    def changed(path):
+        original(path)
+        if Path(path) == version.parent:
+            (version / "launcher.py").write_bytes(replacement)
+
+    monkeypatch.setattr(installer, "_sync_directory", changed)
+    with pytest.raises(ValueError):
+        installer.operator_activation(str(target), digest)
+    assert not (target / "active-operator-runner.json").exists()
+    assert not (target / "bin/cadence-operator-runner").exists()
+    assert (version / "launcher.py").read_bytes() == replacement
+    assert preserved != replacement
