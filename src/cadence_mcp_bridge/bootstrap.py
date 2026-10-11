@@ -80,6 +80,40 @@ def export_repair_helper(output: Path) -> dict[str, object]:
     }
 
 
+def _repair_inventory_script(source: bytes) -> str:
+    """Fixed stdin bootstrap for package helper bytes, never a public code input."""
+    if not source or len(source) > 131072:
+        raise ValueError("repair_helper_source_bound")
+    # Only the immutable installed resource supplies source to prepare_repair.
+    # The command line contains a length/hash, not the growing helper program.
+    return (r"""import sys
+if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+    sys.stderr.write("INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED\n")
+    sys.exit(1)
+first = sys.path[0] if sys.path else None
+sys.path[:] = [p for p in sys.path if p and p != first]
+import os
+cwd = os.path.realpath(os.getcwd())
+sys.path[:] = [p for p in sys.path if os.path.isabs(p) and os.path.realpath(p) != cwd]
+import hashlib
+stream = getattr(sys.stdin, "buffer", sys.stdin)
+source = stream.read(__HELPER_LENGTH__)
+if len(source) != __HELPER_LENGTH__ or hashlib.sha256(source).hexdigest() != "__HELPER_HASH__":
+    sys.stderr.write("INSTALLATION_REPAIR_SOURCE_REJECTED\n")
+    sys.exit(1)
+namespace = {"__name__": "fixed_repair_inventory", "__package__": ""}
+eval(compile(source, "<fixed-package-repair>", "exec"), namespace)
+try:
+    namespace["main"]()
+except Exception as failure:
+    reason = str(failure) if isinstance(failure, ValueError) else "system_error"
+    namespace["emit"]({"event": "rejected", "reason": reason,
+        "changed_state_may_be_partial": True, "execution_authorized": False})
+    sys.exit(1)
+""".replace("__HELPER_LENGTH__", str(len(source)))
+        .replace("__HELPER_HASH__", hashlib.sha256(source).hexdigest()))
+
+
 def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     """Read-only standard-VM inventory; exclusive private plan, no approval minted."""
     import json
@@ -94,12 +128,13 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     executable = shutil.which("ssh.exe")
     if executable is None:
         raise ValueError("OpenSSH unavailable")
-    code = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_text("utf-8")
+    source = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_bytes()
+    code = _repair_inventory_script(source)
     status, stdout, stderr = run_repair_inventory(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
          "/usr/bin/python", "-E", "-s", "-B", "-c", shlex.quote(code), "inventory"],
-        data, OpenSshBackend._ssh_environment(),
+        source + data, OpenSshBackend._ssh_environment(),
     )
     if status or stderr:
         raise ValueError("repair_inventory_rejected")

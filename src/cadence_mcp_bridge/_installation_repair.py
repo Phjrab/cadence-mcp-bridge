@@ -7,6 +7,10 @@ Only group/other write removal is supported; contents and owners never change.
 import sys
 
 if __name__ == "__main__":
+    # Reject inherited Python search hooks before any filesystem-backed import.
+    if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+        sys.stderr.write("INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED\n")
+        sys.exit(1)
     # The fixed operator invocation uses -E -s -B. Exclude script/CWD before
     # filesystem-backed imports; authenticated retained modules keep stdlib.
     _entry_search = sys.path[0] if sys.path else None

@@ -215,7 +215,7 @@ def test_private_plan_binds_selected_operator_profile(
     response_file = tmp_path / "synthetic-inventory-response.json"
     response_file.write_bytes(response)
     request_file = tmp_path / "synthetic-inventory-request.json"
-    request_file.write_bytes(raw)
+    request_file.write_bytes(Path(repair.__file__).read_bytes() + raw)
     real_process = subprocess.Popen
 
     def synthetic_inventory(argv, *args, **kwargs):
@@ -2047,3 +2047,48 @@ def test_external_only_library_parent_is_exact_repair_target(actual_recipe_layou
         assert stat.S_IMODE(nested.stat().st_mode) == 0o777
         assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
     assert external_before == (external.read_bytes(), external.stat().st_mode)
+
+
+@pytest.mark.parametrize("variable", ["PYTHONPATH", "PYTHONUSERBASE"])
+def test_repair_rejects_unisolated_python_before_absolute_search_hook(tmp_path, variable):
+    exported = tmp_path / "repair.py"
+    bootstrap.export_repair_helper(exported)
+    hook = tmp_path / "unreviewed-hook"
+    hook.mkdir()
+    marker = tmp_path / "unreviewed-executed"
+    (hook / "hashlib.py").write_text(
+        "from pathlib import Path\nPath(" + ascii(str(marker)) + ").write_text('executed')\n",
+        encoding="utf-8",
+    )
+    environment = dict(os.environ)
+    environment[variable] = str(hook)
+    result = subprocess.run(
+        [sys.executable, "-B", str(exported), "inventory"],
+        env=environment, input=b"{}", capture_output=True, timeout=15, check=False,
+    )
+    assert result.returncode == 1 and not result.stdout
+    assert result.stderr.splitlines() == [b"INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED"]
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("tampered", [False, True])
+def test_large_fixed_inventory_helper_uses_short_command_and_bound_stdin(tampered):
+    source = b"# owned synthetic filler\n" * 2000 + (
+        b"import sys\ndef main():\n"
+        b"    assert sys.stdin.read() == '{\"private\":true}'\n"
+        b"    sys.stdout.write('SYNTHETIC_FIXED_INVENTORY_PASS')\n"
+    )
+    assert 32768 < len(source) < 131072
+    code = bootstrap._repair_inventory_script(source)
+    assert len(code) < 8192
+    supplied = source[:-1] + b"x" if tampered else source
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", "-c", code, "inventory"],
+        input=supplied + b'{"private":true}', capture_output=True, timeout=15, check=False,
+    )
+    if tampered:
+        assert result.returncode == 1 and not result.stdout
+        assert result.stderr.splitlines() == [b"INSTALLATION_REPAIR_SOURCE_REJECTED"]
+    else:
+        assert result.returncode == 0 and not result.stderr
+        assert result.stdout == b"SYNTHETIC_FIXED_INVENTORY_PASS"
