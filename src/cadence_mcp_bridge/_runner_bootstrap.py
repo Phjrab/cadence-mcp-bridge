@@ -322,7 +322,8 @@ def operator_activation(target, expected):
             exclusive(path, launcher, 448)
         existed = os.path.lexists(state)
         if not existed:
-            exclusive(state, canonical(value))
+            _publish_operator_state(state, value)
+        _sync_directory(target)
         return {
             "status": "EXISTING_EXACT_OPERATOR_ACTIVATION"
             if existed
@@ -349,7 +350,7 @@ def operator_deactivate(target, expected):
             if _operator_state(revoked) != active:
                 raise ValueError("operator_revocation_drift")
         else:
-            exclusive(revoked, canonical(active))
+            _publish_operator_state(revoked, active)
         # A durable file alone does not persist its new directory entry. Repeat
         # this barrier for an exact marker left by an interrupted deactivation.
         _sync_directory(target)
@@ -366,6 +367,40 @@ def _sync_directory(path):
             os.fsync(fd)
         finally:
             os.close(fd)
+
+
+def _publish_operator_state(path, value):
+    # Only fixed pointer/revocation records, under the existing lifetime flock.
+    # Failed private candidates remain evidence; never parse a truncated final file.
+    raw = canonical(value)
+    if len(raw) > 8192:
+        raise ValueError("operator_state_size")
+    parent = directory(os.path.dirname(path))
+    if os.path.lexists(path):
+        if _operator_state(path) != value:
+            raise ValueError("operator_state_publish_conflict")
+        return
+    name = ".operator-state-" + digest(os.urandom(32))
+    candidate = os.path.join(parent, name)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if os.name != "nt":
+        flags |= os.O_NOFOLLOW
+    fd = os.open(candidate, flags, 384)
+    try:
+        offset = 0
+        while offset < len(raw):
+            wrote = os.write(fd, raw[offset:])
+            if wrote <= 0:
+                raise ValueError("operator_state_short_write")
+            offset += wrote
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _sync_directory(parent)
+    if regular(candidate) != raw or os.path.lexists(path):
+        raise ValueError("operator_state_publish_conflict")
+    os.rename(candidate, path)
+    _sync_directory(parent)
 
 
 def _retain_exact(path, data, mode=384):
