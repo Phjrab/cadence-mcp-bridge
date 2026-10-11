@@ -2245,3 +2245,34 @@ def test_internal_link_retarget_after_fixed_resolution_rejects_completion(
     assert injected and retained.is_symlink() and link.resolve() == retained.resolve()
     assert not any(v["event"] in {"complete", "changed"} for v in events)
     assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_internal_only_library_parents_are_exact_repair_targets(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    nested = ic / "tools.lnx86/lib/internal-only/nested"
+    nested.mkdir(parents=True)
+    nested.parent.chmod(0o777)
+    nested.chmod(0o777)
+    link = nested / "owned-internal.so"
+    link.symlink_to(code_paths[0])
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    link_before = link.lstat()
+    prepared = repair.inventory(profile)
+    assert str(nested) in prepared["plan"]["scope"]["paths"]
+    assert str(nested.parent) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    assert stat.S_IMODE(nested.stat().st_mode) == 0o755
+    assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o755
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert stat.S_IMODE(nested.stat().st_mode) == 0o777
+        assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
+    assert link_before == link.lstat()
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}

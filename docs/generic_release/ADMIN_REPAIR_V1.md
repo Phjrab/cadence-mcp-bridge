@@ -1,3 +1,16 @@
+## Internal-only library directory roles, 2026-10-11
+
+Review4240442083 is corrected: an internal library alias now adds its canonical
+in-installation entry-parent chain to the exact repair scope, just as external
+aliases already do. A writable nested directory containing only an internal .so
+cannot remain writable after a successful repair. Two owned POSIX apply/repeat/
+rollback fixtures retain alias metadata and every target byte/mode, repairing
+only the planned parent directories. This exact list remains profile-derived;
+no arbitrary recursive installation or external target mutation is introduced.
+Updated exact hosted/package/security/independent review remain gates. No actual
+VM, simulation or reservation change occurred; previous evidence remains history.
+Continuous authorized limits and the final public-candidate approval are retained.
+
 ## Last library membership and internal-link observations, 2026-10-11
 
 Independent follow-up4240407849/4240407850 is corrected. Every traversed fixed

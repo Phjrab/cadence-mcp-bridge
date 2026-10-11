@@ -1083,6 +1083,13 @@ def inventory(profile):
                 inside(resolved, code_root) for code_root in code_roots):
             raise ValueError("dependency_code_role_escape")
         if os.path.islink(path):
+            parent = os.path.realpath(os.path.dirname(path))
+            if not inside(parent, base):
+                raise ValueError("internal_link_parent_scope")
+            paths.add(parent)
+            while parent != base:
+                parent = os.path.dirname(parent)
+                paths.add(parent)
             observed = external_link_record(path, resolved)
             links[path] = {"path": path, "target": observed["target"], "resolved": resolved}
             internal[path] = observed
