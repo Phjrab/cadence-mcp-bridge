@@ -1,3 +1,16 @@
+## GREL03 exact reservation-asset pin integration, 2026-10-11
+
+The new initial-activation pin test correctly rejected the inherited GREL02 pin
+against GREL03's already reviewed append-only legacy-seal reservation helper.
+The branch-owned compiled reservations pin now binds those exact reviewed bytes
+(normalized SHA25661c04f53fb8896c9844581ad3a6b5afec1fb8ac470c8db987e419b53eb66b905).
+The helper content and prior anchors/counters are unchanged by this correction;
+only the independent source pin follows the branch's reviewed implementation.
+Failed exact-head CI/logs are retained. The pin-match regression stays enabled,
+and affected bootstrap/combined/installed/hosted gates are rerun for new source.
+Source/review identity is not replaced by operator-supplied manifest hashes.
+No VM, journal, result, reservation or source-design changes occurred.
+
 ## Retained validated migration helpers, 2026-10-11
 
 Fresh review P2 identified a path-import gap after source manifest verification.
