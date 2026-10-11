@@ -205,6 +205,16 @@ partial publication; retry the same command. `native-runtime revoke` is append-o
 and never deletes jobs or refunds reservations. Read its scope before invoking it.
 Rollback uses preserved exact predecessors and metadata, not a broad reset.
 
+If SSH times out after restarting the VM, check that your registered VM is
+running and obtain its current guest address from VMware or the guest console.
+A DHCP address change does not establish a new trusted host. Verify the existing
+registered host key at the new address before changing only your own SSH alias.
+Keep the original configuration and a rollback record; preserve other aliases
+and known_hosts. Do not disable StrictHostKeyChecking or accept a replacement key
+just to regain connectivity. Re-run the ordinary-user read-only environment and
+runner preflight before admitting work. Do not reset grants, journals or budgets
+because the address changed.
+
 For executable_permissions, obtain a bounded repair plan and preserve content
 hashes/metadata before an owner-approved repair; never run the whole server as root.
 For lock/recovery rejection, preserve the files and identify the live owner's work.

@@ -1,3 +1,27 @@
+## Current connection and source continuation, 2026-10-11
+
+The user completed the Codex application restart. Current connected tools read
+the old qualified scope and return the same successful operation without another
+execution or reservation; this does not qualify a new app submission or changed
+final assets. The earlier restart-unavailable checkpoint is preserved history.
+
+The current managed VM's DHCP address had changed. Official VMware observation,
+strict existing host-key verification and ordinary UID500 confirmed the same VM.
+Only the private SSH alias address and explicit existing host-key identity were
+updated after saving the original configuration/hash/rollback record. Guest
+installation, VM/network configuration, known_hosts and other aliases were not
+changed. Read-only current environment qualification passes; old consumed grants
+and the existing actual ledger remain retained. No new simulation/reservation.
+
+Latest source integrates fixed installation/receipt locks and single-link guards,
+durable installer retries and independently pinned launchers, isolated standalone
+Python startup, fixed storage lock/content checks with legitimate contention,
+and explicit authenticated native-module loading. Final parent/review/hosted,
+installed artifact and exact VM/app gates still apply. General release is BLOCKED,
+2.0.0 is development metadata, and no exact public candidate is authorized.
+Continue direct GREL02-08/16GiB/500/20 and related conditional normal merges;
+no repeated phase/budget/administrator approval, reset/refund or publication.
+
 ## Active PR151 lock-contended inventory correction, 2026-10-11
 
 The current direct user delegation allows GREL02-08 candidate preparation,
