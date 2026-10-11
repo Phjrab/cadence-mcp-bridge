@@ -2140,3 +2140,139 @@ def test_external_lexical_ancestor_rechecked_after_final_leaf(
     assert original.is_dir() and alternate.is_dir()
     assert baseline == (target.read_bytes(), target.stat(), leaf.lstat())
     assert leaf.lstat().st_ino == fixed.lstat().st_ino
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("library", ["ic", "spectre", "oa"])
+@pytest.mark.parametrize("drift", ["create", "rename"])
+def test_final_walk_membership_changes_during_later_target_hash_reject(
+    actual_recipe_layout, monkeypatch, rollback, library, drift
+):
+    import inspect
+    from pathlib import Path
+
+    shared, _, _, code_paths, profile = actual_recipe_layout
+    code_paths[0].chmod(0o777)
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    ms = Path(profile["tools"]["spectre"]["path"].split("/tools", 1)[0])
+    directory = {"ic": ic / "tools.lnx86/lib", "spectre": ms / "tools.lnx86/lib",
+                 "oa": ic / "oa/lib"}[library]
+    added, pending = directory / "late-unreviewed.so", shared / "preserved-pending-code"
+    raw = b"synthetic shared object; never executed"
+    if drift == "rename":
+        pending.write_bytes(raw)
+        pending.chmod(0o777)
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    real_plan, real_hash = repair.plan, repair.file_hash
+    active, hashing, injected, events = False, False, False, []
+
+    def plan(value):
+        nonlocal hashing
+        if active and inspect.currentframe().f_back.f_code.co_name == "inventory":
+            hashing = True  # The final fixed-library walk has already completed.
+        return real_plan(value)
+
+    def file_hash(fd):
+        nonlocal injected
+        result = real_hash(fd)
+        if hashing and not injected:
+            if drift == "rename":
+                pending.rename(added)
+            else:
+                added.write_bytes(raw)
+                added.chmod(0o777)
+            injected = True
+        return result
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair, "plan", plan)
+    monkeypatch.setattr(repair, "file_hash", file_hash)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="library_membership_race"):
+        repair.mutate(request, rollback)
+    assert injected and added.read_bytes() == raw and stat.S_IMODE(added.stat().st_mode) == 0o777
+    assert not any(v["event"] in {"complete", "changed"} for v in events)
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_internal_link_retarget_after_fixed_resolution_rejects_completion(
+    actual_recipe_layout, monkeypatch, rollback
+):
+    import inspect
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    code_paths[0].chmod(0o777)
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    link, retained = ic / "tools", ic / "preserved-old-tools-alias"
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    original, active, injected, events = repair.os.path.realpath, False, False, []
+
+    def realpath(path, *args, **kwargs):
+        nonlocal injected
+        result = original(path, *args, **kwargs)
+        if (active and not injected and str(path) == str(link) and
+                inspect.currentframe().f_back.f_code.co_name == "external_link_record"):
+            link.rename(retained)
+            link.symlink_to("./tools.lnx86")
+            injected = True
+        return result
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair.os.path, "realpath", realpath)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="external_link_race"):
+        repair.mutate(request, rollback)
+    assert injected and retained.is_symlink() and link.resolve() == retained.resolve()
+    assert not any(v["event"] in {"complete", "changed"} for v in events)
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_internal_only_library_parents_are_exact_repair_targets(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    nested = ic / "tools.lnx86/lib/internal-only/nested"
+    nested.mkdir(parents=True)
+    nested.parent.chmod(0o777)
+    nested.chmod(0o777)
+    link = nested / "owned-internal.so"
+    link.symlink_to(code_paths[0])
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    link_before = link.lstat()
+    prepared = repair.inventory(profile)
+    assert str(nested) in prepared["plan"]["scope"]["paths"]
+    assert str(nested.parent) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    assert stat.S_IMODE(nested.stat().st_mode) == 0o755
+    assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o755
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert stat.S_IMODE(nested.stat().st_mode) == 0o777
+        assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
+    assert link_before == link.lstat()
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}

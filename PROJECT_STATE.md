@@ -43,6 +43,30 @@ Current16GiB/500/same-change20,GREL02-08 and conditional normal merge authority
 remain; final exact public posting approval is still separate. Earlier records
 and all original ledgers, policy versions, grants and evidence remain preserved.
 
+## Held-byte launcher preflight under the existing lock, 2026-10-11
+
+Review4240425695 is corrected in the supported package preflight path. A fixed
+package entry takes the existing run.lock shared flock before reading/compiling
+any launcher code, retains the lock through the child and validates named lock
+and launcher bindings at completion. The host passes the exact locally reviewed
+package launcher hash; only matching retained bytes are compiled. A process that
+started before an A-to-B update cannot execute A while authenticating path B.
+Updates continue to use the same exclusive lock, without creating a substitute.
+The entry opens existing files read-only, uses fixed preflight arguments and
+removes CWD using builtin sys before imports. No public shell/eval/path tool or
+new arbitrary-code input is introduced. Direct mutable-bin execution is not the
+new package-bound preflight qualification interface; use runner preflight CLI.
+
+Three owned POSIX fixtures cover update before source loading, update blocked
+through the child lifetime and rejection of historical launcher bytes. Four
+portable -c/CWD marker tests reject without executing unreviewed imports.
+Windows bootstrap98 PASS/15 POSIX skips and official Ruff/mypy73 PASS. Exact
+hosted POSIX/Windows, package/security and refreshed independent review remain
+required. No actual VM, administrator, ledger, simulation or reservation changes
+occurred. Existing directGREL02-08/16GiB/500/same-change20 and conditional normal
+integration remain authorized; exact public-candidate approval stays separate.
+All prior source receipts, grants, policies and failed evidence remain history.
+
 ## Durable next-runtime update binding, 2026-10-11
 
 Independent review4240354827 is corrected: activation and preflight-only update
@@ -82,6 +106,41 @@ Two exported-helper child tests omit each flag with absolute PYTHONPATH and
 PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
+
+## Internal-only library directory roles, 2026-10-11
+
+Review4240442083 is corrected: an internal library alias now adds its canonical
+in-installation entry-parent chain to the exact repair scope, just as external
+aliases already do. A writable nested directory containing only an internal .so
+cannot remain writable after a successful repair. Two owned POSIX apply/repeat/
+rollback fixtures retain alias metadata and every target byte/mode, repairing
+only the planned parent directories. This exact list remains profile-derived;
+no arbitrary recursive installation or external target mutation is introduced.
+Updated exact hosted/package/security/independent review remain gates. No actual
+VM, simulation or reservation change occurred; previous evidence remains history.
+Continuous authorized limits and the final public-candidate approval are retained.
+
+## Last library membership and internal-link observations, 2026-10-11
+
+Independent follow-up4240407849/4240407850 is corrected. Every traversed fixed
+library directory now binds the walk's yielded names, held/named identity and
+metadata, and reobserves membership after all selected target and link reads.
+Late .so creation/rename rejects without silently expanding mutation targets.
+Excluded directory names are retained for comparison but are never traversed.
+Internal links use the same held-leaf and lexical-parent guard as compatibility
+links, including trailing validation during plan and final inventory. No new
+external code/content authority or mutation scope is introduced. These are final
+observation guards, not atomic exclusion of independent filesystem operations.
+
+Twelve owned Linux apply/rollback completion fixtures add or rename a777 library
+after the walk during a later target hash; two retarget an internal alias after
+its fixed resolution. All unreviewed bytes and prior target states are retained.
+Windows repair/bootstrap120 PASS/220 actual-platform skips; official Ruff/mypy72
+PASS. Updated exact Linux, package/security and independent review remain gates.
+Prior770f hosted363/4 checks and installed32-state PASS are historical, not proof
+for this correction. No actual VM, simulation or reservation change occurred.
+ContinuousGREL02-08/16GiB/500/same-change20 and conditional normal integration
+remain authorized; public posting still needs exact final-candidate approval.
 
 ## Lexical compatibility ancestors, 2026-10-11
 
