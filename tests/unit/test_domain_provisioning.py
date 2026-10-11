@@ -469,3 +469,51 @@ def test_retained_job_classification_obeys_serialized_anchor_capacity(domain, co
     for name, data in before.items():
         assert (root / name).read_bytes() == data
     assert migration.apply(req, "a" * 64)["anchor_created"] is False
+
+
+@pytest.mark.parametrize("changed", ["reservations.py", "installer.py", "probe.py"])
+def test_validated_helper_bytes_survive_path_replacement_and_cached_module_poisoning(
+    tmp_path, monkeypatch, changed,
+):
+    import sys
+    import types
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    values = {name: (output / name).read_bytes() for name in migration.MEMBERS}
+    marker = tmp_path / "unreviewed-code-executed"
+    replacement = ("from pathlib import Path\nPath(" + repr(str(marker)) +
+                   ").write_text('executed')\n").encode()
+    # Exact manifest-checked retained values preceded a same-UID path replacement.
+    (output / changed).write_bytes(replacement)
+    for name in ("reservations", "installer", "probe"):
+        monkeypatch.setitem(sys.modules, name, types.ModuleType("untrusted_cached_" + name))
+    monkeypatch.setattr(migration, "__package__", "")
+    monkeypatch.setattr(migration, "_VALIDATED_HELPERS", None)
+    migration.load_validated_helpers(values, str(output))
+    retained_accounting, retained_installer, retained_probe = migration.helpers()
+    assert retained_installer.canonical({"checked": True}) == b'{"checked":true}'
+    retained_accounting.counter_shape({
+        "campaign_id": "AUTO-PHASE-01", "count": 82, "result_reserved_bytes": 9798942720,
+    })
+    retained_probe.validate_profile(json.loads(EXAMPLE.read_bytes()))
+    assert not marker.exists()
+    assert (output / changed).read_bytes() == replacement
+    assert all(module is not sys.modules[module.__name__] for module in migration.helpers())
+
+
+def test_standalone_helpers_require_complete_asset_validation(monkeypatch):
+    monkeypatch.setattr(migration, "__package__", "")
+    monkeypatch.setattr(migration, "_VALIDATED_HELPERS", None)
+    with pytest.raises(ValueError, match="migration_helpers_not_validated"):
+        migration.helpers()
+
+
+
+def test_failed_asset_revalidation_clears_previous_helper_state(monkeypatch):
+    monkeypatch.setattr(migration, "__package__", "")
+    monkeypatch.setattr(migration, "_VALIDATED_HELPERS", (object(), object(), object()))
+    with pytest.raises(ValueError, match="migration_asset_location"):
+        migration.validate_assets("short")
+    with pytest.raises(ValueError, match="migration_helpers_not_validated"):
+        migration.helpers()

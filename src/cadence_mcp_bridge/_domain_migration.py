@@ -9,6 +9,7 @@ import sys
 
 LIMIT = 262144
 MEMBERS = ("migration.py", "reservations.py", "installer.py", "probe.py")
+_VALIDATED_HELPERS = None
 
 
 def canonical(value):
@@ -31,18 +32,36 @@ def closed(data):
 
 
 def helpers():
-    if __package__:
-        from cadence_mcp_bridge import _shared_reservations as accounting
-        from cadence_mcp_bridge import _runner_bootstrap as installer
-        from cadence_mcp_bridge import _environment_probe as probe
-    else:
-        import reservations as accounting
-        import installer
-        import probe
+    if not __package__:
+        if _VALIDATED_HELPERS is None:
+            raise ValueError("migration_helpers_not_validated")
+        return _VALIDATED_HELPERS
+    from cadence_mcp_bridge import _shared_reservations as accounting
+    from cadence_mcp_bridge import _runner_bootstrap as installer
+    from cadence_mcp_bridge import _environment_probe as probe
     return accounting, installer, probe
 
 
+def load_validated_helpers(values, directory):
+    # Compile only bytes retained by ALL manifest checks, never import a filename
+    # again or reuse a caller-poisoned sys.modules helper. Fixed private names.
+    import types
+
+    global _VALIDATED_HELPERS
+    _VALIDATED_HELPERS = None
+    modules = []
+    for name in ("reservations.py", "installer.py", "probe.py"):
+        module = types.ModuleType(name[:-3])
+        module.__file__ = directory + "/" + name
+        module.__package__ = ""
+        eval(compile(values[name], module.__file__, "exec"), module.__dict__)
+        modules.append(module)
+    _VALIDATED_HELPERS = tuple(modules)
+
+
 def validate_assets(expected):
+    global _VALIDATED_HELPERS
+    _VALIDATED_HELPERS = None
     # Verify ALL fixed source files before any helper import; no caller code/name.
     directory = os.path.dirname(os.path.abspath(__file__))
     if os.path.realpath(directory) != directory or len(expected) != 64:
@@ -100,6 +119,7 @@ def validate_assets(expected):
     for name in MEMBERS:
         if manifest["files"][name] != {"sha256": digest(values[name]), "bytes": len(values[name])}:
             raise ValueError("migration_asset_content_drift")
+    load_validated_helpers(values, directory)
     return expected
 
 

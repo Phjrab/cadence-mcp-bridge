@@ -1,3 +1,15 @@
+## Retained validated migration helpers, 2026-10-11
+
+Fresh review P2 identified a path-import gap after source manifest verification.
+The standalone helper now compiles only the exact retained, bounded bytes for
+fixed reservations/installer/probe module names after ALL asset hashes pass.
+It neither rereads helper paths nor uses cached helper modules. Failed validation
+clears retained authority; standalone calls before validation reject. Package
+internal synthetic calls keep normal imports and do not attest a native install.
+Replacement of each helper after read plus cached-module poisoning:29 PASS/1
+Windows POSIX skip; Ruff PASS. Exact installed/hosted/fresh review gates are
+pending. Counter, replay, retained job history and the VM have not been changed.
+
 ## PR149 reviewed executable binding correction, 2026-10-11
 
 Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
