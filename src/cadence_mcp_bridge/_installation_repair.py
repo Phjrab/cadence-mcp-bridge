@@ -866,10 +866,35 @@ def common_installation_root(ic, ms):
 
 
 
+def lexical_parent_snapshot(path):
+    # Canonical descriptors do not bind compatibility aliases such as IC615/oa.
+    # Observe each lexical parent without following its final component. Retain
+    # legitimate directory symlinks, but reject a retarget or metadata change.
+    parts = os.path.dirname(path).split("/")
+    if not path.startswith("/") or len(parts) > 128:
+        raise ValueError("external_link_race")
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    result, current = [], ""
+    for part in parts:
+        current = current.rstrip("/") + "/" + part if part else "/"
+        before = os.lstat(current)
+        if not (stat.S_ISDIR(before.st_mode) or stat.S_ISLNK(before.st_mode)):
+            raise ValueError("external_link_race")
+        target = os.readlink(current) if stat.S_ISLNK(before.st_mode) else None
+        after = os.lstat(current)
+        values = tuple(getattr(before, key) for key in fields)
+        if values != tuple(getattr(after, key) for key in fields):
+            raise ValueError("external_link_race")
+        result.append((current, values, target))
+    return result
+
+
 def external_link_record(path, expected_resolved):
     # Hold a canonical no-follow parent. Python 2.6 has no dir_fd or O_PATH;
     # proc-fd leaf operations retain the exact directory without opening vendor
     # code or following the external target for content/metadata mutation.
+    lexical = lexical_parent_snapshot(path)
     parent_path = os.path.realpath(os.path.dirname(path))
     parent_fd = open_fixed(parent_path)
     fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
@@ -904,8 +929,8 @@ def external_link_record(path, expected_resolved):
                     os.path.realpath(path) != resolved or
                     (os.readlink(entry) if is_link else None) != target):
                 raise ValueError("external_link_race")
-            # Trailing no-follow entries come after the last content/resolution
-            # read. No further pathname observation follows these identity checks.
+            # Trailing no-follow entries follow the leaf content/resolution reads.
+            # The canonical and lexical parent chains are then reobserved.
             trailing, fixed, held_parent = os.lstat(entry), os.lstat(path), os.fstat(parent_fd)
             if (any(getattr(trailing, key) != getattr(before, key) or
                     getattr(fixed, key) != getattr(before, key) for key in fields) or
@@ -921,6 +946,8 @@ def external_link_record(path, expected_resolved):
                     raise ValueError("external_link_race")
             finally:
                 os.close(final_parent)
+            if lexical_parent_snapshot(path) != lexical:
+                raise ValueError("external_link_race")
         finally:
             os.close(named_parent)
         return result

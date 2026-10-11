@@ -1,3 +1,23 @@
+## Lexical compatibility ancestors, 2026-10-11
+
+Independent review4240327313 is corrected: external-link observations now retain
+all lexical parent identities, modes, owners, timestamps and symlink targets,
+then compare them after the final leaf and canonical-parent observations.
+Legitimate compatibility directory aliases remain supported. Retargeting an alias
+cannot pass merely because the original canonical directory and same leaf inode
+still exist. Two owned POSIX fixtures retain both parents and external contents;
+the race must reject and the unchanged alias must pass. This remains a final
+observation guard, not atomic exclusion of external filesystem operations.
+
+Connected Windows repair/bootstrap120 PASS/206 platform skips and Ruff PASS.
+Exact hosted Linux, package/security and refreshed independent review are still
+required; no new VM change, simulation or reservation occurred in this fix.
+The prior root3ec actual four-directory metadata correction is source-specific
+history, not a current helper or release qualification. ContinuousGREL02-08,
+16GiB/500/same-change20 and conditional normal integration remain authorized.
+Public posting still needs final approval of the exact qualified candidate.
+Earlier dated records and all journals, results, receipts and policies remain.
+
 ## Fixed stdin inventory and isolated operator invocation, 2026-10-11
 
 The latest independent P1 review4240265879 is addressed in the primary README
