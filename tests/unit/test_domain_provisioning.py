@@ -517,3 +517,54 @@ def test_failed_asset_revalidation_clears_previous_helper_state(monkeypatch):
         migration.validate_assets("short")
     with pytest.raises(ValueError, match="migration_helpers_not_validated"):
         migration.helpers()
+
+
+@pytest.mark.parametrize("name", ["platform", "types", "subprocess"])
+def test_validated_helper_transitive_import_cannot_use_new_bundle_module(
+    tmp_path, monkeypatch, name,
+):
+    import sys
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    values = {member: (output / member).read_bytes() for member in migration.MEMBERS}
+    marker = tmp_path / "unreviewed-transitive-import"
+    (output / (name + ".py")).write_text(
+        "from pathlib import Path\nPath(" + repr(str(marker)) +
+        ").write_text('executed')\nraise RuntimeError('must-not-import')\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(output)
+    monkeypatch.setattr(sys, "path", [str(output), "", ".", *sys.path])
+    monkeypatch.delitem(sys.modules, name, raising=False)
+    monkeypatch.setattr(migration, "__package__", "")
+    monkeypatch.setattr(migration, "_VALIDATED_HELPERS", None)
+    migration.load_validated_helpers(values, str(output))
+    assert len(migration.helpers()) == 3
+    assert not marker.exists()
+    assert all(Path(entry or ".").resolve() != output for entry in sys.path)
+
+
+@pytest.mark.parametrize("name", ["json", "hashlib", "stat", "os"])
+def test_standalone_migration_startup_cannot_import_unlisted_bundle_stdlib_shadow(
+    tmp_path, name,
+):
+    import subprocess
+    import sys
+
+    output = tmp_path / "helper"
+    domain_provisioning.export(output)
+    marker = tmp_path / "unreviewed-startup-import"
+    (output / (name + ".py")).write_text(
+        "from pathlib import Path\nPath(" + repr(str(marker)) +
+        ").write_text('executed')\nraise RuntimeError('must-not-import')\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-E", "-s", "-B", str(output / "migration.py"),
+         "inventory-existing", "a" * 64],
+        cwd=output, input=b"{}", capture_output=True, timeout=15, check=False,
+    )
+    assert result.returncode == 1
+    assert result.stderr.replace(b"\r\n", b"\n") == b"OPERATOR_DOMAIN_MIGRATION_REJECTED\n"
+    assert not marker.exists()

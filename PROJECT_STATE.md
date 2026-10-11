@@ -1,3 +1,15 @@
+## Migration transitive import isolation, 2026-10-11
+
+Fresh review P2 identified that direct script launch left the staged helper
+bundle on sys.path. The retained-byte loader now removes every bundle path alias
+(including an empty/current-directory entry) before any import or compilation.
+New same-UID platform/types/subprocess files created after inventory cannot be
+resolved as dependencies of reviewed retained helpers. Fixed module names and
+complete manifest checks remain mandatory. This does not authenticate arbitrary
+caller dependencies or expand the supported standard VM. New regressions and
+exact source/installed/CI/review gates are required; prior failures are retained.
+No VM, ledger, reservation, replay, results or circuit originals changed.
+
 ## GREL03 exact reservation-asset pin integration, 2026-10-11
 
 The new initial-activation pin test correctly rejected the inherited GREL02 pin
