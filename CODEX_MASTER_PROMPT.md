@@ -1,3 +1,28 @@
+## Completion fixed-recipe membership correction, 2026-10-11
+
+Fresh exact169f4a6 review found that completion only reobserved original paths;
+new or renamed .so members in a fixed code root could escape that path list. The
+final completion check now uses a registered fixed recipe selector to reenumerate
+its full scope, requires exact original scope equality, and verifies all content/
+identity/mode/ACL records from that fresh inventory. Original path/link validation
+is retained. Arbitrary recipe IDs/directories/globs cannot select a new scope.
+The standard installation selector is explicit; the separate registered model
+recipe in the parent must retain its exact profile/model_include binding.
+
+Three portable selector cases and24 complete owned Linux cases cover create and
+rename across IC/Spectre/OA library roots for apply/rollback, no-op and postchange
+completion. New shared-writable .so evidence is preserved without mutation, and
+no complete event is emitted. The owned recovery fixture now regenerates its
+synthetic inventory records honestly after metadata changes. Prior exact169f
+hosted Linux249 PASS/0skip and installed32-state preservation remain history.
+Updated-source connected171 PASS/131 Windows POSIX/symlink skips; Ruff/mypy72/
+security18/strict locked audit/85 schemas and exact wheel/sdist/license/content/
+installed32-state preservation PASS. Updated exact hosted/fresh review/current-VM
+read-only inventory gates remain pending.0 current-VM/admin/simulation/reservation
+activity; prior helpers/artifacts/receipts and cumulative ledgers are preserved.
+Current user16GiB/500/20,GREL02-08/conditional normal merge delegation persists;
+public tag/Release/upload still needs exact-candidate final approval.
+
 ## Final receipt content observation namespace correction, 2026-10-11
 
 Fresh exact0d72108 review found that the final receipt hash ran after its earlier
