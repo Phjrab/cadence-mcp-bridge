@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 from importlib.resources import files
 
 REFERENCE_STORAGE_ROOT = "/home/buet/cds_work/.cadence_mcp"
@@ -23,7 +24,7 @@ cd "$VERSION"
 sha256sum -c manifest.sha256 >/dev/null 2>&1 || exit 69
 RUNTIME="$VERSION/runtime/$1"
 [ "$(sha256sum "$RUNTIME/manifest.json" | cut -d ' ' -f 1)" = "$1" ] || exit 69
-exec /usr/bin/python -E -s -B "$RUNTIME/storage.py" "$2" "$3"
+exec /usr/bin/python -E -s -B -c __CADENCE_STORAGE_ENTRY__ "$RUNTIME" "$1" "$2" "$3"
 """
 
 
@@ -55,7 +56,10 @@ def reference_storage_bundle() -> tuple[str, dict[str, bytes]]:
     pin = hashlib.sha256(raw).hexdigest()
     prefix = f"runtime/{pin}/"
     return pin, {
-        "run.sh": REFERENCE_STORAGE_LAUNCHER.encode("ascii"),
+        "run.sh": REFERENCE_STORAGE_LAUNCHER.replace(
+            "__CADENCE_STORAGE_ENTRY__",
+            shlex.quote(resources.joinpath("_storage_entry.py").read_text()),
+        ).encode("ascii"),
         **{prefix + name: payload for name, payload in assets.items()},
         prefix + "manifest.json": raw,
     }

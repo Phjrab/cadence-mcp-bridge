@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -36,7 +37,8 @@ def test_reference_runtime_is_complete_deterministic_and_packaged() -> None:
         raw = payloads[prefix + name]
         assert identity == {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
     assert payloads[prefix + "storage.py"] == Path(worker.__file__).read_bytes()
-    assert b'"$RUNTIME/storage.py" "$2" "$3"' in payloads["run.sh"]
+    assert b'"$RUNTIME" "$1" "$2" "$3"' in payloads["run.sh"]
+    assert b"storage_entry_source_binding" in payloads["run.sh"]
     assert b'"$RUNTIME/manifest.json"' in payloads["run.sh"]
     assert b'exec /usr/bin/python -E -s -B ' in payloads["run.sh"]
 
@@ -61,8 +63,16 @@ async def test_storage_backend_routes_only_explicit_exact_pin(
     monkeypatch.setattr(backend, "_invoke_at_path", invoke)
     assert await backend._storage_request("inventory", {}) == "{}"
     runner = config.remote_root + f"/phase-campaign/storage-mgmt-v{7 if pinned else 6}/run.sh"
-    expected = (runner, pin, "inventory", "7b7d") if pinned else (runner, "inventory", "7b7d")
-    invoke.assert_called_once_with(*expected)
+    if pinned:
+        from importlib.resources import files
+        entry = files("cadence_mcp_bridge").joinpath("_storage_entry.py").read_text()
+        directory = config.remote_root + "/phase-campaign/storage-mgmt-v7/runtime/" + pin
+        invoke.assert_called_once_with(
+            "/usr/bin/python", "-E", "-s", "-B", "-c", shlex.quote(entry),
+            directory, pin, "inventory", "7b7d",
+        )
+    else:
+        invoke.assert_called_once_with(runner, "inventory", "7b7d")
 
 
 @pytest.fixture
@@ -196,8 +206,10 @@ async def test_backend_pin_to_exact_standalone_production_layout(
     backend = OpenSshBackend(BridgeConfig(reference_storage_manifest_sha256=pin))
     calls = []
 
-    def transport(runner: str, manifest_pin: str, action: str, encoded: str) -> str:
-        assert runner.endswith("/storage-mgmt-v7/run.sh") and manifest_pin == pin
+    def transport(runner: str, *arguments: str) -> str:
+        assert runner == "/usr/bin/python" and arguments[:4] == ("-E", "-s", "-B", "-c")
+        _entry, _directory, manifest_pin, action, encoded = arguments[4:]
+        assert "storage_entry_source_binding" in _entry and manifest_pin == pin
         calls.append((action, encoded))
         reply = standalone(root, script, action, json.loads(bytes.fromhex(encoded)))
         assert reply.returncode == 0, reply.stderr.decode()
@@ -317,3 +329,57 @@ def test_memory_loaded_storage_preserves_legitimate_first_import_path(tmp_path, 
     loaded.__package__ = ""
     exec(compile(payloads[f"runtime/{pin}/storage.py"], loaded.__file__, "exec"), loaded.__dict__)
     assert sys.path[0] == stdlib
+
+
+@pytest.mark.parametrize("replace_manifest", [False, True])
+def test_pinned_entry_rejects_modified_worker_before_execution(
+    exact_posix_runtime, replace_manifest
+):
+    from cadence_mcp_bridge import _storage_entry as entry
+
+    root, script, pin = exact_posix_runtime
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    marker = root / "unreviewed-storage-executed"
+    changed = ("open(" + repr(str(marker)) + ", 'w').write('executed')\n").encode()
+    script.write_bytes(changed)
+    if replace_manifest:
+        path = script.parent / "manifest.json"
+        manifest = json.loads(path.read_bytes())
+        manifest["files"]["storage.py"] = {"sha256": hashlib.sha256(changed).hexdigest(),
+                                             "bytes": len(changed)}
+        path.write_bytes(worker.canonical(manifest))
+    with pytest.raises(ValueError, match="storage_entry_(source|manifest)_binding"):
+        entry.run(str(script.parent), pin, "inventory", "7b7d")
+    assert not marker.exists()
+    assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
+def test_pinned_entry_compiles_only_retained_authenticated_worker(
+    exact_posix_runtime, monkeypatch
+):
+    from cadence_mcp_bridge import _storage_entry as entry
+
+    root, script, _ = exact_posix_runtime
+    marker = root / "authenticated-storage-executed"
+    trusted = ("def main():\n    open(" + repr(str(marker)) +
+               ", 'w').write('authenticated')\n").encode()
+    script.write_bytes(trusted)
+    manifest_path = script.parent / "manifest.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    manifest["files"]["storage.py"] = {"sha256": hashlib.sha256(trusted).hexdigest(),
+                                          "bytes": len(trusted)}
+    raw = worker.canonical(manifest)
+    manifest_path.write_bytes(raw)
+    pin = hashlib.sha256(raw).hexdigest()
+    original, replaced = entry.read, []
+
+    def read(path):
+        value = original(path)
+        if path.endswith("/storage.py"):
+            script.write_bytes(b"raise RuntimeError('reopened unreviewed worker')\n")
+            replaced.append(True)
+        return value
+
+    monkeypatch.setattr(entry, "read", read)
+    entry.run(str(script.parent), pin, "inventory", "7b7d")
+    assert replaced == [True] and marker.read_text() == "authenticated"

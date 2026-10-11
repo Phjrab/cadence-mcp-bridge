@@ -1,3 +1,21 @@
+## Pinned storage worker entry and zero initialization fixture, 2026-10-11
+
+Independent finding4240464522 is corrected: the explicitly pinned reference
+storage backend supplies the installed fixed `_storage_entry.py` source with
+-E -s -B -c. That entry authenticates the caller's manifest pin and retained
+storage.py bytes before executing any worker code, including legacy ledgers.
+The exported launcher embeds the same bounded entry; the pinned backend does
+not execute a mutable remote launcher. Unpinned historical v6 remains an explicit
+legacy route, while fresh operator storage stays unavailable until attested.
+
+Three owned POSIX regressions cover modified worker, modified worker+manifest,
+and replacing the pathname after the authenticated source was retained. Existing
+standalone/legacy/fresh tests remain separate. Windows connected139 PASS/12 OS
+skips; Ruff/mypy80 PASS. Installed migration verification now explicitly rejects
+a fresh power result at baseline0 and checks production models after its actual
+disposable1/2 reservations. No actual VM budget/ledger/admin changes are made.
+Exact hosted, package, independent review and final VM/app remain mandatory.
+
 ## Staging startup and positive power admission, 2026-10-11
 
 Independent review4240427687/4240427689 is corrected. The fixed -c setup staging
