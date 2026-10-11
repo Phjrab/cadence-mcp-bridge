@@ -303,6 +303,17 @@ def reviewed_operator_assets(contents, action):
             raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
 
 
+def _durable_operator_runtime(version, expected, raw, contents, target):
+    # Repeat for initial, partial and completed retries before any publication.
+    # A validated runtime whose directory entry is not durable is not ready.
+    _sync_directory(version)
+    _sync_directory(os.path.dirname(version))
+    checked_manifest, checked_contents, checked_raw = validate(version, expected)
+    if checked_raw != raw or checked_contents != contents:
+        raise ValueError("operator_runtime_durability_drift")
+    target_binding(checked_manifest, checked_contents, target)
+
+
 def operator_activation(target, expected):
     target = directory(target)
     fd = _operator_lock(target)
@@ -313,14 +324,7 @@ def operator_activation(target, expected):
         if manifest["schema_version"] != 2:
             raise ValueError("operator_manifest_version")
         reviewed_operator_assets(contents, "activation")
-        # Durable assets must precede any launcher/pointer publication. Repeat
-        # both namespace barriers for an exact retained installation on retry.
-        _sync_directory(version)
-        _sync_directory(os.path.dirname(version))
-        checked_manifest, checked_contents, checked_raw = validate(version, expected)
-        if checked_raw != raw or checked_contents != contents:
-            raise ValueError("operator_runtime_durability_drift")
-        target_binding(checked_manifest, checked_contents, target)
+        _durable_operator_runtime(version, expected, raw, contents, target)
         if os.path.lexists(os.path.join(target, "execution.lock")):
             raise ValueError("active_or_unresolved_jobs")
         if os.path.lexists(os.path.join(target, "operator-runner-revoked.json")):
@@ -492,6 +496,8 @@ def operator_preflight_update(target, expected, previous):
                for suffix in (".json", ".complete.json")):
             raise ValueError("operator_update_reverse_history")
         reviewed_operator_assets(new_files, "update")
+        _durable_operator_runtime(
+            os.path.join(target, "runtime", expected), expected, new_raw, new_files, target)
         before = {"schema_version": 1, "manifest_sha256": previous}
         after = {"schema_version": 1, "manifest_sha256": expected}
         state = os.path.join(target, "active-operator-runner.json")

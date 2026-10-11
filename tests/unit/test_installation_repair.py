@@ -2092,3 +2092,51 @@ def test_large_fixed_inventory_helper_uses_short_command_and_bound_stdin(tampere
     else:
         assert result.returncode == 0 and not result.stderr
         assert result.stdout == b"SYNTHETIC_FIXED_INVENTORY_PASS"
+
+
+@pytest.mark.parametrize("retarget", [False, True])
+def test_external_lexical_ancestor_rechecked_after_final_leaf(
+    actual_recipe_layout, monkeypatch, retarget
+):
+    import inspect
+
+    shared, _, _, _, _ = actual_recipe_layout
+    original = shared / "preserved-oa-v1"
+    alternate = shared / "preserved-oa-v2"
+    original.mkdir()
+    alternate.mkdir()
+    target = shared / "preserved-vendor-leaf"
+    target.write_bytes(b"external bytes must remain unchanged")
+    leaf = original / "compatibility.so"
+    leaf.symlink_to(target)
+    # Both directories contain the same symlink inode: leaf identity alone
+    # cannot detect a lexical ancestor switch; the original canonical parent lives.
+    os.link(leaf, alternate / leaf.name, follow_symlinks=False)
+    alias = shared / "oa"
+    alias.symlink_to(original, target_is_directory=True)
+    fixed = alias / leaf.name
+    baseline = (target.read_bytes(), target.stat(), leaf.lstat())
+    real_lstat, injected = repair.os.lstat, False
+
+    def lstat(path, *args, **kwargs):
+        nonlocal injected
+        value = real_lstat(path, *args, **kwargs)
+        caller = inspect.currentframe().f_back
+        if (retarget and not injected and str(path) == str(fixed) and
+                caller.f_code.co_name == "external_link_record"):
+            alias.unlink()
+            alias.symlink_to(alternate, target_is_directory=True)
+            injected = True
+        return value
+
+    monkeypatch.setattr(repair.os, "lstat", lstat)
+    if retarget:
+        with pytest.raises(ValueError, match="external_link_race"):
+            repair.external_link_record(str(fixed), str(target))
+        assert injected
+    else:
+        result = repair.external_link_record(str(fixed), str(target))
+        assert result["resolved"] == str(target)
+    assert original.is_dir() and alternate.is_dir()
+    assert baseline == (target.read_bytes(), target.stat(), leaf.lstat())
+    assert leaf.lstat().st_ino == fixed.lstat().st_ino

@@ -24,6 +24,23 @@ Current16GiB/500/same-change20,GREL02-08 and conditional normal merge authority
 remain; final exact public posting approval is still separate. Earlier records
 and all original ledgers, policy versions, grants and evidence remain preserved.
 
+## Durable next-runtime update binding, 2026-10-11
+
+Independent review4240354827 is corrected: activation and preflight-only update
+share the version-directory/runtime-parent durability barrier and a full asset
+and target revalidation before launcher, pointer or transition-history writes.
+Initial, interrupted and completed exact retries repeat these barriers. Failure
+preserves current files and pointer; a substituted next runtime rejects before
+publication. Six portable failure/retry cases and one last-barrier replacement
+case pass; the POSIX completed-retry fixture checks actual directory fsync order.
+
+Connected Windows bootstrap94 PASS/12 platform skips. Exact hosted Linux,
+security/package and refreshed independent review remain gates; no actual VM,
+ledger, grant, simulation or reservation changes occur in this correction.
+Current directGREL02-08/16GiB/500/same-change20/conditional normal integration
+remain authorized. Public tag/Release/assets require the exact final approval.
+Earlier source evidence, policy and recovery histories are retained.
+
 ## Selected runtime namespace durability, 2026-10-11
 
 Fresh independent finding4240331189 is corrected: activation fsyncs the selected
@@ -46,6 +63,26 @@ Two exported-helper child tests omit each flag with absolute PYTHONPATH and
 PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
 Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
 package and final independent review remain gates. No VM/accounting mutation.
+
+## Lexical compatibility ancestors, 2026-10-11
+
+Independent review4240327313 is corrected: external-link observations now retain
+all lexical parent identities, modes, owners, timestamps and symlink targets,
+then compare them after the final leaf and canonical-parent observations.
+Legitimate compatibility directory aliases remain supported. Retargeting an alias
+cannot pass merely because the original canonical directory and same leaf inode
+still exist. Two owned POSIX fixtures retain both parents and external contents;
+the race must reject and the unchanged alias must pass. This remains a final
+observation guard, not atomic exclusion of external filesystem operations.
+
+Connected Windows repair/bootstrap120 PASS/206 platform skips and Ruff PASS.
+Exact hosted Linux, package/security and refreshed independent review are still
+required; no new VM change, simulation or reservation occurred in this fix.
+The prior root3ec actual four-directory metadata correction is source-specific
+history, not a current helper or release qualification. ContinuousGREL02-08,
+16GiB/500/same-change20 and conditional normal integration remain authorized.
+Public posting still needs final approval of the exact qualified candidate.
+Earlier dated records and all journals, results, receipts and policies remain.
 
 ## Fixed stdin inventory and isolated operator invocation, 2026-10-11
 
