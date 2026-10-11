@@ -1,3 +1,34 @@
+## Operator launcher directory durability, 2026-10-11
+
+PR149's further P2 found that initial activation could persist the active pointer
+while the launcher entry in its separate bin directory remained uncommitted.
+Correction f76c8d5c1000331a772fcd52614bcd9f447ae3d1 now fsyncs that directory
+before publishing a pointer and repeats the barrier for exact retries, including
+a recreated launcher with a preexisting exact pointer. A directory-sync failure
+returns no success, does not publish a new pointer, and preserves exact launcher,
+pointer and historical state for recovery under the retained lifetime domain lock.
+
+Exact bootstrap: 58 PASS / 11 Windows platform skips. Five new POSIX cases inspect
+actual file/directory descriptors and publication order, inject bin-directory sync
+failure for absent, launcher-only, complete and pointer-only states, then verify
+exact recovery and inode/history preservation. Ubuntu hosted execution and fresh
+review remain pending. Ruff/mypy72, security18/strict locked audit,85 schemas and
+installed CLI/SDK/bootstrap/43-state reinstall-uninstall preservation PASS.
+Persistent audited wheel80-member SHA256
+8dfced4add90877be811b704e369141730e4640c1b27a7f6822356b8c859fc54;
+sdist81-member a6d20e6e6c3ccb822e6f216e6de7954cdbd5c2b7ff7f658698dc7bdc3a333854.
+Installer SHA256 861581f16ed41ec330d0c038a474da90dbf9f13bac83378341cfd0ca9896ce38.
+
+Parent148's later rollback-receipt-origin correction is still awaiting normal
+integration; these receipts apply to f76c8d5 with the prior9c311 repair parent.
+Foundation branch metadata1.0.0 is separate from root152's chosen2.0 development
+metadata and is not a frozen RC. Current direct user delegation permits reviewed
+GREL02-08 integration within the retained16GiB/500-attempt/20-correction limits;
+old contrary statements below remain historical. This correction has zero VM
+contacts, actual activation/revocation, admin changes, simulations or reservations.
+Changed native assets require renewed exact qualification. Generic release BLOCKED;
+public tag/Release/artifact upload remains unapproved.
+
 ## Atomic operator state and exact parent integration, 2026-10-11
 
 Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
