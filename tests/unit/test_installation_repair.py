@@ -2526,3 +2526,55 @@ def test_compatibility_records_are_bounded_before_retaining(monkeypatch, kind, b
     if kind == "internal":
         repair.retain_compatibility_record(records, record, usage, record["path"])
         assert records == before and usage == before_usage
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", ["create", "rename"])
+def test_earlier_directory_changes_during_later_final_membership_scan_reject(
+    actual_recipe_layout, monkeypatch, rollback, drift
+):
+    from pathlib import Path
+
+    shared, _, _, code_paths, profile = actual_recipe_layout
+    code_paths[0].chmod(0o777)
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    earlier = ic / "oa/lib/late-unreviewed.so"
+    later = str(ic / "tools.lnx86/lib")
+    pending = shared / "preserved-pending-library"
+    raw = b"owned synthetic library, never executed"
+    if drift == "rename":
+        pending.write_bytes(raw)
+    before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
+    real_snapshot = repair.library_directory_snapshot
+    active, injected, calls, events = False, False, {}, []
+
+    def snapshot(path):
+        nonlocal injected
+        value = real_snapshot(path)
+        if active:
+            calls[path] = calls.get(path, 0) + 1
+            if path == later and calls[path] == 2 and not injected:
+                if drift == "rename":
+                    pending.rename(earlier)
+                else:
+                    earlier.write_bytes(raw)
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair, "library_directory_snapshot", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="library_membership_race"):
+        repair.mutate(request, rollback)
+    assert injected and earlier.read_bytes() == raw
+    assert not any(event["event"] in {"complete", "changed"} for event in events)
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}

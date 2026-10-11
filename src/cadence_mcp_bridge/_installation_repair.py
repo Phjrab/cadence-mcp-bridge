@@ -1035,6 +1035,32 @@ def library_directory_snapshot(path):
         os.close(fd)
 
 
+def library_directory_metadata(path):
+    """Metadata-only trailing guard, after all directory membership scans."""
+    lexical = lexical_parent_snapshot(path)
+    resolved = os.path.realpath(path)
+    fd = open_fixed(resolved)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISDIR(before.st_mode):
+            raise ValueError("library_membership_race")
+        values = tuple(getattr(before, key) for key in fields)
+        named = open_fixed(resolved)
+        try:
+            if values != tuple(getattr(os.fstat(named), key) for key in fields):
+                raise ValueError("library_membership_race")
+        finally:
+            os.close(named)
+        if (os.path.realpath(path) != resolved or lexical_parent_snapshot(path) != lexical or
+                values != tuple(getattr(os.lstat(path), key) for key in fields)):
+            raise ValueError("library_membership_race")
+        return digest((resolved, values, lexical))
+    finally:
+        os.close(fd)
+
+
 def retain_compatibility_record(records, observed, usage, key=None):
     """Bound retained link metadata before accumulating another full record."""
     previous = records.get(key) if key is not None else None
@@ -1260,8 +1286,15 @@ def inventory(profile):
     # The walk's yielded names can be stale even when all selected target bytes
     # are unchanged. Reobserve every traversed directory after ALL target and
     # link observations, retaining excluded directory names without traversing.
+    trailing_metadata = {}
     for path, observed in sorted(library_directories.items()):
+        trailing_metadata[path] = library_directory_metadata(path)
         if library_directory_snapshot(path)[0] != observed:
+            raise ValueError("library_membership_race")
+    # A later membership scan must not invalidate an earlier directory. No
+    # content/name scan follows this complete union's metadata-only guard.
+    for path, observed in sorted(trailing_metadata.items()):
+        if library_directory_metadata(path) != observed:
             raise ValueError("library_membership_race")
     return bounded
 

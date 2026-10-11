@@ -51,6 +51,16 @@ failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PAS
 Hosted actual POSIX and fresh final review/package remain separate pending gates.
 This correction performs no actual VM activation, EDA or accounting mutation.
 
+## Complete directory-union trailing observation, 2026-10-11
+
+Review4240623183 is corrected: metadata signatures are retained around the final
+membership pass and every traversed directory is reobserved after all membership
+scans. Creation/rename in an earlier directory during a later scan rejects before
+completion. No further content or membership scan follows that trailing guard;
+this is bounded filesystem observation, not atomic exclusion of external tools.
+Four owned Linux apply/rollback timing regressions preserve targets and failure
+evidence. Exact hosted/installed checks remain required. No VM mutation or run.
+
 ## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
 
 Review4240588448/4240588451 is corrected: native library exclusion names apply
