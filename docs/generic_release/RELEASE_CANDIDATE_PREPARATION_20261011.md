@@ -1,3 +1,13 @@
+> Current evidence supersedes earlier dated counts below: exact40c/bf6 six
+> new-circuit DC/AC/TRAN routes and fresh-host new DC CLI PASS; ledger102 /
+> 12,483,297,280 bytes. Earlier grants are fully consumed. New app submission
+> and final replacement assets remain pending. Development metadata is2.0.0.
+
+> Integrated development metadata now selects2.0.0 for the breaking bare-launch
+> migration and reviewed newer policy outputs. Exact2.0.0 installed artifacts,
+> final native/app gates and a frozen commit/hash set are still pending. Earlier
+> references to1.0.0 tested wheels remain historical, not2.0.0 acceptance.
+
 # Release candidate preparation, 2026-10-11
 
 Status: **NOT_FROZEN / NOT_RC_READY / GENERIC_RELEASE_GATE=BLOCKED**.

@@ -146,11 +146,15 @@ async def test_version_license_model_and_schema_drift_rejected(
     if change == "version":
         path = project / "pyproject.toml"
         path.write_text(
-            path.read_text(encoding="utf-8").replace('version = "1.0.0"', 'version = "1.1.0"')
+            path.read_text(encoding="utf-8").replace(
+                f'version = "{audit.__version__}"', 'version = "999.0.0"'
+            )
         )
     elif change == "runtime":
         path = project / "src/cadence_mcp_bridge/__init__.py"
-        path.write_text(path.read_text(encoding="utf-8").replace('"1.0.0"', '"1.1.0"'))
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(f'"{audit.__version__}"', '"999.0.0"')
+        )
     elif change == "license":
         (project / "LICENSE").write_text("altered grant")
     elif change == "notice":

@@ -1,3 +1,28 @@
+## Development version and final-review checkpoint, 2026-10-11
+
+Development package/runtime/lock metadata now agree on2.0.0. The published v1
+bare-launch configuration requires an explicit command migration; original22
+contracts stay pinned and newer policy output changes have separate immutable
+snapshots. Version/metadata/negative-drift checks73 PASS and locked dependency
+records are unchanged. This selects development metadata, not a frozen RC.
+
+PR148 has an additional blocking rollback-origin review: an applied exact-plan
+receipt must authenticate restoration metadata. PR151 busy inventory must avoid
+an unlocked multi-file reservation audit while retaining conservative protection.
+Both are being corrected before normal dependency-order integration. Their final
+native assets require new exact installed qualification; oldbf6/eb62 evidence is
+preserved at its original identity. PR149 pointer durability correction is pushed;
+PR150 descendant integration is in progress. No unresolved blocker is waived.
+
+Latest actual VM consumption remains102 attempts/12,483,297,280 reserved bytes;
+remaining4,696,571,904 bytes of the approved16GiB. Previous experimental grants
+are consumed. Further bounded final-code experiments use the continuing direct
+GREL02-08 authority and the same ledger, without resetting or refunding history.
+The user cannot restart the QA MCP connection; actual new app submit/restart
+remains pending and no repeat restart request is made. Release remains BLOCKED;
+no exact candidate commit/artifact hash set or public posting approval exists.
+Earlier dated checkpoints below remain historical evidence.
+
 ## Fresh host new DC and repair inventory checkpoint, 2026-10-11
 
 A new operation submitted through exact installed40c/bf6 CLI from the exported
