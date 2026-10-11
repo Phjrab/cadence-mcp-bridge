@@ -2421,3 +2421,46 @@ def test_empty_traversed_library_namespace_is_exact_repair_target(actual_recipe_
         assert stat.S_IMODE(directory.stat().st_mode) == 0o777
         assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o777
     assert before == {str(p): p.read_bytes() for p in code_paths}
+
+
+@pytest.mark.parametrize("name", ["package.itcl", "package.itk", "extensionless-source"])
+def test_fixed_tcl_code_roles_include_any_sourceable_filename(actual_recipe_layout, name):
+    from pathlib import Path
+
+    _, _, _, _, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    target = ic / "share/lib/tcltk/tcl8.4"
+    target.mkdir(parents=True)
+    script = target / name
+    script.write_bytes(b"# synthetic sourceable file\n")
+    script.chmod(0o777)
+    (ic / "tools.lnx86/lib/tcl").symlink_to(target, target_is_directory=True)
+    prepared = repair.inventory(profile)
+    assert str(script) in prepared["plan"]["scope"]["paths"]
+    repair.mutate(_receipt_request(prepared))
+    assert stat.S_IMODE(script.stat().st_mode) == 0o755
+    assert script.read_bytes() == b"# synthetic sourceable file\n"
+
+
+def test_fixed_vendor_roots_use_final_tools_segment(actual_recipe_layout):
+    from pathlib import Path
+
+    shared, _, _, _, profile = actual_recipe_layout
+    source = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0]).parent
+    parent = shared / "tools"
+    parent.mkdir()
+    destination = parent / "cadence"
+    source.rename(destination)
+
+    def relocate(value):
+        if isinstance(value, str):
+            return value.replace(str(source), str(destination))
+        if isinstance(value, dict):
+            return {key: relocate(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [relocate(item) for item in value]
+        return value
+
+    prepared = repair.inventory(relocate(profile))
+    assert prepared["plan"]["recipe_id"] == "standard-vm-trust-v1"
+    assert any(str(destination) in path for path in prepared["plan"]["scope"]["paths"])

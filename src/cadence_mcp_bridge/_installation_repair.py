@@ -1074,7 +1074,7 @@ def inventory(profile):
                 raise ValueError("executable_drift")
         finally:
             os.close(fd)
-        roots.append(os.path.realpath(path.split("/tools", 1)[0]))
+        roots.append(os.path.realpath(path.rsplit("/tools", 1)[0]))
     ic, ocean, ms = roots
     if ic != ocean or ic == ms:
         raise ValueError("standard_vm_installation_layout")
@@ -1197,8 +1197,9 @@ def inventory(profile):
                     child = expected
                 children.append(child)
             for name in filenames:
-                sourced_script = (any(inside(current, root) for root in script_roots) and
-                                  (name.endswith((".tcl", ".tm", ".msg")) or name == "tclIndex"))
+                # Tcl source/package indexes can name files of any extension.
+                # All regular content in the fixed sourced-code roots is bound.
+                sourced_script = any(inside(current, root) for root in script_roots)
                 if ".so" in name or sourced_script:
                     add(current + "/" + name)
             if len(pending) + len(directories) + len(library_directories) > MAX_ITEMS:
