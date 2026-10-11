@@ -51,6 +51,17 @@ failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PAS
 Hosted actual POSIX and fresh final review/package remain separate pending gates.
 This correction performs no actual VM activation, EDA or accounting mutation.
 
+## Empty library code namespace protection, 2026-10-11
+
+Review4240540555 is corrected: every bounded traversed directory is an exact
+metadata target, including an empty loader-visible directory with no .so file.
+The helper preserves all names/content/owner/read/execute and removes only shared
+write permissions. Two owned Linux apply/repeat/rollback cases retain original
+code bytes and verify empty namespace metadata. Current standard-VM exact target
+count must be refreshed; the earlier448/112 observation is retained historical
+evidence, not a claim about this changed recipe. No actual administrator change,
+reservation or Cadence execution occurs in this source correction.
+
 ## Actual standard-VM Tcl/Tk dependency roles, 2026-10-11
 
 Read-only latest i686 inventory exposed four standard Tcl/Tk library aliases,

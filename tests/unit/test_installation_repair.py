@@ -2394,3 +2394,30 @@ def test_standard_vm_tcl_alias_cannot_expand_to_other_installation_code(actual_r
     (ic / "tools.lnx86/lib/tcl").symlink_to(ic / "tools.lnx86/bin", target_is_directory=True)
     with pytest.raises(ValueError, match="library_directory_alias_not_enumerated"):
         repair.inventory(profile)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_empty_traversed_library_namespace_is_exact_repair_target(actual_recipe_layout, rollback):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    directory = ic / "tools.lnx86/lib/empty-code-namespace/nested"
+    directory.mkdir(parents=True)
+    directory.parent.chmod(0o777)
+    directory.chmod(0o777)
+    before = {str(p): p.read_bytes() for p in code_paths}
+    prepared = repair.inventory(profile)
+    assert str(directory) in prepared["plan"]["scope"]["paths"]
+    assert str(directory.parent) in prepared["plan"]["scope"]["paths"]
+    request = _receipt_request(prepared)
+    repair.mutate(request)
+    repair.mutate(request)
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o755
+    assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o755
+    if rollback:
+        repair.mutate(request, True)
+        repair.mutate(request, True)
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o777
+        assert stat.S_IMODE(directory.parent.stat().st_mode) == 0o777
+    assert before == {str(p): p.read_bytes() for p in code_paths}
