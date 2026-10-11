@@ -4,13 +4,30 @@ No import side effects or vendor execution. Plans and receipts are private.
 Only group/other write removal is supported; contents and owners never change.
 """
 # mypy: ignore-errors
+import sys
+
+if __name__ == "__main__":
+    # Reject inherited Python search hooks before any filesystem-backed import.
+    if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+        sys.stderr.write("INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED\n")
+        sys.exit(1)
+    # The fixed operator invocation uses -E -s -B. Exclude script/CWD before
+    # filesystem-backed imports; authenticated retained modules keep stdlib.
+    _entry_search = sys.path[0] if sys.path else None
+    sys.path[:] = [p for p in sys.path if p and p != _entry_search]
+import os
+
+if __name__ == "__main__":
+    _entry_directories = set((os.path.realpath(os.getcwd()),))
+    if "__file__" in globals():
+        _entry_directories.add(os.path.realpath(os.path.dirname(os.path.abspath(__file__))))
+    sys.path[:] = [p for p in sys.path if os.path.isabs(p) and
+                  os.path.realpath(p) not in _entry_directories]
 import errno
 import hashlib
 import json
-import os
 import stat
 import subprocess
-import sys
 
 LIMIT = 16777216
 MAX_ITEMS = 8192
@@ -894,6 +911,16 @@ def external_link_record(path, expected_resolved):
                     getattr(fixed, key) != getattr(before, key) for key in fields) or
                     any(getattr(held_parent, key) != getattr(parent, key) for key in fields)):
                 raise ValueError("external_link_race")
+            # An ancestor rename during the final fixed-leaf read can leave the
+            # held parent unchanged. Reopen its complete named no-follow chain
+            # after that read, before accepting the original fixed namespace.
+            final_parent = open_fixed(parent_path)
+            try:
+                final = os.fstat(final_parent)
+                if any(getattr(final, key) != getattr(parent, key) for key in fields):
+                    raise ValueError("external_link_race")
+            finally:
+                os.close(final_parent)
         finally:
             os.close(named_parent)
         return result
@@ -981,7 +1008,17 @@ def inventory(profile):
             raise ValueError("standard_vm_dependency_missing")
         resolved = os.path.realpath(path)
         if not inside(resolved, base):
-            # Alternative compatibility-library links are not mutation targets.
+            # External targets never enter the mutation scope. Their entries
+            # still require trusted installation-owned directory parent chains.
+            parent = os.path.realpath(os.path.dirname(path))
+            if not inside(parent, base):
+                raise ValueError("external_link_parent_scope")
+            paths.add(parent)
+            while parent != base:
+                parent = os.path.dirname(parent)
+                paths.add(parent)
+            if len(paths) > MAX_ITEMS:
+                raise ValueError("scope_size")
             external.append(external_link_record(path, resolved))
             return
         if os.path.isfile(resolved) and resolved not in exact_code and not any(
