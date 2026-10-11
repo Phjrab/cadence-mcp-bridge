@@ -163,6 +163,7 @@ Replacement of each helper after read plus cached-module poisoning:29 PASS/1
 Windows POSIX skip; Ruff PASS. Exact installed/hosted/fresh review gates are
 pending. Counter, replay, retained job history and the VM have not been changed.
 
+
 ## Initial-pin installed package evidence, 2026-10-11
 
 Exact newly changed bootstrap/fixture source passed curated wheel80/sdist81,
@@ -224,6 +225,33 @@ local source correction only: VM/admin/EDA/ledger side effects0. Prior receipts,
 open PRs, history, grants and cumulative consumption remain preserved. Continue
 currentGREL02-08/16GiB conditional integration; public candidate approval remains.
 See OPERATOR_RUNNER_COEXISTENCE_V1.md. Earlier dated records remain history.
+
+## Held external-link observation correction, 2026-10-11
+
+Fresh exact c0b4b69 review found separate pathname reads could retain a stale
+external-link tuple after a concurrent retarget. The fixed collector now holds
+the canonical no-follow parent and observes its proc-fd leaf without opening the
+external target for content or metadata changes. It binds the external entry's
+identity/metadata and immutable parent identity, and repeats literal target,
+resolution, existence, held/named parent and trailing no-follow entry checks.
+After internal target hash/ACL reads and serialization bounds, the full inventory
+reobserves every external binding. Parent mode is only checked for stability
+within each read-only observation so approved code-directory chmod can still
+complete; external entry and immutable parent identity remain authenticated.
+These are last-observation guards, not atomic exclusion of filesystem tools.
+
+Twenty-four complete owned Linux timing cases inject retarget or parent detach
+during literal-target/existence/trailing-resolution reads across apply/rollback
+and no-op/processed paths. Eight further cases inject drift during later internal
+target hashes. External bytes/metadata and partial/failed evidence are preserved;
+no complete event is emitted. Latest connected local checks: 173 PASS / 199
+Windows POSIX or symlink skips; Ruff/mypy (72 files) PASS. Updated exact security,
+package, hosted CI, fresh review and root final installed-helper actual read-only
+inventory remain pending gates. Previous exact c0b4b69 hosted POSIX 314 PASS / 0
+skips and installed 32-state preservation remain source-specific historical proof.
+No VM contact/admin/simulation/reservation or publication occurred in this fix.
+The current 16 GiB / 500 / 20, GREL-02 through GREL-08 and conditional normal merge
+authority remains active; public tag/Release/upload requires final candidate approval.
 
 ## External compatibility-link membership correction, 2026-10-11
 
