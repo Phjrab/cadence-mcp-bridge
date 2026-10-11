@@ -98,7 +98,7 @@ def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
     status, stdout, stderr = run_repair_inventory(
         [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
          "-o", "ConnectTimeout=10", environment.ssh_alias,
-         "/usr/bin/python", "-B", "-c", shlex.quote(code), "inventory"],
+         "/usr/bin/python", "-E", "-s", "-B", "-c", shlex.quote(code), "inventory"],
         data, OpenSshBackend._ssh_environment(),
     )
     if status or stderr:
