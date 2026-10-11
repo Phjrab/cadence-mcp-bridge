@@ -1,3 +1,29 @@
+## Python isolation before interpreter startup, 2026-10-11
+
+Independent P1 review4240357276 is addressed by a manifest-bound fixed POSIX
+operator launcher. The supported domain transport now invokes /bin/sh with that
+fixed bundle entry; it executes only /usr/bin/python -E -s -B and the adjacent
+migration.py, with four closed actions and one lowercase64-hex binding. The
+caller cannot supply Python flags, an interpreter, script path or shell command.
+The launcher is a fifth exact helper asset and participates in strict manifest
+and directory inventory. Import, doctor and MCP startup do not invoke migration.
+
+The in-script flag guard remains a direct-invocation diagnostic only: it cannot
+prevent usercustomize.py or .pth code already executed during interpreter startup.
+A disposable POSIX regression creates both hooks in the interpreter's actual
+versioned user site, proves they execute without -s, then checks that the fixed
+launcher suppresses both. The hosted fixture substitutes its tested interpreter;
+the distributed standard-VM launcher retains literal /usr/bin/python. Trusted
+system interpreter/site configuration remains required; no OS or security setting
+is changed. Direct python migration.py without isolated flags is unsupported.
+
+Connected Windows domain41 PASS/2 POSIX skips; official Ruff/mypy74 PASS. Exact
+hosted POSIX, package/security, fresh independent review and installed standard-VM
+validation remain gates. No VM change, simulation or reservation occurred.
+Current16GiB/500/same-change20,GREL02-08 and conditional normal merge authority
+remain; final exact public posting approval is still separate. Earlier records
+and all original ledgers, policy versions, grants and evidence remain preserved.
+
 ## Selected runtime namespace durability, 2026-10-11
 
 Fresh independent finding4240331189 is corrected: activation fsyncs the selected

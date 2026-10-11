@@ -16,6 +16,7 @@ from cadence_mcp_bridge.operator_transport import run_fixed
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 SOURCES = {
+    "domain-operator.sh": "_domain_operator.sh",
     "migration.py": "_domain_migration.py",
     "reservations.py": "_shared_reservations.py",
     "installer.py": "_runner_bootstrap.py",
@@ -119,11 +120,8 @@ def _transport(
         "-o",
         "ConnectTimeout=10",
         environment.ssh_alias,
-        "/usr/bin/python",
-        "-E",
-        "-s",
-        "-B",
-        environment.paths.managed_root + "/operator-helpers/" + expected + "/migration.py",
+        "/bin/sh",
+        environment.paths.managed_root + "/operator-helpers/" + expected + "/domain-operator.sh",
         action,
         expected,
     ]
