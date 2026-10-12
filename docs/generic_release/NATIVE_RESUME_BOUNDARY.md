@@ -1,3 +1,16 @@
+## Later actual seven-job and integration checkpoint, 2026-10-12
+
+Installed8aad03d/721fd231 is active and fixed native preflight passed. Seven
+new analyses/sweep points passed; same-ID sweep/new-process recovery added0
+executions/reservations and QA specification four statuses passed. Current109
+attempts/13,422,821,376 bytes; bounded grant retains1/128MiB for actual CodexDC.
+Continue149/150 exact review fixes and normal parent integration through151/152,
+then final installed/clean operator/app/restart andGREL08. Preserve old receipts,
+all consumed counters and original protection. Release remains BLOCKED; no public
+posting. Current user withdrew failure-stop; other exclusions remain. Full dated
+source-specific details: ADMIN_NATIVE_RESUME_20261012.md.
+Earlier inactive stage/102-accounting entries below are historical observations.
+
 ## Active repair and continuation checkpoint, 2026-10-12
 
 The direct user withdrew stop-after-test-failure; continue diagnosis/corrections

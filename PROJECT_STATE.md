@@ -104,6 +104,22 @@ submit/query/retry/restart, then exact release candidate checks. When a prepared
 QA configuration requires app reload, preserve state and end the turn to request
 only actual restart; resume after the user says restart complete.
 
+## Actual seven-job acceptance and resumed integration, 2026-10-12
+
+Installed8aad03d/721fd231 ordinary-user native activation/preflight passed.
+InverterAC/TRAN, comparatorDC/AC/TRAN and a two-pointAC sweep succeeded with
+automatic extraction/effective-input/original protection. A new-process same-ID
+sweep replay added zero executions/reservations; QA specification four statuses
+passed. Accounting109/13,422,821,376 bytes,16GiB remaining3,757,047,808;
+bounded final grant retains1/128MiB for actual Codex inverterDC. No reset/refund.
+PR148 is normally merged;149482a38c file durability correction and150 bounded
+registry integration require exact gates before normal merges and downstream
+refresh. Exact final installed/app/cleanroom/GREL08 candidate remain pending;
+general release BLOCKED, no public publication. Failures are retained and fixed;
+the user withdrew test-failure STOP. ContinueGREL02-08 under current delegation.
+See docs/generic_release/ADMIN_NATIVE_RESUME_20261012.md for source-specific scope.
+Earlier entries are preserved as historical evidence.
+
 ## Whole model-union observation and resumed inventory, 2026-10-11
 
 Independent P1 finding4240280936 is corrected: the gate retains file/ancestor

@@ -1,5 +1,45 @@
 # Administrator repair and native resume, 2026-10-12
 
+## Later actual execution and read-only recovery checkpoint
+
+The installed8aad03d source's721fd231 native bundle was subsequently confirmed,
+updated from the preserved historical activation and repeated idempotently under
+ordinary UID500. Fixed active native preflight passed. The earlier inactive-stage
+section remains a dated observation, superseded only by these later receipts.
+
+The final bounded eight-job/1GiB grant retained the existing domain/ledger and
+all spent grants. Seven new executions succeeded: inverterAC/TRAN, comparator
+DC/AC/TRAN, and an inverterAC two-point sweep at0.55/0.65V. Common registered
+worker/template, OA/ADE copies, netlisting, effective input checks and automatic
+extraction passed. Original protection and result bounds passed. No circuit-specific
+core or extraction helper was added. The remaining inverterDC is reserved for
+actual Codex submission; older successful DC evidence does not replace this gate.
+
+The sweep script initially compared variable filesystem occupancy along with
+stable accounting and failed after both points/result succeeded. A separate
+process queried, submitted the same parent ID and advanced the completed sweep;
+results matched and no execution/reservation was added. A QA-only contract syntax
+error was retained and corrected. Actual extracted AC results produced the expected
+QA PASS, FAIL, NOT_EVALUATED and CONDITION_MISMATCH; these are test thresholds,
+not user scientific specifications.
+
+Latest execution accounting:109 attempts/13,422,821,376 reserved bytes;
+16GiB leaves3,757,047,808 bytes. This eight-job grant spent7/896MiB, retaining
+1/128MiB for the app. Disk observations vary and must refresh before admission.
+No historic consumption, failure, journal or reservation was reset/refunded.
+The native source-history audit corrected the Sweep filename and included
+Specification paths; the conservative count remains18/20 with no additional
+native source correction. Shared-parent review fixes have distinct finding IDs.
+
+PR149 independent review identified additional exact-file durability gaps.
+Source482a38c addresses retained runtime files and initial launcher fsync before
+publication; local112 PASS/30 OS skips and Ruff/mypy PASS, with exact hosted,
+installed/security and refreshed review gates pending. PR150's bounded registry
+fix and normal parent integration continue. These later helper changes have not
+yet been qualified as the same exact final installed native package. Actual app
+submit/retry/restart, final clean installed checks and GREL08 candidate remain
+incomplete. No qualified release or publication is claimed.
+
 The direct user withdrew the stop-after-test-failure condition. Retain failures,
 diagnose and correct within the existing GREL02-08 delegation. Current-VM minimum
 administrator provisioning, conditional normal PR merges, 500 Spectre attempts,
