@@ -1,3 +1,13 @@
+## Actual app restart recovery PASS, 2026-10-12
+
+Actual2.0.0 reconnect/status/result/same-ID submit preserves completed revision5,
+event count5 and identical verified result. Remote110/13,557,039,104 accounting
+unchanged;0 new spend/admin changes. No restart is currently needed. Root normal
+parent integration changes no executable bytes versus installed32acbb4. Continue
+151 final CI/triage/normal merge then152/final artifact/install/GREL08 gates.
+FINAL_QUALIFICATION_20261012.md records exact evidence reuse and remaining limits.
+Earlier dated restart instructions are history, not new required user actions.
+
 ## Actual app execution passed; recovery restart required, 2026-10-12
 
 Actual Codex2.0.0 submitted/retrieved the recorded new inverterDC and retried the

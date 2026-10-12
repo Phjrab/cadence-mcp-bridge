@@ -1,22 +1,14 @@
-> Current evidence supersedes earlier dated counts below: exact40c/bf6 six
-> new-circuit DC/AC/TRAN routes and fresh-host new DC CLI PASS; ledger102 /
-> 12,483,297,280 bytes. Earlier grants are fully consumed. New app submission
-> and final replacement assets remain pending. Development metadata is2.0.0.
-
-> Integrated development metadata now selects2.0.0 for the breaking bare-launch
-> migration and reviewed newer policy outputs. Exact2.0.0 installed artifacts,
-> final native/app gates and a frozen commit/hash set are still pending. Earlier
-> references to1.0.0 tested wheels remain historical, not2.0.0 acceptance.
-
 # Standard VM installation draft for 2.0.0
 
 **DRAFT / NOT_RC_READY / DO_NOT_PUBLISH.** The final commit, versioned assets and
-SHA-256 list are not frozen. Current tested packages still report1.0.0. Complete
-final integrated native and actual Codex qualification before shipping this guide.
+SHA-256 list are not frozen. Exact installed2.0.0 now has actual Codex new-job,
+automatic result, same-ID retry and restart recovery evidence. Final integrated
+artifact/installation transition checks remain before shipping this guide.
 
 ## Host installation from reviewed release files
 
-Use Windows with Python3.12 or3.13 and your own professor-provided VM in VMware.
+Use Windows with Python3.12 and your own professor-provided VM in VMware.
+The package accepts3.13, but actual3.13 environment qualification is not claimed.
 The bridge uses the VM's existing CentOS, Cadence, PDK and license entitlement;
 do not upgrade guest Python or install Cadence/PDK from the bridge package.
 Other host/Cadence/PDK combinations remain unqualified.

@@ -1,3 +1,15 @@
+## Actual app lifecycle and final installation progress, 2026-10-12
+
+Exact installed2.0.0/source32acbb4/native553b90fa actual Codex newDC, automatic
+result, same-ID retry and actual restart recovery PASS. Result/provenance/receipt
+identity and ledger110/13,557,039,104 are retained after reconnect with0 extra
+spend. Two circuit analysis/Sweep worker evidence721fd231 is reusable only after
+verified equality of all execution assets; current553 differs installer.py alone.
+Public exact15115c hosted Windows/Ubuntu CI PASS; root final review/CI and exact
+artifact versioned upgrade/downgrade/source-archive gates remain pending. Fresh
+generic deletion/active termination remain unavailable. No publication approval.
+See FINAL_QUALIFICATION_20261012.md. Earlier receipts below retain source scope.
+
 ## Initial versioned package rehearsal checkpoint, 2026-10-11
 
 Exact development commitc76dbcba15afb46cbd67c325d7dec7551029a3d8 built2.0.0

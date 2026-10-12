@@ -1,3 +1,15 @@
+## Actual app restart recovery PASS; final integration, 2026-10-12
+
+Actual reconnected2.0.0 status/result/identical submit retain the completed
+revision5/event count5 and identical provenance. Remote accounting110/
+13,557,039,104 unchanged;0 new simulations/reservations/admin changes. Root
+normally integrates main07427767 and151/15c234c with no executable differences
+from exact installed32acbb4. Local affected151238 PASS/22 platform skips;
+exact hosted/thread gates and152/final artifact matrix remain. No restart needed
+at this checkpoint. Continue existingGREL02–08/conditional normal integration;
+public identical-candidate approval remains separate. See
+docs/generic_release/FINAL_QUALIFICATION_20261012.md. Older records are history.
+
 ## Actual installed app success and recovery restart, 2026-10-12
 
 Actual Codex2.0.0 submitted the recorded new inverterDC, automatically extracted

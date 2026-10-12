@@ -1,20 +1,9 @@
-> Current evidence supersedes earlier dated counts below: exact40c/bf6 six
-> new-circuit DC/AC/TRAN routes and fresh-host new DC CLI PASS; ledger102 /
-> 12,483,297,280 bytes. Earlier grants are fully consumed. New app submission
-> and final replacement assets remain pending. Development metadata is2.0.0.
-
-> Integrated development metadata now selects2.0.0 for the breaking bare-launch
-> migration and reviewed newer policy outputs. Exact2.0.0 installed artifacts,
-> final native/app gates and a frozen commit/hash set are still pending. Earlier
-> references to1.0.0 tested wheels remain historical, not2.0.0 acceptance.
-
 # Release notes draft: 2.0.0
 
-**NOT_FROZEN / NOT_RC_READY / DO_NOT_PUBLISH.** Version2.0.0 is a provisional
-compatibility recommendation. No exact candidate commit or asset/hash set is
-frozen. Current package metadata and tested wheels remain1.0.0. Fresh actual
-Codex submission/retry/restart and final integrated native qualification are
-incomplete; the generic release gate remains **BLOCKED**.
+**NOT_FROZEN / NOT_RC_READY / DO_NOT_PUBLISH.** Version2.0.0 reflects the required
+launch migration. Exact installed2.0.0 has actual new Codex job/extraction/result/
+same-ID retry/restart evidence. Final integrated artifacts, installation transitions
+and candidate commit/file/hash set remain pending; the release gate is **BLOCKED**.
 
 ## Breaking launch change and migration
 
@@ -58,15 +47,16 @@ Registered measurement/specification definitions remain bound to provenance,
 units and conditions. Missing targets yield NOT_EVALUATED; these tests make no
 claim that a QA circuit meets an invented performance goal or is optimal.
 
-Current actual standard-VM evidence includes two distinct inverter/comparator
-sources, fresh DC/AC/TRAN with automatic extraction on prior qualified bundles,
-and all six routes plus AC two-point Sweep on exact installed40c/bf6c20. Effective
-inputs and original/source/model protections passed. Same-ID/new-process replay
-adds no execution/reservation. Actual Codex latest-bundle status/result reads and
-an empty-local-journal same-domain replay and fresh-host NEW inverter DC CLI passed. **A fresh actual app submission
-and restart acceptance are still pending.** Final repair-helper/installer changes
-alter native assets, so these observations must not be relabeled as acceptance
-of an untested replacement bundle or an exact2.0.0 candidate.
+Current actual standard-VM evidence covers two distinct new inverter/comparator
+sources through the same registered implementation. Installed8aad03d/721fd231
+completed inverterAC/TRAN, comparatorDC/AC/TRAN and AC two-point Sweep; exact
+installed32acbb4/553b90fa completed a new inverterDC through actual Codex.
+All six analysis routes automatically extract bounded results and protect effective
+inputs/source/model baselines. The later bundle changes installer.py alone; all
+worker/rendering/input/reader and other native bytes match. Same-ID/new-process
+Sweep recovery and actual Codex restart/query/retry add no spend. QA specification
+controls cover PASS/FAIL/NOT_EVALUATED/CONDITION_MISMATCH without invented goals.
+Final integrated artifacts and installation transitions remain separate gates.
 
 Observed reference versions are CentOS6.5 i686/Python2.6.6, Virtuoso
 IC6.1.5.500.15 and Spectre12.1.0.347.isr3, with ordinary OCEAN execution observed
@@ -84,14 +74,11 @@ the current already-used VM refuses fresh accounting. New host settings can
 retain the same remote ledger and replay protection. Imports, doctor and server
 startup do not provision or perform administrator repair automatically.
 
-The managed validation VM currently has an authorized16GiB cumulative result
-ceiling, Spectre500 and same-change corrections20. Those are that VM's policy,
-not defaults for another user. Current observations102 attempts and
-12,483,297,280 reserved bytes are preserved; each new admission must read current
-accounting and authority. Failures remain charged. Disk floors and per-job size
-limits stay active. The physical allowance conservatively includes all retained
-native reservations after completion, so admission can stop before the measured
-occupied bytes alone would require. No automatic refund/reset/deletion exists.
+Operators choose and approve their own resource limits. The current validation VM
+retains all consumed attempts and reservations under its existing authorized policy;
+those settings are not defaults for another operator. Each admission reads current
+accounting/consent/disk conditions. Failures remain charged, disk floors and per-job
+size checks stay active, and no automatic refund/reset/deletion exists.
 
 Minimum installation metadata repair requires the actual VM owner's authority,
 exact targets and recoverable records. MCP, SSH, OA/ADE copies, EDA, extraction
@@ -101,8 +88,8 @@ or arbitrary SKILL/OCEAN interface, and no license or PDK content modification.
 Keep old exact wheels, client settings, bundles, grants and journals when updating.
 Immutable stage/update/repeat and append-only history preserve prior evidence.
 A private published-v1/40c host code swap and rollback/re-upgrade preserves
-original schemas and eight disposable durable/legacy files. Both currently tested
-wheels report1.0.0, so final semantic2.0.0 upgrade/downgrade is not yet qualified.
+original schemas and eight disposable durable/legacy files. Historical versioned1.0-to2.0 rehearsals passed; the final artifact transition
+must still be checked at the exact candidate.
 Old v1 cannot run `serve-operator`; restore explicit old client settings and do
 not reset new operator state. Host package rollback and native bundle rollback
 are separate compatibility checks. Uninstall must preserve operator/remote data.

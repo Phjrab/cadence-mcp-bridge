@@ -1,5 +1,12 @@
 # Actual installed app execution and restart checkpoint, 2026-10-12
 
+Recovery restart COMPLETED: actual QA2.0.0 status/result/identical submit retain
+the original revision5/event count5, result and provenance byte-equivalent.
+Fresh remote accounting remains110/13,557,039,104;0 new spend. Private actual
+restart receipts and summary are alongside earlier actual-tools evidence. The
+restart instructions below are historical, not another request to restart.
+Continue final qualification/integration. See FINAL_QUALIFICATION_20261012.md.
+
 The actual Codex QA connection now reports development2.0.0, the expected two
 operator designs and catalog semantic hashes. Independent exact installed wheel/
 sdist hashes and105 package files match the retained32acbb4 artifacts. Ordinary

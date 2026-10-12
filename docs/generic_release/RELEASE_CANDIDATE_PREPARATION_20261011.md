@@ -1,3 +1,10 @@
+> Latest2026-10-12 evidence: exact installed2.0.0/source32acbb4/native553b90fa
+> actual Codex newDC/extraction/result/retry/actual restart PASS with0 duplicate spend.
+> Native execution assets equal earlier seven-job721fd231 except installer.py.
+> Normal PR150 main07427767 and final15115c CI PASS; integrated candidate/artifact/
+> versioned transition/source archives remain pending. This dated preparation file
+> below is preserved history; use FINAL_QUALIFICATION_20261012.md for current scope.
+
 # Release candidate preparation, 2026-10-11
 
 Status: **NOT_FROZEN / NOT_RC_READY / GENERIC_RELEASE_GATE=BLOCKED**.

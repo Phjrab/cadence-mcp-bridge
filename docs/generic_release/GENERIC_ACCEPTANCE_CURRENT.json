@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
-  "observed_date": "2026-10-11",
+  "observed_date": "2026-10-12",
   "generic_release_gate": "BLOCKED",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
+  "source_checkpoint": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
   "later_scope_correction": "CLOSED_STATIC_GRAMMAR_RESERVED_ANALYSIS_MASTERS_AND_PROTECTION_PRAGMAS_LOCAL_PACKAGE_SIX_ACTUAL_PY26_INPUTS_PASS_FINAL_CI_REVIEW_PENDING",
-  "live_native_bundle_sha256": "bf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9",
+  "live_native_bundle_sha256": "553b90fa7fae5629f7acd4d13a37dc010ceb1201bc9bb593edb2084c770240ee",
   "publication_authorized": false,
   "resource": {
-    "attempts_observed": 102,
-    "reserved_bytes_observed": 12483297280,
+    "attempts_observed": 110,
+    "reserved_bytes_observed": 13557039104,
     "result_ceiling_bytes": 17179869184,
-    "remaining_bytes": 4696571904,
+    "remaining_bytes": 3622830080,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
-    "new_simulations_this_continuation": 3,
-    "new_reservations_this_continuation": 402653184,
-    "reserved_mib_observed": 11905,
-    "remaining_mib": 4479
+    "new_simulations_this_continuation": 0,
+    "new_reservations_this_continuation": 0,
+    "reserved_mib_observed": 12929,
+    "remaining_mib": 3455
   },
   "mandatory": [
     {
@@ -48,33 +48,33 @@
     },
     {
       "id": "G06",
-      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_PASS_FINAL_CANDIDATE_PENDING",
-      "evidence_scope": "Currentbf6 two registered sources complete all six DC/AC/TRAN routes with effective inputs, automatic extraction, bounded completed results; final replacement candidate pending."
+      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
+      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
     },
     {
       "id": "G07",
-      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_AND_AC2_INPUTS_PASS",
-      "evidence_scope": "Currentbf6 all six route jobs and AC2 points verify effective inputs and protected source/library/model integrity."
+      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
+      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
     },
     {
       "id": "G08",
-      "status": "ACTUAL_CURRENT_BUNDLE_SIX_ROUTES_AND_AC2_EXTRACTION_PASS",
-      "evidence_scope": "Currentbf6 installed common worker extracts DC/AC/TRAN plus AC2 with bounded completed-tree size, without circuit-specific helpers."
+      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
+      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
     },
     {
       "id": "G09",
-      "status": "ACTUAL_EXACT_INSTALLED_AC2_SWEEP_RETRY_PASS",
-      "evidence_scope": "Independent currentbf6 installed AC2 completes; subprocess submit/advance retries add0. Earlier DC3/AC2 retained separately."
+      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
+      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
     },
     {
       "id": "G10",
-      "status": "ACTUAL_SECOND_BATCH_PASS",
-      "evidence_scope": "First batch followed by independent second sweep batch under the same retained accounting."
+      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
+      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
     },
     {
       "id": "G11",
-      "status": "PARTIAL_ACTUAL_RESTART_AND_FRESH_HOST_REPLAY_PASS",
-      "evidence_scope": "Actual subprocess retries and empty host-journal remote reconstruction preserve consumed budget/replay; app restart/fresh-submit pending; response-loss fixtures remain synthetic."
+      "status": "ACTUAL_RETRY_RESTART_PASS_SYNTHETIC_UNKNOWN_AND_PARTIAL_CASES_PASS_FINAL_CANDIDATE_PENDING",
+      "evidence_scope": "Actual operation and Sweep new-process replay plus actual Codex restart retain IDs/results with zero duplicate spend. Response-loss and partial-publication cases are synthetic; exact final CI remains required."
     },
     {
       "id": "G12",
@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "PARTIAL_ACTUAL_RESTART_PLAN_STATUS_RESULT_AND_SAME_ID_REPLAY_PASS_NEW_APP_JOB_PENDING",
-      "evidence_scope": "User reported Codex restart. Actual reconnected QA tools plan exact grant93021/currentbf6, reconcile prior fresh-host DC to SUCCEEDED, same-ID submit preserves event_count6 and result retrieval verifies terminal/content/PSF/protected originals. Read-only actual ledger remains102/12,483,297,280. New app submission on a new bounded grant and final replacement assets remains pending."
+      "status": "ACTUAL_EXACT_INSTALLED_NEW_APP_JOB_QUERY_RETRY_RESTART_PASS",
+      "evidence_scope": "Installed2.0.0/source32acbb4 actual Codex submitted new inverterDC, extracted/retrieved verified result, retried sameID, then actual app restart preserved revision5/event_count5/result/provenance and accounting110/13,557,039,104. Final integrated artifact identity remains separate."
     },
     {
       "id": "G16",
@@ -128,7 +128,8 @@
     "NATIVE_UPDATE_AND_RESULTS_V1.md",
     "NATIVE_SWEEP_SPEC_V1.md",
     "NATIVE_RESUME_BOUNDARY.md",
-    "GREL_07_RESULT.md"
+    "GREL_07_RESULT.md",
+    "FINAL_QUALIFICATION_20261012.md"
   ],
   "synthetic_vm_scenarios": 17,
   "current_parser_actual_baselines": 6,
@@ -225,5 +226,17 @@
     "new_app_jobs": 0,
     "reason": "authority_inactive",
     "restart": "USER_CURRENTLY_UNAVAILABLE"
+  },
+  "current_actual_app": {
+    "bridge_version": "2.0.0",
+    "source_commit": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
+    "fresh_new_job": "PASS",
+    "automatic_result": "PASS",
+    "same_id_retry": "PASS_NO_EXTRA_SPEND",
+    "actual_restart": "PASS_IDENTICAL_RESULT_AND_RECEIPT",
+    "accounting_attempts": 110,
+    "accounting_reserved_bytes": 13557039104,
+    "developer_private_journal_dependency": false,
+    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
   }
 }

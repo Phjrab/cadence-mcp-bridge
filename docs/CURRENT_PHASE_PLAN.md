@@ -1,3 +1,14 @@
+## Actual app recovery PASS; final candidate gates, 2026-10-12
+
+Actual restarted Codex2.0.0 status/result/same-ID submit PASS with identical
+revision5/event count5/content/provenance and unchanged110/13,557,039,104 ledger.
+No additional simulation/reservation/admin/configuration change or restart needed.
+Normally integrated root executable bytes equal installed32acbb4;15115c affected
+238 PASS/22 Windows skips, final exact CI/thread/merge and152/installed versioned
+matrix/source archives/release assets pending. Continue authorized scope; no
+new grant/reset/refund/publication. See generic_release/FINAL_QUALIFICATION_20261012.md.
+Earlier restart requirements are preserved completed checkpoints.
+
 ## Actual app execution passed; recovery restart required, 2026-10-12
 
 Current actual Codex2.0.0 new inverterDC submit/extraction/result/same-ID retry

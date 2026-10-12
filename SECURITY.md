@@ -10,13 +10,15 @@ observed behavior, and a description of the trust boundary involved. Remove
 credentials, license endpoints, proprietary circuits, PDK/model contents, raw
 results, private paths and unrestricted logs before sending evidence.
 
-The current generic operator route is unqualified and denies native execution.
-Configuration or a locally matching grant form is not execution authorization.
-Executable/dependency trust, physical resource identity, shared accounting and
-operator confirmation must all pass before a future native path can be enabled.
+Generic execution is opt-in through complete operator-owned registration and
+an explicitly activated immutable native bundle. Configuration or a locally
+matching grant form is not execution authorization. Executable/dependency trust,
+physical resource identity, shared accounting, current capacity/disk checks and
+independent OS-operator confirmation must pass before any new execution. Missing
+or unqualified bindings fail closed; there is no developer-reference fallback.
 No generic shell, SSH, SKILL or OCEAN evaluation interface is supported.
 
-Public CI uses disposable GitHub-hosted Windows runners, read-only token permission,
+Public CI uses disposable GitHub-hosted Windows/Linux runners, read-only token permission,
 pinned reviewed actions, a fixed uv binary checksum and locked dependencies. It
 runs no Cadence/PDK/laboratory VM calls and uploads no artifacts or private evidence.
 Fork PR code is never automatically run on a self-hosted licensed system. Workflow
