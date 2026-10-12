@@ -1,5 +1,11 @@
 # Exact installed app restart checkpoint, 2026-10-12
 
+This initial configuration-reload checkpoint is now historical: actual Codex
+loaded2.0.0 and new inverterDC execution/extraction/result/same-ID retry passed.
+Use ACTUAL_APP_EXECUTION_CHECKPOINT_20261012.md for the current completed-operation
+recovery restart, accounting110/13,557,039,104 and normally merged PR15007427767.
+The original prepared records and all earlier source-specific evidence are retained.
+
 The direct user requires ending the turn when actual Codex restart is needed,
 then resuming after their restart-complete message. The QA configuration is now
 applied; do not infer that the running app has loaded it. Existing GREL02-08,

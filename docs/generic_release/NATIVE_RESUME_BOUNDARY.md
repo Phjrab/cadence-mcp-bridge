@@ -1,3 +1,14 @@
+## Actual app execution passed; recovery restart required, 2026-10-12
+
+Actual Codex2.0.0 submitted/retrieved the recorded new inverterDC and retried the
+same ID without spend. Exact installed105 files/artifact pins and UID500 active
+preflight PASS. Fresh110/13,557,039,104 accounting retains spent remainder1/128MiB;
+16GiB remaining3,622,830,080. PR150 normally merged07427767, remote verified.
+Per user procedure, end for actual app restart recovery; then query/retry the same
+ID and verify no new accounting. Continuous151/152/GREL08 work stays authorized;
+no new grant/reset/refund/publication. Full exact resume and retained failure:
+ACTUAL_APP_EXECUTION_CHECKPOINT_20261012.md. Earlier reload checkpoint is history.
+
 ## Actual app restart required, 2026-10-12
 
 Latest installed2.0.0/native553b90fa ordinary-user update/repeat/preflight passed.

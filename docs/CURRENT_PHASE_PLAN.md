@@ -1,3 +1,16 @@
+## Actual app execution passed; recovery restart required, 2026-10-12
+
+Current actual Codex2.0.0 new inverterDC submit/extraction/result/same-ID retry
+PASS; ledger110/13,557,039,104, exactly1/128MiB added and retry0. Exact installed
+pins/105 files and UID500 native preflight PASS. PR150 normally merged07427767,
+remote verified;151 d70 exact four CI PASS with final integration/triage pending.
+End after saved state for actual app recovery restart. After restart-complete,
+observe/query/retry the same completed ID and reconcile unchanged accounting;
+never renew the spent remainder or mint another job. Continue151/152 and exact
+GREL08 gates. Public candidate posting remains subject to final approval.
+See generic_release/ACTUAL_APP_EXECUTION_CHECKPOINT_20261012.md. Earlier checkpoint
+below records the previous configuration reload, already completed.
+
 ## Actual app restart required, 2026-10-12
 
 Latest installed2.0.0/native553b90fa ordinary-user update/repeat/preflight passed.

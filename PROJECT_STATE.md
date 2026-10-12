@@ -1,3 +1,17 @@
+## Actual installed app success and recovery restart, 2026-10-12
+
+Actual Codex2.0.0 submitted the recorded new inverterDC, automatically extracted
+and retrieved its verified bounded result, and retried the same ID without extra
+spend. Exact105 installed files/artifact pins and UID500 native preflight PASS.
+Fresh ledger110/13,557,039,104; added1/128MiB, remaining3,622,830,080 of16GiB.
+The remainder grant is fully spent; preserve it and all original history.
+PR150 normally merged as07427767a184c9263a5843bf2340f7bb99b414fa, remote verified;
+PR151 exactd70 four CI PASS, final parent/triage/merge pending. Save and end for
+actual app restart-dedupe per user procedure, then continue151/152/final matrix/
+GREL08 without phase reapproval. No new configuration/admin changes/publication.
+See docs/generic_release/ACTUAL_APP_EXECUTION_CHECKPOINT_20261012.md.
+Earlier checkpoints are preserved historical evidence.
+
 ## Active repair and continuation checkpoint, 2026-10-12
 
 The direct user withdrew stop-after-test-failure; continue diagnosis/corrections
