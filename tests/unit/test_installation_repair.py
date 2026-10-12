@@ -2205,6 +2205,97 @@ def test_final_walk_membership_changes_during_later_target_hash_reject(
 
 
 @pytest.mark.parametrize("rollback", [False, True])
+@pytest.mark.parametrize("drift", ["content-restored-mtime", "mode", "same-byte-replacement"])
+def test_targets_change_during_trailing_membership_reject(
+    actual_recipe_layout, monkeypatch, rollback, drift
+):
+    from pathlib import Path
+
+    _, _, _, code_paths, profile = actual_recipe_layout
+    target = code_paths[0]
+    target.chmod(0o777)
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    ic = Path(profile["tools"]["virtuoso"]["path"].split("/tools", 1)[0])
+    later = str(ic / "tools.lnx86/lib")
+    real_snapshot = repair.library_directory_snapshot
+    raw, info = target.read_bytes(), target.stat()
+    injected, active, calls, events = False, False, {}, []
+
+    def snapshot(path):
+        nonlocal injected
+        value = real_snapshot(path)
+        if active:
+            calls[path] = calls.get(path, 0) + 1
+            if path == later and calls[path] == 2 and not injected:
+                if drift == "content-restored-mtime":
+                    target.write_bytes(b"X" * len(raw))
+                    os.utime(target, ns=(info.st_atime_ns, info.st_mtime_ns))
+                elif drift == "mode":
+                    target.chmod(stat.S_IMODE(info.st_mode) ^ 0o002)
+                else:
+                    replacement = target.with_name(target.name + ".replacement")
+                    replacement.write_bytes(raw)
+                    replacement.chmod(stat.S_IMODE(info.st_mode))
+                    os.utime(replacement, ns=(info.st_atime_ns, info.st_mtime_ns))
+                    replacement.replace(target)
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair, "library_directory_snapshot", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="inventory_target_race"):
+        repair.mutate(request, rollback)
+    assert injected and not any(event["event"] in {"changed", "complete"} for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_later_final_content_scan_cannot_invalidate_earlier_target(
+    actual_recipe_layout, monkeypatch, rollback
+):
+    _, _, _, code_paths, profile = actual_recipe_layout
+    request = _receipt_request(repair.inventory(profile))
+    repair.mutate(request)
+    if rollback:
+        repair.mutate(request, True)
+    earlier, later = sorted(code_paths)[:2]
+    raw, info = earlier.read_bytes(), earlier.stat()
+    real_snapshot = repair.snapshot
+    active, injected, calls, events = False, False, {}, []
+
+    def snapshot(path):
+        nonlocal injected
+        value = real_snapshot(path)
+        if active:
+            calls[path] = calls.get(path, 0) + 1
+            if path == str(later) and calls[path] == 2 and not injected:
+                earlier.write_bytes(b"X" * len(raw))
+                os.utime(earlier, ns=(info.st_atime_ns, info.st_mtime_ns))
+                injected = True
+        return value
+
+    def emit(value):
+        nonlocal active
+        events.append(value)
+        if value["event"] == "validated":
+            active = True
+
+    monkeypatch.setattr(repair, "snapshot", snapshot)
+    monkeypatch.setattr(repair, "emit", emit)
+    with pytest.raises(ValueError, match="inventory_target_race"):
+        repair.mutate(request, rollback)
+    assert injected and not any(event["event"] in {"changed", "complete"} for event in events)
+
+
+@pytest.mark.parametrize("rollback", [False, True])
 def test_internal_link_retarget_after_fixed_resolution_rejects_completion(
     actual_recipe_layout, monkeypatch, rollback
 ):
