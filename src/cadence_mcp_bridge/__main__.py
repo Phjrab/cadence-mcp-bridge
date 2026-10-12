@@ -137,6 +137,11 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--output", type=Path, required=True)
     export = actions.add_parser("export-installer")
     export.add_argument("--output", type=Path, required=True)
+    repair_plan = actions.add_parser("repair-plan")
+    repair_plan.add_argument("--profile", type=Path, required=True)
+    repair_plan.add_argument("--output", type=Path, required=True)
+    repair_export = actions.add_parser("export-repair-helper")
+    repair_export.add_argument("--output", type=Path, required=True)
     preflight = actions.add_parser("preflight")
     preflight.add_argument("--bundle", type=Path, required=True)
     preflight.add_argument("--expected-plan-sha256", required=True)
@@ -363,6 +368,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 report = bootstrap.bundle(arguments.profile, arguments.output)
             elif arguments.runner_action == "export-installer":
                 report = bootstrap.export_installer(arguments.output)
+            elif arguments.runner_action == "repair-plan":
+                report = bootstrap.prepare_repair(arguments.profile, arguments.output)
+            elif arguments.runner_action == "export-repair-helper":
+                report = bootstrap.export_repair_helper(arguments.output)
             elif arguments.runner_action == "preflight":
                 report = bootstrap.preflight(arguments.bundle, arguments.expected_plan_sha256)
             elif arguments.runner_action == "install":

@@ -126,6 +126,16 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
             raise ValueError("content workflow granted execution")
         return result
 
+    repair_export = command(
+        ["runner", "export-repair-helper", "--output", str(workspace / "repair.py")]
+    )
+    assert repair_export["protected_permissions_changed"] is False
+    assert repair_export["remote_contact"] is False
+    assert repair_export["sha256"] == hashlib.sha256(
+        (workspace / "repair.py").read_bytes()
+    ).hexdigest()
+    command(["runner", "export-repair-helper", "--output", str(workspace / "repair.py")],
+            accepted=False)
     command(["runner", "export-installer", "--output", str(workspace / "installer.py")])
     report = command(
         [

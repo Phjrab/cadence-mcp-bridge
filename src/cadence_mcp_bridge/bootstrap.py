@@ -65,6 +65,101 @@ def export_installer(output: Path) -> dict[str, object]:
     }
 
 
+def export_repair_helper(output: Path) -> dict[str, object]:
+    """Export only; import/startup/doctor never changes installation metadata."""
+    output = _local_path(output)
+    data = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_bytes()
+    installer.exclusive(str(output), data)  # type: ignore[no-untyped-call]
+    return {
+        "status": "OPERATOR_REPAIR_HELPER_EXPORTED",
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "bytes": len(data),
+        "execution_authorized": False,
+        "remote_contact": False,
+        "protected_permissions_changed": False,
+    }
+
+
+def _repair_inventory_script(source: bytes) -> str:
+    """Fixed stdin bootstrap for package helper bytes, never a public code input."""
+    if not source or len(source) > 131072:
+        raise ValueError("repair_helper_source_bound")
+    # Only the immutable installed resource supplies source to prepare_repair.
+    # The command line contains a length/hash, not the growing helper program.
+    return (r"""import sys
+if not sys.flags.ignore_environment or not sys.flags.no_user_site:
+    sys.stderr.write("INSTALLATION_REPAIR_ISOLATED_PYTHON_REQUIRED\n")
+    sys.exit(1)
+first = sys.path[0] if sys.path else None
+sys.path[:] = [p for p in sys.path if p and p != first]
+import os
+cwd = os.path.realpath(os.getcwd())
+sys.path[:] = [p for p in sys.path if os.path.isabs(p) and os.path.realpath(p) != cwd]
+import hashlib
+stream = getattr(sys.stdin, "buffer", sys.stdin)
+source = stream.read(__HELPER_LENGTH__)
+if len(source) != __HELPER_LENGTH__ or hashlib.sha256(source).hexdigest() != "__HELPER_HASH__":
+    sys.stderr.write("INSTALLATION_REPAIR_SOURCE_REJECTED\n")
+    sys.exit(1)
+namespace = {"__name__": "fixed_repair_inventory", "__package__": ""}
+eval(compile(source, "<fixed-package-repair>", "exec"), namespace)
+try:
+    namespace["main"]()
+except Exception as failure:
+    reason = str(failure) if isinstance(failure, ValueError) else "system_error"
+    namespace["emit"]({"event": "rejected", "reason": reason,
+        "changed_state_may_be_partial": True, "execution_authorized": False})
+    sys.exit(1)
+""".replace("__HELPER_LENGTH__", str(len(source)))
+        .replace("__HELPER_HASH__", hashlib.sha256(source).hexdigest()))
+
+
+def prepare_repair(profile: Path, output: Path) -> dict[str, object]:
+    """Read-only standard-VM inventory; exclusive private plan, no approval minted."""
+    import json
+    import shlex
+    import shutil
+
+    from cadence_mcp_bridge import _installation_repair as repair
+    from cadence_mcp_bridge.operator_transport import run_repair_inventory
+    from cadence_mcp_bridge.ssh_backend import OpenSshBackend
+
+    environment, data = load_environment(_local_path(profile))
+    executable = shutil.which("ssh.exe")
+    if executable is None:
+        raise ValueError("OpenSSH unavailable")
+    source = files("cadence_mcp_bridge").joinpath("_installation_repair.py").read_bytes()
+    code = _repair_inventory_script(source)
+    status, stdout, stderr = run_repair_inventory(
+        [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+         "-o", "ConnectTimeout=10", environment.ssh_alias,
+         "/usr/bin/python", "-E", "-s", "-B", "-c", shlex.quote(code), "inventory"],
+        source + data, OpenSshBackend._ssh_environment(),
+    )
+    if status or stderr:
+        raise ValueError("repair_inventory_rejected")
+    result = json.loads(stdout)
+    if not isinstance(result, dict) or set(result) != {
+        "plan", "plan_sha256", "readonly_compatibility_links", "dependency_scope",
+        "native_runtime_attestation",
+    } or result["plan_sha256"] != repair.digest(result["plan"]):  # type: ignore[no-untyped-call]
+        raise ValueError("repair_inventory_binding")
+    if result["plan"]["scope"]["profile_sha256"] != repair.digest(  # type: ignore[no-untyped-call]
+        json.loads(data)
+    ):
+        raise ValueError("repair_profile_binding")
+    installer.exclusive(str(_local_path(output)), stdout)  # type: ignore[no-untyped-call]
+    return {
+        "status": "PRIVATE_REPAIR_PLAN_CREATED_NO_AUTHORITY",
+        "plan_sha256": result["plan_sha256"],
+        "items": len(result["plan"]["records"]),
+        "native_runtime_attestation": "NOT_ATTESTED",
+        "execution_authorized": False,
+        "remote_contact": True,
+        "protected_permissions_changed": False,
+    }
+
+
 def install(bundle_path: Path, target: Path, expected: str) -> dict[str, Any]:
     entry = installer.stage_windows if os.name == "nt" else installer.install
     return dict(

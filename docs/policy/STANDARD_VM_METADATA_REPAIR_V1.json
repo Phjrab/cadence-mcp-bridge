@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "PROTECTION_DELTA_DOCUMENTATION_NOT_OPERATOR_APPROVAL",
+  "authority_source": "Direct human current-VM administrator delegation, 2026-10-08, sections 3-6",
+  "applicability": "current managed VM repair only; other operators require actual authority",
+  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation and existing PDK, per-user VMware",
+  "approved_actual_deltas": {
+    "installation_files": 289,
+    "installation_directories": 42,
+    "workspace_ancestors": 1,
+    "mode": "remove only group/other write bits, preserve owner/r/x",
+    "acl": "remove unnecessary default write entries; restrict access group/mask/other writes",
+    "owner_group_changes": 0,
+    "vendor_content_changes": 0,
+    "selinux_installation_changes": 0
+  },
+  "previous_baselines": "retained; exact private plan/ACL/hash receipts explain intended metadata differences; no global rebase",
+  "checks": "unchanged executable byte hashes plus expected per-target mode/ACL changes and normal-user preflight",
+  "public_mcp_admin_capabilities": false,
+  "import_startup_doctor_mutation": false,
+  "native_new_jobs_in_this_repair": 0,
+  "budget_reset_increase_refund": false,
+  "next_scope": "continue authorized GREL02-07 with fresh existing ledger; no GREL08/publication/merge"
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "repository": "Phjrab/cadence-mcp-bridge",
+  "historical_continuation": "PROGRAM_CONTINUATION.json",
+  "authorized_phases": [
+    "GREL-02",
+    "GREL-03",
+    "GREL-04",
+    "GREL-05",
+    "GREL-06",
+    "GREL-07"
+  ],
+  "phase_status": "PARTIAL_NATIVE_TRUST_REPAIRED_PROVIDER_PENDING",
+  "branch": "feat/grel-02-standard-vm-trust-repair",
+  "parent_pr_url": "https://github.com/Phjrab/cadence-mcp-bridge/pull/147",
+  "base_main": "553276d28c54d8e87092229d102bfd05ec98e74f",
+  "administrator_authority": "Actual user instruction on 2026-10-08, current managed VM only; this document does not mint approval",
+  "support": "Professor-provided standard CentOS/Cadence VM or equivalent installation with existing PDK, individual VMware",
+  "native_trust": {
+    "metadata_changed": 332,
+    "content_files_preserved": 289,
+    "owner_group_changed": 0,
+    "repeat_changed": 0,
+    "normal_user_ocean_startup": "PASS",
+    "environment_preflight": "PASS",
+    "latest_observation_utc": "2026-10-08T04:49:03Z",
+    "full_runtime_attestation": "NOT_COMPLETE"
+  },
+  "execution": {
+    "new_simulations": 0,
+    "new_reservations": 0,
+    "production_provider": "NOT_IMPLEMENTED",
+    "public_dispatch": "DISABLED"
+  },
+  "resources": {
+    "attempts": 82,
+    "reserved_result_bytes": 9798942720,
+    "ceiling_result_bytes": 10737418240,
+    "approved_remaining_bytes": 938475520,
+    "fresh_read_required_before_admission": true,
+    "reset_refund_increase_authorized": false
+  },
+  "validation": {
+    "affected_passed": 184,
+    "platform_skips": 6,
+    "security_passed": 18,
+    "dependency_audit": "CLEAN",
+    "installed_preserved_state_files": 32,
+    "hosted_ci": "PENDING",
+    "independent_review": "PENDING"
+  },
+  "next_work": [
+    "coexisting operator launcher without replacing legacy launcher",
+    "authentic provider and existing-domain migration",
+    "two new owned circuit copies, effective inputs and fresh DC/AC/TRAN",
+    "automatic extraction and generic sweep/specification",
+    "clean actual Codex submit/read/retry/restart",
+    "native operational and migration qualification"
+  ],
+  "excluded": [
+    "GREL-08",
+    "publication",
+    "merge",
+    "license or PDK changes",
+    "original OA/ADE changes",
+    "historical result/journal deletion",
+    "budget reset/refund/increase"
+  ],
+  "report": "ADMIN_REPAIR_V1.md",
+  "next_phase_authorized": true
+}

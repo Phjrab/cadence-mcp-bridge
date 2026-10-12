@@ -1,3 +1,621 @@
+## Final repair-target observation correction, 2026-10-12
+
+Independent PR148 finding4244590385 addressed by trailing complete target
+content/ACL checks and joint target/directory metadata guards. Windows90 PASS/
+258 Linux skips, Ruff PASS; exact hosted Linux/review/install/VM gates pending.
+User withdrew stop-after-test-failure; continue prior delegated scope while
+preserving failures. See docs/generic_release/FINAL_TARGET_OBSERVATION_V1.md.
+Prior dated checkpoints remain history.
+
+## Complete directory-union trailing observation, 2026-10-11
+
+Review4240623183 is corrected: metadata signatures are retained around the final
+membership pass and every traversed directory is reobserved after all membership
+scans. Creation/rename in an earlier directory during a later scan rejects before
+completion. No further content or membership scan follows that trailing guard;
+this is bounded filesystem observation, not atomic exclusion of external tools.
+Four owned Linux apply/rollback timing regressions preserve targets and failure
+evidence. Exact hosted/installed checks remain required. No VM mutation or run.
+
+## Complete Tcl descendant and compatibility-record bounds, 2026-10-11
+
+Review4240588448/4240588451 is corrected: native library exclusion names apply
+only outside the two fixed Tcl/Tk source roots. Every descendant directory and
+regular source file there is bound. Compatibility records share an aggregate
+count and conservative serialized-byte budget, checked before retention for
+external and internal links; duplicate internal bindings do not consume new
+credit. Windows90 repair tests PASS/246 POSIX skips, static72 PASS; ten owned
+Linux descendant apply/repeat/rollback cases require hosted evidence. No current
+VM permission change or simulation occurred. Prior569/233 inventory is history
+until this exact helper performs a new read-only inventory.
+
+## Relocated installation fixture correction, 2026-10-11
+
+Exact0c83 Linux CI found one fixture failure after394 passing tests: moving the
+owned vendor tree left three absolute directory aliases pointing to its old
+location. The relocation regression now retargets only those three disposable
+fixture aliases before testing the final-tools-segment production logic. No
+production trust rule is weakened and no actual VM file is changed. Historical
+failed CI remains; exact follow-up hosted validation is required.
+
+## Complete sourced-file roles and final tool segment, 2026-10-11
+
+Review4240563319/4240572996 is corrected. Vendor roots derive from the final
+/tools segment, preserving equivalent layouts with a tools-named ancestor.
+Inside the two fixed Tcl/Tk sourced-code roots all regular content is selected:
+Tcl indexes can source .itcl/.itk or extensionless files, so extensions cannot be
+used as a trust boundary. No installation-wide walk or external/PDK/license
+content mutation is admitted. Three source-role and one relocated-layout owned
+POSIX regressions are included. The previous451/115 normal-user inventory is
+retained history; this exact recipe's VM count and final gates must be refreshed.
+No actual admin metadata, contents, ledger, reservation or simulation changes.
+
+## Empty library code namespace protection, 2026-10-11
+
+Review4240540555 is corrected: every bounded traversed directory is an exact
+metadata target, including an empty loader-visible directory with no .so file.
+The helper preserves all names/content/owner/read/execute and removes only shared
+write permissions. Two owned Linux apply/repeat/rollback cases retain original
+code bytes and verify empty namespace metadata. Current standard-VM exact target
+count must be refreshed; the earlier448/112 observation is retained historical
+evidence, not a claim about this changed recipe. No actual administrator change,
+reservation or Cadence execution occurs in this source correction.
+
+## Actual standard-VM Tcl/Tk dependency roles, 2026-10-11
+
+Read-only latest i686 inventory exposed four standard Tcl/Tk library aliases,
+whose intermediate share/lib/tcltk/tcl8.4 and tk8.4 aliases resolve to a shared
+08.49 directory. The fixed recipe now binds those exact compatibility roles and
+intermediate links, traverses each canonical script directory once with bounded
+readdir64, and includes sourced .tcl/.tm/.msg/tclIndex code. Other nested directory
+aliases, code-role escapes and excluded64/license/data/doc/sample trees reject.
+No generic recursive installation scope or platform abstraction is introduced.
+
+Actual UID500/Python2.6 read-only inventory PASS:448 exact targets,112 new mode
+changes required (0777 to0755). The observed prior336 targets remain; contents,
+owner/group and old receipts are not overwritten. Additional repair has NOT been
+applied. The earlier four SuSE-directory changes are already completed history.
+Owned Linux direct/shared intermediate aliases cover apply/repeat/rollback and
+code-role rejection; final hosted/package/review and exact installed qualification
+remain gates. This observation adds0 simulations,0 reservations and0 admin changes.
+
+## Preallocation-bounded library enumeration, 2026-10-11
+
+Independent finding4240505088 identified that os.listdir/os.walk allocate whole
+name lists before posthoc limits. The repair recipe now reads Linux readdir64
+through an independently opened directory stream, stops at MAX_ITEMS+1 and
+bounds aggregate pending directory paths. It retains fixed digests and uses the
+same dirent64 offsets as the existing storage implementation on i686/x86_64.
+It does not depend on Python3-only scandir or expand supported EDA platforms.
+An owned stream regression forbids listdir/walk and exercises limit/recovery;
+Windows86 PASS/225 OS skips, exact hosted POSIX and current i686 VM remain gates.
+No actual VM/admin/ledger/reservation/simulation change occurs in this correction.
+
+## Canonical library digest correction, 2026-10-11
+
+Exact ce23e43 hosted POSIX checks failed because the membership collector passed
+already canonical bytes through JSON canonicalization a second time. It now
+hashes those bounded canonical bytes directly. A portable regression binds the
+expected exact digest and exercises the same production function on Windows;
+owned Linux membership/alias/race cases remain required hosted evidence.
+Windows repair86 PASS/224 OS skips and Ruff/mypy72 PASS. This changes no VM,
+metadata, ledger, reservation or simulation. Earlier failed logs are preserved;
+final hosted/review/package and standard-VM inspection remain release gates.
+
+## Bounded directory membership and unvisited aliases, 2026-10-11
+
+Review4240469024/4240469027 is corrected. The current fixed32-bit recipe explicitly
+rejects selected nested library-directory symlinks instead of pretending their
+unvisited subtree is authenticated. Known top-level tools/OA compatibility aliases
+are still observed and their selected library roots walked. No excluded64-bit,
+license/data/doc/sample branch is traversed. The supported standard VM must pass
+this current read-only inventory; an unexpected alias is a concrete unsupported
+layout blocker, not a reason to waive trust or change proprietary contents.
+
+Each traversed directory now retains one64-hex membership/metadata digest rather
+than all filename and lexical-ancestor lists. Per-directory entry/serialized-byte
+limits and total directory count still apply; timestamps are encoded losslessly.
+Two owned Linux alias cases reject before mutation and one1000-entry case verifies
+bounded retained signatures and late membership detection. Updated exact hosted,
+installed standard-VM and independent review remain gates. No actual VM change,
+new simulation or reservation occurred; all prior receipt/policy evidence remains.
+Current directGREL02-08/16GiB/500/same-change20 and publication boundaries persist.
+
+## Internal-only library directory roles, 2026-10-11
+
+Review4240442083 is corrected: an internal library alias now adds its canonical
+in-installation entry-parent chain to the exact repair scope, just as external
+aliases already do. A writable nested directory containing only an internal .so
+cannot remain writable after a successful repair. Two owned POSIX apply/repeat/
+rollback fixtures retain alias metadata and every target byte/mode, repairing
+only the planned parent directories. This exact list remains profile-derived;
+no arbitrary recursive installation or external target mutation is introduced.
+Updated exact hosted/package/security/independent review remain gates. No actual
+VM, simulation or reservation change occurred; previous evidence remains history.
+Continuous authorized limits and the final public-candidate approval are retained.
+
+## Last library membership and internal-link observations, 2026-10-11
+
+Independent follow-up4240407849/4240407850 is corrected. Every traversed fixed
+library directory now binds the walk's yielded names, held/named identity and
+metadata, and reobserves membership after all selected target and link reads.
+Late .so creation/rename rejects without silently expanding mutation targets.
+Excluded directory names are retained for comparison but are never traversed.
+Internal links use the same held-leaf and lexical-parent guard as compatibility
+links, including trailing validation during plan and final inventory. No new
+external code/content authority or mutation scope is introduced. These are final
+observation guards, not atomic exclusion of independent filesystem operations.
+
+Twelve owned Linux apply/rollback completion fixtures add or rename a777 library
+after the walk during a later target hash; two retarget an internal alias after
+its fixed resolution. All unreviewed bytes and prior target states are retained.
+Windows repair/bootstrap120 PASS/220 actual-platform skips; official Ruff/mypy72
+PASS. Updated exact Linux, package/security and independent review remain gates.
+Prior770f hosted363/4 checks and installed32-state PASS are historical, not proof
+for this correction. No actual VM, simulation or reservation change occurred.
+ContinuousGREL02-08/16GiB/500/same-change20 and conditional normal integration
+remain authorized; public posting still needs exact final-candidate approval.
+
+## Lexical compatibility ancestors, 2026-10-11
+
+Independent review4240327313 is corrected: external-link observations now retain
+all lexical parent identities, modes, owners, timestamps and symlink targets,
+then compare them after the final leaf and canonical-parent observations.
+Legitimate compatibility directory aliases remain supported. Retargeting an alias
+cannot pass merely because the original canonical directory and same leaf inode
+still exist. Two owned POSIX fixtures retain both parents and external contents;
+the race must reject and the unchanged alias must pass. This remains a final
+observation guard, not atomic exclusion of external filesystem operations.
+
+Connected Windows repair/bootstrap120 PASS/206 platform skips and Ruff PASS.
+Exact hosted Linux, package/security and refreshed independent review are still
+required; no new VM change, simulation or reservation occurred in this fix.
+The prior root3ec actual four-directory metadata correction is source-specific
+history, not a current helper or release qualification. ContinuousGREL02-08,
+16GiB/500/same-change20 and conditional normal integration remain authorized.
+Public posting still needs final approval of the exact qualified candidate.
+Earlier dated records and all journals, results, receipts and policies remain.
+
+## Fixed stdin inventory and isolated operator invocation, 2026-10-11
+
+The latest independent P1 review4240265879 is addressed in the primary README
+and current runbook apply/rollback commands: use /usr/bin/python -E -s -B.
+Direct helper startup also rejects missing environment/user-site isolation before
+filesystem-backed imports. Two portable tests supply absolute search-hook values;
+neither unreviewed marker executes. This cannot repair an already compromised
+system startup hook; standard VM/system interpreter trust remains required.
+
+Actual root-installed inventory uncovered host WinError206 before SSH creation:
+the package helper now exceeds the Windows command-line limit. Repair-plan uses
+a small fixed package bootstrap plus bounded stdin source/request framing. It
+hashes exact installed helper bytes before compile/evaluation, keeps the fixed
+inventory-only dispatch and16MiB/60s transport limits, and rejects a source over
+128KiB or a changed source. No arbitrary-code/path/shell MCP input is introduced;
+only the immutable installed resource supplies this internal source. Portable
+owned child tests use a >32KiB helper, short command and same-size byte tampering.
+All failed harness/line-ending/escaping attempts remain preserved, with no actual
+VM/admin/simulation/reservation changes. Updated exact hosted/package/review and
+root installed actual inventory are still mandatory; previous receipts are history.
+Current16GiB/500/20,GREL02-08 and conditional normal merge continue. Public posting
+remains subject to one approval of the identical final qualified candidate.
+
+## External-parent and startup trust correction, 2026-10-11
+
+Fresh8a325b0 review4240230641/4240230643 found two narrower trust gaps. The
+external collector now reopens the full named no-follow parent after the final
+fixed leaf read, rejecting ancestor detach while a held leaf directory survives.
+An external-only nested library now contributes its canonical in-installation
+parent chain to the exact repair plan; external target files remain excluded.
+A parent that resolves outside the fixed installation rejects instead of expanding
+mutation scope. Existing content/owner/read/execute/ACL and rollback protections
+remain. Apply/rollback timing and nested-parent recovery have dedicated Linux
+regressions; Windows startup shadows are portable separate evidence.
+
+Read-only repair-plan now uses the reference -E -s -B Python flags. The exported
+helper removes script/CWD paths using builtin sys before filesystem-backed imports;
+retained memory-loaded modules preserve their legitimate stdlib paths. Use
+`/usr/bin/python -E -s -B repair.py apply` or `rollback` for explicitly authorized
+operator/admin execution. Import, doctor and planning still perform no repair.
+Historical -B-only instructions/helper receipts stay historical, not the current
+recommended invocation. Current VM16GiB/500/20 and continuousGREL02-08 delegation
+persist; package/hosted/fresh review/final actual installed gates are pending.
+This correction itself performs no actual VM/admin mutation/reservation/simulation.
+Public tag/Release/upload still requires final exact-candidate approval.
+
+## Held external-link observation correction, 2026-10-11
+
+Fresh exact c0b4b69 review found separate pathname reads could retain a stale
+external-link tuple after a concurrent retarget. The fixed collector now holds
+the canonical no-follow parent and observes its proc-fd leaf without opening the
+external target for content or metadata changes. It binds the external entry's
+identity/metadata and immutable parent identity, and repeats literal target,
+resolution, existence, held/named parent and trailing no-follow entry checks.
+After internal target hash/ACL reads and serialization bounds, the full inventory
+reobserves every external binding. Parent mode is only checked for stability
+within each read-only observation so approved code-directory chmod can still
+complete; external entry and immutable parent identity remain authenticated.
+These are last-observation guards, not atomic exclusion of filesystem tools.
+
+Twenty-four complete owned Linux timing cases inject retarget or parent detach
+during literal-target/existence/trailing-resolution reads across apply/rollback
+and no-op/processed paths. Eight further cases inject drift during later internal
+target hashes. External bytes/metadata and partial/failed evidence are preserved;
+no complete event is emitted. Latest connected local checks: 173 PASS / 199
+Windows POSIX or symlink skips; Ruff/mypy (72 files) PASS. Updated exact security,
+package, hosted CI, fresh review and root final installed-helper actual read-only
+inventory remain pending gates. Previous exact c0b4b69 hosted POSIX 314 PASS / 0
+skips and installed 32-state preservation remain source-specific historical proof.
+No VM contact/admin/simulation/reservation or publication occurred in this fix.
+The current 16 GiB / 500 / 20, GREL-02 through GREL-08 and conditional normal merge
+authority remains active; public tag/Release/upload requires final candidate approval.
+
+## External compatibility-link membership correction, 2026-10-11
+
+Fresh exact 1e685b1 review found new external .so symlinks were omitted from the
+completion plan because their read-only compatibility records lived only in the
+response envelope. The standard installation plan now authenticates the ordered
+external membership, resolved target, existence and literal symlink target under
+its plan digest and apply receipt. Initial apply/rollback and fixed completion
+re-enumeration reject missing or changed binding. External resolved targets remain
+outside every metadata mutation path. Historical unbound plans/helpers/receipts
+are preserved; the updated helper requires a fresh read-only inventory rather
+than inventing a historical before-state. The model recipe retains its separate
+explicit exact profile/model_include selector.
+
+Two portable pre-lock rejection cases and 36 complete owned Linux cases cover
+create, rename and retarget-to-the-same-resolution across IC/Spectre/OA roots,
+apply/rollback and no-op/processed states. External target bytes and metadata are
+preserved, failed evidence remains, and no complete event is emitted. Latest
+connected local checks: 173 PASS / 167 Windows POSIX or symlink skips. Ruff and
+mypy (72 files) PASS. Updated security/package/hosted/fresh-review and actual final
+installed-helper read-only inventory gates remain pending. Prior exact 1e685b1
+hosted POSIX 276 PASS / 0 skips and Windows success remain source-specific history.
+No current-VM contact, admin action, simulation or reservation occurred here.
+Active 16 GiB / 500 / 20, GREL-02 through GREL-08 and conditional normal PR merge
+authority persists. Public tag/Release/upload requires final exact-candidate approval.
+
+## Completion fixed-recipe membership correction, 2026-10-11
+
+Fresh exact169f4a6 review found that completion only reobserved original paths;
+new or renamed .so members in a fixed code root could escape that path list. The
+final completion check now uses a registered fixed recipe selector to reenumerate
+its full scope, requires exact original scope equality, and verifies all content/
+identity/mode/ACL records from that fresh inventory. Original path/link validation
+is retained. Arbitrary recipe IDs/directories/globs cannot select a new scope.
+The standard installation selector is explicit; the separate registered model
+recipe in the parent must retain its exact profile/model_include binding.
+
+Three portable selector cases and24 complete owned Linux cases cover create and
+rename across IC/Spectre/OA library roots for apply/rollback, no-op and postchange
+completion. New shared-writable .so evidence is preserved without mutation, and
+no complete event is emitted. The owned recovery fixture now regenerates its
+synthetic inventory records honestly after metadata changes. Prior exact169f
+hosted Linux249 PASS/0skip and installed32-state preservation remain history.
+Updated-source connected171 PASS/131 Windows POSIX/symlink skips; Ruff/mypy72/
+security18/strict locked audit/85 schemas and exact wheel/sdist/license/content/
+installed32-state preservation PASS. Updated exact hosted/fresh review/current-VM
+read-only inventory gates remain pending.0 current-VM/admin/simulation/reservation
+activity; prior helpers/artifacts/receipts and cumulative ledgers are preserved.
+Current user16GiB/500/20,GREL02-08/conditional normal merge delegation persists;
+public tag/Release/upload still needs exact-candidate final approval.
+
+## Final receipt content observation namespace correction, 2026-10-11
+
+Fresh exact0d72108 review found that the final receipt hash ran after its earlier
+fixed-directory check. A same-UID rename during that hash left the proc-fd file
+entry readable. After the last content hash and file-entry check, read_receipt now
+reauthenticates the full fixed parent/directory namespace and repeats held file and
+directory metadata stability. No content read or fsync follows that final check.
+Four additional complete owned Linux apply/rollback cases detach the directory
+during the final hash or final file-entry lookup and retain its original evidence.
+The held-target/fixed-lock/resource_guard correction is retained; no new mutation
+scope, schemas, authority, platform abstraction or transport allowance is added.
+
+Previous0d72108 exact hosted Linux245 PASS/0skip and isolated installed32-state
+preservation PASS remain source-specific history. Updated-source connected local
+168 PASS/107 Windows POSIX/symlink skips; Ruff/mypy72/security18/strict locked audit/
+85 schemas and exact wheel/sdist/license/content/installed32-state preservation
+PASS. Exact updated hosted/fresh independent review and actual read-only332-target
+inventory remain pending gates. Current-VM contact/admin actions,
+simulations and result reservations remain0 in this correction. The user16GiB/500/
+20,GREL02-08 and conditional normal merge delegation persists; exact public tag,
+Release/upload requires the separate final approval. Earlier artifacts, failed
+review evidence, installed helpers and cumulative ledger are retained unchanged.
+
+## Held target and fixed resource-lock race correction, 2026-10-11
+
+Fresh exact-e169 review found two remaining prechange windows: a new regular-file
+hardlink could appear between the earlier nlink check and held snapshot, and a
+renamed/replaced run.lock could leave flock protecting a detached inode. Held
+snapshots now reject regular nlink !=1 without changing historical plan schema.
+After receipt/ancestor/resource-lock checks, the helper repeats the whole target
+observation and its immediate link-count check before chmod. The separate setfacl
+mutation repeats those guards and authenticates the exact chmod intermediate ACL.
+
+Flock now retains its parent descriptor, verifies the fixed lock/parent named
+entries and held metadata after acquisition and receipt admission, before target
+mutation, and at completion including no-op/rollback. Fixed names are rechecked
+again after all reads. Detached, substituted, relinked or metadata-drifted locks
+reject; failed/partial evidence is retained. Six portable and26 complete owned
+Linux cases cover both apply/rollback, hardlink timing, real independently acquired
+replacement flock, no-op/postchange drift, and drift between chmod and setfacl.
+These are last-observation guards, not atomic exclusion of external filesystem
+operations. Lock contents, mutation targets, transport limits and authority do not
+expand. Administrator/MCP execution separation and authenticated receipts persist.
+
+Updated-source Ruff/mypy72 PASS; connected Windows repair/bootstrap/transport/context
+checks168 PASS/103 POSIX/symlink skips. Secret scan/security18, strict locked audit
+and85 schemas PASS. Exact wheel/sdist source/license/content and isolated installed
+CLI/SDK/context/operation/bootstrap plus reinstall/uninstall32-state preservation
+PASS. Hosted Linux/Windows, refreshed independent review and exact current-VM
+read-only332-target inventory are separate pending final gates. The initial local audit failed on a CP949 child-process decode and is
+rerun under explicit UTF8; this is not a dependency or VM modification. Prior
+helper bundles/artifacts and all exact source-specific results remain historical.
+No current-VM contact/admin/simulation/reservation has occurred in this correction.
+Active16GiB/500/20,GREL02-08 and conditional normal PR merge remain authorized;
+public tag/Release/upload still requires exact-candidate approval.
+
+## Whole receipt durability and named-chain correction, 2026-10-11
+
+Fresh review of f4e0084 found a receipt file could be detached or replaced during
+fsync after its earlier fixed-name check. After all file/directory fsync and
+namespace operations the helper now repeats the held receipt's complete stat,
+content hash/stability and fixed filename identity. The held receipt directory's
+full metadata must also remain stable. The fixed managed parent is reopened after
+its entry read; every named ancestor to/ is checked and reopened for identity,
+owner/group/mode drift. Unlisted writable ancestors reject. An exact planned
+workspace before/after/known-intermediate state is allowed so authorized workspace
+repair and rollback still work; no other shared-write exception is introduced.
+Exact8952b7 hosted Linux reached212 PASS with one existing fixture assertion
+expecting the later ancestor reason. The new receipt ancestor guard correctly
+rejects that recipe-to-lock race earlier, before target validation/mutation. The
+fixture now expects that exact earlier reason and retains all protected-state and
+no-completion assertions. Production helper/artifact bytes are unchanged; exact
+corrected hosted/independent review/current-VM inventory gates remain pending.
+
+First apply still publishes/verifies the full exact receipt before any target
+mutation, and every target's immediate prechange and completion reauthenticate it.
+
+Grouped owned Linux fixtures cover31 new file fsync/directory fsync cases: rename,
+unlink, identical-byte replacement, restored-mtime content change, receipt-directory
+metadata drift, selected/unlisted ancestor drift and detached managed parents, with
+apply/rollback and exact planned writable-workspace recovery. Failed evidence is
+preserved. This is last-observation validation, not atomic exclusion of external
+administrator/user filesystem tools. Previous f4 local179/49skip, hosted Linux182/
+no skips and installed32-state package PASS are history. Updated-source local
+179 related PASS/80 Windows POSIX skips and Ruff/mypy72 PASS. Final updated-source
+package/security/audit/hosted/refreshed review gates are pending.
+No VM/admin/simulation/reservation change; prior receipts/helper bundles/ledger and
+all existing active16GiB/500/20,GREL02-08,normal merge/publication boundaries persist.
+
+## Fixed receipt namespace read-race correction, 2026-10-11
+
+Fresh review of7fb77b7 found that a directory could be detached during a receipt
+read or fsync while its held descriptor still authenticated the old file. The
+helper now reopens the fixed managed parent and verifies its exact UID-owned
+0700 directory entry after receipt reads and durability operations. Detached or
+substituted entries reject before chmod/completion; their evidence is preserved.
+Six complete Linux recipe cases race read, file fsync and directory fsync during
+both immediate rollback prechange and idempotent apply completion checks.
+Previous7fb local179/43skips, hosted Ubuntu176/no skips, all four hosted checks and
+installed32-state package preservation PASS remain that source's history.
+Updated-source local179 related PASS/49 Windows POSIX skips, Ruff/mypy72 PASS.
+Final updated-source security/audit/package/hosted/refreshed review gates are pending.
+No VM contact/admin/simulation/reservation, target expansion, authority grant or
+protection bypass occurs. Prior exact helper/bundle/ledger records are retained;
+updated modeltrust native qualification remains separate. Current16GiB/500/20,
+continuous GREL02-08 and conditional normal integration remain authorized;
+public tag/Release/upload requires exact-candidate approval.
+
+## Authenticated rollback provenance correction, 2026-10-11
+
+Fresh PR148 review found that a caller could change both the private plan and its
+self-computed digest to invent a more permissive pre-apply mode/ACL. The explicit
+apply path now requires all first-apply records to match the actual before-state
+and durably publishes the exact observed plan before any target mutation. The
+fixed managed-root namespace is trust-repair-v1-user-UID or trust-repair-v1-admin-0;
+no-follow owner checks,0700 directories and0400 single-link files separate normal
+users from administrators. Root never accepts a user-owned receipt. The receipt
+records observation, not human approval; the real operator delegation is still
+required. Read-only inventory/import/doctor never provision a receipt.
+
+Existing exact receipts permit interruption/retry/no-op/rollback without rewriting
+history. Missing receipts reject rollback and externally changed after/intermediate
+states; fabricated plans, changed receipts and metadata/content drift reject.
+Publication writes/fsyncs a private candidate, verifies its bytes, links exclusively
+and fsyncs the directory before mutation. Failed candidates and partial/multi-link
+publication evidence are retained. A multi-link interruption requires investigation,
+not automatic deletion or promotion. Receipt trust and the fixed directory are
+rechecked before each chmod and before completion; external filesystem activity is
+not claimed to be atomic. Resume under the same real identity. Historical repair
+helpers/plans/receipts remain archived; no automatic provenance import is provided.
+
+Portable provenance cases and complete owned Linux recipe cases cover invented
+before states, exact repeat/rollback/no-op, partial apply, forged root receipts,
+write/fsync/link/unlink interruptions and detached receipt directories. Final local
+179 related tests PASS/43 Windows POSIX skips, Ruff/mypy72/security18/strict locked
+audit and85-schema compatibility PASS. Exact package, hosted Linux/Windows and
+refreshed independent review checks remain pending.
+The helper is shipped as native modeltrust.py, so exact updated native qualification
+remains a separate gate; prior eb62/bf6c20 evidence is source-specific and preserved.
+No VM contact, administrator change, simulation or reservation occurs in this fix.
+Latest root-observed ledger102/12,483,297,280 is historical to this local correction;
+active16GiB/500/20,GREL02-08 and conditional normal PR integration remain authorized.
+Public tag/Release/upload still requires approval of an exact completed candidate.
+
+## Whole-target completion integrity correction, 2026-10-11
+
+Fresh PR148 review found no-op targets and already processed targets could drift
+after their earlier observation without preventing a complete receipt. The helper
+now recomputes the whole exact recipe immediately before completion. Every target's
+content/hash, identity, owner/group, size/mtime, requested mode and normalized ACL
+must match; original links are revalidated by the recipe. Partial receipts remain
+preserved on rejection. Omitted-ancestor rechecks, mutation scope, caps and explicit
+authority remain unchanged; outside administrator activity is not made atomic.
+Twelve portable completion cases cover apply/rollback, protected and metadata drift
+and record count. Eight owned Linux cases cover no-op/previously processed mode,
+ACL, content and same-resolution link drift, requiring rejection without complete.
+Local169 relevant tests PASS/26 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist license/
+content audit and installed CLI/SDK/bootstrap/reinstall/uninstall32-state
+preservation PASS. Retained wheel SHA256 is68f6e31be5e403237e9ec77f1408fe6f45646a850d487786c8f53b6aac9b4083;
+helper SHA256 is8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+Final hosted Linux/Windows and refreshed independent review remain pending. Prior
+installed eb62 current-VM UID500 read-only inventory PASS (332 targets,0 changes,
+173064-byte response, historical exact targets/content/metadata preserved) remains
+that source's evidence. Updated helper/modeltrust needs exact installed/current-VM
+qualification; preserve bf6c20 and all prior bundles/results.
+Root's latest actual ledger observation is102 attempts/12,483,297,280 reserved
+bytes. Earlier94 and82 snapshots below are history. This fix performs0 VM contacts,
+admin changes, simulations or reservations. Active16GiB/500/20, continuous GREL02-08,
+conditional normal merge and final exact-publication authorization gate persist.
+
+## Repair application ancestor race correction, 2026-10-11
+
+Fresh PR148 review identified omitted-ancestor permission drift between recipe
+inventory and application under the resource lock. The fixed helper now reopens
+and checks the no-follow ancestor chain immediately before each held-target chmod
+and before completion, including idempotent/no-op apply and rollback. Unsafe
+outside-scope paths reject without adding mutation targets; drift after an actual
+change retains partial receipts and cannot produce a complete event. This does not
+make concurrent administrator filesystem activity atomic; the operator must
+stabilize the external ancestor and resume the preserved exact plan.
+Portable apply/rollback regressions cover prechange, postchange and no-op drift.
+Complete owned Linux fixtures exercise recipe-to-lock and held-target races plus
+postchange/no-op rejection without modifying omitted ancestors through the helper.
+Local157 relevant checks PASS/18 Windows POSIX skips; Ruff/mypy72, security18/
+strict locked audit and85-schema compatibility PASS. Exact wheel/sdist distribution,
+installed CLI/SDK/bootstrap and reinstall/uninstall32-state preservation PASS.
+Retained wheel SHA256 is54807b0e4d181ed9d6b9e62ac1340b4aa9f014bf332e0b9bdefb1fa5c6de9495;
+helper SHA256 is9a6da270a65bdffaa2b50369ea862ec35b6c61f427fbea05e56e24ec036626cf.
+Final hosted Linux/Windows, refreshed review and actual standard-VM read-only
+inventory remain pending. modeltrust helper bytes change again; preserve
+bf6c20 and all earlier evidence until exact updated native qualification. This fix
+adds0 VM contacts/admin changes/simulations/reservations. Current16GiB/500/20,
+continuous GREL02-08, conditional normal merge and exact-publication gate persist.
+
+## Whole repair protocol and omitted ancestor checks, 2026-10-11
+
+Fresh PR148 review found valid large-ACL plans exceeding the whole16MiB protocol
+and unsafe ancestors above the fixed vendor base being omitted. The standalone
+helper now bounds aggregate records, the complete inventory response and canonical
+apply/rollback envelope (including newline and maximum allowed authority text)
+before action. Oversized plans fail closed rather than expanding the private cap.
+Unlisted ancestors above vendor/workspace roots are checked read-only through
+no-follow descriptors to/. Unsafe ancestors reject; exact repair targets and their
+content/owner protection do not expand to user or system ancestor trees.
+Local167 relevant checks PASS/10 Windows POSIX skips; Ruff/mypy72 and isolated
+package/CLI/bootstrap/reinstall/uninstall32-state preservation PASS. Complete Linux
+synthetic recipe coverage checks the omitted writable ancestor without changing it,
+then proves healthy ancestors stay outside the target set. Exact current-VM
+read-only inventory, hosted checks and final independent review remain pending.
+The helper is also shipped as native modeltrust.py, so its bytes change. Preserve
+bf6c20 and prior runtime evidence; qualify the exact updated native bundle before
+candidate acceptance. This fix performs0 VM contacts/admin changes/simulations/
+reservations. Earlier observations remain history; active16GiB/500/20, continuous
+GREL02-08 and conditional normal merge authority and exact-publication gate persist.
+
+## Real repair transport boundary correction, 2026-10-11
+
+Final PR148 review found that bootstrap's16MiB request still met the general
+transport's256KiB ceiling before SSH. Repair planning now uses a dedicated internal
+16MiB/60-second inventory transport. General fixed calls retain their256KiB ceiling
+and32KiB default, strict host keys and bounded pipes. No public MCP input or tool
+is added; planning remains read-only and exclusive, without approval creation.
+The profile-bound small/large inventory tests now run the real transport against
+owned synthetic child processes. Exact16MiB output succeeds; oversized input,
+stdout and stderr reject. Related71 tests PASS/9 Windows POSIX skips; Ruff/mypy72,
+security18/locked dependency audit and85-schema compatibility PASS. Exact isolated
+package build/installed CLI/bootstrap/reinstall/uninstall preserves32 synthetic
+state files. Exact final hosted checks and refreshed independent review are pending.
+This host-only fix changes no native worker/helper bytes and performs0 VM contacts,
+admin changes, simulations or reservations. Earlier ledger snapshots remain
+historical; admission must read the latest actual ledger. Direct16GiB/GREL02-08/
+conditional normal merge authority and exact-publication approval gate remain.
+
+## Repair inventory transport-bound correction, 2026-10-09
+
+Latest review found inventory responses larger than256KiB blocked despite the
+fixed helper's16MiB request/plan protocol. The private bounded transport now uses
+the same16MiB ceiling; timeout/host-key checks and exclusive output remain. Large
+synthetic inventories over256KiB preserve exact plan/profile binding, while the
+transport retains a finite cap. This host-only bootstrap change does not modify
+native worker/model-trust assets or authorize remote metadata mutation.
+Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact installed
+32-state preservation pass. Final exact hosted/final review remains pending.
+Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
+0 new simulations/reservations/admin changes in this PR qualification.
+
+## Descriptor snapshot stability correction, 2026-10-09
+
+The subsequent review identified content/metadata change during ACL collection.
+Held snapshots now check trailing stat including ctime, repeat the content hash
+and check final descriptor stability. Same-length content replacement followed
+by restored original mtime during ACL observation rejects before chmod. Actual
+UID500/Python2.6 synthetic interruption/repeat and4 descriptor races pass; real
+ledger94/11,409,555,456 unchanged. Local59 checks/9 Windows POSIX skips plus
+Ruff/mypy72 pass. Exact installed32-state package preservation passes; final hosted review/CI
+pending for this source; no vendor/admin/simulation change. Existing authority/publication
+gate and all prior evidence remain preserved.
+
+## Held-descriptor integrity correction, 2026-10-09
+
+A subsequent independent review found path snapshot/final-open ACL race exposure.
+The helper now reobserves all protected content/identity/mtime/mode and normalized
+ACL on the held descriptor immediately before chmod. Unreviewed named/default
+ACL or content drift rejects before any metadata mutation. Three Linux race
+regressions and actual UID500/Python2.6 synthetic races pass; apply/rollback
+interruption/repeat still restores original fixture metadata/content. Actual
+ledger94/11,409,555,456 remains unchanged; no vendor/admin/simulation changes.
+Local59 checks/8 Windows POSIX skips, Ruff/mypy72 and exact installed32-state
+preservation pass. Final exact-head hosted review/CI remain pending. Current
+direct16GiB/GREL02-08/conditional merge authority and exact-publication gate persist.
+
+## Exact rollback interruption recovery, 2026-10-09
+
+The latest review of3b678d2 found an interrupted rollback metadata state missing
+from the fixed helper. Chmod now computes access owner/mask-or-group/other bits
+from the exact requested mode while preserving named/default entries. Only
+rollback accepts the exact original-mode/restricted-ACL intermediate state;
+unexpected metadata and all protected content/identity drift still reject.
+The Linux fixture interrupts both apply and rollback, resumes and repeats each,
+then checks original contents and metadata. Local59 repair/bootstrap checks pass/
+5 Windows skips; Ruff/mypy72 pass. Actual UID500/Python2.6 synthetic apply/rollback
+interruption/repeat restores exact contents/ACL/mode/identity, with the real94/
+11,409,555,456-byte ledger unchanged. This is not a new vendor metadata repair.
+Exact installed32-state package preservation passes; final hosted review/CI
+remain pending for this source.
+
+Latest main98710153a167e103c2955b1c5c82612eb2864038 includes normal PR142-147
+merges. Existing16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues; public exact-candidate approval remains required. Prior receipts and
+policies are historical and retained. No new simulation/reservation/admin change.
+
+## Component-aware installation boundary correction, 2026-10-09
+
+The fixed repair recipe now derives the installation base from path components,
+so sibling vendor roots whose names share a prefix keep both IC/OCEAN and MMSIM/
+Spectre targets in scope. The exact profile/executable hashes, role-specific seed
+list, no-follow descriptors, ACL/content/owner checks and bounded mutation remain.
+Local58 repair/bootstrap tests pass with5 Windows OS skips; Ruff/mypy72 and exact
+installed32-state conservation pass. Current authoritative16GiB/GREL02-08 and
+conditional normal merge overlay remains;82-attempt repair evidence is historical.
+Final exact-head hosted checks and independent review are pending. No new remote
+repair, simulation or reservation; actual generic release acceptance is separate.
+
+## Cross-version repair metadata correction, 2026-10-09
+
+A final PR148 review found fractional mtime serialization differs between
+Python2.6 and Python3. New fixed inventories encode mtimes as round-trip strings;
+content, inode, owner, group, mode and ACL checks remain separate and enforced.
+Historical numeric private records and their exact helper/digests remain preserved;
+comparison supports equivalent historical numeric mtimes without accepting drift.
+Local136 tests/5 POSIX skips, Ruff/mypy72 and exact installed32-state preservation
+pass. Actual UID500/Python2.6 fractional synthetic inventory hashes identically on
+the host; real94-attempt/11,409,555,456-byte ledger is unchanged. Final exact-head
+hosted checks and independent review are pending. No administrator change or new
+simulation/reservation was performed. This is not general release acceptance.
+
 ## Serialized AC grid correction, 2026-10-09
 
 Final review exposed valid ultra-narrow grids whose %.16g displacement exceeds
@@ -191,6 +809,42 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+## Current standard-VM administrator delegation and repair, 2026-10-08
+
+The user's latest direct instruction fixes release support to the professor-provided
+CentOS/Cadence VM (or an equivalent reproduced installation), existing PDK and
+individual VMware use. Address/SSH keys/account/workspace/circuit/ADE/results/
+registries/journals/limits remain operator data. No developer private checkpoint
+is a fresh-install prerequisite; existing installations retain their real ledger.
+Other OS/Cadence/PDK/physical-host qualification is deferred.
+
+The user explicitly delegates minimum reversible administrator repair on the
+current managed VM. This supersedes earlier administrator/permission exclusions
+for this bounded repair only; historical statements below remain prior evidence.
+Do not request phase/per-path approval again inside the existing GREL02–07 and
+895 MiB delegation. Human authentication input is required only if actually needed.
+No GREL08/publication/merge, budget increase/reset/refund, license/content changes,
+original OA/ADE/PDK/result/journal deletion, security disabling or root MCP/EDA.
+
+Actual repair removed shared write bits from331 installation-code/ancestor items
+and one workspace ancestor (332 total). All289 file contents/owners/groups and
+331 recorded installation SELinux contexts were preserved. No chown or root
+execution was needed. Exact plans, links, ACLs, hashes, partial/repeat/rollback
+receipts are private. Root helper-only verification later changed0;
+MCP/EDA remained ordinary-user. Reapplication changed0. General-user OCEAN startup passed.
+Environment preflight passed; installed immutable version preflight passed at
+04:49:03Z, with the legacy launcher preserved. This is not new circuit execution,
+full dependency attestation, license entitlement or production-provider authority.
+The old launcher name collides with initial generic activation; coexistence must
+be implemented without overwriting it. Latest shared ledger remains82 attempts /
+9,798,942,720 reserved bytes; zero new simulation reservations in this repair.
+
+Continue coexisting bootstrap, authentic existing-domain provider/migration,
+owned new RC/MOS ADE inputs, DC/AC/TRAN/extraction, generic Sweep/spec facts and
+actual clean Codex retry/restart within GREL02–07. Release remains BLOCKED until
+those actual gates pass. See [repair boundary](docs/generic_release/ADMIN_REPAIR_V1.md)
+and [native continuation](docs/generic_release/NATIVE_RESUME_BOUNDARY.md).
+
 ## GREL-05 feasible-reader exact-source receipt, 2026-10-08
 
 Tested source f5a1de2 in ready/unmerged PR147: local247 related PASS/no skips;
