@@ -1,3 +1,20 @@
+## Latest installed diagnostic checkpoint, 2026-10-12
+
+Exact952c39c archive/build/distribution/installed bootstrap and domain checks PASS.
+Current installed ordinary-user VM inventory569 targets/233 pending changes PASS,
+matching retained target contents/owners/identities/normalized metadata. GitHub
+connection restored; final PR148-152 Windows/POSIX CI PASS and root952c39c bot
+review6117583132 no-major (not formal APPROVED). No PR merger or RC is claimed.
+Private extra xattr/SELinux capture failed before iterating targets because
+Python2.6 lacks ctypes.c_ssize_t. User requested failure recording and end of run:
+failed script/stdout/stderr remain; administrator apply NOT_STARTED,0 metadata
+changes/0 simulations/0 reservations. Correct the diagnostic in a new evidence
+version, then complete pre-change recovery capture and exact delegated repair.
+No app configuration change and no restart needed. Other original/native/app/
+correction accounting/GREL08 gates remain. See
+[installed failure checkpoint](docs/generic_release/INSTALLED_DIAGNOSTIC_CHECKPOINT_20261012.md).
+Earlier checkpoints remain source-specific dated history.
+
 ## Latest bounded verification checkpoint, 2026-10-11
 
 User-requested checkpoint: current source291010d normal parent integration,
