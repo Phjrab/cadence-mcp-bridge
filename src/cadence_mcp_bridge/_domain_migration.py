@@ -243,18 +243,28 @@ def job_directory_entries(path):
             os.close(fd)
 
 
-def bounded_job_names(path):
+def bounded_directory_names(path, maximum, rejection):
     names, total = [], 0
     entries = job_directory_entries(path)
     try:
         for name in entries:
             total += len(name)
-            if len(names) >= 2048 or total > LIMIT:
-                raise ValueError("migration_inventory_limit")
+            if len(names) >= maximum or total > LIMIT:
+                raise ValueError(rejection)
             names.append(name)
     finally:
         entries.close()
     return sorted(names)
+
+
+def bounded_job_names(path):
+    return bounded_directory_names(path, 2048, "migration_inventory_limit")
+
+
+def bounded_registry_names(path):
+    # The identity namespace can contain only manifest and legacy seal. Consume
+    # at most the third entry before rejecting, including corrupted registries.
+    return bounded_directory_names(path, 2, "migration_registry_inventory_limit")
 
 
 def snapshot(root):
@@ -388,7 +398,7 @@ def prior_anchor(value, root, current):
     accounting, installer, probe = helpers()
     registry = root + "/" + accounting.REGISTRY
     accounting.safe(registry, True)
-    if set(os.listdir(registry)) not in (
+    if set(bounded_registry_names(registry)) not in (
         set(("manifest.json",)),
         set(("manifest.json", "legacy-seal.json")),
     ):
@@ -462,7 +472,7 @@ def apply(request, assets_sha256):
                 raise ValueError("migration_seal_prior_binding")
         if os.path.lexists(registry) and not seal:
             accounting.safe(registry, True)
-            if sorted(os.listdir(registry)) not in ([], ["manifest.json"]):
+            if bounded_registry_names(registry) not in ([], ["manifest.json"]):
                 raise ValueError("migration_registry_conflict")
             if not os.path.lexists(intent):
                 raise ValueError("migration_unrecorded_partial_state")
