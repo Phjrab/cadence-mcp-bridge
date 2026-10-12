@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import math
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from cadence_mcp_bridge.analog_measurements import AnalogResult
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.power_measurements import PowerCounter
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    require_fresh_reservation_sequence,
+)
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
@@ -189,7 +193,7 @@ class OffsetRun(ContractModel):
     psf_sha256: Digest
     frame_sha256: Digest
     scalars: OffsetScalars
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     new_simulation: bool
     warnings: Annotated[int, Field(ge=0, le=2)]
     notices: Annotated[int, Field(ge=0, le=16)]
@@ -199,6 +203,11 @@ class OffsetRun(ContractModel):
 class OffsetExtraction(ContractModel):
     schema_version: Literal[1]
     cases: tuple[OffsetRun, OffsetRun, OffsetRun, OffsetRun, OffsetRun]
+
+    @model_validator(mode="after")
+    def shared_policy(self) -> Self:
+        require_fresh_reservation_sequence(tuple(case.counter for case in self.cases))
+        return self
 
 
 class OffsetDiagnostics(ContractModel):
@@ -220,6 +229,7 @@ class OffsetDiagnostics(ContractModel):
 
 def study_diagnostics(extraction: OffsetExtraction) -> OffsetDiagnostics:
     rows = extraction.cases
+    require_fresh_reservation_sequence(tuple(row.counter for row in rows))
     names = ("zero", "minus1", "plus1", "minus05", "plus05")
     expected = (0, -1e-6, 1e-6, -0.5e-6, 0.5e-6)
     verified = True
@@ -232,8 +242,10 @@ def study_diagnostics(extraction: OffsetExtraction) -> OffsetDiagnostics:
             or r.source_input_sha256 != REFERENCE_INPUT
             or r.source_psf_sha256 != REFERENCE_PSF
             or r.new_simulation != (i != 0)
-            or r.counter.count != 68 + i
-            or r.counter.result_reserved_bytes != 7919894528 + i * 128 * 1024**2
+            or (not isinstance(r.counter, FreshResourceCounter) and (
+                r.counter.count != 68 + i
+                or r.counter.result_reserved_bytes != 7919894528 + i * 128 * 1024**2
+            ))
         ):
             raise ValueError("immutable offset cases/source/admission sequence required")
         if i == 0 and (r.psf_sha256 != REFERENCE_PSF or r.input_sha256 != REFERENCE_INPUT):

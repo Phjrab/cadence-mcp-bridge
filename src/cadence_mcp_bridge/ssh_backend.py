@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -65,6 +66,7 @@ from cadence_mcp_bridge.profiles import ACTUAL_PROFILE_ID, FIXTURE_PROFILE_ID
 from cadence_mcp_bridge.sanitization import sanitize_text
 from cadence_mcp_bridge.slew_study import StepExtraction
 from cadence_mcp_bridge.storage import CleanupOutcome, CleanupRequest, StorageSnapshot
+from cadence_mcp_bridge.storage_runtime import reference_storage_bundle, reference_storage_entry
 from cadence_mcp_bridge.write_models import (
     DesignWritePlan,
     DesignWriteValidationResult,
@@ -185,8 +187,21 @@ class OpenSshBackend:
         )
         if len(raw) > 8192:
             raise InvalidInputError("storage request bound exceeded")
-        runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
-        return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
+        if isinstance(self._config, OperatorTransport):
+            raise ConfigurationError("RUNNER_SETUP_REQUIRED: operator storage is not attested")
+        pin = self._config.reference_storage_manifest_sha256
+        if pin is None:
+            runner = self._config.remote_root + "/phase-campaign/storage-mgmt-v6/run.sh"
+            return await asyncio.to_thread(self._invoke_at_path, runner, action, raw.hex())
+        directory = self._config.remote_root + "/phase-campaign/storage-mgmt-v7/runtime/" + pin
+        current_pin, payloads = reference_storage_bundle()
+        if current_pin != pin:
+            raise ConfigurationError("STORAGE_RUNTIME_UPDATE_REQUIRED: package-bound pin differs")
+        entry = reference_storage_entry(payloads)
+        return await asyncio.to_thread(
+            self._invoke_at_path, "/usr/bin/python", "-E", "-s", "-B", "-c",
+            shlex.quote(entry), directory, pin, action, raw.hex(),
+        )
 
     async def health(self) -> HealthReport:
         payload = await self._invoke_json(_RunnerCommand.HEALTH)

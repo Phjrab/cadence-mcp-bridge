@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import shlex
@@ -51,18 +52,24 @@ def _closed_document(data: bytes) -> None:
         raise ValueError("migration document nesting") from error
 
 
-def contents() -> tuple[dict[str, bytes], bytes, str]:
+def contents(setup: bool = False) -> tuple[dict[str, bytes], bytes, str]:
+    sources = (
+        {**{name: source for name, source in SOURCES.items() if name != "domain-operator.sh"},
+         "setup.py": "_fresh_domain.py"}
+        if setup else SOURCES
+    )
     assets = {
         name: files("cadence_mcp_bridge").joinpath(source).read_bytes()
-        for name, source in SOURCES.items()
+        for name, source in sources.items()
     }
-    entry = files("cadence_mcp_bridge").joinpath("_domain_entry.py").read_text()
-    assets["domain-operator.sh"] = assets["domain-operator.sh"].replace(
-        b"__CADENCE_DOMAIN_ENTRY__", shlex.quote(entry).encode("ascii")
-    )
+    if not setup:
+        entry = files("cadence_mcp_bridge").joinpath("_domain_entry.py").read_text()
+        assets["domain-operator.sh"] = assets["domain-operator.sh"].replace(
+            b"__CADENCE_DOMAIN_ENTRY__", shlex.quote(entry).encode("ascii")
+        )
     manifest = {
         "schema_version": 1,
-        "kind": "EXISTING_DOMAIN_OPERATOR_HELPER",
+        "kind": "STANDARD_VM_DOMAIN_SETUP_HELPER" if setup else "EXISTING_DOMAIN_OPERATOR_HELPER",
         "files": {
             name: {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
             for name, data in assets.items()
@@ -88,9 +95,9 @@ def _entry_from_assets(assets: dict[str, bytes]) -> str:
     return entry[0]
 
 
-def export(output: Path) -> dict[str, object]:
+def export(output: Path, setup: bool = False) -> dict[str, object]:
     output = _local_path(output)
-    assets, manifest, digest = contents()
+    assets, manifest, digest = contents(setup)
     if output.exists() or not output.parent.is_dir():
         raise ValueError("exclusive_helper_parent_required")
     output.mkdir(mode=0o700)
@@ -129,13 +136,43 @@ def _transport(
     entry_source: str | None = None,
 ) -> dict[str, object]:
     output = _local_path(output)
-    if entry_source is None:
+    if (action in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
+            and entry_source is None):
         raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
         raise ValueError("exclusive_receipt_parent_required")
     executable = shutil.which("ssh.exe")
     if executable is None:
         raise ValueError("OpenSSH unavailable")
+    allowed = {
+        "inventory-existing",
+        "apply-existing",
+        "inventory-legacy-seal",
+        "seal-existing",
+        "plan-fresh",
+        "apply-fresh",
+        "register-existing",
+    }
+    if action not in allowed:
+        raise ValueError("fixed_domain_action_required")
+    helper_name = (
+        "domain-operator.sh"
+        if action
+        in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
+        else "setup.py"
+    )
+    helper_path = (
+        environment.paths.managed_root + "/operator-helpers/" + expected + "/domain-operator.sh"
+        if helper_name == "domain-operator.sh"
+        else environment.paths.workspace_root + "/.cadence_mcp-setup/" + expected + "/setup.py"
+    )
+    command = (
+        ["/usr/bin/python", "-E", "-s", "-B", "-c",
+         shlex.quote(entry_source or ""),
+         environment.paths.managed_root + "/operator-helpers/" + expected]
+        if helper_name == "domain-operator.sh"
+        else ["/usr/bin/python", "-E", "-s", "-B", helper_path]
+    )
     argv = [
         executable,
         "-o",
@@ -145,9 +182,7 @@ def _transport(
         "-o",
         "ConnectTimeout=10",
         environment.ssh_alias,
-        "/usr/bin/python", "-E", "-s", "-B", "-c",
-        shlex.quote(entry_source),
-        environment.paths.managed_root + "/operator-helpers/" + expected,
+        *command,
         action,
         expected,
     ]
@@ -158,6 +193,8 @@ def _transport(
         raise ValueError("existing_domain_inventory_rejected")
     _closed_document(stdout)
     receipt = json.loads(stdout)
+    if action in {"apply-fresh", "register-existing"}:
+        return _setup_receipt(receipt, stdout, output, json.loads(payload), action)
     if action in {"apply-existing", "seal-existing"}:
         return _apply_receipt(receipt, stdout, output, json.loads(payload))
     if (
@@ -266,3 +303,181 @@ def _apply_receipt(receipt: Any, raw: bytes, output: Path, request: Any) -> dict
         raise ValueError("existing_domain_apply_receipt_binding")
     installer.exclusive(str(output), raw)  # type: ignore[no-untyped-call]
     return {**receipt, "remote_contact": True}
+
+
+def prepare_fresh(profile: Path, output: Path, expected_helper_sha256: str) -> dict[str, object]:
+    environment, data = load_environment(_local_path(profile))
+    _, _, expected = contents(True)
+    if expected != expected_helper_sha256:
+        raise ValueError("helper_package_binding_mismatch")
+    return _transport(environment, _canonical(json.loads(data)), expected, "plan-fresh", output)
+
+
+def setup_existing(
+    profile: Path,
+    output: Path,
+    expected_helper_sha256: str,
+    identity_manifest_sha256: str,
+    operator_authority: str,
+) -> dict[str, object]:
+    environment, data = load_environment(_local_path(profile))
+    _, _, expected = contents(True)
+    if expected != expected_helper_sha256:
+        raise ValueError("helper_package_binding_mismatch")
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    if not accounting.matches(accounting.HASH, identity_manifest_sha256):  # type: ignore[no-untyped-call]
+        raise ValueError("identity_manifest_binding")
+    _instruction(operator_authority)
+    plan = {
+        "schema_version": 1,
+        "profile": json.loads(data),
+        "identity_manifest_sha256": identity_manifest_sha256,
+        "helper_manifest_sha256": expected,
+    }
+    request = {
+        "plan": plan,
+        "expected_plan_sha256": hashlib.sha256(_canonical(plan)).hexdigest(),
+        "operator_authority": operator_authority,
+    }
+    return _transport(environment, _canonical(request), expected, "register-existing", output)
+
+
+def _instruction(operator_authority: str) -> None:
+    if not 1 <= len(operator_authority) <= 512 or any(ord(c) < 32 for c in operator_authority):
+        raise ValueError("actual_operator_instruction_required")
+
+
+def apply_fresh(
+    profile: Path,
+    plan: Path,
+    output: Path,
+    expected_plan_sha256: str,
+    expected_helper_sha256: str,
+    operator_authority: str,
+) -> dict[str, object]:
+
+    environment, data = load_environment(_local_path(profile))
+    _, _, expected = contents(True)
+    if expected != expected_helper_sha256:
+        raise ValueError("helper_package_binding_mismatch")
+    raw = installer.regular(str(_local_path(plan)))  # type: ignore[no-untyped-call]
+    _closed_document(raw)
+    receipt = json.loads(raw)
+    _instruction(operator_authority)
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != {"plan", "plan_sha256", "execution_authorized", "ledger_initialized"}
+        or receipt["execution_authorized"] is not False
+        or receipt["ledger_initialized"] is not False
+        or not isinstance(receipt["plan"], dict)
+        or receipt["plan_sha256"] != expected_plan_sha256
+        or receipt["plan"].get("recipe_id") != "fresh-standard-vm-domain-v1"
+        or receipt["plan"].get("helper_manifest_sha256") != expected
+        or _canonical(receipt["plan"].get("profile")) != _canonical(json.loads(data))
+        or hashlib.sha256(_canonical(receipt["plan"])).hexdigest() != expected_plan_sha256
+    ):
+        raise ValueError("fresh_domain_plan_binding")
+    request = {
+        "plan": receipt["plan"],
+        "expected_plan_sha256": expected_plan_sha256,
+        "operator_authority": operator_authority,
+    }
+    return _transport(environment, _canonical(request), expected, "apply-fresh", output)
+
+
+def _setup_receipt(
+    receipt: Any, raw: bytes, output: Path, request: Any, action: str
+) -> dict[str, object]:
+    expected = request["plan"].get("identity_manifest_sha256")
+    if action == "apply-fresh":
+        expected = hashlib.sha256(_canonical(request["plan"]["anchor"])).hexdigest()
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt)
+        != {
+            "status",
+            "identity_manifest_sha256",
+            "ledger_initialized",
+            "ledger_modified",
+            "execution_authorized",
+        }
+        or receipt["identity_manifest_sha256"] != expected
+        or receipt["ledger_modified"] is not False
+        or receipt["execution_authorized"] is not False
+        or type(receipt["ledger_initialized"]) is not bool
+        or (
+            action == "register-existing"
+            and (
+                receipt["ledger_initialized"] is not False
+                or receipt["status"] != "EXISTING_DOMAIN_REGISTERED_NO_LEDGER_CHANGE"
+            )
+        )
+        or (
+            action == "apply-fresh"
+            and (receipt["status"], receipt["ledger_initialized"])
+            not in {
+                ("FRESH_DOMAIN_INITIALIZED_NOT_EXECUTION_AUTHORITY", True),
+                ("EXISTING_FRESH_DOMAIN_REUSED", False),
+            }
+        )
+    ):
+        raise ValueError("setup_receipt_binding")
+    installer.exclusive(str(output), raw)  # type: ignore[no-untyped-call]
+    return {**receipt, "remote_contact": True}
+
+
+def stage_setup(profile: Path, expected_helper_sha256: str) -> dict[str, object]:
+    """Stage only current package's fixed helper set, never caller filenames/content/code."""
+    environment, data = load_environment(_local_path(profile))
+    assets, manifest, expected = contents(True)
+    if expected != expected_helper_sha256:
+        raise ValueError("helper_package_binding_mismatch")
+    executable = shutil.which("ssh.exe")
+    if executable is None:
+        raise ValueError("OpenSSH unavailable")
+    payload = {
+        "profile": json.loads(data),
+        "expected": expected,
+        "files": {
+            name: base64.b64encode(raw).decode("ascii")
+            for name, raw in {**assets, "manifest.json": manifest}.items()
+        },
+    }
+    argv = [
+        executable,
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "StrictHostKeyChecking=yes",
+        "-o",
+        "ConnectTimeout=10",
+        environment.ssh_alias,
+        "/usr/bin/python",
+        "-E",
+        "-s",
+        "-B",
+        "-c",
+        shlex.quote(
+            files("cadence_mcp_bridge").joinpath("_setup_stage.py").read_text(encoding="utf-8")
+        ),
+        expected,
+    ]
+    status, stdout, stderr = run_fixed(
+        argv, _canonical(payload), OpenSshBackend._ssh_environment(), timeout=60, limit=262144
+    )
+    if status or stderr or len(stdout) > 4096:
+        raise ValueError("fixed_setup_staging_rejected")
+    _closed_document(stdout)
+    result = json.loads(stdout)
+    if (
+        not isinstance(result, dict)
+        or set(result) != {"status", "manifest_sha256", "changed_files", "execution_authorized"}
+        or result["status"] != "STANDARD_VM_SETUP_HELPER_STAGED"
+        or result["manifest_sha256"] != expected
+        or type(result["changed_files"]) is not int
+        or not 0 <= result["changed_files"] <= 6
+        or result["execution_authorized"] is not False
+    ):
+        raise ValueError("fixed_setup_staging_receipt")
+    return {**result, "remote_contact": True, "ledger_initialized": False}

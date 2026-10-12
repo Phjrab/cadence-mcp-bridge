@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "COMPATIBILITY_REFERENCE_NOT_OPERATOR_ENVIRONMENT_OR_AUTHORITY",
+  "support": "professor-provided standard CentOS/Cadence VM or equivalent reproduced installation; existing PDK; individual VMware",
+  "observed_guest": {
+    "centos_release": "6.5 Final",
+    "architecture": "i686",
+    "python_version": "2.6.6"
+  },
+  "observed_tools": {
+    "virtuoso": "IC6.1.5.500.15",
+    "spectre": "12.1.0.347.isr3",
+    "ocean": "included IC615 OCEAN; ordinary-user startup observed"
+  },
+  "source_evidence": [
+    "ADMIN_REPAIR_V1.md",
+    "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+    "VERIFIED_ENVIRONMENT.md"
+  ],
+  "common_invocation": {
+    "guest_helper": [
+      "/usr/bin/python",
+      "-E",
+      "-s",
+      "-B"
+    ],
+    "ssh_checks": [
+      "BatchMode=yes",
+      "StrictHostKeyChecking=yes"
+    ],
+    "eda_concurrency": 1,
+    "ordinary_user_only": true
+  },
+  "operator_owned_fields": [
+    "address/ssh alias",
+    "host keys/authentication",
+    "guest account",
+    "workspace/protected paths",
+    "circuit library/cell/view/ADE",
+    "result location",
+    "registry/journals",
+    "confirmed resource policy and experiment bounds"
+  ],
+  "qualification": {
+    "fresh_actual_observation_required": true,
+    "new_circuits": "NOT_RUN",
+    "dc_ac_tran_sweep": "PRODUCTION_PROVIDER_NOT_CONNECTED",
+    "other_vm_versions_pdk_hosts": "DEFERRED"
+  },
+  "reference_supplies_connection_or_keys": false,
+  "reference_supplies_budget_or_execution_grant": false
+}

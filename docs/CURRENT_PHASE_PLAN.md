@@ -1,3 +1,58 @@
+## Exact launcher synchronization and retained entry pin, 2026-10-11
+
+Review4240549663 is corrected by updating the checked-in v7 launcher to match
+its generated authenticated entry exactly; the deployment drift guard remains.
+The deployment source set includes the entry. New reference manifests bind its
+SHA256; the pinned backend retains the entry from that same bundle construction
+rather than reading a resource again. A configured older v7 pin reports explicit
+STORAGE_RUNTIME_UPDATE_REQUIRED; unpinned historical v6 remains unchanged. This
+is an opt-in reference compatibility update, not fresh generic-storage acceptance.
+Historical manifests/ledgers are preserved and their existing worker schemas
+remain readable. New helper pins do not grant any deletion or simulation authority.
+
+Portable current66 PASS/12 POSIX skips; a source-deployment equality regression and
+exact retained-entry delivery regression are included. Prior isolated package
+43-state/20-migration preservation PASS belongs to482e code before this change;
+exact refreshed hosted/package/security/independent review remain required.
+No VM contact/change, deletion, reservation, refund or actual simulation occurred.
+
+## Pinned storage worker entry and zero initialization fixture, 2026-10-11
+
+Independent finding4240464522 is corrected: the explicitly pinned reference
+storage backend supplies the installed fixed `_storage_entry.py` source with
+-E -s -B -c. That entry authenticates the caller's manifest pin and retained
+storage.py bytes before executing any worker code, including legacy ledgers.
+The exported launcher embeds the same bounded entry; the pinned backend does
+not execute a mutable remote launcher. Unpinned historical v6 remains an explicit
+legacy route, while fresh operator storage stays unavailable until attested.
+
+Three owned POSIX regressions cover modified worker, modified worker+manifest,
+and replacing the pathname after the authenticated source was retained. Existing
+standalone/legacy/fresh tests remain separate. Windows connected139 PASS/12 OS
+skips; Ruff/mypy80 PASS. Installed migration verification now explicitly rejects
+a fresh power result at baseline0 and checks production models after its actual
+disposable1/2 reservations. No actual VM budget/ledger/admin changes are made.
+Exact hosted, package, independent review and final VM/app remain mandatory.
+
+## Staging startup and positive power admission, 2026-10-11
+
+Independent review4240427687/4240427689 is corrected. The fixed -c setup staging
+source now removes CWD/script entries using builtin sys before importing base64,
+hashlib, json or other filesystem dependencies, and requires isolated Python
+flags. Memory-loaded imports preserve trusted stdlib entries. Five real child
+process tests place marker-bearing shadows in the SSH-equivalent CWD; all reject
+the invalid payload without importing those files or creating any remote state.
+
+PowerExtraction now applies the shared positive fresh-reservation guard, including
+direct OpenSSH model validation. A fresh count0/bytes0 result cannot qualify;
+legacy power counter serialization remains unchanged. The cross-consumer zero
+counter regression now includes power. Windows fresh/power/consumer144 PASS,
+official Ruff/mypy78 PASS. Exact current hosted, installed, security and refreshed
+independent review remain gates; no actual VM, journal, reservation or simulation
+changes occurred. ContinuousGREL02-08/16GiB/500/same-change20/conditional normal
+integration remain authorized. Final exact public-candidate approval is separate.
+Earlier histories, policy versions, failed evidence and original state remain.
+
 ## Bounded retained-job migration scan, 2026-10-11
 
 Review4240586372 is corrected: retained job names stream through the fixed
@@ -340,6 +395,94 @@ persist; package/hosted/fresh review/final actual installed gates are pending.
 This correction itself performs no actual VM/admin mutation/reservation/simulation.
 Public tag/Release/upload still requires final exact-candidate approval.
 
+
+## PR151 authenticated setup execution correction, 2026-10-11
+
+Review4239974380 found fresh setup reimported helper paths after complete asset
+validation. Standalone setup now executes only the retained authenticated bytes
+in fresh fixed module instances, ignores poisoned helper caches and gives its
+migration helper the same authenticated accounting/installer/probe instances.
+A failed revalidation clears prior authenticated state. Startup removes the script
+entry only for direct __main__ launch; memory-loaded helpers preserve legitimate
+stdlib entries. Canonical staging aliases are excluded before stdlib imports and
+retained compilation. Standalone storage follows the same startup distinction.
+Original pre-fix regression logs are retained; exact updated source/package/hosted/
+fresh-review gates remain required. This isolated branch changes no actual VM,
+admin state, journal, ledger, reservation, simulation or protected circuit content.
+Current user16GiB/500/20,GREL02-08 and conditional normal integration delegation
+remains; exact public candidate approval is separate. General release stays BLOCKED.
+Earlier source receipts and policy records below are preserved as history.
+
+## PR151 current safety-parent refresh, 2026-10-11
+
+Current source normally integrates150206fe0b: initial executable pins, retained
+validated helper bytes and reviewed installed-fixture correction, with148 fixed
+recipe completion membership. The151 early fresh-policy correction retains all
+legacy/scientific protections. Exact3d74b50 isolated installed disposable-ledger
+1/2 amplifier/power/SDK consumers PASS; its new Linux parser fixture initially
+failed only on host ssh.exe availability and now explicitly stubs that unused
+executable lookup. No actual transport or supported platform behavior changed.
+Final related/package/hosted/review and pending parent membership corrections are
+separate gates. General release stays BLOCKED; current delegated limits/history
+remain preserved, and exact public-candidate approval is still required.
+
+## PR151 current standalone correction and parent integration, 2026-10-11
+
+Review4239919242 is fixed by binding the private named resource lock's inode,
+ownership/mode/link count/size and at most4096 actual content bytes. Existing
+fixed launchers' O_TRUNC of an empty lock can change timestamps without corrupting
+it; only lock mtime/ctime are excluded. Same-size content drift and all namespace/
+permission/link checks still reject. Artifact metadata protection is unchanged.
+
+Exact8c8389e Ubuntu actual files/flock/standalone463 PASS with zero POSIX skips,
+Windows portable consumers119 PASS/17 OS skips, Ruff/mypy78 PASS and exact
+isolated installed85-tool43+20-state preservation PASS are source evidence.
+Current source additionally merges latest150ca2476, including148 final receipt
+namespace and149 independently compiled launcher binding. This integrated source
+needs refreshed hosted/security/package/review gates; previous receipts remain
+source-specific history. No VM contact/admin/deployment/actual journal/ledger/
+reservation/simulation changes occurred. General release and exact RC stay BLOCKED.
+Current user16GiB/500/20,GREL02-08 and conditional normal PR integration authority
+continues; public tag/Release/assets still require exact-candidate approval.
+
+## Active PR151 standalone deployment correction, 2026-10-11
+
+Fresh review exposed a missing production accounting helper/manifest in the
+historical v6 storage deployment. A separate hash-bound v7 deployment and exact
+operator-configured pin now provide storage.py/reservations.py plus a canonical
+manifest, with no import/startup/doctor provisioning. The shared trusted-root
+execute_fixed dispatcher validates activation after held/busy lock decisions;
+legacy native_generic=True remains fail-closed pending the qualified consumer.
+Windows portable60 PASS/11 skips, Ruff and mypy78 PASS are source evidence;
+real standalone Linux/hosted/package/security/review gates are pending.
+No VM/deployment/simulation/reservation/actual ledger/admin change occurs.
+General release remains BLOCKED. See [exact runtime](generic_release/REFERENCE_STORAGE_RUNTIME_V7.md) for routing, protection
+and qualification scope. Current retained16GiB/500/20, GREL02-08 and conditional
+normal integration delegation remains; exact publication still needs approval.
+Historical source receipts and authority records below remain preserved.
+
+## Active PR151 lock-contended inventory correction, 2026-10-11
+
+The current direct user delegation allows GREL02-08 candidate preparation,
+conditional normal integration of reviewed related PRs, and the validation VM's
+16 GiB retained reservation ceiling. Existing attempts/corrections/reservations
+remain retained. Public tag/Release/assets publication still needs the final
+exact-candidate approval. Earlier exclusions and resource observations below
+remain historical and do not override that delegation.
+
+PR151 now distinguishes lock-contended read-only storage inventory from a
+lock-held conservation audit. Only expected fixed-main inventory flock contention
+uses the partial route: authenticate the immutable registered domain/policy and
+last committed physical counter, mark coverage incomplete and artifacts active/
+protected, and offer no deletion candidates. Cleanup, spending and lock-held
+inventory keep the full multi-file audit; unexpected lock failures reject.
+This is local synthetic source/package work, with no VM contact, actual journal/
+ledger change, reservation, simulation or metadata repair. The native storage
+asset changes identity and needs exact new-bundle qualification; prior native
+receipts do not qualify this correction. Release and exact candidate remain
+BLOCKED. See [consumer correction](generic_release/FRESH_POLICY_CONSUMERS_V1.md)
+for source-scoped test/package receipts. Independent final review/CI remain gates.
+Historical sections below keep their original source scope.
 ## Retained migration composition startup boundary, 2026-10-11
 
 A retained migration module can be compiled by the new-install provider with an
@@ -1113,6 +1256,44 @@ PR142-144 normally merged; latest checked main eda060e1a1a984134e25490839c60ec2c
 Existing changes and evidence are retained. This correction adds0 simulations and0
 reservations. Actual standard-VM execution is tracked separately in PR152; actual
 Codex new-job acceptance and exact GREL08 candidate remain incomplete. Release BLOCKED.
+
+## Active fresh-policy consumer correction, 2026-10-08
+
+Continue the existing branch and unmerged PR151; latest main remains553276d.
+Fresh counter/storage observations now carry and audit the registered schema2
+policy and account index rather than inheriting the developer campaign/10GiB.
+Historical PowerCounter/study output and85 public MCP schemas remain exact.
+The generic provider/public storage route remains incomplete; do not treat this
+consumer correction as native dispatch or completed GREL03. Source/package/CI
+receipts are tracked in [fresh-policy consumer report](generic_release/FRESH_POLICY_CONSUMERS_V1.md).
+
+Actual ordinary-user retained preflight PASS, existing seven control metadata
+unchanged; installed accounting predates current source and cannot attest current
+package dispatch. Actual OCEAN17 ADE APIs callable is existence only, not netlisting.
+Counter82 /9,798,942,720, remaining895MiB; this continuation simulations/reservations0.
+ContinuousGREL02–07 and current minimum administrator delegation persist; no
+phase reapproval, merge/GREL08/publication, budget increase/reset/refund or deletion.
+Next remains authentic provider/worker, new RC/MOS inputs/jobs/extraction/Sweep/spec
+and actual clean Codex retry/restart. Historical overlays below remain evidence.
+
+## Active fresh-policy and retained-domain provisioning, 2026-10-08
+
+Current branch feat/grel-03-fresh-domain-policy continues unmerged PR150 corrected
+ancestor a26256a. A fixed normal-user setup CLI separates genuine zero-history
+initialization from retained accounting reuse. Account-home index and history
+inventory reject alternate-root resets; the same transaction/audit code supports
+schema2 initial policy and unchanged historical schema1. Local157 PASS/8 skips,
+security18/audit clean, Ruff/mypy76 and installed43+20-state preservation PASS.
+Actual current VM installed-wheel staging/repeat and existing-domain index
+registration/repeat PASS; fresh initialization correctly DENIED. Existing seven
+protected control files' content/uid/gid/mode/inode/mtime unchanged. Counter82 /
+9,798,942,720, remaining895MiB; new reservations/simulations0. Setup grant false.
+
+Production authenticated provider/terminal workers, new RC/MOS OA/ADE inputs,
+effective netlisting/DC/AC/TRAN/extraction, generic Sweep/specification and actual
+clean Codex jobs remain incomplete; release BLOCKED. Existing continuousGREL02–07
+and minimum administrator delegation continue; no phase reapproval. See
+FRESH_DOMAIN_V1.md for actual/synthetic boundaries and source-scoped receipts.
 
 ## Active legacy classification correction, 2026-10-08
 

@@ -10,6 +10,7 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.registered_measurements import MeasurementProvenance
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel
 
 REFERENCE_OPERATION = "f154d798-0f7f-47d6-9323-6b046394eef6"
@@ -96,6 +97,39 @@ class PowerCounter(ContractModel):
     result_reserved_bytes: Annotated[int, Field(ge=0, le=10 * 1024**3)]
 
 
+# Historical counters retain their exact three-field serialization. Fresh
+# observations carry their registered policy rather than inheriting AUTO-PHASE-01.
+RegisteredPowerCounter = PowerCounter | FreshResourceCounter
+
+
+def require_same_resource_policy(counters: tuple[RegisteredPowerCounter, ...]) -> None:
+    """Composite receipts cannot splice observations from different domains/policies."""
+    identities = tuple(
+        (counter.campaign_id, counter.policy if isinstance(counter, FreshResourceCounter) else None)
+        for counter in counters
+    )
+    if identities and any(identity != identities[0] for identity in identities[1:]):
+        raise ValueError("shared registered resource policy required")
+
+
+def require_fresh_reservation_sequence(counters: tuple[RegisteredPowerCounter, ...]) -> None:
+    """Fresh observations use their policy and positive consecutive admissions.
+
+    No historical campaign offset or per-attempt byte amount is inherited. The
+    registered policy bounds each typed counter; actual transaction conservation
+    remains a runner/ledger check, not authority conferred by this result parser.
+    """
+    require_same_resource_policy(counters)
+    if not counters or not isinstance(counters[0], FreshResourceCounter):
+        return
+    if counters[0].count == 0:
+        raise ValueError("fresh result requires a positive admitted counter")
+    for previous, current in zip(counters, counters[1:], strict=False):
+        if (current.count != previous.count + 1
+                or current.result_reserved_bytes <= previous.result_reserved_bytes):
+            raise ValueError("fresh consecutive reservation sequence required")
+
+
 class PowerExtraction(ContractModel):
     schema_version: Literal[1]
     job_id: OperationId
@@ -107,12 +141,13 @@ class PowerExtraction(ContractModel):
     status: Literal["EXTRACTED", "UNQUALIFIED"]
     reason: Literal["signed_branch_current_unavailable", "reader_error"] | None
     protected_unchanged: Literal[True]
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     new_spectre_attempts: Literal[0]
     new_reservation_bytes: Literal[0]
 
     @model_validator(mode="after")
     def exact_inventory(self) -> Self:
+        require_fresh_reservation_sequence((self.counter,))
         for source, (identity, role, voltage) in zip(self.sources, SOURCE_SET, strict=True):
             if source.source_id != identity or source.role != role:
                 raise ValueError("complete ordered source inventory required")

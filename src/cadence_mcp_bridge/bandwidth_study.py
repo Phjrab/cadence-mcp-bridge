@@ -10,7 +10,11 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge.analog_measurements import AnalogResult
 from cadence_mcp_bridge.models import ContractModel
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.power_measurements import PowerCounter
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    require_fresh_reservation_sequence,
+)
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.variable_contracts import Digest
 
 REFERENCE_OPERATION = "1afa2677-e264-4e80-a23d-dc722e34bb4a"
@@ -36,7 +40,7 @@ class RefinementGrid(ContractModel):
     psf_sha256: Digest
     frame_sha256: Digest
     spectrum: Annotated[tuple[StudyPoint, ...], Field(min_length=251, max_length=501)]
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     warnings: Annotated[int, Field(ge=0, le=2)]
     notices: Annotated[int, Field(ge=0, le=100)]
     protected_unchanged: Literal[True]
@@ -64,10 +68,11 @@ class RefinementExtraction(ContractModel):
 
     @model_validator(mode="after")
     def ordered_grids(self) -> Self:
+        require_fresh_reservation_sequence(tuple(grid.counter for grid in self.grids))
         a, b = self.grids
         if a.grid != 50 or b.grid != 100:
             raise ValueError("ordered distinct grids required")
-        if (
+        if not isinstance(a.counter, FreshResourceCounter) and (
             b.counter.count != a.counter.count + 1
             or b.counter.result_reserved_bytes != a.counter.result_reserved_bytes + 128 * 1024**2
         ):
@@ -128,7 +133,7 @@ class RefinementProvenance(ContractModel):
     frame_sha256: Digest
     warnings: Annotated[int, Field(ge=0, le=2)]
     notices: Annotated[int, Field(ge=0, le=100)]
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
 
 
 class BandwidthStudyResult(ContractModel):
@@ -151,6 +156,11 @@ class BandwidthStudyResult(ContractModel):
     raw_vectors_included: Literal[False] = False
     execution_authorized: Literal[False] = False
     spec_evaluation: Literal["not_evaluated"] = "not_evaluated"
+
+    @model_validator(mode="after")
+    def shared_policy(self) -> Self:
+        require_fresh_reservation_sequence(tuple(item.counter for item in self.refinements))
+        return self
 
 
 def study_definition() -> StudyDefinition:

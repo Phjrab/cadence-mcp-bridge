@@ -6,16 +6,31 @@ Operator registration/consent are separate canonical mode-600 records.
 
 from __future__ import with_statement
 
+import sys
+
+# Standalone/runtime execution must not resolve stdlib from unmanifested files
+# beside this script or from the working directory. Use only the builtin sys
+# module before removing that startup entry; normal installed package imports
+# leave the host application's import paths unchanged.
+if __name__ == "__main__":
+    if sys.path:
+        del sys.path[0]
+    sys.path[:] = [entry for entry in sys.path if entry]
+import os
+
+if not globals().get("__package__"):
+    _storage_asset_root = os.path.normcase(os.path.realpath(os.path.dirname(__file__)))
+    sys.path[:] = [entry for entry in sys.path
+                   if os.path.normcase(os.path.realpath(entry or os.curdir)) != _storage_asset_root]
+
 import binascii
 import ctypes
 import errno
 import hashlib
 import json
-import os
 import re
 import stat
 import subprocess
-import sys
 import time
 
 ROOT = "/home/buet/cds_work/.cadence_mcp"
@@ -114,6 +129,21 @@ class PosixIO(object):
             os.close(fd)
             raise
 
+    def account_home(self):
+        import pwd
+
+        return pwd.getpwuid(os.getuid()).pw_dir
+
+    def canonical_root(self, fd):
+        # Linux descriptor path is observed, never supplied by model input.
+        path = os.readlink("/proc/self/fd/" + str(fd))
+        if not path.startswith("/") or os.path.realpath(path) != path:
+            raise ValueError("storage root identity unavailable")
+        opened, named = os.fstat(fd), os.lstat(path)
+        if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
+            raise ValueError("storage root identity drift")
+        return path
+
     def names(self, fd):
         duplicate = self.checked(
             self.libc.openat(fd, b".", os.O_RDONLY | self.directory | self.nofollow, 0)
@@ -180,7 +210,72 @@ def metadata(fd):
     ]
 
 
-def read_json(io, parent, name, limit, private=False):
+def storage_lock_guard(io, root_path, root, lock):
+    """Bind the held lock to the fixed private root and named single-link file."""
+    def directory_state(fd):
+        info = os.fstat(fd)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ValueError("storage root permissions")
+        return [info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode]
+
+    def lock_metadata(fd):
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+            raise ValueError("storage lock permissions")
+        if not 0 <= info.st_size <= 4096:
+            raise ValueError("storage lock content bound")
+        # Existing fixed launchers use O_TRUNC before trying flock. Truncating an
+        # already empty lock changes mtime/ctime without changing its identity.
+        # Bind actual bounded bytes instead; artifact metadata stays unchanged.
+        return [info.st_dev, info.st_ino, info.st_uid, info.st_gid,
+                info.st_mode, info.st_nlink, info.st_size]
+
+    def lock_state(fd):
+        before = lock_metadata(fd)
+        offset = os.lseek(fd, 0, os.SEEK_CUR)
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            blocks, count = [], 0
+            while count <= 4096:
+                block = os.read(fd, 4097 - count)
+                if not block:
+                    break
+                blocks.append(block)
+                count += len(block)
+            if count > 4096 or count != before[-1] or lock_metadata(fd) != before:
+                raise ValueError("storage lock content drift")
+            return before + [hashlib.sha256(b"".join(blocks)).hexdigest()]
+        finally:
+            os.lseek(fd, offset, os.SEEK_SET)
+
+    pinned_root, pinned_lock = directory_state(root), lock_state(lock)
+
+    def check():
+        if directory_state(root) != pinned_root or lock_state(lock) != pinned_lock:
+            raise ValueError("held storage lock identity drift")
+        named_root = io.root(root_path)
+        try:
+            if directory_state(named_root) != pinned_root:
+                raise ValueError("named storage root identity drift")
+            named_lock = io.open(named_root, "run.lock")
+            try:
+                if lock_state(named_lock) != pinned_lock:
+                    raise ValueError("named storage lock identity drift")
+            finally:
+                os.close(named_lock)
+        finally:
+            os.close(named_root)
+        if directory_state(root) != pinned_root or lock_state(lock) != pinned_lock:
+            raise ValueError("held storage lock identity drift")
+
+    check()
+    return check
+
+
+
+def read_json(io, parent, name, limit, private=False, canonical_ledger=False):
     fd = io.open(parent, name)
     try:
         s = os.fstat(fd)
@@ -194,6 +289,10 @@ def read_json(io, parent, name, limit, private=False):
         value = json.loads(raw.decode("ascii"))
         if private and raw.strip() != canonical(value):
             raise ValueError("canonical operator metadata required")
+        if canonical_ledger and raw.strip() not in (
+            canonical(value), json.dumps(value, sort_keys=True).encode("ascii")
+        ):
+            raise ValueError("canonical cumulative ledger required")
         return value
     finally:
         os.close(fd)
@@ -338,11 +437,168 @@ def append_artifact(artifacts, aggregates, item):
     frames.append([item["artifact_id"], item["fingerprint"]])
 
 
-def snapshot(io, root, is_active):
+def fresh_ledger(io, root, counter, lock_held=True):
+    """Authenticate schema2 policy at the pinned root and audit conserved slots.
+
+    Multi-file conservation is audited only while the caller holds run.lock.
+    Lock-contended read-only inventory validates the immutable registered policy
+    and physical committed counter, but cannot attest transactional conservation.
+    That snapshot is active/partial and has no deletion candidates or authority.
+    This consumer never acquires another flock, reserves or repairs.
+    Standalone generic bundles must hash-verify reservations.py before import.
+    The historical standalone worker never loads it for a legacy counter.
+    """
+    try:
+        registry = private_directory(io, root, "reservation-identity")
+    except OSError as failure:
+        if failure.errno == errno.ENOENT:
+            return None  # Unmigrated historical installation only.
+        raise
+    try:
+        anchor = read_json(io, registry, "manifest.json", 262144, private=True)
+    finally:
+        os.close(registry)
+    if type(anchor) is not dict or type(anchor.get("schema_version")) is not int:
+        raise ValueError("storage anchor schema required")
+    if anchor["schema_version"] == 1:
+        return None  # Retained migration policy uses the historical counter.
+    if anchor["schema_version"] != 2:
+        raise ValueError("fresh storage anchor required")
+    path = io.canonical_root(root)
+    home = io.root(io.account_home())
+    try:
+        domain = private_directory(io, home, ".cadence_mcp-domain")
+        try:
+            index = read_json(io, domain, "manifest.json", 8192, private=True)
+        finally:
+            os.close(domain)
+    finally:
+        os.close(home)
+    exact(index, "schema_version root resource_domain_sha256 identity_manifest_sha256 plan_sha256")
+    if (
+        type(index["schema_version"]) is not int or index["schema_version"] != 1
+        or index["root"] != path
+        or index["resource_domain_sha256"] != anchor.get("resource_domain_sha256")
+        or index["identity_manifest_sha256"] != digest(anchor)
+        or any(
+            not isinstance(index[k], STRINGS) or not DIGEST.match(index[k])
+            for k in ("resource_domain_sha256", "identity_manifest_sha256", "plan_sha256")
+        )
+    ):
+        raise ValueError("fresh storage registered domain drift")
+    if __package__:
+        from cadence_mcp_bridge import _shared_reservations as accounting
+    else:
+        # A legacy standalone deployment cannot grow generic capability by
+        # importing code from CWD/PYTHONPATH. Only an immutable schema3 runtime
+        # may supply the two hash-bound fixed assets at its private location.
+        directory = os.path.dirname(os.path.abspath(__file__))
+        if os.path.realpath(directory) != directory or os.path.basename(__file__) != "storage.py":
+            raise ValueError("fresh storage fixed asset location")
+        ancestor = directory
+        while True:
+            info = os.lstat(ancestor)
+            if (
+                not stat.S_ISDIR(info.st_mode)
+                or info.st_uid not in (0, os.getuid()) or info.st_mode & 18
+            ):
+                raise ValueError("fresh storage asset ancestor trust")
+            parent = os.path.dirname(ancestor)
+            if parent == ancestor:
+                break
+            ancestor = parent
+        source = io.root(directory)
+        try:
+            manifest = read_json(io, source, "manifest.json", 262144, private=True)
+            if (
+                type(manifest) is not dict or type(manifest.get("schema_version")) is not int
+                or digest(manifest) != os.path.basename(directory)
+            ):
+                raise ValueError("fresh storage fixed asset manifest")
+            if manifest["schema_version"] == 1:
+                # Historical pinned manifests remain readable by the retained
+                # worker; new pinned entry identity is explicit, never implied.
+                keys = "schema_version kind managed_root files"
+                if "entry_sha256" in manifest:
+                    keys += " entry_sha256"
+                    if not isinstance(manifest["entry_sha256"], STRINGS) or not DIGEST.match(
+                            manifest["entry_sha256"]):
+                        raise ValueError("fresh storage entry binding")
+                exact(manifest, keys)
+                if (
+                    manifest["kind"] != "REFERENCE_STORAGE_RUNTIME"
+                    or manifest["managed_root"] != "/home/buet/cds_work/.cadence_mcp"
+                    or type(manifest["files"]) is not dict
+                    or set(manifest["files"]) != set(("storage.py", "reservations.py"))
+                ):
+                    raise ValueError("fresh storage reference manifest")
+            elif manifest["schema_version"] != 3:
+                raise ValueError("fresh storage fixed asset manifest")
+            for name in ("storage.py", "reservations.py"):
+                fd = io.open(source, name)
+                try:
+                    info = os.fstat(fd)
+                    if (
+                        not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                        or info.st_uid != os.getuid() or info.st_mode & 18 or info.st_size > 262144
+                    ):
+                        raise ValueError("fresh storage fixed asset trust")
+                    before = metadata(fd)
+                    raw = os.read(fd, 262145)
+                    if before != metadata(fd) or len(raw) != info.st_size:
+                        raise ValueError("fresh storage fixed asset changed during read")
+                    if manifest["files"][name] != {
+                        "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
+                    }:
+                        raise ValueError("fresh storage fixed asset drift")
+                    if name == "reservations.py":
+                        accounting_raw = raw
+                finally:
+                    os.close(fd)
+        finally:
+            os.close(source)
+        # Keep transitive stdlib resolution outside all bundle aliases as well.
+        bundle_path = os.path.normcase(os.path.realpath(directory))
+        sys.path[:] = [entry for entry in sys.path
+                       if os.path.normcase(os.path.realpath(entry or os.curdir)) != bundle_path]
+        import types
+
+        # Evaluate exactly the authenticated descriptor bytes. Do not reopen a
+        # path, create bytecode or depend on imp (removed by host Python3.12).
+        accounting = types.ModuleType("fixed_storage_accounting")
+        accounting.__file__ = directory + "/reservations.py"
+        eval(compile(accounting_raw, accounting.__file__, "exec"), accounting.__dict__)
+    binding = {
+        "root_sha256": hashlib.sha256(path.encode("utf-8")).hexdigest(),
+        "resource_domain_sha256": anchor.get("resource_domain_sha256"),
+        "ledger_ref": "sim-mcp-v2-jobs/counter.json",
+        "identity_manifest_sha256": digest(anchor),
+    }
+    manifest = accounting.identity_manifest(path, binding)
+    accounting.counter_shape(counter, manifest)
+    if (
+        counter["count"] < manifest["baseline"]["count"]
+        or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
+        or (counter["count"] == 0) != (counter["result_reserved_bytes"] == 0)
+        or counter["result_reserved_bytes"] < counter["count"]
+    ):
+        raise ValueError("storage committed ledger integrity")
+    if not lock_held:
+        return anchor["policy"]
+    audited, records = accounting.state(path, binding)
+    if canonical(counter) != canonical(audited):
+        raise ValueError("storage ledger changed during observation")
+    return anchor["policy"]
+
+
+def snapshot(io, root, is_active, lock_held=True, native_generic=False):
+    if native_generic:
+        raise ValueError("native generic storage consumer qualification required")
     artifacts, coverage = [], {}
     reasons = {}
     aggregates = {}
-    complete = True
+    complete = lock_held
+    is_active = is_active or not lock_held
     scanned = 0
     hash_budget = [0]
     for group, relative, retention in GROUPS:
@@ -477,22 +733,24 @@ def snapshot(io, root, is_active):
         raise ValueError("storage group response bound")
     counter_root = io.open(root, "sim-mcp-v2-jobs", directory=True)
     try:
-        counter = read_json(io, counter_root, "counter.json", 2048)
+        counter = read_json(io, counter_root, "counter.json", 2048, canonical_ledger=True)
     finally:
         os.close(counter_root)
     exact(counter, "campaign_id count result_reserved_bytes")
-    if (
-        counter["campaign_id"] != "AUTO-PHASE-01"
-        or type(counter["count"]) not in INTEGERS
-        or not 62 <= counter["count"] <= 500
-        or type(counter["result_reserved_bytes"]) not in INTEGERS
-        or not 7114588160 <= counter["result_reserved_bytes"] <= 10737418240
-    ):
-        raise ValueError("invalid cumulative ledger")
+    policy = fresh_ledger(io, root, counter, lock_held)
+    if policy is None:
+        if (
+            counter["campaign_id"] != "AUTO-PHASE-01"
+            or type(counter["count"]) not in INTEGERS
+            or not 62 <= counter["count"] <= 500
+            or type(counter["result_reserved_bytes"]) not in INTEGERS
+            or not 7114588160 <= counter["result_reserved_bytes"] <= 10737418240
+        ):
+            raise ValueError("invalid cumulative ledger")
     disk = os.fstatvfs(root)
     is_active = is_active or any(a["active_dependency"] for a in artifacts)
     value = dict(
-        contract_version=1,
+        contract_version=2 if policy else 1,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,
@@ -502,11 +760,13 @@ def snapshot(io, root, is_active):
         filesystem_free_bytes=disk.f_bavail * disk.f_frsize,
         filesystem_total_bytes=disk.f_blocks * disk.f_frsize,
         reserved_result_bytes=counter["result_reserved_bytes"],
-        result_ceiling_bytes=10737418240,
+        result_ceiling_bytes=policy["result_ceiling_bytes"] if policy else 10737418240,
         spectre_attempts=counter["count"],
         active_eda=is_active,
         platform_delete_primitives=True,
     )
+    if policy is not None:
+        value["ledger_policy"] = policy
     bound = dict(value)
     del bound["filesystem_free_bytes"]
     del bound["filesystem_total_bytes"]
@@ -602,7 +862,7 @@ def outcome(
     )
 
 
-def remove_leaf(io, root, quarantine, artifact, internal):
+def remove_leaf(io, root, quarantine, artifact, internal, mutation_guard=None):
     spool = private_directory(io, root, SPOOL)
     leaf = private_directory(io, spool, internal)
     try:
@@ -611,6 +871,8 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         if fingerprint != artifact["fingerprint"]:
             raise ValueError("selected artifact changed")
         # Atomic move first. A substituted leaf is preserved in quarantine, not deleted.
+        if mutation_guard is not None:
+            mutation_guard()
         io.rename(leaf, "payload.bin", quarantine, internal)
         os.fsync(leaf)
         os.fsync(quarantine)
@@ -633,6 +895,8 @@ def remove_leaf(io, root, quarantine, artifact, internal):
             if count != info[4] or h.hexdigest() != content_hash or changed != metadata(moved):
                 raise ValueError("quarantined content mismatch")
             allocated = getattr(os.fstat(moved), "st_blocks", 0) * 512
+            if mutation_guard is not None:
+                mutation_guard()
             io.unlink(quarantine, internal)
         finally:
             os.close(moved)
@@ -645,7 +909,7 @@ def remove_leaf(io, root, quarantine, artifact, internal):
         os.close(spool)
 
 
-def cleanup(io, root, request, is_active):
+def cleanup(io, root, request, is_active, native_generic=False, mutation_guard=None):
     validate_cleanup(request)
     control = private_directory(io, root, CONTROL)
     operations = private_directory(io, control, "operations")
@@ -671,7 +935,7 @@ def cleanup(io, root, request, is_active):
                 )
             finally:
                 os.close(record)
-        s = snapshot(io, root, is_active)
+        s = snapshot(io, root, is_active, native_generic=native_generic)
         p = plan(s, request["selection"])
         if p["plan_sha256"] != request["plan_sha256"]:
             raise ValueError("cleanup plan changed")
@@ -701,6 +965,8 @@ def cleanup(io, root, request, is_active):
                 raise ValueError("exact selection consent required")
         except (OSError, ValueError, KeyError):
             return outcome(request, "DENIED", [], chosen, expected)
+        if mutation_guard is not None:
+            mutation_guard()
         io.mkdir(operations, operation)
         record = private_directory(io, operations, operation)
         try:
@@ -737,7 +1003,10 @@ def cleanup(io, root, request, is_active):
                             )
                         finally:
                             os.close(spool)
-                        size, blocks = remove_leaf(io, root, quarantine, artifacts[item], internal)
+                        size, blocks = remove_leaf(
+                            io, root, quarantine, artifacts[item], internal,
+                            mutation_guard=mutation_guard,
+                        )
                         logical += size
                         allocated += blocks
                         removed.append(item)
@@ -779,6 +1048,61 @@ def cleanup(io, root, request, is_active):
         os.close(control)
 
 
+def execute_fixed(root_path, action, request, before=None, native_generic=False):
+    """Internal trusted-root dispatcher; main exposes no caller path.
+
+    Exact activation checks run under the actual held lock, or before a busy
+    read-only inventory. Cleanup contention never invokes the callback.
+    """
+    if action not in ("inventory", "cleanup"):
+        raise ValueError("unsupported storage action")
+    if action == "inventory":
+        exact(request, "")
+    else:
+        validate_cleanup(request)
+    io = PosixIO()
+    root = io.root(root_path)
+    try:
+        import fcntl
+
+        lock = io.open(root, "run.lock")
+        try:
+            guard = storage_lock_guard(io, root_path, root, lock)
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except IOError as failure:
+                if failure.errno not in (errno.EAGAIN, errno.EACCES):
+                    raise
+                if action == "cleanup":
+                    raise ValueError("active EDA lock")
+                guard()
+                if before is not None:
+                    before()
+                guard()
+                value = snapshot(io, root, True, lock_held=False, native_generic=native_generic)
+            else:
+                guard()
+                if before is not None:
+                    before()
+                guard()
+                active = active_eda(root_path)
+                if action == "inventory":
+                    value = snapshot(io, root, active, native_generic=native_generic)
+                else:
+                    value = cleanup(
+                        io, root, request, active, native_generic=native_generic,
+                        mutation_guard=guard,
+                    )
+            guard()
+        finally:
+            os.close(lock)
+        if len(canonical(value)) > 65536:
+            raise ValueError("storage response bound")
+        return value
+    finally:
+        os.close(root)
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("inventory", "cleanup"):
         raise ValueError("unsupported storage action")
@@ -786,38 +1110,8 @@ def main():
     if not re.match(r"^[0-9a-f]{2,16384}$", encoded) or len(encoded) % 2:
         raise ValueError("bounded encoded request required")
     request = json.loads(binascii.unhexlify(encoded).decode("ascii"))
-    if sys.argv[1] == "inventory":
-        exact(request, "")
-    else:
-        validate_cleanup(request)
-    io = PosixIO()
-    root = io.root(ROOT)
-    try:
-        import fcntl
-
-        # Existing run.lock serializes EDA and cleanup; inventory is nonblocking too.
-        lock = io.open(root, "run.lock")
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
-            if sys.argv[1] == "cleanup":
-                raise ValueError("active EDA lock")
-            value = snapshot(io, root, True)
-        else:
-            active = active_eda(ROOT)
-            if sys.argv[1] == "inventory":
-                exact(request, "")
-                value = snapshot(io, root, active)
-            else:
-                value = cleanup(io, root, request, active)
-        finally:
-            os.close(lock)
-        raw = canonical(value)
-        if len(raw) > 65536:
-            raise ValueError("storage response bound")
-        sys.stdout.write(raw.decode("ascii") + "\n")
-    finally:
-        os.close(root)
+    value = execute_fixed(ROOT, sys.argv[1], request)
+    sys.stdout.write(canonical(value).decode("ascii") + "\n")
 
 
 if __name__ == "__main__":

@@ -44,6 +44,94 @@ persist; package/hosted/fresh review/final actual installed gates are pending.
 This correction itself performs no actual VM/admin mutation/reservation/simulation.
 Public tag/Release/upload still requires final exact-candidate approval.
 
+## PR151 authenticated setup execution correction, 2026-10-11
+
+Review4239974380 found fresh setup reimported helper paths after complete asset
+validation. Standalone setup now executes only the retained authenticated bytes
+in fresh fixed module instances, ignores poisoned helper caches and gives its
+migration helper the same authenticated accounting/installer/probe instances.
+A failed revalidation clears prior authenticated state. Startup removes the script
+entry only for direct __main__ launch; memory-loaded helpers preserve legitimate
+stdlib entries. Canonical staging aliases are excluded before stdlib imports and
+retained compilation. Standalone storage follows the same startup distinction.
+Original pre-fix regression logs are retained; exact updated source/package/hosted/
+fresh-review gates remain required. This isolated branch changes no actual VM,
+admin state, journal, ledger, reservation, simulation or protected circuit content.
+Current user16GiB/500/20,GREL02-08 and conditional normal integration delegation
+remains; exact public candidate approval is separate. General release stays BLOCKED.
+Earlier source receipts and policy records below are preserved as history.
+
+## PR151 current safety-parent refresh, 2026-10-11
+
+Current source normally integrates150206fe0b: initial executable pins, retained
+validated helper bytes and reviewed installed-fixture correction, with148 fixed
+recipe completion membership. The151 early fresh-policy correction retains all
+legacy/scientific protections. Exact3d74b50 isolated installed disposable-ledger
+1/2 amplifier/power/SDK consumers PASS; its new Linux parser fixture initially
+failed only on host ssh.exe availability and now explicitly stubs that unused
+executable lookup. No actual transport or supported platform behavior changed.
+Final related/package/hosted/review and pending parent membership corrections are
+separate gates. General release stays BLOCKED; current delegated limits/history
+remain preserved, and exact public-candidate approval is still required.
+
+## PR151 current standalone correction and parent integration, 2026-10-11
+
+Review4239919242 is fixed by binding the private named resource lock's inode,
+ownership/mode/link count/size and at most4096 actual content bytes. Existing
+fixed launchers' O_TRUNC of an empty lock can change timestamps without corrupting
+it; only lock mtime/ctime are excluded. Same-size content drift and all namespace/
+permission/link checks still reject. Artifact metadata protection is unchanged.
+
+Exact8c8389e Ubuntu actual files/flock/standalone463 PASS with zero POSIX skips,
+Windows portable consumers119 PASS/17 OS skips, Ruff/mypy78 PASS and exact
+isolated installed85-tool43+20-state preservation PASS are source evidence.
+Current source additionally merges latest150ca2476, including148 final receipt
+namespace and149 independently compiled launcher binding. This integrated source
+needs refreshed hosted/security/package/review gates; previous receipts remain
+source-specific history. No VM contact/admin/deployment/actual journal/ledger/
+reservation/simulation changes occurred. General release and exact RC stay BLOCKED.
+Current user16GiB/500/20,GREL02-08 and conditional normal PR integration authority
+continues; public tag/Release/assets still require exact-candidate approval.
+
+## Active PR151 standalone deployment correction, 2026-10-11
+
+Fresh review exposed a missing production accounting helper/manifest in the
+historical v6 storage deployment. A separate hash-bound v7 deployment and exact
+operator-configured pin now provide storage.py/reservations.py plus a canonical
+manifest, with no import/startup/doctor provisioning. The shared trusted-root
+execute_fixed dispatcher validates activation after held/busy lock decisions;
+legacy native_generic=True remains fail-closed pending the qualified consumer.
+Windows portable60 PASS/11 skips, Ruff and mypy78 PASS are source evidence;
+real standalone Linux/hosted/package/security/review gates are pending.
+No VM/deployment/simulation/reservation/actual ledger/admin change occurs.
+General release remains BLOCKED. See [exact runtime](docs/generic_release/REFERENCE_STORAGE_RUNTIME_V7.md) for routing, protection
+and qualification scope. Current retained16GiB/500/20, GREL02-08 and conditional
+normal integration delegation remains; exact publication still needs approval.
+Historical source receipts and authority records below remain preserved.
+
+## Active PR151 lock-contended inventory correction, 2026-10-11
+
+The current direct user delegation allows GREL02-08 candidate preparation,
+conditional normal integration of reviewed related PRs, and the validation VM's
+16 GiB retained reservation ceiling. Existing attempts/corrections/reservations
+remain retained. Public tag/Release/assets publication still needs the final
+exact-candidate approval. Earlier exclusions and resource observations below
+remain historical and do not override that delegation.
+
+PR151 now distinguishes lock-contended read-only storage inventory from a
+lock-held conservation audit. Only expected fixed-main inventory flock contention
+uses the partial route: authenticate the immutable registered domain/policy and
+last committed physical counter, mark coverage incomplete and artifacts active/
+protected, and offer no deletion candidates. Cleanup, spending and lock-held
+inventory keep the full multi-file audit; unexpected lock failures reject.
+This is local synthetic source/package work, with no VM contact, actual journal/
+ledger change, reservation, simulation or metadata repair. The native storage
+asset changes identity and needs exact new-bundle qualification; prior native
+receipts do not qualify this correction. Release and exact candidate remain
+BLOCKED. See [consumer correction](docs/generic_release/FRESH_POLICY_CONSUMERS_V1.md)
+for source-scoped test/package receipts. Independent final review/CI remain gates.
+Historical sections below keep their original source scope.
+
 ## Held external-link observation correction, 2026-10-11
 
 Fresh exact c0b4b69 review found separate pathname reads could retain a stale

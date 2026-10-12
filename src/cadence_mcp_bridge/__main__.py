@@ -77,6 +77,27 @@ def build_parser() -> argparse.ArgumentParser:
     domain_plan.add_argument("--profile", type=Path, required=True)
     domain_plan.add_argument("--output", type=Path, required=True)
     domain_plan.add_argument("--expected-helper-sha256", required=True)
+    setup_export = domain_actions.add_parser("export-setup-helper-bundle")
+    setup_export.add_argument("--output", type=Path, required=True)
+    setup_stage = domain_actions.add_parser("stage-setup-helper")
+    setup_stage.add_argument("--profile", type=Path, required=True)
+    setup_stage.add_argument("--expected-helper-sha256", required=True)
+    setup_plan = domain_actions.add_parser("plan-fresh")
+    for name in ("profile", "output"):
+        setup_plan.add_argument("--" + name, type=Path, required=True)
+    setup_plan.add_argument("--expected-helper-sha256", required=True)
+    setup_apply = domain_actions.add_parser("apply-fresh")
+    for name in ("profile", "plan", "output"):
+        setup_apply.add_argument("--" + name, type=Path, required=True)
+    setup_apply.add_argument("--expected-plan-sha256", required=True)
+    setup_apply.add_argument("--expected-helper-sha256", required=True)
+    setup_apply.add_argument("--operator-authority", required=True)
+    setup_existing = domain_actions.add_parser("register-existing")
+    for name in ("profile", "output"):
+        setup_existing.add_argument("--" + name, type=Path, required=True)
+    setup_existing.add_argument("--expected-helper-sha256", required=True)
+    setup_existing.add_argument("--identity-manifest-sha256", required=True)
+    setup_existing.add_argument("--operator-authority", required=True)
     domain_apply = domain_actions.add_parser("apply-existing", aliases=["seal-existing"])
     for name in ("profile", "plan", "output"):
         domain_apply.add_argument("--" + name, type=Path, required=True)
@@ -376,8 +397,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         from cadence_mcp_bridge import domain_provisioning
 
         try:
-            if arguments.domain_action == "export-helper-bundle":
-                report = domain_provisioning.export(arguments.output)
+            if arguments.domain_action in {"export-helper-bundle", "export-setup-helper-bundle"}:
+                report = domain_provisioning.export(
+                    arguments.output, arguments.domain_action == "export-setup-helper-bundle"
+                )
+            elif arguments.domain_action == "stage-setup-helper":
+                report = domain_provisioning.stage_setup(
+                    arguments.profile, arguments.expected_helper_sha256
+                )
+            elif arguments.domain_action == "plan-fresh":
+                report = domain_provisioning.prepare_fresh(
+                    arguments.profile, arguments.output, arguments.expected_helper_sha256
+                )
+            elif arguments.domain_action == "apply-fresh":
+                report = domain_provisioning.apply_fresh(
+                    arguments.profile,
+                    arguments.plan,
+                    arguments.output,
+                    arguments.expected_plan_sha256,
+                    arguments.expected_helper_sha256,
+                    arguments.operator_authority,
+                )
+            elif arguments.domain_action == "register-existing":
+                report = domain_provisioning.setup_existing(
+                    arguments.profile,
+                    arguments.output,
+                    arguments.expected_helper_sha256,
+                    arguments.identity_manifest_sha256,
+                    arguments.operator_authority,
+                )
             elif arguments.domain_action in {"apply-existing", "seal-existing"}:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,

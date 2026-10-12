@@ -33,6 +33,7 @@ class TestIO:
         self.real_close = os.close
         self.bad_permission: set[str] = set()
         real_fstat, real_close, real_fsync = os.fstat, os.close, os.fsync
+        actual_uid = os.getuid() if hasattr(os, "getuid") else 0
 
         def fstat(fd: int) -> Any:
             s = self.paths[fd].stat() if fd < 0 else real_fstat(fd)
@@ -45,6 +46,7 @@ class TestIO:
                 )
             return SimpleNamespace(
                 st_dev=s.st_dev,
+                st_gid=s.st_gid,
                 st_ino=s.st_ino,
                 st_mode=mode,
                 st_nlink=s.st_nlink,
@@ -65,7 +67,7 @@ class TestIO:
         monkeypatch.setattr(w.os, "fstat", fstat)
         monkeypatch.setattr(w.os, "close", close)
         monkeypatch.setattr(w.os, "fsync", lambda fd: real_fsync(fd) if fd >= 0 else None)
-        monkeypatch.setattr(w.os, "getuid", lambda: 0, raising=False)
+        monkeypatch.setattr(w.os, "getuid", lambda: actual_uid, raising=False)
         monkeypatch.setattr(
             w.os,
             "fstatvfs",
@@ -93,6 +95,15 @@ class TestIO:
         self.next_fd -= 1
         self.paths[self.next_fd] = path
         return self.next_fd
+
+    def account_home(self) -> str:
+        return str(self.root_path)
+
+    def root(self, path: str) -> int:
+        return self.directory(Path(path))
+
+    def canonical_root(self, fd: int) -> str:
+        return str(self.paths[fd])
 
     def names(self, fd: int) -> list[str]:
         names = sorted(p.name for p in self.paths[fd].iterdir())
@@ -485,3 +496,383 @@ def test_orphan_active_marker_in_every_historical_group_blocks_cleanup(
     marker.parent.mkdir()
     marker.write_bytes(b"unresolved queued operation")
     assert w.active_eda(str(tmp_path))
+
+
+@pytest.fixture
+def fresh_store(store: tuple[TestIO, int, Path]) -> tuple[TestIO, int, Path]:
+    from cadence_mcp_bridge import _shared_reservations as a
+
+    _, _, path = store
+    (path / "run.lock").write_bytes(b"x")
+    (path / a.JOBS).mkdir(mode=0o700)
+    (path / a.REGISTRY).mkdir(mode=0o700)
+    campaign = str(uuid4())
+    baseline = dict(campaign_id=campaign, count=0, result_reserved_bytes=0)
+    anchor = dict(
+        schema_version=2,
+        root_sha256=a.digest(str(path).encode("utf-8")),
+        resource_domain_sha256="a" * 64,
+        ledger_ref=a.LEDGER,
+        baseline=baseline,
+        legacy_operation_ids=[],
+        policy=dict(campaign_id=campaign, attempt_ceiling=2, result_ceiling_bytes=131072),
+    )
+    (path / a.LEDGER).write_bytes(a.canonical(baseline))
+    (path / a.REGISTRY / "manifest.json").write_bytes(a.canonical(anchor))
+    index = path / ".cadence_mcp-domain"
+    index.mkdir(mode=0o700)
+    (index / "manifest.json").write_bytes(a.canonical(dict(
+        schema_version=1, root=str(path), resource_domain_sha256="a" * 64,
+        identity_manifest_sha256=a.digest(a.canonical(anchor)), plan_sha256="b" * 64,
+    )))
+    return store
+
+
+def test_fresh_storage_zero_consumed_exhausted_and_power_counters(
+    fresh_store: tuple[TestIO, int, Path],
+) -> None:
+    from pydantic import TypeAdapter
+
+    from cadence_mcp_bridge import _shared_reservations as a
+    from cadence_mcp_bridge.power_measurements import RegisteredPowerCounter
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    anchor = a.read(str(path / a.REGISTRY / "manifest.json"))
+    binding = dict(
+        root_sha256=anchor["root_sha256"], resource_domain_sha256="a" * 64,
+        ledger_ref=a.LEDGER, identity_manifest_sha256=a.digest(a.canonical(anchor)),
+        grant_sha256="b" * 64, runner_sha256="c" * 64, plan_sha256="d" * 64,
+        execution_input_sha256="e" * 64, expires_at=4000000000,
+        max_attempts=2, max_reserved_bytes=131072, reserve_bytes=65536, disk_floor_bytes=0,
+    )
+    for count in range(3):
+        before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+        value = w.snapshot(io, root, False)
+        snapshot = StorageSnapshot.model_validate(value)
+        assert snapshot.snapshot_id == snapshot_digest(snapshot)
+        assert snapshot.spectre_attempts == count
+        assert snapshot.result_ceiling_bytes == 131072
+        assert snapshot.ledger_policy is not None
+        assert snapshot.ledger_policy.campaign_id == anchor["policy"]["campaign_id"]
+        counter = a.read(str(path / a.LEDGER))
+        power = TypeAdapter(RegisteredPowerCounter).validate_python(
+            dict(counter, policy=anchor["policy"])
+        )
+        assert power.count == count and power.result_reserved_bytes == count * 65536
+        assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+        if count < 2:
+            identity = str(uuid4())
+            work = path / a.JOBS / identity / "work"
+            work.mkdir(parents=True, mode=0o700)
+            a.reserve(str(path), identity, binding)
+    # A fully consumed domain remains readable; reading never reserves/refunds.
+    assert w.snapshot(io, root, False)["reserved_result_bytes"] == 131072
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["campaign", "ceiling", "anchor", "lost-slot", "policy-reset", "legacy-fallback", "index"],
+)
+def test_fresh_storage_rejects_forged_or_unconserved_policy(
+    fresh_store: tuple[TestIO, int, Path], change: str,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as a
+
+    io, root, path = fresh_store
+    counter = a.read(str(path / a.LEDGER))
+    anchor_path = path / a.REGISTRY / "manifest.json"
+    anchor = a.read(str(anchor_path))
+    if change == "campaign":
+        counter["campaign_id"] = str(uuid4())
+    elif change == "ceiling":
+        counter["result_reserved_bytes"] = 131073
+    elif change == "anchor":
+        anchor["root_sha256"] = "b" * 64
+        anchor_path.write_bytes(a.canonical(anchor))
+    elif change == "policy-reset":
+        anchor["policy"]["result_ceiling_bytes"] = 1048576
+        anchor_path.write_bytes(a.canonical(anchor))
+    elif change == "legacy-fallback":
+        counter.update(campaign_id="AUTO-PHASE-01", count=62, result_reserved_bytes=7114588160)
+    elif change == "index":
+        index = path / ".cadence_mcp-domain" / "manifest.json"
+        registration = a.read(str(index))
+        registration["root"] = str(path / "new-domain")
+        index.write_bytes(a.canonical(registration))
+    else:
+        counter.update(count=1, result_reserved_bytes=65536)
+    (path / a.LEDGER).write_bytes(a.canonical(counter))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError):
+        w.snapshot(io, root, False)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+
+def test_fresh_standalone_legacy_deployment_cannot_import_cwd_code(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    io, root, path = fresh_store
+    # The old standalone worker is not a verified schema3 generic bundle.
+    # An attacker-controlled CWD sibling must never be imported as accounting.
+    (path / "reservations.py").write_text("raise AssertionError('untrusted import executed')")
+    monkeypatch.setattr(w, "__package__", "")
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError, match="fixed asset location"):
+        w.snapshot(io, root, False)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+
+def fresh_binding(path: Path) -> dict[str, Any]:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    anchor = accounting.read(str(path / accounting.REGISTRY / "manifest.json"))
+    return dict(
+        root_sha256=anchor["root_sha256"], resource_domain_sha256="a" * 64,
+        ledger_ref=accounting.LEDGER,
+        identity_manifest_sha256=accounting.digest(accounting.canonical(anchor)),
+        grant_sha256="b" * 64, runner_sha256="c" * 64, plan_sha256="d" * 64,
+        execution_input_sha256="e" * 64, expires_at=4000000000,
+        max_attempts=2, max_reserved_bytes=131072, reserve_bytes=65536, disk_floor_bytes=0,
+    )
+
+
+def test_busy_inventory_during_each_reservation_write_is_read_only_and_protected(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    register(fresh_store)
+    identity = str(uuid4())
+    (path / accounting.JOBS / identity / "work").mkdir(parents=True, mode=0o700)
+    original_write = accounting.write_new
+    observations = []
+    lock_path = path / "run.lock"
+    lock_before = lock_path.read_bytes()
+
+    def paused_write(filename: str, value: Any) -> None:
+        original_write(filename, value)
+        # Windows byte-range locking prevents reading this exact held lock file.
+        # Its identity/metadata are checked during observation and bytes afterward.
+        lock_metadata = lock_path.stat()
+        before = {
+            leaf: leaf.read_bytes() for leaf in path.rglob("*")
+            if leaf.is_file() and leaf != lock_path
+        }
+        result = w.snapshot(io, root, False, lock_held=False)
+        parsed = StorageSnapshot.model_validate(result)
+        assert parsed.snapshot_id == snapshot_digest(parsed)
+        assert parsed.active_eda and not parsed.coverage_complete
+        assert parsed.result_ceiling_bytes == 131072
+        assert parsed.reserved_result_bytes == parsed.spectre_attempts * 65536
+        assert all(item.deletion_status == "PROTECTED_OR_UNKNOWN" for item in parsed.artifacts)
+        assert all(item.active_dependency for item in parsed.artifacts)
+        assert before == {
+            leaf: leaf.read_bytes() for leaf in path.rglob("*")
+            if leaf.is_file() and leaf != lock_path
+        }
+        assert lock_metadata == lock_path.stat()
+        observations.append((Path(filename).name, parsed.spectre_attempts))
+        if Path(filename).name != "reservation-receipt.json":
+            # The strict transaction audit is still required by spending/cleanup.
+            with pytest.raises(ValueError):
+                w.snapshot(io, root, False)
+
+    monkeypatch.setattr(accounting, "write_new", paused_write)
+    accounting.reserve(str(path), identity, fresh_binding(path))
+    assert lock_before == lock_path.read_bytes()
+    assert observations == [
+        ("counter.json.ade-tmp", 0), (identity + ".json", 0),
+        ("reservation-intent.json", 0), ("attempt-reserved", 0),
+        ("reservation-receipt.json", 1),
+    ]
+    final = w.snapshot(io, root, False)
+    assert final["coverage_complete"] and not final["active_eda"]
+    assert final["spectre_attempts"] == 1 and final["reserved_result_bytes"] == 65536
+
+
+@pytest.mark.parametrize("change", [
+    "campaign", "ceiling", "bool", "orphan-bytes", "missing-bytes", "duplicate", "index", "anchor",
+])
+def test_busy_inventory_still_denies_malformed_counter_and_unknown_policy(
+    fresh_store: tuple[TestIO, int, Path], change: str,
+) -> None:
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    io, root, path = fresh_store
+    counter = accounting.read(str(path / accounting.LEDGER))
+    if change == "campaign":
+        counter["campaign_id"] = str(uuid4())
+    elif change == "ceiling":
+        counter.update(count=1, result_reserved_bytes=131073)
+    elif change == "bool":
+        counter["count"] = False
+    elif change == "orphan-bytes":
+        counter["result_reserved_bytes"] = 1
+    elif change == "missing-bytes":
+        counter["count"] = 1
+    elif change == "index":
+        (path / ".cadence_mcp-domain" / "manifest.json").write_bytes(b"{}")
+    elif change == "anchor":
+        (path / accounting.REGISTRY / "manifest.json").write_bytes(b"{}")
+    raw = accounting.canonical(counter)
+    if change == "duplicate":
+        raw = raw[:-1] + b',"count":0}'
+    (path / accounting.LEDGER).write_bytes(raw)
+    before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+    with pytest.raises(ValueError):
+        w.snapshot(io, root, True, lock_held=False)
+    assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+
+
+@pytest.mark.parametrize("lock_errno", [errno.EAGAIN, errno.EACCES, errno.EIO])
+@pytest.mark.parametrize("operation", ["inventory", "cleanup"])
+def test_fixed_main_only_expected_contention_uses_partial_inventory(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str], lock_errno: int, operation: str,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
+    (path / "sim-mcp-v2-jobs/counter.json.ade-tmp").write_bytes(b"uncommitted")
+    calls = []
+
+    def contended(fd: int, mode: int) -> None:
+        calls.append((fd, mode))
+        raise OSError(lock_errno, "synthetic lock failure")
+
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(
+        flock=contended, LOCK_EX=2, LOCK_NB=4,
+    ))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "ROOT", str(path))
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
+    before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+    if lock_errno == errno.EIO:
+        with pytest.raises(OSError):
+            w.main()
+        assert capsys.readouterr().out == ""
+    elif operation == "cleanup":
+        with pytest.raises(ValueError, match="active EDA lock"):
+            w.main()
+        assert capsys.readouterr().out == ""
+    else:
+        w.main()
+        output = json.loads(capsys.readouterr().out)
+        assert output["active_eda"] and not output["coverage_complete"]
+        assert output["spectre_attempts"] == output["reserved_result_bytes"] == 0
+        assert output["result_ceiling_bytes"] == 131072
+    assert len(calls) == 1
+    assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Requires real POSIX flock; covered by Ubuntu CI")
+@pytest.mark.parametrize("operation", ["inventory", "cleanup"])
+def test_fixed_main_real_reservation_lock_does_not_audit_an_incomplete_transaction(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str], operation: str,
+) -> None:
+    import sys
+
+    from cadence_mcp_bridge import _shared_reservations as accounting
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store)) if operation == "cleanup" else {}
+    encoded_request = w.canonical(request).hex()
+    original_write = accounting.write_new
+    observations = []
+    identity = str(uuid4())
+    (path / accounting.JOBS / identity / "work").mkdir(parents=True, mode=0o700)
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "ROOT", str(path))
+    monkeypatch.setattr(sys, "argv", ["fixed-storage", operation, encoded_request])
+
+    def paused_write(filename: str, value: Any) -> None:
+        original_write(filename, value)
+        if Path(filename).name != "counter.json.ade-tmp":
+            return
+        before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+        # reserve() is holding its actual flock; main opens the same lock independently.
+        if operation == "cleanup":
+            with pytest.raises(ValueError, match="active EDA lock"):
+                w.main()
+            assert capsys.readouterr().out == ""
+        else:
+            w.main()
+            observed = json.loads(capsys.readouterr().out)
+            assert observed["active_eda"] and not observed["coverage_complete"]
+            assert observed["spectre_attempts"] == observed["reserved_result_bytes"] == 0
+            assert observed["result_ceiling_bytes"] == 131072
+        assert before == {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+        observations.append(operation)
+
+    monkeypatch.setattr(accounting, "write_new", paused_write)
+    accounting.reserve(str(path), identity, fresh_binding(path))
+    assert observations == [operation]
+
+
+@pytest.mark.parametrize("busy", [False, True])
+def test_fixed_dispatcher_checks_activation_after_actual_lock_decision(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch, busy: bool,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    sequence = []
+
+    def lock(fd: int, mode: int) -> None:
+        sequence.append("lock")
+        if busy:
+            raise OSError(errno.EAGAIN, "active transaction")
+
+    def before() -> None:
+        assert sequence == ["lock"]
+        sequence.append("activation")
+
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(flock=lock, LOCK_EX=2, LOCK_NB=4))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    monkeypatch.setattr(w, "active_eda", lambda root: False)
+    original = w.snapshot
+
+    def observe(*args: Any, **kwargs: Any) -> Any:
+        assert sequence == ["lock", "activation"]
+        assert kwargs["native_generic"] is False
+        sequence.append("snapshot")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(w, "snapshot", observe)
+    before_bytes = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    result = w.execute_fixed(str(path), "inventory", {}, before=before)
+    assert sequence == ["lock", "activation", "snapshot"]
+    assert result["coverage_complete"] is (not busy)
+    assert before_bytes == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+
+def test_fixed_dispatcher_failed_activation_prevents_inventory_and_cleanup(
+    fresh_store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sys
+
+    io, _root, path = fresh_store
+    request = request_for(fresh_store, register(fresh_store))
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(
+        flock=lambda *_args: None, LOCK_EX=2, LOCK_NB=4,
+    ))
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+
+    def denied() -> None:
+        raise ValueError("exact activation drift")
+
+    monkeypatch.setattr(w, "snapshot", lambda *_args, **_kw: pytest.fail("snapshot reached"))
+    monkeypatch.setattr(w, "cleanup", lambda *_args, **_kw: pytest.fail("cleanup reached"))
+    before = {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}
+    for action, payload in (("inventory", {}), ("cleanup", request)):
+        with pytest.raises(ValueError, match="activation drift"):
+            w.execute_fixed(str(path), action, payload, before=denied)
+    assert before == {p: p.read_bytes() for p in path.rglob("*") if p.is_file()}

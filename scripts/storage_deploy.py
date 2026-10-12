@@ -11,21 +11,31 @@ import ade_qual as io
 import deploy_native_mcp_v1 as transport
 import phase_campaign as campaign
 
+from cadence_mcp_bridge.storage_runtime import reference_storage_bundle
+
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = ROOT / ".codex"
-VERSION = "/home/buet/cds_work/.cadence_mcp/phase-campaign/storage-mgmt-v6"
+VERSION = "/home/buet/cds_work/.cadence_mcp/phase-campaign/storage-mgmt-v7"
 CONTROL = "/home/buet/cds_work/.cadence_mcp/storage-mgmt-v1"
 SPOOL = "/home/buet/cds_work/.cadence_mcp/storage-disposable-v1"
 POLICY = ROOT / "docs/policy/STORAGE_MGMT_V1.json"
 CORRECTION = ROOT / "docs/policy/PHASE_CORRECTION_LIMIT_V5.json"
 SCAN = ROOT / "docs/policy/STORAGE_SCAN_V2.json"
-FILES = {
-    "run.sh": ROOT / "remote/phase-campaign/storage-mgmt-v6/run.sh",
-    "worker.py": ROOT / "src/cadence_mcp_bridge/_storage_worker.py",
-    "policy.json": POLICY,
-    "correction.json": CORRECTION,
-    "scan.json": SCAN,
-}
+POLICY_FILES = {"policy.json": POLICY, "correction.json": CORRECTION, "scan.json": SCAN}
+SOURCES = tuple(POLICY_FILES.values()) + (
+    ROOT / "src/cadence_mcp_bridge/_storage_worker.py",
+    ROOT / "src/cadence_mcp_bridge/_shared_reservations.py",
+    ROOT / "src/cadence_mcp_bridge/_storage_entry.py",
+    ROOT / "remote/phase-campaign/storage-mgmt-v7/run.sh",
+)
+
+
+def payloads() -> tuple[str, dict[str, bytes]]:
+    pin, runtime = reference_storage_bundle()
+    if runtime["run.sh"] != SOURCES[-1].read_bytes():
+        raise ValueError("fixed storage launcher source drift")
+    return pin, {**runtime, **{name: path.read_bytes() for name, path in POLICY_FILES.items()}}
+
 
 
 def expected_policy() -> dict[str, Any]:
@@ -60,7 +70,7 @@ def expected_policy() -> dict[str, Any]:
 def authority() -> dict[str, Any]:
     campaign._load_authority()
     policy = campaign._read_json(POLICY)
-    if policy != expected_policy() or any(p.is_symlink() for p in FILES.values()):
+    if policy != expected_policy() or any(p.is_symlink() for p in SOURCES):
         raise ValueError("storage policy/source drift")
     scan = campaign._read_json(SCAN)
     if scan != {
@@ -104,27 +114,27 @@ def authority() -> dict[str, Any]:
         "consumed_history_preserved": True,
     }:
         raise ValueError("explicit correction-limit authority absent")
-    if any(b"\r" in FILES[n].read_bytes() for n in ("run.sh", "worker.py")):
-        raise ValueError("guest sources require LF bytes")
+    runtime_pin, files = payloads()
     expected = {
-        "contract_version": 3,
+        "contract_version": 4,
         "phase": "STORAGE-MGMT-01",
+        "runtime_manifest_sha256": runtime_pin,
         "policy_sha256": io.digest(campaign._canonical(policy)),
         "correction_sha256": io.digest(campaign._canonical(correction)),
         "scan_sha256": io.digest(campaign._canonical(scan)),
         "extra_authority_sha256": io.digest(extra_path.read_bytes()),
-        "files": {n: io.digest(p.read_bytes()) for n, p in FILES.items()},
+        "files": {n: io.digest(raw) for n, raw in files.items()},
         "user_delegation": "explicit-phase-development-no-historical-deletion",
         "maximum_new_simulations": 0,
     }
-    if campaign._read_json(PRIVATE / "storage-mgmt-v6-delegation.private.json") != expected:
+    if campaign._read_json(PRIVATE / "storage-mgmt-v7-delegation.private.json") != expected:
         raise ValueError("exact storage phase delegation absent")
     return expected
 
 
 def deploy() -> dict[str, Any]:
     delegation = authority()
-    journal = PRIVATE / "storage-mgmt-v6-deploy.private.json"
+    journal = PRIVATE / "storage-mgmt-v7-deploy.private.json"
     io.save_new(journal, {"state": "reserved", "delegation": delegation})
     stage = VERSION + ".stage"
     for target in (VERSION, stage):
@@ -149,25 +159,41 @@ def deploy() -> dict[str, Any]:
         + "/operations"
     )
     transport.ssh("umask 077; mkdir -m 700 " + stage)
-    activation = PRIVATE / "storage-mgmt-v6-activation.private.json"
+    activation = PRIVATE / "storage-mgmt-v7-activation.private.json"
     io.save_new(activation, {k: v for k, v in delegation.items() if k != "files"})
-    files = {**FILES, "activation.private.json": activation}
-    manifest = PRIVATE / "storage-mgmt-v6-manifest.private.sha256"
+    runtime_pin, files = payloads()
+    files["activation.private.json"] = activation.read_bytes()
+    local = PRIVATE / "storage-mgmt-v7-payloads" / runtime_pin
+    local.mkdir(parents=True, exist_ok=False)
+    paths = {}
+    for name, raw in files.items():
+        source = local / name
+        source.parent.mkdir(parents=True, exist_ok=True)
+        with source.open("xb") as stream:
+            stream.write(raw)
+        paths[name] = source
+    transport.ssh("mkdir -m 700 " + stage + "/runtime")
+    transport.ssh("mkdir -m 700 " + stage + "/runtime/" + runtime_pin)
+    manifest = PRIVATE / "storage-mgmt-v7-manifest.private.sha256"
     with manifest.open("xb") as stream:
         stream.write(
-            "".join(io.digest(p.read_bytes()) + "  " + n + "\n" for n, p in files.items()).encode(
+            "".join(io.digest(raw) + "  " + n + "\n" for n, raw in files.items()).encode(
                 "ascii"
             )
         )
-    for name, source in {**files, "manifest.sha256": manifest}.items():
+    for name, source in {**paths, "manifest.sha256": manifest}.items():
         io.command((*io.SCP, str(source), "cadence-vm:" + stage + "/" + name))
     transport.ssh(
         "cd "
         + stage
         + " && sha256sum -c manifest.sha256 >/dev/null"
-        + " && bash -n run.sh && /usr/bin/python -c "
-        + '\'compile(open("worker.py","rb").read(),"worker","exec")\''
-        + " && chmod 700 run.sh && chmod 600 worker.py *.json manifest.sha256"
+        + " && bash -n run.sh && /usr/bin/python -E -s -B -c "
+        + "'compile(open(\"runtime/" + runtime_pin
+        + "/storage.py\",\"rb\").read(),\"storage\",\"exec\");"
+        + "compile(open(\"runtime/" + runtime_pin
+        + "/reservations.py\",\"rb\").read(),\"accounting\",\"exec\")'"
+        + " && chmod 700 run.sh && chmod 600 *.json manifest.sha256 runtime/"
+        + runtime_pin + "/*.py runtime/" + runtime_pin + "/manifest.json"
         + " && mv "
         + stage
         + " "
@@ -176,7 +202,9 @@ def deploy() -> dict[str, Any]:
     value = {
         "state": "deployed",
         "policy_sha256": delegation["policy_sha256"],
-        "payload_bytes": sum(p.stat().st_size for p in files.values()),
+        "payload_bytes": sum(len(raw) for raw in files.values()),
+        "runtime_manifest_sha256": runtime_pin,
+        "configure_reference_storage_manifest_sha256": runtime_pin,
         "new_simulations": 0,
         "deleted_artifacts": 0,
     }

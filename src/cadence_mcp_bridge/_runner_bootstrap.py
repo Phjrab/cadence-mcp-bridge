@@ -16,7 +16,7 @@ REVIEWED_OPERATOR_SHA256 = {
     "probe.py": "5db6297d16bfd4d60471983aa084702697c00cc0f41d8c9c908249e3925d15e2",
     "runner.py": "aa3e40fdbce271940545bc7cd62883cb454d7c6712d229c9aa991434237bf9db",
     "launcher.py": "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f",
-    "reservations.py": "61c04f53fb8896c9844581ad3a6b5afec1fb8ac470c8db987e419b53eb66b905",
+    "reservations.py": "74cdd5e6f8feb795d62a9a6b8cf4995746b9d5c8666f7ffa35021d50f60906c8",
 }
 
 

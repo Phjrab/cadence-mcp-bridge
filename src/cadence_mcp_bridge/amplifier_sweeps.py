@@ -17,7 +17,14 @@ from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.models import ContractModel, JobResult, JobStatus
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry
 from cadence_mcp_bridge.pdk_reference import reference_adapter
-from cadence_mcp_bridge.power_measurements import PowerCounter, SignedSource, delivered_power
+from cadence_mcp_bridge.power_measurements import (
+    RegisteredPowerCounter,
+    SignedSource,
+    delivered_power,
+    require_fresh_reservation_sequence,
+    require_same_resource_policy,
+)
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.sweep_service import SweepBackend, SweepSupervisor
 from cadence_mcp_bridge.sweeps import (
     SweepPlan,
@@ -201,7 +208,7 @@ class AmplifierChild(ContractModel):
     source_job_id: str
     source_input_sha256: Digest
     source_psf_sha256: Digest
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     protected_unchanged: Literal[True]
     warnings: Annotated[int, Field(ge=0, le=2, strict=True)]
     notices: Literal[0]
@@ -219,7 +226,9 @@ class AmplifierChild(ContractModel):
             != SOURCES[self.analysis]
         ):
             raise ValueError("compiled deterministic child and original source required")
-        if not 77 <= self.counter.count <= 82 or self.counter.result_reserved_bytes != (
+        if isinstance(self.counter, FreshResourceCounter):
+            require_fresh_reservation_sequence((self.counter,))
+        elif not 77 <= self.counter.count <= 82 or self.counter.result_reserved_bytes != (
             8993636352 + (self.counter.count - 76) * 128 * 1024**2
         ):
             raise ValueError("phase reservation identity")
@@ -423,7 +432,7 @@ class AmplifierMetric(ContractModel):
     psf_sha256: Digest
     frame_sha256: Digest
     source_result_sha256: Digest
-    counter: PowerCounter
+    counter: RegisteredPowerCounter
     spec_evaluation: Literal["not_evaluated"] = "not_evaluated"
 
     @model_validator(mode="after")
@@ -450,6 +459,11 @@ class AmplifierSweepResult(ContractModel):
     engine: AmplifierEngineResult
     measurements: Annotated[tuple[AmplifierMetric, ...], Field(max_length=3)]
     spec_evaluation: Literal["not_evaluated"] = "not_evaluated"
+
+    @model_validator(mode="after")
+    def shared_policy(self) -> Self:
+        require_same_resource_policy(tuple(metric.counter for metric in self.measurements))
+        return self
 
 
 class AmplifierSupervisor:
