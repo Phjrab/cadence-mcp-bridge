@@ -396,10 +396,10 @@ def test_operator_partial_activation_resumes_exact_launcher(operator_bound, monk
     _, target, digest = operator_bound
     original = installer._publish_operator_state
 
-    def interrupted(path, value):
+    def interrupted(path, value, guard=None):
         if path.endswith("active-operator-runner.json"):
             raise OSError("simulated interruption before pointer")
-        return original(path, value)
+        return original(path, value, guard)
 
     monkeypatch.setattr(installer, "_publish_operator_state", interrupted)
     with pytest.raises(OSError, match="interruption"):
@@ -455,10 +455,10 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
             events.append("file")
         original_fsync(fd)
 
-    def observed_publish(path, value):
+    def observed_publish(path, value, guard=None):
         assert events[-1] == "binary_directory"
         events.append("pointer_publish")
-        return original_publish(path, value)
+        return original_publish(path, value, guard)
 
     monkeypatch.setattr(os, "fsync", observed_fsync)
     monkeypatch.setattr(installer, "_publish_operator_state", observed_publish)
@@ -1436,3 +1436,111 @@ def test_operator_bound_preflight_entry_scrubs_cwd_before_import(tmp_path, name)
     assert result.returncode == 1 and not result.stdout
     assert result.stderr.splitlines() == [b"OPERATOR_PREFLIGHT_BINDING_REJECTED"]
     assert not marker.exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX lifetime named-lock replacement")
+@pytest.mark.parametrize("action", ["activate", "deactivate", "update"])
+@pytest.mark.parametrize("drift", ["lock", "root"])
+@pytest.mark.parametrize("moment", ["acquired", "publication"])
+def test_operator_mutation_rejects_detached_lifetime_namespace(
+    request, monkeypatch, action, drift, moment
+):
+    import fcntl
+    import shutil
+
+    if action == "update":
+        _, target, previous, expected = request.getfixturevalue("operator_update_pair")
+    else:
+        _, target, expected = request.getfixturevalue("operator_bound")
+        previous = None
+        if action == "deactivate":
+            installer.operator_activation(str(target), expected)
+    lock = target / "run.lock"
+    lock.write_bytes(b"")
+    lock.chmod(0o600)
+    moved = target.with_name(target.name + "-detached")
+    changed = []
+
+    def detach():
+        if changed:
+            return
+        changed.append(True)
+        if drift == "lock":
+            lock.rename(target / "run.lock.detached")
+            lock.write_bytes(b"")
+            lock.chmod(0o600)
+        else:
+            target.rename(moved)
+            shutil.copytree(moved, target)
+        # The replacement is independently lockable while the old fd is held.
+        other = os.open(lock, os.O_RDWR)
+        try:
+            fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        finally:
+            os.close(other)
+
+    def acquire(path):
+        fd = REAL_OPERATOR_LOCK(path)
+        if moment == "acquired":
+            detach()
+        return fd
+
+    monkeypatch.setattr(installer, "_operator_lock", acquire)
+    sync = installer._sync_directory
+
+    def synchronized(path):
+        sync(path)
+        if moment != "publication" or Path(path) != target:
+            return
+        pointer = target / "active-operator-runner.json"
+        done = (target / "operator-runner-revoked.json").exists() if action == "deactivate" else (
+            pointer.exists() and json.loads(pointer.read_bytes())["manifest_sha256"] == expected
+        )
+        if done:
+            detach()
+
+    monkeypatch.setattr(installer, "_sync_directory", synchronized)
+    with pytest.raises(ValueError, match="operator_lock_drift"):
+        if action == "activate":
+            installer.operator_activation(str(target), expected)
+        elif action == "deactivate":
+            installer.operator_deactivate(str(target), expected)
+        else:
+            installer.operator_preflight_update(str(target), expected, previous)
+    assert changed == [True]
+    if moment == "acquired":
+        if action == "activate":
+            assert not (target / "active-operator-runner.json").exists()
+            assert not (target / "bin/cadence-operator-runner").exists()
+        elif action == "deactivate":
+            assert not (target / "operator-runner-revoked.json").exists()
+        else:
+            assert json.loads((target / "active-operator-runner.json").read_bytes())[
+                "manifest_sha256"
+            ] == previous
+            assert not (target / "operator-activation-history").exists()
+    if action == "update":
+        history = target / "operator-activation-history"
+        assert not history.exists() or not list(history.glob("*.complete.json"))
+    if drift == "root":
+        assert moved.is_dir() and (moved / "run.lock").read_bytes() == b""
+    else:
+        assert (target / "run.lock.detached").read_bytes() == b""
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX bounded lock content")
+def test_operator_lifetime_guard_accepts_lock_timestamps_but_denies_content(tmp_path):
+    root = tmp_path / "operator"
+    root.mkdir(mode=0o700)
+    lock = root / "run.lock"
+    lock.write_bytes(b"same")
+    lock.chmod(0o600)
+    fd = REAL_OPERATOR_LOCK(str(root))
+    try:
+        os.utime(lock, (1, 2))
+        installer._operator_guard(str(root), fd)
+        lock.write_bytes(b"drft")
+        with pytest.raises(ValueError, match="operator_lock_drift"):
+            installer._operator_guard(str(root), fd)
+    finally:
+        os.close(fd)
