@@ -1,3 +1,18 @@
+## Latest metadata resume checkpoint, 2026-10-12
+
+Actual installed ordinary-user pre-change capture PASS:632 targets/links and509
+file hashes; Python2.6/i686 signed ssize_t/xattr ABI verified on retained disposable
+data. Exact current inventory569/233 pending corrections equals prior plan; failed
+v1 evidence preserved. Reused old-grant accounting observation failed locally with
+authority_inactive before provider/remote ledger read. User stop-after-failure
+boundary applies:0 admin changes/0 simulations/0 reservations. Last102/
+12,483,297,280 remains historical, not fresh. Use fixed retained-domain readonly
+accounting without new planning under inactive grant; preserve all spent grants/
+ledger and reconcile corrections before admission. Refresh metadata before exact
+delegated apply. GREL02-08/16GiB/500/20 and conditional normal merge remain; final
+public approval still required. No app configuration changed/restart needed. See
+[metadata resume checkpoint](generic_release/METADATA_RESUME_CHECKPOINT_20261012.md). Earlier dated checkpoints remain history.
+
 ## Latest installed diagnostic checkpoint, 2026-10-12
 
 Exact952c39c archive/build/distribution/installed bootstrap and domain checks PASS.
