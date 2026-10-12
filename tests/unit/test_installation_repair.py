@@ -2664,7 +2664,10 @@ def test_earlier_directory_changes_during_later_final_membership_scan_reject(
 
     monkeypatch.setattr(repair, "library_directory_snapshot", snapshot)
     monkeypatch.setattr(repair, "emit", emit)
-    with pytest.raises(ValueError, match="library_membership_race"):
+    # New file creation changes the included directory target's metadata, so
+    # the complete target guard now rejects before the later membership guard.
+    reason = "inventory_target_race" if drift == "create" else "library_membership_race"
+    with pytest.raises(ValueError, match=reason):
         repair.mutate(request, rollback)
     assert injected and earlier.read_bytes() == raw
     assert not any(event["event"] in {"complete", "changed"} for event in events)

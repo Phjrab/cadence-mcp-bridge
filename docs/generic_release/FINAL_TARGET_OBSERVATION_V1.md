@@ -19,6 +19,14 @@ Linux evidence. Current installed helper/source952c39c is historical and does no
 contain this correction; new installed/VM/review qualification remains required.
 No reviewed candidate, new simulator job or release publication is claimed.
 
+First exact0974018 Linux run419 PASS/two failures: the pre-existing directory
+creation tests expected `library_membership_race`, but the new complete target
+guard correctly rejected that directory change earlier as `inventory_target_race`.
+Only the creation-case expectation was updated; rename still requires its original
+membership rejection, no changed/complete event is permitted, and injected files
+remain evidence. All eight new target-drift cases passed in that first Linux run.
+Failed CI is retained; final corrected-head hosted checks/review remain required.
+
 During the separately delegated VM repair, the earlier fixed installed helper call
 timed out. Read-only exact state and independent full metadata comparisons observed
 all233 planned0777-to0755 changes and0 remaining;509 file hashes, owner/group,
