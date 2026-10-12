@@ -370,10 +370,60 @@ def reviewed_operator_assets(contents, action):
             raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
 
 
+def _file_metadata(info):
+    # Reads may update atime; all identity, permission and content metadata stay bound.
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+            info.st_nlink, info.st_size, info.st_mtime,
+            # Python3.12 Windows stat/fstat disagree on ctime semantics. Named
+            # ctime is checked separately; native POSIX binds held ctime too.
+            info.st_ctime if os.name != "nt" else None)
+
+
+def _sync_exact_file(path, data, guard=None, mode=None):
+    _check_guard(guard)
+    if regular(path) != data:
+        raise ValueError("operator_file_durability_drift")
+    named = os.lstat(path)
+    if mode is not None and os.name != "nt" and stat.S_IMODE(named.st_mode) != mode:
+        raise ValueError("operator_file_durability_drift")
+    # Windows _commit requires a writable descriptor; no bytes are written.
+    flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
+    fd = os.open(path, flags | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0))
+    try:
+        held = os.fstat(fd)
+        fingerprint = _file_metadata(named)
+        if (not stat.S_ISREG(held.st_mode) or held.st_nlink != 1 or
+                (os.name != "nt" and (held.st_uid != os.getuid() or held.st_mode & 18)) or
+                fingerprint != _file_metadata(held) or os.read(fd, LIMIT + 1) != data):
+            raise ValueError("operator_file_durability_drift")
+        after = os.lstat(path)
+        if fingerprint != _file_metadata(os.fstat(fd)) or fingerprint != _file_metadata(
+                after) or named.st_ctime != after.st_ctime:
+            raise ValueError("operator_file_durability_drift")
+        _check_guard(guard)
+        os.fsync(fd)
+        os.lseek(fd, 0, os.SEEK_SET)
+        if os.read(fd, LIMIT + 1) != data:
+            raise ValueError("operator_file_durability_drift")
+        _check_guard(guard)
+        after = os.lstat(path)
+        if fingerprint != _file_metadata(os.fstat(fd)) or fingerprint != _file_metadata(
+                after) or named.st_ctime != after.st_ctime or (
+                os.path.realpath(path) != os.path.abspath(path)):
+            raise ValueError("operator_file_durability_drift")
+    finally:
+        os.close(fd)
+
+
 def _durable_operator_runtime(version, expected, raw, contents, target, guard=None):
     # Repeat for initial, partial and completed retries before any publication.
-    # A validated runtime whose directory entry is not durable is not ready.
+    # Cached complete bytes may follow a failed file fsync. Repeat each file
+    # barrier before directory barriers, without replacing retained inodes.
     _check_guard(guard)
+    for name in sorted(contents):
+        _sync_exact_file(os.path.join(version, name), contents[name], guard)
+    _sync_exact_file(os.path.join(version, "manifest.json"), raw, guard)
     _sync_directory(version)
     _check_guard(guard)
     _sync_directory(os.path.dirname(version))
@@ -420,6 +470,7 @@ def operator_activation(target, expected):
                 os.name != "nt" and stat.S_IMODE(os.stat(path).st_mode) != 448
             ):
                 raise ValueError("operator_launcher_collision")
+            _sync_exact_file(path, launcher, guard, 448)
         else:
             guard()
             exclusive(path, launcher, 448, guard)
@@ -531,23 +582,10 @@ def _retain_exact(path, data, mode=384, guard=None):
             raise ValueError("operator_update_history_drift")
         # Full bytes can remain after a failed file fsync too. Pin and resync
         # that exact existing inode before its directory durability barrier.
-        named = os.lstat(path)
-        # Windows _commit needs a writable descriptor; no write is performed.
-        flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
-        _check_guard(guard)
-        fd = os.open(path, flags | getattr(os, "O_NOFOLLOW", 0) |
-                     getattr(os, "O_NONBLOCK", 0))
         try:
-            held = os.fstat(fd)
-            if tuple(named) != tuple(held):
-                raise ValueError("operator_update_history_drift")
-            _check_guard(guard)
-            os.fsync(fd)
-            if (tuple(held) != tuple(os.fstat(fd)) or
-                    tuple(held) != tuple(os.lstat(path)) or regular(path) != data):
-                raise ValueError("operator_update_history_drift")
-        finally:
-            os.close(fd)
+            _sync_exact_file(path, data, guard, mode)
+        except ValueError:
+            raise ValueError("operator_update_history_drift")
     else:
         exclusive(path, data, mode, guard)
     # Exact entries can survive a failed directory fsync; recovery repeats it.

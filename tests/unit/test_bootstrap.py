@@ -464,6 +464,7 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
     monkeypatch.setattr(installer, "_publish_operator_state", observed_publish)
     installer.operator_activation(str(target), digest)
     assert events == [
+        *(["file"] * 6),
         "version_directory",
         "runtime_directory",
         "file",
@@ -483,7 +484,8 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
         == "EXISTING_EXACT_OPERATOR_ACTIVATION"
     )
     assert events == [
-        "version_directory", "runtime_directory", "binary_directory", "managed_directory"
+        *(["file"] * 6), "version_directory", "runtime_directory", "file",
+        "binary_directory", "managed_directory"
     ]
     assert (pointer.stat().st_dev, pointer.stat().st_ino) == identity
     assert {
@@ -530,11 +532,7 @@ def test_operator_activation_launcher_directory_sync_failure_preserves_and_recov
     monkeypatch.setattr(os, "fsync", interrupted_fsync)
     with pytest.raises(OSError, match="launcher directory sync failure before pointer"):
         installer.operator_activation(str(target), digest)
-    assert attempted == (
-        ["launcher_file", "binary_directory"]
-        if prior_state in ("absent", "pointer_only")
-        else ["binary_directory"]
-    )
+    assert attempted == ["launcher_file"] * 7 + ["binary_directory"]
     assert pointer.exists() == (prior_state in ("complete", "pointer_only"))
     assert not list(target.glob(".operator-state-*"))
     for name, raw in before.items():
@@ -695,7 +693,9 @@ def test_operator_state_inside_write_failure_retains_candidate_and_recovers(
     def interrupted_fsync(fd):
         import stat
 
-        if failure == "fsync" and stat.S_ISREG(installer.os.fstat(fd).st_mode):
+        info = installer.os.fstat(fd)
+        candidate_inodes = {p.stat().st_ino for p in target.glob(".operator-state-*")}
+        if failure == "fsync" and stat.S_ISREG(info.st_mode) and info.st_ino in candidate_inodes:
             raise OSError("simulated state fsync failure")
         return original_fsync(fd)
 
@@ -1237,6 +1237,105 @@ def test_operator_runtime_durability_failure_preserves_pointer_and_retries(
     assert installer.operator_activation(str(target), digest)["execution_authorized"] is False
     for name, content in before.items():
         assert (target / name).read_bytes() == content
+
+
+@pytest.mark.parametrize("asset", [*installer.FILES, "manifest.json"])
+@pytest.mark.parametrize("action", ["activate", "update"])
+def test_operator_runtime_file_sync_failure_retries_before_publication(
+    request, monkeypatch, asset, action
+):
+    if action == "activate":
+        _, target, expected = request.getfixturevalue("operator_bound")
+        def invoke():
+            return installer.operator_activation(str(target), expected)
+    else:
+        _, target, previous, expected = request.getfixturevalue("operator_update_pair")
+        def invoke():
+            return installer.operator_preflight_update(str(target), expected, previous)
+    selected = target / "runtime" / expected / asset
+    identity = (selected.stat().st_dev, selected.stat().st_ino)
+    before = {p.relative_to(target): (p.read_bytes(), p.stat().st_ino)
+              for p in target.rglob("*") if p.is_file()}
+    original = os.fsync
+    attempts = []
+
+    def failed(fd):
+        info = os.fstat(fd)
+        if (info.st_dev, info.st_ino) == identity:
+            attempts.append(identity)
+            raise OSError("injected runtime file fsync failure")
+        return original(fd)
+
+    monkeypatch.setattr(os, "fsync", failed)
+    for _ in range(2):
+        with pytest.raises(OSError, match="runtime file fsync failure"):
+            invoke()
+        assert {p.relative_to(target): (p.read_bytes(), p.stat().st_ino)
+                for p in target.rglob("*") if p.is_file()} == before
+    assert attempts == [identity, identity]
+    monkeypatch.setattr(os, "fsync", original)
+    invoke()
+    invoke()
+    assert (selected.stat().st_dev, selected.stat().st_ino) == identity
+
+
+def test_operator_partial_launcher_file_sync_retries_same_inode(operator_bound, monkeypatch):
+    _, target, expected = operator_bound
+    launcher = target / "bin/cadence-operator-runner"
+    pointer = target / "active-operator-runner.json"
+    original = os.fsync
+    failed_inodes = []
+
+    def failed(fd):
+        info = os.fstat(fd)
+        if launcher.exists() and (info.st_dev, info.st_ino) == (
+                launcher.stat().st_dev, launcher.stat().st_ino):
+            failed_inodes.append(info.st_ino)
+            raise OSError("injected launcher file fsync failure")
+        return original(fd)
+
+    monkeypatch.setattr(os, "fsync", failed)
+    for _ in range(3):
+        with pytest.raises(OSError, match="launcher file fsync failure"):
+            installer.operator_activation(str(target), expected)
+        assert not pointer.exists()
+        assert launcher.read_bytes() == (target / "runtime" / expected / "launcher.py").read_bytes()
+    assert len(failed_inodes) == 3 and len(set(failed_inodes)) == 1
+    monkeypatch.setattr(os, "fsync", original)
+    installer.operator_activation(str(target), expected)
+    installer.operator_activation(str(target), expected)
+    assert launcher.stat().st_ino == failed_inodes[0]
+
+
+@pytest.mark.parametrize("drift", ["replace", "content", "metadata"])
+def test_operator_file_sync_revalidates_held_and_named_bytes(operator_bound, monkeypatch, drift):
+    _, target, expected = operator_bound
+    selected = target / "runtime" / expected / "runner.py"
+    original = os.fsync
+    identity = (selected.stat().st_dev, selected.stat().st_ino)
+    original_content = selected.read_bytes()
+
+    def changed(fd):
+        original(fd)
+        info = os.fstat(fd)
+        if (info.st_dev, info.st_ino) != identity:
+            return
+        if drift == "replace":
+            retained = selected.with_name("retained-runner.py")
+            selected.rename(retained)
+            selected.write_bytes(original_content)
+        elif drift == "content":
+            selected.write_bytes(b"x" * len(original_content))
+        else:
+            selected.chmod(0o700)
+
+    if drift in ("metadata", "replace") and os.name == "nt":
+        pytest.skip("POSIX executable metadata or open-file replacement")
+    monkeypatch.setattr(os, "fsync", changed)
+    with pytest.raises(ValueError, match="operator_file_durability_drift"):
+        installer.operator_activation(str(target), expected)
+    assert not (target / "active-operator-runner.json").exists()
+    assert not (target / "bin/cadence-operator-runner").exists()
 
 
 def test_operator_runtime_revalidated_after_last_namespace_barrier(operator_bound, monkeypatch):
