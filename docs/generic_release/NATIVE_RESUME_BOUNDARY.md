@@ -1,3 +1,12 @@
+## Final independent review corrections, 2026-10-12
+
+Review189b5ae found policy-publication recovery, allocated-copy capacity and
+native waveform serialization issues. Implemented local213 PASS/27 OS skips,
+Ruff/mypy99 PASS; renewed exact hosted/review/installed/VM gates remain. Earlier
+189 artifact equivalence is source-specific history and excludes these changed
+assets. See docs/generic_release/FINAL_REVIEW_CORRECTIONS_20261012.md. No new
+VM changes/simulations/reservations/publication or restart at this checkpoint.
+
 ## Installed candidate checkpoint and final freeze boundary, 2026-10-12
 
 PR151 normally merged eba26d68. Exact root189b5ae has four hosted CI checks PASS;

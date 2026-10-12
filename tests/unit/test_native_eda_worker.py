@@ -50,6 +50,43 @@ def test_native_frame_has_bound_identity_inventory_and_finite_values(frame_worke
     worker.frame((header + "\nV|out|0.5\nEND\n").encode(), plan, route, "1" * 64)
 
 
+def test_small_file_copy_allocation_rejects_before_materialization(
+    frame_worker, tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+
+    worker, _, _, _ = frame_worker
+    source = tmp_path / "source"
+    source.mkdir(mode=0o700)
+    for i in range(200):
+        (source / str(i)).write_bytes(b"x")
+    observed = copying.snapshot(str(source.resolve()))
+    monkeypatch.setattr(
+        eda.os, "statvfs", lambda _: SimpleNamespace(f_frsize=4096, f_bsize=4096), raising=False
+    )
+    monkeypatch.setattr(worker, "size", lambda _: (0, 0, "a" * 64))
+    # Payload200B plus1MiB fits; allocated-entry estimate correctly does not.
+    with pytest.raises(ValueError, match="copy_capacity"):
+        worker.copy_capacity({"source_cell": observed}, str(tmp_path), 2 * 1024**2)
+    assert copying.snapshot(str(source.resolve())) == observed
+    assert not (tmp_path / "owned-copy").exists()
+    worker.copy_capacity({"source_cell": observed}, str(tmp_path), 4 * 1024**2)
+
+
+def test_copy_capacity_includes_existing_job_and_filesystem_unit(frame_worker, monkeypatch):
+    from types import SimpleNamespace
+
+    worker, _, _, _ = frame_worker
+    monkeypatch.setattr(
+        eda.os, "statvfs", lambda _: SimpleNamespace(f_frsize=4096, f_bsize=65536), raising=False
+    )
+    monkeypatch.setattr(worker, "size", lambda _: (1, 1048576, "a" * 64))
+    rows = [["directory", ""], ["file", "data", 0, 0, 0, 0, 65537]]
+    with pytest.raises(ValueError, match="copy_capacity"):
+        worker.copy_capacity({"source": {"metadata": rows}}, "/synthetic", 2300000)
+    worker.copy_capacity({"source": {"metadata": rows}}, "/synthetic", 3 * 1024**2)
+
+
 @pytest.mark.parametrize(
     "rows",
     [

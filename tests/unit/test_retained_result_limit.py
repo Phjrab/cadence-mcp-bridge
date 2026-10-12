@@ -10,6 +10,7 @@ from test_shared_reservations import binding, job, snapshot
 from test_shared_reservations import root as root
 
 from cadence_mcp_bridge import _domain_migration as migration
+from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge import _shared_reservations as ledger
 
 
@@ -170,3 +171,59 @@ def test_current_policy_record_binds_latest_limits_and_preserves_prior_files():
         ]
         == 10737418240
     )
+
+
+@pytest.mark.parametrize("failure", ["partial", "file_fsync", "after_rename"])
+def test_policy_publication_interruption_retains_evidence_and_same_plan_recovers(
+    domain, monkeypatch, failure
+):
+    root, value = setup_registered(domain, monkeypatch)
+    before = snapshot(root)
+    proposal = migration.result_limit_plan(value, "a" * 64)
+    request = dict(
+        plan=proposal["plan"],
+        expected_plan_sha256=proposal["plan_sha256"],
+        operator_authority="SYNTHETIC NOT USER APPROVAL",
+    )
+    final = root / ledger.REGISTRY / ledger.RESULT_POLICY_FILE
+    original_write, original_rename = installer.exclusive, migration.os.rename
+
+    def fail_write(path, data, *args, **kwargs):
+        if Path(path).name.startswith(".result-policy-v6-"):
+            if failure == "partial":
+                Path(path).write_bytes(data[:7])
+                Path(path).chmod(0o600)
+                raise OSError("synthetic partial policy")
+            original_write(path, data, *args, **kwargs)
+            raise OSError("synthetic policy file fsync failure")
+        return original_write(path, data, *args, **kwargs)
+
+    def fail_rename(source, target):
+        original_rename(source, target)
+        if Path(target) == final:
+            raise OSError("synthetic after policy rename")
+
+    if failure == "after_rename":
+        monkeypatch.setattr(migration.os, "rename", fail_rename)
+    else:
+        monkeypatch.setattr(installer, "exclusive", fail_write)
+    with pytest.raises(OSError, match="synthetic"):
+        migration.apply_result_limit(request, "a" * 64)
+    retained = {p.name: p.read_bytes() for p in root.glob(".result-policy-v6-*")}
+    assert final.exists() == (failure == "after_rename")
+    if failure != "after_rename":
+        assert len(retained) == 1
+        # Incomplete private evidence never enters the strict reservation index.
+        assert (
+            ledger.effective_policy(str(root), proposal["plan"]["anchor"])["result_ceiling_bytes"]
+            == ledger.CEILING_BYTES
+        )
+    monkeypatch.setattr(installer, "exclusive", original_write)
+    monkeypatch.setattr(migration.os, "rename", original_rename)
+    recovered = migration.apply_result_limit(request, "a" * 64)
+    assert recovered["created"] == (failure != "after_rename")
+    assert recovered["result_ceiling_bytes"] == 17179869184
+    assert {p.name: p.read_bytes() for p in root.glob(".result-policy-v6-*")} == retained
+    for name, data in before.items():
+        assert (root / name).read_bytes() == data
+    assert not migration.apply_result_limit(request, "a" * 64)["created"]

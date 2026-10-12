@@ -87,6 +87,15 @@ class NativeRoute(EnvironmentModel):
 
     @model_validator(mode="after")
     def canonical(self) -> Self:
+        if self.ade.inputs.analysis != "dc":
+            # %.16g emits at most24 bytes for a finite double. Count each full
+            # row, its index/delimiters, the fixed identity header and currents.
+            frame_bound = 256 + sum(
+                (len(node.logical_id) + 82) * self.reader.maximum_samples
+                for node in self.reader.nodes
+            ) + sum(len(source.source_id) + 28 for source in self.reader.sources)
+            if frame_bound > 65536:
+                raise ValueError("native reader serialization bound exceeded")
         for source in (self.source_cell, self.source_state):
             if str(PurePosixPath(source)) != source or ".." in PurePosixPath(source).parts:
                 raise ValueError("canonical source path required")

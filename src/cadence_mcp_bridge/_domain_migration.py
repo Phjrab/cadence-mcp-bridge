@@ -660,9 +660,20 @@ def apply_result_limit(request, assets_sha256):
         path = root + "/" + accounting.REGISTRY + "/" + accounting.RESULT_POLICY_FILE
         created = not os.path.lexists(path)
         if created:
-            accounting.write_new(path, document)
+            # Keep incomplete candidates outside the strict reservation registry.
+            # The existing operator lock protects this complete-record publication.
+            candidate = root + "/.result-policy-v6-" + digest(os.urandom(32))
+            raw = canonical(document)
+            installer.exclusive(candidate, raw)
+            accounting.sync_directory(root)
+            if installer.regular(candidate) != raw or os.path.lexists(path):
+                raise ValueError("result_limit_publish_conflict")
+            os.rename(candidate, path)
+            accounting.sync_directory(root)
         elif canonical(accounting.read(path)) != canonical(document):
             raise ValueError("result_limit_retained_conflict")
+        # Recovery also repeats the durability barriers if rename already happened.
+        installer._retain_exact(path, canonical(document))
         policy = accounting.effective_policy(root, anchor)
         accounting.state(root, binding)
         if canonical(snapshot(root)) != canonical(current):

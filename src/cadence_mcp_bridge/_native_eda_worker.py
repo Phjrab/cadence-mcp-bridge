@@ -124,6 +124,21 @@ class EdaWorker(object):
         finally:
             os.close(parent)
 
+    def copy_capacity(self, snapshots, job, limit):
+        # Logical payload alone misses small-file/directory block allocation.
+        # One extra allocation unit per entry also covers directory-entry growth.
+        fs = os.statvfs(job)
+        unit = max(4096, fs.f_frsize, fs.f_bsize)
+        projected = 0
+        for tree in snapshots.values():
+            for row in tree["metadata"]:
+                projected += 2 * unit
+                if row[0] == "file":
+                    projected += ((row[6] + unit - 1) // unit) * unit
+        logical, allocated, _ = self.size(job)
+        if max(logical, allocated) + projected + 1048576 > limit:
+            raise ValueError("native_worker_copy_capacity")
+
     def live(self, session, plan):
         session.check()
         self.gate.read(plan)
@@ -378,8 +393,7 @@ class EdaWorker(object):
         execution_limit = amount - terminal_overhead
         if execution_limit <= 0:
             raise ValueError("native_worker_terminal_capacity")
-        if sum(v["bytes"] for v in before.values()) + 1048576 > amount:
-            raise ValueError("native_worker_copy_capacity")
+        self.copy_capacity(before, journal.job, execution_limit)
         root, work = journal.job, journal.work
         for name in ("library", "state-root", "project"):
             self.operations.directory(root + "/" + name, self.gate.accounting)

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "observed_date": "2026-10-12",
-  "generic_release_gate": "FINAL_REMOTE_COMMIT_AND_ARTIFACT_RECEIPT_PENDING",
+  "generic_release_gate": "BLOCKED_FINAL_REVIEW_CORRECTIONS_REQUALIFICATION",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
   "source_checkpoint": "189b5aeb1b8cbe96dec23745b43c43154187edf2",
@@ -258,5 +258,15 @@
     "hosted_windows": "3567 PASS/373 platform skips/56 warnings; security18, strict dependency audit, compatibility and package preservation PASS",
     "hosted_ubuntu": "442 accounting/repair;106 operator;100 domain;258 consumer;88 confirmation;191 provider;43 enrollment PASS, no POSIX skips",
     "final_remote_commit_and_archives": "PENDING_FINAL_FREEZE"
+  },
+  "final_review_corrections": {
+    "reviewed_source": "189b5aeb1b8cbe96dec23745b43c43154187edf2",
+    "finding_ids": [
+      4246904103,
+      4246904110,
+      4246904114
+    ],
+    "status": "IMPLEMENTED_LOCAL213PASS27PLATFORM_SKIPS_FINAL_HOSTED_INSTALLED_VM_REVIEW_PENDING",
+    "reference": "FINAL_REVIEW_CORRECTIONS_20261012.md"
   }
 }

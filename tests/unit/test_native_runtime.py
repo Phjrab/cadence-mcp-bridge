@@ -70,6 +70,38 @@ def test_export_has_exact_fixed_assets_bound_hashes_and_no_authority(registered,
     assert retained == {p.name: p.read_bytes() for p in output.iterdir()}
 
 
+@pytest.mark.parametrize("analysis", ["ac", "tran"])
+def test_native_large_waveform_registration_rejected_before_bundle(registered, tmp_path, analysis):
+    context, _, path = registered
+    data = json.loads(path.read_bytes())
+    route = data["routes"][0]
+    route["ade"]["inputs"] = (
+        {"analysis": "ac", "start_hz": "1", "stop_hz": "1000", "points_per_decade": 64}
+        if analysis == "ac"
+        else {"analysis": "tran", "stop_s": "0.001", "maxstep_s": "0.00001", "method": "trap"}
+    )
+    route["reader"].update(
+        nodes=[
+            {"logical_id": "n" + str(i) + "x" * 60, "selector": "/n" + str(i)} for i in range(6)
+        ],
+        sources=[],
+        transfer=None,
+        maximum_samples=256,
+    )
+    path.write_text(json.dumps(data), encoding="ascii")
+    output = tmp_path / "oversized"
+    with pytest.raises(ValidationError, match="serialization bound"):
+        bundle(context, path, output)
+    assert not output.exists()
+    assert not context.binding.analysis_journal.exists()
+    # The same registered signals with a bounded grid remain locally admissible.
+    route["reader"]["maximum_samples"] = 64
+    assert (
+        NativeRegistration.model_validate_json(json.dumps(data)).routes[0].reader.maximum_samples
+        == 64
+    )
+
+
 @pytest.mark.parametrize(
     "failure", ["source", "state", "managed", "library", "reader", "extra", "duplicate"]
 )
