@@ -828,9 +828,10 @@ def test_actual_migration_registry_scan_is_bounded_and_read_only(tmp_path, monke
     registry.mkdir(mode=0o700)
     for i in range(4):
         (registry / f"retained-{i}").write_bytes(b"preserved")
-    monkeypatch.setattr(migration.os, "listdir", lambda path: pytest.fail("unbounded listdir"))
-    with pytest.raises(ValueError, match="migration_registry_inventory_limit"):
-        migration.bounded_registry_names(str(registry))
+    with monkeypatch.context() as guard:
+        guard.setattr(migration.os, "listdir", lambda path: pytest.fail("unbounded listdir"))
+        with pytest.raises(ValueError, match="migration_registry_inventory_limit"):
+            migration.bounded_registry_names(str(registry))
     assert [p.read_bytes() for p in registry.iterdir()] == [b"preserved"] * 4
 
 
