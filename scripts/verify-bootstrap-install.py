@@ -197,6 +197,53 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
     command(["runner", "verify", *args])
     command(["activate", str(managed), digest], standalone=True)
     active = (managed / "active-runner.json").read_bytes()
+    legacy_launcher = (managed / "bin/cadence-runner").read_bytes()
+    command(["activate-operator", str(managed), digest], standalone=True)
+    assert command(["activate-operator", str(managed), digest], standalone=True)[
+        "status"
+    ] == "EXISTING_EXACT_OPERATOR_ACTIVATION"
+    # Synthetic historical launcher first, then the exact reviewed current
+    # package launcher. An arbitrary rehashed NEXT executable is never accepted.
+    import shutil
+    revised = workspace / "launcher-revision"
+    shutil.copytree(workspace / "bundle", revised)
+    launcher = revised / "launcher.py"
+    launcher.write_bytes(launcher.read_bytes() + b"\n# synthetic historical launcher revision\n")
+    revised_manifest = json.loads((revised / "manifest.json").read_bytes())
+    revised_manifest["files"]["launcher.py"] = {
+        "sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+        "bytes": len(launcher.read_bytes()),
+    }
+    raw_revision = json.dumps(
+        revised_manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("ascii")
+    (revised / "manifest.json").write_bytes(raw_revision)
+    revised_digest = hashlib.sha256(raw_revision).hexdigest()
+    command(["runner", "install", "--bundle", str(revised), "--target", str(managed),
+             "--expected-plan-sha256", revised_digest])
+    # Historical fixture state is written explicitly; the current installer must
+    # refuse to activate these modified bytes even with a self-consistent hash.
+    before_rejected = snapshot(managed)
+    command(["activate-operator", str(managed), revised_digest], standalone=True, accepted=False)
+    assert snapshot(managed) == before_rejected
+    (managed / "bin/cadence-operator-runner").write_bytes(launcher.read_bytes())
+    (managed / "active-operator-runner.json").write_bytes(
+        json.dumps({"schema_version": 1, "manifest_sha256": revised_digest},
+                   sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    )
+    assert (managed / "bin/cadence-runner").read_bytes() == legacy_launcher
+    assert (managed / "active-runner.json").read_bytes() == active
+    update = ["update-operator-preflight", str(managed), digest, revised_digest]
+    command(update, standalone=True)
+    command(update, standalone=True)
+    assert (managed / "bin/cadence-operator-runner").read_bytes() == (
+        workspace / "bundle" / "launcher.py"
+    ).read_bytes()
+    assert (managed / "bin/cadence-runner").read_bytes() == legacy_launcher
+    assert (managed / "active-runner.json").read_bytes() == active
+    command(["deactivate-operator", str(managed), digest], standalone=True)
+    command(["activate-operator", str(managed), digest], standalone=True, accepted=False)
+    assert (managed / "bin/cadence-runner").read_bytes() == legacy_launcher
     # Stage a distinct content candidate; no active-pointer replacement is available.
     profile = workspace / "next-profile.json"
     next_profile = json.loads((examples / "environment.json").read_bytes())

@@ -17,6 +17,31 @@ the elapsed-limit change. The original OA/ADE, PDK, and historical results are
 protected. Feature changes go through a dedicated PR.
 
 
+## Coexisting operator runner
+
+The installed package's runner bundle/export-installer/verify/preflight workflow
+uses a dedicated `cadence-operator-runner`, `active-operator-runner.json` and
+`operator-runner-revoked.json`. Existing `cadence-runner` and legacy state remain
+preserved. On the guest, the exported helper supports explicit
+`activate-operator MANAGED_ROOT MANIFEST_SHA256` and `deactivate-operator
+MANAGED_ROOT MANIFEST_SHA256`. These actions need the existing trusted `run.lock`;
+they never create a ledger or authorize simulations. Exact initial activation is
+repeatable; an interrupted launcher-before-pointer write is recoverable.
+
+Use the installed `runner preflight --bundle LOCAL_BUNDLE
+--expected-plan-sha256 MANIFEST_SHA256` CLI. It invokes the fixed guest Python
+interpreter with isolated startup flags; do not depend on a Windows-transferred
+shebang. Preflight attests selected immutable package assets and the configured
+VM, with analyses and license entitlement still unqualified.
+
+The exported helper's `update-operator-preflight MANAGED_ROOT NEXT_SHA PREVIOUS_SHA`
+is restricted to the known preflight runner, unchanged profile/probe/reservation
+assets and a launcher revision. It shares the same physical lock, preserves old
+versions and immutable transition receipts, and recovers a known interrupted pair.
+It cannot update simulator worker code or replace the legacy launcher. Native
+provider/migration, genuine fresh initialization and new-circuit execution remain
+unfinished. See the [workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+
 ## Standard VM and operator trust repair
 
 Release development targets the professor-provided CentOS/Cadence VM (or an

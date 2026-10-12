@@ -75,3 +75,6 @@ jobs:
           sudo apt-get install -y acl
       - name: Actual files, process death and independent POSIX flock
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py tests/unit/test_installation_repair.py -q --basetemp "$HOME/grel-reservation-tests"
+
+      - name: Operator launcher coexistence, recovery and shared lock
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_bootstrap.py -k operator -q --basetemp "$HOME/grel-operator-tests"

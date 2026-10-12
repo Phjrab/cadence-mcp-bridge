@@ -1,3 +1,13 @@
+## Active operator coexistence continuation, 2026-10-08
+
+Dedicated operator activation and same-profile preflight-launcher update now pass
+on the actual ordinary-user VM; legacy launcher/counter/lock are preserved. The
+final installed package preserves43 synthetic files across reinstall/uninstall.
+Actual new-job capability/provider/migration remains incomplete. Latest evidence:
+[coexistence result](OPERATOR_RUNNER_COEXISTENCE_V1.md). Earlier collision/permission
+blockers below are historical and superseded within this explicit user delegation.
+Continuous GREL02–07 and895MiB remains authorized; no phase reapproval.
+
 ## Administrator repair continuation, 2026-10-08
 
 The latest explicit current-VM administrator delegation supersedes the historical

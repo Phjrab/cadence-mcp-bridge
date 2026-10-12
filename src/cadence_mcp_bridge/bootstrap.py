@@ -250,6 +250,7 @@ def diagnose_trust(profile: Path, output: Path) -> dict[str, object]:
 def preflight(bundle_path: Path, expected: str) -> dict[str, object]:
     """Verify current package/bundle and request the exact installed runner preflight."""
     import hashlib
+    import shlex
     import shutil
     from uuid import uuid4
 
@@ -286,9 +287,16 @@ def preflight(bundle_path: Path, expected: str) -> dict[str, object]:
         "-o",
         "ConnectTimeout=10",
         environment.ssh_alias,
-        environment.paths.managed_root + "/bin/cadence-runner",
-        "preflight",
+        "/usr/bin/python",
+        "-E",
+        "-s",
+        "-B",
+        "-c",
+        shlex.quote(files("cadence_mcp_bridge").joinpath(
+            "_operator_preflight_entry.py").read_text(encoding="utf-8")),
+        environment.paths.managed_root,
         expected,
+        hashlib.sha256(contents["launcher.py"]).hexdigest(),
         nonce,
     ]
     code, stdout, stderr = run_fixed(argv, b"", OpenSshBackend._ssh_environment())

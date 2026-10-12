@@ -7,6 +7,59 @@ User withdrew stop-after-test-failure; continue prior delegated scope while
 preserving failures. See docs/generic_release/FINAL_TARGET_OBSERVATION_V1.md.
 Prior dated checkpoints remain history.
 
+## Held-byte launcher preflight under the existing lock, 2026-10-11
+
+Review4240425695 is corrected in the supported package preflight path. A fixed
+package entry takes the existing run.lock shared flock before reading/compiling
+any launcher code, retains the lock through the child and validates named lock
+and launcher bindings at completion. The host passes the exact locally reviewed
+package launcher hash; only matching retained bytes are compiled. A process that
+started before an A-to-B update cannot execute A while authenticating path B.
+Updates continue to use the same exclusive lock, without creating a substitute.
+The entry opens existing files read-only, uses fixed preflight arguments and
+removes CWD using builtin sys before imports. No public shell/eval/path tool or
+new arbitrary-code input is introduced. Direct mutable-bin execution is not the
+new package-bound preflight qualification interface; use runner preflight CLI.
+
+Three owned POSIX fixtures cover update before source loading, update blocked
+through the child lifetime and rejection of historical launcher bytes. Four
+portable -c/CWD marker tests reject without executing unreviewed imports.
+Windows bootstrap98 PASS/15 POSIX skips and official Ruff/mypy73 PASS. Exact
+hosted POSIX/Windows, package/security and refreshed independent review remain
+required. No actual VM, administrator, ledger, simulation or reservation changes
+occurred. Existing directGREL02-08/16GiB/500/same-change20 and conditional normal
+integration remain authorized; exact public-candidate approval stays separate.
+All prior source receipts, grants, policies and failed evidence remain history.
+
+## Durable next-runtime update binding, 2026-10-11
+
+Independent review4240354827 is corrected: activation and preflight-only update
+share the version-directory/runtime-parent durability barrier and a full asset
+and target revalidation before launcher, pointer or transition-history writes.
+Initial, interrupted and completed exact retries repeat these barriers. Failure
+preserves current files and pointer; a substituted next runtime rejects before
+publication. Six portable failure/retry cases and one last-barrier replacement
+case pass; the POSIX completed-retry fixture checks actual directory fsync order.
+
+Connected Windows bootstrap94 PASS/12 platform skips. Exact hosted Linux,
+security/package and refreshed independent review remain gates; no actual VM,
+ledger, grant, simulation or reservation changes occur in this correction.
+Current directGREL02-08/16GiB/500/same-change20/conditional normal integration
+remain authorized. Public tag/Release/assets require the exact final approval.
+Earlier source evidence, policy and recovery histories are retained.
+
+## Selected runtime namespace durability, 2026-10-11
+
+Fresh independent finding4240331189 is corrected: activation fsyncs the selected
+version and runtime parent before any launcher or active pointer publication,
+then validates the exact manifest/assets again. Exact retries repeat both
+barriers. Actual POSIX fsync-order coverage is extended; four portable cases
+inject repeated version/runtime barrier failure in initial and exact activation,
+and another replaces runtime bytes during the last barrier. Pointer/history and
+failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PASS.
+Hosted actual POSIX and fresh final review/package remain separate pending gates.
+This correction performs no actual VM activation, EDA or accounting mutation.
+
 ## Complete directory-union trailing observation, 2026-10-11
 
 Review4240623183 is corrected: metadata signatures are retained around the final
@@ -221,6 +274,68 @@ recommended invocation. Current VM16GiB/500/20 and continuousGREL02-08 delegatio
 persist; package/hosted/fresh review/final actual installed gates are pending.
 This correction itself performs no actual VM/admin mutation/reservation/simulation.
 Public tag/Release/upload still requires final exact-candidate approval.
+
+## Initial-pin installed package evidence, 2026-10-11
+
+Exact newly changed bootstrap/fixture source passed curated wheel80/sdist81,
+locked clean installation,85 stdio schemas across three templates, two isolated
+operator contexts, operation acceptance, bootstrap/update/revocation and43-file
+synthetic journal/accounting/replay preservation across reinstall and uninstall.
+Wheel SHA256:f80d49af490e3361df846dbe048c062ed9c553e3a35797c31febfb00adb0b0b2.
+Sdist SHA256:e2ed47c7fd1dd63c2b33bbab982738155b29ff332375899502295e3d0364253b.
+These hashes predate the latest repair-parent integration; new final source
+requires its own package receipt. No native/VM qualification is inferred.
+Mypy72 PASS. A Windows pip-api locale failure was retained and strict locked
+security audit is being rerun with UTF8 enabled; checks are not bypassed.
+
+## Initial activation reviewed executable binding, 2026-10-11
+
+Fresh review P1 identified that initial activation checked a caller-rehashed
+manifest without independent executable authentication. Initial operator
+activation and preflight updates now bind ALL four executable assets (launcher,
+runner, probe and reservation helper) to reviewed package SHA256 pins, normalized
+only for checkout line endings. Profile bytes remain per-operator configuration.
+Self-rehashed replace/append-code/append-comment attacks for every executable
+reject without pointer, launcher, file inode or history mutation. Current bundle
+pins match exact package assets:bootstrap82 PASS/12 Windows OS skips; Ruff PASS.
+Synthetic update history is now explicitly prepared in disposable test state;
+current activation refuses those old modified bytes. Prior installed43-file
+preservation passed the fixture correction; exact newly changed shipped-source
+package/hosted/fresh review verification is pending. No native job or VM change.
+
+## Installed reviewed-launcher fixture correction, 2026-10-11
+
+The complete installed bootstrap verifier now builds explicitly synthetic prior
+launcher history and updates toward the unmodified reviewed package executable,
+then repeats and revokes that exact current identity. It asserts installed new
+launcher bytes equal the package bundle while legacy activation remains unchanged.
+The obsolete arbitrary synthetic NEXT comment is no longer a positive fixture.
+This corrects acceptance code for the new pin; all shipped source assets remain
+byte-identical to c32d246/ca2476. Exact full installed verification is pending and
+must pass before main integration. No native execution or reservation occurs.
+
+## PR149 reviewed executable binding correction, 2026-10-11
+
+Fresh review P1 exposed a self-rehashed arbitrary replacement launcher. Update
+now pins new launcher bytes to the independently compiled reviewed package asset
+and rejects substitute/append-code/append-comment before state/history mutation.
+Windows bootstrap69 PASS/12 OS skips; final parent, related, exact package, hosted
+and fresh review remain pending. Earlier82b207 receipts remain source-scoped
+history. This correction has0 VM/admin/EDA/ledger side effects and preserves all
+existing evidence and delegatedGREL02-08/16GiB normal integration authority.
+Public tag/Release/upload still requires exact-candidate user approval.
+
+## PR149 directed update durability correction, 2026-10-11
+
+Fresh review found reverse preflight transitions and missing retry fsync barriers.
+The same retained-lock update now rejects completed/partial opposite history,
+re-syncs exact retained files/parent directories and already-replaced launcher and
+pointer directories before advancing. New Windows bootstrap66 PASS/12 OS skips;
+actual POSIX order, relevant/package/hosted/final review remain pending. This is a
+local source correction only: VM/admin/EDA/ledger side effects0. Prior receipts,
+open PRs, history, grants and cumulative consumption remain preserved. Continue
+currentGREL02-08/16GiB conditional integration; public candidate approval remains.
+See OPERATOR_RUNNER_COEXISTENCE_V1.md. Earlier dated records remain history.
 
 ## Held external-link observation correction, 2026-10-11
 
@@ -443,6 +558,77 @@ Latest root-observed ledger102/12,483,297,280 is historical to this local correc
 active16GiB/500/20,GREL02-08 and conditional normal PR integration remain authorized.
 Public tag/Release/upload still requires approval of an exact completed candidate.
 
+## Operator launcher directory durability, 2026-10-11
+
+PR149's further P2 found that initial activation could persist the active pointer
+while the launcher entry in its separate bin directory remained uncommitted.
+Correction f76c8d5c1000331a772fcd52614bcd9f447ae3d1 now fsyncs that directory
+before publishing a pointer and repeats the barrier for exact retries, including
+a recreated launcher with a preexisting exact pointer. A directory-sync failure
+returns no success, does not publish a new pointer, and preserves exact launcher,
+pointer and historical state for recovery under the retained lifetime domain lock.
+
+Exact bootstrap: 58 PASS / 11 Windows platform skips. Five new POSIX cases inspect
+actual file/directory descriptors and publication order, inject bin-directory sync
+failure for absent, launcher-only, complete and pointer-only states, then verify
+exact recovery and inode/history preservation. Ubuntu hosted execution and fresh
+review remain pending. Ruff/mypy72, security18/strict locked audit,85 schemas and
+installed CLI/SDK/bootstrap/43-state reinstall-uninstall preservation PASS.
+Persistent audited wheel80-member SHA256
+8dfced4add90877be811b704e369141730e4640c1b27a7f6822356b8c859fc54;
+sdist81-member a6d20e6e6c3ccb822e6f216e6de7954cdbd5c2b7ff7f658698dc7bdc3a333854.
+Installer SHA256 861581f16ed41ec330d0c038a474da90dbf9f13bac83378341cfd0ca9896ce38.
+
+Parent148's later rollback-receipt-origin correction is still awaiting normal
+integration; these receipts apply to f76c8d5 with the prior9c311 repair parent.
+Foundation branch metadata1.0.0 is separate from root152's chosen2.0 development
+metadata and is not a frozen RC. Current direct user delegation permits reviewed
+GREL02-08 integration within the retained16GiB/500-attempt/20-correction limits;
+old contrary statements below remain historical. This correction has zero VM
+contacts, actual activation/revocation, admin changes, simulations or reservations.
+Changed native assets require renewed exact qualification. Generic release BLOCKED;
+public tag/Release/artifact upload remains unapproved.
+
+## Atomic operator state and exact parent integration, 2026-10-11
+
+Normal merge f7559262cd4aff87b088db143f2632114848e5bf incorporates the latest
+repair parent 9c311b0a6c14d06bb5abc92bb59ec1039497e339 and atomic operator-state
+correction 14e7e0c. Initial active-pointer and revocation publication now writes a
+private mode-600 exclusive candidate under the existing lifetime resource lock,
+handles short writes, fsyncs the file and directory, checks complete bytes and
+absence of a conflicting final marker, then renames and fsyncs the directory.
+Failed candidates remain evidence; an exact retry uses a new candidate, and
+repeating a completed marker preserves its inode. General exclusive export and
+historical launcher-collision behavior remain unchanged. This is the existing
+trusted-owner/lock contract, not protection against hostile same-UID editing.
+
+Related tests: 273 PASS / 28 Windows platform skips in 40.74s; Ruff/mypy 72 files,
+security 18, strict locked audit and 85-schema compatibility PASS. New activation
+and deactivation tests interrupt writes, file fsync and publication, preserve
+partial candidates and unrelated final collisions, and recover exact requests.
+POSIX directory barriers run in the Ubuntu operator suite; Windows synthetic
+evidence does not attest native POSIX behavior. Exact installed CLI/SDK/bootstrap,
+reinstall and uninstall preserve 43 disposable synthetic state files.
+
+Audited wheel (80 members) SHA256:
+80de927e51d66c64978ef85f6dcfc5fde04cf683ac5327c5ee1c25ba27e5c85f;
+sdist (81 members):
+63afe42904a73c686a02eb6d1a06113301749042546cc7242007c6ff353d4ce1.
+Shipped installer SHA256:
+1627bf45fd93c738830ea64f33a1fe3eea2a50032151e7b7a33f42f14f1e8425 (20,979 bytes);
+repair/modeltrust helper:
+8f2723ee210ba244be298b35e0cb1db921d21085beb63f68836502aa01303bb1.
+These are test artifacts, not an accepted release candidate. Exact final hosted
+checks and fresh review remain pending. A native bundle with these changed assets
+requires renewed exact qualification; bf6c20 and all prior evidence are retained.
+
+General private transport remains 256 KiB; repair inventory alone uses 16 MiB.
+This integration performs 0 VM contacts, administrator changes, simulations or
+reservations. Existing real consumption, journals, replay and protected originals
+remain preserved. Direct 16 GiB / 500 / 20, continuous GREL02-08 and conditional
+normal related feature-PR merge authority persist. Exact public tag/Release/upload
+still requires final user approval. Earlier receipts remain source-scoped history.
+
 ## Whole-target completion integrity correction, 2026-10-11
 
 Fresh PR148 review found no-op targets and already processed targets could drift
@@ -493,6 +679,50 @@ inventory remain pending. modeltrust helper bytes change again; preserve
 bf6c20 and all earlier evidence until exact updated native qualification. This fix
 adds0 VM contacts/admin changes/simulations/reservations. Current16GiB/500/20,
 continuous GREL02-08, conditional normal merge and exact-publication gate persist.
+
+## PR148/149 integrated-source receipt, 2026-10-11
+
+Normal merge c649853d5b1a36f41818badda3150b8fcd650650 incorporates parent
+3360d0e5c0f1af28140475516f1861b54db9fb68 and operator revocation durability
+correction a2fc3d880aafdf845b35ff30ae8e3cc27b3d982e. Both documentation histories
+are retained. Integrated related235 checks PASS/16 Windows platform skips;
+Ruff/mypy72, security18/locked audit/85-schema compatibility and installed43-state
+package/reinstall/uninstall preservation PASS. Audited wheel80 members SHA256
+80a40eebc288e8368dec463f6f3baad641a610d7d3e86e5cfd531ac49272fa86;
+sdist81 members af5a65792553ec2a7afb5cb5906f06d0abfa625292a699848346b90618585f0c.
+These are test artifact identities, not an accepted release candidate. Exact hosted
+checks and independent review remain pending. A subsequent parent review identified
+another omitted-ancestor race whose correction still needs normal integration and
+renewed qualification. Updated installer/modeltrust bytes have no current-VM
+qualification in this receipt; prior native bundle/evidence remains preserved.
+This integration has0 VM contacts/admin changes/simulations/reservations and does
+not grant publication authority. Earlier source-scoped receipts remain history.
+
+## Operator revocation directory durability, 2026-10-11
+
+PR149's final P2 found that an fsynced revocation file could lose its directory
+entry after power loss. Operator deactivation now fsyncs the managed directory
+before reporting success, including an exact existing marker left by interruption.
+A failed directory sync propagates; retry retains the original marker inode,
+active pointer, historical versions and resource state, then repeats the barrier.
+The existing resource lock, identity/permissions checks and drift rejection remain.
+
+Local related226 tests PASS/15 Windows platform skips, Ruff/mypy72, security18,
+locked dependency audit and85-schema compatibility PASS. The three new POSIX
+regressions inspect real fsync descriptors/order and inject new/existing-marker
+sync failure before success, then verify recovery/repeat without replacement.
+They run in the existing Ubuntu operator CI; exact hosted checks and independent
+review of this final source remain pending. Matching curated artifacts and isolated
+installed protocol/bootstrap/coexistence/reinstall/uninstall preserve43 synthetic
+state files. Synthetic/Windows evidence does not attest native POSIX durability.
+
+The shipped installer bytes change; any later native bundle containing this helper
+requires its own exact hash/qualification. Worker, launcher, profile and shared
+reservation assets are unchanged. This correction performs0 VM contacts, metadata
+changes, simulations or reservations; existing real journals/ledger/replay remain.
+Direct16GiB/500/20, continuous GREL02-08 and conditional normal feature-PR merge
+authority persist. Release is still blocked; exact public tag/Release/upload needs
+final user approval. Prior dated boundaries and observations below are history.
 
 ## Whole repair protocol and omitted ancestor checks, 2026-10-11
 
@@ -545,6 +775,19 @@ Related61 repair/bootstrap checks/9 Windows skips, Ruff/mypy72 and exact install
 32-state preservation pass. Final exact hosted/final review remains pending.
 Current direct authority, real94/11,409,555,456 ledger and prior evidence remain;
 0 new simulations/reservations/admin changes in this PR qualification.
+
+## Final stable-parent integration, 2026-10-09
+
+This feature normally incorporates latest trust-repair parent49b9906 and keeps
+operator/legacy runner coexistence and existing root/ledger/journals unchanged.
+Related bootstrap/runtime/environment/repair213 checks pass/12 Windows POSIX
+skips; Ruff/mypy72 and exact installed43-state preservation pass. Current parent
+49b9906 and this final head still require exact hosted/final review and ordered
+normal merge; no code integration is actual native candidate or release PASS.
+Existing direct16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+continues. Last observed94/11,409,555,456 ledger remains preserved;0 new EDA/
+reservation/admin changes. Exact public-candidate tag/Release/upload gate persists.
+Earlier dated checkpoints remain historical evidence.
 
 ## Descriptor snapshot stability correction, 2026-10-09
 
@@ -809,6 +1052,26 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+
+## Active operator runner coexistence, 2026-10-08
+
+The standard-VM trust repair is in ready, unmerged PR148; its exact source0870c73
+passed hosted Windows and Ubuntu verification. Continuous GREL02–07 and the
+895MiB remainder stay authorized. The operator route now uses a separate
+cadence-operator-runner and active-operator-runner.json while retaining the legacy
+launcher/pointer. Ordinary-user actual activation, repeat, two fresh fixed-Python
+preflights and shared run.lock contention rejection passed. No new simulations,
+reservations, owner/group changes or journal migration occurred. Existing counter
+still82 /9,798,942,720. Failure evidence remains private and retained.
+
+Same-profile preflight-launcher updates retain immutable old versions/history;
+only the compiled known preflight runner and unchanged other assets are accepted.
+This is not a native worker update gate. Production provider/operator confirmation,
+existing-domain migration/fresh provisioning, two new OA/ADE circuits, effective
+inputs/DC/AC/TRAN/extraction, generic Sweep/spec and clean actual Codex remain
+incomplete. Continue those authorized tasks; no phase approval question.
+See [coexistence workflow](docs/generic_release/OPERATOR_RUNNER_COEXISTENCE_V1.md).
+
 ## Current standard-VM administrator delegation and repair, 2026-10-08
 
 The user's latest direct instruction fixes release support to the professor-provided
