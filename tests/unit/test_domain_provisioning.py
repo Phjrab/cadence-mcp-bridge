@@ -795,6 +795,45 @@ def test_migration_job_scan_never_calls_listdir(domain, monkeypatch):
     assert len(observed["native_jobs"]) == 1
 
 
+def test_migration_registry_scan_rejects_third_entry_and_closes(monkeypatch):
+    consumed, closed = [], []
+
+    def entries(path):
+        try:
+            for i in range(10000):
+                consumed.append(i)
+                yield f"entry-{i}"
+        finally:
+            closed.append(path)
+
+    monkeypatch.setattr(migration, "job_directory_entries", entries)
+    with pytest.raises(ValueError, match="migration_registry_inventory_limit"):
+        migration.bounded_registry_names("/owned/registry")
+    assert consumed == [0, 1, 2]
+    assert closed == ["/owned/registry"]
+
+
+@pytest.mark.parametrize("names", [[], ["manifest.json"], ["legacy-seal.json", "manifest.json"]])
+def test_migration_small_registry_scan_retains_exact_names(monkeypatch, names):
+    def entries(path):
+        yield from names
+
+    monkeypatch.setattr(migration, "job_directory_entries", entries)
+    assert migration.bounded_registry_names("/owned/registry") == sorted(names)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual Linux bounded registry dirent64")
+def test_actual_migration_registry_scan_is_bounded_and_read_only(tmp_path, monkeypatch):
+    registry = tmp_path / "registry"
+    registry.mkdir(mode=0o700)
+    for i in range(4):
+        (registry / f"retained-{i}").write_bytes(b"preserved")
+    monkeypatch.setattr(migration.os, "listdir", lambda path: pytest.fail("unbounded listdir"))
+    with pytest.raises(ValueError, match="migration_registry_inventory_limit"):
+        migration.bounded_registry_names(str(registry))
+    assert [p.read_bytes() for p in registry.iterdir()] == [b"preserved"] * 4
+
+
 @pytest.mark.skipif(os.name != "posix", reason="actual Linux bounded dirent64")
 def test_actual_migration_directory_limit_preserves_entries(tmp_path, monkeypatch):
     jobs = tmp_path / "jobs"

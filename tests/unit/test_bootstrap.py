@@ -396,10 +396,10 @@ def test_operator_partial_activation_resumes_exact_launcher(operator_bound, monk
     _, target, digest = operator_bound
     original = installer._publish_operator_state
 
-    def interrupted(path, value):
+    def interrupted(path, value, guard=None):
         if path.endswith("active-operator-runner.json"):
             raise OSError("simulated interruption before pointer")
-        return original(path, value)
+        return original(path, value, guard)
 
     monkeypatch.setattr(installer, "_publish_operator_state", interrupted)
     with pytest.raises(OSError, match="interruption"):
@@ -455,15 +455,16 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
             events.append("file")
         original_fsync(fd)
 
-    def observed_publish(path, value):
+    def observed_publish(path, value, guard=None):
         assert events[-1] == "binary_directory"
         events.append("pointer_publish")
-        return original_publish(path, value)
+        return original_publish(path, value, guard)
 
     monkeypatch.setattr(os, "fsync", observed_fsync)
     monkeypatch.setattr(installer, "_publish_operator_state", observed_publish)
     installer.operator_activation(str(target), digest)
     assert events == [
+        *(["file"] * 6),
         "version_directory",
         "runtime_directory",
         "file",
@@ -483,7 +484,8 @@ def test_operator_activation_syncs_launcher_entry_before_pointer(operator_bound,
         == "EXISTING_EXACT_OPERATOR_ACTIVATION"
     )
     assert events == [
-        "version_directory", "runtime_directory", "binary_directory", "managed_directory"
+        *(["file"] * 6), "version_directory", "runtime_directory", "file",
+        "binary_directory", "managed_directory"
     ]
     assert (pointer.stat().st_dev, pointer.stat().st_ino) == identity
     assert {
@@ -530,11 +532,7 @@ def test_operator_activation_launcher_directory_sync_failure_preserves_and_recov
     monkeypatch.setattr(os, "fsync", interrupted_fsync)
     with pytest.raises(OSError, match="launcher directory sync failure before pointer"):
         installer.operator_activation(str(target), digest)
-    assert attempted == (
-        ["launcher_file", "binary_directory"]
-        if prior_state in ("absent", "pointer_only")
-        else ["binary_directory"]
-    )
+    assert attempted == ["launcher_file"] * 7 + ["binary_directory"]
     assert pointer.exists() == (prior_state in ("complete", "pointer_only"))
     assert not list(target.glob(".operator-state-*"))
     for name, raw in before.items():
@@ -695,7 +693,9 @@ def test_operator_state_inside_write_failure_retains_candidate_and_recovers(
     def interrupted_fsync(fd):
         import stat
 
-        if failure == "fsync" and stat.S_ISREG(installer.os.fstat(fd).st_mode):
+        info = installer.os.fstat(fd)
+        candidate_inodes = {p.stat().st_ino for p in target.glob(".operator-state-*")}
+        if failure == "fsync" and stat.S_ISREG(info.st_mode) and info.st_ino in candidate_inodes:
             raise OSError("simulated state fsync failure")
         return original_fsync(fd)
 
@@ -1239,6 +1239,105 @@ def test_operator_runtime_durability_failure_preserves_pointer_and_retries(
         assert (target / name).read_bytes() == content
 
 
+@pytest.mark.parametrize("asset", [*installer.FILES, "manifest.json"])
+@pytest.mark.parametrize("action", ["activate", "update"])
+def test_operator_runtime_file_sync_failure_retries_before_publication(
+    request, monkeypatch, asset, action
+):
+    if action == "activate":
+        _, target, expected = request.getfixturevalue("operator_bound")
+        def invoke():
+            return installer.operator_activation(str(target), expected)
+    else:
+        _, target, previous, expected = request.getfixturevalue("operator_update_pair")
+        def invoke():
+            return installer.operator_preflight_update(str(target), expected, previous)
+    selected = target / "runtime" / expected / asset
+    identity = (selected.stat().st_dev, selected.stat().st_ino)
+    before = {p.relative_to(target): (p.read_bytes(), p.stat().st_ino)
+              for p in target.rglob("*") if p.is_file()}
+    original = os.fsync
+    attempts = []
+
+    def failed(fd):
+        info = os.fstat(fd)
+        if (info.st_dev, info.st_ino) == identity:
+            attempts.append(identity)
+            raise OSError("injected runtime file fsync failure")
+        return original(fd)
+
+    monkeypatch.setattr(os, "fsync", failed)
+    for _ in range(2):
+        with pytest.raises(OSError, match="runtime file fsync failure"):
+            invoke()
+        assert {p.relative_to(target): (p.read_bytes(), p.stat().st_ino)
+                for p in target.rglob("*") if p.is_file()} == before
+    assert attempts == [identity, identity]
+    monkeypatch.setattr(os, "fsync", original)
+    invoke()
+    invoke()
+    assert (selected.stat().st_dev, selected.stat().st_ino) == identity
+
+
+def test_operator_partial_launcher_file_sync_retries_same_inode(operator_bound, monkeypatch):
+    _, target, expected = operator_bound
+    launcher = target / "bin/cadence-operator-runner"
+    pointer = target / "active-operator-runner.json"
+    original = os.fsync
+    failed_inodes = []
+
+    def failed(fd):
+        info = os.fstat(fd)
+        if launcher.exists() and (info.st_dev, info.st_ino) == (
+                launcher.stat().st_dev, launcher.stat().st_ino):
+            failed_inodes.append(info.st_ino)
+            raise OSError("injected launcher file fsync failure")
+        return original(fd)
+
+    monkeypatch.setattr(os, "fsync", failed)
+    for _ in range(3):
+        with pytest.raises(OSError, match="launcher file fsync failure"):
+            installer.operator_activation(str(target), expected)
+        assert not pointer.exists()
+        assert launcher.read_bytes() == (target / "runtime" / expected / "launcher.py").read_bytes()
+    assert len(failed_inodes) == 3 and len(set(failed_inodes)) == 1
+    monkeypatch.setattr(os, "fsync", original)
+    installer.operator_activation(str(target), expected)
+    installer.operator_activation(str(target), expected)
+    assert launcher.stat().st_ino == failed_inodes[0]
+
+
+@pytest.mark.parametrize("drift", ["replace", "content", "metadata"])
+def test_operator_file_sync_revalidates_held_and_named_bytes(operator_bound, monkeypatch, drift):
+    _, target, expected = operator_bound
+    selected = target / "runtime" / expected / "runner.py"
+    original = os.fsync
+    identity = (selected.stat().st_dev, selected.stat().st_ino)
+    original_content = selected.read_bytes()
+
+    def changed(fd):
+        original(fd)
+        info = os.fstat(fd)
+        if (info.st_dev, info.st_ino) != identity:
+            return
+        if drift == "replace":
+            retained = selected.with_name("retained-runner.py")
+            selected.rename(retained)
+            selected.write_bytes(original_content)
+        elif drift == "content":
+            selected.write_bytes(b"x" * len(original_content))
+        else:
+            selected.chmod(0o700)
+
+    if drift in ("metadata", "replace") and os.name == "nt":
+        pytest.skip("POSIX executable metadata or open-file replacement")
+    monkeypatch.setattr(os, "fsync", changed)
+    with pytest.raises(ValueError, match="operator_file_durability_drift"):
+        installer.operator_activation(str(target), expected)
+    assert not (target / "active-operator-runner.json").exists()
+    assert not (target / "bin/cadence-operator-runner").exists()
+
+
 def test_operator_runtime_revalidated_after_last_namespace_barrier(operator_bound, monkeypatch):
     _, target, digest = operator_bound
     version = target / "runtime" / digest
@@ -1436,3 +1535,111 @@ def test_operator_bound_preflight_entry_scrubs_cwd_before_import(tmp_path, name)
     assert result.returncode == 1 and not result.stdout
     assert result.stderr.splitlines() == [b"OPERATOR_PREFLIGHT_BINDING_REJECTED"]
     assert not marker.exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX lifetime named-lock replacement")
+@pytest.mark.parametrize("action", ["activate", "deactivate", "update"])
+@pytest.mark.parametrize("drift", ["lock", "root"])
+@pytest.mark.parametrize("moment", ["acquired", "publication"])
+def test_operator_mutation_rejects_detached_lifetime_namespace(
+    request, monkeypatch, action, drift, moment
+):
+    import fcntl
+    import shutil
+
+    if action == "update":
+        _, target, previous, expected = request.getfixturevalue("operator_update_pair")
+    else:
+        _, target, expected = request.getfixturevalue("operator_bound")
+        previous = None
+        if action == "deactivate":
+            installer.operator_activation(str(target), expected)
+    lock = target / "run.lock"
+    lock.write_bytes(b"")
+    lock.chmod(0o600)
+    moved = target.with_name(target.name + "-detached")
+    changed = []
+
+    def detach():
+        if changed:
+            return
+        changed.append(True)
+        if drift == "lock":
+            lock.rename(target / "run.lock.detached")
+            lock.write_bytes(b"")
+            lock.chmod(0o600)
+        else:
+            target.rename(moved)
+            shutil.copytree(moved, target)
+        # The replacement is independently lockable while the old fd is held.
+        other = os.open(lock, os.O_RDWR)
+        try:
+            fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        finally:
+            os.close(other)
+
+    def acquire(path):
+        fd = REAL_OPERATOR_LOCK(path)
+        if moment == "acquired":
+            detach()
+        return fd
+
+    monkeypatch.setattr(installer, "_operator_lock", acquire)
+    sync = installer._sync_directory
+
+    def synchronized(path):
+        sync(path)
+        if moment != "publication" or Path(path) != target:
+            return
+        pointer = target / "active-operator-runner.json"
+        done = (target / "operator-runner-revoked.json").exists() if action == "deactivate" else (
+            pointer.exists() and json.loads(pointer.read_bytes())["manifest_sha256"] == expected
+        )
+        if done:
+            detach()
+
+    monkeypatch.setattr(installer, "_sync_directory", synchronized)
+    with pytest.raises(ValueError, match="operator_lock_drift"):
+        if action == "activate":
+            installer.operator_activation(str(target), expected)
+        elif action == "deactivate":
+            installer.operator_deactivate(str(target), expected)
+        else:
+            installer.operator_preflight_update(str(target), expected, previous)
+    assert changed == [True]
+    if moment == "acquired":
+        if action == "activate":
+            assert not (target / "active-operator-runner.json").exists()
+            assert not (target / "bin/cadence-operator-runner").exists()
+        elif action == "deactivate":
+            assert not (target / "operator-runner-revoked.json").exists()
+        else:
+            assert json.loads((target / "active-operator-runner.json").read_bytes())[
+                "manifest_sha256"
+            ] == previous
+            assert not (target / "operator-activation-history").exists()
+    if action == "update":
+        history = target / "operator-activation-history"
+        assert not history.exists() or not list(history.glob("*.complete.json"))
+    if drift == "root":
+        assert moved.is_dir() and (moved / "run.lock").read_bytes() == b""
+    else:
+        assert (target / "run.lock.detached").read_bytes() == b""
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX bounded lock content")
+def test_operator_lifetime_guard_accepts_lock_timestamps_but_denies_content(tmp_path):
+    root = tmp_path / "operator"
+    root.mkdir(mode=0o700)
+    lock = root / "run.lock"
+    lock.write_bytes(b"same")
+    lock.chmod(0o600)
+    fd = REAL_OPERATOR_LOCK(str(root))
+    try:
+        os.utime(lock, (1, 2))
+        installer._operator_guard(str(root), fd)
+        lock.write_bytes(b"drft")
+        with pytest.raises(ValueError, match="operator_lock_drift"):
+            installer._operator_guard(str(root), fd)
+    finally:
+        os.close(fd)

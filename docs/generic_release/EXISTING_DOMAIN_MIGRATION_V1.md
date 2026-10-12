@@ -231,3 +231,20 @@ Windows job failed in an unrelated PowerShell synthetic lock-holder cold-start
 fixture (2673 tests passed). The fixture now prefers available PowerShell7, waits
 for the explicit ready signal up to45s and cleans up only its own synthetic child.
 Production lock behavior is unchanged. Corrected-source hosted checks are pending.
+
+## Bounded identity registry observation, 2026-10-12
+
+Review thread PRRT_kwDOUGi5886rVcXt identified an unbounded legacy-seal registry
+list. The fixed registry iterator accepts at most the two defined records and
+rejects upon its third entry, closing the iterator on every outcome. Both prior
+anchor observation and existing apply use this limit; the separate retained-job
+scan keeps its2048-entry bound. Empty/one/two/oversized iterators and actual owned
+directory conservation are covered. No legacy IDs, consumption or records are
+deleted or rebased. Initial focused49 PASS/7 Windows platform skips and combined
+parent147 PASS/35 skips are historical to65947b2; latest normal parent482a38c
+integration requires refreshed exact gates. Actual current-VM migration and final
+candidate qualification remain distinct from these local synthetic tests.
+
+Latest integrated Windows related161 PASS/37 platform skips, Ruff/mypy76 PASS.
+The exact hosted/package/security and refreshed independent review remain gates;
+no current-VM modification, new simulation or reservation occurred in this update.
