@@ -752,3 +752,5 @@ Native install, activate and deactivate all require TARGET to equal the managed
 root in the hash-verified bundled profile before any write. A hash-valid copied
 runtime at another root cannot authorize activation or revocation there. Windows
 content staging does not permit standalone lifecycle activation of that tree.
+
+Existing standard-VM installations: see [retained-ledger migration](docs/generic_release/EXISTING_DOMAIN_MIGRATION_V1.md). This explicit operator CLI preserves accounting and does not authorize simulation.

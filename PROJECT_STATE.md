@@ -7,6 +7,69 @@ User withdrew stop-after-test-failure; continue prior delegated scope while
 preserving failures. See docs/generic_release/FINAL_TARGET_OBSERVATION_V1.md.
 Prior dated checkpoints remain history.
 
+## Bounded retained-job migration scan, 2026-10-11
+
+Review4240586372 is corrected: retained job names stream through the fixed
+Python2.6-compatible Linux dirent64 reader and are rejected at the2049th entry
+or aggregate byte limit before sorting. The directory descriptor and named
+identity are rechecked and streams close on rejection. Windows host fixtures use
+bounded scandir. Migration45 Windows tests PASS/six POSIX skips, static76 PASS;
+actual owned oversized Linux directory evidence still requires hosted checks.
+No existing ledger/journal or actual VM state is mutated by this source fix.
+
+## Retained manifest-bound migration entry, 2026-10-11
+
+Fresh finding4240529796 identified a second installed-resource read between
+helper manifest binding and transport. prepare/apply now retain the entry source
+from the exact manifest-bound exported launcher and pass it directly to transport.
+No later resource/path read can substitute executing -c bytes. A portable package
+replacement regression rejects any reopened resource and checks exact retained
+source delivery. Windows42 PASS/5 POSIX skips; Ruff/mypy76 PASS. Actual VM/ledger/
+metadata and reservations remain unchanged; final updated exact gates apply.
+
+## Executing migration byte binding, 2026-10-11
+
+Independent finding4240481575 is addressed by a package-supplied fixed Python
+entry. Supported CLI transport sends that reviewed source with -E -s -B -c,
+checks the caller's package-bound manifest pin and retains/authenticates
+migration.py before compiling it. The executing migration hash is compared again
+to the retained validated asset before loading helpers or publishing records.
+No mutable migration pathname is loaded by Python before authentication. The
+exported closed shell wrapper embeds the same fixed entry for explicit operator
+invocation; the CLI does not execute mutable remote wrapper bytes.
+
+Three owned POSIX cases cover source replacement, both source+manifest replacement,
+and post-read replacement. They must pass hosted Linux; Windows41 PASS/5 OS skips.
+The previous real user-site startup control remains. Earlier helper/source/logs
+and actual journals are retained; this source change does not contact or mutate
+VM, reserve results or run Cadence. Final exact review/package/VM gates remain.
+
+## Python isolation before interpreter startup, 2026-10-11
+
+Independent P1 review4240357276 is addressed by a manifest-bound fixed POSIX
+operator launcher. The supported domain transport now invokes /bin/sh with that
+fixed bundle entry; it executes only /usr/bin/python -E -s -B and the adjacent
+migration.py, with four closed actions and one lowercase64-hex binding. The
+caller cannot supply Python flags, an interpreter, script path or shell command.
+The launcher is a fifth exact helper asset and participates in strict manifest
+and directory inventory. Import, doctor and MCP startup do not invoke migration.
+
+The in-script flag guard remains a direct-invocation diagnostic only: it cannot
+prevent usercustomize.py or .pth code already executed during interpreter startup.
+A disposable POSIX regression creates both hooks in the interpreter's actual
+versioned user site, proves they execute without -s, then checks that the fixed
+launcher suppresses both. The hosted fixture substitutes its tested interpreter;
+the distributed standard-VM launcher retains literal /usr/bin/python. Trusted
+system interpreter/site configuration remains required; no OS or security setting
+is changed. Direct python migration.py without isolated flags is unsupported.
+
+Connected Windows domain41 PASS/2 POSIX skips; official Ruff/mypy74 PASS. Exact
+hosted POSIX, package/security, fresh independent review and installed standard-VM
+validation remain gates. No VM change, simulation or reservation occurred.
+Current16GiB/500/same-change20,GREL02-08 and conditional normal merge authority
+remain; final exact public posting approval is still separate. Earlier records
+and all original ledgers, policy versions, grants and evidence remain preserved.
+
 ## Held-byte launcher preflight under the existing lock, 2026-10-11
 
 Review4240425695 is corrected in the supported package preflight path. A fixed
@@ -59,6 +122,17 @@ and another replaces runtime bytes during the last barrier. Pointer/history and
 failed evidence remain preserved. Windows87 PASS/12 POSIX skips, Ruff/mypy72 PASS.
 Hosted actual POSIX and fresh final review/package remain separate pending gates.
 This correction performs no actual VM activation, EDA or accounting mutation.
+
+## Direct migration interpreter isolation, 2026-10-11
+
+Fresh independent finding4240335186 is corrected before filesystem-backed imports:
+direct migration startup requires ignore_environment and no_user_site flags,
+otherwise a bounded explicit isolated-interpreter error exits without migration.
+Memory-loaded authenticated composition retains its existing import boundary.
+Two exported-helper child tests omit each flag with absolute PYTHONPATH and
+PYTHONUSERBASE shadows; no unreviewed marker executes or request writes occur.
+Windows40 PASS/one actual POSIX skip; Ruff/mypy74 PASS. Current exact hosted,
+package and final independent review remain gates. No VM/accounting mutation.
 
 ## Complete directory-union trailing observation, 2026-10-11
 
@@ -274,6 +348,56 @@ recommended invocation. Current VM16GiB/500/20 and continuousGREL02-08 delegatio
 persist; package/hosted/fresh review/final actual installed gates are pending.
 This correction itself performs no actual VM/admin mutation/reservation/simulation.
 Public tag/Release/upload still requires final exact-candidate approval.
+
+## Retained migration composition startup boundary, 2026-10-11
+
+A retained migration module can be compiled by the new-install provider with an
+empty package name. Only direct __main__ startup now removes the first sys.path
+entry; memory-loaded modules retain their legitimate standard-library first
+entry. Canonical bundle/current-directory aliases remain excluded in both paths.
+A composition regression compiles the exact exported migration bytes under the
+fixed module name with legitimate stdlib plus bundle aliases and checks both
+preservation and exclusion. Prior083608 package/tests remain source-specific
+history; fresh gates apply to this one-condition production change. No native
+journal, counter, grant, budget, result or original circuit change occurred.
+
+## Migration transitive import isolation, 2026-10-11
+
+Fresh review P2 identified that direct script launch left the staged helper
+bundle on sys.path. The retained-byte loader now removes every bundle path alias
+(including an empty/current-directory entry) before any import or compilation.
+New same-UID platform/types/subprocess files created after inventory cannot be
+resolved as dependencies of reviewed retained helpers. Fixed module names and
+complete manifest checks remain mandatory. This does not authenticate arbitrary
+caller dependencies or expand the supported standard VM. New regressions and
+exact source/installed/CI/review gates are required; prior failures are retained.
+No VM, ledger, reservation, replay, results or circuit originals changed.
+
+## GREL03 exact reservation-asset pin integration, 2026-10-11
+
+The new initial-activation pin test correctly rejected the inherited GREL02 pin
+against GREL03's already reviewed append-only legacy-seal reservation helper.
+The branch-owned compiled reservations pin now binds those exact reviewed bytes
+(normalized SHA25661c04f53fb8896c9844581ad3a6b5afec1fb8ac470c8db987e419b53eb66b905).
+The helper content and prior anchors/counters are unchanged by this correction;
+only the independent source pin follows the branch's reviewed implementation.
+Failed exact-head CI/logs are retained. The pin-match regression stays enabled,
+and affected bootstrap/combined/installed/hosted gates are rerun for new source.
+Source/review identity is not replaced by operator-supplied manifest hashes.
+No VM, journal, result, reservation or source-design changes occurred.
+
+## Retained validated migration helpers, 2026-10-11
+
+Fresh review P2 identified a path-import gap after source manifest verification.
+The standalone helper now compiles only the exact retained, bounded bytes for
+fixed reservations/installer/probe module names after ALL asset hashes pass.
+It neither rereads helper paths nor uses cached helper modules. Failed validation
+clears retained authority; standalone calls before validation reject. Package
+internal synthetic calls keep normal imports and do not attest a native install.
+Replacement of each helper after read plus cached-module poisoning:29 PASS/1
+Windows POSIX skip; Ruff PASS. Exact installed/hosted/fresh review gates are
+pending. Counter, replay, retained job history and the VM have not been changed.
+
 
 ## Initial-pin installed package evidence, 2026-10-11
 
@@ -846,6 +970,17 @@ conditional normal merge overlay remains;82-attempt repair evidence is historica
 Final exact-head hosted checks and independent review are pending. No new remote
 repair, simulation or reservation; actual generic release acceptance is separate.
 
+## Retained ID serialized-capacity correction, 2026-10-09
+
+Migration inventories retain up to the bounded2048-entry scan capacity, then
+reject if the complete canonical anchor exceeds the existing8192-byte accounting
+record bound or the complete response exceeds262144 bytes. Legacy classification
+validation uses the same serialized bound; no IDs are dropped to fit.129/160-ID
+fixtures plan/apply/repeat with unchanged old bytes;240-ID over-capacity planning
+rejects without anchor writes. Local94 tests/5 Windows POSIX skips, Ruff/mypy74
+pass. Final installed package, latest parent integration, exact hosted checks and
+independent review are pending. No current-VM migration or resource reset occurs.
+
 ## Cross-version repair metadata correction, 2026-10-09
 
 A final PR148 review found fractional mtime serialization differs between
@@ -1052,6 +1187,40 @@ not run a reinstall-state preservation test. Final hosted checks and review stil
 No new VM simulation or reservation from this repository integration refresh.
 Earlier dated restrictions below are historical under the latest direct user's
 conditional merge/GREL02–08/16GiB authority; public tag/Release remains unapproved.
+
+## Active legacy classification correction, 2026-10-08
+
+PR150 P2 feedback corrected: all retained IDs, including unmarked legacy jobs,
+are sealed before generic reservation;256KiB JSON plans no longer use the32KiB
+profile limit. Actual normal-user installed-wheel append-only correction/repeat
+PASS. Old anchor/receipts remain intact; effective anchorcfd037cd seals3 IDs.
+Counter82 /9,798,942,720 and old marker/lock snapshot identical; new attempts0.
+Original apply evidence below remains historical. An unrelated hosted PowerShell
+cold-start fixture caused one PR-event failure while its push Windows/Ubuntu
+checks passed; corrected source CI pending. No execution grant/provider/new jobs.
+Continue authorized fresh-domain/provider work without phase reapproval.
+See EXISTING_DOMAIN_MIGRATION_V1.md for exact receipts and limits.
+
+## Active existing-domain migration checkpoint, 2026-10-08
+
+Current branch feat/grel-03-operator-domain-provisioning stacks on corrected
+PR149/8e7fa306 (Windows/Ubuntu CI PASS, prior P2 lock feedback fixed; no formal
+approval or merge). Latest main remains553276d. The installed locked wheel exports
+fixed Python2.6 helpers and normal-user actual VM inventory/apply/repeat PASS.
+An immutable accounting anchor plus intent/completion records were added; existing
+counter, markers and shared lock snapshot remained identical. Counter82 /
+9,798,942,720; remaining938,475,520 (895MiB); new simulations/reservations0.
+This anchors existing accounting only: execution_authorized=false and no grant.
+
+Local affected140 PASS/8 Windows skips, security18 PASS/audit clean, Ruff/mypy74
+and85-schema compatibility PASS. Final package preservation/hosted CI receipts are
+tracked in EXISTING_DOMAIN_MIGRATION_V1.md and GREL_03_RESULT.md. Genuine fresh
+initialization, authenticated production provider, terminal extraction/recovery,
+two new RC/MOS OA/ADE circuits, effective inputs/DC/AC/TRAN, generic Sweep/spec
+and actual clean Codex submit/read/retry/restart remain incomplete. Release BLOCKED.
+ContinuousGREL02–07 and895MiB stay authorized; do not ask phase approval again.
+No GREL08/publication/merge/budget reset or new root to evade existing accounting.
+Latest user administrator delegation remains current; older exclusions are history.
 
 ## Active operator runner coexistence, 2026-10-08
 

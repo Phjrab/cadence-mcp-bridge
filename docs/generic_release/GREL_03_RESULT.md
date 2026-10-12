@@ -1,3 +1,14 @@
+## Retained ID serialized-capacity correction, 2026-10-09
+
+Migration inventories retain up to the bounded2048-entry scan capacity, then
+reject if the complete canonical anchor exceeds the existing8192-byte accounting
+record bound or the complete response exceeds262144 bytes. Legacy classification
+validation uses the same serialized bound; no IDs are dropped to fit.129/160-ID
+fixtures plan/apply/repeat with unchanged old bytes;240-ID over-capacity planning
+rejects without anchor writes. Local94 tests/5 Windows POSIX skips, Ruff/mypy74
+pass. Final installed package, latest parent integration, exact hosted checks and
+independent review are pending. No current-VM migration or resource reset occurs.
+
 ## Final grant and concurrent journal corrections, 2026-10-09
 
 At latest worktree source, prepare_plan and pending cancellation check that the
@@ -16,6 +27,40 @@ sidecar tests plus concurrent admission, forged grant and cancellation regressio
 pass:131 related tests, Ruff/mypy68 and installed19-file preservation PASS.
 Final hosted checks and independent review remain required before normal merge.
 No new VM operation/reservation, grant reset or publication occurred.
+
+## Active legacy classification correction, 2026-10-08
+
+PR150 P2 feedback corrected: all retained IDs, including unmarked legacy jobs,
+are sealed before generic reservation;256KiB JSON plans no longer use the32KiB
+profile limit. Actual normal-user installed-wheel append-only correction/repeat
+PASS. Old anchor/receipts remain intact; effective anchorcfd037cd seals3 IDs.
+Counter82 /9,798,942,720 and old marker/lock snapshot identical; new attempts0.
+Original apply evidence below remains historical. An unrelated hosted PowerShell
+cold-start fixture caused one PR-event failure while its push Windows/Ubuntu
+checks passed; corrected source CI pending. No execution grant/provider/new jobs.
+Continue authorized fresh-domain/provider work without phase reapproval.
+See EXISTING_DOMAIN_MIGRATION_V1.md for exact receipts and limits.
+
+## Active existing-domain migration checkpoint, 2026-10-08
+
+Current branch feat/grel-03-operator-domain-provisioning stacks on corrected
+PR149/8e7fa306 (Windows/Ubuntu CI PASS, prior P2 lock feedback fixed; no formal
+approval or merge). Latest main remains553276d. The installed locked wheel exports
+fixed Python2.6 helpers and normal-user actual VM inventory/apply/repeat PASS.
+An immutable accounting anchor plus intent/completion records were added; existing
+counter, markers and shared lock snapshot remained identical. Counter82 /
+9,798,942,720; remaining938,475,520 (895MiB); new simulations/reservations0.
+This anchors existing accounting only: execution_authorized=false and no grant.
+
+Local affected140 PASS/8 Windows skips, security18 PASS/audit clean, Ruff/mypy74
+and85-schema compatibility PASS. Final package preservation/hosted CI receipts are
+tracked in EXISTING_DOMAIN_MIGRATION_V1.md and GREL_03_RESULT.md. Genuine fresh
+initialization, authenticated production provider, terminal extraction/recovery,
+two new RC/MOS OA/ADE circuits, effective inputs/DC/AC/TRAN, generic Sweep/spec
+and actual clean Codex submit/read/retry/restart remain incomplete. Release BLOCKED.
+ContinuousGREL02–07 and895MiB stay authorized; do not ask phase approval again.
+No GREL08/publication/merge/budget reset or new root to evade existing accounting.
+Latest user administrator delegation remains current; older exclusions are history.
 
 # Final combined durable lifecycle checkpoint, 2026-10-08
 
