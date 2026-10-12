@@ -1,3 +1,14 @@
+## Actual app restart required, 2026-10-12
+
+Latest installed2.0.0/native553b90fa ordinary-user update/repeat/preflight passed.
+QA config two fields applied with all other settings/approval/ACL preserved.
+Actual app still reports old1.0.0; end turn per direct user restart procedure.
+After restart-complete, submit the privately recorded inverterDC ID/plan using
+the remaining1/128MiB, query/result/same-ID/restart/accounting verification, then
+finish150/151 normal integration,152 actual gates andGREL08. No blanket release
+PASS or public posting. Exact source/receipts/pending CI and preserved failures:
+docs/generic_release/APP_RESTART_CHECKPOINT_20261012.md.
+
 ## Later actual seven-job and integration checkpoint, 2026-10-12
 
 Installed8aad03d/721fd231 is active and fixed native preflight passed. Seven

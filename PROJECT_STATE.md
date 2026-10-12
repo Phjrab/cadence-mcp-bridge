@@ -104,6 +104,20 @@ submit/query/retry/restart, then exact release candidate checks. When a prepared
 QA configuration requires app reload, preserve state and end the turn to request
 only actual restart; resume after the user says restart complete.
 
+## Actual app restart required, 2026-10-12
+
+PR149 normally mergedc783ab1, remote main verified. PR1509592c40 all four CI PASS;
+final addressed-thread resolution/normal merge pending. PR151d70e726 exact gates
+pending. Installed32acbb4 development2.0.0 and native553b90fa ordinary UID500
+update/repeat/active preflight PASS. Only installer differs from actual seven-job
+721fd231 runtime; earlier execution receipts remain source-scoped. Accounting
+109/13,422,821,376 retained; only remaining1/128MiB is connected to inverterDC.
+Fresh local app journals use the same remote ledger. QA config two fields applied,
+all other settings/approval/ACL preserved. Actual connected app still1.0.0; user
+restart is needed before new actual app submission. End turn as directly requested,
+resume after restart-complete. No new job/reservation/publication this checkpoint.
+See docs/generic_release/APP_RESTART_CHECKPOINT_20261012.md for exact resume.
+
 ## Actual seven-job acceptance and resumed integration, 2026-10-12
 
 Installed8aad03d/721fd231 ordinary-user native activation/preflight passed.
