@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "observed_date": "2026-10-12",
-  "generic_release_gate": "BLOCKED",
+  "generic_release_gate": "FINAL_REMOTE_COMMIT_AND_ARTIFACT_RECEIPT_PENDING",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
-  "later_scope_correction": "CLOSED_STATIC_GRAMMAR_RESERVED_ANALYSIS_MASTERS_AND_PROTECTION_PRAGMAS_LOCAL_PACKAGE_SIX_ACTUAL_PY26_INPUTS_PASS_FINAL_CI_REVIEW_PENDING",
+  "source_checkpoint": "189b5aeb1b8cbe96dec23745b43c43154187edf2",
+  "later_scope_correction": "CURRENT_SOURCE_EXACT_CI_AND_INSTALLED_CHECKS_PASS_FINAL_MERGE_RECEIPT_PENDING",
   "live_native_bundle_sha256": "553b90fa7fae5629f7acd4d13a37dc010ceb1201bc9bb593edb2084c770240ee",
   "publication_authorized": false,
   "resource": {
@@ -23,73 +23,73 @@
   "mandatory": [
     {
       "id": "G01",
-      "status": "ACTUAL_EXACT_INSTALLED_FRESH_HOST_CLI_PASS_FINAL_APP_CANDIDATE_PENDING",
-      "evidence_scope": "Exported artifact starter with separate local journals submits NEW inverter DC using retained remote domain and resource lock; no developer journal dependency. App/final candidate pending."
+      "status": "PASS_ACTUAL_AND_INSTALLED",
+      "evidence_scope": "Artifact-exported operator starter and separate host journals register both sources and execute new work; actual Codex new-job and restart PASS. Same existing VM ledger is retained. Final artifact identity belongs to the separate frozen-candidate receipt."
     },
     {
       "id": "G02",
-      "status": "ACTUAL_SETTINGS_PASS_FINAL_CANDIDATE_PENDING",
-      "evidence_scope": "Two new registered sources and six routes use the same core/template; no legacy fallback."
+      "status": "PASS_ACTUAL_OPERATOR_CONFIGURATION",
+      "evidence_scope": "Two distinct new inverter/comparator sources and six DC/AC/TRAN routes use common core/template without circuit-specific helpers."
     },
     {
       "id": "G03",
-      "status": "ACTUAL_CURRENT_BUNDLE_PREFLIGHT_PASS",
-      "evidence_scope": "Currentbf6 immutable update/repeat and Oct11 UID500 read-only preflight pass. Upcoming helper correction changes bundle identity; final candidate requalification pending."
+      "status": "PASS_ACTUAL_NORMAL_USER_PREFLIGHT",
+      "evidence_scope": "Installed32acbb4/native553b90fa current VM environment/active native preflight passes as ordinary UID500; repair repeat changed0. No blanket installation trust or system upgrade."
     },
     {
       "id": "G04",
-      "status": "ACTUAL_V2_RETAINED_SCOPE_CONFIRMATION_PASS",
-      "evidence_scope": "Expired old scope retained;17 of20 deducted before v2 remainder3/384MiB. AC2 consumes2 and fresh-host DC1; scope now fully spent. Old confirmations/ledger/replay preserved."
+      "status": "PASS_ACTUAL_BOUNDED_RETAINED_AUTHORITY",
+      "evidence_scope": "Final authorized8-job/1GiB batch is fully spent across preserved7/896MiB and1/128MiB grants; no renewal/reset/refund. Global observed110/13,557,039,104 under16GiB/500/20 remains."
     },
     {
       "id": "G05",
-      "status": "ACTUAL_EXACT_INSTALLED_TWO_SOURCES_ENROLLMENT_PASS",
-      "evidence_scope": "Six installed read-only enrollment records preserve source/ADE/library/model data; assembled JSON semantics exactly match accepted registration despite formatting."
+      "status": "PASS_ACTUAL_ARTIFACT_EXPORTED_ENROLLMENT",
+      "evidence_scope": "Six read-only enrolled routes bind the two new source/ADE/model/reader baselines using installed collector/assembler; owned copies only, protected originals preserved."
     },
     {
       "id": "G06",
-      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
-      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
+      "status": "PASS_ACTUAL_TWO_DESIGNS_COMMON_RUNTIME",
+      "evidence_scope": "Installed8aad/721fd231 completed seven analyses/Sweep points; installed32ac/553b90fa actual Codex completed inverterDC. Worker/rendering/input/reader/native assets equal except installer.py. All six routes extract bounded verified results; QA specifications do not assert a performance target."
     },
     {
       "id": "G07",
-      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
-      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
+      "status": "PASS_ACTUAL_TWO_DESIGNS_COMMON_RUNTIME",
+      "evidence_scope": "Installed8aad/721fd231 completed seven analyses/Sweep points; installed32ac/553b90fa actual Codex completed inverterDC. Worker/rendering/input/reader/native assets equal except installer.py. All six routes extract bounded verified results; QA specifications do not assert a performance target."
     },
     {
       "id": "G08",
-      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
-      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
+      "status": "PASS_ACTUAL_TWO_DESIGNS_COMMON_RUNTIME",
+      "evidence_scope": "Installed8aad/721fd231 completed seven analyses/Sweep points; installed32ac/553b90fa actual Codex completed inverterDC. Worker/rendering/input/reader/native assets equal except installer.py. All six routes extract bounded verified results; QA specifications do not assert a performance target."
     },
     {
       "id": "G09",
-      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
-      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
+      "status": "PASS_ACTUAL_TWO_DESIGNS_COMMON_RUNTIME",
+      "evidence_scope": "Installed8aad/721fd231 completed seven analyses/Sweep points; installed32ac/553b90fa actual Codex completed inverterDC. Worker/rendering/input/reader/native assets equal except installer.py. All six routes extract bounded verified results; QA specifications do not assert a performance target."
     },
     {
       "id": "G10",
-      "status": "ACTUAL_TWO_DESIGNS_COMMON_WORKER_PASS_FINAL_ARTIFACT_PENDING",
-      "evidence_scope": "Installed8aad/721fd231 seven-job analyses+AC2 Sweep and installed32ac/553b90fa actual appDC; bundles differ only installer.py, other worker/rendering/input/reader bytes equal. Effective inputs/extraction/protection/result size and repeat PASS."
+      "status": "PASS_ACTUAL_TWO_DESIGNS_COMMON_RUNTIME",
+      "evidence_scope": "Installed8aad/721fd231 completed seven analyses/Sweep points; installed32ac/553b90fa actual Codex completed inverterDC. Worker/rendering/input/reader/native assets equal except installer.py. All six routes extract bounded verified results; QA specifications do not assert a performance target."
     },
     {
       "id": "G11",
-      "status": "ACTUAL_RETRY_RESTART_PASS_SYNTHETIC_UNKNOWN_AND_PARTIAL_CASES_PASS_FINAL_CANDIDATE_PENDING",
-      "evidence_scope": "Actual operation and Sweep new-process replay plus actual Codex restart retain IDs/results with zero duplicate spend. Response-loss and partial-publication cases are synthetic; exact final CI remains required."
+      "status": "PASS_ACTUAL_RETRY_RESTART_AND_SYNTHETIC_FAILURE_CASES",
+      "evidence_scope": "Actual job and Sweep same-ID/new-process replay plus actual Codex restart preserve IDs/results and consume0 again. Response loss, partial publication and unknown outcome use separate synthetic POSIX/guest fixtures."
     },
     {
       "id": "G12",
-      "status": "PARTIAL_POSIX_AND_VM_LOCK",
-      "evidence_scope": "Public Ubuntu independent flock/process-death tests and VM live-lock rejection; no simultaneous EDA execution introduced."
+      "status": "PASS_SCOPED_POSIX_AND_VM_LOCK",
+      "evidence_scope": "Exact hosted Ubuntu owned files, independent flock/process-death and provider tests pass without POSIX skips. Actual VM live-lock rejection is separate evidence; simultaneous EDA executions were not introduced."
     },
     {
       "id": "G13",
-      "status": "PASS_LOCAL_COMPATIBILITY_FINAL_CANDIDATE_PENDING",
-      "evidence_scope": "Original22 declarations/85 legacy schemas/registries retained; final candidate legacy evidence recheck required."
+      "status": "PASS_INSTALLED_ORIGINAL22_AND_RESTORED85",
+      "evidence_scope": "Exact189b5ae installed1.0.0\u21922.0.0\u21921.0.0\u21922.0.0 retains original22 complete declarations and restored22/85 inventories exactly. Version2 requires explicit launch migration."
     },
     {
       "id": "G14",
-      "status": "ACTUAL_FRESH_HOST_NEW_JOB_AND_REPLAY_PASS_FINAL_CANDIDATE_PENDING",
-      "evidence_scope": "Artifact-exported host settings with separate local journals submit new inverter DC and reconstruct remote history; developer journal hashes remain unchanged. Existing VM ledger retained, not a new zero-history domain."
+      "status": "PASS_ACTUAL_FRESH_HOST_AND_SYNTHETIC_NEW_DOMAIN",
+      "evidence_scope": "Fresh exported host settings/local journals execute new inverterDC with retained VM accounting; no developer journal dependency. Genuine zero-history domain initialization is installed synthetic disposable-file evidence, not a blank vendor VM rebuild."
     },
     {
       "id": "G15",
@@ -98,23 +98,23 @@
     },
     {
       "id": "G16",
-      "status": "PARTIAL_INSTALLED_PRESERVATION_UPGRADE_REHEARSAL_PENDING",
-      "evidence_scope": "Same-version reinstall/uninstall43+20-state checks pass. Published source to current installed package swap is separate; exact candidate versioned upgrade/downgrade not qualified."
+      "status": "PASS_EXACT_INSTALLED_HOST_VERSION_TRANSITIONS",
+      "evidence_scope": "Exact189b5ae wheel105 installed files verified; versioned1\u21922\u21921\u21922 keeps8 disposable durable/legacy/replay sentinel files and rejects duplicate admission. Old1.0.0 rejects serve-operator. Native immutable update/repeat/recovery evidence is separate; live semantic downgrade is unsupported."
     },
     {
       "id": "G17",
-      "status": "PARTIAL_CURATED_ARTIFACT_AUDIT",
-      "evidence_scope": "Wheel/sdist allowlist/license/notices/secrets scans pass; exact final release files and GitHub source archives pending."
+      "status": "PASS_CURATED_ARTIFACTS_FINAL_HOSTED_ARCHIVES_PENDING",
+      "evidence_scope": "Exact189b5ae wheel/sdist member/source/license/notices/protected-pattern checks pass. Imported planning excluded. Final frozen remote ZIP/tar.gz and release sidecars remain to inspect. Whole-history/import/external-adaptation rights remain LEGAL_REVIEW_REQUIRED."
     },
     {
       "id": "G18",
-      "status": "IMPLEMENTED_FINAL_OPERATOR_WALKTHROUGH_PENDING",
-      "evidence_scope": "Packaged install/enroll/run/retry/update guide has installed command validation; complete fresh operator walkthrough pending."
+      "status": "PASS_SCOPED_INSTALLED_OPERATOR_FLOW",
+      "evidence_scope": "Exported guide/commands and two separate contexts pass installed SDK checks; installed bootstrap/fresh/retained-domain guards pass on disposable files. Actual owned enrollment/new-job/result/retry/restart covers standard VM. Another physical PC and genuine blank VM full rebuild are deferred."
     },
     {
       "id": "G19",
-      "status": "NOT_READY",
-      "evidence_scope": "No exact RC/version/commit/artifact set frozen. Further reviewed helper corrections change native bundle; app gate and final candidate checks pending."
+      "status": "FINAL_REMOTE_COMMIT_AND_ARTIFACT_RECEIPT_PENDING",
+      "evidence_scope": "Version2.0.0 justified by bare-launch migration. Final merge/remote identity and exact candidate release files/hashes are external receipt gates; no publication is authorized. Frozen GENERIC_RELEASE_GATE_2.0.0.json must identify the exact commit and inspected assets."
     }
   ],
   "conditional": {
@@ -133,8 +133,8 @@
   ],
   "synthetic_vm_scenarios": 17,
   "current_parser_actual_baselines": 6,
-  "later_host_correction": "AC_SPEC_SERIALIZATION_COMPLETED_JOB_BOUND_COMPONENT_ROOT_ROLLBACK_RECOVERY_MIGRATION_CAPACITY_LOCAL_TESTED_EXACT_HOSTED_REVIEW_PENDING",
-  "latest_checked_main": "98710153a167e103c2955b1c5c82612eb2864038",
+  "later_host_correction": "CURRENT_SOURCE_EXACT_CI_AND_INSTALLED_CHECKS_PASS_FINAL_MERGE_RECEIPT_PENDING",
+  "latest_checked_main": "eba26d68ade0b8b881d3cd4ea2b37f436f4acd90",
   "retained_actual_journal_claims": {
     "parents": 2,
     "children": 5,
@@ -186,8 +186,21 @@
     "held_descriptor_races": 4,
     "intra_snapshot_restored_mtime_drift_rejected": true
   },
-  "completed_result_size_evidence": "CURRENT_BF6_ACTUAL_COMPLETED_JOB_READONLY_PASS_FINAL_CANDIDATE_PENDING",
-  "current_installed_execution": {
+  "completed_result_size_evidence": "ACTUAL553B90FA_COMPLETED_BOUNDED_VERIFIED_RESULT_PASS",
+  "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope.",
+  "current_actual_app": {
+    "bridge_version": "2.0.0",
+    "source_commit": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
+    "fresh_new_job": "PASS",
+    "automatic_result": "PASS",
+    "same_id_retry": "PASS_NO_EXTRA_SPEND",
+    "actual_restart": "PASS_IDENTICAL_RESULT_AND_RECEIPT",
+    "accounting_attempts": 110,
+    "accounting_reserved_bytes": 13557039104,
+    "developer_private_journal_dependency": false,
+    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
+  },
+  "current_installed_execution_historical": {
     "source_commit": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
     "wheel_sha256": "cd6b8477931e951d8bc78ed6c2ea3ecd9bafb7595c9e8c620ed4f94cca39daae",
     "five_routes": "PASS",
@@ -207,7 +220,7 @@
     "fresh_host_new_dc_cli": "PASS",
     "developer_journal_hashes_preserved": true
   },
-  "authority_remainder": {
+  "authority_remainder_historical": {
     "schema_version": 2,
     "old_grant_expired": true,
     "original_scope_attempts": 20,
@@ -220,23 +233,30 @@
     "remaining_bytes": 0,
     "budget_reset_or_refund": false
   },
-  "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope.",
-  "actual_qa_local_plan_after_restart_unavailable": {
+  "actual_qa_local_plan_after_restart_unavailable_historical": {
     "remote_contact": false,
     "new_app_jobs": 0,
     "reason": "authority_inactive",
     "restart": "USER_CURRENTLY_UNAVAILABLE"
   },
-  "current_actual_app": {
-    "bridge_version": "2.0.0",
-    "source_commit": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
-    "fresh_new_job": "PASS",
-    "automatic_result": "PASS",
-    "same_id_retry": "PASS_NO_EXTRA_SPEND",
-    "actual_restart": "PASS_IDENTICAL_RESULT_AND_RECEIPT",
-    "accounting_attempts": 110,
-    "accounting_reserved_bytes": 13557039104,
-    "developer_private_journal_dependency": false,
-    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
+  "exact_installed_artifact_checkpoint": {
+    "source_commit": "189b5aeb1b8cbe96dec23745b43c43154187edf2",
+    "wheel_sha256": "1460a0613e3a85f423cc40fc36bb5026bc4f935ecaabda4e9bf709f932d79f4e",
+    "sdist_sha256": "44fccd0235969edf0187b78d3684d74f8d1301590ee56c624e1eda5ed7657f4f",
+    "candidate_installed_files_match_wheel": 105,
+    "files_byte_identical_to_actual_app": 100,
+    "five_nonexecutable_resources": "Only CRLF\u2192LF py.typed and starter README/three JSON templates; parsed JSON and normalized content equal. All executable package bytes unchanged.",
+    "locked_dependencies_equal": true,
+    "host_versions": [
+      "1.0.0",
+      "2.0.0",
+      "1.0.0",
+      "2.0.0"
+    ],
+    "durable_disposable_state_files_preserved": 8,
+    "five_installed_verifiers": "PASS_LOCAL_WINDOWS_SYNTHETIC_NO_REMOTE_CONTACT",
+    "hosted_windows": "3567 PASS/373 platform skips/56 warnings; security18, strict dependency audit, compatibility and package preservation PASS",
+    "hosted_ubuntu": "442 accounting/repair;106 operator;100 domain;258 consumer;88 confirmation;191 provider;43 enrollment PASS, no POSIX skips",
+    "final_remote_commit_and_archives": "PENDING_FINAL_FREEZE"
   }
 }

@@ -1,3 +1,41 @@
+## Installed candidate checkpoint and final freeze boundary, 2026-10-12
+
+PR151 normally merged eba26d68. Exact root189b5ae has four hosted CI checks PASS;
+Windows3567 PASS/373 platform skips/56 warnings, security18/strict dependency
+audit/compatibility/package preservation PASS. Ubuntu all seven groups pass with
+no POSIX skips. The final review and normal PR152 merge remain required.
+
+Exact189b5ae artifact-only install/context/operation/bootstrap/domain verifiers
+PASS. Published1.0.0→2.0.0→1.0.0→2.0.0 preserves8 disposable durable/result/replay
+files, original22 complete declarations and restored22/85 inventories. This is
+host-package synthetic evidence; native immutable update/recovery and actual
+Codex/Cadence execution are recorded separately. No live semantic downgrade.
+
+All105 installed candidate files match their wheel. Against actual-app32acbb4,
+100 package files are byte-identical; only py.typed and the starter README/three
+JSON templates differ by CRLF→LF. Parsed templates and normalized text match.
+All executable and native asset bytes and locked runtime dependencies are equal.
+This bounded evidence permits runtime reuse, not a new environment/app claim.
+The first strict all-file-equality assertion failed on these five resources and
+is preserved; it is not reported as a historical PASS. An earlier verification
+harness CP949 decode error is also retained; explicit UTF-8 is required.
+
+No further app restart, simulation, grant, reservation or administrator change is
+needed for these descriptive/package checks. Last actual accounting remains110/
+13,557,039,104 under16GiB/500/20; final8-job/1GiB grants remain fully spent.
+Original OA/ADE/PDK/vendor/license/results/failures/journals and accounting stay.
+
+Final readiness is an exact frozen remote commit and external release-receipt
+decision. GENERIC_RELEASE_GATE_2.0.0.json, installation/release notes, asset list
+and SHA256SUMS must identify that commit and independently inspected artifacts.
+This avoids claiming a self-referential commit hash inside its own source tree.
+The current source snapshot still records pending final merge/hosted-archive
+inspection; a later exact validated release receipt supersedes that checkpoint
+only for its explicitly named candidate. No tag/Release/upload is authorized.
+Curated original-code packages have a separate audited licensing boundary;
+preserved import/history and affected external adaptations remain
+LEGAL_REVIEW_REQUIRED. Other physical PC/Cadence/PDK/Claude are deferred.
+
 ## Actual app recovery PASS; final candidate gates, 2026-10-12
 
 Actual restarted Codex2.0.0 status/result/same-ID submit PASS with identical
