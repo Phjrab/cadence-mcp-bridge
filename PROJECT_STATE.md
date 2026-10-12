@@ -1,3 +1,12 @@
+## Final repair-target observation correction, 2026-10-12
+
+Independent PR148 finding4244590385 addressed by trailing complete target
+content/ACL checks and joint target/directory metadata guards. Windows90 PASS/
+258 Linux skips, Ruff PASS; exact hosted Linux/review/install/VM gates pending.
+User withdrew stop-after-test-failure; continue prior delegated scope while
+preserving failures. See docs/generic_release/FINAL_TARGET_OBSERVATION_V1.md.
+Prior dated checkpoints remain history.
+
 ## Exact launcher synchronization and retained entry pin, 2026-10-11
 
 Review4240549663 is corrected by updating the checked-in v7 launcher to match

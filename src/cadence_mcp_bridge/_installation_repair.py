@@ -1079,6 +1079,33 @@ def retain_compatibility_record(records, observed, usage, key=None):
     usage[:] = [count, size]
 
 
+def target_metadata(path):
+    """Metadata-only held/named observation after content and membership scans."""
+    lexical = lexical_parent_snapshot(path)
+    fd = open_fixed(path)
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    try:
+        info = os.fstat(fd)
+        if (not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)) or
+                (stat.S_ISREG(info.st_mode) and info.st_nlink != 1)):
+            raise ValueError("inventory_target_race")
+        observed = tuple(getattr(info, key) for key in fields)
+        named = open_fixed(path)
+        try:
+            if observed != tuple(getattr(os.fstat(named), key) for key in fields):
+                raise ValueError("inventory_target_race")
+        finally:
+            os.close(named)
+        if (observed != tuple(getattr(os.fstat(fd), key) for key in fields) or
+                observed != tuple(getattr(os.lstat(path), key) for key in fields) or
+                os.path.realpath(path) != path or lexical_parent_snapshot(path) != lexical):
+            raise ValueError("inventory_target_race")
+        return observed, lexical
+    finally:
+        os.close(fd)
+
+
 def inventory(profile):
     """Standard-VM recipe; address/account/install roots come from operator data.
 
@@ -1278,6 +1305,8 @@ def inventory(profile):
     result["dependency_scope"] = "wrappers_32bit_binaries_shared_library_trees"
     result["native_runtime_attestation"] = "NOT_ATTESTED"
     bounded = bounded_inventory(result)
+    target_observations = dict((record["path"], target_metadata(record["path"]))
+                               for record in result["plan"]["records"])
     # Internal target hashes/ACL tools run after member enumeration. Reobserve
     # every held-parent external binding after those reads, without mutation.
     for link in external + list(internal.values()):
@@ -1291,8 +1320,27 @@ def inventory(profile):
         trailing_metadata[path] = library_directory_metadata(path)
         if library_directory_snapshot(path)[0] != observed:
             raise ValueError("library_membership_race")
-    # A later membership scan must not invalidate an earlier directory. No
-    # content/name scan follows this complete union's metadata-only guard.
+    # Membership/alias scans can modify an already hashed target without changing
+    # directory membership. Recheck every record after those scans, including
+    # restored-mtime content changes and targets skipped by apply/rollback.
+    for record in result["plan"]["records"]:
+        path = record["path"]
+        observed = target_observations[path]
+        if target_metadata(path) != observed:
+            raise ValueError("inventory_target_race")
+        current = snapshot(path)
+        for key in current:
+            equal = (normalize_acl(current[key]) == normalize_acl(record[key])
+                     if key == "acl" else metadata_equal(key, current[key], record[key]))
+            if not equal:
+                raise ValueError("inventory_target_race")
+        if target_metadata(path) != observed:
+            raise ValueError("inventory_target_race")
+    # Later content scans must not invalidate earlier files or directories. No
+    # content/name scan follows these complete metadata-only union guards.
+    for path, observed in sorted(target_observations.items()):
+        if target_metadata(path) != observed:
+            raise ValueError("inventory_target_race")
     for path, observed in sorted(trailing_metadata.items()):
         if library_directory_metadata(path) != observed:
             raise ValueError("library_membership_race")
