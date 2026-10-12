@@ -1,3 +1,19 @@
+## Active repair and continuation checkpoint, 2026-10-12
+
+The direct user withdrew stop-after-test-failure; continue diagnosis/corrections
+under existing GREL02-08/16GiB/500/same-change20/minimum administrator/conditional
+normal merge authority. Earlier failure-stop and no-admin records below are history.
+Exact233 mode0777-to0755 changes were observed;509 file hashes/owner/group/links/
+xattrs were preserved. Current installed8aad03d helper authenticated the retained
+receipt and completed root repeat changed0. Ordinary-user environment qualification
+and15-file staged native preflight PASS; candidate721fd remains inactive. Ledger
+102/12,483,297,280,4,696,571,904 remaining,0 new simulations/reservations. PR148
+normally merged as63a92b75ba98ca5923e1f76da0edb676702799b3 with all exact checks
+PASS. Reconcile correction history, complete dependent reviews/integration and final
+VM/app/installed/RC gates. Final identical-candidate public approval remains required.
+No app configuration changed/restart needed at this checkpoint. Details:
+[ADMIN_NATIVE_RESUME_20261012.md](ADMIN_NATIVE_RESUME_20261012.md).
+
 ## Latest metadata resume checkpoint, 2026-10-12
 
 Actual installed ordinary-user pre-change capture PASS:632 targets/links and509
