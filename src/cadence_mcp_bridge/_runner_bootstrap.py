@@ -113,15 +113,24 @@ def validate(bundle, expected):
     return manifest, contents, raw
 
 
-def exclusive(path, content, mode=384):
+def _check_guard(guard):
+    if guard is not None:
+        guard()
+
+
+def exclusive(path, content, mode=384, guard=None):
+    _check_guard(guard)
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     stream = os.fdopen(descriptor, "wb")
     try:
+        _check_guard(guard)
         stream.write(content)
         stream.flush()
+        _check_guard(guard)
         os.fsync(stream.fileno())
     finally:
         stream.close()
+    _check_guard(guard)
 
 
 def target_binding(manifest, contents, target):
@@ -230,13 +239,61 @@ def deactivate(target, expected):
     return {"status": "DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
 
 
+class _OperatorLock(int):
+    """An integer descriptor with its acquisition namespace retained."""
+
+
+def _operator_lock_fingerprint(fd):
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink", "st_size")
+    before = os.fstat(fd)
+    if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or
+            before.st_uid != os.getuid() or before.st_mode & 18 or before.st_size > 4096):
+        raise ValueError("operator_lock_drift")
+    offset = os.lseek(fd, 0, os.SEEK_CUR)
+    try:
+        os.lseek(fd, 0, os.SEEK_SET)
+        raw = os.read(fd, 4097)
+    finally:
+        os.lseek(fd, offset, os.SEEK_SET)
+    value = tuple(getattr(before, key) for key in fields)
+    if len(raw) != before.st_size or value != tuple(getattr(os.fstat(fd), key) for key in fields):
+        raise ValueError("operator_lock_drift")
+    # Existing shell contenders truncate empty locks before flock. Timestamps
+    # are not identity; actual bounded content and namespace remain bound.
+    return value, digest(raw)
+
+
+def _operator_guard(target, fd):
+    if fd is None:
+        return  # Content-only host fixtures are not native qualification.
+    if not isinstance(fd, _OperatorLock) or fd.target != target:
+        raise ValueError("operator_lock_drift")
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid")
+    for path, expected in fd.ancestors:
+        if tuple(getattr(os.lstat(path), key) for key in fields) != expected:
+            raise ValueError("operator_lock_drift")
+    if _operator_lock_fingerprint(fd) != fd.fingerprint:
+        raise ValueError("operator_lock_drift")
+    named = os.open(os.path.join(target, "run.lock"), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        if _operator_lock_fingerprint(named) != fd.fingerprint:
+            raise ValueError("operator_lock_drift")
+    finally:
+        os.close(named)
+    for path, expected in fd.ancestors:
+        if tuple(getattr(os.lstat(path), key) for key in fields) != expected:
+            raise ValueError("operator_lock_drift")
+    if _operator_lock_fingerprint(fd) != fd.fingerprint:
+        raise ValueError("operator_lock_drift")
+
+
 def _operator_lock(target):
     # Existing-domain provisioning is separate. Never create a substitute lock.
     if os.name == "nt":
         return None  # Disposable local staging tests only.
     import fcntl
 
-    current = target
+    current, ancestors = target, []
     while True:
         info = os.lstat(current)
         if (
@@ -245,6 +302,8 @@ def _operator_lock(target):
             or info.st_mode & 18
         ):
             raise ValueError("operator_ancestor_permissions")
+        ancestors.append((current, tuple(getattr(info, key) for key in (
+            "st_dev", "st_ino", "st_mode", "st_uid", "st_gid"))))
         parent = os.path.dirname(current)
         if parent == current:
             break
@@ -281,7 +340,15 @@ def _operator_lock(target):
     except Exception:
         os.close(fd)
         raise ValueError("operator_lock_drift")
-    return fd
+    result = _OperatorLock(fd)
+    result.target, result.ancestors = target, ancestors
+    try:
+        result.fingerprint = _operator_lock_fingerprint(fd)
+        _operator_guard(target, result)
+    except Exception:
+        os.close(fd)
+        raise
+    return result
 
 
 def _operator_state(path):
@@ -303,28 +370,35 @@ def reviewed_operator_assets(contents, action):
             raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
 
 
-def _durable_operator_runtime(version, expected, raw, contents, target):
+def _durable_operator_runtime(version, expected, raw, contents, target, guard=None):
     # Repeat for initial, partial and completed retries before any publication.
     # A validated runtime whose directory entry is not durable is not ready.
+    _check_guard(guard)
     _sync_directory(version)
+    _check_guard(guard)
     _sync_directory(os.path.dirname(version))
+    _check_guard(guard)
     checked_manifest, checked_contents, checked_raw = validate(version, expected)
     if checked_raw != raw or checked_contents != contents:
         raise ValueError("operator_runtime_durability_drift")
     target_binding(checked_manifest, checked_contents, target)
+    _check_guard(guard)
 
 
 def operator_activation(target, expected):
     target = directory(target)
     fd = _operator_lock(target)
     try:
+        def guard():
+            _operator_guard(target, fd)
         version = os.path.join(target, "runtime", expected)
         manifest, contents, raw = validate(version, expected)
         target_binding(manifest, contents, target)
         if manifest["schema_version"] != 2:
             raise ValueError("operator_manifest_version")
         reviewed_operator_assets(contents, "activation")
-        _durable_operator_runtime(version, expected, raw, contents, target)
+        _durable_operator_runtime(version, expected, raw, contents, target, guard)
+        guard()
         if os.path.lexists(os.path.join(target, "execution.lock")):
             raise ValueError("active_or_unresolved_jobs")
         if os.path.lexists(os.path.join(target, "operator-runner-revoked.json")):
@@ -335,6 +409,7 @@ def operator_activation(target, expected):
             raise ValueError("update_requires_lifecycle_gate")
         binary = os.path.join(target, "bin")
         if not os.path.exists(binary):
+            guard()
             os.mkdir(binary, 448)
         directory(binary)
         path = os.path.join(binary, "cadence-operator-runner")
@@ -346,14 +421,18 @@ def operator_activation(target, expected):
             ):
                 raise ValueError("operator_launcher_collision")
         else:
-            exclusive(path, launcher, 448)
+            guard()
+            exclusive(path, launcher, 448, guard)
+        guard()
         # Persist the launcher entry before publishing an active pointer. Repeat
         # the barrier for an exact launcher/pointer left by an interrupted run.
         _sync_directory(binary)
         existed = os.path.lexists(state)
         if not existed:
-            _publish_operator_state(state, value)
+            guard()
+            _publish_operator_state(state, value, guard)
         _sync_directory(target)
+        guard()
         return {
             "status": "EXISTING_EXACT_OPERATOR_ACTIVATION"
             if existed
@@ -370,6 +449,9 @@ def operator_deactivate(target, expected):
     target = directory(target)
     fd = _operator_lock(target)
     try:
+        def guard():
+            _operator_guard(target, fd)
+
         manifest, contents, raw = validate(os.path.join(target, "runtime", expected), expected)
         target_binding(manifest, contents, target)
         active = _operator_state(os.path.join(target, "active-operator-runner.json"))
@@ -380,10 +462,12 @@ def operator_deactivate(target, expected):
             if _operator_state(revoked) != active:
                 raise ValueError("operator_revocation_drift")
         else:
-            _publish_operator_state(revoked, active)
+            _operator_guard(target, fd)
+            _publish_operator_state(revoked, active, guard)
         # A durable file alone does not persist its new directory entry. Repeat
         # this barrier for an exact marker left by an interrupted deactivation.
         _sync_directory(target)
+        _operator_guard(target, fd)
         return {"status": "OPERATOR_DEACTIVATED_HISTORY_RETAINED", "execution_authorized": False}
     finally:
         if fd is not None:
@@ -399,9 +483,10 @@ def _sync_directory(path):
             os.close(fd)
 
 
-def _publish_operator_state(path, value):
+def _publish_operator_state(path, value, guard=None):
     # Only fixed pointer/revocation records, under the existing lifetime flock.
     # Failed private candidates remain evidence; never parse a truncated final file.
+    _check_guard(guard)
     raw = canonical(value)
     if len(raw) > 8192:
         raise ValueError("operator_state_size")
@@ -409,31 +494,38 @@ def _publish_operator_state(path, value):
     if os.path.lexists(path):
         if _operator_state(path) != value:
             raise ValueError("operator_state_publish_conflict")
+        _check_guard(guard)
         return
     name = ".operator-state-" + digest(os.urandom(32))
     candidate = os.path.join(parent, name)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if os.name != "nt":
         flags |= os.O_NOFOLLOW
+    _check_guard(guard)
     fd = os.open(candidate, flags, 384)
     try:
         offset = 0
         while offset < len(raw):
+            _check_guard(guard)
             wrote = os.write(fd, raw[offset:])
             if wrote <= 0:
                 raise ValueError("operator_state_short_write")
             offset += wrote
+        _check_guard(guard)
         os.fsync(fd)
     finally:
         os.close(fd)
     _sync_directory(parent)
     if regular(candidate) != raw or os.path.lexists(path):
         raise ValueError("operator_state_publish_conflict")
+    _check_guard(guard)
     os.rename(candidate, path)
     _sync_directory(parent)
+    _check_guard(guard)
 
 
-def _retain_exact(path, data, mode=384):
+def _retain_exact(path, data, mode=384, guard=None):
+    _check_guard(guard)
     if os.path.lexists(path):
         if regular(path) != data:
             raise ValueError("operator_update_history_drift")
@@ -442,12 +534,14 @@ def _retain_exact(path, data, mode=384):
         named = os.lstat(path)
         # Windows _commit needs a writable descriptor; no write is performed.
         flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
+        _check_guard(guard)
         fd = os.open(path, flags | getattr(os, "O_NOFOLLOW", 0) |
                      getattr(os, "O_NONBLOCK", 0))
         try:
             held = os.fstat(fd)
             if tuple(named) != tuple(held):
                 raise ValueError("operator_update_history_drift")
+            _check_guard(guard)
             os.fsync(fd)
             if (tuple(held) != tuple(os.fstat(fd)) or
                     tuple(held) != tuple(os.lstat(path)) or regular(path) != data):
@@ -455,9 +549,11 @@ def _retain_exact(path, data, mode=384):
         finally:
             os.close(fd)
     else:
-        exclusive(path, data, mode)
+        exclusive(path, data, mode, guard)
     # Exact entries can survive a failed directory fsync; recovery repeats it.
+    _check_guard(guard)
     _sync_directory(os.path.dirname(path))
+    _check_guard(guard)
 
 
 def _replace_operator_file(source, target):
@@ -473,6 +569,8 @@ def operator_preflight_update(target, expected, previous):
     target = directory(target)
     fd = _operator_lock(target)
     try:
+        def guard():
+            _operator_guard(target, fd)
         old, old_files, old_raw = validate(os.path.join(target, "runtime", previous), previous)
         new, new_files, new_raw = validate(os.path.join(target, "runtime", expected), expected)
         target_binding(old, old_files, target)
@@ -497,7 +595,8 @@ def operator_preflight_update(target, expected, previous):
             raise ValueError("operator_update_reverse_history")
         reviewed_operator_assets(new_files, "update")
         _durable_operator_runtime(
-            os.path.join(target, "runtime", expected), expected, new_raw, new_files, target)
+            os.path.join(target, "runtime", expected), expected, new_raw, new_files, target, guard)
+        guard()
         before = {"schema_version": 1, "manifest_sha256": previous}
         after = {"schema_version": 1, "manifest_sha256": expected}
         state = os.path.join(target, "active-operator-runner.json")
@@ -513,6 +612,7 @@ def operator_preflight_update(target, expected, previous):
         if current == after and actual != new_files["launcher.py"]:
             raise ValueError("operator_update_state_drift")
         if not os.path.exists(history):
+            guard()
             os.mkdir(history, 448)
         directory(history)
         _sync_directory(target)
@@ -532,21 +632,29 @@ def operator_preflight_update(target, expected, previous):
             evidence
         ):
             raise ValueError("operator_update_history_missing")
-        _retain_exact(evidence, canonical(record))
+        guard()
+        _retain_exact(evidence, canonical(record), guard=guard)
+        guard()
         if actual != new_files["launcher.py"]:
             pending = os.path.join(target, "bin", "operator-launcher-update.pending")
-            _retain_exact(pending, new_files["launcher.py"], 448)
+            guard()
+            _retain_exact(pending, new_files["launcher.py"], 448, guard)
             if os.name != "nt" and stat.S_IMODE(os.stat(pending).st_mode) != 448:
                 raise ValueError("operator_update_pending_permissions")
+            guard()
             _replace_operator_file(pending, launcher)
         # Repeat after an interrupted rename/fsync even when bytes already match.
         _sync_directory(os.path.dirname(launcher))
+        guard()
         if current != after:
             pending = os.path.join(target, "operator-pointer-update.pending")
-            _retain_exact(pending, canonical(after))
+            _retain_exact(pending, canonical(after), guard=guard)
+            guard()
             _replace_operator_file(pending, state)
         _sync_directory(target)
-        _retain_exact(os.path.join(history, key + ".complete.json"), canonical(record))
+        guard()
+        _retain_exact(os.path.join(history, key + ".complete.json"), canonical(record), guard=guard)
+        guard()
         return {
             "status": "OPERATOR_PREFLIGHT_UPDATE_RECORDED",
             "manifest_sha256": expected,
