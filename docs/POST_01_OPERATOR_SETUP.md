@@ -148,6 +148,14 @@ locked dependency audit and the existing 22-declaration/85-tool compatibility
 audit passed. The new Linux CI group exercises setup, onboarding and runtime
 checks including the symlink cases.
 
+The first Linux run exposed test-host assumptions: uv's symlinked interpreter
+was correctly refused by client export, and configured stdio constructs the
+Windows OpenSSH backend. CI now prepares a copied pinned Python interpreter;
+only that Windows-specific stdio case is platform-marked. The unconfigured
+stdio test and local path/symlink rejection cases still run on Linux. Product
+path protection and the supported Windows-host boundary are unchanged; the
+failed run is retained on PR153.
+
 The isolated wheel walkthrough passed 15 actual CLI invocations using only
 packaged fictional templates, with 7 existing files preserved. It verified fresh
 and retained local paths, exact hashes, Codex TOML/mcp-json exports, inherited

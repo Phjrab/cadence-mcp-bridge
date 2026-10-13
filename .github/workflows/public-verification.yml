@@ -68,7 +68,12 @@ jobs:
           checksum: "8681d8921e7d520fb368991dcf5f9c1905b80f5bf2a265a0ed085c8d8e342477"
           enable-cache: false
       - name: Install locked public dependencies
-        run: uv sync --locked --all-groups --python 3.12.10
+        run: |
+          uv python install 3.12.10
+          post01_python="$(uv python find --managed-python 3.12.10)"
+          "$post01_python" -m venv --copies .venv
+          uv sync --locked --all-groups --python 3.12.10
+          .venv/bin/python -c "import pathlib,sys; p=pathlib.Path(sys.executable); assert p.is_file() and not p.is_symlink(); assert sys.version_info[:3] == (3,12,10)"
       - name: Install synthetic ACL test prerequisite
         run: |
           sudo apt-get update -qq
