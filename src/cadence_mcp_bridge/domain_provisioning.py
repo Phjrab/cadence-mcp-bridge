@@ -32,7 +32,7 @@ def _canonical(value: object) -> bytes:
     )
 
 
-def _closed_document(data: bytes) -> None:
+def _closed_document(data: bytes, *, max_bytes: int = 262144) -> None:
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
         value: dict[str, Any] = {}
         for key, item in items:
@@ -44,7 +44,7 @@ def _closed_document(data: bytes) -> None:
     def constant(_: str) -> None:
         raise ValueError("nonfinite migration JSON")
 
-    if len(data) > 262144:
+    if len(data) > max_bytes:
         raise ValueError("migration document too large")
     try:
         json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)

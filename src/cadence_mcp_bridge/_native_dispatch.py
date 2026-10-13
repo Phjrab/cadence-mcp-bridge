@@ -335,7 +335,7 @@ def main():
         "payload": result,
     }
     raw = canonical(reply)
-    if len(raw) > LIMIT:
+    if len(raw) > (1048576 if action == "result" else LIMIT):
         raise ValueError("native_runtime_response_size")
     sys.stdout.write(raw.decode("ascii") + "\n")
 

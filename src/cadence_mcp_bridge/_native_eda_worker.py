@@ -14,6 +14,8 @@ import stat
 import subprocess
 import time
 
+FRAME_LIMIT = 262144
+
 
 class EdaWorker(object):
     def __init__(self, gate, operations, rendering, copying, installer):
@@ -334,7 +336,7 @@ class EdaWorker(object):
                 self.operations.digest(self.operations.canonical(route["reader"])),
             )
         )
-        if not lines or lines[0] != expected or lines[-1] != "END" or len(data) > 65536:
+        if not lines or lines[0] != expected or lines[-1] != "END" or len(data) > FRAME_LIMIT:
             raise ValueError("native_worker_frame_binding")
         index = 1
         for node in route["reader"]["nodes"]:

@@ -669,6 +669,8 @@ def apply_result_limit(request, assets_sha256):
             if installer.regular(candidate) != raw or os.path.lexists(path):
                 raise ValueError("result_limit_publish_conflict")
             os.rename(candidate, path)
+            # Persist destination entry before source removal across directories.
+            accounting.sync_directory(os.path.dirname(path))
             accounting.sync_directory(root)
         elif canonical(accounting.read(path)) != canonical(document):
             raise ValueError("result_limit_retained_conflict")

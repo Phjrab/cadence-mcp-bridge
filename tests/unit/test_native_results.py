@@ -110,6 +110,43 @@ async def test_verified_result_projects_only_registered_measurements_without_wri
 
 
 @pytest.mark.asyncio
+async def test_result_envelope_large_frame_bound_is_separate_from_control_calls(
+    retrieval, monkeypatch
+):
+    import json
+
+    from cadence_mcp_bridge.generic_measurements import FRAME_LIMIT
+
+    provider, plan, op, payload, _ = retrieval
+    payload["frame"] = "x" * FRAME_LIMIT
+    assert (
+        wire.NativeResultPayload.model_validate_json(wire._canonical(payload)).frame
+        == payload["frame"]
+    )
+    raw = wire._canonical(
+        dict(
+            schema_version=1,
+            action="result",
+            payload=payload,
+            runtime_manifest_sha256=provider.binding.runtime_manifest_sha256,
+            identity_manifest_sha256=provider.binding.identity_manifest_sha256,
+        )
+    )
+    assert 262144 < len(raw) < 1048576
+
+    def transport(argv, request, env, **bounds):
+        assert json.loads(request)["action"] == "result"
+        assert bounds == {"timeout": 60, "limit": 1048576}
+        return 0, raw, b""
+
+    monkeypatch.setattr(wire, "run_fixed", transport)
+    assert await provider._call("result", plan, op) == payload
+    payload["frame"] += "x"
+    with pytest.raises(ValueError):
+        wire.NativeResultPayload.model_validate_json(wire._canonical(payload))
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "failure",
     [

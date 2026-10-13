@@ -16,7 +16,11 @@ from pydantic import Field
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.environments import EnvironmentModel, load_environment
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
-from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, project_frame
+from cadence_mcp_bridge.generic_measurements import (
+    FRAME_LIMIT,
+    GenericReaderRegistration,
+    project_frame,
+)
 from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_lifecycle import ProviderAccounting, ProviderObservation
 from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected, OperatorGrant
@@ -77,7 +81,7 @@ class NativeResultPayload(EnvironmentModel):
     receipt: ExtractionReceipt
     ade: AdeExecutionRegistration
     reader: GenericReaderRegistration
-    frame: Annotated[str, Field(max_length=65536)]
+    frame: Annotated[str, Field(max_length=FRAME_LIMIT)]
     completed_size: CompletedJobSize
 
 
@@ -148,14 +152,14 @@ class AuthenticatedOperatorProvider:
                 _canonical(request),
                 OpenSshBackend._ssh_environment(),
                 timeout=60,
-                limit=262144,
+                limit=1048576 if action == "result" else 262144,
             )
         except (OSError, ValueError):
             raise OperationRejected("native_provider_transport_unknown") from None
         if code or stderr:
             raise OperationRejected("native_provider_rejected")
         try:
-            _closed_document(stdout)
+            _closed_document(stdout, max_bytes=1048576 if action == "result" else 262144)
             result = ProviderEnvelope.model_validate_json(stdout)
         except ValueError:
             raise OperationRejected("native_provider_response_invalid") from None

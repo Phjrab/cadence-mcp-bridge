@@ -227,3 +227,32 @@ def test_policy_publication_interruption_retains_evidence_and_same_plan_recovers
     for name, data in before.items():
         assert (root / name).read_bytes() == data
     assert not migration.apply_result_limit(request, "a" * 64)["created"]
+
+
+def test_cross_directory_policy_publication_syncs_destination_before_source(domain, monkeypatch):
+    root, value = setup_registered(domain, monkeypatch)
+    proposal = migration.result_limit_plan(value, "a" * 64)
+    request = dict(
+        plan=proposal["plan"],
+        expected_plan_sha256=proposal["plan_sha256"],
+        operator_authority="SYNTHETIC NOT USER APPROVAL",
+    )
+    after_rename, calls = [], []
+    original_rename, original_sync = migration.os.rename, ledger.sync_directory
+
+    def rename(source, target):
+        original_rename(source, target)
+        if Path(target).name == ledger.RESULT_POLICY_FILE:
+            after_rename.append(True)
+
+    def sync(path):
+        if after_rename:
+            calls.append(Path(path))
+        return original_sync(path)
+
+    monkeypatch.setattr(migration.os, "rename", rename)
+    monkeypatch.setattr(ledger, "sync_directory", sync)
+    monkeypatch.setattr(installer, "_sync_directory", sync)
+    migration.apply_result_limit(request, "a" * 64)
+    assert calls[:2] == [root / ledger.REGISTRY, root]
+    assert calls[-1] == root / ledger.REGISTRY

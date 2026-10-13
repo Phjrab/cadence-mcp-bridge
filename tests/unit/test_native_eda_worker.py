@@ -87,6 +87,41 @@ def test_copy_capacity_includes_existing_job_and_filesystem_unit(frame_worker, m
     worker.copy_capacity({"source": {"metadata": rows}}, "/synthetic", 3 * 1024**2)
 
 
+@pytest.mark.parametrize("analysis", ["ac", "tran"])
+def test_maximum_long_id_waveform_uses_shared_bounded_frame_limit(frame_worker, analysis):
+    from cadence_mcp_bridge.generic_measurements import FRAME_LIMIT
+
+    worker, _, _, _ = frame_worker
+    plan = {"analysis": analysis}
+    reader = {
+        "nodes": [{"logical_id": "n" + str(i) + "x" * 60} for i in range(6)],
+        "sources": [],
+        "maximum_samples": 256,
+    }
+    route = {"reader": reader}
+    header = "|".join(
+        (
+            "MCP_GREL_FRAME",
+            "1",
+            worker.operation_id,
+            operations.digest(operations.canonical(plan)),
+            "1" * 64,
+            operations.digest(operations.canonical(reader)),
+        )
+    )
+    rows = [
+        f"P|{node['logical_id']}|{i}|{(i + 1) * 1.234567890123456e-10:.16g}|"
+        "-1.234567890123456e+10|1.234567890123456e-10"
+        for node in reader["nodes"]
+        for i in range(256)
+    ]
+    data = (header + "\n" + "\n".join(rows) + "\nEND\n").encode("ascii")
+    assert 65536 < len(data) <= FRAME_LIMIT == eda.FRAME_LIMIT
+    worker.frame(data, plan, route, "1" * 64)
+    with pytest.raises(ValueError, match="frame_binding"):
+        worker.frame(data + b" " * (FRAME_LIMIT + 1), plan, route, "1" * 64)
+
+
 @pytest.mark.parametrize(
     "rows",
     [

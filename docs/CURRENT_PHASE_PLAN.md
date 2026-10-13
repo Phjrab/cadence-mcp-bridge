@@ -1,3 +1,16 @@
+## Current bounded frame and policy recovery, 2026-10-13
+
+Final frame validation/retrieval use the existing256KiB reader bound; result-only
+envelopes are bounded1MiB, while control/request/storage/migration stay256KiB.
+This preserves the enrolled256-sample routes rejected by the earlier64KiB
+proposal. Policy rename syncs destination before source and rechecks exact-file
+durability on retry. Local246 PASS/27 OS skips, Ruff/mypy99 PASS. Native source
+changes are conservatively20/20; no history reset. Final review/CI/installed/
+supported-VM/app checks remain. Last ledger110/13,557,039,104; planned necessary
+post-review regression is at most2/256MiB, not a spent-grant renewal. No new
+simulation/reservation/deployment/configuration or restart has occurred yet.
+See FINAL_REVIEW_CORRECTIONS_20261012.md; earlier sections are history.
+
 ## Final independent review corrections, 2026-10-12
 
 Review189b5ae found policy-publication recovery, allocated-copy capacity and

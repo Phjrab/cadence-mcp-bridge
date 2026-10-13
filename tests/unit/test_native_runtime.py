@@ -71,7 +71,7 @@ def test_export_has_exact_fixed_assets_bound_hashes_and_no_authority(registered,
 
 
 @pytest.mark.parametrize("analysis", ["ac", "tran"])
-def test_native_large_waveform_registration_rejected_before_bundle(registered, tmp_path, analysis):
+def test_native_large_waveform_registration_keeps_existing_sample_contract(registered, analysis):
     context, _, path = registered
     data = json.loads(path.read_bytes())
     route = data["routes"][0]
@@ -88,18 +88,11 @@ def test_native_large_waveform_registration_rejected_before_bundle(registered, t
         transfer=None,
         maximum_samples=256,
     )
-    path.write_text(json.dumps(data), encoding="ascii")
-    output = tmp_path / "oversized"
-    with pytest.raises(ValidationError, match="serialization bound"):
-        bundle(context, path, output)
-    assert not output.exists()
-    assert not context.binding.analysis_journal.exists()
-    # The same registered signals with a bounded grid remain locally admissible.
-    route["reader"]["maximum_samples"] = 64
     assert (
         NativeRegistration.model_validate_json(json.dumps(data)).routes[0].reader.maximum_samples
-        == 64
+        == 256
     )
+    assert not context.binding.analysis_journal.exists()
 
 
 @pytest.mark.parametrize(
