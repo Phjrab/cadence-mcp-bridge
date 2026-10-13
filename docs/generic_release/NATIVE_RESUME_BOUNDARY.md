@@ -1,3 +1,18 @@
+## Exact corrected runtime and actual AC checkpoint, 2026-10-13
+
+Tested executable source5e642986b10a11aa5f38d462bc39127fb280fd91 has four
+hosted checks PASS (Windows3578/373 skips/56 warnings; Ubuntu seven groups,
+no POSIX skips), final independent review no major issues, five isolated
+installed verifiers and105 wheel-byte identities PASS. UID500 immutable update,
+repeat0/preflight and fresh comparatorAC copy/netlist/input/extraction PASS.
+New-process same-ID replay adds0. Actual ledger111/13,691,256,832, this
+continuation1/128MiB; new bounded2/256MiB regression retains1/128MiB for
+actual CodexDC. Prior spent grants and16GiB/500/same-change20 are retained.
+Exact app settings two-field diff is prepared; after application, end for
+user restart before the new actual-app submission. Private application receipt
+distinguishes prepared/applied. No final PR152 merge or frozen candidate/public
+posting yet. See FINAL_APP_RELOAD_20261013.md; older checkpoints are history.
+
 ## Current bounded frame and policy recovery, 2026-10-13
 
 Final frame validation/retrieval use the existing256KiB reader bound; result-only

@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
-  "observed_date": "2026-10-12",
-  "generic_release_gate": "BLOCKED_FINAL_REVIEW_CORRECTIONS_REQUALIFICATION",
+  "observed_date": "2026-10-13",
+  "generic_release_gate": "BLOCKED_FINAL_ACTUAL_APP_RELOAD_AND_FROZEN_CANDIDATE",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
-  "source_checkpoint": "189b5aeb1b8cbe96dec23745b43c43154187edf2",
-  "later_scope_correction": "CURRENT_SOURCE_EXACT_CI_AND_INSTALLED_CHECKS_PASS_FINAL_MERGE_RECEIPT_PENDING",
-  "live_native_bundle_sha256": "553b90fa7fae5629f7acd4d13a37dc010ceb1201bc9bb593edb2084c770240ee",
+  "source_checkpoint": "5e642986b10a11aa5f38d462bc39127fb280fd91",
+  "later_scope_correction": "EXACT_REVIEW_CI_INSTALLED_VM_AC_PASS_APP_DC_RELOAD_PENDING",
+  "live_native_bundle_sha256": "97fa1aa6d3242c0f98072de28f8a6ecdfec27421ec61bbf63dec4f25769c4760",
   "publication_authorized": false,
   "resource": {
-    "attempts_observed": 110,
-    "reserved_bytes_observed": 13557039104,
+    "attempts_observed": 111,
+    "reserved_bytes_observed": 13691256832,
     "result_ceiling_bytes": 17179869184,
-    "remaining_bytes": 3622830080,
+    "remaining_bytes": 3488612352,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
-    "new_simulations_this_continuation": 0,
-    "new_reservations_this_continuation": 0,
-    "reserved_mib_observed": 12929,
-    "remaining_mib": 3455
+    "new_simulations_this_continuation": 1,
+    "new_reservations_this_continuation": 134217728,
+    "reserved_mib_observed": 13057,
+    "remaining_mib": 3327
   },
   "mandatory": [
     {
@@ -34,12 +34,12 @@
     {
       "id": "G03",
       "status": "PASS_ACTUAL_NORMAL_USER_PREFLIGHT",
-      "evidence_scope": "Installed32acbb4/native553b90fa current VM environment/active native preflight passes as ordinary UID500; repair repeat changed0. No blanket installation trust or system upgrade."
+      "evidence_scope": "Exact installed5e64298/native97fa1aa6 UID500 immutable update/repeat0 and active environment/native preflight PASS."
     },
     {
       "id": "G04",
       "status": "PASS_ACTUAL_BOUNDED_RETAINED_AUTHORITY",
-      "evidence_scope": "Final authorized8-job/1GiB batch is fully spent across preserved7/896MiB and1/128MiB grants; no renewal/reset/refund. Global observed110/13,557,039,104 under16GiB/500/20 remains."
+      "evidence_scope": "Earlier8-job/1GiB grants remain fully spent and preserved. Necessary postreview2-job/256MiB scope has spent1/128MiB, leaving1/128MiB; same actual ledger111/13,691,256,832 under16GiB/500/20. No reset/refund."
     },
     {
       "id": "G05",
@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "ACTUAL_EXACT_INSTALLED_NEW_APP_JOB_QUERY_RETRY_RESTART_PASS",
-      "evidence_scope": "Installed2.0.0/source32acbb4 actual Codex submitted new inverterDC, extracted/retrieved verified result, retried sameID, then actual app restart preserved revision5/event_count5/result/provenance and accounting110/13,557,039,104. Final integrated artifact identity remains separate."
+      "status": "PENDING_CHANGED_ASSET_ACTUAL_APP_REQUALIFICATION",
+      "evidence_scope": "Prior actual32ac newDC/restart remains PASS source-specific history. Exact corrected5e installed VM AC passes; new actual CodexDC and restart are pending app reload."
     },
     {
       "id": "G16",
@@ -270,5 +270,44 @@
     "status": "LOCAL246PASS27PLATFORM_SKIPS_LARGER_BOUNDED_FRAME_AND_DESTINATION_DURABILITY_FINAL_GATES_PENDING",
     "reference": "FINAL_REVIEW_CORRECTIONS_20261012.md",
     "native_source_correction_count": 20
+  },
+  "final_requalification_20261013": {
+    "source_commit": "5e642986b10a11aa5f38d462bc39127fb280fd91",
+    "hosted_checks": 4,
+    "all_checks_pass": true,
+    "windows": {
+      "passed": 3578,
+      "platform_skips": 373,
+      "warnings": 56
+    },
+    "posix_passed_groups": [
+      442,
+      106,
+      104,
+      258,
+      88,
+      198,
+      43
+    ],
+    "posix_skips": 0,
+    "independent_review_comment": 6136226770,
+    "independent_review": "NO_MAJOR_ISSUES_NOT_FORMAL_APPROVED",
+    "isolated_installed_verifiers_pass": 5,
+    "installed_wheel_file_matches": 105,
+    "actual_uid500_update_repeat_preflight": "PASS",
+    "actual_comparator_ac": "PASS",
+    "same_id_new_process_replay": "PASS_ZERO_ADDITIONAL_COST",
+    "installed_actual_py26_synthetic_update_scenarios": 17,
+    "installed_actual_py26_synthetic_policy_recovery_scenarios": 4,
+    "live_policy_modified_by_synthetic": false,
+    "new_admin_changes": 0,
+    "native_source_corrections": 20,
+    "native_source_correction_ceiling": 20,
+    "post_review_regression_remaining_attempts": 1,
+    "post_review_regression_remaining_bytes": 134217728,
+    "actual_new_codex_dc": "PENDING_EXACT_APP_RELOAD",
+    "final_pr_merge": "PENDING",
+    "exact_frozen_candidate": "PENDING",
+    "publication_authorized": false
   }
 }
