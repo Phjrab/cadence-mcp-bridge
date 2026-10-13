@@ -66,6 +66,9 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.operator_setup import add_setup_parser
 
     add_setup_parser(subparsers)
+    from cadence_mcp_bridge.feature_guidance import add_features_parser
+
+    add_features_parser(subparsers)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -349,6 +352,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-features":
+        from cadence_mcp_bridge.feature_guidance import features_cli
+
+        return features_cli(arguments)
     if arguments.command == "operator-setup":
         from cadence_mcp_bridge.operator_setup import run_setup
 

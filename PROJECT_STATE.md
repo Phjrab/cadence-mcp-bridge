@@ -1,3 +1,21 @@
+## Active POST-02 and continuous POST-03--07 approval, 2026-10-13
+
+POST-01 PR153 normally merged at67c21a70b1eb5af1f82d2b21e0b6e3df1239bc01.
+The latest direct user instruction authorizes continuous POST-02 through POST-07;
+the earlier proposal-only statements below remain dated history. Published2.0.0
+atff376af remains immutable. Feature work does not authorize another publication.
+
+POST-02 implements read-only loaded-mode/circuit guidance as an additive MCP
+resource and explicit local CLI. Existing public tool contracts remain preserved.
+Local guidance never attests live qualification, OS approval or remaining budget.
+No VM mutation or execution is needed. Subsequent phases cover result/report,
+extraction-only recovery, exact-target deletion before compaction, Claude actual
+app verification of the published build and scientifically defined measurements.
+Exact deletion targets and measurement testbench/authority gates remain binding.
+No native correction or resource history is reset. Last actual ledger observation
+112 attempts/13,825,474,560 reserved bytes is historical, not a fresh quota check.
+See docs/POST_02_FEATURE_GUIDANCE.md. Older checkpoints retain their original scope.
+
 ## POST-01 local operator setup implementation, 2026-10-13
 
 The user approved proceeding with the first proposed postrelease phase after

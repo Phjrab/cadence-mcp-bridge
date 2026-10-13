@@ -1,3 +1,16 @@
+## Active POST-02; POST-03--07 continuous approval, 2026-10-13
+
+POST-01 PR153 merged normally at67c21a7. Implement/test/document POST-02 feature
+guidance over actual loaded mode and circuit contracts without changing existing
+tool schemas or claiming live readiness. Verify local isolation, inactive/scoped
+authority, stale hashes, fixtures and installed MCP resource discovery/read.
+Then continue approved POST-03--07 with separate phase evidence. Preserve published
+2.0.0, all operator data/accounting and per-action gates. No new publication is
+authorized. User has opened Claude for computer-use actual app verification in
+POST-06. Do not replace that with SDK results. Full roadmap approval alone selects
+no exact deletion target or scientifically valid measurement testbench.
+See POST_02_FEATURE_GUIDANCE.md. Prior sections below are dated history.
+
 ## Active POST-01: guided local operator setup, 2026-10-13
 
 The user has approved the first proposed postrelease phase. Published2.0.0 at

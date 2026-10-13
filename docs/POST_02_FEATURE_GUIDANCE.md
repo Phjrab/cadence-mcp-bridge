@@ -1,0 +1,70 @@
+# POST-02: local feature guidance
+
+This development feature follows merged POST-01 (PR153/main67c21a7). It is not
+part of the immutable published v2.0.0 artifacts. Support remains the professor's
+standard CentOS/Cadence/PDK VM on personal VMware; no broader qualification is claimed.
+
+Read the MCP resource `cadence://feature-guidance` to inspect the running server's
+actual mode and registered circuits. The original 85 common tool declarations and
+11 conditional native declarations remain unchanged. Listing a tool does not prove
+that its service implementation is available in the current mode.
+
+For an offline operator inspection, use:
+
+```text
+cadence-mcp-bridge operator-features --settings <absolute-runtime.json> --context <context-id>
+```
+
+This CLI selects explicit files, ignores inherited operator/legacy defaults, and
+does not construct a service, open journals, contact SSH or reserve resources.
+`native_tools_registered: null` means a file inspection cannot observe an app's
+loaded tool surface. The resource reports a boolean from its actual loaded service.
+
+| State | Meaning |
+| --- | --- |
+| LOCAL_AVAILABLE | Local registered description or variable lookup is available. |
+| BLOCKED | A required local binding, analysis contract or authority scope is absent or invalid. |
+| REQUIRES_EXECUTION_CHECKS | Local bindings permit using the indicated native route; job-specific checks remain mandatory. |
+| REFERENCE_ONLY | Legacy fixed reference adapter compatibility; not generic circuit execution. |
+| SYNTHETIC_ONLY | Passive fixture contract, not OA/PDK qualification. |
+| UNVERIFIED | Existing legacy contract requires its own eligibility checks. |
+
+Native guidance rereads bounded provider/grant documents, verifies their exact
+hashes and runner binding, and checks active time and exact design/analysis scope.
+Specification guidance checks the bounded catalog and circuit membership. It does
+not authenticate the operator, inspect the remote registration/reader, check disk
+space, assess journals or claim any remaining budget. Explicit values, numeric
+scope, confirmation/revocation, ledger, integrity and preflight are still enforced
+by existing submission paths. Expired or revoked submit authority does not disable
+lookup of already admitted results; identity/provenance checks remain mandatory.
+
+Reports contain logical IDs and closed reasons, not private paths, OA bindings,
+credentials, raw validation errors or document contents. Guidance makes no changes
+and cannot grant authority, initialize capacity, or bypass a blocker. A changed
+binding requires review/restart through the existing operator setup flow.
+
+Acceptance distinguishes unit/synthetic tests and isolated installed MCP protocol
+tests from actual VM or actual client acceptance. No new simulation is needed for
+this host-only feature. Prior results, journals, replay and cumulative consumption
+remain unchanged. POST-03 through POST-07 have subsequent continuous user approval;
+each phase retains its own scientific, app-access and exact-target boundaries.
+
+## Local verification checkpoint, 2026-10-13
+
+New guidance cases11 PASS, affected operator/native/setup cases102 PASS/4 Windows
+symlink skips. The full local Windows suite3614 PASS/384 platform skips/56 existing
+warnings; full-collection selected guidance cases11 PASS. Ruff/mypy101 PASS,
+security18 and locked dependency audit PASS, original22 declarations/85 common
+tools preserved. Isolated built-wheel context-resource discovery/read, conditional
+native96 protocol,16-command setup walkthrough and reinstall/uninstall retention
+of63 synthetic state files PASS. Artifact audit found no unexpected/protected
+contents. These are local synthetic/installed tests, not actual VM/app tests.
+
+The first local dependency audit failed on a non-UTF-8 subprocess response in
+the Korean path; repeating with PYTHONUTF8=1 passed. The normal product and hosted
+workflow already use UTF-8. No dependency or security gate was disabled.
+
+No new VM simulation, reservation, correction, installation change or data deletion
+occurred. Hosted final-revision verification belongs to this feature PR. A Claude
+window was found via Computer Use, but screen access returned app-approval timeout;
+actual Claude verification remains pending and is not replaced with SDK evidence.

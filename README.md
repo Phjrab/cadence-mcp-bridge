@@ -63,6 +63,18 @@ derives its paths from that selected context. Exports never overwrite an existin
 file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
 for required inputs, retained-state handling and error recovery.
 
+## POST-02 development: available features
+
+Read `cadence://feature-guidance` in a resource-capable MCP client, or run
+`operator-features --settings RUNTIME --context ID` for explicit local inspection.
+The report distinguishes the loaded operator/legacy mode, circuit descriptions,
+synthetic fixtures, reference adapters, missing bindings and submit authority scope.
+`REQUIRES_EXECUTION_CHECKS` still requires the normal job-specific checks; it is
+not live qualification or permission to execute. Expired submit authority does
+not imply that admitted results are unavailable. Private paths and remaining
+budget are not exposed. This additive development feature is not in the published
+2.0.0 wheel. See [states and verification scope](docs/POST_02_FEATURE_GUIDANCE.md).
+
 ## Set up your VM and register a circuit
 
 Follow the exported `my-operator-setup/README.md` in order. Every installed command
