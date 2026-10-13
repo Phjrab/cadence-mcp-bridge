@@ -170,6 +170,19 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
             raise RuntimeRejected("runtime_file_required")
         with source.open("rb") as stream:
             data = stream.read(65_537)
+        return validate_runtime_document(source, data)
+    except RuntimeRejected:
+        raise
+    except (OSError, ValueError, RecursionError):
+        raise RuntimeRejected("runtime_contract_invalid") from None
+
+
+def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext, ...]:
+    """Validate a prospective local document using the same runtime checks, without writes."""
+    try:
+        source = _local_path(path)
+        if not path.is_absolute():
+            raise RuntimeRejected("runtime_file_required")
         _closed_json(data)
         settings = RuntimeSettings.model_validate_json(data)
         state_root = _local_path(settings.resource_state_root)

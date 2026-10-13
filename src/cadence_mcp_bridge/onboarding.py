@@ -8,7 +8,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.designs import RegistryBase, load_design_registry
@@ -18,6 +18,9 @@ from cadence_mcp_bridge.environments import (
     qualify_environment,
 )
 from cadence_mcp_bridge.pdk_adapters import PdkRegistry, load_pdk_registry
+
+if TYPE_CHECKING:
+    from cadence_mcp_bridge.runtime_context import ExecutionContext
 
 
 class OnboardingRejected(ValueError):
@@ -159,6 +162,62 @@ def export_client_config(
     runtime_settings: Path | None = None,
     context_id: str | None = None,
 ) -> dict[str, object]:
+    return _export_client_config(
+        profile,
+        designs,
+        pdks,
+        journal,
+        output,
+        format=format,
+        sweep_journal=sweep_journal,
+        runtime_settings=runtime_settings,
+        context_id=context_id,
+    )
+
+
+def export_context_client_config(
+    settings: Path,
+    context_id: str,
+    output: Path,
+    *,
+    format: Literal["codex", "mcp-json", "claude-desktop"],
+) -> dict[str, object]:
+    """Select inputs and reserve every context's paths from one complete snapshot."""
+    from cadence_mcp_bridge.runtime_context import RuntimeRejected, load_runtime
+
+    runtime_path = _local_path(settings)
+    contexts = load_runtime(runtime_path)
+    context = next((c for c in contexts if c.binding.context_id == context_id), None)
+    if context is None:
+        raise RuntimeRejected("unknown_context_id")
+    binding = context.binding
+    return _export_client_config(
+        binding.environment_profile,
+        binding.design_registry,
+        binding.pdk_registry,
+        binding.analysis_journal,
+        output,
+        format=format,
+        sweep_journal=binding.sweep_journal,
+        runtime_settings=runtime_path,
+        context_id=context_id,
+        contexts=contexts,
+    )
+
+
+def _export_client_config(
+    profile: Path,
+    designs: Path,
+    pdks: Path,
+    journal: Path,
+    output: Path,
+    *,
+    format: Literal["codex", "mcp-json", "claude-desktop"],
+    sweep_journal: Path | None = None,
+    runtime_settings: Path | None = None,
+    context_id: str | None = None,
+    contexts: tuple[ExecutionContext, ...] | None = None,
+) -> dict[str, object]:
     """Create a new reviewed fragment; no global client config or journal writes."""
     snapshot = load_contracts(profile, designs, pdks)
     design_path, pdk_path, journal_path, output_path = (
@@ -209,7 +268,8 @@ def export_client_config(
         )
         if operator_config.runtime_settings_path is None:
             raise RuntimeRejected("context_without_settings")
-        contexts = load_runtime(operator_config.runtime_settings_path)
+        if contexts is None:
+            contexts = load_runtime(operator_config.runtime_settings_path)
         if operator_config.runtime_context_id is None:
             raise RuntimeRejected("explicit_context_selection_required")
         context = next(

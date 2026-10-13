@@ -397,7 +397,12 @@ def test_direct_operator_transport_cannot_invoke_legacy_runner(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("configured", [False, True])
+@pytest.mark.parametrize("configured", [
+    False,
+    pytest.param(True, marks=pytest.mark.skipif(
+        sys.platform != "win32", reason="configured stdio constructs the Windows OpenSSH backend",
+    )),
+])
 async def test_operator_stdio_without_state_or_reference_fallback(
     configured: bool,
     tmp_path: Path,

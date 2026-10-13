@@ -1,3 +1,28 @@
+## Active POST-01: guided local operator setup, 2026-10-13
+
+The user has approved the first proposed postrelease phase. Published2.0.0 at
+ff376af2e3effddb3bb1565e4510d27060cc0ff7 remains unchanged; feature work starts
+from main e5ef14c. POST-02 through POST-07 remain proposed and outside this phase.
+
+Implement an operator-only guide, local contract/context checks, exclusive runtime
+settings export and context-derived client export. Reuse the existing validators,
+runtime schema and client exporter. Provide a clear fresh/existing-domain branch
+and actionable closed errors. The helper must not run a subprocess or contact the
+VM, initialize directories/journals/locks/accounting, create approval, change native
+runtime code or submit simulations. It must preserve every selected existing file
+and reject collisions/stale hashes. Explicit native/provider/grant hashes remain
+inputs, never inferred authority.
+
+Verify a clean installed-package walkthrough using only packaged fictional files
+and public CLI, plus retained-state/error preservation tests, compatibility and
+relevant package/security checks. Record local synthetic and actual VM/client
+evidence separately. Final affected124 tests pass/5 OS skips; installed15-command
+walkthrough, security/compatibility and independent corrected-source review pass.
+Hosted CI and review disposition are tracked on the feature PR. This phase selects
+no new release version and does not change the published2.0.0 candidate.
+See [POST-01 workflow and acceptance](POST_01_OPERATOR_SETUP.md).
+Earlier dated records below are preserved history, superseded only for this scope.
+
 ## Actual Codex restart recovery completed, 2026-10-13
 
 Actual corrected5e/97fa Codex restart status/result/identical-ID submission PASS;
