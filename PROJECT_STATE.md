@@ -1,3 +1,29 @@
+## POST-01 local operator setup implementation, 2026-10-13
+
+The user approved proceeding with the first proposed postrelease phase after
+2.0.0 publication. Published tag v2.0.0 remains bound to
+ff376af2e3effddb3bb1565e4510d27060cc0ff7; this feature starts from main e5ef14c
+and does not modify published assets. POST-02 through POST-07 remain proposals.
+The direct user instruction authorizes this phase; this status file creates no
+additional execution authority.
+
+POST-01 adds a host-only operator-setup guide/check and exclusive runtime/client
+exports over existing validators and CLI contracts. New/retained domain guidance
+is explicit. No SSH, native/runtime deployment, administrator action, journal or
+resource-domain initialization, simulation or authority creation is performed by
+the helper. Existing protected data, counters and approval boundaries remain.
+Native correction history is not reset by this feature or checkout.
+
+Implementation and documentation are complete. Final affected tests124 PASS/5
+Windows symlink skips, Ruff/mypy100, security18/locked audit and compatibility
+PASS. Isolated installed-wheel15-command walkthrough preserves7 files and needs
+no developer private inputs. Independent review's context-snapshot race is fixed
+and rechecked; final hosted CI is tracked on the feature PR. These are local
+synthetic/installed checks, distinct from actual VM/client qualification.
+No version bump or new publication is authorized by this implementation record.
+See [POST-01 scope and workflow](docs/POST_01_OPERATOR_SETUP.md).
+Earlier checkpoints below retain their historical source/time scope.
+
 ## Actual Codex restart recovery completed, 2026-10-13
 
 Actual corrected5e/97fa Codex restart status/result/identical-ID submission PASS;

@@ -16,6 +16,67 @@ and OS-operator confirmation. Import, doctor and server startup do not provision
 Each operator must qualify their installed environment and an actual client job;
 configuration validation alone does not establish successful Cadence execution.
 
+## Guided local setup
+
+This development package adds `operator-setup`; the published 2.0.0 wheel does
+not include that command. It wraps the existing local validators and exports.
+It never contacts the VM, starts a subprocess, initializes accounting, creates
+journals or runs a simulation. Local setup does not grant execution authority.
+
+1. Run `python -m cadence_mcp_bridge operator-setup guide --mode fresh` for a
+   genuinely new resource domain, or `--mode existing` to preserve a retained
+   installation. The guide does not inspect whether the VM is empty; the existing
+   domain tools verify that condition later. A new host or journal does not reset
+   remote consumption.
+2. Replace the fictional templates with observed operator data and check them:
+
+   ```text
+   python -m cadence_mcp_bridge operator-setup check --profile ENV --design-registry DESIGNS --pdk-registry PDKS
+   ```
+
+3. Select existing private host directories for resource state and journal
+   parents. Supply the actual runner hash and authority/ledger references, then
+   export a new runtime file:
+
+   ```text
+   python -m cadence_mcp_bridge operator-setup export-runtime --profile ENV --design-registry DESIGNS --pdk-registry PDKS --resource-state-root STATE_DIRECTORY --context CONTEXT_ID --runner-sha256 RUNNER_SHA256 --authority-ref AUTHORITY_REF --ledger-ref LEDGER_REF --journal ANALYSIS_JOURNAL --sweep-journal SWEEP_JOURNAL --output NEW_RUNTIME
+   ```
+
+   Exact contract hashes are computed from the supplied files. No directory,
+   journal, lock or approval is created. Keep the actual existing journals when
+   retaining an installation. Native provider/grant bindings are optional here,
+   but when supplied require all four explicit arguments:
+   `--native-provider-binding`, `--native-provider-sha256`, `--operator-grant`
+   and `--operator-grant-sha256`. Optional specification bindings require both
+   `--native-specifications` and `--native-specifications-sha256`. Use reviewed
+   existing files and hashes; recording them does not authenticate their live
+   installation or grant usable scope.
+4. Run `operator-setup check --settings NEW_RUNTIME --context CONTEXT_ID`.
+   Do not mix this input form with the three individual contract arguments.
+5. Follow the explicit trust, domain, registration, native activation/preflight
+   and authority procedures below. After intended provider/grant binding changes,
+   export another new runtime file and check that selection again.
+6. Derive the client fragment from the final selected context:
+
+   ```text
+   python -m cadence_mcp_bridge operator-setup export-client --settings RUNTIME --context CONTEXT_ID --format codex --output NEW_CLIENT_FRAGMENT
+   ```
+
+   `mcp-json` and `claude-desktop` export formats are also available. A format
+   does not qualify that actual app. Review/install the fragment, restart the MCP
+   connection, then run one approved job and query its result with the existing
+   tools. Reuse its UUID and plan after response loss/restart and confirm no extra
+   execution or reservation.
+
+`ENV`, `DESIGNS`, `PDKS`, `RUNTIME` and output names above represent your own
+private files. Exports validate first and never overwrite. If interrupted, retain
+the existing partial output and choose a new filename after resolving the cause.
+For stale hashes, verify intended edits and export new settings. For missing
+parents or path collisions, select the correct private directories and distinct
+paths without deleting state. For contract mismatch, use that stage's schema
+and validation command. Never make fictional/unqualified settings executable by
+inserting another operator's identity, hash, approval or budget.
+
 ## Install and local configuration
 
 Use Python 3.12 on the Windows host in a dedicated virtual environment. Python
@@ -37,6 +98,10 @@ Choose your private managed root and approved resource limits in environment.jso
 Set both `job_root` and `result_root` to `<managed_root>/native-mcp-v1-jobs`.
 This fixed derived directory is shared by the coordinator, confirmation and storage
 inventory; other job/result locations are rejected during new-domain setup.
+The fictional starter uses example `jobs` paths; replace them with this required
+derived location before native setup. Its zero limits and unqualified/read-only
+design descriptions remain non-executable until deliberately registered under
+your observed contracts and actual approved scope.
 Protected roots cover executable installations and PDK/model dependencies. Set
 observed executable digests and versions. The validation VM's 16GiB ceiling is
 not a default for new operators. Zero example limits must be replaced by the

@@ -94,6 +94,10 @@ try {
         --workspace $domainWorkspace
     if ($LASTEXITCODE -ne 0) { throw "Installed existing-domain migration acceptance failed." }
 
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-operator-setup-install.py") `
+        --workspace (Join-Path $resolvedTemporaryRoot "operator-setup-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed guided operator setup acceptance failed." }
+
     # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
     & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
         --python $python $wheel[0].FullName

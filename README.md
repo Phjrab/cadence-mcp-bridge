@@ -5,13 +5,13 @@ the professor-provided CentOS/Cadence/PDK VM running in your personal VMware.
 Operator settings select a common execution template; another supported circuit
 requires no bridge-core patch or circuit-specific Python extractor.
 
-**2.0.0 candidate preparation is in progress. Public release is not yet approved.**
+**[2.0.0 is published](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.0.0).**
 Two distinct new inverter/comparator test circuits completed DC/AC/TRAN,
 automatic extraction and a bounded AC Sweep on the standard VM. Exact installed
 2.0.0 also submitted a new job through the actual Codex app. Result retrieval,
 same-ID retry and actual app restart preserved its result without duplicate
-execution or reservation. Final integrated artifacts, installation transitions
-and release checks remain separate gates. See the
+execution or reservation. The release includes the exact candidate's installation,
+artifact and acceptance reports. Earlier source checkpoints remain in the
 [acceptance record](docs/generic_release/GENERIC_ACCEPTANCE_CURRENT.json).
 
 ## Supported environment
@@ -29,9 +29,9 @@ circuit is bundled. Your existing software entitlement remains required.
 
 ## Install from release files
 
-Use the wheel, locked runtime file and SHA256SUMS for one exact approved candidate.
-Compare every file's hash before installation. These filenames describe planned
-2.0.0 assets; a development build is not a published release.
+Use the wheel, locked runtime file and SHA256SUMS from the same published release.
+Compare every file's hash before installation. The following commands install
+2.0.0; a later development checkout does not change those published files.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 .\cadence_mcp_bridge-2.0.0-py3-none-any.whl
@@ -47,6 +47,21 @@ The exclusive starter export includes the complete setup guide and fictional
 environment/design/PDK templates. It needs no developer checkout, private journal
 or past job. Keep setup and journals outside the package. Import, doctor and MCP
 startup do not initialize accounting, repair permissions or run EDA.
+
+## POST-01 development: guided local setup
+
+The current feature adds `operator-setup` to reduce manual context and client
+configuration. This command is not included in the published 2.0.0 wheel yet.
+Start with `operator-setup guide --mode fresh` for a genuinely new installation,
+or `--mode existing` when preserving an existing resource domain. The guide is
+local and does not inspect or initialize the VM.
+
+Use `check` for your environment/design/PDK contracts, `export-runtime` to write
+one new settings file, then `check --settings RUNTIME --context ID`. After the
+existing explicit VM setup, registration and authority steps, `export-client`
+derives its paths from that selected context. Exports never overwrite an existing
+file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
+for required inputs, retained-state handling and error recovery.
 
 ## Set up your VM and register a circuit
 
@@ -149,6 +164,6 @@ Git archives; exclusion does not clear history, clones or external adaptations.
 See [third-party scope](THIRD_PARTY_NOTICES.md) and
 [archive boundary](docs/AGENT_PLAN_EXPORT_BOUNDARY_V1.md).
 
-GitHub Releases is the intended initial destination. Exact commit/files/hashes and
-final user publication approval are required before tag/Release/upload.
+GitHub Releases hosts the published2.0.0 build. Any later release requires its
+own exact commit/files/hashes and final user approval before tag/Release/upload.
 PyPI/MCPB/marketplace posting is a separate decision.

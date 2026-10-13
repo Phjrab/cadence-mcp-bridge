@@ -63,6 +63,9 @@ def build_parser() -> argparse.ArgumentParser:
         "operator-starter", help="Export packaged fictional templates and guide."
     )
     starter.add_argument("--output", type=Path, required=True)
+    from cadence_mcp_bridge.operator_setup import add_setup_parser
+
+    add_setup_parser(subparsers)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -346,6 +349,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-setup":
+        from cadence_mcp_bridge.operator_setup import run_setup
+
+        return run_setup(arguments)
     if arguments.command == "operator-starter":
         try:
             result = export_starter(arguments.output)
