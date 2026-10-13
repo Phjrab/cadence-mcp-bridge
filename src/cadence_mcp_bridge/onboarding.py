@@ -241,6 +241,7 @@ def export_client_config(
                     loaded.binding.sweep_journal,
                     getattr(loaded.binding, "native_provider_binding", None),
                     getattr(loaded.binding, "operator_grant", None),
+                    getattr(loaded.binding, "native_specifications", None),
                 )
                 if value is not None
             )
@@ -297,4 +298,34 @@ def export_client_config(
             if context_report
             else {}
         ),
+    }
+
+
+STARTER_FILES = ("README.md", "environment.json", "designs.json", "pdks.json")
+
+
+def export_starter(output: Path) -> dict[str, object]:
+    from importlib.resources import files
+
+    target = _local_path(output)
+    if target.exists() or not target.parent.is_dir():
+        raise OnboardingRejected("exclusive_starter_output_required")
+    data = {
+        name: files("cadence_mcp_bridge").joinpath("operator_starter", name).read_bytes()
+        for name in STARTER_FILES
+    }
+    target.mkdir(mode=0o700)
+    for name, raw in data.items():
+        fd = os.open(target / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+    return {
+        "status": "FICTIONAL_OPERATOR_STARTER_EXPORTED_NOT_AUTHORIZED",
+        "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
+        "remote_contact": False,
+        "execution_authorized": False,
+        "new_simulations": 0,
+        "new_reservations": 0,
     }

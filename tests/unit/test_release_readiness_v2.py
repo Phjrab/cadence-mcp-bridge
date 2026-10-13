@@ -29,6 +29,7 @@ def fixture(tmp_path: Path) -> Path:
         "src/cadence_mcp_bridge/models.py",
         "src/cadence_mcp_bridge/measurement_models.py",
         "docs/contracts/MCP_FRESH_POLICY_CONSUMER_V1_SNAPSHOT.json",
+        "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json",
         "docs/contracts/MCP_V1_COMPATIBILITY_SNAPSHOT.json",
         "docs/contracts/MCP_RELEASE_READINESS_V2_SNAPSHOT.json",
         "docs/contracts/MCP_RUNTIME_CONFIG_V1_SNAPSHOT.json",
@@ -145,11 +146,15 @@ async def test_version_license_model_and_schema_drift_rejected(
     if change == "version":
         path = project / "pyproject.toml"
         path.write_text(
-            path.read_text(encoding="utf-8").replace('version = "1.0.0"', 'version = "1.1.0"')
+            path.read_text(encoding="utf-8").replace(
+                f'version = "{audit.__version__}"', 'version = "999.0.0"'
+            )
         )
     elif change == "runtime":
         path = project / "src/cadence_mcp_bridge/__init__.py"
-        path.write_text(path.read_text(encoding="utf-8").replace('"1.0.0"', '"1.1.0"'))
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(f'"{audit.__version__}"', '"999.0.0"')
+        )
     elif change == "license":
         (project / "LICENSE").write_text("altered grant")
     elif change == "notice":
@@ -231,4 +236,29 @@ async def test_current_fresh_output_drift_and_historical_substitution_rejected(
     data["tools"]["cadence_bandwidth_study_result"]["outputSchema"] = {}
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="bandwidth study"):
+        audit.inspect(project, await audit.inventory())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["empty", "source", "extra", "prior", "history", "new-output"])
+async def test_standard_vm_consumer_transition_is_exact_and_history_bound(
+    tmp_path: Path, change: str,
+) -> None:
+    project = fixture(tmp_path)
+    path = project / "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json"
+    data = json.loads(path.read_bytes())
+    if change == "empty":
+        data["tools"] = {}
+    elif change == "source":
+        data["source_before"] = "0" * 40
+    elif change == "extra":
+        data["tools"]["cadence_health"] = {}
+    elif change == "prior":
+        data["prior_snapshot_sha256"] = "0" * 64
+    elif change == "history":
+        data["previous_tool_sha256"]["cadence_storage_summary"] = "0" * 64
+    else:
+        data["tools"]["cadence_storage_summary"]["outputSchema"] = {}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="standard-VM fresh policy consumer"):
         audit.inspect(project, await audit.inventory())

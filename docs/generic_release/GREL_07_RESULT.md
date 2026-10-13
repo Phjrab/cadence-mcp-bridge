@@ -1,3 +1,411 @@
+## Actual app lifecycle and final installation progress, 2026-10-12
+
+Exact installed2.0.0/source32acbb4/native553b90fa actual Codex newDC, automatic
+result, same-ID retry and actual restart recovery PASS. Result/provenance/receipt
+identity and ledger110/13,557,039,104 are retained after reconnect with0 extra
+spend. Two circuit analysis/Sweep worker evidence721fd231 is reusable only after
+verified equality of all execution assets; current553 differs installer.py alone.
+Public exact15115c hosted Windows/Ubuntu CI PASS; root final review/CI and exact
+artifact versioned upgrade/downgrade/source-archive gates remain pending. Fresh
+generic deletion/active termination remain unavailable. No publication approval.
+See FINAL_QUALIFICATION_20261012.md. Earlier receipts below retain source scope.
+
+## Initial versioned package rehearsal checkpoint, 2026-10-11
+
+Exact development commitc76dbcba15afb46cbd67c325d7dec7551029a3d8 built2.0.0
+wheel742dad3a8ad105a0802e8af87cde373e4e02314282e5be0c8a40bf970311f3c2 and
+curated sdist331fa1808b49cc1aef9095da7aca55c4520a9ffc4b3f845205eed8dd016ccb5f.
+Distribution member/license/secret exclusion audit and isolated installed protocol,
+context, operation, bootstrap, retained/fresh domain, reinstall/uninstall state
+conservation PASS. Original22 schemas/annotations stay equal. The installed
+conditional96-schema check is synthetic and contacts no VM.
+
+A distinct Windows/Python3.12.10 environment with current locked dependencies
+passed published1.0 -> development2.0 ->1.0 ->2.0 versioned replacement. Eight
+synthetic durable/result/replay files remain identical, restored inventories are
+exact and repeat admission is denied. Old1.0 rejects serve-operator. This is a
+host installed rehearsal, not remote/native or actual-app execution, and not the
+final candidate: newer starter migration prose and pending PR148-151 assets have
+not been incorporated in those earlier artifacts. All failed local harness/fixture
+attempts remain preserved; they did not contact VM or reserve simulation budget.
+
+Final exact-code validation has a separate pre-recorded8-attempt/1GiB maximum
+batch, including an actual app DC among the six routes and an independent two-point
+Sweep, within current continuing16GiB delegation. Its final bindings/grant are
+not minted yet. Latest actual consumption stays102/12,483,297,280; release is
+BLOCKED and public posting remains excluded. Earlier checkpoints are history.
+
+## Actual Codex restart checkpoint, 2026-10-11
+
+The user completed Codex restart. Actual QA MCP now loads the expected retained
+93021 grant andbf6 bundle. Local plan, successful status, same-ID submit and
+bounded verified result retrieval PASS; event_count remains6. A new read-only
+accounting observation remains102 /12,483,297,280 bytes. This supersedes the
+previous restart-unavailable/authority-inactive observation only for that current
+connection. No new app job ran and the three-attempt grant remains fully spent.
+Prepare the next bounded exact-code experiment and app settings together; preserve
+old grants and consumption. New actual app submission and final assets remain
+release gates. No blanket RC or release PASS is claimed. Earlier evidence stays.
+
+## Development version and final-review checkpoint, 2026-10-11
+
+Development package/runtime/lock metadata now agree on2.0.0. The published v1
+bare-launch configuration requires an explicit command migration; original22
+contracts stay pinned and newer policy output changes have separate immutable
+snapshots. Version/metadata/negative-drift checks73 PASS and locked dependency
+records are unchanged. This selects development metadata, not a frozen RC.
+
+PR148 has an additional blocking rollback-origin review: an applied exact-plan
+receipt must authenticate restoration metadata. PR151 busy inventory must avoid
+an unlocked multi-file reservation audit while retaining conservative protection.
+Both are being corrected before normal dependency-order integration. Their final
+native assets require new exact installed qualification; oldbf6/eb62 evidence is
+preserved at its original identity. PR149 pointer durability correction is pushed;
+PR150 descendant integration is in progress. No unresolved blocker is waived.
+
+Latest actual VM consumption remains102 attempts/12,483,297,280 reserved bytes;
+remaining4,696,571,904 bytes of the approved16GiB. Previous experimental grants
+are consumed. Further bounded final-code experiments use the continuing direct
+GREL02-08 authority and the same ledger, without resetting or refunding history.
+The user cannot restart the QA MCP connection; actual new app submit/restart
+remains pending and no repeat restart request is made. Release remains BLOCKED;
+no exact candidate commit/artifact hash set or public posting approval exists.
+Earlier dated checkpoints below remain historical evidence.
+
+## Fresh host new DC and repair inventory checkpoint, 2026-10-11
+
+A new operation submitted through exact installed40c/bf6 CLI from the exported
+fresh host settings passed OA copy/netlisting, effective inputs, Spectre,
+automatic DC extraction and completed-tree result size. The host has separate
+local journals and retains the existing remote domain/ledger and local resource
+lock. New-process same-ID submit after success adds0 dispatch/reservation;
+original developer analysis/sweep journal hashes remain identical. This completes
+the currentbf6 six routes over two QA circuits, alongside its independent AC2
+Sweep. It proves fresh host CLI execution, not a fresh blank VM or actual app job.
+
+After-run normal UID500 native preflight PASS. Latest ledger102 attempts /
+12,483,297,280 reserved bytes; remaining4,696,571,904 bytes (4479MiB) of16GiB.
+This Oct11 continuation3 executions/384MiB; generic verification20 attempts/
+2560MiB includes19 successes and1 retained failed128MiB. The retained original
+20-job scope and latest v2 remainder3/384MiB are fully spent. Any additional
+final-code validation needs a new explicit bounded experiment/grant under the
+existing direct GREL02-08/16GiB delegation, retaining all previous consumption;
+do not reset, refund or claim an unspent old scope. No new budget is requested.
+
+Exact PR148eb62 installed repair-helper read-only inventory passes332 targets,
+normalized required changes0 and identical historical target contents/metadata.
+The actual response is173064 bytes; larger16MiB-bound pipe cases are synthetic.
+New chmod/chown/ACL writes0. Local comparison/JSON-driver errors rejected before
+simulation and their private evidence remains; they are not failed Cadence jobs.
+
+The user cannot restart the QA MCP connection. Its actual local plan returns
+`authority_inactive`; new configuration/grant reload and new app submit/restart
+are unobserved. Actual app jobs0, gate remains pending, no repeat restart request.
+PR148-152 final parent integration/review/CI is in progress. Repair/installer
+changes alter native assets and require exact replacement qualification; bf6
+results stay historical after replacement. Six newer result schemas will have a
+reviewed fresh-policy delta; original22 compatibility must remain exact.
+
+Release remains BLOCKED. Version2.0.0 is proposed for the breaking bare-launch
+migration; current package metadata is still1.0.0 and no exact RC is frozen.
+Continue independent approved work; tag/Release/upload requires the final exact
+candidate's public approval. Earlier checkpoints and policies remain history.
+
+## Installed execution and retained-scope resume, 2026-10-11
+
+The exact installed source40c879b102bdc0a83fe8d199c26b615eb5d7252f produced
+native bundlebf6c20d7d1cc9c06b62749eaf5e530d6af86a37c2ead1a51c02d8163b79493c9.
+Its five fresh inverter AC/TRAN and comparator DC/AC/TRAN jobs all passed
+OA/ADE copy, netlisting, effective inputs, Spectre, automatic extraction and
+read-only completed-tree size checks. Installed six-route enrollment matches the
+accepted registration semantically; pretty versus canonical JSON explains unequal
+raw bytes. No source/PDK/vendor contents were changed.
+
+The 2026-10-11 ordinary UID500 installed native preflight passes with the active
+bundle and retained counter101 /12,349,079,552 reserved bytes after an independent
+installed AC2-point Sweep. New-process same-parent submit/advance adds0 dispatch
+and0 reservation. Installed specifications over these actual AC facts return PASS,
+deliberate QA FAIL, NOT_EVALUATED and CONDITION_MISMATCH; QA bounds are validator
+tests, not invented production circuit goals. This continuation2 runs/256MiB;
+current generic validation19 attempts/2432MiB includes1 retained failed128MiB.
+The prior five-job batch is preserved execution evidence, not new spending today.
+
+The old grant expired. The latest direct user continuation and existing GREL02-08/
+16GiB delegation support a new OS-operator-confirmed v2 grant for only its retained
+remainder3 jobs/384MiB. Spent original scope1+11+5=17 of20 was deducted first.
+AC2 uses2 of those3;1 job/128MiB remains. Earlier grants, confirmations, ledger,
+replay, journals and failed records remain. No budget reset/refund/increase occurs.
+The initial local authority-ref mismatch rejected before remote confirmation and
+is preserved; the corrected explicit identity binding passes at UID500.
+
+The installed starter also creates a separate fresh host configuration with empty
+local journals while retaining the same remote domain/ledger/grant/runtime and
+existing local resource lock. Read-only remote same-ID lookup reconstructs its
+first record without reading the developer journal or spending/resending; the old
+journal remains unchanged. This is fresh host configuration against the existing
+VM, not a fresh blank VM or a new accounting domain. Actual Codex queried the
+corrected runtime's completed comparator TRAN status/result, but actual app new
+submit/restart remains incomplete: the user currently cannot restart the QA MCP.
+Do not substitute SDK/CLI/replay for that app gate or repeatedly request approval.
+
+Related PR142-147 are normally merged; latest checked main98710153a167e103c2955b1c5c82612eb2864038.
+PR148-152 remain unmerged. PR148's transport P1 has a dedicated bounded private
+transport fix and further serialized-plan/ancestor review corrections in progress.
+Changing its modeltrust helper changes a native asset: requalify the resulting
+bundle before claiming final candidate acceptance. Oldbf6 observations remain
+historical after such a change. PR149 normal-parent integrationc0c1610 passes176
+relevant tests/13 Windows skips, Ruff/mypy and installed43-state preservation;
+final parent/CI/review gates still apply. No main/force/admin-bypass merge is used.
+
+Current support is only the professor standard CentOS/Cadence/PDK VM in personal
+VMware or an equivalently reproduced installation, with operator-specific SSH/
+account/work/circuit/ADE/results/registry/journal/limits. Current VM16GiB/500/20
+is not another user's default. Remaining global reservation4,830,789,632 bytes;
+disk floors/per-job bounds and conservative retained reservations stay binding.
+No new administrator chmod/chown or vendor/model/OA/ADE content repair occurred.
+Historical STANDARD_VM_CONTINUATION/METADATA_REPAIR receipts and dated exclusion
+statements remain history, superseded only in the scope of direct user delegation.
+
+Generic release remains BLOCKED. Exact final installed bundle/app, complete fresh
+operator submission, upgrade/downgrade rehearsal, ordered reviewed normal merges,
+operational matrix and GREL08 version/commit/artifact/hash/rights checks remain.
+No exact RC or publication approval is claimed. Continue authorized independent
+work without phase reapproval; exact-candidate tag/Release/upload needs final
+public approval once ready. PyPI/MCPB/marketplace remain separate decisions.
+
+## Descriptor observation stability correction, 2026-10-09
+
+Latest independent repair review identified content changes during ACL collection.
+The fixed held snapshot now checks trailing descriptor identity/mode/owner/size/
+mtime/ctime, repeats the content hash and checks final descriptor stability before
+allowing metadata mutation. A Linux regression restores the old mtime after a
+same-length content change during ACL observation and requires rejection before
+chmod. Actual UID500/Python2.6 synthetic apply/rollback/repeat and all4 descriptor
+races pass, with actual94/11,409,555,456 ledger unchanged. No vendor repair or EDA.
+Related78 host checks/8 Windows skips, Ruff/mypy94 and exact installed96-schema/
+43+20-state conservation pass; final hosted review/CI pending for this source.
+Current actual read-only332-target installation inventory passes with0 changes. Existing direct16GiB/
+GREL02-08/conditional normal merge authority and final publication gate persist.
+The locally prepared older18feb71 runtime remains inactive; exact new immutable
+bundle, final deployed/app qualification and candidate acceptance remain required.
+
+## Required completed-size and held-descriptor corrections, 2026-10-09
+
+Latest review additionally required completed-size evidence in successful native
+payloads. The provider now rejects missing/null evidence; a valid historical
+pre-terminal receipt cannot bypass the reservation check. New worker read-only
+retrieval computes this evidence without rewriting retained receipts. Pre-update
+runtime responses lacking it reject rather than claiming bounded success; update
+and requalify the explicit native runtime. The legacy85 tools remain unchanged.
+
+Repair now rechecks protected contents/metadata and normalized ACL through the
+held descriptor immediately before mutation. Three actual UID500/Python2.6
+synthetic named/default-ACL/content races reject before chmod; interrupted apply/
+rollback and repeat still preserve original fixture contents/metadata. Real
+ledger94/11,409,555,456 bytes remains unchanged; no vendor/admin/simulation changes.
+Relevant78 host checks/7 Windows POSIX skips and separate78 bootstrap checks/10
+skips pass; mypy94 passes. Final installed package, exact hosted tests/review and
+corrected deployed/app requalification remain pending. The local prepared18feb71
+bundle predates this descriptor correction and is not activated. Replace it with
+an immutable new bundle after exact source review, retaining all prior artifacts,
+the same journals/resource domain and only the existing8-job/1GiB scoped remainder.
+Current16GiB/GREL02-08/conditional normal merge authority and final public-candidate
+approval remain binding; generic release still BLOCKED, no exactRC.
+
+## Current review corrections and retained-resource checkpoint, 2026-10-09
+
+Latest checked main98710153a167e103c2955b1c5c82612eb2864038 normally merges
+PR142-147; PR148-152 still require their exact final review/CI/integration gates.
+The direct-user16GiB/GREL02-08/conditional normal merge/minimum VM repair authority
+remains active. Exact-candidate tag/Release/upload approval is still required.
+Older dated exclusions/observations below remain historical evidence.
+
+AC specification frequencies use the same %.16g representation as extraction.
+Native workers reserve bounded terminal receipt/event/directory overhead and
+read-only result collection checks the completed tree against its retained
+per-job reservation. Historical receipts remain immutable. Vendor installation
+roots are compared by components. Exact chmod-before-ACL rollback states can
+resume safely without accepting other metadata drift. Migration retains every
+legacy ID when the whole anchor/seal fits the unchanged8192-byte record limit;
+129/160 IDs pass, oversized240-ID plans reject before writes.
+
+Relevant181 tests/22 Windows POSIX skips and separate78 repair/bootstrap tests/
+7 skips pass; Ruff/mypy94, security18/strict dependency audit and local technical
+contract85/22 pass. The earlier audit invocation's Windows encoding failure is
+retained; UTF-8 rerun finds no known vulnerabilities. Installed96-schema/43+20-state
+preservation passes for terminal/spec/root/migration source. The subsequent ACL
+rollback source also passes exact96-schema/43+20-state package preservation.
+The exact hosted Ubuntu pipeline and final review remain pending.
+Actual UID500/Python2.6 synthetic migration and apply/rollback interruption/repeat
+pass with the actual ledger unchanged. These fixtures are not Cadence executions
+or new installation metadata repairs. Current installation read-only plan332
+items requires0 changes; prior approved342 metadata repairs preserve296 contents.
+
+Actual Codex QA local planning succeeds for registered inverter DC (128MiB),
+plan a63eefdadd4f15c044dd2419c69ddd3ea9cce139f799da2556f56f73b1ba6a7e.
+This is local planning, not a new app submission. Corrected exact artifact/native
+bundle loading, fresh app submit/query/same-ID/restart, final deployed requalification,
+artifact-only fresh-operator walkthrough and candidate operational matrix remain.
+Release BLOCKED; no exactRC or publication claim. This continuation0 simulations/
+reservations/admin changes; latest actual94 attempts/11,409,555,456 bytes,
+remaining5,770,313,728 under17,179,869,184 bytes. The separately scoped old grant
+has8 jobs/1,073,741,824 bytes remaining; execution must recheck time and scope.
+
+## Current QA connection and compatibility corrections, 2026-10-09
+
+Actual Codex QA runtime_info_v2 now observes operator registry4 with two designs
+and one PDK; list_designs names qa-inverter and qa-comparator. This is loaded
+local configuration only, not remote qualification, execution authority or a new
+app job. The earlier connection-restart blocker is superseded by this observation;
+exact corrected-artifact loading and fresh submit/query/retry/restart remain pending.
+
+AC compares the expected grid and requested frequencies in %.16g representation
+before disjoint quarter-gap comparisons. Both valid ultra-narrow reviewer cases
+pass without allowing missing boundaries. Repair inventories encode mtimes as
+round-trip strings across Python2.6/3; historical records/helpers remain intact.
+Local128 native/reader tests plus106 reader/repair tests pass, with two/four POSIX
+skips respectively; Ruff/mypy94 and exact installed96-schema/43+20-state package
+conservation pass. Final exact-head hosted checks and independent review are pending.
+Actual UID500/Python2.6 fractional synthetic metadata digest agrees with host;
+current read-only332-target installation inventory passes with0 required changes.
+
+Latest actual ledger94/11,409,555,456 bytes, free25,612,369,920 bytes; remaining
+5,770,313,728 under16GiB. This continuation0 simulations/reservations/admin changes.
+Current native bundle eb6d638 remains historical execution scope; no corrected
+rollout or candidate is claimed. Continue authorized02-08/conditional normal
+merges; publication remains false and exactRC undefined. Earlier receipts are history.
+
+## Sweep identity and narrow AC correction checkpoint, 2026-10-09
+
+PR145 normally merged exact38ff7bc after both hosted checks/final review as
+bdcba00487a2405e59280de1d594ba9309506b48. PR146 bcdff78 passed all4 Windows/Ubuntu
+checks/final no-major automated review and normally merged as
+5a85beb80429f1642b2f242f47c2ec148c1f1a11. No formal APPROVED review or protected-rule
+bypass is inferred. Current main is5a85beb; PR147/148 onward remain unmerged.
+
+Final review found two additional blockers, now locally corrected. Sweep parent
+and exposed child UUIDs share one admission namespace: immutable retained parent
+documents reserve the IDs inside the same SQLite transaction before exposure.
+Standalone/other-parent/wrong-plan admission rejects; only internal Sweep advance
+passes the matching owner. No public owner override, extra ledger or deletion is
+added. Existing pre-index journal records are covered without rewriting them.
+An isolated read-only clone of the actual operator journal validates both parents/
+all5 children and7 standalone denials; original bytes/metadata remain preserved.
+
+AC endpoint and full-grid tolerances are capped at one quarter of each nearest
+declared grid gap. Missing boundary samples in valid ultra-narrow high-frequency
+sweeps reject, while exact neighbors and normal16-digit endpoint rounding pass.
+Both retained actual AC results requery identically through the current host reader;
+this is prior-bundle result validation, not new candidate execution. Local affected
+220 tests PASS/one POSIX skip, Ruff/mypy94 PASS. Exact final wheel/sdist/installed
+CLI/96 conditional SDK schemas/bootstrap/reinstall/uninstall PASS, preserving43
+operator and20 migration files. Namespace-specific125 checks also PASS. Final
+hosted checks and independent review remain required. Failed fault-injection
+fixture checks remain evidence; the fixture now preserves the internal owner argument.
+
+This continuation adds0 simulations/reservations/admin changes; the last actual ledger
+is94/11,409,555,456 bytes (10,881 MiB), remaining5,503 MiB under16GiB, scoped grant
+8 jobs/1GiB. Existing approved02-08/conditional merge authority continues. Actual Codex
+new-job/restart, exact deployed requalification, artifact-only operator acceptance,
+upgrade/downgrade and finalRC remain incomplete. Release BLOCKED/publication false.
+
+## Hidden control correction and exact installation checkpoint, 2026-10-09
+
+Third PR145 P1 covers case-variant extracted controls. The common parser rejects
+PARAMETERS/include variants, uppercase DC/AC/TRAN and unsupported noise/periodic/
+sweep/alter controls before static comparison. Regression deliberately registers
+the harmful extra line in the static hash, proving hash equality cannot hide its
+control meaning. Local145 affected tests PASS/one POSIX skip; Ruff/mypy94 PASS;
+actual normal-user Python2.6/POSIX16 synthetic scenarios PASS. All six actual
+baseline routes reassemble byte-identical original registration. Live94 attempts/
+11,409,555,456 reserved bytes and prior runtime/grant/journals remain unchanged;
+this continuation0 simulations/0 reservations/0 administrator changes.
+
+Exact corrected artifact source/license/notices/allowlist and isolated installed
+starter/CLI/SDK96/bootstrap/reinstall/uninstall43+20-state preservation PASS.
+Prior abed4c2 exact QA wheel4587fd27f6ac300761b61d69f0148ae307c79b0392c2115270d662db2158df73
+has99 installed package files equal and unchanged96 SDK schemas; it remains separate
+from this later control correction and is not an RC or actual app acceptance.
+Codex loaded runtime read still reports legacy registry2/context, new actual app
+jobs0 and requested QA Restart remains pending. The new source is not deployed.
+
+PR1457ff5563 final CI/review pending after three corrected P1 findings. PR1463beb2cf
+four hosted checks PASS; four historical reservation findings have retained fixes/
+regressions and resolved discussions; fresh review pending. Its provider foundation
+is disabled/unqualified, with production16GiB paths separately in PR152. Continue
+normal dependency integration after final gates; no direct main/force/admin bypass.
+GENERIC_ACCEPTANCE_CURRENT.json remains BLOCKED, exact candidate undefined and
+exact public tag/Release/upload approval still required after actual gates.
+Earlier receipts below preserve their original tested-source scope.
+
+## Closed-scope dialect and acceptance matrix checkpoint, 2026-10-09
+
+The second independent PR145 P1 extends the scope correction: library/section,
+protected/conditional/braced/language-switch forms and case-variant scope keywords
+reject before control extraction. Supported lowercase subckt/inline-subckt static
+circuits remain valid. Shared native parser115 local tests PASS/one POSIX skip,
+Ruff/mypy94 PASS; actual normal-user Python2.6/POSIX15 synthetic recovery/authority/
+scope scenarios PASS. All six actual baseline routes again reassemble byte-identical
+registration5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190.
+Live ledger94/11,409,555,456 and original bundle/grant/journals remain unchanged;
+new simulations/reservations/admin permission changes0. This is not newly deployed
+native or actual-client acceptance.
+
+Exact post-correction wheel/sdist allowlist/license/notices and isolated starter/
+CLI/SDK96/bootstrap/reinstall/uninstall43+20-state preservation PASS. Original22
+legacy declarations/85 schemas/registry1-8 compatibility audit PASS. f6845f4's four
+hosted Windows/Ubuntu checks and automated no-major-issues review PASS; this later
+scope correction requires its own final hosted/review receipt. PR152 stays draft.
+GENERIC_ACCEPTANCE_CURRENT.json distinguishes all19 mandatory gates, prior actual
+bundle evidence, synthetic installation/recovery, pending clean actual operator/
+Codex connection/new-job/restart, final upgrade/downgrade and candidate artifacts.
+No exact release candidate is frozen; generic release remains BLOCKED. Continuous
+GREL02-08/conditional normal merges/retained16GiB authority remains active and final
+exact-candidate tag/Release/upload requires separate public approval. Earlier
+checkpoint receipts below remain preserved at their original source scope.
+
+## Current native enrollment and reviewed authority checkpoint, 2026-10-09
+
+Continuous direct GREL02-08, conditional normal related-PR merges and the current
+managed VM retained16GiB policy remain authorized. Spectre500/corrections20, disk
+floors, old results/failures/journals/replay and original/vendor contents are binding.
+Exact-candidate tag/Release/upload still needs final public approval. Prior dated
+limits/exclusions below remain historical. No phase or routine path reapproval.
+
+Normally integrated reviewed PR144 parent55f57f2/main eda060e preserves grant object/
+raw-byte digest binding, pending cancellation, replay lookup-before-capacity and
+SQLite sidecar concurrency guards. Current native confirmation/gate accepts exact
+v2 design-analysis pairs without broadening preserved v1 documents. Confirmation
+and revoke now publish complete fsynced records atomically; interrupted candidates
+remain evidence. Packaged guide names actual runner/runtime verify commands and
+installed acceptance validates every listed command. Distribution test fixtures
+now include the four explicitly packaged starter resources on Windows as well.
+
+Independent PR145 P1 scope issue is also corrected in the shared native parser:
+nested parameter/include/analysis controls and unbalanced subckt/inline-subckt
+scope reject. All six private actual DC/AC/TRAN baselines reassemble byte-identical
+registration5e393fee67f7b67da93c4b49442c6e71003bb7971da530ad7fbb29ae9100e190.
+This is local reassembly of actual inputs, not another fresh execution acceptance.
+Real ordinary-user Python2.6/POSIX14 synthetic recovery/authority/scope scenarios
+PASS with live ledger94 attempts/11,409,555,456 reserved bytes unchanged. Remaining
+5,770,313,728 bytes of16GiB. This continuation0 simulations/0 reservations/0 admin
+metadata changes. Existing grant retains8 jobs/1GiB of its previously approved scope.
+
+Local affected263 PASS/43 OS skips; broader parent integration491 PASS/9 skips;
+confirmation/onboarding atomic138 PASS/one skip; Ruff/mypy94/security18/locked audit
+PASS. Exact post-correction wheel/sdist106/107 members match source/license/notices,
+with protected/unexpected content0. Installed starter/offline validation, SDK96
+conditional native schemas, bootstrap and43 operator+20 migration state preservation
+PASS. Those are synthetic installation/protocol evidence, not actual Codex acceptance.
+Final exact hosted CI and refreshed independent automated review remain required.
+
+PR14557bc3ec scope correction is feature-pushed, final hosted/review pending.
+Actual current Codex QA connection remains pending the already requested Restart;
+legacy namespace is still loaded, actual new app jobs0. The configured installed
+QA91ac wheel remains distinct from this source. Fresh installed operator/native
+qualification, final operational matrix, ordered PR145-152 integration and exact
+GREL08 commit/version/artifacts are not finished. Generic release BLOCKED.
+
 # Final combined durable lifecycle checkpoint, 2026-10-08
 
 Tested sourcea7fcf455462a040b5ac1bb8ca789341a0217cdb3, stacked PR144 open/ready/

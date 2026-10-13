@@ -250,3 +250,21 @@ def test_symlink_input_or_output_denied(contracts: tuple[Path, Path, Path], tmp_
         onboarding.export_client_config(
             *contracts, tmp_path / "journal.sqlite3", link, format="codex"
         )
+
+
+def test_packaged_starter_is_offline_and_exclusive(tmp_path, monkeypatch):
+    target = tmp_path / "starter"
+    transport = MagicMock(side_effect=AssertionError("starter contacted VM"))
+    monkeypatch.setattr(subprocess, "run", transport)
+    result = onboarding.export_starter(target)
+    report = onboarding.verify_contracts(
+        target / "environment.json", target / "designs.json", target / "pdks.json"
+    )
+    assert report["status"] == "consistent_local_contracts"
+    assert result["new_simulations"] == 0 and not result["execution_authorized"]
+    assert set(result["files"]) == set(onboarding.STARTER_FILES)
+    before = {name: (target / name).read_bytes() for name in onboarding.STARTER_FILES}
+    with pytest.raises(onboarding.OnboardingRejected):
+        onboarding.export_starter(target)
+    assert before == {name: (target / name).read_bytes() for name in before}
+    transport.assert_not_called()

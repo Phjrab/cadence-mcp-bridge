@@ -26,6 +26,7 @@ if __name__ == "__main__":
 import errno
 import hashlib
 import json
+import re
 import stat
 import subprocess
 
@@ -293,9 +294,12 @@ def metadata_equal(key, before, after):
 def completion_inventory(original):
     # Only the registered fixed installation recipe can enumerate new members;
     # no caller directory, glob or code path is accepted as a completion recipe.
-    if original.get("recipe_id") != "standard-vm-trust-v1":
-        raise ValueError("fixed_profile_recipe_required")
-    return inventory(original["profile"])["plan"]
+    if original.get("recipe_id") == "standard-vm-model-trust-v1":
+        return inventory_models({"profile": original["profile"],
+            "model_include": original["model_include"]})["plan"]
+    if original.get("recipe_id") == "standard-vm-trust-v1":
+        return inventory(original["profile"])["plan"]
+    raise ValueError("fixed_profile_recipe_required")
 
 
 def verify_completed_targets(original, rollback, recipe_guard=False):
@@ -811,16 +815,18 @@ def mutate(request, rollback=False):
     if not isinstance(authority, TEXT) or not 1 <= len(authority) <= 512:
         raise ValueError("operator_authority_required")
     original = request["plan"]
-    if original.get("schema_version") != 2 or original.get("recipe_id") != "standard-vm-trust-v1":
+    if original.get("schema_version") != 2 or original.get("recipe_id") not in (
+            "standard-vm-trust-v1", "standard-vm-model-trust-v1"):
         raise ValueError("fixed_profile_recipe_required")
     if digest(original) != request["expected_plan_sha256"]:
         raise ValueError("plan_binding")
     # No caller target/mode command: recompute the fixed recipe from the bound
     # operator profile before accepting a private exact target list.
-    expected_plan = inventory(original["profile"])["plan"]
+    expected_plan = completion_inventory(original)
     if expected_plan["scope"] != original["scope"]:
         raise ValueError("fixed_recipe_scope_mismatch")
-    if (not isinstance(original.get("readonly_compatibility_links"), list) or
+    if original["recipe_id"] == "standard-vm-trust-v1" and (
+            not isinstance(original.get("readonly_compatibility_links"), list) or
             expected_plan.get("readonly_compatibility_links") !=
             original["readonly_compatibility_links"]):
         raise ValueError("fixed_external_link_binding_required")
@@ -1106,7 +1112,7 @@ def target_metadata(path):
         os.close(fd)
 
 
-def inventory(profile):
+def installation(profile):
     """Standard-VM recipe; address/account/install roots come from operator data.
 
     This covers wrappers, the 32-bit binaries and shared-library search trees.
@@ -1155,6 +1161,17 @@ def inventory(profile):
     protected = profile["paths"]["protected_roots"]
     if not all(any(inside(root, p) for p in protected) for root in (ic, ms)):
         raise ValueError("unprotected_installation")
+    return ic, ms, base
+
+
+def inventory(profile):
+    """Standard-VM recipe; address/account/install roots come from operator data.
+
+    This covers wrappers, the 32-bit binaries and shared-library search trees.
+    It is not complete dynamic runtime attestation. Never include PDK/OA design
+    data, licenses, logs, caches, documentation or the complete installation.
+    """
+    ic, ms, base = installation(profile)
     seeds = [ic + "/share/bin/" + x for x in (
         "cdnWrapperWithOA2010", ".cdnWrapper_core", ".cdnWrapper_argv_parsing",
         ".cdnWrapper_dev", ".cdnWrapper_help", ".cdnWrapper_cwlg", ".cdsWrapperLib")]
@@ -1347,8 +1364,181 @@ def inventory(profile):
     return bounded
 
 
+def model_graph(main, section):
+    """Resolve selected model includes without executing or exporting model text."""
+    model_root = os.path.dirname(main)
+    pending, seen, records = [(main, section)], set(), {}
+    total = 0
+    while pending:
+        path, selected = pending.pop()
+        if (path, selected) in seen:
+            continue
+        seen.add((path, selected))
+        if len(seen) > 512 or not inside(path, model_root) or os.path.realpath(path) != path:
+            raise ValueError("model_graph_escape_or_bound")
+        if path not in records:
+            fd = open_fixed(path)
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 8388608:
+                    raise ValueError("model_graph_file")
+                raw = os.read(fd, 8388609)
+                if len(raw) != info.st_size or len(raw) > 8388608:
+                    raise ValueError("model_graph_read")
+                if (os.lstat(path).st_dev, os.lstat(path).st_ino) != (info.st_dev, info.st_ino):
+                    raise ValueError("model_graph_identity")
+            finally:
+                os.close(fd)
+            total += len(raw)
+            if total > 33554432 or len(records) >= 128:
+                raise ValueError("model_graph_total_bound")
+            text = raw.decode("latin-1")
+            # Preserve quoted targets while discarding line/block comments.
+            text = re.sub(
+                r'"(?:[^"\\]|\\.)*"|/\*[\s\S]*?\*/|//[^\n]*',
+                lambda m: (
+                    m.group(0) if m.group(0).startswith('"') else "\n" * m.group(0).count("\n")
+                ),
+                text,
+            )
+            bodies, current = {None: []}, None
+            for line in text.splitlines():
+                line = line.strip()
+                begin = re.match(r"^section\s+([A-Za-z][A-Za-z0-9_.$-]*)\s*$", line, re.I)
+                end = re.match(r"^endsection(?:\s+([A-Za-z][A-Za-z0-9_.$-]*))?\s*$", line, re.I)
+                if begin:
+                    if current is not None or begin.group(1) in bodies:
+                        raise ValueError("model_graph_sections")
+                    current = begin.group(1)
+                    bodies[current] = []
+                elif end:
+                    if current is None or end.group(1) not in (None, current):
+                        raise ValueError("model_graph_sections")
+                    current = None
+                else:
+                    bodies[current].append(line)
+            if current is not None or len(bodies) > 65:
+                raise ValueError("model_graph_sections")
+            records[path] = {"sha256": hashlib.sha256(raw).hexdigest(), "bodies": bodies}
+        bodies = records[path]["bodies"]
+        if selected is not None and selected not in bodies:
+            raise ValueError("model_graph_section_absent")
+        if selected is None and len(bodies) > 1:
+            raise ValueError("model_graph_section_required")
+        for body in (bodies[None], bodies.get(selected, []) if selected is not None else []):
+            for line in body:
+                if not re.match(r"^include\b", line, re.I):
+                    continue
+                match = re.match(
+                    r'^include\s+"([A-Za-z0-9._/-]+)"(?:\s+section\s*=\s*([A-Za-z][A-Za-z0-9_.$-]*))?\s*$',
+                    line,
+                    re.I,
+                )
+                if match is None:
+                    raise ValueError("model_graph_include_syntax")
+                child = os.path.normpath(os.path.join(os.path.dirname(path), match.group(1)))
+                pending.append((child, match.group(2)))
+    return dict((path, record["sha256"]) for path, record in records.items())
+
+
+
+def trusted_model_metadata(values):
+    """Stable read-only path/ancestor metadata; no contents or permission writes."""
+    metadata = {}
+    uid = os.getuid()
+    if uid == 0:
+        raise ValueError("model_graph_normal_user_required")
+    fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+              "st_size", "st_mtime", "st_ctime")
+    for path in values:
+        current = path
+        while True:
+            info = os.lstat(current)
+            if (info.st_uid not in (0, uid) or info.st_mode & 18 or
+                    os.path.realpath(current) != current or
+                    (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 if current == path else
+                        not stat.S_ISDIR(info.st_mode))):
+                raise ValueError("model_graph_untrusted_metadata")
+            record = tuple(getattr(info, key) for key in fields)
+            trailing = os.lstat(current)
+            if (tuple(getattr(trailing, key) for key in fields) != record or
+                    current in metadata and metadata[current] != record):
+                raise ValueError("model_graph_metadata_drift")
+            metadata[current] = record
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+    return metadata
+
+
+def trusted_model_graph(main, section):
+    """Normal-user closure trust binds metadata around the final content scan."""
+    if os.getuid() == 0:
+        raise ValueError("model_graph_normal_user_required")
+    values = model_graph(main, section)
+    before = trusted_model_metadata(values)
+    if model_graph(main, section) != values:
+        raise ValueError("model_graph_content_drift")
+    # No content scan follows this final namespace/type/permission observation.
+    if trusted_model_metadata(values) != before:
+        raise ValueError("model_graph_metadata_drift")
+    return values
+
+
+
+def inventory_models(request):
+    if set(request) != set(("profile", "model_include")):
+        raise ValueError("model_inventory_request")
+    profile, include = request["profile"], request["model_include"]
+    ic, ms, base = installation(profile)
+    if not isinstance(include, dict) or set(include) != set(("path", "section", "file_sha256")):
+        raise ValueError("model_inventory_binding")
+    main = valid_path(include["path"])
+    if (
+        not inside(main, base)
+        or inside(main, ic)
+        or inside(main, ms)
+        or not os.path.dirname(main).endswith("/models/spectre")
+        or not main.endswith(".scs")
+        or not isinstance(include["section"], TEXT)
+        or re.match(r"^[A-Za-z][A-Za-z0-9_.$-]{0,95}$", include["section"]) is None
+        or not any(inside(main, root) for root in profile["paths"]["protected_roots"])
+    ):
+        raise ValueError("model_inventory_scope")
+    hashes = model_graph(main, include["section"])
+    if hashes[main] != include["file_sha256"]:
+        raise ValueError("model_inventory_top_hash")
+    paths = set(hashes)
+    for path in hashes:
+        while path != base:
+            path = os.path.dirname(path)
+            paths.add(path)
+    result = plan(
+        {
+            "installation_roots": [base],
+            "paths": sorted(paths),
+            "links": [],
+            "profile_sha256": digest(profile),
+            "resource_lock": profile["paths"]["managed_root"] + "/run.lock",
+        }
+    )
+    for record in result["plan"]["records"]:
+        if record["kind"] == "file" and record["sha256"] != hashes[record["path"]]:
+            raise ValueError("model_inventory_content_race")
+    result["plan"].update(
+        schema_version=2,
+        recipe_id="standard-vm-model-trust-v1",
+        profile=profile,
+        model_include=include,
+    )
+    result["plan_sha256"] = digest(result["plan"])
+    return bounded_inventory(result)
+
+
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "apply", "rollback"):
+    if len(sys.argv) != 2 or sys.argv[1] not in (
+            "inventory", "inventory-models", "apply", "rollback"):
         raise ValueError("explicit_action_required")
     if not sys.platform.startswith("linux"):
         raise ValueError("linux_required")
@@ -1356,7 +1546,9 @@ def main():
     if len(data) > LIMIT:
         raise ValueError("request_limit")
     request = json.loads(data)
-    if sys.argv[1] == "inventory":
+    if sys.argv[1] == "inventory-models":
+        emit(inventory_models(request))
+    elif sys.argv[1] == "inventory":
         emit(inventory(request))
     else:
         mutate(request, sys.argv[1] == "rollback")

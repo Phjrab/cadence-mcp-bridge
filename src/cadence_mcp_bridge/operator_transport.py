@@ -7,7 +7,7 @@ import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from typing import Any
 
-_FIXED_LIMIT = 262144
+_FIXED_LIMIT = 1048576
 _REPAIR_INVENTORY_LIMIT = 16777216
 
 

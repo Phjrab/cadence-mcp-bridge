@@ -27,6 +27,10 @@ def project(tmp_path: Path) -> Path:
     source.mkdir(parents=True)
     (source / "__init__.py").write_bytes(b"# Synthetic original source\n")
     (source / "py.typed").write_bytes(b"")
+    starter = source / "operator_starter"
+    starter.mkdir()
+    for name in ("README.md", "environment.json", "designs.json", "pdks.json"):
+        (starter / name).write_bytes(b"Synthetic starter resource\n")
     (root / "pyproject.toml").write_bytes(
         b'[project]\nversion="1.0.0"\nname="cadence-mcp-bridge"\nlicense="Apache-2.0"\n'
     )
@@ -47,15 +51,25 @@ def entries(project: Path, kind: str) -> dict[str, bytes]:
     )
     if kind == "wheel":
         info = prefix + ".dist-info/"
-        files = {p.relative_to(project / "src").as_posix(): p.read_bytes()
-                 for p in (project / "src/cadence_mcp_bridge").iterdir()}
-        files.update({info + "licenses/" + name: (project / name).read_bytes()
-                      for name in AUDIT.LICENSE_FILES})
+        files = {
+            p.relative_to(project / "src").as_posix(): p.read_bytes()
+            for p in (project / "src/cadence_mcp_bridge").rglob("*")
+            if p.is_file()
+        }
+        files.update(
+            {
+                info + "licenses/" + name: (project / name).read_bytes()
+                for name in AUDIT.LICENSE_FILES
+            }
+        )
         files.update({info + name: b"" for name in ("WHEEL", "RECORD", "entry_points.txt")})
         files[info + "METADATA"] = metadata
     else:
-        files = {prefix + "/" + p.relative_to(project).as_posix(): p.read_bytes()
-                 for p in project.rglob("*") if p.is_file()}
+        files = {
+            prefix + "/" + p.relative_to(project).as_posix(): p.read_bytes()
+            for p in project.rglob("*")
+            if p.is_file()
+        }
         files[prefix + "/PKG-INFO"] = metadata
     return files
 
@@ -82,10 +96,21 @@ def test_original_package_and_license_bytes_pass(project: Path, tmp_path: Path, 
 
 
 @pytest.mark.parametrize("kind", ["wheel", "sdist"])
-@pytest.mark.parametrize("extra", [".codex/private.sqlite3", "docs/agent_plan/import.md",
-                                    "gpdk090/models.scs", "../outside", "cadence.dll"])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ".codex/private.sqlite3",
+        "docs/agent_plan/import.md",
+        "gpdk090/models.scs",
+        "../outside",
+        "cadence.dll",
+    ],
+)
 def test_unreviewed_content_paths_are_rejected(
-    project: Path, tmp_path: Path, kind: str, extra: str,
+    project: Path,
+    tmp_path: Path,
+    kind: str,
+    extra: str,
 ) -> None:
     files = entries(project, kind)
     files[extra] = b"synthetic"
@@ -96,7 +121,10 @@ def test_unreviewed_content_paths_are_rejected(
 @pytest.mark.parametrize("kind", ["wheel", "sdist"])
 @pytest.mark.parametrize("change", ["notice", "expression", "license", "source", "secret", "model"])
 def test_content_and_metadata_mismatch_is_rejected(
-    project: Path, tmp_path: Path, kind: str, change: str,
+    project: Path,
+    tmp_path: Path,
+    kind: str,
+    change: str,
 ) -> None:
     files = entries(project, kind)
     if change == "notice":

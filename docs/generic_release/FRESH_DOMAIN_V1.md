@@ -1,3 +1,45 @@
+## Current scope and evidence overlay, 2026-10-11
+
+The implementation checkpoints below are dated history. Their earlier exclusions
+of GREL08, related-PR merge and result-ceiling increase are superseded for the
+current managed standard VM by the latest direct user instruction: continuous
+GREL02–08, conditional normal related-PR merges and a retained16GiB result ceiling
+(17,179,869,184 bytes), with Spectre500 and same-change corrections20 unchanged.
+Consumption, replay, old policies, failures, shared locks and journals are retained.
+This instruction supplies authority; generated plans and this document do not.
+Another VM owner must authorize that VM's settings, provisioning and experiment
+scope. The current VM's16GiB ceiling is not another installation's default.
+
+The authenticated native provider, common OA/ADE copy, netlisting, effective-input
+checks and automatic extraction are implemented. Exact installed source40c879b
+with active native bundlebf6c20 passed ordinary-UID500 preflight and five new
+inverter/comparator AC/TRAN/DC analyses in the current existing installation.
+A subsequent bounded AC1D Sweep completed two fresh points; new-process parent
+submit/advance replay dispatched0 and reserved0. Latest observed ledger101 /
+12,349,079,552 bytes leaves4,830,789,632 bytes under16GiB;
+execution must read the latest ledger rather than reuse this snapshot. Actual
+Codex latest-bundle status/result reads passed; fresh app submission/retry/restart
+and an exact release candidate remain pending. See
+[the packaged operator guide](../../src/cadence_mcp_bridge/operator_starter/README.md)
+for the current install/enroll/confirm/run/update flow.
+
+Fresh initialization and retained-domain reuse remain distinct. On this current
+VM, the installed product correctly refuses fresh accounting and retains the
+established domain. Installed synthetic zero-history initialization/replay/recovery
+is not actual fresh-VM evidence. The exported operator templates and new registry
+configuration use the same existing remote ledger; current local analysis/sweep
+journals are also retained existing journals. That is migration acceptance, not
+proof of an actual context independent of the developer's private journal.
+Such a host context must preserve the same remote identity and cumulative budget;
+it must not create a fresh remote journal/domain to evade consumption or replay.
+
+Normal import, doctor and MCP startup still make no provisioning changes.
+Minimum administrator repair is delegated only on the user's managed VM, with
+content protection and recoverable metadata records. No license/PDK/vendor-content
+changes, result deletion, refunds, resets or protection bypass are authorized.
+The release remains BLOCKED until final operator/app/upgrade/candidate gates pass.
+Public tag/Release/upload remains subject to final approval of the exact candidate.
+
 # Standard-VM new installation and retained domain reuse
 
 Supported release scope is the professor-provided CentOS/Cadence VM or equivalent

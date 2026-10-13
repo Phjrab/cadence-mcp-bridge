@@ -1,6 +1,30 @@
 # Release readiness reassessment v3
 
-## Codex lifecycle evidence update, 2026-10-07
+## Current 2.0.0 evidence boundary, 2026-10-13
+
+This v3 assessment below is preserved historical evidence. Current release work
+targets the professor-provided standard CentOS/Cadence/PDK VM in personal VMware
+with operator-specific registrations. The development version is 2.0.0 because
+the documented v1 bare launch now requires explicit legacy `serve` or configured
+`serve-operator`; the historical additive v1.1.0 recommendation is superseded.
+
+Installed executable source `5e642986b10a11aa5f38d462bc39127fb280fd91` passed new
+comparator AC and actual Codex inverter DC through automatic result extraction.
+The completed actual-app job survives Codex restart, result retrieval and same-ID
+retry with zero additional execution/reservation. Accounting remains 112 attempts
+/ 13,825,474,560 bytes. Earlier two-circuit six-analysis/Sweep/specification evidence
+remains scoped to its recorded source. See
+[current actual-app evidence](generic_release/ACTUAL_APP_RECOVERY_20261013.md).
+
+These actual results do not establish every historical app lifecycle property,
+Claude support, another Cadence/PDK or another host. Final normal integration,
+exact artifact/installation transitions, hosted archives and distribution-rights
+checks remain pending. The external `GENERIC_RELEASE_GATE-2.0.0.json` will identify
+the frozen candidate and its scoped results. Imported/history and affected
+external-adaptation rights remain LEGAL_REVIEW_REQUIRED. Public posting still
+requires approval of the identical finished candidate; POST-01–07 remain proposals.
+
+## Historical Codex lifecycle evidence update, 2026-10-07
 
 [CLIENT-LIFECYCLE-QUAL-01](CLIENT_LIFECYCLE_QUAL_01.md) captured actual app
 initialize (protocol2025-06-18) and all85 complete wire schemas with exact

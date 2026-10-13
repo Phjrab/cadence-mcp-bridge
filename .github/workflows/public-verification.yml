@@ -74,13 +74,22 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y acl
       - name: Actual files, process death and independent POSIX flock
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py tests/unit/test_installation_repair.py -q --basetemp "$HOME/grel-reservation-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py tests/unit/test_installation_repair.py tests/unit/test_model_repair_integration.py -q --basetemp "$HOME/grel-reservation-tests"
 
       - name: Operator launcher coexistence, recovery and shared lock
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_bootstrap.py -k operator -q --basetemp "$HOME/grel-operator-tests"
 
       - name: Existing domain migration on disposable files
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py -q --basetemp "$HOME/grel-domain-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"
 
       - name: Fresh storage and result counter policy consumers
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_storage_worker.py tests/unit/test_storage_runtime.py tests/unit/test_storage_lock.py tests/unit/test_storage.py tests/unit/test_resource_policy.py tests/unit/test_fresh_policy_consumers.py -q --basetemp "$HOME/grel-consumer-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_storage_worker.py tests/unit/test_storage_lock.py tests/unit/test_storage_runtime.py tests/unit/test_native_storage_groups.py tests/unit/test_storage.py tests/unit/test_resource_policy.py tests/unit/test_fresh_policy_consumers.py -q --basetemp "$HOME/grel-consumer-tests"
+
+      - name: OS-operator confirmation and append-only revocation on disposable files
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_operator_confirmation.py tests/unit/test_confirmed_asset_loading.py tests/unit/test_native_copy.py -q --basetemp "$HOME/grel-confirmation-tests"
+
+      - name: Fixed admission, confirmed gate and detached worker flock on disposable files
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_native_operations.py tests/unit/test_native_gate.py tests/unit/test_authenticated_provider.py tests/unit/test_native_eda_worker.py tests/unit/test_native_runtime.py tests/unit/test_native_setup.py tests/unit/test_native_operation_cli.py tests/unit/test_native_results.py tests/unit/test_native_public_service.py tests/unit/test_native_storage.py -q --basetemp "$HOME/grel-provider-tests"
+
+      - name: Read-only enrollment and native Sweep/spec synthetic contracts
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_native_registration.py tests/unit/test_native_sweeps.py tests/unit/test_native_specifications.py -q --basetemp "$HOME/grel-enrollment-tests"

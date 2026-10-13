@@ -159,7 +159,7 @@ def profile(value):
         or value["paths"]["job_root"] != root + "/" + accounting.JOBS
         or value["paths"]["result_root"] != root + "/" + accounting.JOBS
         or not 1 <= value["limits"]["spectre_attempts"] <= accounting.CEILING_COUNT
-        or not 1 <= value["limits"]["result_reserved_bytes"] <= accounting.CEILING_BYTES
+        or not 1 <= value["limits"]["result_reserved_bytes"] <= accounting.MAX_POLICY_BYTES
     ):
         raise ValueError("setup_profile_scope")
     installer.directory(home())
@@ -208,7 +208,7 @@ def make_anchor(value, root, campaign):
         "resource_domain_sha256": digest(
             canonical(
                 {
-                    "hostname": value["host"]["hostname"],
+                    "hostname": value["host"]["hostname"].lower().rstrip("."),
                     "architecture": value["host"]["architecture"],
                 }
             )
@@ -440,7 +440,7 @@ def register_existing(request, assets):
                 "resource_domain_sha256": digest(
                     canonical(
                         {
-                            "hostname": value["profile"]["host"]["hostname"],
+                            "hostname": value["profile"]["host"]["hostname"].lower().rstrip("."),
                             "architecture": value["profile"]["host"]["architecture"],
                         }
                     )
@@ -449,13 +449,7 @@ def register_existing(request, assets):
                 "identity_manifest_sha256": value["identity_manifest_sha256"],
             }
             anchor = accounting.identity_manifest(root, binding)
-            expected_policy = anchor.get(
-                "policy",
-                {
-                    "attempt_ceiling": accounting.CEILING_COUNT,
-                    "result_ceiling_bytes": accounting.CEILING_BYTES,
-                },
-            )
+            expected_policy = accounting.effective_policy(root, anchor)
             if (
                 value["profile"]["limits"]["spectre_attempts"],
                 value["profile"]["limits"]["result_reserved_bytes"],

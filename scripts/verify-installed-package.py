@@ -60,6 +60,52 @@ async def verify(
     if process.stdout.strip() != expected_version:
         raise ValueError("installed CLI version disagrees")
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
+    starter = workspace / "packaged-starter"
+    exported = cli(["operator-starter", "--output", str(starter)], workspace)
+    if set(exported["files"]) != {"README.md", "environment.json", "designs.json", "pdks.json"}:
+        raise ValueError("installed starter files missing")
+    import contextlib
+    import io
+    import re
+
+    from cadence_mcp_bridge.__main__ import build_parser
+
+    commands = sorted(
+        set(
+            re.findall(
+                r"`((?:runner|domain|operation|native-runtime|operator-authority|native-registration|"
+                r"native-sweep|native-specification|runtime|design|pdk|environment) [a-z-]+)",
+                (starter / "README.md").read_text(encoding="utf-8"),
+            )
+        )
+    )
+    if not commands or len(commands) > 80:
+        raise ValueError("packaged guide command inventory is invalid")
+    for command in commands:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                build_parser().parse_args([*command.split(), "--help"])
+            except SystemExit as error:
+                if error.code:
+                    raise ValueError(
+                        "packaged guide names an unsupported command: " + command
+                    ) from None
+            else:
+                raise ValueError("guide command unexpectedly executed")
+    local = cli(
+        [
+            "verify",
+            "--profile",
+            str(starter / "environment.json"),
+            "--design-registry",
+            str(starter / "designs.json"),
+            "--pdk-registry",
+            str(starter / "pdks.json"),
+        ],
+        workspace,
+    )
+    if local["status"] != "consistent_local_contracts" or local["remote_contact"]:
+        raise ValueError("installed starter does not validate offline")
     paths = {name: workspace / (name + ".json") for name in ("environment", "designs", "pdks")}
     for name, path in paths.items():
         with path.open("xb") as stream:

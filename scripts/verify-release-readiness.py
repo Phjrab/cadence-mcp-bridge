@@ -30,6 +30,9 @@ TAG_COMMIT = "8a0d44fab90e2095cc39322baef60fc09d741cd6"
 SNAPSHOT_COMMIT = "4ea17e2641f316ec0899c9c91f8bea97c6b4086f"
 RUNTIME_CONFIG_COMMIT = "b015b7151239e5613f8960fa896b8422b0b680aa"
 FRESH_CONSUMER_SNAPSHOT_SHA256 = "2c4beca566fc4d12ff155a0a73ddc69cdbde2d972da36817480cae1db821d728"
+STANDARD_VM_CONSUMER_SNAPSHOT_SHA256 = (
+    "6e25c9863bc2787748c8d1aaf79396291474555b57f16ee41d2113f9e288a154"
+)
 FRESH_CONSUMER_TOOLS = {
     "cadence_amplifier_sweep_result",
     "cadence_bandwidth_study_result",
@@ -125,9 +128,34 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or fresh.get("scope") != "registered_fresh_policy_output_consumers_only"
         or set(fresh.get("tools", {})) != FRESH_CONSUMER_TOOLS
         or set(fresh.get("historical_tool_sha256", {})) != FRESH_CONSUMER_TOOLS
-        or any(schemas.get(name) != tool for name, tool in fresh["tools"].items())
     ):
         raise ValueError("unreviewed fresh policy consumer schema drift")
+
+    standard = read_json(
+        project / "docs/contracts/MCP_STANDARD_VM_RESOURCE_CONSUMER_V2_SNAPSHOT.json"
+    )
+    if (
+        schema_digest(standard) != STANDARD_VM_CONSUMER_SNAPSHOT_SHA256
+        or type(standard.get("schema_version")) is not int
+        or standard.get("schema_version") != 2
+        or standard.get("source_before") != "7808aa8041a9ceeba872ff94a199f63b5cbfbf0a"
+        or standard.get("prior_snapshot_sha256") != FRESH_CONSUMER_SNAPSHOT_SHA256
+        or standard.get("scope")
+        != "registered_fresh_and_retained_v6_policy_output_consumers_only"
+        or set(standard.get("tools", {})) != FRESH_CONSUMER_TOOLS
+        or set(standard.get("previous_tool_sha256", {})) != FRESH_CONSUMER_TOOLS
+        or any(
+            standard["previous_tool_sha256"][name] != schema_digest(fresh["tools"][name])
+            or schemas.get(name) != standard["tools"][name]
+            or {key: value for key, value in fresh["tools"][name].items() if key != "outputSchema"}
+            != {
+                key: value for key, value in standard["tools"][name].items()
+                if key != "outputSchema"
+            }
+            for name in FRESH_CONSUMER_TOOLS
+        )
+    ):
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
 
     def reviewed_schema(name: str, tool: dict[str, Any]) -> bool:
         if name in FRESH_CONSUMER_TOOLS:
@@ -135,10 +163,10 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             # snapshots stay unchanged and unrelated schemas must still match.
             return (
                 schema_digest(tool) == fresh["historical_tool_sha256"][name]
-                and schemas.get(name) == fresh["tools"][name]
+                and schemas.get(name) == standard["tools"][name]
                 and {key: value for key, value in tool.items() if key != "outputSchema"}
                 == {
-                    key: value for key, value in fresh["tools"][name].items()
+                    key: value for key, value in standard["tools"][name].items()
                     if key != "outputSchema"
                 }
             )
@@ -330,6 +358,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         "license": "Apache-2.0",
         "conditional_semver_recommendation": "requires_behavior_and_migration_review",
         "reviewed_fresh_policy_output_transitions": sorted(FRESH_CONSUMER_TOOLS),
+        "resource_consumer_transition_version": 2,
         "comparison_scope": "declarations_shared_models_current_schemas_not_universal_behavior",
         "publication_authorized": False,
         "unverified_external_gates": [

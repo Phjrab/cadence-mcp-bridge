@@ -568,8 +568,8 @@ async def test_crash_after_atomic_admission_before_send_can_be_tombstoned(lifecy
     identity = str(uuid4())
     real = coordinator.store.admit_operation
 
-    def committed_then_crashed(identity, plan, *, dispatch_intent=False):
-        result = real(identity, plan, dispatch_intent=dispatch_intent)
+    def committed_then_crashed(identity, plan, *, dispatch_intent=False, sweep_id=None):
+        result = real(identity, plan, dispatch_intent=dispatch_intent, sweep_id=sweep_id)
         assert result and dispatch_intent
         raise SystemExit("synthetic crash before provider call")
 

@@ -28,7 +28,11 @@ from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import RemoteFailureError
 from cadence_mcp_bridge.offset_study import OffsetExtraction
 from cadence_mcp_bridge.power_measurements import PowerCounter, PowerExtraction
-from cadence_mcp_bridge.resource_policy import FreshResourceCounter
+from cadence_mcp_bridge.resource_policy import (
+    FreshResourceCounter,
+    RetainedResourceCounter,
+    RetainedResourcePolicy,
+)
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
 from cadence_mcp_bridge.slew_study import StepExtraction
@@ -200,6 +204,97 @@ async def test_storage_supervisor_and_sdk_report_registered_lower_ceiling(consum
         assert output.structured_content["reserved_result_bytes"] == raw["reserved_result_bytes"]
     assert backend.executions == 0
 
+
+
+def retained_receipt(kind: str) -> dict[str, Any]:
+    value = receipt(kind, fresh=False)
+    policy = RetainedResourcePolicy(
+        campaign_id="AUTO-PHASE-01", attempt_ceiling=500, result_ceiling_bytes=16 * 1024**3,
+        policy_sha256="1625e131118a0c0b4ff466c567d8a79bcb050dbf798505c23685e7b5604adac0",
+    ).model_dump()
+    for counter in counters(value):
+        counter["policy"] = dict(policy)
+    if kind == "power":
+        value["counter"].update(count=102, result_reserved_bytes=12483297280)
+    return value
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_production_consumers_require_and_preserve_retained_v6_policy(kind: str) -> None:
+    value = retained_receipt(kind)
+    result = MODELS[kind].model_validate_json(json.dumps(value))
+    assert counters(result.model_dump(mode="json")) == counters(value)
+    for counter in counters(value):
+        assert RetainedResourceCounter.model_validate(counter).policy.result_ceiling_bytes == (
+            16 * 1024**3
+        )
+    if kind == "power":
+        assert isinstance(result.counter, RetainedResourceCounter)
+
+
+@pytest.mark.parametrize("change", ["missing-policy", "hash", "limit", "bytes", "attempts", "bool"])
+def test_above_historical_counter_cannot_implicitly_gain_retained_v6_policy(change: str) -> None:
+    value = retained_receipt("power")
+    counter = value["counter"]
+    if change == "missing-policy":
+        counter.pop("policy")
+    elif change == "hash":
+        counter["policy"]["policy_sha256"] = "0" * 64
+    elif change == "limit":
+        counter["policy"]["result_ceiling_bytes"] = 10 * 1024**3
+    elif change == "bytes":
+        counter["result_reserved_bytes"] = 16 * 1024**3 + 1
+    elif change == "attempts":
+        counter["count"] = 501
+    else:
+        counter["count"] = True
+    with pytest.raises(ValidationError):
+        PowerExtraction.model_validate_json(json.dumps(value))
+
+
+@pytest.mark.parametrize("kind", ["bandwidth", "bias", "slew", "offset"])
+def test_retained_and_legacy_observations_cannot_splice_in_one_receipt(kind: str) -> None:
+    value = retained_receipt(kind)
+    counters(value)[-1].pop("policy")
+    with pytest.raises(ValidationError, match="shared registered resource policy"):
+        MODELS[kind].model_validate_json(json.dumps(value))
+
+
+@pytest.mark.asyncio
+async def test_registered_v3_storage_supervisor_sdk_keep_vm_ceiling_and_consumption() -> None:
+    raw = snapshot(storage_artifact(1, "EVIDENCE_REQUIRED")).model_dump(mode="json")
+    raw.update(contract_version=3, spectre_attempts=102, reserved_result_bytes=12483297280,
+               result_ceiling_bytes=16 * 1024**3,
+               ledger_policy=retained_receipt("power")["counter"]["policy"])
+    value = StorageSnapshot.model_validate_json(json.dumps(raw))
+    value = value.model_copy(update={"snapshot_id": snapshot_digest(value)})
+    backend = Backend(value)
+    result = await StorageSupervisor(backend).summary()
+    assert result.result_ceiling_bytes == 17179869184
+    assert result.reserved_result_bytes == 12483297280 and result.spectre_attempts == 102
+    assert result.disk_floor_bytes == 2147483648 and result.disk_floor_status == "OK"
+    async with Client(create_server(CadenceService(backend))) as client:  # type: ignore[arg-type]
+        output = await client.call_tool("cadence_storage_summary", {})
+        assert not output.is_error
+        assert output.structured_content["result_ceiling_bytes"] == 17179869184
+        assert output.structured_content["reserved_result_bytes"] == 12483297280
+        assert output.structured_content["spectre_attempts"] == 102
+    assert backend.executions == 0
+
+
+def test_retained_storage_policy_cannot_be_used_as_fresh_or_implicit_legacy() -> None:
+    raw = snapshot().model_dump(mode="json")
+    raw.update(spectre_attempts=102, reserved_result_bytes=12483297280,
+               result_ceiling_bytes=16 * 1024**3,
+               ledger_policy=retained_receipt("power")["counter"]["policy"])
+    for version in (1, 2):
+        raw["contract_version"] = version
+        with pytest.raises(ValidationError):
+            StorageSnapshot.model_validate_json(json.dumps(raw))
+    raw["contract_version"] = 3
+    raw["ledger_policy"]["policy_sha256"] = "0" * 64
+    with pytest.raises(ValidationError):
+        StorageSnapshot.model_validate_json(json.dumps(raw))
 
 @pytest.mark.parametrize("kind", ["power", "bandwidth", "bias", "slew", "offset", "amplifier"])
 def test_fresh_result_cannot_claim_zero_unadmitted_observation(kind: str) -> None:

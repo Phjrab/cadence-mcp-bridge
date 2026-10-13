@@ -14,6 +14,7 @@ from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
 
+from cadence_mcp_bridge import _native_rendering
 from cadence_mcp_bridge.generic_ade import AcInputs, AdeExecutionRegistration, bind_inputs
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected
@@ -159,15 +160,7 @@ class GenericReaderRegistration(VariableModel):
 
 
 # Proven API spellings from the retained native readers; general binding remains unqualified.
-_PREAMBLE = r"""procedure(mcpGenericScalar(name)
-  let((data vec)
-    data=getData(name)
-    cond((numberp(data) data)
-      (drIsWaveform(data)
-        vec=drGetWaveformYVec(data)
-        if(equal(drVectorLength(vec) 1) then drGetElem(vec 0) else nil))
-      (t nil))))
-"""
+_PREAMBLE = _native_rendering.READER_PREAMBLE
 
 
 def bind_reader(
@@ -266,48 +259,17 @@ def render_reader(
     execution_input_sha256: str,
 ) -> bytes:
     bind_reader(context, plan, ade, reader)
-    header = _header(operation_id, plan, reader, execution_input_sha256)
-    # Paths come only from the immutable operator environment and validated UUID.
-    job = context.contracts.environment.paths.job_root + "/" + operation_id + "/work"
-    result = "dcOp" if plan.analysis == "dc" else plan.analysis
-    lines = [
-        _PREAMBLE,
-        "let((port data wave xVec yVec count index sample axis)",
-        f'  port=outfile("{job}/generic-frame.txt")',
-        "  unless(port exit(1))",
-        f'  unless(openResults("{job}/psf") close(port) exit(1))',
-        f"  unless(selectResult('{result}) close(port) exit(1))",
-        f'  fprintf(port "{header}\\n")',
-    ]
-    if plan.analysis == "dc":
-        for node in reader.nodes:
-            lines += [
-                f'  data=mcpGenericScalar("{node.selector}")',
-                "  unless(numberp(data) close(port) exit(1))",
-                f'  fprintf(port "V|{node.logical_id}|%.16g\\n" data)',
-            ]
-        for source in reader.sources:
-            lines += [
-                f'  data=mcpGenericScalar("{source.current_selector}")',
-                "  unless(numberp(data) close(port) exit(1))",
-                f'  fprintf(port "I|{source.source_id}|%.16g\\n" data)',
-            ]
-    else:
-        for node in reader.nodes:
-            lines += [
-                f'  wave=getData("{node.selector}")',
-                "  unless(wave && drIsWaveform(wave) close(port) exit(1))",
-                "  xVec=drGetWaveformXVec(wave) yVec=drGetWaveformYVec(wave)",
-                "  count=drVectorLength(xVec)",
-                f"  unless(count>=2 && count<={reader.maximum_samples} && "
-                "count==drVectorLength(yVec) close(port) exit(1))",
-                "  for(index 0 sub1(count)",
-                "    axis=drGetElem(xVec index) sample=drGetElem(yVec index)",
-                f'    fprintf(port "P|{node.logical_id}|%d|%.16g|%.16g|%.16g\\n" '
-                "index axis real(sample) imag(sample)))",
-            ]
-    lines += ['  fprintf(port "END\\n")', "  close(port))", "exit(0)", ""]
-    return "\n".join(lines).encode("ascii")
+    _header(operation_id, plan, reader, execution_input_sha256)
+    # Paths and selectors are validated registration primitives, not MCP paths.
+    return _native_rendering.reader(  # type: ignore[no-any-return,no-untyped-call]
+        context.contracts.environment.paths.job_root,
+        plan.analysis,
+        reader.model_dump(mode="json"),
+        operation_id,
+        plan.plan_sha256,
+        execution_input_sha256,
+        canonical_digest(reader),
+    )
 
 
 def _finite(text: str) -> float:

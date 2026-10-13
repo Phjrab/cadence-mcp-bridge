@@ -6,7 +6,7 @@
   "version": "1.0.0",
   "generic_release_gate": "BLOCKED",
   "publication_authorized": false,
-  "grel08_authorized": false,
+  "grel08_authorized": true,
   "gates": [
     {
       "id": "G01",
@@ -17,7 +17,8 @@
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
         "ADMIN_REPAIR_V1.md",
-        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
+        "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
         "installed coexisting operator runner and actual active preflight passed; fresh-domain/provider bootstrap remains incomplete"
@@ -31,25 +32,22 @@
         "GREL_02_RESULT.md",
         "GREL_03_RESULT.md",
         "GREL_07_RESULT.md",
-        "ADMIN_REPAIR_V1.md"
+        "ADMIN_REPAIR_V1.md",
+        "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
       ],
       "limitations": [
-        "operator routing and current VM binaries/roots qualified; new circuit/native provider remains unqualified"
+        "Operator routing and two new circuits/analyses/sweeps passed actual current VM. Fresh operator artifact-only enrollment remains separately incomplete."
       ]
     },
     {
       "id": "G03",
-      "status": "PARTIAL",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "ADMIN_REPAIR_V1.md",
-        "OPERATOR_RUNNER_COEXISTENCE_V1.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "current executable permissions repaired; ordinary-user active runner preflight and shared lock contention denial passed; full dynamic attestation and actual native job qualification remain incomplete"
+        "Current exact-bundle normal-user preflight PASS; full fresh operator/app deployment remains a separate gate."
       ]
     },
     {
@@ -57,94 +55,76 @@
       "status": "PARTIAL",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "read-only local authority forms; authentic operator confirmation/provider absent"
+        "Actual reusable current-VM operator confirmation/grant and retained16GiB ledger passed; no other VM/operator installation acceptance is claimed."
       ]
     },
     {
       "id": "G05",
-      "status": "NOT_RUN",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "two genuine new circuits not created or registered for native acceptance"
+        "Two distinct newly registered owned QA circuits validated in the current standard VM; other hosts/PDKs deferred."
       ]
     },
     {
       "id": "G06",
-      "status": "NOT_RUN",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "new MOS native DC/AC/TRAN execution absent"
+        "Fresh DC/AC/TRAN succeeded for both registered circuits through one common worker; current VM scope."
       ]
     },
     {
       "id": "G07",
-      "status": "PARTIAL",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "GREL_04_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "local generic compiler/effective-input comparison implemented; actual native source/state/copy/model attestation and execution absent"
+        "All six jobs passed actual effective parameters/model/analysis/static-input checks and protected source/state/library/model boundaries."
       ]
     },
     {
       "id": "G08",
-      "status": "PARTIAL",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "GREL_05_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "local generic bounded reader/compiler and mathematical projection implemented; automatic terminal worker and native PSF/selector/source attestation absent"
+        "Automatic registered reader plus terminal/input/script/frame/PSF receipt verification and bounded retrieval PASS for all six; earlier failed extraction retained."
       ]
     },
     {
       "id": "G09",
-      "status": "NOT_IMPLEMENTED",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md"
+        "NATIVE_SWEEP_SPEC_V1.md"
       ],
       "limitations": [
-        "new registered-circuit native 1D Sweep absent"
+        "Actual current standard VM DC3point then independent AC2point fresh batches through the same native operations/retained ledger. Installed/actual Codex and clean-operator acceptance remain separate."
       ]
     },
     {
       "id": "G10",
-      "status": "NOT_RUN",
+      "status": "PASS",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+        "NATIVE_SWEEP_SPEC_V1.md"
       ],
       "limitations": [
-        "second actual batch under reusable authority absent"
+        "Actual current standard VM DC3point then independent AC2point fresh batches through the same native operations/retained ledger. Installed/actual Codex and clean-operator acceptance remain separate."
       ]
     },
     {
@@ -152,13 +132,10 @@
       "status": "PARTIAL",
       "required": true,
       "evidence_reference": [
-        "GREL_02_RESULT.md",
-        "GREL_03_RESULT.md",
-        "GREL_07_RESULT.md",
-        "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+        "NATIVE_UPDATE_AND_RESULTS_V1.md"
       ],
       "limitations": [
-        "durable lifecycle and disposable shared-counter crash/replay tests; authentic production provider/native qualification absent"
+        "Actual successful/failed same-ID service restart lookup and immutable update partial/repeat tests PASS; full operational/unknown/recovery matrix pending."
       ]
     },
     {
@@ -212,7 +189,8 @@
         "GREL_07_RESULT.md"
       ],
       "limitations": [
-        "actual current Codex new generic job/restart absent"
+        "installed SDK stdio conditional90-tool local plan/restart and synthetic wire submit/retry pass",
+        "actual Codex new-job/app restart remains NOT_RUN"
       ]
     },
     {
@@ -867,7 +845,624 @@
     "new_job_or_restart_qualification": "NOT_RUN",
     "global_config_modified": false
   },
-  "native_trust_observation_freshness": "LAST_OBSERVED_REJECTION_NOT_REFRESHED_IN_THIS_CHECKPOINT",
+  "native_trust_observation_freshness": "PRODUCT_NATIVE_PREFLIGHT_AND_CURRENT_PY26_POSTCHECK_PASS",
   "current_administrator_scope": "explicit human 2026-10-08 current managed VM minimum reversible metadata repair; historical restrictions superseded only within that scope",
-  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation with existing PDK, per-user VMware and operator configuration; other hosts/versions/PDKs deferred"
+  "support_scope": "professor standard CentOS/Cadence VM or equivalent installation with existing PDK, per-user VMware and operator configuration; other hosts/versions/PDKs deferred",
+  "latest_checkpoint": {
+    "assessment": "ACTUAL_CURRENT_VM_SIX_FRESH_ANALYSES_PASS_NOT_RELEASE_CANDIDATE",
+    "reference": "NATIVE_UPDATE_AND_RESULTS_V1.md",
+    "successful_circuits": 2,
+    "successful_analyses": 6,
+    "total_new_attempts_with_preserved_failure": 7,
+    "cumulative_attempts": 89,
+    "reserved_result_bytes": 10738466816,
+    "remaining_bytes": 6441402368,
+    "actual_codex": "PENDING",
+    "sweep_spec": "PENDING",
+    "candidate": "NOT_READY"
+  },
+  "history": [
+    {
+      "label": "previous_gate_assessment_before_six_native_jobs",
+      "gates": [
+        {
+          "id": "G01",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "ADMIN_REPAIR_V1.md",
+            "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+            "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
+          ],
+          "limitations": [
+            "installed coexisting operator runner and actual active preflight passed; fresh-domain/provider bootstrap remains incomplete"
+          ]
+        },
+        {
+          "id": "G02",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "ADMIN_REPAIR_V1.md",
+            "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
+          ],
+          "limitations": [
+            "operator routing and current VM binaries/roots qualified; new circuit/native provider remains unqualified"
+          ]
+        },
+        {
+          "id": "G03",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Current exact-bundle normal-user preflight PASS; full fresh operator/app deployment remains a separate gate."
+          ]
+        },
+        {
+          "id": "G04",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Actual reusable current-VM operator confirmation/grant and retained16GiB ledger passed; no other VM/operator installation acceptance is claimed."
+          ]
+        },
+        {
+          "id": "G05",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Two distinct newly registered owned QA circuits validated in the current standard VM; other hosts/PDKs deferred."
+          ]
+        },
+        {
+          "id": "G06",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Fresh DC/AC/TRAN succeeded for both registered circuits through one common worker; current VM scope."
+          ]
+        },
+        {
+          "id": "G07",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "All six jobs passed actual effective parameters/model/analysis/static-input checks and protected source/state/library/model boundaries."
+          ]
+        },
+        {
+          "id": "G08",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Automatic registered reader plus terminal/input/script/frame/PSF receipt verification and bounded retrieval PASS for all six; earlier failed extraction retained."
+          ]
+        },
+        {
+          "id": "G09",
+          "status": "NOT_IMPLEMENTED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "new registered-circuit native 1D Sweep absent"
+          ]
+        },
+        {
+          "id": "G10",
+          "status": "NOT_RUN",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "second actual batch under reusable authority absent"
+          ]
+        },
+        {
+          "id": "G11",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Actual successful/failed same-ID service restart lookup and immutable update partial/repeat tests PASS; full operational/unknown/recovery matrix pending."
+          ]
+        },
+        {
+          "id": "G12",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "internal existing physical lock adapter/process tests; native installation/domain/operator attestation absent"
+          ]
+        },
+        {
+          "id": "G13",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "85 full schemas and legacy tests preserved; native new-path historical replay absent"
+          ]
+        },
+        {
+          "id": "G14",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "isolated synthetic operator install verified; actual fresh native context absent"
+          ]
+        },
+        {
+          "id": "G15",
+          "status": "NOT_RUN",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "installed SDK stdio conditional90-tool local plan/restart and synthetic wire submit/retry pass",
+            "actual Codex new-job/app restart remains NOT_RUN"
+          ]
+        },
+        {
+          "id": "G16",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "hosted synthetic workflow and same-version state preservation; semver migration absent"
+          ]
+        },
+        {
+          "id": "G17",
+          "status": "PASS_SCOPED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "exact curated wheel/sdist source/license/notices and content audits pass; history rights separate"
+          ]
+        },
+        {
+          "id": "G18",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "shipped bootstrap/form instructions distinguish local match and execution; generic runbook pending"
+          ]
+        },
+        {
+          "id": "G19",
+          "status": "NOT_AUTHORIZED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "GREL08 final release candidate/version/publication are not authorized"
+          ]
+        },
+        {
+          "id": "C01",
+          "status": "DISABLED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "fresh operator deletion disabled; no exact consent or native delete qualification"
+          ]
+        },
+        {
+          "id": "C02",
+          "status": "UNSUPPORTED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "active native termination unsupported; pending cancellation tested only at synthetic provider seam"
+          ]
+        },
+        {
+          "id": "C03",
+          "status": "UNQUALIFIED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "historical qualified/partial measurement scopes preserved; generic PM/Offset/Slew absent"
+          ]
+        },
+        {
+          "id": "C04",
+          "status": "DEFERRED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "actual Claude complete qualification stays deferred"
+          ]
+        }
+      ]
+    },
+    {
+      "checkpoint": "BEFORE_NATIVE_SWEEP_SPEC",
+      "gates": [
+        {
+          "id": "G01",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "ADMIN_REPAIR_V1.md",
+            "OPERATOR_RUNNER_COEXISTENCE_V1.md",
+            "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
+          ],
+          "limitations": [
+            "installed coexisting operator runner and actual active preflight passed; fresh-domain/provider bootstrap remains incomplete"
+          ]
+        },
+        {
+          "id": "G02",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "ADMIN_REPAIR_V1.md",
+            "AUTHENTICATED_NATIVE_PROVIDER_V1.md"
+          ],
+          "limitations": [
+            "operator routing and current VM binaries/roots qualified; new circuit/native provider remains unqualified"
+          ]
+        },
+        {
+          "id": "G03",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Current exact-bundle normal-user preflight PASS; full fresh operator/app deployment remains a separate gate."
+          ]
+        },
+        {
+          "id": "G04",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Actual reusable current-VM operator confirmation/grant and retained16GiB ledger passed; no other VM/operator installation acceptance is claimed."
+          ]
+        },
+        {
+          "id": "G05",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Two distinct newly registered owned QA circuits validated in the current standard VM; other hosts/PDKs deferred."
+          ]
+        },
+        {
+          "id": "G06",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Fresh DC/AC/TRAN succeeded for both registered circuits through one common worker; current VM scope."
+          ]
+        },
+        {
+          "id": "G07",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "All six jobs passed actual effective parameters/model/analysis/static-input checks and protected source/state/library/model boundaries."
+          ]
+        },
+        {
+          "id": "G08",
+          "status": "PASS",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Automatic registered reader plus terminal/input/script/frame/PSF receipt verification and bounded retrieval PASS for all six; earlier failed extraction retained."
+          ]
+        },
+        {
+          "id": "G09",
+          "status": "NOT_IMPLEMENTED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "new registered-circuit native 1D Sweep absent"
+          ]
+        },
+        {
+          "id": "G10",
+          "status": "NOT_RUN",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "second actual batch under reusable authority absent"
+          ]
+        },
+        {
+          "id": "G11",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "NATIVE_UPDATE_AND_RESULTS_V1.md"
+          ],
+          "limitations": [
+            "Actual successful/failed same-ID service restart lookup and immutable update partial/repeat tests PASS; full operational/unknown/recovery matrix pending."
+          ]
+        },
+        {
+          "id": "G12",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "internal existing physical lock adapter/process tests; native installation/domain/operator attestation absent"
+          ]
+        },
+        {
+          "id": "G13",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "85 full schemas and legacy tests preserved; native new-path historical replay absent"
+          ]
+        },
+        {
+          "id": "G14",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "isolated synthetic operator install verified; actual fresh native context absent"
+          ]
+        },
+        {
+          "id": "G15",
+          "status": "NOT_RUN",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "installed SDK stdio conditional90-tool local plan/restart and synthetic wire submit/retry pass",
+            "actual Codex new-job/app restart remains NOT_RUN"
+          ]
+        },
+        {
+          "id": "G16",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "hosted synthetic workflow and same-version state preservation; semver migration absent"
+          ]
+        },
+        {
+          "id": "G17",
+          "status": "PASS_SCOPED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "exact curated wheel/sdist source/license/notices and content audits pass; history rights separate"
+          ]
+        },
+        {
+          "id": "G18",
+          "status": "PARTIAL",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md",
+            "GREL_03_SHARED_RESERVATIONS_RESULT.md"
+          ],
+          "limitations": [
+            "shipped bootstrap/form instructions distinguish local match and execution; generic runbook pending"
+          ]
+        },
+        {
+          "id": "G19",
+          "status": "NOT_AUTHORIZED",
+          "required": true,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "GREL08 final release candidate/version/publication are not authorized"
+          ]
+        },
+        {
+          "id": "C01",
+          "status": "DISABLED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "fresh operator deletion disabled; no exact consent or native delete qualification"
+          ]
+        },
+        {
+          "id": "C02",
+          "status": "UNSUPPORTED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "active native termination unsupported; pending cancellation tested only at synthetic provider seam"
+          ]
+        },
+        {
+          "id": "C03",
+          "status": "UNQUALIFIED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "historical qualified/partial measurement scopes preserved; generic PM/Offset/Slew absent"
+          ]
+        },
+        {
+          "id": "C04",
+          "status": "DEFERRED",
+          "required": false,
+          "evidence_reference": [
+            "GREL_02_RESULT.md",
+            "GREL_03_RESULT.md",
+            "GREL_07_RESULT.md"
+          ],
+          "limitations": [
+            "actual Claude complete qualification stays deferred"
+          ]
+        }
+      ]
+    }
+  ]
 }

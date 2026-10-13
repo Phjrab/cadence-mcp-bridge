@@ -274,7 +274,6 @@ def storage_lock_guard(io, root_path, root, lock):
     return check
 
 
-
 def read_json(io, parent, name, limit, private=False, canonical_ledger=False):
     fd = io.open(parent, name)
     try:
@@ -368,7 +367,7 @@ def payload_fingerprint(io, parent, hash_budget=None):
         os.close(fd)
 
 
-def active_eda(root):
+def active_eda(root, native_generic=False):
     # Non-destructive inventory can still report active storage. Deletes hold run.lock.
     process = subprocess.Popen(
         ["ps", "-eo", "comm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True
@@ -380,7 +379,7 @@ def active_eda(root):
         return True
     return any(
         os.path.lexists(root + "/" + relative + "/active")
-        for group, relative, _retention in GROUPS
+        for group, relative, _retention in storage_groups(native_generic)
         if group != "disposable"
     )
 
@@ -461,8 +460,24 @@ def fresh_ledger(io, root, counter, lock_held=True):
     if type(anchor) is not dict or type(anchor.get("schema_version")) is not int:
         raise ValueError("storage anchor schema required")
     if anchor["schema_version"] == 1:
-        return None  # Retained migration policy uses the historical counter.
-    if anchor["schema_version"] != 2:
+        registry = private_directory(io, root, "reservation-identity")
+        try:
+            try:
+                read_json(io, registry, "result-policy-v6.json", 8192, private=True)
+            except OSError as failure:
+                if failure.errno == errno.ENOENT:
+                    return None  # Historical retained policy; unchanged legacy path.
+                raise
+            # Seal preserves the historical anchor; current domain binds the effective anchor.
+            try:
+                seal = read_json(io, registry, "legacy-seal.json", 8192, private=True)
+                anchor = seal["anchor"]
+            except OSError as failure:
+                if failure.errno != errno.ENOENT:
+                    raise
+        finally:
+            os.close(registry)
+    if anchor["schema_version"] not in (1, 2):
         raise ValueError("fresh storage anchor required")
     path = io.canonical_root(root)
     home = io.root(io.account_home())
@@ -574,26 +589,42 @@ def fresh_ledger(io, root, counter, lock_held=True):
         "ledger_ref": "sim-mcp-v2-jobs/counter.json",
         "identity_manifest_sha256": digest(anchor),
     }
-    manifest = accounting.identity_manifest(path, binding)
-    accounting.counter_shape(counter, manifest)
+    anchor = accounting.identity_manifest(path, binding)
+    accounting.counter_shape(counter, anchor)
     if (
-        counter["count"] < manifest["baseline"]["count"]
-        or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
+        counter["count"] < anchor["baseline"]["count"]
+        or counter["result_reserved_bytes"] < anchor["baseline"]["result_reserved_bytes"]
         or (counter["count"] == 0) != (counter["result_reserved_bytes"] == 0)
         or counter["result_reserved_bytes"] < counter["count"]
     ):
         raise ValueError("storage committed ledger integrity")
+    policy = accounting.effective_policy(path, anchor)
+    if anchor["schema_version"] == 1:
+        policy = dict(
+            policy, campaign_id="AUTO-PHASE-01", policy_sha256=accounting.RESULT_POLICY_SHA
+        )
     if not lock_held:
-        return anchor["policy"]
+        return policy
     audited, records = accounting.state(path, binding)
     if canonical(counter) != canonical(audited):
         raise ValueError("storage ledger changed during observation")
-    return anchor["policy"]
+    return policy
+
+
+def storage_groups(native_generic=False):
+    # Both generations remain protected under the unchanged logical native group.
+    if native_generic:
+        return GROUPS + (("native", "native-grel-v1-jobs", "REPLAY_REQUIRED"),)
+    return GROUPS
+
+
+def merge_coverage(coverage, reasons, group, previous, reason):
+    priority = {"MISSING": 0, "SCANNED": 1, "PARTIAL": 2, "BLOCKED": 3}
+    if previous is not None and priority[previous] > priority[coverage[group]]:
+        coverage[group], reasons[group] = previous, reason
 
 
 def snapshot(io, root, is_active, lock_held=True, native_generic=False):
-    if native_generic:
-        raise ValueError("native generic storage consumer qualification required")
     artifacts, coverage = [], {}
     reasons = {}
     aggregates = {}
@@ -601,8 +632,12 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
     is_active = is_active or not lock_held
     scanned = 0
     hash_budget = [0]
-    for group, relative, retention in GROUPS:
-        budget = [0]
+    budgets = {}
+    for group, relative, retention in storage_groups(native_generic):
+        # Sharing the native logical budget retains the original six-group bound.
+        budget = budgets.setdefault(group, [0])
+        starting_nodes = budget[0]
+        previous, previous_reason = coverage.get(group), reasons.get(group)
         try:
             parent = io.open(root, relative, directory=True)
         except OSError as exc:
@@ -610,6 +645,7 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
             reasons[group] = "missing" if exc.errno == errno.ENOENT else "io_unavailable"
             if exc.errno != errno.ENOENT:
                 complete = False
+            merge_coverage(coverage, reasons, group, previous, previous_reason)
             continue
         try:
             coverage[group] = "SCANNED"
@@ -621,7 +657,9 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
                     coverage[group], complete = "PARTIAL", False
                     reasons[group] = "scan_limit" if budget[0] >= MAX_NODES else "artifact_limit"
                     break
-                identity = "sa-" + digest([group, name])
+                identity = "sa-" + digest(
+                    [group, relative, name] if relative == "native-grel-v1-jobs" else [group, name]
+                )
                 disposition = retention
                 analysis, extracted = "unknown", None
                 replay, evidence = retention == "REPLAY_REQUIRED", retention == "EVIDENCE_REQUIRED"
@@ -645,7 +683,25 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
                     elif group in ("native", "diagnostic", "pvt", "headroom") and UUID.match(name):
                         leaf = io.open(parent, name, directory=True)
                         try:
-                            request = read_json(io, leaf, "request.json", 2048)
+                            if (relative == "native-grel-v1-jobs" or
+                                    group == "native" and "request.json" not in io.names(leaf)):
+                                work = private_directory(io, leaf, "work")
+                                try:
+                                    operation = private_directory(io, work, "operation")
+                                    try:
+                                        request = read_json(
+                                            io, operation, "admission.json", 65536, private=True
+                                        )
+                                    finally:
+                                        os.close(operation)
+                                finally:
+                                    os.close(work)
+                                if (request.get("operation_id") != name or
+                                        request.get("plan_sha256") != digest(request["plan"])):
+                                    raise ValueError("native storage admission identity")
+                                request = request["plan"]
+                            else:
+                                request = read_json(io, leaf, "request.json", 2048)
                             if request.get("analysis") in ("dc", "ac", "tran"):
                                 analysis = request["analysis"]
                         finally:
@@ -724,7 +780,8 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
             reasons[group] = "directory_unavailable_or_bounded"
         finally:
             os.close(parent)
-            scanned += budget[0]
+            scanned += budget[0] - starting_nodes
+            merge_coverage(coverage, reasons, group, previous, previous_reason)
     for key in sorted(aggregates):
         item, frames = aggregates[key]
         item["fingerprint"] = digest(frames)
@@ -750,7 +807,7 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
     disk = os.fstatvfs(root)
     is_active = is_active or any(a["active_dependency"] for a in artifacts)
     value = dict(
-        contract_version=2 if policy else 1,
+        contract_version=(3 if "policy_sha256" in policy else 2) if policy else 1,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,
@@ -1085,7 +1142,8 @@ def execute_fixed(root_path, action, request, before=None, native_generic=False)
                 if before is not None:
                     before()
                 guard()
-                active = active_eda(root_path)
+                active = (active_eda(root_path, native_generic=True)
+                          if native_generic else active_eda(root_path))
                 if action == "inventory":
                     value = snapshot(io, root, active, native_generic=native_generic)
                 else:
