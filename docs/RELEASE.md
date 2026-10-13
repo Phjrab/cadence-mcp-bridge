@@ -1,6 +1,34 @@
 # Packaging and Release
 
-## Current public readiness, 2026-10-06
+## Current 2.0.0 preparation, 2026-10-13
+
+The current release targets the professor-provided standard CentOS/Cadence/PDK
+VM in personal VMware, with each operator registering private settings and their
+own circuits. Development package/runtime/lock metadata are 2.0.0. The major
+version records the breaking bare-launch migration: existing reference users
+select explicit `serve`; new operators configure `serve-operator`.
+
+Installed executable source `5e642986b10a11aa5f38d462bc39127fb280fd91` completed
+new comparator AC and actual Codex inverter DC with automatic extraction. Actual
+Codex restart, result retrieval and identical-ID retry preserve the completed job
+and add zero spend. The retained ledger is 112 attempts / 13,825,474,560 bytes.
+Earlier two-circuit DC/AC/TRAN and bounded Sweep evidence retains its source scope.
+See [current actual-app evidence](generic_release/ACTUAL_APP_RECOVERY_20261013.md)
+and the [2.0.0 installation draft](generic_release/INSTALL_DRAFT_2_0_0.md).
+
+Final normal integration, exact candidate artifacts, versioned installation
+transitions and hosted source-archive checks remain pending. The final external
+`GENERIC_RELEASE_GATE-2.0.0.json` will bind that exact commit, files and evidence.
+Imported planning/history and affected external adaptations retain separate
+LEGAL_REVIEW_REQUIRED status; artifact exclusion is not blanket rights clearance.
+No tag, Release or upload is authorized until the user approves the identical
+finished candidate. PyPI/MCPB and the POST-01–07 proposals are separate decisions.
+
+The dated readiness and workflows below preserve the 2026-10-06 checkpoint.
+Use the current 2.0.0 installation draft and eventual exact-candidate receipt for
+the new operator release; the old tool counts and version are historical.
+
+## Historical public readiness, 2026-10-06
 
 The repository is public and v1.0.0 was published on 2026-08-31. Its tag peels
 to `8a0d44fab90e2095cc39322baef60fc09d741cd6`. The GitHub release body and

@@ -1,3 +1,16 @@
+## Actual Codex restart recovery completed, 2026-10-13
+
+Actual corrected5e/97fa Codex restart status/result/identical-ID submission PASS;
+receipt, event_count5, revision5 and result/provenance equal before restart.
+Fresh installed read-only accounting remains112/13,825,474,560; this recovery adds0.
+Postreview2/256MiB scope is fully spent;16GiB/500/corrections20 and all history remain.
+No further restart is needed for this check. Exact28cf four hosted checks and
+independent review6137307439 report PASS/no major issues, not formal APPROVED.
+Finish final documentation, normal PR152 integration and exact GREL08 candidate
+artifacts/hosted archives/install transitions/rights scope/hashes. Publication
+requires the identical finished candidate approval. POST-01–07 remain proposals.
+See generic_release/ACTUAL_APP_RECOVERY_20261013.md; earlier checkpoints remain source-specific history.
+
 ## Corrected-source actual app success; recovery restart pending, 2026-10-13
 
 Actual Codex on installed5e64298/native97fa1aa6 submitted a new inverterDC,
@@ -77,7 +90,7 @@ needed for these descriptive/package checks. Last actual accounting remains110/
 Original OA/ADE/PDK/vendor/license/results/failures/journals and accounting stay.
 
 Final readiness is an exact frozen remote commit and external release-receipt
-decision. GENERIC_RELEASE_GATE_2.0.0.json, installation/release notes, asset list
+decision. GENERIC_RELEASE_GATE-2.0.0.json, installation/release notes, asset list
 and SHA256SUMS must identify that commit and independently inspected artifacts.
 This avoids claiming a self-referential commit hash inside its own source tree.
 The current source snapshot still records pending final merge/hosted-archive

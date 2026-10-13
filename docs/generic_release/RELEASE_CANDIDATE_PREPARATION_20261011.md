@@ -1,9 +1,18 @@
-> Latest2026-10-12 evidence: exact installed2.0.0/source32acbb4/native553b90fa
+> Current2026-10-13 update: installed2.0.0 executable source5e642986/native97fa1aa6
+> passes new comparatorAC and actual Codex inverterDC with automatic extraction.
+> The completed app job survives actual restart/result/same-ID retry with0 added
+> spend. Retained accounting is112/13,825,474,560 bytes; the postreview2-job/256MiB
+> grant is fully spent. Final integration, exact candidate artifacts, versioned
+> installation transitions, hosted archives and scoped rights checks remain pending.
+> The final external receipt will be `GENERIC_RELEASE_GATE-2.0.0.json`.
+> See ACTUAL_APP_RECOVERY_20261013.md. The dated preparation below remains history.
+>
+> Historical2026-10-12 evidence: exact installed2.0.0/source32acbb4/native553b90fa
 > actual Codex newDC/extraction/result/retry/actual restart PASS with0 duplicate spend.
 > Native execution assets equal earlier seven-job721fd231 except installer.py.
 > Normal PR150 main07427767 and final15115c CI PASS; integrated candidate/artifact/
 > versioned transition/source archives remain pending. This dated preparation file
-> below is preserved history; use FINAL_QUALIFICATION_20261012.md for current scope.
+> below is preserved history; FINAL_QUALIFICATION_20261012.md records that scope.
 
 # Release candidate preparation, 2026-10-11
 

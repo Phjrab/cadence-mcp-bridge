@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "observed_date": "2026-10-13",
-  "generic_release_gate": "BLOCKED_FINAL_ACTUAL_APP_RECOVERY_RESTART_AND_FROZEN_CANDIDATE",
+  "generic_release_gate": "BLOCKED_FINAL_INTEGRATION_AND_FROZEN_CANDIDATE",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
   "source_checkpoint": "5e642986b10a11aa5f38d462bc39127fb280fd91",
-  "later_scope_correction": "EXACT_REVIEW_CI_INSTALLED_VM_AC_AND_ACTUAL_CODEX_DC_PASS_RECOVERY_RESTART_PENDING",
+  "later_scope_correction": "EXACT_REVIEW_CI_INSTALLED_VM_AC_ACTUAL_CODEX_DC_AND_APP_RESTART_PASS",
   "live_native_bundle_sha256": "97fa1aa6d3242c0f98072de28f8a6ecdfec27421ec61bbf63dec4f25769c4760",
   "publication_authorized": false,
   "resource": {
@@ -15,8 +15,8 @@
     "remaining_bytes": 3354394624,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
-    "new_simulations_this_continuation": 1,
-    "new_reservations_this_continuation": 134217728,
+    "new_simulations_this_continuation": 0,
+    "new_reservations_this_continuation": 0,
     "reserved_mib_observed": 13185,
     "remaining_mib": 3199
   },
@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "PENDING_FINAL_SAME_JOB_ACTUAL_APP_RESTART",
-      "evidence_scope": "Installed5e64298 actual Codex new inverterDC/extraction/result/identical retry PASS. Separate installed-process replay adds0. Prior32ac actual app restart remains source-specific history; same completed5e job after actual app restart is pending."
+      "status": "PASS_ACTUAL_NEW_JOB_AND_SAME_JOB_APP_RESTART",
+      "evidence_scope": "Installed5e64298 actual Codex new inverterDC/extraction/result/identical retry PASS. Actual app restart returns identical status, result and receipt; fresh accounting112/13,825,474,560 is unchanged. Separate installed-process replay also adds0."
     },
     {
       "id": "G16",
@@ -114,7 +114,7 @@
     {
       "id": "G19",
       "status": "FINAL_REMOTE_COMMIT_AND_ARTIFACT_RECEIPT_PENDING",
-      "evidence_scope": "Version2.0.0 justified by bare-launch migration. Final merge/remote identity and exact candidate release files/hashes are external receipt gates; no publication is authorized. Frozen GENERIC_RELEASE_GATE_2.0.0.json must identify the exact commit and inspected assets."
+      "evidence_scope": "Version2.0.0 justified by bare-launch migration. Final merge/remote identity and exact candidate release files/hashes are external receipt gates; no publication is authorized. Frozen GENERIC_RELEASE_GATE-2.0.0.json must identify the exact commit and inspected assets."
     }
   ],
   "conditional": {
@@ -129,7 +129,8 @@
     "NATIVE_SWEEP_SPEC_V1.md",
     "NATIVE_RESUME_BOUNDARY.md",
     "GREL_07_RESULT.md",
-    "FINAL_QUALIFICATION_20261012.md"
+    "FINAL_QUALIFICATION_20261012.md",
+    "ACTUAL_APP_RECOVERY_20261013.md"
   ],
   "synthetic_vm_scenarios": 17,
   "current_parser_actual_baselines": 6,
@@ -188,18 +189,6 @@
   },
   "completed_result_size_evidence": "ACTUAL553B90FA_COMPLETED_BOUNDED_VERIFIED_RESULT_PASS",
   "historical_receipts": "Dated policy/continuation/metadata records retained; current direct16GiB/500/20/GREL02-08/conditional normal merges override earlier exclusions only in their explicit scope.",
-  "current_actual_app": {
-    "bridge_version": "2.0.0",
-    "source_commit": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
-    "fresh_new_job": "PASS",
-    "automatic_result": "PASS",
-    "same_id_retry": "PASS_NO_EXTRA_SPEND",
-    "actual_restart": "PASS_IDENTICAL_RESULT_AND_RECEIPT",
-    "accounting_attempts": 110,
-    "accounting_reserved_bytes": 13557039104,
-    "developer_private_journal_dependency": false,
-    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
-  },
   "current_installed_execution_historical": {
     "source_commit": "40c879b102bdc0a83fe8d199c26b615eb5d7252f",
     "wheel_sha256": "cd6b8477931e951d8bc78ed6c2ea3ecd9bafb7595c9e8c620ed4f94cca39daae",
@@ -309,10 +298,11 @@
     "final_pr_merge": "PENDING",
     "exact_frozen_candidate": "PENDING",
     "publication_authorized": false,
-    "actual_same_job_app_restart": "PENDING_USER_RESTART",
+    "actual_same_job_app_restart": "PASS_IDENTICAL_STATUS_RESULT_RETRY_AND_ZERO_ACCOUNTING_DELTA",
     "post_review_regression_spent_attempts": 2,
     "post_review_regression_spent_bytes": 268435456,
-    "final_documentation_review_comment": 6136302136
+    "final_documentation_review_comment": 6137307439,
+    "documentation_checked_head": "28cf4110ad4cff77eb05f5a278b8de39dfe719b4"
   },
   "post_release_proposals": {
     "status": "NOT_ACTIVE_NOT_IMPLEMENTATION_AUTHORITY",
@@ -326,5 +316,31 @@
       "POST-07"
     ],
     "next_step": "After2.0.0 completion propose POST-01 scope and acceptance; preserve all counters"
+  },
+  "actual_app_32ac_historical": {
+    "bridge_version": "2.0.0",
+    "source_commit": "32acbb4c937743c3c8908c08e5eb40cda44a3aed",
+    "fresh_new_job": "PASS",
+    "automatic_result": "PASS",
+    "same_id_retry": "PASS_NO_EXTRA_SPEND",
+    "actual_restart": "PASS_IDENTICAL_RESULT_AND_RECEIPT",
+    "accounting_attempts": 110,
+    "accounting_reserved_bytes": 13557039104,
+    "developer_private_journal_dependency": false,
+    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
+  },
+  "current_actual_app": {
+    "bridge_version": "2.0.0",
+    "source_commit": "5e642986b10a11aa5f38d462bc39127fb280fd91",
+    "fresh_new_job": "PASS",
+    "automatic_result": "PASS",
+    "same_id_retry": "PASS_NO_EXTRA_SPEND",
+    "actual_restart": "PASS_IDENTICAL_STATUS_RESULT_AND_RECEIPT",
+    "accounting_attempts": 112,
+    "accounting_reserved_bytes": 13825474560,
+    "restart_added_attempts": 0,
+    "restart_added_reserved_bytes": 0,
+    "developer_private_journal_dependency": false,
+    "wire_complete_schema_observation": "SDK_SEPARATE_NOT_FULL_APP_WIRE"
   }
 }

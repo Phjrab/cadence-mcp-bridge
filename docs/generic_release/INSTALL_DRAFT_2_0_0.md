@@ -1,9 +1,12 @@
 # Standard VM installation draft for 2.0.0
 
 **DRAFT / NOT_RC_READY / DO_NOT_PUBLISH.** The final commit, versioned assets and
-SHA-256 list are not frozen. Exact installed2.0.0 now has actual Codex new-job,
-automatic result, same-ID retry and restart recovery evidence. Final integrated
-artifact/installation transition checks remain before shipping this guide.
+SHA-256 list are not frozen. Installed executable source
+`5e642986b10a11aa5f38d462bc39127fb280fd91` has actual Codex new-job, automatic
+result, same-ID retry and completed-job restart recovery evidence with zero
+duplicate spend. Final integrated artifact/installation transition and hosted
+archive checks remain before shipping this guide. The final external
+`GENERIC_RELEASE_GATE-2.0.0.json` will bind the exact commit and distribution files.
 
 ## Host installation from reviewed release files
 

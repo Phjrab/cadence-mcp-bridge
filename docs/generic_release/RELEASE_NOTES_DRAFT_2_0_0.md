@@ -1,9 +1,12 @@
 # Release notes draft: 2.0.0
 
 **NOT_FROZEN / NOT_RC_READY / DO_NOT_PUBLISH.** Version2.0.0 reflects the required
-launch migration. Exact installed2.0.0 has actual new Codex job/extraction/result/
-same-ID retry/restart evidence. Final integrated artifacts, installation transitions
-and candidate commit/file/hash set remain pending; the release gate is **BLOCKED**.
+launch migration. Installed executable source
+`5e642986b10a11aa5f38d462bc39127fb280fd91` has actual new Codex job/extraction/result/
+same-ID retry/completed-job restart evidence. Final integrated artifacts,
+installation transitions, hosted archives and candidate commit/file/hash set remain
+pending; the release gate is **BLOCKED**. The final external
+`GENERIC_RELEASE_GATE-2.0.0.json` will bind that exact candidate and scoped evidence.
 
 ## Breaking launch change and migration
 
@@ -47,16 +50,23 @@ Registered measurement/specification definitions remain bound to provenance,
 units and conditions. Missing targets yield NOT_EVALUATED; these tests make no
 claim that a QA circuit meets an invented performance goal or is optimal.
 
-Current actual standard-VM evidence covers two distinct new inverter/comparator
-sources through the same registered implementation. Installed8aad03d/721fd231
-completed inverterAC/TRAN, comparatorDC/AC/TRAN and AC two-point Sweep; exact
-installed32acbb4/553b90fa completed a new inverterDC through actual Codex.
-All six analysis routes automatically extract bounded results and protect effective
-inputs/source/model baselines. The later bundle changes installer.py alone; all
-worker/rendering/input/reader and other native bytes match. Same-ID/new-process
-Sweep recovery and actual Codex restart/query/retry add no spend. QA specification
-controls cover PASS/FAIL/NOT_EVALUATED/CONDITION_MISMATCH without invented goals.
-Final integrated artifacts and installation transitions remain separate gates.
+Actual standard-VM evidence covers two distinct new inverter/comparator sources
+through the same registered implementation. Historical installed8aad03d/721fd231
+completed inverterAC/TRAN, comparatorDC/AC/TRAN and AC two-point Sweep;
+installed32acbb4/553b90fa completed inverterDC through actual Codex. These six
+analysis routes automatically extracted bounded results and protected effective
+inputs/source/model baselines at their recorded source versions.
+
+Corrected installed source5e642986/native97fa1aa6 completed a fresh comparatorAC
+regression and a fresh actual Codex inverterDC, with automatic extraction and
+protected originals. Its changed migration, dispatcher, worker, provider and closed
+document parsing have separate local/installed/Python2.6 synthetic evidence.
+The earlier six routes and Sweep were not all rerun on this corrected source.
+Same-ID/new-process recovery and completed-job actual Codex restart/query/retry
+add zero spend. The retained ledger is112 attempts/13,825,474,560 bytes; the
+postreview2-job/256MiB grant is fully spent. QA specification controls retain
+PASS/FAIL/NOT_EVALUATED/CONDITION_MISMATCH without invented goals. Final integrated
+artifacts and installation transitions remain separate gates.
 
 Observed reference versions are CentOS6.5 i686/Python2.6.6, Virtuoso
 IC6.1.5.500.15 and Spectre12.1.0.347.isr3, with ordinary OCEAN execution observed
@@ -111,8 +121,10 @@ unknown jobs rather than retrying with new identities or deleting their journals
 
 Apache-2.0 covers original bridge material within the reviewed rights scope.
 Cadence/PDK/client/dependency terms remain separate. Imported planning remains
-LEGAL_REVIEW_REQUIRED and is excluded from curated packages and audited new
-source archives; exclusion does not clear history or external adaptations.
+LEGAL_REVIEW_REQUIRED and is excluded from curated packages and previously audited
+new source archives; the final hosted archives still need inspection. Exclusion
+does not clear history or affected external adaptations, including any retained
+adaptations in the final source archives.
 Exact final source ZIP/tar.gz, wheel/sdist, install contents, secrets/notices,
 upgrade/downgrade and asset hashes must pass before this draft can be finalized.
 

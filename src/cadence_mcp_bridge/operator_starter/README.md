@@ -1,4 +1,4 @@
-# Standard VM operator setup (release work in progress)
+# Standard VM operator setup
 
 Support is the professor-provided CentOS/Cadence/PDK VM, or an equivalent
 reproduced installation, running in a personal VMware. Current VM observations
@@ -13,20 +13,23 @@ SSH key, circuit, PDK model, results or license. Replace example settings with
 observed operator data. Never copy another operator's authority or identifiers.
 Current native routes require explicit configuration, a trusted installed bundle
 and OS-operator confirmation. Import, doctor and server startup do not provision.
-Release acceptance still requires installed fresh-operator and actual-client proof.
+Each operator must qualify their installed environment and an actual client job;
+configuration validation alone does not establish successful Cadence execution.
 
 ## Install and local configuration
 
-Install Python 3.12 or 3.13 on the Windows host in a dedicated virtual environment;
-do not change the guest system Python. Install the verified wheel and its locked
+Use Python 3.12 on the Windows host in a dedicated virtual environment. Python
+3.13 is accepted by the package but has no actual environment qualification here.
+Do not change the guest system Python. Install the verified wheel and its locked
 runtime dependencies from the release archive. Verify the archive SHA-256 list
 before installing. Do not install this bridge or run EDA as root.
 
 Use `python -m cadence_mcp_bridge operator-starter --output NEW_EMPTY_DIRECTORY`
 to export this guide and three fictional templates. The command is local-only,
 exclusive and never overwrites an installation. Run `doctor` for host prerequisites.
-Every command below has `--help`; schema commands print the complete closed JSON
-schema rather than accepting shell, SKILL or OCEAN text from a model.
+Host CLI commands provide `--help`; schema commands print complete closed JSON
+schemas. Exported guest helpers use the fixed protocols stated below. Model inputs
+cannot supply shell, SKILL or OCEAN text.
 
 Register your own SSH alias, known host key, ordinary guest account and private
 workspace. Keep host-key checking on and credentials in your SSH agent/config.
@@ -70,9 +73,31 @@ Run the read-only runner trust/preflight path for your observed environment.
 `runner repair-plan --profile ENV --output NEW_PLAN` enumerates exact code
 paths, symlinks, metadata, contents and proposed shared-write-bit removals.
 `runner export-repair-helper --output NEW_HELPER` exports the fixed helper.
-Your VM owner must approve that exact bounded plan, preserve rollback information,
-and apply only its listed targets via their normal administrator access. See the
-exported helper's `--help` for apply/verify/rollback and exact plan hash arguments.
+Your VM owner must approve that exact bounded plan and preserve rollback information.
+Create a private JSON application request with exactly three fields: `plan` is the
+full `plan` object from the repair receipt, `expected_plan_sha256` is that receipt's
+`plan_sha256`, and `operator_authority` is a 1–512 character reference to the actual
+VM owner's approval. Generated plan/request text does not create that authority.
+Transfer the exported helper and private request through your trusted operator
+workflow, checking the helper against its exported SHA-256. This guest example
+names the exported helper `repair.py` and the request `apply-request.private.json`:
+
+```sh
+/usr/bin/python -E -s -B repair.py apply < apply-request.private.json
+```
+
+Use ordinary ownership privileges if sufficient, otherwise existing legitimate
+administrator authentication for this fixed helper. Preserve private JSONL output,
+stderr and its durable receipt. Repeat the same request after an interruption only
+when its recorded partial state is understood. Authorized rollback uses the same
+request and authenticated receipt:
+
+```sh
+/usr/bin/python -E -s -B repair.py rollback < apply-request.private.json
+```
+
+Keep the isolated Python flags. Recheck with ordinary-user read-only `runner trust`
+and `runner repair-plan`, then the applicable environment/native preflight.
 No recursive broad chmod/chown, license changes or security disabling is needed.
 Do not blindly trust unexplained content changes. Recheck under the normal user.
 Writable caches, logs and results must remain separate from executable code.
