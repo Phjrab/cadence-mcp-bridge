@@ -1,3 +1,33 @@
+## Active POST-03 existing-result reports, 2026-10-13
+
+POST-02 PR154 exactd4f23c0 passed both hosted Windows/POSIX checks and remains
+open. POST-03 branches from that head; neither feature changes published2.0.0.
+Read-only native journal catalogs and authenticated existing-result captures now
+preserve verified conditions, quantities, units, definitions and provenance.
+Offline search/comparison rejects condition mismatches and labels imported files
+as local content, not new remote attestations. No submit/extraction path is used.
+
+Final affected126 tests, Ruff/mypy102, security18/locked audit, package/compatibility
+PASS. Initial full3628 PASS/392 skips/three failures: traced a271-character Windows
+disposable fixture audit path; short report/storage91 PASS/8 platform skips without
+changing storage code. Final short-root full/hosted checks remain separate gates.
+Source-host CLI captured one existing actual VM DC
+result twice, four quantities equal, selected local inputs and journal unchanged.
+No simulation/extraction/reservation; fresh ledger112/13,825,474,560 and native
+correction20/20 retained. Installed report checks use synthetic data. Locked final
+wheel also captured/repeated the actual VM result with selected inputs/journal
+preserved. No actual
+POST-03 app qualification is claimed. See docs/POST_03_RESULT_REPORTS.md.
+
+Latest explicit Claude access authorization passes window/accessibility reading.
+Screenshot capture and one normal reconnect timed out; POST-06 actual app/build
+verification stays pending, not substituted by SDK success. Continuous POST-04--07
+implementation approval remains; exact deletion and scientific testbench/action
+gates persist. Retained native source correction ceiling20/20 blocks required new
+worker changes until a numeric decision; proposal24 is not active policy. See
+docs/POST_04_07_RUNTIME_BOUNDARY.md. POST PRs have no new inferred merge/publication authority.
+Earlier dated checkpoints below retain their original evidence and scope.
+
 ## Active POST-02 and continuous POST-03--07 approval, 2026-10-13
 
 POST-01 PR153 normally merged at67c21a70b1eb5af1f82d2b21e0b6e3df1239bc01.

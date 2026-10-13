@@ -1,3 +1,30 @@
+## Active POST-03; continuous POST-04--07, 2026-10-13
+
+Finish read-only retained job catalog, authenticated existing-result report capture
+and condition-compatible offline search/comparison. Preserve quantities, units,
+definitions, job/plan/provenance and explicit capture-date semantics. Reporting
+must never submit/reconcile/extract/reserve or initialize an absent journal.
+Existing85+11 tool contracts and immutable published2.0.0 remain unchanged.
+
+Final affected126/static/security/package/compatibility PASS. Locked installed
+actual existing DC result capture/repeat PASS with journal/selected inputs unchanged.
+Initial full3628 PASS/392 skips/three long Windows fixture failures retained;
+short-path report/storage91 PASS/8 skips with no storage code change. Final full
+and feature-SHA hosted checks remain separate gates. Actual accounting112 attempts/
+13,825,474,560 bytes and corrections20/20 remain retained. Document installed
+synthetic, source-host VM and actual-client evidence separately, then create a
+stacked feature PR over POST-02. Do not infer POST merge/publication permission.
+
+Continue approved POST-04 recovery, POST-05 safe exact-target deletion before
+separate compaction, POST-06 published-build actual Claude and POST-07 scientific
+measurement work. Latest explicit Claude access passes accessibility reading;
+screen capture/reconnect timed out. No stale-coordinate inputs or permission
+bypass; actual app acceptance is pending. Exact deletion targets and scientific
+testbench/action authority remain binding. Native source ceiling20/20 is retained;
+the numeric24 proposal remains pending, without further worker changes or resets.
+See POST_03_RESULT_REPORTS.md and POST_04_07_RUNTIME_BOUNDARY.md.
+Earlier entries below remain dated history.
+
 ## Active POST-02; POST-03--07 continuous approval, 2026-10-13
 
 POST-01 PR153 merged normally at67c21a7. Implement/test/document POST-02 feature

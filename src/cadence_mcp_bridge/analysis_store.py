@@ -38,8 +38,12 @@ class AnalysisStore:
         self.path = path.absolute()
 
     @contextmanager
-    def connection(self, *, create: bool) -> Iterator[sqlite3.Connection]:
+    def connection(
+        self, *, create: bool, read_only: bool = False,
+    ) -> Iterator[sqlite3.Connection]:
         connection = None
+        if create and read_only:
+            raise ConfigurationError("Read-only journal access cannot create state")
         try:
             for component in (self.path, *self.path.parents):
                 if component.is_symlink() or component.is_junction():
@@ -64,6 +68,10 @@ class AnalysisStore:
                     or metadata.st_nlink not in (0, 1)
                 ):
                     raise ConfigurationError("Analysis journal is unavailable")
+                if read_only:
+                    # Do not let reporting create shared-memory state or attempt
+                    # rollback recovery. Existing status/writer paths own recovery.
+                    raise ConfigurationError("Read-only journal snapshot is unavailable")
             new = False
             if not self.path.exists():
                 if not create:
@@ -75,9 +83,21 @@ class AnalysisStore:
                     new = True
                 except FileExistsError:
                     pass
-            connection = sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True, timeout=5)
-            connection.execute("PRAGMA synchronous=FULL")
-            connection.execute("BEGIN IMMEDIATE")
+            if read_only:
+                with self.path.open("rb") as stream:
+                    header = stream.read(20)
+                if header[:16] != b"SQLite format 3\x00" or header[18:20] != b"\x01\x01":
+                    raise ConfigurationError("Read-only journal snapshot is unavailable")
+            connection = sqlite3.connect(
+                self.path.as_uri() + ("?mode=ro" if read_only else "?mode=rw"),
+                uri=True, timeout=5,
+            )
+            if read_only:
+                connection.execute("PRAGMA query_only=ON")
+                connection.execute("BEGIN")
+            else:
+                connection.execute("PRAGMA synchronous=FULL")
+                connection.execute("BEGIN IMMEDIATE")
             if new:
                 connection.execute(f"PRAGMA application_id={APPLICATION_ID}")
                 connection.execute("PRAGMA user_version=1")
