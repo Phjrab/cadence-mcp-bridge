@@ -1,3 +1,24 @@
+## POST-03 final PASS; independent POST-05 safety record, 2026-10-13
+
+POST-03 final1efc811/PR155 passed local3632 tests and both exact hosted checks;
+installed actual existing DC reporting/repeat and synthetic protocol/package
+preservation pass. Keep PR155 stacked on154, published2.0.0 and all existing data
+unchanged. No POST merge/publication authority is inferred.
+
+Record the existing five-tool selective cleanup flow and actual connected Codex
+plan/dry-run/repeat. Protected DC groups are excluded; the inspected intermediate
+dry-run removes0, refunds0 and preserves snapshot and112/13,825,474,560. This is
+safety evidence, not a real user deletion selection or compaction qualification.
+The user's exact future selection and existing independent operator consent remain
+required; do not choose/delete historical objects on their behalf.
+
+Continue approved extraction recovery and measurements when the retained native
+20/20 source ceiling receives a numeric decision; proposed24 is not active policy.
+Actual Claude access passes but screen capture/reconnect times out. Wait for window
+restoration/capture recovery before UI actions; keep POST-06 unverified. No current
+Codex restart is required. See POST_05_SELECTION_SAFETY.md and
+POST_04_07_RUNTIME_BOUNDARY.md. Older entries below retain their checkpoint scope.
+
 ## Active POST-03; continuous POST-04--07, 2026-10-13
 
 Finish read-only retained job catalog, authenticated existing-result report capture

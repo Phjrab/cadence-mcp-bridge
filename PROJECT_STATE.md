@@ -1,3 +1,26 @@
+## POST-03 verified; POST-05 safety checkpoint and external boundaries, 2026-10-13
+
+POST-03 PR155 final1efc811 is ready for review, stacked on open POST-02 PR154.
+Final local full3632 PASS/392 skips/56 existing warnings; hosted Windows3643 PASS/
+373 skips, both Windows/POSIX checks SUCCESS at that exact head. Static/security/
+locked audit/compatibility/package PASS; locked installed wheel actual existing
+DC report/repeat preserves four quantities, selected inputs and journal. No POST
+merge or publication is inferred, and published2.0.0 remains immutable.
+
+POST-05 reuses the existing storage engine. Actual connected Codex/native VM
+inventory/plan excludes protected DC results; permitted12288-byte intermediate
+dry-run and identical-ID repeat preserve snapshot and112/13,825,474,560 consumption.
+No deletion/refund/new simulation/reservation/native update/admin change occurred.
+Current user has selected no historical deletion target. Original PSF/results remain
+protected; compaction is a separate unimplemented step. See POST_05_SELECTION_SAFETY.md.
+
+Continuous POST-04--07 approval remains, with current native source ceiling20/20.
+Proposed24 is awaiting a numeric user decision; no source count or policy reset.
+Claude app access now passes; screenshot and fresh-window recovery timed out.
+Actual Claude verification awaits window restoration/capture recovery, not repeated
+task approval. Existing operator/data/security boundaries remain binding.
+Earlier pending statements below retain their original checkpoint scope.
+
 ## Active POST-03 existing-result reports, 2026-10-13
 
 POST-02 PR154 exactd4f23c0 passed both hosted Windows/POSIX checks and remains
