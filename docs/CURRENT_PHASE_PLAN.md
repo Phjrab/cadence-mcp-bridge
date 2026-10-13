@@ -1,3 +1,17 @@
+## Corrected-source actual app success; recovery restart pending, 2026-10-13
+
+Actual Codex on installed5e64298/native97fa1aa6 submitted a new inverterDC,
+completed automatic extraction and verified results. Same-ID app retry and
+separate-process replay retain revision5/event_count5 and add0 spend. Fresh
+ledger112/13,825,474,560; this continuation1/128MiB, postreview2/256MiB grant
+fully spent. Global remaining3,354,394,624 under16GiB/500; native corrections20/20.
+End for actual app restart, then query/result/retry the same saved ID with no
+new grant/job. Settings already correct. All58934a4 CI checks and independent
+review pass; final152 normal merge and exact GREL08 candidate remain pending.
+User separates proposed POST-01–07 from current2.0.0; do not implement them now.
+After2.0.0, propose POST-01 scope/acceptance. Public identical-candidate approval
+remains required. See ACTUAL_APP_SUCCESS_20261013.md; older entries are history.
+
 ## Exact corrected runtime and actual AC checkpoint, 2026-10-13
 
 Tested executable source5e642986b10a11aa5f38d462bc39127fb280fd91 has four

@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
   "observed_date": "2026-10-13",
-  "generic_release_gate": "BLOCKED_FINAL_ACTUAL_APP_RELOAD_AND_FROZEN_CANDIDATE",
+  "generic_release_gate": "BLOCKED_FINAL_ACTUAL_APP_RECOVERY_RESTART_AND_FROZEN_CANDIDATE",
   "scope": "PROFESSOR_STANDARD_CENTOS_CADENCE_PDK_VM_PERSONAL_VMWARE",
   "other_hosts_versions_pdks": "DEFERRED",
   "source_checkpoint": "5e642986b10a11aa5f38d462bc39127fb280fd91",
-  "later_scope_correction": "EXACT_REVIEW_CI_INSTALLED_VM_AC_PASS_APP_DC_RELOAD_PENDING",
+  "later_scope_correction": "EXACT_REVIEW_CI_INSTALLED_VM_AC_AND_ACTUAL_CODEX_DC_PASS_RECOVERY_RESTART_PENDING",
   "live_native_bundle_sha256": "97fa1aa6d3242c0f98072de28f8a6ecdfec27421ec61bbf63dec4f25769c4760",
   "publication_authorized": false,
   "resource": {
-    "attempts_observed": 111,
-    "reserved_bytes_observed": 13691256832,
+    "attempts_observed": 112,
+    "reserved_bytes_observed": 13825474560,
     "result_ceiling_bytes": 17179869184,
-    "remaining_bytes": 3488612352,
+    "remaining_bytes": 3354394624,
     "spectre_ceiling": 500,
     "same_change_corrections_ceiling": 20,
     "new_simulations_this_continuation": 1,
     "new_reservations_this_continuation": 134217728,
-    "reserved_mib_observed": 13057,
-    "remaining_mib": 3327
+    "reserved_mib_observed": 13185,
+    "remaining_mib": 3199
   },
   "mandatory": [
     {
@@ -39,7 +39,7 @@
     {
       "id": "G04",
       "status": "PASS_ACTUAL_BOUNDED_RETAINED_AUTHORITY",
-      "evidence_scope": "Earlier8-job/1GiB grants remain fully spent and preserved. Necessary postreview2-job/256MiB scope has spent1/128MiB, leaving1/128MiB; same actual ledger111/13,691,256,832 under16GiB/500/20. No reset/refund."
+      "evidence_scope": "Earlier8-job/1GiB grants and current postreview2-job/256MiB grant are fully spent and retained. Same actual ledger112/13,825,474,560 under16GiB/500/20. No reset/refund."
     },
     {
       "id": "G05",
@@ -93,8 +93,8 @@
     },
     {
       "id": "G15",
-      "status": "PENDING_CHANGED_ASSET_ACTUAL_APP_REQUALIFICATION",
-      "evidence_scope": "Prior actual32ac newDC/restart remains PASS source-specific history. Exact corrected5e installed VM AC passes; new actual CodexDC and restart are pending app reload."
+      "status": "PENDING_FINAL_SAME_JOB_ACTUAL_APP_RESTART",
+      "evidence_scope": "Installed5e64298 actual Codex new inverterDC/extraction/result/identical retry PASS. Separate installed-process replay adds0. Prior32ac actual app restart remains source-specific history; same completed5e job after actual app restart is pending."
     },
     {
       "id": "G16",
@@ -303,11 +303,28 @@
     "new_admin_changes": 0,
     "native_source_corrections": 20,
     "native_source_correction_ceiling": 20,
-    "post_review_regression_remaining_attempts": 1,
-    "post_review_regression_remaining_bytes": 134217728,
-    "actual_new_codex_dc": "PENDING_EXACT_APP_RELOAD",
+    "post_review_regression_remaining_attempts": 0,
+    "post_review_regression_remaining_bytes": 0,
+    "actual_new_codex_dc": "PASS_NEW_JOB_AUTOMATIC_RESULT_IDENTICAL_RETRY",
     "final_pr_merge": "PENDING",
     "exact_frozen_candidate": "PENDING",
-    "publication_authorized": false
+    "publication_authorized": false,
+    "actual_same_job_app_restart": "PENDING_USER_RESTART",
+    "post_review_regression_spent_attempts": 2,
+    "post_review_regression_spent_bytes": 268435456,
+    "final_documentation_review_comment": 6136302136
+  },
+  "post_release_proposals": {
+    "status": "NOT_ACTIVE_NOT_IMPLEMENTATION_AUTHORITY",
+    "phase_ids": [
+      "POST-01",
+      "POST-02",
+      "POST-03",
+      "POST-04",
+      "POST-05",
+      "POST-06",
+      "POST-07"
+    ],
+    "next_step": "After2.0.0 completion propose POST-01 scope and acceptance; preserve all counters"
   }
 }
