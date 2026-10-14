@@ -1,3 +1,23 @@
+## POST-07 next actual measurement validation, 2026-10-14
+
+Experimental host-only operator-analog implementation reads existing authenticated
+complete AC grids; default/MCP/native source unchanged. Explicit measured-reference
+downward crossing is bounded to an observed bracket; no crossing returns null.
+Related132 tests/Ruff/mypy105 pass. Actual two retained new-circuit16-point10Hz–1MHz
+reads/repeats and UID500 preflight pass, with no observed3dB crossing. Ledger114 /
+13,842,251,776 unchanged, source22/24. Prepare exact installed artifact and a
+prospectively recorded two-job wider finite AC experiment under retained16GiB/500
+and ordinary-user trust/ledger/disk/input gates. Preserve old registrations/results,
+runtime/grants/journals. PM/offset/slew need actual scientific testbench conditions;
+do not relabel legacy/synthetic facts. POST07 partial, no completion claim.
+
+Claude confirmed restart yields readable new window but click geometry and one
+fresh capture retry fail. No prompt sent; POST06 remains NOT_VERIFIED. Existing
+connection preserved beside public2.0.0 QA connection; SDK preflight is separate.
+PR157 exactfa0ebc3 hosted Windows/Linux PASS; review pending. Continue authorized
+POST02–07 independent work; no POST merge/publication or deletion inferred.
+See POST_07_GENERIC_ANALOG.md; older checkpoints retain their original scope.
+
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 
 Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original

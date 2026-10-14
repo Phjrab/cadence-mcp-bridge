@@ -1,5 +1,25 @@
 # Retained native change boundary for POST-04 and POST-07
 
+## Latest implementation and app checkpoint, 2026-10-14
+
+Native source consumption is22/24; two remain. The four-remaining statement below
+is the earlier authorization checkpoint, preserved as history. Actual shared
+ledger114 /13,842,251,776 reserved bytes is retained. POST07 adds an opt-in host
+measurement CLI over existing authenticated complete AC frames; no deployed
+native asset changes, execution or reservation. Two actual retained new-circuit
+reads/repeats and normal-user preflight pass; neither old AC interval contains a
+3dB crossing. PM/offset/slew remain scientifically blocked, not promoted from
+reference or synthetic facts. See POST_07_GENERIC_ANALOG.md.
+
+User-confirmed Claude restart yields a fresh target window. Accessibility reads
+work; indexed input fails `coordinate input geometry is unavailable`. Fresh
+window reselection and the one screenshot recovery retry fail `window capture
+timed out: timed out waiting on channel`. No prompt/input was sent. Exact public
+2.0.0 connection was added preserving the old connection/journals; SDK preflight
+passes but actual Claude acceptance remains NOT_VERIFIED. No Codex restart is
+required by these errors. Public2.0.0 remains unchanged. PR157 exactfa0ebc3 hosted
+Windows/Linux checks now both PASS; independent review remains separate.
+
 ## Current authorization, 2026-10-14
 
 The user's direct message "클로드 창 복원 확인과 증액 결정 완료" confirms the

@@ -266,8 +266,19 @@ class AuthenticatedOperatorProvider:
         """Same verified result lookup with path-free input/definition context for reports."""
         return await self._result(operation_id, plan, include_report_conditions=True)
 
+    async def analog_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Read complete bounded AC samples through the same terminal/content checks."""
+        if plan.analysis != "ac":
+            raise OperationRejected("analog_ac_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True, include_ac_spectrum=True,
+        )
+
     async def _result(
         self, operation_id: str, plan: OperationPlan, *, include_report_conditions: bool,
+        include_ac_spectrum: bool = False,
     ) -> tuple[ProviderObservation, dict[str, object]]:
         from pydantic import TypeAdapter
 
@@ -327,6 +338,7 @@ class AuthenticatedOperatorProvider:
             operation_id,
             receipt.native_input_sha256,
             frame,
+            include_ac_spectrum=include_ac_spectrum,
         )
         if projected["reader_script_sha256"] != receipt.reader_script_sha256:
             raise OperationRejected("native_provider_result_reader_drift")

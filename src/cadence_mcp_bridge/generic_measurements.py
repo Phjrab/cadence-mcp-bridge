@@ -302,6 +302,8 @@ def project_frame(
     operation_id: str,
     execution_input_sha256: str,
     frame: bytes,
+    *,
+    include_ac_spectrum: bool = False,
 ) -> dict[str, object]:
     """Validate mathematical data only. A future provider must authenticate its origin."""
     script = render_reader(context, plan, ade, reader, operation_id, execution_input_sha256)
@@ -410,6 +412,8 @@ def project_frame(
             raise OperationRejected("reader_frame_axes_mismatch")
         if plan.analysis == "ac":
             output["transfer"] = _transfer(ade, reader, axes, waves)
+            if include_ac_spectrum:
+                output["ac_spectrum"] = _transfer(ade, reader, axes, waves, all_samples=True)
         else:
             output["transient"] = _transient(ade, axes, waves)
     return output
@@ -472,6 +476,8 @@ def _transfer(
     reader: GenericReaderRegistration,
     axes: tuple[float, ...],
     waves: dict[str, tuple[tuple[float, complex], ...]],
+    *,
+    all_samples: bool = False,
 ) -> list[dict[str, object]]:
     inputs = ade.inputs
     if inputs.analysis != "ac":
@@ -488,7 +494,10 @@ def _transfer(
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
-    for i in _sample_indices(transfer.gain_frequencies_hz, axes):
+    indices = (
+        range(len(axes)) if all_samples else _sample_indices(transfer.gain_frequencies_hz, axes)
+    )
+    for i in indices:
 
         def differential(positive: str, negative: str | None, index: int) -> complex:
             return waves[positive][index][1] - (waves[negative][index][1] if negative else 0j)

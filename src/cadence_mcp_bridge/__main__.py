@@ -75,6 +75,9 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.extraction_recovery import add_recovery_parser
 
     add_recovery_parser(subparsers)
+    from cadence_mcp_bridge.generic_analog import add_analog_parser
+
+    add_analog_parser(subparsers)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -362,6 +365,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         from cadence_mcp_bridge.extraction_recovery import recovery_cli
 
         return recovery_cli(arguments)
+    if arguments.command == "operator-analog":
+        from cadence_mcp_bridge.generic_analog import analog_cli
+
+        return analog_cli(arguments)
     if arguments.command == "operator-results":
         from cadence_mcp_bridge.result_reports import results_cli
 

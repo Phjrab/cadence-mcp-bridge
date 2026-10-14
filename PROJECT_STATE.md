@@ -1,3 +1,23 @@
+## POST-07 bounded host measurements and Claude restart, 2026-10-14
+
+Separate feat/post-07-generic-analog preserves POST04/PR157 and public2.0.0.
+Opt-in operator-analog reads complete authenticated registered AC spectra and
+defines an explicit sampled-reference downward crossing, retaining source/job/
+conditions/units/hash/bracket. Ordinary result contracts/native assets unchanged.
+Related132 tests, Ruff/mypy105 PASS. Actual retained inverter/comparator AC reads
+and repeats pass; both16-point10Hz–1MHz ranges have no3dB crossing, so no numerical
+bandwidth is invented. Ordinary UID500 preflight passes; actual ledger114 /
+13,842,251,776 bytes unchanged. Native source22/24;2 remain. Exact installed wider
+AC validation and PR review/CI are pending; PM/offset/slew remain scientifically
+blocked. See docs/POST_07_GENERIC_ANALOG.md. POST07 is partial, not complete.
+
+User-confirmed Claude restart recognized a fresh window; accessibility reads pass,
+click lacks geometry and one fresh screenshot recovery times out. No prompt sent;
+published2.0.0 SDK96-tool preflight is distinct from NOT_VERIFIED actual Claude.
+PR157 exactfa0ebc3 hosted Windows/Linux both PASS; independent review remains.
+No POST merge/publication/deletion/compaction or Codex restart inferred.
+Earlier checkpoints below remain historical.
+
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 
 Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original
