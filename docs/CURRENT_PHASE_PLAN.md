@@ -1,3 +1,29 @@
+## Exact installed POST07 and remaining loop work, 2026-10-14
+
+290aab4 normal feature push/remote SHA and both hosted CI PASS. Exact private
+wheel/sdist rights/install/CLI/SDK/state checks PASS. Installed new-process
+offset read/repeat and all five same-ID requests add0; retained inverter slew
+agrees and comparator plateau rejection persists. UID500 preflight/journals/
+settings/grants/counter remain protected:121 /14,781,775,872,native22/24.
+No formal review submissions/threads are observed; PR158 remains draft.
+See POST_07_INSTALLED_RESULT_V1.md for exact artifact hashes/scoped results.
+
+Continue PM with a separately owned ideal-unilateral-feedback QA fixture,
+explicit injection sign/DC/load checks and actual return-ratio proof. Read-only
+vcvs/vdc symbol inspection passes. Retained first OA preparation failed on
+protected SKILL constant t; local wrapper failures spent0. Minimal variable-only
+v4 correction passes OA pin-map/check/save, followed by common DC/AC netlisting
+and effective-input checks. Observed fixture has unity unilateral VCVS and
+DC0/AC1 series injection with isolated return node. Next verify default zero AC
+on unexcited bias/supply, fixed DC/load, sign/calibration and bounded sampled
+crossings before registering/executing a finite retained-ledger loop experiment.
+Reuse these source/state/input receipts; do not recreate successful preparation.
+Do not equate OA/netlisting with PM or
+ordinary AC phase with loop margin. No new native assets or experiments were
+accepted for this preparation. Claude input remains geometry/capture blocked;
+public app local user-supplied lookup only. Historical deletion selection and
+POST merge/publication remain separate. No Codex restart is required.
+
 ## Actual five-point DC continuation, 2026-10-14
 
 Five new registered nominal input-nulling DC jobs now succeed with automatic

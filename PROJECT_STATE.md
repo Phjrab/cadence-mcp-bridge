@@ -1,3 +1,26 @@
+## Exact installed measurement and hosted checkpoint, 2026-10-14
+
+Feature290aab4 pushed and remote SHA verified; exact Windows/Linux CI both PASS.
+Private wheel16933b40/sdist7493dca2 canonical source/rights/content/isolated install
+and synthetic CLI/SDK/state-preservation PASS. Actual installed new-process offset
+reads twice agree; five same-ID resubmits spend0. Installed causal slew read keeps
+inverter-1.100875721V/ns and comparator plateau rejection, with current UID500
+preflight/journals/settings/grants preserved. Ledger121 /14,781,775,872 and native
+22/24 remain. Review threads/submissions empty, not formal approval. PR158 draft,
+no POST merge/publication. See POST_07_INSTALLED_RESULT_V1.md.
+
+Actual read-only vcvs/vdc pin/CDF inspection for a new ideal-unilateral feedback
+QA fixture passes with all old libraries/counters preserved. First owned-loop
+preparation fails on protected SKILL constant t; its copies/logs remain. Local
+newline/exception-wrapper harness attempts fail before transport and are retained.
+Minimal t-variable correction v4 now passes OA pin-map/check/save. Common DC/AC
+netlisting and effective-input checks pass. Observed unity unilateral VCVS and
+DC0/AC1 series injection have the intended terminal map and isolated return node;
+DC/load/default-AC/sign/crossing proofs and actual return ratio remain incomplete.
+Exact current native SDK96-tool inventory also passes with0 remote contact and
+unchanged journals. Earlier erroneous newline diagnosis is superseded by the
+actual retained log. Published2.0.0 and original OA/ADE/PDK/results stay intact.
+
 ## Actual five DC and host measurement correction, 2026-10-14
 
 All five new owned input-nulling DC jobs succeed at UID500 through common native
