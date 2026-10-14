@@ -1,3 +1,29 @@
+## POST-04 exact installed VM failure retained, 2026-10-14
+
+Exact0fe7dee package rights/content checks and isolated installed CLI pass after
+updating the installed verifier to the package LF projection. The initial verifier
+expected raw CRLF and failed; that evidence remains. Hosted Linux's new CRLF
+regression reached an unstubbed Windows ssh.exe lookup; isolate that unused
+transport in the test. These test/harness corrections change no native asset.
+
+Ordinary UID500 update4b0f24c8 ->4c288204, repeat0 and preflight passed, preserving
+all old runtimes, grants and journals. All13 exact installed assets compile on
+actual VM Python2.6. The preserved recovery ID was accepted and reached
+EXTRACTION_FAILED: complete reader frame exists but OCEAN32 shutdown aborted with
+glibc double free/corruption. Nonzero vendor exit remains a failure, never waived.
+Read-only original tree/content/effective-input/PSF revalidation passes. Retained
+ledger113 /13,833,863,168 bytes: this extraction1 attempt/8MiB, Spectre0/netlisting0.
+Preserve the failed recovery, original failure and output; same-ID restart is
+lookup-only. No deletion/refund/reset or vendor/license content change occurred.
+Native source consumption22/24; POST-04 remains unqualified and experimental.
+
+Claude accessibility now exposes the past Code-tab conversation. It documents
+historical local/unreviewed-build reads, not current published2.0.0 qualification.
+Capture still times out and indexed click lacks geometry. No prompt has been sent.
+Keep actual chat-mode POST-06 and POST-07 scientific extraction pending; continue
+independent authorized work. Published2.0.0 and its tag/assets remain immutable.
+Older checkpoints below retain their original source/time scope.
+
 ## POST-04 actual runtime diagnosis, 2026-10-14
 
 Exact37c84c9 hosted Windows/POSIX checks, package/installed CLI and63-state

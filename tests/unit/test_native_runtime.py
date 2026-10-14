@@ -108,6 +108,7 @@ def test_crlf_package_exports_same_authenticated_bytes_and_installer_hashes(
         raise OSError("synthetic transport boundary")
 
     monkeypatch.setattr(host, "run_fixed", transport)
+    monkeypatch.setattr(host, "_ssh", lambda environment: ["synthetic-ssh", "python"])
     with pytest.raises(host.NativeSetupRemoteRejected) as failure:
         host.setup_runtime(second, receipt["manifest_sha256"], "stage", "SYNTHETIC-authority")
     assert failure.value.reason == "native_setup_transport_ambiguous"
