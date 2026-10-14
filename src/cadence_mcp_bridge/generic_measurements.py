@@ -304,6 +304,7 @@ def project_frame(
     frame: bytes,
     *,
     include_ac_spectrum: bool = False,
+    include_tran_waveforms: bool = False,
 ) -> dict[str, object]:
     """Validate mathematical data only. A future provider must authenticate its origin."""
     script = render_reader(context, plan, ade, reader, operation_id, execution_input_sha256)
@@ -416,6 +417,11 @@ def project_frame(
                 output["ac_spectrum"] = _transfer(ade, reader, axes, waves, all_samples=True)
         else:
             output["transient"] = _transient(ade, axes, waves)
+            if include_tran_waveforms:
+                output["tran_waveforms"] = {
+                    name: [{"time_s": time, "value_v": value.real} for time, value in wave]
+                    for name, wave in waves.items()
+                }
     return output
 
 

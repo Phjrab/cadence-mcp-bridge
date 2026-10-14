@@ -1,5 +1,22 @@
 # Retained native change boundary for POST-04 and POST-07
 
+## Current delegated measurement boundary, 2026-10-14
+
+The user supplies actual published-Claude local runtime-info-v2 and delegates
+remaining QA definitions/testbenches. This supersedes earlier scientific-choice
+questions, not protected data, finite budgets or publication boundaries. Loaded
+v4/v2 catalogs are valid; v8 wording refers to supported versions. Remote/app
+execution is not assessed by this response.
+
+Actual retained inverter sampled slew/read/repeat and ordinary UID500 preflight
+pass; comparator fails plateau eligibility and its evidence is retained. Shared
+116 /14,110,687,232 and native22/24 remain. New owned nulling OA/ADE preparation
+and common netlist input pass. A finite5-point/640MiB registration retains the
+same domain/journals; actual activation/runs and exact installed checks remain.
+No source/runtime isolation, private-parent check or original protection is
+relaxed. PM still needs loop qualification. No historical deletion, POST merge,
+public posting or Codex restart is inferred. Earlier overlays remain history.
+
 ## Actual POST07 retained boundary, 2026-10-14
 
 Exact installed two wider generic AC runs, common extraction and result pass.

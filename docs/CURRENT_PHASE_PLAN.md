@@ -1,3 +1,25 @@
+## Current measurement execution plan, 2026-10-14
+
+Direct user "나머지는 너가 구성해서 검증" delegates remaining scientific QA
+choices. Proceed with the new owned nulling testbench/common registrations,
+exact opt-in installed host measurement build and finite5 DC/640MiB experiment
+under fresh trust/qualification/input/ledger/disk checks. Preserve116 attempts/
+14,110,687,232 reserved bytes, native22/24, source state/model contents, old
+bundles/grants/results and current shared journals/domain. No new ledger or refund.
+Preparation and actual common netlist input already pass; do not recreate them.
+
+Retained inverter sampled slew reads/repeats pass; comparator rejects unsettled
+plateaus. Keep rejection and original PSF, no widened tolerance or metric relabel.
+Refresh exact installed/hosted checks after the code changes. PM needs actual
+valid loop/injection/loading/sign qualification, and remains incomplete.
+
+Record user-supplied Claude published2.0.0 local-runtime lookup success only;
+do not infer remote/health/authority/qualification or whole POST06 PASS. v8 is
+a supported catalog variant, not the currently loaded version. Older requests
+for user testbench choices and UI failure status remain historical. POST05 exact
+deletion selection and POST merge/publication remain outside this continuation.
+No Codex restart is needed. See POST_06_CLAUDE_APP.md/POST_07_GENERIC_ANALOG.md.
+
 ## POST-07 installed actual AC checkpoint and remaining work, 2026-10-14
 
 Two exact installed generic registered89-point10Hz–1THz AC runs pass common

@@ -14,6 +14,8 @@ from pydantic import Field, TypeAdapter
 
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.generic_offset import InputNullingDefinition, sampled_input_nulling
+from cadence_mcp_bridge.generic_slew import SampledSlewDefinition, sampled_slew
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationService
 from cadence_mcp_bridge.onboarding import _local_path
@@ -47,11 +49,13 @@ def requirements() -> dict[str, Any]:
         },
         "offset": {
             "status": "BLOCKED", "reason": "offset_definition_and_testbench_required",
+            "experimental_operator_command": "operator-analog offset",
             "required": "Input-referred or output definition, common mode, feedback state, "
             "stimulus and threshold/zero-crossing method with actual extraction.",
         },
         "slew": {
-            "status": "BLOCKED", "reason": "qualified_step_loading_and_window_required",
+            "status": "BLOCKED", "reason": "per_job_step_loading_window_and_resolution_required",
+            "experimental_operator_command": "operator-analog slew",
             "required": "Actual step stimulus, input/output signals, load, amplitude, direction, "
             "settled endpoints, threshold window and time-resolved extraction. TRAN extrema "
             "or reference-circuit calculations are insufficient.",
@@ -152,6 +156,111 @@ async def capture_bandwidth(
     }
 
 
+async def capture_slew(
+    native: NativeOperationService, operation_id: str, plan_sha256: str,
+    definition: SampledSlewDefinition,
+) -> dict[str, Any]:
+    TypeAdapter(OperationId).validate_python(operation_id)
+    TypeAdapter(Digest).validate_python(plan_sha256)
+    native.current()
+    store = native.lifecycle.store
+    with store.connection(create=False, read_only=True) as connection:
+        record = store._read_operation(connection, operation_id)
+    if (
+        record.operation_id != operation_id or record.plan.plan_sha256 != plan_sha256
+        or record.plan.resource_domain_sha256 != native.context.resource_domain_sha256
+        or record.plan.ledger_ref != native.context.binding.ledger_ref
+        or record.plan.analysis != "tran" or record.progress.phase != "SUCCEEDED"
+    ):
+        raise OperationRejected("analog_retained_succeeded_tran_identity_required")
+    observed, result = await native.provider.analog_result(operation_id, record.plan)
+    observed.check(record)
+    if observed.progress != record.progress:
+        raise OperationRejected("analog_terminal_identity_mismatch")
+    report = make_report(record, result)
+    if report.analysis_conditions.static_statements_sha256 != definition.static_statements_sha256:
+        raise OperationRejected("slew_static_stimulus_and_load_binding_mismatch")
+    waves = TypeAdapter(dict[str, list[dict[str, Any]]]).validate_python(result["tran_waveforms"])
+    estimate = sampled_slew(waves, definition)
+    estimate["native_provenance"] = report.source_provenance
+    return {
+        "measurement": estimate, "source": report.model_dump(mode="json"),
+        "conditions_sha256": conditions_digest(report),
+        "waveforms_sha256": hashlib.sha256(_canonical(waves)).hexdigest(), "waveforms": waves,
+        "new_simulations": 0, "new_extractions": 0, "new_reservations": 0,
+        "remote_contact": True,
+    }
+
+
+async def capture_offset(
+    native: NativeOperationService, operations: list[dict[str, str]],
+    definition: InputNullingDefinition,
+) -> dict[str, Any]:
+    if not 3 <= len(operations) <= 32 or len({op.get("operation_id") for op in operations}) != len(
+        operations,
+    ):
+        raise OperationRejected("offset_distinct_bounded_operations_required")
+    native.current()
+    records = []
+    store = native.lifecycle.store
+    with store.connection(create=False, read_only=True) as connection:
+        for op in operations:
+            if set(op) != {"operation_id", "expected_plan_sha256"}:
+                raise OperationRejected("offset_operation_identity_required")
+            operation_id = TypeAdapter(OperationId).validate_python(op["operation_id"])
+            plan_sha = TypeAdapter(Digest).validate_python(op["expected_plan_sha256"])
+            record = store._read_operation(connection, operation_id)
+            if (
+                record.operation_id != operation_id or record.plan.plan_sha256 != plan_sha
+                or record.plan.resource_domain_sha256 != native.context.resource_domain_sha256
+                or record.plan.ledger_ref != native.context.binding.ledger_ref
+                or record.plan.analysis != "dc" or record.progress.phase != "SUCCEEDED"
+            ):
+                raise OperationRejected("offset_retained_succeeded_dc_identity_required")
+            records.append(record)
+    reports, rows = [], []
+    baseline = None
+    for record in records:
+        observed, result = await native.provider.report_result(record.operation_id, record.plan)
+        observed.check(record)
+        if observed.progress != record.progress:
+            raise OperationRejected("analog_terminal_identity_mismatch")
+        report = make_report(record, result)
+        static_digest = report.analysis_conditions.static_statements_sha256
+        if static_digest != definition.static_statements_sha256:
+            raise OperationRejected("offset_static_testbench_binding_mismatch")
+        conditions = report.conditions()
+        variable_names = {definition.positive_input_variable, definition.negative_input_variable}
+        conditions["values"] = [v for v in conditions["values"]
+                                if v["logical_id"] not in variable_names]
+        if baseline is not None and conditions != baseline:
+            raise OperationRejected("offset_source_or_conditions_mismatch")
+        baseline = conditions
+        nodes = TypeAdapter(list[dict[str, Any]]).validate_python(result["nodes"])
+        measured = {node["logical_id"]: float(node["value"]) for node in nodes}
+        variables = {v.logical_id: v for v in record.plan.request.values}
+        for signal, logical in (
+            (definition.positive_input, definition.positive_input_variable),
+            (definition.negative_input, definition.negative_input_variable),
+        ):
+            if logical not in variables or variables[logical].unit != "V" or (
+                signal not in measured
+                or abs(measured[signal] - float(variables[logical].value))
+                > definition.common_mode_tolerance_v
+            ):
+                raise OperationRejected("offset_measured_input_variable_binding_mismatch")
+        rows.append(measured)
+        reports.append(report.model_dump(mode="json"))
+    estimate = sampled_input_nulling(rows, definition)
+    estimate["native_provenance"] = reports[0]["source_provenance"]
+    return {
+        "measurement": estimate, "sources": reports, "measured_nodes": rows,
+        "common_conditions_sha256": hashlib.sha256(_canonical(baseline)).hexdigest(),
+        "new_simulations": 0, "new_extractions": 0, "new_reservations": 0,
+        "remote_contact": True,
+    }
+
+
 def add_analog_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser(
         "operator-analog", help="Read-only experimental sampled-transfer measurements.",
@@ -165,6 +274,18 @@ def add_analog_parser(subparsers: Any) -> None:
     capture.add_argument("--reference-frequency-hz", type=float, required=True)
     capture.add_argument("--drop-db", type=float, default=3.0)
     capture.add_argument("--experimental-analog", action="store_true", required=True)
+    slew = actions.add_parser("slew")
+    slew.add_argument("--settings", type=Path, required=True)
+    slew.add_argument("--definition", type=Path, required=True)
+    for name in ("context", "operation-id", "expected-plan-sha256"):
+        slew.add_argument("--" + name, required=True)
+    slew.add_argument("--experimental-analog", action="store_true", required=True)
+    offset = actions.add_parser("offset")
+    offset.add_argument("--settings", type=Path, required=True)
+    offset.add_argument("--definition", type=Path, required=True)
+    offset.add_argument("--operations", type=Path, required=True)
+    offset.add_argument("--context", required=True)
+    offset.add_argument("--experimental-analog", action="store_true", required=True)
 
 
 def analog_cli(arguments: argparse.Namespace) -> int:
@@ -174,26 +295,48 @@ def analog_cli(arguments: argparse.Namespace) -> int:
             output = {"requirements": requirements(), "remote_contact": False,
                       "new_simulations": 0, "new_extractions": 0, "new_reservations": 0}
         else:
-            definition = SampledBandwidthDefinition(
-                reference_frequency_hz=arguments.reference_frequency_hz,
-                drop_db=arguments.drop_db,
-            )
+            definition: SampledBandwidthDefinition | SampledSlewDefinition | InputNullingDefinition
+            if arguments.analog_action in ("slew", "offset"):
+                from cadence_mcp_bridge.domain_provisioning import _closed_document
+
+                with _local_path(arguments.definition).open("rb") as stream:
+                    raw = stream.read(16385)
+                _closed_document(raw, max_bytes=16384)
+                definition = (SampledSlewDefinition.model_validate_json(raw)
+                              if arguments.analog_action == "slew"
+                              else InputNullingDefinition.model_validate_json(raw))
+            else:
+                definition = SampledBandwidthDefinition(
+                    reference_frequency_hz=arguments.reference_frequency_hz,
+                    drop_db=arguments.drop_db,
+                )
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
             if context is None:
                 raise OperationRejected("analog_context_required")
             native = NativeOperationService(context)
             contact = None
-            output = asyncio.run(capture_bandwidth(
-                native, arguments.operation_id, arguments.expected_plan_sha256, definition,
-            ))
+            if isinstance(definition, InputNullingDefinition):
+                with _local_path(arguments.operations).open("rb") as stream:
+                    raw = stream.read(16385)
+                _closed_document(raw, max_bytes=16384)
+                operations = TypeAdapter(list[dict[str, str]]).validate_json(raw)
+                output = asyncio.run(capture_offset(native, operations, definition))
+            elif isinstance(definition, SampledSlewDefinition):
+                output = asyncio.run(capture_slew(
+                    native, arguments.operation_id, arguments.expected_plan_sha256, definition,
+                ))
+            else:
+                output = asyncio.run(capture_bandwidth(
+                    native, arguments.operation_id, arguments.expected_plan_sha256, definition,
+                ))
         print(json.dumps(output, sort_keys=True, allow_nan=False))
         return 0
     except (OSError, ValueError, KeyError, TypeError, BridgeError):
         print(json.dumps({
             "status": "BLOCKED", "reason": "generic_analog_rejected",
-            "guidance": "Use an existing succeeded registered AC ID and exact plan; confirm "
-            "nonzero complete transfer and a measured reference frequency. No rerun occurs.",
+            "guidance": "Use an existing succeeded registered AC/TRAN ID and exact plan. "
+            "Confirm the bound definition and complete saved samples. No rerun occurs.",
             "remote_contact": contact, "new_simulations": 0, "new_extractions": 0,
             "new_reservations": 0,
         }))

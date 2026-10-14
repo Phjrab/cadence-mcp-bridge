@@ -1,3 +1,30 @@
+## Current user-delegated measurement continuation, 2026-10-14
+
+User supplies actual Claude public2.0.0 runtime-info-v2 local lookup: loaded
+operator designs v4/two and PDKv2/one, no remote/health/authority/qualification
+assessment. Record scoped app observation; v8 wording denotes supported schema,
+not mandatory loaded version. Remote/app execution acceptance remains separate.
+User now delegates remaining QA definitions/testbench configuration; older
+scientific-choice questions no longer block independent work.
+
+Common opt-in sampled slew and nominal input-nulling host paths are implemented.
+Actual retained inverter TRAN gives−1.100875721V/ns signed10/90 average with
+bound static source and sufficient saved resolution; comparator rejects unsettled
+plateaus. Reads/repeats preserve frames/settings/journals, UID500 preflight and
+116 /14,110,687,232 ledger. Native22/24 unchanged. First failed comparator
+harness is retained; no simulation/extraction/reservation.164 related host tests,
+Ruff/mypy107 pass; exact installed and final hosted checks remain pending.
+
+New owned nulling OA/ADE and actual common netlisting/effective input pass,
+original whole MyDesignLib/state preserved. Registerable source is copied into
+a new0700 user workspace subtree without relaxing runtime-source isolation or
+changing workspace permissions. Helper-file initialization and private-parent
+copy failures are preserved. Local finite5-point DC/640MiB registration keeps
+existing journals/domain/ledger; activation and actual fresh runs remain pending.
+PM loop qualification still required; POST05 deletion waits exact human targets.
+No POST merge/publication or Codex restart inferred. See POST_06_CLAUDE_APP.md
+and POST_07_GENERIC_ANALOG.md. Earlier records remain history.
+
 ## POST-07 actual installed AC and restart checkpoint, 2026-10-14
 
 PR158 draft/d03f3f14 implements opt-in generic sampled-reference bandwidth using

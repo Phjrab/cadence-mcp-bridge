@@ -1,5 +1,78 @@
 # Generic analog measurements: experimental operator path
 
+## Common sampled slew and input-nulling extension, 2026-10-14
+
+The user now delegates remaining QA testbench and definition choices. Earlier
+requests for that scientific choice are superseded; no routine approval is needed.
+This extension remains unpublished and opt-in. No public MCP schema, native asset
+or original circuit is changed. PM still needs a valid loop testbench and actual
+return-ratio qualification; ordinary AC phase is never promoted to PM.
+
+`operator-analog slew` reads complete existing authenticated TRAN frames. Its
+bounded operator definition binds the exact static stimulus/load hash, distinct
+input/output IDs, expected measured input endpoints, initial/final plateau windows,
+tolerance, minimum response and threshold fractions. It computes the signed
+average output slope between unique10/90% crossings, with linear time interpolation,
+observed brackets and a minimum four saved intervals across the duration. Wrong
+stimulus, unsettled endpoints, repeated/reversed input, ambiguous crossing or poor
+time resolution cannot produce a valid slope. No maximum derivative, intrinsic
+amplifier slew limit, continuous-waveform or grid-convergence claim is made.
+The ordinary TRAN summary is unchanged. Load description is an operator
+interpretation bound to the static topology, not an independent load attestation.
+
+Actual retained new inverter TRAN:70 samples, input0.5→0.7V, unchanged registered
+load, output plateau windows0–4ns and15–20ns,1mV tolerance. Authenticated result
+gives a signed sampled average−1.1008757205347075V/ns between5.1960377303ns and
+5.8287278735ns; largest crossing sample gap0.1023128551ns. This is a QA step
+response, not a manufacturer's slew rating. Repeat agrees, old frame/journal/
+settings remain identical and ordinary UID500 preflight passes. The comparator
+output is unsettled in the same windows; rejection is retained without widening
+the tolerance. First harness failed on that rejection; v2 records each outcome.
+This read uses0 simulations/extractions/reservations/native changes. Ledger stays
+116 /14,110,687,232 bytes; native sources22/24. Evidence is private
+`.tmp/post07-slew-retained-v1/` and `v2/`. This is source-host actual VM evidence;
+exact installed feature and actual app checks remain distinct.
+
+`operator-analog offset` reads3–32 distinct succeeded DC jobs, using exact plans,
+source/PDK/static inputs/reader/conditions, allowing only the two named input
+variables to vary. Both measured input voltages must match those registered
+variables, all other bias values must agree, and common mode must match. Four
+distinct differential terminals are required. Nonfinite/saturated/nonmonotonic/
+duplicate inputs reject. The signed applied input difference at differential
+output zero is interpolated only inside a measured bracket. Missing crossing is
+null. This is nominal sampled input nulling, with no absolute precision, mismatch,
+Monte Carlo or PVT qualification.
+
+A new owned amplifier OA/ADE copy and actual common-renderer DC netlist now pass
+normal-user preparation and effective-input verification. Original whole
+MyDesignLib and original state are preserved. A preparation harness first lacked
+the helper's `__file__` identifier; failure is retained. Registerable sources are
+placed in a new0700 user workspace subtree, retaining preparation copies. An
+initial copy into a0755 parent was rejected; no permission/guard was weakened.
+Five DC points−1,−0.5,0,+0.5,+1microV at VCM0.5V and fixed0.32/0.702V bias are
+prospectively registered for at most5 attempts/640MiB in the existing domain and
+journals. Registration is local preparation, not yet actual execution acceptance.
+All earlier results/bundles/grants and the shared counter remain protected.
+
+Usage requires an exact bounded definition file and existing source IDs:
+
+```text
+python -I -m cadence_mcp_bridge operator-analog slew --experimental-analog --settings ABSOLUTE_SETTINGS --context OWN_CONTEXT --operation-id RETAINED_TRAN_ID --expected-plan-sha256 EXACT_PLAN --definition ABSOLUTE_SLEW_DEFINITION
+python -I -m cadence_mcp_bridge operator-analog offset --experimental-analog --settings ABSOLUTE_SETTINGS --context OWN_CONTEXT --operations ABSOLUTE_DC_ID_PLAN_LIST --definition ABSOLUTE_NULLING_DEFINITION
+```
+
+The operations file is a bounded JSON array of `operation_id` and
+`expected_plan_sha256` records; definitions use the closed models in
+`generic_slew.py` and `generic_offset.py`. Neither command submits, extracts or
+updates a journal. Definitions must describe the actual registered source, not
+invent loading/feedback from a metric label. Public2.0.0 assets stay immutable.
+
+The previous9d2e406 Linux check failed an exact floating-point roundtrip assertion
+(100.0000000000002 vs100). A tight1e-12 relative test and a separately exact
+threshold fixture fix this without changing the scientific crossing calculation.
+Related164 host tests/Ruff/mypy107 currently pass; final source CI/package/installed
+validation must be refreshed. These tests are synthetic, not native acceptance.
+
 This unpublished POST-07 feature is separate from immutable public v2.0.0.
 It reuses the standard VM's registered generic reader and terminal/content
 verification. No circuit-specific Python reader, new MCP tool, OCEAN invocation,

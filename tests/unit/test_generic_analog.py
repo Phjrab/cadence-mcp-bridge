@@ -28,7 +28,18 @@ def test_log_interpolation_first_downward_and_exact_crossing():
     assert result["bracket_hz"] == [10, 100]
     assert result["native_provenance"] == "NOT_ATTESTED"
     exact = sampled_crossing(spectrum([6, 3, 0]), definition)
-    assert exact["value"] == 100
+    # The generated dB -> magnitude -> dB roundtrip differs across libm builds.
+    assert exact["value"] == pytest.approx(100, rel=1e-12)
+
+
+def test_exact_sampled_threshold_preserves_exact_frequency():
+    samples = [{"frequency_hz": f, "real_v_per_v": gain, "imag_v_per_v": 0.0}
+               for f, gain in ((10, 2), (100, 1), (1000, 0.5))]
+    result = sampled_crossing(samples, SampledBandwidthDefinition(
+        reference_frequency_hz=10, drop_db=20 * math.log10(2),
+    ))
+    assert result["value"] == 100
+    assert result["bracket_hz"] == [10, 100]
 
 
 def test_nonfirst_explicit_reference_and_no_extrapolation():
