@@ -78,3 +78,13 @@ subsequent native source commits and a pending source change, preserving histori
 policy hashes. The guard is not human consent. Other users' install defaults,
 published assets, original OA/ADE/PDK/license contents and all past evidence remain
 outside this change.
+
+## Windows package line endings
+
+Native bundle source is projected to LF before manifest hashing, because the
+standard VM's Python2.6 memory compiler rejects CRLF source strings. The setup
+CLI validates the identical package-only projection. No remote file is normalized
+after its manifest check. Retained predecessor bundles and failure evidence remain
+unchanged. The exact37c84c9 package passed hosted/installed checks but its actual
+recovery plan rejected before reservation on this issue; it is not actual recovery
+qualification. The corrected installed VM path remains a separate acceptance gate.

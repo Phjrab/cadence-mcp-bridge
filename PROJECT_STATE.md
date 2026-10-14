@@ -1,3 +1,24 @@
+## POST-04 actual runtime diagnosis, 2026-10-14
+
+Exact37c84c9 hosted Windows/POSIX checks, package/installed CLI and63-state
+preservation passed. Ordinary UID500 immutable stage/update/repeat/preflight
+passed; active runtime4b0f24c8 was retained. Actual recovery CLI plan then rejected
+before admission, OCEAN or reservation. Read-only exact VM Python2.6 compilation
+identified modeltrust.py CRLF source: exact bytes fail at line5; LF projection
+passes. All other12 Python assets compile. Original failed job/PSF and112 attempts/
+13,825,474,560 reserved bytes remain; no new spend or Spectre start is claimed.
+
+Bundle generation and installed-source hash checks now share a package-only LF
+projection before hashing. Remote authenticated bytes are never rewritten or
+trusted unconditionally; old bundles/receipts and failed diagnostics are retained.
+The pending correction counts22/24. Updated exact installed/VM execution and
+hosted checks remain required. Recovery remains experimental, unpublished.
+
+Claude fresh selected window capture again timed out. Recovery accessibility
+observation succeeds but exposes only window chrome, no usable editor or content.
+No app input was sent; POST-06 NOT_VERIFIED. Published2.0.0 is unchanged.
+Earlier checkpoints below retain their source/time-specific scope.
+
 ## Current POST continuation, 2026-10-14
 
 POST native source ceiling24 confirmed by direct user, retaining20 consumed.

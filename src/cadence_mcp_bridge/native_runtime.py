@@ -51,6 +51,16 @@ SOURCES = {
 KIND = "STANDARD_VM_CONFIRMED_NATIVE_RUNTIME"
 
 
+def source_assets() -> dict[str, bytes]:
+    # Python 2.6 compile(bytes) does not apply file universal-newline handling.
+    # Normalize only package source line endings before hashing/export, never
+    # remote authenticated bytes. The installer binds the identical projection.
+    return {
+        name: files("cadence_mcp_bridge").joinpath(source).read_bytes().replace(b"\r\n", b"\n")
+        for name, source in SOURCES.items()
+    }
+
+
 class NativeLibrary(EnvironmentModel):
     name: BindingName
     path: RemotePath
@@ -207,10 +217,7 @@ def bundle(context: ExecutionContext, registration_path: Path, output: Path) -> 
     if hashlib.sha256(profile_raw).hexdigest() != context.binding.environment_sha256:
         raise OperationRejected("native_runtime_environment_changed")
     compiled = projection(context, registration)
-    assets = {
-        name: files("cadence_mcp_bridge").joinpath(source).read_bytes()
-        for name, source in SOURCES.items()
-    }
+    assets = source_assets()
     assets.update({"profile.json": profile_raw, "registration.json": _canonical(compiled)})
     manifest = {
         "schema_version": 3,
@@ -278,8 +285,8 @@ def setup_runtime(
         for name in (*setup.FILES, "manifest.json")
     }
     known = {
-        name: hashlib.sha256(files("cadence_mcp_bridge").joinpath(source).read_bytes()).hexdigest()
-        for name, source in SOURCES.items()
+        name: hashlib.sha256(raw).hexdigest()
+        for name, raw in source_assets().items()
     }
     # All source assets must match this installed package before any contact.
     manifest, profile, registration = setup.inventory(assets, expected, known)  # type: ignore[no-untyped-call]

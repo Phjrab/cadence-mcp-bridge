@@ -11,7 +11,7 @@ from pathlib import Path
 from cadence_mcp_bridge import _native_dispatch, _native_setup
 from cadence_mcp_bridge.__main__ import build_parser
 from cadence_mcp_bridge.extraction_recovery import RecoveryPlan
-from cadence_mcp_bridge.native_runtime import SOURCES
+from cadence_mcp_bridge.native_runtime import SOURCES, source_assets
 
 
 def main() -> None:
@@ -36,6 +36,11 @@ def main() -> None:
     assert "recovery.py" in SOURCES and set(_native_dispatch.FILES) == set(_native_setup.FILES)
     asset = files("cadence_mcp_bridge").joinpath(SOURCES["recovery.py"]).read_bytes()
     assert b"class ExtractionRecovery" in asset and b"subprocess" not in asset
+    for name, raw in source_assets().items():
+        assert b"\r\n" not in raw
+        assert raw == files("cadence_mcp_bridge").joinpath(SOURCES[name]).read_bytes().replace(
+            b"\r\n", b"\n"
+        )
     assert "recovery" in RecoveryPlan.model_json_schema()["properties"]
     assert list(workspace.iterdir()) == before
     print(json.dumps({
