@@ -1,3 +1,25 @@
+## POST-04 actual DC recovery succeeds, 2026-10-14
+
+Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original
+failed PSF. One separately recorded revalidation succeeds on the same installed
+0fe7dee runtime4c288204. Successful result and same-ID submit after process restart
+pass, adding0; failed-ID restart/submit also lookup-only. Original job/tree/input/
+PSF and retained host journal preserved. No Spectre/netlisting starts, vendor/
+license/admin changes, deletion or refund. This continuation2 OCEAN accounting
+attempts/16MiB; cumulative114 /13,842,251,776 bytes,16GiB remaining3,337,617,408.
+Source changes22/24. Qualification is only tested inverter DC extraction recovery;
+AC/TRAN recovery, actual app and broader environments are not qualified.
+
+Updated verifier/package/SDK/CLI/reinstall/uninstall63-file preservation passes.
+Final27e83d4 hosted CI/review pending; its native sources equal installed0fe7dee.
+PR157 remains draft/experimental, with no POST merge/publication authority inferred.
+Published2.0.0 unchanged. Claude UWP config still selects historical local legacy
+server, not exact public build; prepare an additive published-native QA connection
+using old retained context/grants/journals. UI capture/click unavailable; Code-tab
+historical reads are not current published chat-mode acceptance. POST07 remains
+scientific implementation/real extraction work, not automatically qualified math.
+Older checkpoints below retain their source/time scope.
+
 ## POST-04 exact installed VM failure retained, 2026-10-14
 
 Exact0fe7dee package rights/content checks and isolated installed CLI pass after

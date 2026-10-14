@@ -9,9 +9,8 @@ public MCP tool or automatic recovery is installed.
 
 ## Qualification boundary
 
-Host tests/static checks are preliminary evidence. Actual standard-VM extraction
-from retained failed PSF, installed qualification and hosted POSIX tests remain
-required. Do not call this feature generally qualified or part of the published
+Host, isolated installed CLI and actual standard-VM extraction have distinct
+evidence. Updated final hosted checks and independent review remain required. Do not call this feature generally qualified or part of the published
 2.0.0 release. Submit requires `--experimental-recovery`, a hash-bound installed
 runtime and an OS-operator-confirmed grant with `recover_extraction`. Import,
 server startup, result lookup and ordinary retry never perform recovery.
@@ -88,3 +87,28 @@ after its manifest check. Retained predecessor bundles and failure evidence rema
 unchanged. The exact37c84c9 package passed hosted/installed checks but its actual
 recovery plan rejected before reservation on this issue; it is not actual recovery
 qualification. The corrected installed VM path remains a separate acceptance gate.
+
+## Actual standard VM validation, 2026-10-14
+
+Runtime source0fe7dee at immutable4c288204 passes actual UID500 update/repeat,
+preflight and all13 Python2.6 asset compilations. The first accepted extraction
+created a complete frame but OCEAN32 aborted during shutdown with glibc double
+free/corruption. It remains EXTRACTION_FAILED; no nonzero exit is accepted. A
+separately pre-recorded one-attempt/8MiB revalidation on the same runtime succeeds.
+No Cadence binary, library, model, license or administrator metadata was changed.
+This is observed intermittent vendor shutdown behavior, not a diagnosed vendor fix.
+
+Successful CLI result, identical-ID submission and separate-process restart
+queries preserve original EXTRACTION_FAILED/PSF/content and host journal. Failed
+ID restart/submit also remains lookup-only, adding0 dispatch/reservations. Two
+OCEAN readers,0 Spectre/netlisting starts:2 accounting attempts/16MiB total.
+Retained cumulative ledger114/13,842,251,776 bytes;16GiB remaining3,337,617,408.
+Native source changes22/24. The updated package verifier passes isolated build,
+rights/content, SDK/CLI and63-file reinstall/uninstall preservation. Initial
+CRLF verifier mismatch and Linux-only unstubbed ssh.exe fixture failures remain
+recorded; test-only fixes are27e83d4, with native source equal to0fe7dee.
+
+This qualifies the tested registered inverter DC recovery route on the current
+standard VM only. It does not qualify AC/TRAN recovery, another Cadence/PDK/PC,
+actual Claude, or change the immutable published2.0.0 artifacts. Recovery stays
+experimental and operator-CLI-only while broader qualification/review is pending.
