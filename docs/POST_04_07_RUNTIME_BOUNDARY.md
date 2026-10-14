@@ -1,5 +1,13 @@
 # Current scope overlay, 2026-10-14
 
+Actual installed finite loop batch completes3 attempts/384MiB; shared124 /
+15,184,429,056 bytes, remaining1,995,440,128. This grant is fully consumed.
+Native22/24 remains unchanged. Restarted same-ID/read/report checks spend0 and
+preserve journals/settings/older DC admissions. No administrator repair, reset,
+refund, deletion, fourth job or public change occurred. Negative measured margin
+is retained, not presented as stability acceptance. POST_07_LOOP_RESULT_V1.md
+records exact installed/hosted/VM evidence; further Claude checks remain excluded.
+
 Further Claude qualification is excluded by the user's direct instruction;
 historical app/SDK evidence below remains scoped, and exclusion is not PASS.
 Continue independent standard-VM loop and exact installed POST checks. Existing

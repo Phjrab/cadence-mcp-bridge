@@ -1,5 +1,11 @@
 # POST-07 ideal voltage-feedback QA continuation
 
+Execution checkpoint: the finite DC1/AC2 batch now completes on exact installed
+0f877b6, UID500, shared124 /15,184,429,056 bytes, native22/24. Both grids agree
+on a negative~-15.543deg sampled margin; this is not amplifier performance PASS.
+Grant is consumed; restart/read/retry/report spends0. See POST_07_LOOP_RESULT_V1.md.
+The original prospective plan below is retained as history, not fresh capacity.
+
 Status: prepared input evidence, NOT actual PM qualification. The user's direct
 remaining-QA delegation authorizes this work; this plan is not a separate grant
 or approval. Public2.0.0 and existing generic/legacy contracts remain unchanged.

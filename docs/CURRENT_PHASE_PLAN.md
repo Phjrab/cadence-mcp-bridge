@@ -1,5 +1,19 @@
 # Current POST continuation, 2026-10-14
 
+Actual finite DC1/AC2 execution, automatic extraction, measured injection and
+two-grid loop result checks now PASS on exact installed0f877b6/UID500. Margin is
+negative~-15.543deg; preserve it without a stability/performance PASS claim.
+All three same-ID retries, four separate-process margin reads and three completed
+result reports add0; earlier five DC admissions and journals/settings preserved.
+Actual cumulative124 /15,184,429,056 bytes, remaining1,995,440,128 of16GiB;
+native22/24 unchanged. Exact package/rights/lifecycle/SDK and hosted both OS checks
+PASS. Further Claude checks EXCLUDED_BY_USER. See POST_07_LOOP_RESULT_V1.md.
+Finish final documentation/PR synchronization; independent formal review, exact
+historical deletion selection, separate compaction and POST integration remain
+distinct. No routine phase approval or Codex restart is required.
+
+The following paragraph is the earlier pre-execution checkpoint:
+
 Direct user excludes further Claude qualification. Historical app/SDK evidence is
 retained; exclusion is not PASS and no Claude restart/access request is required.
 Continue the existing owned loop fixture, host-only experimental sampled return

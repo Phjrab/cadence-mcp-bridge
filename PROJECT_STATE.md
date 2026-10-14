@@ -1,5 +1,16 @@
 # Current POST scope, 2026-10-14
 
+Exact installed0f877b6 actual owned loop DC1/AC2 and automatic results PASS.
+Measured negative margin~-15.543deg is retained; not a stable amplifier rating.
+Two saved grids agree, installed restart/read/same-ID retry/report adds0, previous
+five DC admissions/settings/journals preserved. Fresh UID500 ledger124 /
+15,184,429,056 bytes, native22/24. Package/rights/lifecycle/SDK and exact hosted
+Windows/Linux PASS. Claude further verification EXCLUDED_BY_USER, not PASS.
+No POST merge/publication, actual historical deletion or compaction performed.
+Details and exact hashes: docs/POST_07_LOOP_RESULT_V1.md.
+
+The following paragraph is the earlier pre-execution checkpoint:
+
 Claude additional qualification is EXCLUDED_BY_USER (not PASS). Continue remaining
 POST tests/actual standard-VM loop checks without app access or restart requests.
 Latest fresh UID500 preflight121 /14,781,775,872 bytes, native22/24, preserved

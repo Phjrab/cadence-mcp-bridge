@@ -1,5 +1,12 @@
 # Experimental ideal voltage-loop reader, 2026-10-14
 
+Actual exact installed DC/AC/automatic extraction/loop/restart/retry/report checks
+now pass. Two grids agree at a negative~-15.543deg margin. Preserve this measured
+QA result; no stable-operation/application/whole-circuit qualification is claimed.
+Latest shared124 /15,184,429,056 bytes, native22/24. See POST_07_LOOP_RESULT_V1.md
+for scientific limits, exact artifacts and distinct actual/synthetic/SDK evidence.
+The implementation description below predates this execution checkpoint.
+
 `operator-analog phase-margin --experimental-analog --settings ABSOLUTE_SETTINGS
 --context CONTEXT --operation-id RETAINED_ID --expected-plan-sha256 PLAN
 --definition ABSOLUTE_DEFINITION` reads a succeeded registered AC job only.
