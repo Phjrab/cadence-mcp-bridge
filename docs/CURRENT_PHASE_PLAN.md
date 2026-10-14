@@ -1,5 +1,17 @@
 # Current POST continuation, 2026-10-14
 
+Corrected exact c8de5a7 installed/package/rights/lifecycle/SDK and hosted both OS
+checks PASS. Two automatic P2s are fixed: loop-waveform projection is independent
+of bandwidth's complete transfer; zero AC sources are checked differentially.
+186 related tests/static PASS. Existing actual loop results/retry/report and
+bandwidth rereads match after restart, add0 and preserve previous DC records and
+journals/settings. Shared124 /15,184,429,056 and native22/24 unchanged. Both
+P2 threads resolved, not formal APPROVED. Claude further checks excluded.
+Finish final docs/PR/source-identity synchronization; no new experiment needed.
+POST05 actual deletion selection/compaction and POST integration stay separate.
+
+The following execution checkpoint predates the review correction:
+
 Actual finite DC1/AC2 execution, automatic extraction, measured injection and
 two-grid loop result checks now PASS on exact installed0f877b6/UID500. Margin is
 negative~-15.543deg; preserve it without a stability/performance PASS claim.

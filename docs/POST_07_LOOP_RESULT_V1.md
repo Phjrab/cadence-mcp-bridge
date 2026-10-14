@@ -1,5 +1,29 @@
 # POST-07 exact installed ideal voltage-loop results
 
+## Corrected exact installed qualification
+
+Corrected code `c8de5a758421d84a20f209f2dc24f87cb32a0171` passes exact hosted
+Windows/Linux checks, canonical source/rights/content, locked isolated install,
+CLI/SDK/context/bootstrap/domain/setup/recovery and reinstall/uninstall preservation.
+Wheel SHA-256:
+`11727aae76c8e16ef8ef7d0427ab774fa3ad355d315b4309a16b96265b9126a2`.
+Sdist SHA-256:
+`b28be76c229eca803a3d501ecf5a9ccee759fa799b79307061490ef1c3d35fe5`.
+
+This exact installation rereads the three retained succeeded jobs after process
+restart: three same-ID submits, four separate-process loop reads, three completed
+result reports and repeated bandwidth reads all pass and match the original
+measurements/conditions. Five earlier DC admissions and journals/settings remain
+unchanged. Local SDK96-tool start passes without remote contact. New floating-bias
+and unrelated unselected-denominator regressions are synthetic; no additional
+actual floating-bias fixture or experiment is claimed. Both automatic P2 threads
+are resolved; this is not formal GitHub APPROVED. Related186/static checks and
+secret preflight1173 files pass. Code/native/journal/runtime histories below stay
+pinned to their original commits. Review fixes use0 new simulation/extraction/
+reservation/native changes; shared124 /15,184,429,056 bytes and native22/24 remain.
+
+The following correction checkpoint predates the successful rebuilt installation:
+
 ## Post-review host correction checkpoint
 
 Two independent automatic P2 findings are addressed without native asset changes:

@@ -1,5 +1,13 @@
 # Experimental ideal voltage-loop reader, 2026-10-14
 
+Corrected installed c8de5a7 revalidation and both hosted checks pass. Loop lookup
+projects full saved node phasors independently of bandwidth's transfer spectrum.
+Zero-excitation sources are validated by terminal differences; floating biases
+and extra observations are permitted, while fixed input/reference must remain
+AC0 for the declared formula. Synthetic regressions and retained actual rereads
+are distinct. All rereads/retries/reports add0; ledger/native boundaries unchanged.
+Exact hashes and limits are in POST_07_LOOP_RESULT_V1.md.
+
 Actual exact installed DC/AC/automatic extraction/loop/restart/retry/report checks
 now pass. Two grids agree at a negative~-15.543deg margin. Preserve this measured
 QA result; no stable-operation/application/whole-circuit qualification is claimed.

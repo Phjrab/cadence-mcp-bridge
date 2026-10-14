@@ -1,5 +1,15 @@
 # Current POST scope, 2026-10-14
 
+Exact corrected c8de5a7 package/installed lifecycle/hosted both OS checks PASS.
+Two automatic P2s resolved with 186 related/static PASS; installed retained
+margin/bandwidth/retry/report/SDK revalidation adds0 and preserves previous
+records/journals/settings. Shared124 /15,184,429,056, native22/24 unchanged.
+Negative~-15.543deg QA margin remains measured, not amplifier stability PASS.
+Further Claude checks excluded. POST05 deletion/compaction and POST normal
+integration remain separate. Exact current hashes/results: POST_07_LOOP_RESULT_V1.md.
+
+The following execution checkpoint predates the review correction:
+
 Exact installed0f877b6 actual owned loop DC1/AC2 and automatic results PASS.
 Measured negative margin~-15.543deg is retained; not a stable amplifier rating.
 Two saved grids agree, installed restart/read/same-ID retry/report adds0, previous
