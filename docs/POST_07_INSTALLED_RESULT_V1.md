@@ -89,6 +89,10 @@ common-mode AC magnitudes are0. Bias/supply default AC magnitudes, DC operating
 point/loading, loop sign and bounded crossing/grid behavior still need checking
 before actual PM qualification. Only this idealized unilateral feedback fixture
 is being studied; no application/common-mode/multiple-loop stability claim.
+Subsequent fixed installed vsource help confirms mag0/phase0 defaults, preserving
+all libraries/ledger and spending0. Actual measured stimulus/DC/load/loop proof
+still remains. See POST_07_LOOP_VALIDATION_V1.md for the bounded continuation;
+its prospective3-job/384MiB arithmetic is not an actual reservation or grant.
 
 Claude published-build evidence remains the user's local runtime-info response.
 Computer Use accessibility/launch succeeds, but ordinary chat-tab input fails

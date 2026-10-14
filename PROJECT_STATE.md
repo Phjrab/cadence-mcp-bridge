@@ -16,7 +16,11 @@ newline/exception-wrapper harness attempts fail before transport and are retaine
 Minimal t-variable correction v4 now passes OA pin-map/check/save. Common DC/AC
 netlisting and effective-input checks pass. Observed unity unilateral VCVS and
 DC0/AC1 series injection have the intended terminal map and isolated return node;
-DC/load/default-AC/sign/crossing proofs and actual return ratio remain incomplete.
+DC/load/sign/crossing proofs and actual return ratio remain incomplete. Installed
+fixed vsource help explicitly confirms mag0/phase0 defaults with library/ledger
+preservation and0 reservation. Actual AC stimulus proof still remains. Next
+prepared DC1/AC2/384MiB proposal and scientific gates are in
+POST_07_LOOP_VALIDATION_V1.md; no new loop grant/admission/reservation exists.
 Exact current native SDK96-tool inventory also passes with0 remote contact and
 unchanged journals. Earlier erroneous newline diagnosis is superseded by the
 actual retained log. Published2.0.0 and original OA/ADE/PDK/results stay intact.

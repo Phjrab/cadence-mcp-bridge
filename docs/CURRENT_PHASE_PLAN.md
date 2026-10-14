@@ -17,6 +17,11 @@ and effective-input checks. Observed fixture has unity unilateral VCVS and
 DC0/AC1 series injection with isolated return node. Next verify default zero AC
 on unexcited bias/supply, fixed DC/load, sign/calibration and bounded sampled
 crossings before registering/executing a finite retained-ledger loop experiment.
+Installed fixed vsource help now explicitly confirms mag0/phase0 defaults;
+the read preserves libraries/ledger and reserves0. Measured stimulus proof still
+requires actual AC. POST_07_LOOP_VALIDATION_V1.md records the next proposed
+DC1/AC2 finite384MiB scope and rejection criteria, not a minted grant or actual
+spend. Implement closed loop definition/eligibility before admission.
 Reuse these source/state/input receipts; do not recreate successful preparation.
 Do not equate OA/netlisting with PM or
 ordinary AC phase with loop margin. No new native assets or experiments were
