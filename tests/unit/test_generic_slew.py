@@ -105,6 +105,19 @@ def test_output_transition_before_input_step_is_rejected():
     assert caught.value.reason == "slew_output_transition_precedes_measured_input_step"
 
 
+def test_output_crossing_inside_unresolved_input_onset_bracket_is_rejected():
+    data = waves()
+    # First observed input change is at3s, but output10% interpolation is2.5s.
+    # Output90% stays much later, so edge-ratio/resolution alone cannot reject it.
+    for point in data["output"]:
+        point["value_v"] = max(0, min(1, .2 if point["time_s"] == 3
+                                    else (point["time_s"] - 1) / 10))
+    data["output"][2]["value_v"] = 0
+    with pytest.raises(OperationRejected) as caught:
+        sampled_slew(data, definition())
+    assert caught.value.reason == "slew_output_transition_precedes_measured_input_step"
+
+
 def test_full_tran_projection_keeps_normal_contract(operator):
     args = reader_for(operator, "tran")
     frame = frame_for(args, "P|input|0|0|0|0\nP|input|1|0.004|1|0\n"

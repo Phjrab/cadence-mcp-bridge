@@ -1,5 +1,13 @@
 # Current POST continuation, 2026-10-14
 
+Fine actual installed12eb747 TRAN/automatic extraction succeeds with231 samples;
+sampled average-44.324575547V/ns,1ps input edge upper/12.092ps output-duration
+lower bound. Shared126 /15,452,864,512,native22/24; coarse null/old ramp preserved.
+Fifth P2 onset-bracket causality guard and223 related/static checks pass; pure
+retained-frame remeasurement agrees. Finish final host build/installed retained
+reads/retry/CI/review only, no further simulation planned. New Linux CI includes
+loop tests. See POST_07_FAST_STEP_V1.md. Claude excluded; no POST merge/publication.
+
 First exact18115b6 actual TRAN/automatic extraction passes but measured15.9ps
 output transition is honestly underresolved (98 samples); null estimate/PSF/
 128MiB spend preserved. Restart/retry/report adds0. Current125 /15,318,646,784,

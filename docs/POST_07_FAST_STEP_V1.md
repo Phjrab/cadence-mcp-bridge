@@ -1,5 +1,37 @@
 # POST-07 fast-input sampled step validation
 
+## Actual finer-grid result and final causality correction
+
+The separately granted finer TRAN succeeds on exact installed12eb747 at UID500:
+common copy/netlisting/effective input, Spectre, automatic extraction and231 saved
+samples. The qualified sampled signed10/90 average is
+**-44.3245755472V/ns**. Measured input10/90 edge upper bound is1ps; conservative
+output-duration lower bound is12.092ps, meeting the unchanged25percent criterion.
+This is an inverter QA average response, not intrinsic/amplifier slew rating or
+continuous-waveform/PVT/grid convergence. The earlier coarse result remains null.
+Different stop/windows prevent declaring a two-grid convergence result.
+
+Two fast-input runs spend2 attempts/256MiB in total. Current shared126/500 and
+15,452,864,512/17,179,869,184 bytes; remaining1,727,004,672 bytes. Both finite grants
+are consumed. No reset/refund/deletion/new domain/journal/native asset change.
+Native source22/24 remains. Final normal-user preflight passes. No administrator
+repair or original OA/ADE/PDK/vendor/license metadata/content change occurred.
+
+Review4269660319 exposes unresolved ordering inside the first input-onset saved
+bracket. The host-only guard now requires output10% crossing at or after the
+conservative end of that bracket. An output-leading same-bracket regression and
+223 related tests/static checks pass. Pure remeasurement of the authenticated
+retained fine frame preserves the exact value and meets this stronger guard;
+this is not yet the exact final installed reread. Final rebuilt wheel/rights/
+installed read/restart, hosted CI and refreshed review remain gates. The actual
+execution receipt stays source-pinned to12eb747; no third simulation is planned.
+The previous selected-zero/loop-source correction is separately tested on exact
+12eb747 installation: retained margin/waveforms/all source fields agree, four
+CLI reads/three retries/three ordinary reports/bandwidth repeats and local SDK96
+pass without spend. Both earlier loop coupling threads are resolved; that is
+not formal GitHub APPROVED. The latest onset review is still pending resolution
+at this checkpoint. Linux CI now explicitly includes the generic loop tests.
+
 ## First actual fast-step and finer-grid checkpoint
 
 Exact18115b6 isolated build/install/rights/lifecycle and retained loop/bandwidth/

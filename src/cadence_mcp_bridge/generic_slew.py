@@ -140,7 +140,9 @@ def sampled_slew(
         times, input_wave, strict=True,
     )) if time > definition.initial_stop_s
         and abs(value - input_initial) > definition.plateau_tolerance_v), None)
-    if input_change is None or crossings[0]["time_s"] < times[max(0, input_change - 1)]:
+    # Inside the onset bracket, saved samples cannot establish input-before-output
+    # ordering. Require the lower output crossing after its conservative end.
+    if input_change is None or crossings[0]["time_s"] < times[input_change]:
         raise OperationRejected("slew_output_transition_precedes_measured_input_step")
     output["input_onset_bracket_s"] = [times[max(0, input_change - 1)], times[input_change]]
     lo, hi = crossings[0]["bracket_index"][0], crossings[1]["bracket_index"][1]

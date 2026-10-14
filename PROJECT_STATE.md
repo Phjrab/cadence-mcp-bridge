@@ -1,5 +1,13 @@
 # Current POST scope, 2026-10-14
 
+Fine actual TRAN succeeds on installed12eb747/UID500 with automatic extraction and
+231 samples; signed sampled average-44.324575547V/ns with fast-edge bound PASS.
+Current126 /15,452,864,512; this fast-input work2/256MiB, native22/24 unchanged.
+Fifth review's unresolved onset ordering is fixed conservatively;223 related/static
+PASS, pure retained-frame value preserved. Final exact installed host reread/CI/
+review remain; no further simulation planned. Previous loop/bandwidth/retry/report/
+SDK results requalified on12eb747 without spend. Public2.0.0 remains immutable.
+
 Exact18115b6 first fast-input TRAN and automatic extraction pass; output transition
 underresolved, null estimate retained. Same-ID restart/read/report spends0.
 Current125 /15,318,646,784,native22/24. Next finite finer-grid1/128MiB uses same
