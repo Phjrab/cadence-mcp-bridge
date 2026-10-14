@@ -1,3 +1,29 @@
+## POST-07 actual installed AC and restart checkpoint, 2026-10-14
+
+PR158 draft/d03f3f14 implements opt-in generic sampled-reference bandwidth using
+existing full authenticated AC frames. Two fresh registered circuits run actual
+89-point10Hz–1THz AC via identical common core/reader/native assets. Inverter has
+an observed sampled-reference3dB crossing13.055949GHz; comparator has no crossing
+and a near-zero reference transfer. Neither value establishes application/PDK
+high-frequency validity or grid convergence. PM/offset/slew are not qualified.
+Original OA/ADE/models/results/failures and all prior runtimes/grants remain.
+
+This experiment2 attempts/256MiB; ledger116 /14,110,687,232 bytes, remaining
+3,069,181,952 of16GiB. Native22/24 unchanged. Actual normal UID500 preflight and
+same-ID repeat pass. Corrected host settings Path regression after first installed
+CLI failure: exact d03 wheelb9543a0d and sdist0d878f13 rights/content/isolated install
+pass;133 related tests/Ruff/mypy105 pass. New-process CLI and repeated same-ID
+submit dispatch0/reserve0, preserving journals/settings/registries/grants. Exact
+native SDK96 tools preserved, no new public tool, remote contact0. Final hosted
+review/CI pending. Source receipts and errors remain private in post07-wide-v1.
+
+Claude user restart confirmed, but fresh accessibility input/capture still lacks
+geometry/times out. No prompt was sent; POST06 NOT_VERIFIED. POST05 exact deletion
+targets have not been selected, so no deletion/compaction. POST07 partial: valid
+PM/Offset/Slew testbench/definitions still needed; user clarification requested.
+No POST merge/publication or Codex restart inferred. Public2.0.0 remains unchanged.
+See docs/POST_07_GENERIC_ANALOG.md; earlier checkpoints below retain original scope.
+
 ## POST-07 bounded host measurements and Claude restart, 2026-10-14
 
 Separate feat/post-07-generic-analog preserves POST04/PR157 and public2.0.0.

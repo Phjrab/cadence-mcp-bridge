@@ -1,5 +1,16 @@
 # Retained native change boundary for POST-04 and POST-07
 
+## Actual POST07 retained boundary, 2026-10-14
+
+Exact installed two wider generic AC runs, common extraction and result pass.
+The host-only measured-reference crossing CLI correction/reinstall/new-process
+lookup/repeat pass without another run. Native source22/24 remains; current ledger
+116 /14,110,687,232 bytes includes this2/256MiB. Same-ID restart/repeat spend0;
+old original/result/failure/runtime/grant/journal protections persist. This is
+sampled-transfer evidence only: PM/offset/slew and actual Claude remain incomplete.
+Source d03f3f14 rights/package/native SDK96 and133 related tests pass, with final
+CI/review pending. See POST_07_GENERIC_ANALOG.md; older counts remain historical.
+
 ## Latest implementation and app checkpoint, 2026-10-14
 
 Native source consumption is22/24; two remain. The four-remaining statement below

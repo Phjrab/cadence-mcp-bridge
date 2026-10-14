@@ -1,3 +1,25 @@
+## POST-07 installed actual AC checkpoint and remaining work, 2026-10-14
+
+Two exact installed generic registered89-point10Hz–1THz AC runs pass common
+copy/netlisting/effective input/Spectre/OCEAN/result. Inverter has a13.055949GHz
+sample-relative downward3dB estimate; comparator has no downward crossing. Do
+not claim PDK high-frequency validity, application bandwidth or grid convergence.
+Native source22/24 unchanged; this experiment2/256MiB and actual retained ledger
+116 /14,110,687,232 bytes,16GiB remaining3,069,181,952. All old evidence is retained.
+
+Corrected installed host CLI Path error and added regression:133 related tests,
+Ruff/mypy105, d03f3f14 rights/content/isolated install pass. Exact corrected CLI
+new-process reads and same-ID retry spend0, journals/settings/registry/grants stay
+unchanged. UID500 preflight and native SDK96-tool start pass; not actual Claude.
+PR158 stays draft; final hosted CI/review pending. No POST merge/publication.
+
+Continue valid PM/offset/slew scientific testbench preparation after target/loop/
+definition/stimulus clarification, rather than relabelling legacy/synthetic data.
+POST06 app input still fails geometry/capture after user-confirmed Claude restart;
+no Codex restart is required. POST05 actual deletion/compaction waits exact human
+target selection. Public2.0.0 and old journal/budget/replay remain protected.
+See POST_07_GENERIC_ANALOG.md; earlier checkpoints below are historical.
+
 ## POST-07 next actual measurement validation, 2026-10-14
 
 Experimental host-only operator-analog implementation reads existing authenticated

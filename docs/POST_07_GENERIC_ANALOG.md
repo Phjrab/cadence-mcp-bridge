@@ -100,3 +100,24 @@ the setting to Path, with a regression checking bounded rejection for a missing
 configuration. This correction changes no native asset or simulation input;
 rebuild/reinstall and repeat existing-ID reads only. Actual Claude acceptance,
 PM/offset/slew testbenches and final review remain separate incomplete work.
+
+## Corrected installed restart checkpoint, 2026-10-14
+
+Source d03f3f14 fixes only the host CLI path type; native code, extraction script,
+registrations and the two already successful jobs remain unchanged. Exact new
+wheel SHA-256 is b9543a0d3a6fc63b2950273f0f0fe6d9bfdf188be16cadf7507f2148f22c85c5;
+sdist is0d878f1326bb8461efecb86b1761af6dc3c6f2e7e19e53cf37b832c6c503f081.
+These are private **unpublished feature** artifacts with2.0.0 metadata inherited
+from the development branch, not replacements for GitHub's public2.0.0 assets.
+Rights/content audit and isolated installed compatibility pass. Related133 tests,
+Ruff/mypy105 pass; Linux CI now explicitly includes generic analog/grid tests.
+
+Both existing job IDs pass installed CLI reads in separate processes. Same-ID
+submit after restart dispatches0/reserves0; measurement/spectrum hashes agree
+with the original installed process. Local journal/settings/registry/grant/provider
+contents are unchanged, UID500 preflight and retained116/14,110,687,232 ledger pass.
+Exact installed native SDK starts with96 tools and unchanged journals; no new
+public analog tool or remote contact. SDK harness initially rejected an existing
+legacy analog name by an overbroad assertion; corrected harness passes and the
+failed attempt is retained. This is SDK evidence, not Claude app acceptance.
+Hosted final SHA and independent review remain pending; PR158 stays draft.
