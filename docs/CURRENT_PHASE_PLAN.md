@@ -1,3 +1,18 @@
+## POST-04 implementation resumed, 2026-10-14
+
+Direct user confirmation activates the proposed source-change ceiling24 while
+retaining20 consumed; see policy/POST_NATIVE_CORRECTION_LIMIT_V7.json. No other
+budget changes, counter reset, POST merge or publication authority is inferred.
+Fresh origin/main remains67c21a7. POST-05 exactdf45048 hosted Windows/POSIX checks
+both pass. Preserve stacked154/155/156 and published2.0.0.
+
+Implement extraction-only recovery under a separate linked identity, existing
+shared accounting and fixed OCEAN reader. Preserve the original failed job/PSF
+and make reads/retries/restarts dispatch-free. Qualify host tests, installed
+package and actual failed PSF separately before enabling/deploying the feature.
+Claude restoration was confirmed but refreshed capture/recovery still times out;
+POST-06 remains unverified. Continue independent work without stale UI inputs.
+
 ## POST-03 final PASS; independent POST-05 safety record, 2026-10-13
 
 POST-03 final1efc811/PR155 passed local3632 tests and both exact hosted checks;

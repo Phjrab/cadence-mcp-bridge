@@ -1,5 +1,27 @@
 # Retained native change boundary for POST-04 and POST-07
 
+## Current authorization, 2026-10-14
+
+The user's direct message "클로드 창 복원 확인과 증액 결정 완료" confirms the
+pending20-to24 source-change proposal. POST_NATIVE_CORRECTION_LIMIT_V7.json is
+the current managed-VM development overlay. Retain all20 consumed changes from
+the private reconciliation; four remain. This policy records the user decision,
+and is not itself a new approval or a new accounting domain. The historicalV5
+andV6 policies and20-change evidence remain unchanged. Spectre500,16GiB, disk
+floors, per-action consent, original data and published2.0.0 remain protected.
+
+The native shared runtime ledger enforces attempts and result reservations;
+source changes are conservatively reconciled from retained native source commits
+before deployment. Do not replace that count with activation counts. Historical
+storage_deploy.py still binds its originalV5 delegation and is not the active POST
+deployer. No remote limit change or reservation follows from this overlay.
+
+Fresh Computer Use selected the restored Claude window on2026-10-14. Capture
+failed with `FrameArrived timed out`; fresh selection/activation and the one
+recovery retry failed with `window capture timed out`. No app input was sent.
+Actual Claude/published-build qualification remains NOT_VERIFIED, independently
+of host and VM work. The earlier proposed/pending statements below are history.
+
 The direct user approves continuing POST-02 through POST-07. Existing cumulative
 limits and consumed corrections remain binding; a new task name or branch cannot
 reset them. The retained 2026-10-13 reconciliation records20 native source changes

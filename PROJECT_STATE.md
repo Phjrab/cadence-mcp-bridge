@@ -1,3 +1,18 @@
+## Current POST continuation, 2026-10-14
+
+POST native source ceiling24 confirmed by direct user, retaining20 consumed.
+The pending recovery source change conservatively brings consumption to21/24;
+verify the retained reconciliation before deployment. See
+docs/policy/POST_NATIVE_CORRECTION_LIMIT_V7.json. Historical policies and ledgers
+remain intact;16GiB/500 and published2.0.0 are unchanged. Latest main67c21a7;
+exact POST-05 PR156 CI passes. POST-04 extraction-only recovery implementation,
+fixed worker and operator CLI are active on feat/post-04-extraction-recovery.
+Ruff/mypy104/contract checks pass; affected232 PASS/50 POSIX skips. Hosted POSIX,
+final frozen-source/package and actual failed-PSF recovery remain separate gates.
+Latest actual ledger112/13,825,474,560 and disk floorOK; no actual new spend.
+Claude restored window is returned, but capture/recovery still times out;
+POST-06 NOT_VERIFIED. No live deployment, deletion, app input or publication.
+
 ## POST-03 verified; POST-05 safety checkpoint and external boundaries, 2026-10-13
 
 POST-03 PR155 final1efc811 is ready for review, stacked on open POST-02 PR154.

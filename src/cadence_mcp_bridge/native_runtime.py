@@ -38,6 +38,7 @@ SOURCES = {
     "operations.py": "_native_operations.py",
     "gate.py": "_native_gate.py",
     "worker.py": "_native_eda_worker.py",
+    "recovery.py": "_native_recovery.py",
     "rendering.py": "_native_rendering.py",
     "copying.py": "_native_copy.py",
     "confirmation.py": "_operator_confirmation.py",

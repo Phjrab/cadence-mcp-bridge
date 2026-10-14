@@ -36,6 +36,7 @@ FILES = (
     "operations.py",
     "gate.py",
     "worker.py",
+    "recovery.py",
     "rendering.py",
     "copying.py",
     "confirmation.py",
@@ -369,15 +370,16 @@ def apply(request, expected, known):
                 private(old_target, True)
                 old_raw = read(old_target + "/manifest.json")
                 old_manifest = closed(old_raw)
+                prior_files = set(old_manifest.get("files", {}))
                 if (
                     digest(old_raw) != previous
                     or old_manifest.get("schema_version") != 3
                     or old_manifest.get("kind") != manifest["kind"]
-                    or set(old_manifest.get("files", {})) != set(FILES)
-                    or set(os.listdir(old_target)) != set(FILES + ("manifest.json",))
+                    or prior_files not in (set(FILES), set(FILES) - set(("recovery.py",)))
+                    or set(os.listdir(old_target)) != prior_files | set(("manifest.json",))
                 ):
                     raise ValueError("native_setup_update_prior_manifest")
-                for name in FILES:
+                for name in sorted(prior_files):
                     old_data = read(old_target + "/" + name)
                     if old_manifest["files"][name] != {
                         "sha256": digest(old_data),

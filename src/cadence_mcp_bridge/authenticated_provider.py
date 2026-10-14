@@ -40,7 +40,10 @@ class ProviderEnvelope(EnvironmentModel):
     schema_version: Literal[1]
     runtime_manifest_sha256: Digest
     identity_manifest_sha256: Digest
-    action: Literal["authorize", "accept", "lookup", "cancel_pending", "result"]
+    action: Literal[
+        "authorize", "accept", "lookup", "cancel_pending", "result",
+        "recover_extraction", "recovery_source",
+    ]
     payload: dict[str, Any] | None
 
 
@@ -133,7 +136,10 @@ class AuthenticatedOperatorProvider:
         plan: OperationPlan,
         operation_id: str | None = None,
     ) -> dict[str, Any] | None:
-        if action not in {"authorize", "accept", "lookup", "cancel_pending", "result"}:
+        if action not in {
+            "authorize", "accept", "lookup", "cancel_pending", "result",
+            "recover_extraction", "recovery_source",
+        }:
             raise OperationRejected("native_provider_fixed_action_required")
         self._plan(plan)
         request = {

@@ -78,7 +78,8 @@ class ConfirmedGate(object):
         return routes[0]
 
     def identity(self, plan):
-        if set(plan) != set(PLAN_KEYS) or (
+        recovery = "recovery" in plan
+        if set(plan) != set(PLAN_KEYS + (("recovery",) if recovery else ())) or (
             type(plan["schema_version"]) is not int
             or plan["schema_version"] != 1
             or type(plan["attempt_cost"]) is not int
@@ -89,6 +90,18 @@ class ConfirmedGate(object):
             or any(plan[key] != self.registration[key] for key in BINDINGS)
         ):
             raise ValueError("native_gate_plan_binding")
+        if recovery:
+            reference = plan["recovery"]
+            if not isinstance(reference, dict) or set(reference) != set((
+                "original_operation_id", "original_plan_sha256", "original_tree_fingerprint"
+            )):
+                raise ValueError("native_gate_recovery_reference")
+            if not self.confirmation.matches(
+                r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                reference["original_operation_id"],
+            ) or any(not self.accounting.matches(self.accounting.HASH, reference[key])
+                     for key in ("original_plan_sha256", "original_tree_fingerprint")):
+                raise ValueError("native_gate_recovery_reference")
         root, binding, user, uid = self.confirmation.domain(self.profile, self.anchor)
         if root != self.root or plan["resource_domain_sha256"] != binding["resource_domain_sha256"]:
             raise ValueError("native_gate_resource_binding")
@@ -261,8 +274,10 @@ class ConfirmedGate(object):
         )
         grant = record["grant"]
         self.match_record(plan, grant)
-        if action not in ("authorize", "submit", "cancel_pending"):
+        if action not in ("authorize", "submit", "cancel_pending", "recover_extraction"):
             raise ValueError("native_gate_fixed_action")
+        if (action == "recover_extraction") != ("recovery" in plan) and action != "authorize":
+            raise ValueError("native_gate_recovery_action_mismatch")
         if action != "authorize" and action not in grant["actions"]:
             raise ValueError("native_gate_action_denied")
         for key, expected in (
@@ -335,7 +350,7 @@ class ConfirmedGate(object):
             "filesystem_total_bytes": observation["total_bytes"],
         }
         # Cancellation requires current consent/trust but need not spend capacity.
-        if action == "submit":
+        if action in ("submit", "recover_extraction"):
             if (
                 accounting_observation["grant_attempts"] + 1 > grant["attempt_limit"]
                 or accounting_observation["grant_reserved_bytes"] + reservation["reserve_bytes"]

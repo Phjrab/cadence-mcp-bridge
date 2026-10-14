@@ -209,8 +209,12 @@ def selector(value, current=False):
     return value
 
 
-def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, reader_sha):
+def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, reader_sha,
+           source_operation_id=None):
     job = path(job_root) + "/" + operation(operation_id) + "/work"
+    source = job if source_operation_id is None else (
+        path(job_root) + "/" + operation(source_operation_id) + "/work"
+    )
     header = "|".join(
         (
             "MCP_GREL_FRAME",
@@ -235,7 +239,7 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
         "let((port data wave xVec yVec count index sample axis)",
         '  port=outfile("' + job + '/generic-frame.txt")',
         "  unless(port exit(1))",
-        '  unless(openResults("' + job + '/psf") close(port) exit(1))',
+        '  unless(openResults("' + source + '/psf") close(port) exit(1))',
         "  unless(selectResult('" + result + ") close(port) exit(1))",
         '  fprintf(port "' + header + '\\n")',
     ]
