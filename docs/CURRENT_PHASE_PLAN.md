@@ -1,5 +1,14 @@
 # Current POST continuation, 2026-10-14
 
+Fresh automatic P2 review4269249515 found slow input ramps could qualify sampled
+step slope. Host input-edge bracket guard now rejects them; related203 tests
+pass. Historical1ns inverter result is reclassified with null qualified value,
+original report/PSF preserved. Owned1ps source and common actual TRAN input pass;
+one finite128MiB TRAN is prepared, not admitted. Same ledger124 /
+15,184,429,056 bytes and native22/24 remain. Finish exact new install, actual TRAN,
+retained restart/retry/read, review and hosted gates. See POST_07_FAST_STEP_V1.md.
+This supersedes the older "no new experiment needed" checkpoint below.
+
 Corrected exact c8de5a7 installed/package/rights/lifecycle/SDK and hosted both OS
 checks PASS. Two automatic P2s are fixed: loop-waveform projection is independent
 of bandwidth's complete transfer; zero AC sources are checked differentially.

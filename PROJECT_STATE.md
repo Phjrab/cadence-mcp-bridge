@@ -1,5 +1,14 @@
 # Current POST scope, 2026-10-14
 
+Automatic review4269249515 exposes input-limited slow-ramp slew eligibility.
+Host-only measured input/output bracket-duration guard and203 related regressions
+pass; prior1ns inverter result is honestly unqualified with report/PSF preserved.
+Owned1ps OA/state/common TRAN effective input and finite1/128MiB preparation pass,
+no admission yet. Same cumulative124 /15,184,429,056, native22/24 remain. Exact
+rebuilt install/actual TRAN/restart/review/hosted checks are pending. Further Claude
+checks excluded; public2.0.0 immutable. See docs/POST_07_FAST_STEP_V1.md. Earlier
+"completed slew" evidence retains its historical source-specific scope.
+
 Exact corrected c8de5a7 package/installed lifecycle/hosted both OS checks PASS.
 Two automatic P2s resolved with 186 related/static PASS; installed retained
 margin/bandwidth/retry/report/SDK revalidation adds0 and preserves previous

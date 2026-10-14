@@ -1,5 +1,10 @@
 # POST-07 exact installed ideal voltage-loop results
 
+Current slew qualification correction is tracked in POST_07_FAST_STEP_V1.md.
+The old1ns input-ramp step estimate below/older reports is reclassified as
+unqualified under measured fast-edge guards; all original receipts remain.
+This host-only slew correction does not change the retained loop measurements.
+
 ## Corrected exact installed qualification
 
 Corrected code `c8de5a758421d84a20f209f2dc24f87cb32a0171` passes exact hosted

@@ -117,3 +117,20 @@ def test_full_tran_projection_keeps_normal_contract(operator):
     assert complete["tran_waveforms"]["output"] == [
         {"time_s": 0, "value_v": 1}, {"time_s": 0.004, "value_v": 0},
     ]
+
+
+def test_monotonic_slow_input_ramp_cannot_qualify_step_slope():
+    data = waves()
+    for point in data["input"]:
+        point["value_v"] = max(0, min(1, (point["time_s"] - 3) / 10))
+    result = sampled_slew(data, definition())
+    assert result["status"] == "INPUT_EDGE_NOT_FAST_ENOUGH_FOR_SAMPLED_STEP_RESPONSE"
+    assert result["value"] is None and result["input_fraction_crossings"]
+    assert result["input_edge_duration_upper_bound_s"] > (
+        .25 * result["output_crossing_duration_lower_bound_s"]
+    )
+
+
+def test_input_edge_bound_cannot_be_widened_to_hide_ramp():
+    with pytest.raises(ValidationError):
+        definition(maximum_input_edge_ratio=.5)

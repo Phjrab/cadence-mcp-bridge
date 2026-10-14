@@ -34,6 +34,9 @@ class SampledSlewDefinition(VariableModel):
     lower_fraction: Annotated[float, Field(gt=0, lt=1, allow_inf_nan=False)] = 0.1
     upper_fraction: Annotated[float, Field(gt=0, lt=1, allow_inf_nan=False)] = 0.9
     minimum_crossing_intervals: Annotated[int, Field(ge=4, le=64)] = 4
+    maximum_input_edge_ratio: Annotated[
+        float, Field(gt=0, le=0.25, allow_inf_nan=False),
+    ] = 0.25
 
     @model_validator(mode="after")
     def windows(self) -> Self:
@@ -146,6 +149,35 @@ def sampled_slew(
     output["largest_crossing_sample_gap_s"] = max(gaps)
     if duration <= 0 or max(gaps) * definition.minimum_crossing_intervals > duration:
         output["status"] = "INSUFFICIENT_SAVED_TIME_RESOLUTION"
+        return output
+    # A monotonic ramp alone cannot qualify a step response. Use containing
+    # input brackets and a conservative output-duration lower bound.
+    input_step = input_final - input_initial
+    if not math.isfinite(input_step) or input_step == 0:
+        raise OperationRejected("slew_nonfinite_or_zero_input_step")
+    normalized_input = [(v - input_initial) / input_step for v in input_wave]
+    input_crossings: list[dict[str, Any]] = []
+    for fraction in (0.1, 0.9):
+        found: list[dict[str, Any]] = []
+        for i in range(1, len(times)):
+            if times[i - 1] < definition.initial_stop_s or times[i] > definition.final_start_s:
+                continue
+            a, b = normalized_input[i - 1], normalized_input[i]
+            if a < fraction <= b:
+                found.append({"time_s": times[i - 1] + (fraction - a) / (b - a)
+                              * (times[i] - times[i - 1]),
+                              "bracket_s": [times[i - 1], times[i]]})
+        if len(found) != 1:
+            output["status"] = "AMBIGUOUS_OR_MISSING_INPUT_EDGE"
+            return output
+        input_crossings.append(found[0])
+    input_bound = input_crossings[1]["bracket_s"][1] - input_crossings[0]["bracket_s"][0]
+    output_bound = crossings[1]["bracket_s"][0] - crossings[0]["bracket_s"][1]
+    output["input_fraction_crossings"] = input_crossings
+    output["input_edge_duration_upper_bound_s"] = input_bound
+    output["output_crossing_duration_lower_bound_s"] = output_bound
+    if output_bound <= 0 or input_bound > definition.maximum_input_edge_ratio * output_bound:
+        output["status"] = "INPUT_EDGE_NOT_FAST_ENOUGH_FOR_SAMPLED_STEP_RESPONSE"
         return output
     estimate = step * (definition.upper_fraction - definition.lower_fraction) / duration
     if not math.isfinite(estimate):
