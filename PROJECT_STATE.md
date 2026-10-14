@@ -1,5 +1,14 @@
 # Current POST scope, 2026-10-14
 
+Exact18115b6 first fast-input TRAN and automatic extraction pass; output transition
+underresolved, null estimate retained. Same-ID restart/read/report spends0.
+Current125 /15,318,646,784,native22/24. Next finite finer-grid1/128MiB uses same
+source/state/load,stop.65ns/maxstep3ps; prepared only. Fourth automatic P2's selected
+transfer coupling is fixed via independent complete-axis loop projection and typed
+waveform source; default public report contract unchanged.222 related tests pass;
+exact rebuilt install/retained equivalence/fine TRAN/review/hosted gates remain.
+Details: docs/POST_07_FAST_STEP_V1.md. No Claude work, merge or publication.
+
 Automatic review4269249515 exposes input-limited slow-ramp slew eligibility.
 Host-only measured input/output bracket-duration guard and203 related regressions
 pass; prior1ns inverter result is honestly unqualified with report/PSF preserved.

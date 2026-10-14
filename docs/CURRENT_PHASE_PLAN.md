@@ -1,5 +1,15 @@
 # Current POST continuation, 2026-10-14
 
+First exact18115b6 actual TRAN/automatic extraction passes but measured15.9ps
+output transition is honestly underresolved (98 samples); null estimate/PSF/
+128MiB spend preserved. Restart/retry/report adds0. Current125 /15,318,646,784,
+native22/24. One separately bounded finer-grid TRAN on identical source is prepared
+for stop.65ns/maxstep3ps/final.6-.65ns; not admitted. Review4269530097's remaining
+selected-transfer coupling is fixed with complete-axis validation and a typed
+loop-waveform source, public report contract unchanged;222 related tests pass.
+Finish rebuilt install, retained loop equivalence and finite fine TRAN/restart/CI/
+review. See POST_07_FAST_STEP_V1.md. Earlier no-new-experiment statements are history.
+
 Fresh automatic P2 review4269249515 found slow input ramps could qualify sampled
 step slope. Host input-edge bracket guard now rejects them; related203 tests
 pass. Historical1ns inverter result is reclassified with null qualified value,

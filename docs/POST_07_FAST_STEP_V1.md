@@ -1,5 +1,43 @@
 # POST-07 fast-input sampled step validation
 
+## First actual fast-step and finer-grid checkpoint
+
+Exact18115b6 isolated build/install/rights/lifecycle and retained loop/bandwidth/
+SDK checks pass. The first new TRAN succeeds at UID500 through common OA copy,
+netlisting/effective input, Spectre and automatic OCEAN extraction.98 saved
+samples preserve the1ps input and settled output; output10/90 duration is about
+15.906ps but largest containing gap4.591ps fails the declared four-interval
+resolution bound. It honestly returns `INSUFFICIENT_SAVED_TIME_RESOLUTION`, null.
+Its PSF, report, completed ID and128MiB reservation remain. New-process same-ID
+retry/two slew reads/report spends0 and preserves eight earlier loop/DC records.
+Historical slow-ramp null reclassification is also verified on this installation.
+
+Current shared125/500 and15,318,646,784/17,179,869,184 bytes. The first finite
+grant is fully consumed. A separate one-job128MiB finer-grid proposal reuses the
+identical owned source/state/static/load, changes only stop.65ns/maxstep3ps and
+final plateau.6–.65ns, initial plateau0–.3ns. Existing coarse saved samples show
+that final window is settled within approximately5.33microV, below the unchanged
+1mV bound. Expected nominal217 grid intervals plus adaptive edge samples must
+still meet the existing256 sample ceiling; overflow stays a failure, never a
+truncation or limit bypass. The new finite plan is prepared, not admitted here.
+Fresh gates and a new exact installed host correction are required before run.
+If admitted once, anticipated126/15,452,864,512 bytes; no reset/refund/new journal.
+
+Automatic review4269530097 additionally found that the prior loop-specific
+projection still computed ordinary selected-frequency transfer. Host loop reads
+now omit both selected/full unrelated transfer while independently validating
+the complete AC axis and all authenticated node samples. The opt-in loop source
+uses a typed `authenticated_loop_waveforms_v1` provenance envelope without
+inventing gain metrics. It retains plan, job, reader/input/receipt/frame hashes
+and source/static/model/analysis conditions, including the unrelated registered
+transfer definition. Its source digest is intentionally different from the old
+ordinary gain report digest. Default public result/report and bandwidth projection
+remain unchanged. Synthetic selected-zero, malformed-axis and integrated source
+capture regressions pass; related222 tests/mypy108 pass. Retained actual margin
+and waveform/source-field equivalence must be rechecked on the rebuilt install.
+Initial new synthetic fixture failures (sanitized exception text and tuple arity)
+are retained; only those test assumptions were corrected. No native change.
+
 ## Review correction and finite preparation
 
 Automatic review4269249515 identified that a monotonic input ramp can limit the

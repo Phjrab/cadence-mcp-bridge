@@ -8,7 +8,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, TypeAdapter
 
@@ -20,10 +20,10 @@ from cadence_mcp_bridge.generic_slew import SampledSlewDefinition, sampled_slew
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationService
 from cadence_mcp_bridge.onboarding import _local_path
-from cadence_mcp_bridge.operator_operations import OperationRejected
-from cadence_mcp_bridge.result_reports import conditions_digest, make_report
+from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected
+from cadence_mcp_bridge.result_reports import ReportConditions, conditions_digest, make_report
 from cadence_mcp_bridge.runtime_context import load_runtime
-from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
+from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
 Positive = Annotated[float, Field(gt=0, allow_inf_nan=False)]
 
@@ -31,6 +31,21 @@ Positive = Annotated[float, Field(gt=0, allow_inf_nan=False)]
 class SampledBandwidthDefinition(VariableModel):
     reference_frequency_hz: Positive
     drop_db: Annotated[float, Field(gt=0, le=120, allow_inf_nan=False)] = 3.0
+
+
+class LoopWaveformSource(VariableModel):
+    """Experimental loop provenance without inventing unrelated gain metrics."""
+
+    source_type: Literal["authenticated_loop_waveforms_v1"] = "authenticated_loop_waveforms_v1"
+    operation_id: OperationId
+    plan: OperationPlan
+    measurement_id: LogicalId
+    reader_registration_sha256: Digest
+    execution_input_sha256: Digest
+    extraction_receipt_sha256: Digest
+    frame_sha256: Digest
+    source_provenance: Literal["FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED"]
+    analysis_conditions: ReportConditions
 
 
 def requirements() -> dict[str, Any]:
@@ -214,17 +229,32 @@ async def capture_phase_margin(
     observed.check(record)
     if observed.progress != record.progress:
         raise OperationRejected("analog_terminal_identity_mismatch")
-    report = make_report(record, result)
-    if report.analysis_conditions.static_statements_sha256 != definition.static_statements_sha256:
+    if result.get("status") != "NATIVE_RESULT_RETRIEVED" or (
+        result.get("operation_id"), result.get("plan_sha256"), result.get("design_id"),
+        result.get("analysis"),
+    ) != (operation_id, plan_sha256, record.plan.request.design_id, "ac"):
+        raise OperationRejected("loop_source_identity_invalid")
+    source = LoopWaveformSource.model_validate_json(json.dumps({
+        "operation_id": operation_id, "plan": record.plan.model_dump(mode="json"),
+        **{key: result[key] for key in (
+            "measurement_id", "reader_registration_sha256", "execution_input_sha256",
+            "extraction_receipt_sha256", "frame_sha256",
+        )},
+        "source_provenance": result["native_provenance"],
+        "analysis_conditions": result["report_conditions"],
+    }))
+    if source.analysis_conditions.analysis_inputs.analysis != "ac" or (
+        source.analysis_conditions.static_statements_sha256 != definition.static_statements_sha256
+    ):
         raise OperationRejected("loop_effective_static_topology_binding_mismatch")
     if result.get("ac_node_mapping") != [n.model_dump(mode="json") for n in definition.nodes]:
         raise OperationRejected("loop_authenticated_reader_mapping_mismatch")
     waves = TypeAdapter(dict[str, list[dict[str, Any]]]).validate_python(result["ac_waveforms"])
     estimate = sampled_loop_margin(waves, definition)
-    estimate["native_provenance"] = report.source_provenance
+    estimate["native_provenance"] = source.source_provenance
     return {
-        "measurement": estimate, "source": report.model_dump(mode="json"),
-        "conditions_sha256": conditions_digest(report),
+        "measurement": estimate, "source": source.model_dump(mode="json"),
+        "conditions_sha256": canonical_digest(source),
         "waveforms_sha256": hashlib.sha256(_canonical(waves)).hexdigest(),
         "definition": definition.model_dump(mode="json"),
         "new_simulations": 0, "new_extractions": 0, "new_reservations": 0,

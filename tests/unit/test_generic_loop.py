@@ -173,6 +173,65 @@ def test_loop_projection_does_not_require_unselected_transfer_input(operator):
         project_frame(*args, frame, include_ac_spectrum=True)
 
 
+def test_loop_only_projection_accepts_zero_at_selected_gain_but_keeps_axis_guard(operator):
+    args = reader_for(operator, "ac")
+    frame = frame_for(args, "P|input|0|1000|0|0\nP|input|1|2000|0|0\n"
+                      "P|output|0|1000|4|0\nP|output|1|2000|4|0")
+    full = project_frame(*args, frame, include_ac_waveforms=True,
+                         include_selected_ac_transfer=False)
+    assert "transfer" not in full and full["ac_waveforms"]["input"][0]["real_v"] == 0
+    with pytest.raises(OperationRejected) as caught:
+        project_frame(*args, frame)
+    assert caught.value.reason == "reader_ac_input_zero"
+    with pytest.raises(OperationRejected) as caught:
+        project_frame(*args, frame.replace(b"|1000|", b"|999|"),
+                      include_ac_waveforms=True, include_selected_ac_transfer=False)
+    assert caught.value.reason == "reader_ac_interval_invalid"
+
+
+@pytest.mark.asyncio
+async def test_loop_capture_uses_authenticated_waveform_source_without_gain_metrics(operator):
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from cadence_mcp_bridge.generic_analog import capture_phase_margin
+
+    args = reader_for(operator, "ac")
+    context, plan, ade, reader, op, _ = args
+    declared = definition()
+    record = SimpleNamespace(operation_id=op, plan=plan,
+                             progress=SimpleNamespace(phase="SUCCEEDED"))
+    result = {
+        "status": "NATIVE_RESULT_RETRIEVED", "operation_id": op,
+        "plan_sha256": plan.plan_sha256, "design_id": plan.request.design_id, "analysis": "ac",
+        "measurement_id": reader.measurement_id,
+        **{key: "a" * 64 for key in ("reader_registration_sha256", "execution_input_sha256",
+                                    "extraction_receipt_sha256", "frame_sha256")},
+        "native_provenance": "FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+        "report_conditions": {
+            "analysis_inputs": ade.inputs.model_dump(mode="json"),
+            "source_tree_sha256": "a" * 64, "ade_state_tree_sha256": "a" * 64,
+            "static_statements_sha256": declared.static_statements_sha256,
+            "model_file_sha256": ["a" * 64],
+            "transfer": reader.transfer.model_dump(mode="json"),
+        },
+        "ac_node_mapping": [n.model_dump(mode="json") for n in declared.nodes],
+        "ac_waveforms": waves(),
+    }
+    observation = SimpleNamespace(check=lambda record: None, progress=record.progress)
+    native = SimpleNamespace(current=lambda: None, context=context,
+                             lifecycle=SimpleNamespace(store=SimpleNamespace(
+                                 connection=lambda **kwargs: nullcontext(None),
+                                 _read_operation=lambda *args: record)),
+                             provider=SimpleNamespace(loop_result=AsyncMock(
+                                 return_value=(observation, result))))
+    measured = await capture_phase_margin(native, op, plan.plan_sha256, declared)
+    assert measured["measurement"]["status"] == "OBSERVED_SINGLE_SAMPLED_MARGIN"
+    assert measured["source"]["source_type"] == "authenticated_loop_waveforms_v1"
+    assert "metrics" not in measured["source"]
+
+
 @pytest.mark.asyncio
 async def test_provider_loop_and_bandwidth_projection_options_are_separate():
     from types import SimpleNamespace
@@ -186,6 +245,7 @@ async def test_provider_loop_and_bandwidth_projection_options_are_separate():
     await provider.loop_result("retained", plan)
     provider._result.assert_awaited_once_with(
         "retained", plan, include_report_conditions=True, include_ac_waveforms=True,
+        include_selected_ac_transfer=False,
     )
     provider._result.reset_mock()
     await provider.analog_result("retained", plan)

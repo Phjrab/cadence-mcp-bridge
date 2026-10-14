@@ -305,6 +305,7 @@ def project_frame(
     *,
     include_ac_spectrum: bool = False,
     include_ac_waveforms: bool = False,
+    include_selected_ac_transfer: bool = True,
     include_tran_waveforms: bool = False,
 ) -> dict[str, object]:
     """Validate mathematical data only. A future provider must authenticate its origin."""
@@ -413,7 +414,9 @@ def project_frame(
         if any(tuple(x for x, _ in wave) != axes for wave in waves.values()):
             raise OperationRejected("reader_frame_axes_mismatch")
         if plan.analysis == "ac":
-            output["transfer"] = _transfer(ade, reader, axes, waves)
+            _validate_ac_axes(ade, axes)
+            if include_selected_ac_transfer:
+                output["transfer"] = _transfer(ade, reader, axes, waves)
             if include_ac_spectrum:
                 output["ac_spectrum"] = _transfer(ade, reader, axes, waves, all_samples=True)
             if include_ac_waveforms:
@@ -484,14 +487,7 @@ def _matches_ac_axis(actual: float, expected_axes: tuple[float, ...], index: int
     return math.isclose(actual, expected, rel_tol=0, abs_tol=tolerance)
 
 
-def _transfer(
-    ade: AdeExecutionRegistration,
-    reader: GenericReaderRegistration,
-    axes: tuple[float, ...],
-    waves: dict[str, tuple[tuple[float, complex], ...]],
-    *,
-    all_samples: bool = False,
-) -> list[dict[str, object]]:
+def _validate_ac_axes(ade: AdeExecutionRegistration, axes: tuple[float, ...]) -> None:
     inputs = ade.inputs
     if inputs.analysis != "ac":
         raise OperationRejected("reader_ac_interval_invalid")
@@ -504,6 +500,17 @@ def _transfer(
         not _matches_ac_axis(actual, expected_axes, index) for index, actual in enumerate(axes)
     ):
         raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
+
+
+def _transfer(
+    ade: AdeExecutionRegistration,
+    reader: GenericReaderRegistration,
+    axes: tuple[float, ...],
+    waves: dict[str, tuple[tuple[float, complex], ...]],
+    *,
+    all_samples: bool = False,
+) -> list[dict[str, object]]:
+    _validate_ac_axes(ade, axes)
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
