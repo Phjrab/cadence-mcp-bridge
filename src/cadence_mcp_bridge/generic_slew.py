@@ -133,6 +133,13 @@ def sampled_slew(
             return output
         crossings.append(upward[0])
     duration = crossings[1]["time_s"] - crossings[0]["time_s"]
+    input_change = next((i for i, (time, value) in enumerate(zip(
+        times, input_wave, strict=True,
+    )) if time > definition.initial_stop_s
+        and abs(value - input_initial) > definition.plateau_tolerance_v), None)
+    if input_change is None or crossings[0]["time_s"] < times[max(0, input_change - 1)]:
+        raise OperationRejected("slew_output_transition_precedes_measured_input_step")
+    output["input_onset_bracket_s"] = [times[max(0, input_change - 1)], times[input_change]]
     lo, hi = crossings[0]["bracket_index"][0], crossings[1]["bracket_index"][1]
     gaps = [times[i] - times[i - 1] for i in range(lo + 1, hi + 1)]
     output["crossings"] = crossings

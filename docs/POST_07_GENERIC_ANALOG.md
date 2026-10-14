@@ -1,5 +1,46 @@
 # Generic analog measurements: experimental operator path
 
+## Actual five-point input nulling checkpoint, 2026-10-14
+
+Exact installed0f47568 runs all five registered DC inputs through the common OA
+copy/netlisting/effective-input/Spectre/automatic-reader/result path at UID500.
+Same-ID resubmissions add0. The first authorization failed before reservation:
+only the new owned library had a strict-copy schema1 fingerprint where the library
+guard requires dependency schema2. Read-only diagnosis proved original libraries
+match, new source content and every existing metadata field match, and the only
+schema difference is verified file nlink1. A versioned registration corrects only
+that entry, retaining old manifests/grants/failures and the same five unused IDs.
+No source content, metadata, native asset or library guard is changed.
+
+The first combined offset read rejects because distinct applied inputs necessarily
+have distinct authenticated execution-input hashes. Host comparison now excludes
+only that point-specific digest and the two named input variables; all source,
+static/model/reader/analysis and other bias conditions still match exactly. Each
+full input digest remains in its own authenticated source report. A positive
+multi-input regression supplements the existing changed-bias rejection test.
+
+Actual corrected source-host read/repeat passes. Measured differential output is
+monotonic across -1 to+1microV, approximately -8.865 to+8.865mV. The interpolated
+nominal zero is approximately0V (numerical residue -2.267e-15V) in the observed
+[-0.5microV,0V] bracket. That residue is **not femtovolt offset precision**;
+no physical mismatch, numerical-tolerance convergence or PVT claim is made.
+Old failure and successful DC results remain intact. Retained read/settings/
+registry/grant/journal checks and current ordinary-user preflight pass.
+
+This finite experiment spends5 attempts/640MiB. Actual cumulative accounting is
+121 /14,781,775,872 bytes; remaining2,398,093,312 of16GiB. Native sources remain
+22/24. Host-only causal slew protection additionally rejects output transitions
+before measured input onset. Related166 tests/Ruff/mypy107 pass. Final exact
+installed updated-host reads, hosted CI and independent review remain gates.
+PM still needs its own proven loop/testbench; POST07 is partial. Public2.0.0
+is unchanged. Private evidence: post07-offset-runtime-v1, v3 and v3/host-read-v4.
+
+When registering a library, use the dependency snapshot fingerprint, which
+includes regular-file link counts and preserves existing lock/recovery evidence.
+Source/ADE copy fingerprints remain the stricter copy snapshots. The two hashes
+are different even for the same unchanged owned library; do not interchange them
+or replace other registered protection baselines to bypass a mismatch.
+
 ## Common sampled slew and input-nulling extension, 2026-10-14
 
 The user now delegates remaining QA testbench and definition choices. Earlier

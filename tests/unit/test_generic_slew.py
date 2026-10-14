@@ -96,6 +96,15 @@ def test_repeated_threshold_crossing_is_ambiguous():
     assert sampled_slew(data, definition())["status"] == "AMBIGUOUS_OR_MISSING_SAMPLED_CROSSING"
 
 
+def test_output_transition_before_input_step_is_rejected():
+    data = waves()
+    for point in data["input"]:
+        point["value_v"] = int(point["time_s"] >= 13)
+    with pytest.raises(OperationRejected) as caught:
+        sampled_slew(data, definition())
+    assert caught.value.reason == "slew_output_transition_precedes_measured_input_step"
+
+
 def test_full_tran_projection_keeps_normal_contract(operator):
     args = reader_for(operator, "tran")
     frame = frame_for(args, "P|input|0|0|0|0\nP|input|1|0.004|1|0\n"

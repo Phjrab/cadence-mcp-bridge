@@ -23,3 +23,11 @@ Do not replace its runtime or package and then describe that as public2.0.0
 qualification. Existing connections, consumed grants, journals and app state
 remain protected. The user delegates remaining QA configuration and verification;
 that delegation is not authority to select historical data for deletion.
+
+Fresh continued Computer Use observes no running Claude window, launches the
+existing installed app, selects its unique returned window and reads accessibility.
+The app opens its Code surface. The observed Claude-tab click fails
+`coordinate input geometry is unavailable`; fresh window selection and one
+screen-capture recovery fail `FrameArrived timed out: timed out waiting on channel`.
+No prompt was typed/submitted and no MCP action or configuration change occurred.
+These helper failures do not require a Codex restart or qualify a remote app job.

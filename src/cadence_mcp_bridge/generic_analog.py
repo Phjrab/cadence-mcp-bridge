@@ -233,6 +233,10 @@ async def capture_offset(
         variable_names = {definition.positive_input_variable, definition.negative_input_variable}
         conditions["values"] = [v for v in conditions["values"]
                                 if v["logical_id"] not in variable_names]
+        # The authenticated effective input necessarily differs at each applied
+        # input point. Retain that digest in each source report, while comparing
+        # the static/source/reader/analysis and every non-input variable exactly.
+        conditions.pop("execution_input_sha256", None)
         if baseline is not None and conditions != baseline:
             raise OperationRejected("offset_source_or_conditions_mismatch")
         baseline = conditions

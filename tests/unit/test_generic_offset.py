@@ -110,3 +110,57 @@ async def test_capture_keeps_non_input_bias_conditions(monkeypatch):
         ], definition())
     assert caught.value.reason == "offset_source_or_conditions_mismatch"
     assert provider.report_result.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_capture_distinct_authenticated_input_points_keeps_each_input_digest(monkeypatch):
+    from contextlib import nullcontext
+    from types import SimpleNamespace as NS
+    from unittest.mock import AsyncMock
+
+    from cadence_mcp_bridge import generic_analog
+
+    identities = [f"00000000-0000-4000-8000-{i:012d}" for i in range(1, 4)]
+    rows = [samples()[i] for i in (0, 2, 4)]
+    records = [NS(operation_id=identity, progress=NS(phase="SUCCEEDED"), plan=NS(
+        plan_sha256="a" * 64, resource_domain_sha256="b" * 64, ledger_ref="retained",
+        analysis="dc", request=NS(values=[
+            NS(logical_id="input-plus", value=str(row["inp"]), unit="V"),
+            NS(logical_id="input-minus", value=str(row["inn"]), unit="V"),
+        ]),
+    )) for identity, row in zip(identities, rows, strict=True)]
+
+    async def result(identity, plan):
+        record = records[identities.index(identity)]
+        return NS(progress=record.progress, check=lambda record: None), {
+            "nodes": [{"logical_id": key, "value": value}
+                      for key, value in rows[identities.index(identity)].items()],
+        }
+
+    provider = NS(report_result=AsyncMock(side_effect=result))
+    store = NS(connection=lambda **kwargs: nullcontext(None),
+               _read_operation=lambda connection, identity: records[identities.index(identity)])
+    native = NS(current=lambda: None, lifecycle=NS(store=store), provider=provider,
+                context=NS(resource_domain_sha256="b" * 64, binding=NS(ledger_ref="retained")))
+
+    def report(record, result):
+        digest = str(identities.index(record.operation_id) + 1) * 64
+        return NS(analysis_conditions=NS(static_statements_sha256="a" * 64),
+                  conditions=lambda: {"execution_input_sha256": digest, "values": [
+                      {"logical_id": v.logical_id, "value": v.value}
+                      for v in record.plan.request.values
+                  ] + [{"logical_id": "bias-n", "value": "0.32"}],
+                      "reader_registration_sha256": "c" * 64},
+                  model_dump=lambda **kwargs: {"execution_input_sha256": digest,
+                                              "source_provenance": "SYNTHETIC_TEST_FIXTURE"})
+
+    monkeypatch.setattr(generic_analog, "make_report", report)
+    captured = await generic_analog.capture_offset(native, [
+        {"operation_id": identity, "expected_plan_sha256": "a" * 64}
+        for identity in identities
+    ], definition())
+    assert captured["measurement"]["value"] == pytest.approx(0.1e-6, abs=1e-15)
+    assert {r["execution_input_sha256"] for r in captured["sources"]} == {
+        "1" * 64, "2" * 64, "3" * 64,
+    }
+    assert captured["new_simulations"] == captured["new_extractions"] == 0

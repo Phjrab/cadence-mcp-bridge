@@ -1,3 +1,23 @@
+## Actual five-point DC continuation, 2026-10-14
+
+Five new registered nominal input-nulling DC jobs now succeed with automatic
+extraction, UID500 gates and same-ID repeat0. Library-registration schema failure
+before spend and subsequent host condition-comparison failure remain preserved.
+Only the explained new-library fingerprint is corrected, preserving all original
+content/metadata and older libraries. Host offset comparison keeps point-specific
+input hashes in each source, while all other conditions/biases remain identical.
+Actual corrected read/repeat returns nominal near0V in[-0.5microV,0V], not physical
+precision/mismatch/PVT evidence. Shared ledger121 /14,781,775,872,remaining
+2,398,093,312 of16GiB; native22/24 unchanged. Related166 tests/static PASS.
+
+Prepare exact updated host wheel, rights/install checks, new-process retained
+offset/slew reads and retry0, final PR158 SHA/CI/review. Continue valid PM loop
+testbench preparation under delegated QA choices; no phase reapproval is needed.
+Fresh Claude accessibility works but click geometry/capture recovery still fail;
+no prompt sent or app execution qualification. POST05 historical target selection
+is still separate. Do not merge POST/public artifacts by inference. Prior history
+remains unchanged.
+
 ## Current measurement execution plan, 2026-10-14
 
 Direct user "나머지는 너가 구성해서 검증" delegates remaining scientific QA

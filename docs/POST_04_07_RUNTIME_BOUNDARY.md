@@ -1,5 +1,18 @@
 # Retained native change boundary for POST-04 and POST-07
 
+## Actual input-nulling continuation, 2026-10-14
+
+Five new owned DC jobs plus automatic extraction/results/repeat0 succeed.
+Current shared ledger121 /14,781,775,872,remaining2,398,093,312 bytes of16GiB;
+native22/24. Versioned new-library fingerprint correction retains original
+content/metadata and all old libraries/failures/bundles/grants. Host-only combined
+input-hash comparison correction adds no native change or simulation; every source
+hash remains in its own report. Actual read/repeat gives nominal near0V within a
+measured bracket, with no absolute precision/mismatch/PVT claim. Final exact
+installed host/CI/review and actual PM loop remain gates. Claude geometry/capture
+still block app inputs; local user-supplied lookup is the only public app success.
+No counter reset/refund, deletion, POST merge, publication or restart is inferred.
+
 ## Current delegated measurement boundary, 2026-10-14
 
 The user supplies actual published-Claude local runtime-info-v2 and delegates

@@ -1,3 +1,24 @@
+## Actual five DC and host measurement correction, 2026-10-14
+
+All five new owned input-nulling DC jobs succeed at UID500 through common native
+copy/netlist/effective input/Spectre/automatic extraction/results. Same-ID repeat
+spends0. Initial pre-reservation library rejection is diagnosed as new-library
+copy-vs-dependency fingerprint schema; exact content/metadata and old libraries
+are preserved in the versioned correction. No guard/native code change occurs.
+Initial combined offset read retains its condition rejection; corrected host
+comparison preserves each varying input hash and compares every non-input bias,
+source/static/PDK/reader/analysis exactly. Actual read/repeat gives nominal near0V
+in a[-0.5microV,0V] bracket, with no femtovolt precision/mismatch/PVT claim.
+
+This5 attempts/640MiB; retained cumulative121 /14,781,775,872 bytes;16GiB remaining
+2,398,093,312. Native22/24 unchanged. Related166 tests/Ruff/mypy107 PASS; exact
+new host artifact/installed reads/CI/review pending. Current main remains67c21a7.
+POST07 partial: PM actual loop proof remains. POST05 waits exact human deletion
+targets. Fresh Claude launch/accessibility works, but chat-tab click geometry
+and one capture recovery fail; no prompt sent, public app scope stays local
+user-supplied runtime-info only. Public2.0.0 and prior journals remain intact.
+No POST merge/publication or Codex restart inferred. Earlier entries are history.
+
 ## Current user-delegated measurement continuation, 2026-10-14
 
 User supplies actual Claude public2.0.0 runtime-info-v2 local lookup: loaded
