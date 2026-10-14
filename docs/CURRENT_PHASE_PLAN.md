@@ -1,3 +1,14 @@
+# Current POST continuation, 2026-10-14
+
+Direct user excludes further Claude qualification. Historical app/SDK evidence is
+retained; exclusion is not PASS and no Claude restart/access request is required.
+Continue the existing owned loop fixture, host-only experimental sampled return
+ratio and finite DC1/AC2 scope in POST_07_LOOP_VALIDATION_V1.md. Latest normal-user
+preflight passes121 /14,781,775,872 bytes; native source22/24 unchanged. Latest main
+67c21a7 and feature6f2f66f hosted Windows/Linux PASS. Public2.0.0 stays immutable;
+POST PRs remain separate. Historical deletion/compaction requires exact selected
+targets; do not select old results on the user's behalf.
+
 ## Exact installed POST07 and remaining loop work, 2026-10-14
 
 290aab4 normal feature push/remote SHA and both hosted CI PASS. Exact private

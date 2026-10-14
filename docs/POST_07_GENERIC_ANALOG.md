@@ -1,3 +1,30 @@
+# Experimental ideal voltage-loop reader, 2026-10-14
+
+`operator-analog phase-margin --experimental-analog --settings ABSOLUTE_SETTINGS
+--context CONTEXT --operation-id RETAINED_ID --expected-plan-sha256 PLAN
+--definition ABSOLUTE_DEFINITION` reads a succeeded registered AC job only.
+It never submits, extracts or updates journals. Native assets and public MCP
+contracts are unchanged. The closed definition contains exact effective static
+statements/hash, unity unilateral VCVS and DC0/AC1 series probe, isolated return
+node and exact registered node selectors. Every independent voltage-source
+terminal must be saved; all other AC source voltages and measured Vm-Vret=1+0j
+are checked. Missing/wrong topology, mapping, stimulus or provenance rejects.
+
+The sign is fixed prospectively: L=-Vret/Vm. An independent analytic two-pole
+model calibrates sign and interpolation. All observed unity crossings and saved
+unwrapped phase are retained. Only one descending crossing with low-frequency
+positive-loop phase, both endpoints bracketing unity, at most0.15 decades per
+interval and no90-degree adjacent phase ambiguity can yield a sampled margin.
+Exact unity touches/plateaus, no/multiple crossings and underresolved grids stay
+unqualified. Interpolation is dB/phase against log frequency, without extrapolation.
+Saved samples cannot rule out hidden between-sample phase rotations or crossings.
+This is an ideal unilateral differential QA loop, not whole-circuit, common-mode,
+multi-loop, continuous-response or PVT stability qualification.
+
+Actual loop DC/AC execution and two-grid comparison are still pending at this
+implementation checkpoint. Further Claude verification is excluded by direct
+user instruction, not recorded as PASS. Public2.0.0 remains unchanged.
+
 # Generic analog measurements: experimental operator path
 
 ## Actual five-point input nulling checkpoint, 2026-10-14

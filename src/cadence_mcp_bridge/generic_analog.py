@@ -14,6 +14,7 @@ from pydantic import Field, TypeAdapter
 
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.generic_loop import IdealVoltageLoopDefinition, sampled_loop_margin
 from cadence_mcp_bridge.generic_offset import InputNullingDefinition, sampled_input_nulling
 from cadence_mcp_bridge.generic_slew import SampledSlewDefinition, sampled_slew
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -43,7 +44,8 @@ def requirements() -> dict[str, Any]:
             "output/input spectrum, nonzero measured input and finite nonzero transfer.",
         },
         "phase_margin": {
-            "status": "BLOCKED", "reason": "qualified_loop_gain_testbench_required",
+            "status": "BLOCKED", "reason": "per_job_ideal_loop_eligibility_required",
+            "experimental_operator_command": "operator-analog phase-margin",
             "required": "Loop break/injection, loading, sign and actual loop-gain extraction; "
             "ordinary output/input phase cannot supply phase margin.",
         },
@@ -192,6 +194,44 @@ async def capture_slew(
     }
 
 
+async def capture_phase_margin(
+    native: NativeOperationService, operation_id: str, plan_sha256: str,
+    definition: IdealVoltageLoopDefinition,
+) -> dict[str, Any]:
+    TypeAdapter(OperationId).validate_python(operation_id)
+    TypeAdapter(Digest).validate_python(plan_sha256)
+    native.current()
+    with native.lifecycle.store.connection(create=False, read_only=True) as connection:
+        record = native.lifecycle.store._read_operation(connection, operation_id)
+    if (
+        record.operation_id != operation_id or record.plan.plan_sha256 != plan_sha256
+        or record.plan.resource_domain_sha256 != native.context.resource_domain_sha256
+        or record.plan.ledger_ref != native.context.binding.ledger_ref
+        or record.plan.analysis != "ac" or record.progress.phase != "SUCCEEDED"
+    ):
+        raise OperationRejected("loop_retained_succeeded_ac_identity_required")
+    observed, result = await native.provider.analog_result(operation_id, record.plan)
+    observed.check(record)
+    if observed.progress != record.progress:
+        raise OperationRejected("analog_terminal_identity_mismatch")
+    report = make_report(record, result)
+    if report.analysis_conditions.static_statements_sha256 != definition.static_statements_sha256:
+        raise OperationRejected("loop_effective_static_topology_binding_mismatch")
+    if result.get("ac_node_mapping") != [n.model_dump(mode="json") for n in definition.nodes]:
+        raise OperationRejected("loop_authenticated_reader_mapping_mismatch")
+    waves = TypeAdapter(dict[str, list[dict[str, Any]]]).validate_python(result["ac_waveforms"])
+    estimate = sampled_loop_margin(waves, definition)
+    estimate["native_provenance"] = report.source_provenance
+    return {
+        "measurement": estimate, "source": report.model_dump(mode="json"),
+        "conditions_sha256": conditions_digest(report),
+        "waveforms_sha256": hashlib.sha256(_canonical(waves)).hexdigest(),
+        "definition": definition.model_dump(mode="json"),
+        "new_simulations": 0, "new_extractions": 0, "new_reservations": 0,
+        "remote_contact": True,
+    }
+
+
 async def capture_offset(
     native: NativeOperationService, operations: list[dict[str, str]],
     definition: InputNullingDefinition,
@@ -290,6 +330,12 @@ def add_analog_parser(subparsers: Any) -> None:
     offset.add_argument("--operations", type=Path, required=True)
     offset.add_argument("--context", required=True)
     offset.add_argument("--experimental-analog", action="store_true", required=True)
+    loop = actions.add_parser("phase-margin")
+    loop.add_argument("--settings", type=Path, required=True)
+    loop.add_argument("--definition", type=Path, required=True)
+    for name in ("context", "operation-id", "expected-plan-sha256"):
+        loop.add_argument("--" + name, required=True)
+    loop.add_argument("--experimental-analog", action="store_true", required=True)
 
 
 def analog_cli(arguments: argparse.Namespace) -> int:
@@ -299,16 +345,20 @@ def analog_cli(arguments: argparse.Namespace) -> int:
             output = {"requirements": requirements(), "remote_contact": False,
                       "new_simulations": 0, "new_extractions": 0, "new_reservations": 0}
         else:
-            definition: SampledBandwidthDefinition | SampledSlewDefinition | InputNullingDefinition
-            if arguments.analog_action in ("slew", "offset"):
+            definition: (SampledBandwidthDefinition | SampledSlewDefinition
+                         | InputNullingDefinition | IdealVoltageLoopDefinition)
+            if arguments.analog_action in ("slew", "offset", "phase-margin"):
                 from cadence_mcp_bridge.domain_provisioning import _closed_document
 
                 with _local_path(arguments.definition).open("rb") as stream:
-                    raw = stream.read(16385)
-                _closed_document(raw, max_bytes=16384)
-                definition = (SampledSlewDefinition.model_validate_json(raw)
-                              if arguments.analog_action == "slew"
-                              else InputNullingDefinition.model_validate_json(raw))
+                    raw = stream.read(65537)
+                _closed_document(raw, max_bytes=65536)
+                models: dict[str, type[SampledSlewDefinition] | type[InputNullingDefinition]
+                             | type[IdealVoltageLoopDefinition]] = {
+                    "slew": SampledSlewDefinition, "offset": InputNullingDefinition,
+                    "phase-margin": IdealVoltageLoopDefinition,
+                }
+                definition = models[arguments.analog_action].model_validate_json(raw)
             else:
                 definition = SampledBandwidthDefinition(
                     reference_frequency_hz=arguments.reference_frequency_hz,
@@ -320,7 +370,11 @@ def analog_cli(arguments: argparse.Namespace) -> int:
                 raise OperationRejected("analog_context_required")
             native = NativeOperationService(context)
             contact = None
-            if isinstance(definition, InputNullingDefinition):
+            if isinstance(definition, IdealVoltageLoopDefinition):
+                output = asyncio.run(capture_phase_margin(
+                    native, arguments.operation_id, arguments.expected_plan_sha256, definition,
+                ))
+            elif isinstance(definition, InputNullingDefinition):
                 with _local_path(arguments.operations).open("rb") as stream:
                     raw = stream.read(16385)
                 _closed_document(raw, max_bytes=16384)

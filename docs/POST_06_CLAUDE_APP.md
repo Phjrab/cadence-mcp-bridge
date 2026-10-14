@@ -1,3 +1,11 @@
+# Current scope override, 2026-10-14
+
+The user explicitly excludes further Claude verification: "클로드는 더이상
+검증 안해도 됨, 나머지 검증 마저 진행." Continue independent POST validation
+without Claude access/restart requests. This is EXCLUDED_BY_USER, not an app PASS.
+Keep the historical local-runtime lookup, SDK checks and failed UI attempts below
+with their original scope. No further Claude operations are required here.
+
 # Claude published-build qualification
 
 ## Actual local lookup observation, 2026-10-14

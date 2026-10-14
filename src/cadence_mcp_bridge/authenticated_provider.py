@@ -275,12 +275,14 @@ class AuthenticatedOperatorProvider:
         return await self._result(
             operation_id, plan, include_report_conditions=True,
             include_ac_spectrum=plan.analysis == "ac",
+            include_ac_waveforms=plan.analysis == "ac",
             include_tran_waveforms=plan.analysis == "tran",
         )
 
     async def _result(
         self, operation_id: str, plan: OperationPlan, *, include_report_conditions: bool,
         include_ac_spectrum: bool = False,
+        include_ac_waveforms: bool = False,
         include_tran_waveforms: bool = False,
     ) -> tuple[ProviderObservation, dict[str, object]]:
         from pydantic import TypeAdapter
@@ -342,6 +344,7 @@ class AuthenticatedOperatorProvider:
             receipt.native_input_sha256,
             frame,
             include_ac_spectrum=include_ac_spectrum,
+            include_ac_waveforms=include_ac_waveforms,
             include_tran_waveforms=include_tran_waveforms,
         )
         if projected["reader_script_sha256"] != receipt.reader_script_sha256:

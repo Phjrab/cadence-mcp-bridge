@@ -304,6 +304,7 @@ def project_frame(
     frame: bytes,
     *,
     include_ac_spectrum: bool = False,
+    include_ac_waveforms: bool = False,
     include_tran_waveforms: bool = False,
 ) -> dict[str, object]:
     """Validate mathematical data only. A future provider must authenticate its origin."""
@@ -415,6 +416,12 @@ def project_frame(
             output["transfer"] = _transfer(ade, reader, axes, waves)
             if include_ac_spectrum:
                 output["ac_spectrum"] = _transfer(ade, reader, axes, waves, all_samples=True)
+            if include_ac_waveforms:
+                output["ac_waveforms"] = {
+                    name: [{"frequency_hz": f, "real_v": v.real, "imag_v": v.imag}
+                           for f, v in wave] for name, wave in waves.items()
+                }
+                output["ac_node_mapping"] = [n.model_dump(mode="json") for n in reader.nodes]
         else:
             output["transient"] = _transient(ade, axes, waves)
             if include_tran_waveforms:

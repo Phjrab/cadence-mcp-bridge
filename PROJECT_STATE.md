@@ -1,3 +1,12 @@
+# Current POST scope, 2026-10-14
+
+Claude additional qualification is EXCLUDED_BY_USER (not PASS). Continue remaining
+POST tests/actual standard-VM loop checks without app access or restart requests.
+Latest fresh UID500 preflight121 /14,781,775,872 bytes, native22/24, preserved
+shared domain/journals/results. Current branch feat/post-07-generic-analog; main
+67c21a7 and exact6f2f66f hosted checks PASS. Loop execution not yet admitted;
+the finite three-job plan does not represent an execution receipt.
+
 ## Exact installed measurement and hosted checkpoint, 2026-10-14
 
 Feature290aab4 pushed and remote SHA verified; exact Windows/Linux CI both PASS.

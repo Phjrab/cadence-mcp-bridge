@@ -1,3 +1,11 @@
+# Current scope overlay, 2026-10-14
+
+Further Claude qualification is excluded by the user's direct instruction;
+historical app/SDK evidence below remains scoped, and exclusion is not PASS.
+Continue independent standard-VM loop and exact installed POST checks. Existing
+shared journals/domain, grants, replay and spent resources remain authoritative.
+No POST merge/publication or historical deletion target selection is inferred.
+
 # Retained native change boundary for POST-04 and POST-07
 
 ## Actual input-nulling continuation, 2026-10-14
