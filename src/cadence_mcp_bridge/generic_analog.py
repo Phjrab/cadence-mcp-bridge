@@ -7,6 +7,7 @@ import asyncio
 import hashlib
 import json
 import math
+from pathlib import Path
 from typing import Annotated, Any
 
 from pydantic import Field, TypeAdapter
@@ -158,7 +159,8 @@ def add_analog_parser(subparsers: Any) -> None:
     actions = parser.add_subparsers(dest="analog_action", required=True)
     actions.add_parser("requirements")
     capture = actions.add_parser("bandwidth")
-    for name in ("settings", "context", "operation-id", "expected-plan-sha256"):
+    capture.add_argument("--settings", type=Path, required=True)
+    for name in ("context", "operation-id", "expected-plan-sha256"):
         capture.add_argument("--" + name, required=True)
     capture.add_argument("--reference-frequency-hz", type=float, required=True)
     capture.add_argument("--drop-db", type=float, default=3.0)

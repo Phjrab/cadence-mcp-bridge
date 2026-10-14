@@ -109,6 +109,22 @@ def test_requirements_never_claim_pm_offset_slew_qualification(capsys):
                for m in ("phase_margin", "offset", "slew"))
 
 
+def test_cli_parses_settings_as_path_and_returns_bounded_rejection(tmp_path, capsys):
+    import json
+    from pathlib import Path
+
+    from cadence_mcp_bridge.__main__ import build_parser
+    args = ["operator-analog", "bandwidth", "--experimental-analog", "--settings",
+            str(tmp_path / "missing.json"), "--context", "operator", "--operation-id",
+            "00000000-0000-4000-8000-000000000001", "--expected-plan-sha256", "a" * 64,
+            "--reference-frequency-hz", "10"]
+    assert isinstance(build_parser().parse_args(args).settings, Path)
+    assert main(args) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "BLOCKED" and result["remote_contact"] is False
+    assert result["new_simulations"] == result["new_extractions"] == 0
+
+
 @pytest.mark.asyncio
 async def test_capture_rejects_wrong_plan_before_remote_contact(monkeypatch):
     from contextlib import nullcontext

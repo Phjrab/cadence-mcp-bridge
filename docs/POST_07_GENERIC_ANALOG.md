@@ -70,3 +70,33 @@ OA/ADE/PDK, existing ledger/journals and all earlier native bundles/grants. Reco
 exact input/expected reservation/stop conditions before admission; retain any
 failure. A wider interval still cannot qualify PM, offset or slew. The feature
 remains partial/experimental until relevant actual criteria pass.
+
+## Actual wider AC checkpoint, 2026-10-14
+
+Exact unpublished source26be132 wheel9eed762a passes rights/content auditing and
+isolated installed compatibility. Ordinary UID500 immutable registration update,
+repeat0 and preflight pass with identical13 native assets, previous bundles/grants
+and journal preserved. Two fresh owned-circuit AC jobs run10Hz–1THz at8 points per
+decade (89 samples each); common OA copy/netlisting/effective input, Spectre,
+automatic OCEAN extraction and normal result retrieval succeed.
+
+The inverter has a sampled-reference3dB crossing estimate13,055,949,311.797434Hz,
+bracketed by approximately10GHz–13.335GHz, relative to measured16.3402163273dB
+at10Hz. This is QA sampled-transfer evidence, **not** a claim of useful amplifier
+bandwidth, PDK model validity at those frequencies or grid convergence. The
+comparator's extremely small reference transfer (-222.43829093dB) never crosses
+downward in that interval; its estimate is null. This is not a useful comparator
+bandwidth qualification. No optimization/specification target was invented.
+
+Same-ID repeats in the original installed process spend0 additional attempts or
+reservations. Normal-user final preflight passes. This experiment2 attempts/
+256MiB; cumulative116 /14,110,687,232 bytes,16GiB remaining3,069,181,952 bytes.
+Native source22/24 unchanged. Old OA/ADE/model/result/failure protections remain.
+Private evidence `.tmp/post07-wide-v1/` preserves original inputs/receipts/frames.
+
+A separate-process installed CLI read exposed a host-only settings-path type
+error before contacting the VM. Its failure is retained; argparse now converts
+the setting to Path, with a regression checking bounded rejection for a missing
+configuration. This correction changes no native asset or simulation input;
+rebuild/reinstall and repeat existing-ID reads only. Actual Claude acceptance,
+PM/offset/slew testbenches and final review remain separate incomplete work.
