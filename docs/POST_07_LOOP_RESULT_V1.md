@@ -1,5 +1,19 @@
 # POST-07 exact installed ideal voltage-loop results
 
+## Post-review host correction checkpoint
+
+Two independent automatic P2 findings are addressed without native asset changes:
+loop retrieval requests complete node waveforms separately from bandwidth's full
+transfer projection, so unrelated unselected transfer-input zeros cannot block
+loop reads. Unexcited independent voltage sources are checked by their saved
+terminal difference; floating common mode and extra observed output nodes are
+permitted. Fixed loop input/reference still must be at AC ground for the declared
+return-ratio formula. New zero-denominator, floating-bias and extra-observation
+regressions pass; related186 tests/Ruff/mypy108 pass. The exact corrected installed
+rebuild/retained read verification is pending at this checkpoint. Original actual
+execution/artifact receipts below remain pinned to0f877b6; no new simulation,
+extraction, reservation or native correction is authorized by this record.
+
 Actual standard-VM validation completed on2026-10-14, ordinary user UID500.
 Exact unpublished code: `0f877b6fe3c16c9c9bf1ea9322bca633b2c274fb` in PR158.
 Public2.0.0 and its published commit/files remain unchanged. Further Claude

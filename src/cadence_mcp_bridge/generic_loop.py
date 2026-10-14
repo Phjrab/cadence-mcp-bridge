@@ -90,6 +90,8 @@ class IdealVoltageLoopDefinition(VariableModel):
                 raise ValueError("independent current injection unsupported")
             if master != "vsource" or name == self.probe_instance:
                 continue
+            if len(nodes) != 2:
+                raise ValueError("two voltage-source terminals required")
             # Standard-VM documented vsource mag/phase defaults are zero; actual
             # source-terminal measurements below independently check that premise.
             if params.get("mag", "0") != "0" or params.get("phase", "0") != "0":
@@ -97,6 +99,18 @@ class IdealVoltageLoopDefinition(VariableModel):
             if any(node != "0" and node not in mapping.values() for node in nodes):
                 raise ValueError("every independent source terminal must be saved")
         return self
+
+    def source_terminals(self) -> list[tuple[str, str, bool]]:
+        """Return bound voltage-source endpoints and the single injection role."""
+        pairs = []
+        for statement in self.static_statements:
+            match = INSTANCE.fullmatch(statement)
+            if match and match[3] == "vsource":
+                nodes = match[2].split()
+                if len(nodes) != 2:
+                    raise OperationRejected("loop_voltage_source_terminal_count_invalid")
+                pairs.append((nodes[0], nodes[1], match[1] == self.probe_instance))
+        return pairs
 
 
 def sampled_loop_margin(
@@ -122,10 +136,22 @@ def sampled_loop_margin(
         axes = frequencies
         values[name] = phasors
     assert axes is not None
-    active = {definition.return_signal, definition.driven_input_signal}
-    if any(abs(v) > definition.ac_tolerance_v for n, vs in values.items()
-           if n not in active for v in vs):
-        raise OperationRejected("loop_unexcited_source_voltage_mismatch")
+    selector_ids = {node.selector[1:]: node.logical_id for node in definition.nodes}
+    zero = [0j] * len(axes)
+    for positive, negative, injected in definition.source_terminals():
+        vp = zero if positive == "0" else values[selector_ids[positive]]
+        vn = zero if negative == "0" else values[selector_ids[negative]]
+        target = 1 if injected else 0
+        if any(abs(p - n - target) > definition.ac_tolerance_v
+               for p, n in zip(vp, vn, strict=True)):
+            raise OperationRejected("loop_measured_series_injection_mismatch" if injected
+                                    else "loop_unexcited_source_voltage_mismatch")
+    # The fixed input and feedback-reference source must also be at AC ground
+    # for L=-Vreturn/Vdriven. Other floating biases and extra observations may move.
+    if any(abs(v) > definition.ac_tolerance_v
+           for name in (definition.fixed_input_signal, definition.common_signal)
+           for v in values[name]):
+        raise OperationRejected("loop_fixed_input_or_reference_ac_ground_required")
     returned, driven = values[definition.return_signal], values[definition.driven_input_signal]
     if any(abs(vm - vr - 1) > definition.ac_tolerance_v
            for vm, vr in zip(driven, returned, strict=True)):

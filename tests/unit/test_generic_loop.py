@@ -154,9 +154,62 @@ async def test_wrong_retained_plan_rejects_before_remote_contact():
                              plan=SimpleNamespace(plan_sha256="a" * 64))
     store = SimpleNamespace(connection=lambda **kwargs: nullcontext(None),
                             _read_operation=lambda *args: record)
-    provider = SimpleNamespace(analog_result=AsyncMock())
+    provider = SimpleNamespace(loop_result=AsyncMock())
     native = SimpleNamespace(current=lambda: None, lifecycle=SimpleNamespace(store=store),
                              provider=provider)
     with pytest.raises(OperationRejected):
         await capture_phase_margin(native, record.operation_id, "b" * 64, definition())
-    provider.analog_result.assert_not_called()
+    provider.loop_result.assert_not_called()
+
+
+def test_loop_projection_does_not_require_unselected_transfer_input(operator):
+    args = reader_for(operator, "ac")
+    frame = frame_for(args, "P|input|0|1000|2|0\nP|input|1|2000|0|0\n"
+                      "P|output|0|1000|4|0\nP|output|1|2000|4|0")
+    full = project_frame(*args, frame, include_ac_waveforms=True)
+    assert full["ac_waveforms"]["input"][1]["real_v"] == 0
+    assert "ac_spectrum" not in full
+    with pytest.raises(OperationRejected):
+        project_frame(*args, frame, include_ac_spectrum=True)
+
+
+@pytest.mark.asyncio
+async def test_provider_loop_and_bandwidth_projection_options_are_separate():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from cadence_mcp_bridge.authenticated_provider import AuthenticatedOperatorProvider
+
+    provider = object.__new__(AuthenticatedOperatorProvider)
+    provider._result = AsyncMock(return_value=(None, {}))
+    plan = SimpleNamespace(analysis="ac")
+    await provider.loop_result("retained", plan)
+    provider._result.assert_awaited_once_with(
+        "retained", plan, include_report_conditions=True, include_ac_waveforms=True,
+    )
+    provider._result.reset_mock()
+    await provider.analog_result("retained", plan)
+    provider._result.assert_awaited_once_with(
+        "retained", plan, include_report_conditions=True,
+        include_ac_spectrum=True, include_tran_waveforms=False,
+    )
+
+
+def test_floating_unexcited_bias_and_extra_output_observation_are_allowed():
+    model = definition().model_dump(mode="json")
+    model["static_statements"].append("floating (BiasA BiasB) vsource dc=0.3")
+    model["static_statements_sha256"] = hashlib.sha256(
+        ("\n".join(model["static_statements"]) + "\n").encode(),
+    ).hexdigest()
+    model["nodes"] += [{"logical_id": name, "selector": selector} for name, selector in
+                       (("bias-a", "/BiasA"), ("bias-b", "/BiasB"), ("observed", "/Op"))]
+    declared = IdealVoltageLoopDefinition.model_validate_json(json.dumps(model))
+    data = waves()
+    for name in ("bias-a", "bias-b", "observed"):
+        data[name] = [s | {"real_v": .2, "imag_v": .1} for s in data["inp"]]
+    assert sampled_loop_margin(data, declared)["status"] == "OBSERVED_SINGLE_SAMPLED_MARGIN"
+    # Only terminal difference is the excitation; common mode can be nonzero.
+    data["bias-b"][5]["imag_v"] += .001
+    with pytest.raises(OperationRejected) as rejected:
+        sampled_loop_margin(data, declared)
+    assert rejected.value.reason == "loop_unexcited_source_voltage_mismatch"

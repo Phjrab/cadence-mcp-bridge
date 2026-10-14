@@ -275,8 +275,17 @@ class AuthenticatedOperatorProvider:
         return await self._result(
             operation_id, plan, include_report_conditions=True,
             include_ac_spectrum=plan.analysis == "ac",
-            include_ac_waveforms=plan.analysis == "ac",
             include_tran_waveforms=plan.analysis == "tran",
+        )
+
+    async def loop_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Loop reads need saved node phasors, not an unrelated complete transfer."""
+        if plan.analysis != "ac":
+            raise OperationRejected("loop_ac_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True, include_ac_waveforms=True,
         )
 
     async def _result(

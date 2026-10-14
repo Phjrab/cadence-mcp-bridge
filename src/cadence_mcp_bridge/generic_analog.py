@@ -210,7 +210,7 @@ async def capture_phase_margin(
         or record.plan.analysis != "ac" or record.progress.phase != "SUCCEEDED"
     ):
         raise OperationRejected("loop_retained_succeeded_ac_identity_required")
-    observed, result = await native.provider.analog_result(operation_id, record.plan)
+    observed, result = await native.provider.loop_result(operation_id, record.plan)
     observed.check(record)
     if observed.progress != record.progress:
         raise OperationRejected("analog_terminal_identity_mismatch")
