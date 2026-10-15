@@ -16,11 +16,17 @@ within that exhausted allowance, and this checkpoint does not increase it.
 The read-only durable checkpoint preserves all four post-baseline source identities
 and rejects source-tree drift or hidden extra history. Eleven disposable-history
 tests pass; local actual-reconciliation guard PASS24/24 with no writes/contact.
-Parent156 final7419620 is normally integrated with both histories preserved.
-Merged host regressions404 PASS/265 Windows POSIX skips; Ruff/mypy104 PASS.
+Parent1567419620 was normally integrated atdd28fe2 with both histories preserved;
+its merged host regressions404 PASS/265 Windows POSIX skips. Latest15604d1a61
+adds the reviewed retained-read guidance correction; guidance46 PASS and
+Ruff/mypy104 PASS after integration.
 Keep the final hosted/package/review gates distinct from these host checks.
 
 ## POST-05 current conditional integration scope, 2026-10-15
+
+Latest parent1557ec9a9e now includes the reviewed154 retained-read correction.
+Preserve all historical overlays and verify the156 delta remains three Markdown
+files only; final-head hosted/review gates remain required before normal merge.
 
 Finish PR156 as documentation of actual inventory/plan/dry-run safety only.
 Normal POST154–158 integration is explicitly authorized after required checks and
@@ -62,6 +68,13 @@ No new VM execution or extraction is required for host file-publication fixes.
 Claude is EXCLUDED_BY_USER; source history/accounting/published2.0.0 stay intact.
 
 ## POST-02 final correction and conditional integration, 2026-10-15
+
+The latest review correction keeps parsed-grant retained read guidance separate
+from submit matching: mismatched bindings/ceilings/removed grant designs remain
+blocked for new work without disabling historical status/result/specification.
+Twelve actual-service synthetic lifecycle cases pass; related354/Ruff/mypy101 PASS and
+independent agent review has no actionable finding. Malformed/stale bindings
+remain blocked. Update final hosted gates and propagate this source normally.
 
 Final static-prerequisite/reason audit covers registered specification versus
 missing result route and native ADE subtype/copy-policy/environment-capability

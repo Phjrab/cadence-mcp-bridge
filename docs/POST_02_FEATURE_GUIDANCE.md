@@ -2,6 +2,17 @@
 
 ## Sweep eligibility correction, 2026-10-15
 
+Follow-up review `PRRT_kwDOUGi5886spO12` separates a parsed, hash-bound grant
+from its eligibility for new work. Binding mismatches, environment ceilings and
+removed grant designs now block submission guidance without falsely disabling
+retained status/result and registered specification reads. Malformed/stale grant
+or provider documents still block the read route. Twelve synthetic lifecycle
+cases use the real native service, retained journal, authenticated result
+projection and specification evaluator; old reads succeed, new plan/submission
+fails before dispatch, and the journal/result payloads remain unchanged.
+Related354 PASS, Ruff/mypy101 PASS; independent agent review finds no actionable defect. This is
+local synthetic verification, not another VM execution or a formal GitHub approval.
+
 Final adjacent review distinguishes a registered specification with an unavailable
 native result route (`native_result_route_unavailable`) from absent/invalid or
 unregistered catalogs. A20-case catalog/route matrix covers active and expired
@@ -82,7 +93,8 @@ Specification guidance checks the bounded catalog and circuit membership. It doe
 not authenticate the operator, inspect the remote registration/reader, check disk
 space, assess journals or claim any remaining budget. Explicit values, numeric
 scope, confirmation/revocation, ledger, integrity and preflight are still enforced
-by existing submission paths. Expired or revoked submit authority does not disable
+by existing submission paths. A parsed, hash-bound grant whose submit authority
+is expired, revoked or incompatible with the loaded context does not disable
 lookup of already admitted results; identity/provenance checks remain mandatory.
 
 Reports contain logical IDs and closed reasons, not private paths, OA bindings,

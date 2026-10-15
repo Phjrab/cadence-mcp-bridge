@@ -2,6 +2,11 @@
 
 ## Current integration scope, 2026-10-15
 
+The final parent refresh normally integrates1557ec9a9e and154 d8c85a6. Their
+retained-read guidance correction does not expand this PR's documentation scope.
+The156 delta remains three Markdown files with exact parent source/test/package
+identity; final hosted/review checks remain separate gates.
+
 The user's latest instruction explicitly authorizes conditional normal integration
 of POST154–158 in dependency order after review, CI and actual scope acceptance.
 For PR156 the accepted scope is this documentation and the retained read-only
