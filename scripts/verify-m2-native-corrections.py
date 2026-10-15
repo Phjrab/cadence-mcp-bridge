@@ -215,6 +215,23 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         ):
             raise ValueError("M2 V9 source change without history")
         counts.append(count)
+    successful_path = directory / "M2_NATIVE_CORRECTION_CONSUMED_V5.json"
+    if successful_path.exists():
+        successful = json.loads(successful_path.read_bytes())
+        previous_checkpoint = json.loads(
+            (directory / "M2_NATIVE_CORRECTION_CONSUMED_V4.json").read_bytes()
+        )
+        post.require_ancestor(successful["corrected_collector_commit"])
+        if (
+            successful["retained_consumed_source_changes"] != 29
+            or consumed != 28
+            or counts[0] != 1
+            or successful["prior_consumed_checkpoint_sha256"]
+            != post.canonical_sha256(previous_checkpoint)
+            or hashlib.sha256((ROOT / SOURCES[0]).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+            != successful["collector_module_lf_sha256"]
+        ):
+            raise ValueError("M2 completed collector checkpoint conflict; no refund or drift")
     consumed_path = directory / "M2_NATIVE_CORRECTION_CONSUMED_V2.json"
     if consumed_path.exists() and not latest_path.exists():
         current = json.loads(consumed_path.read_bytes())

@@ -1,3 +1,22 @@
+## Observed-CDF-bound generator prepared, 2026-10-15
+
+Complete source28 VM CDF evidence was replayed successfully by source29's local
+bounded data parser. Both MOS terminal orders, exact effective W/L/m/model and
+vdc/vpulse/cap parameter units are observed. No MOS nf meaning or PDK-wide range
+is inferred. CheckpointV5 pins successful observation/parser identity and all
+failed source versions remain retained. V12 ceiling30 is reached conservatively
+by the one pending generator source; no new simulation or reservation occurred.
+
+The new operator-only m2_inverter model binds RevisionBinding, raw CDF hash,
+exact source masters and fresh owned DUT/symbol/testbench names. It reuses typed
+contracts without relabeling the synthetic DeviceRegistry. It rejects unknown
+required metadata, expression-valued MOS sizes, collisions and malformed names.
+The fixed writer checks connections/properties before save and after reopen;
+runner snapshots/lock/trusted ordinary-user OCEAN are required independently.
+No public MCP code/path/command input or startup action is added. Local generator
+14 tests and type checks pass; actual OA/netlist/DC/TRAN are still NOT_RUN.
+PR160 remains draft; published2.0.0 and all excluded physical/Claude work stay.
+
 ## Complete actual CDF frame; host parser correction, 2026-10-15
 
 The fixed source28 OCEAN collector completed normally and emitted a COMPLETE

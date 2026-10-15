@@ -22,6 +22,8 @@ def verify(workspace: Path, *, preserved: bool) -> None:
         return
     import cadence_mcp_bridge
     from cadence_mcp_bridge.m2_cdf import CdfSource, parse_frame, render_collector
+    from cadence_mcp_bridge.m2_inverter import OwnedInverterPlan, observed_devices
+    from cadence_mcp_bridge.schematic_plan import RevisionBinding
 
     if not Path(cadence_mcp_bridge.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()):
         raise ValueError("installed package origin required")
@@ -34,6 +36,28 @@ def verify(workspace: Path, *, preserved: bool) -> None:
         pass
     else:
         raise ValueError("incomplete observed CDF must remain blocked")
+    plan = OwnedInverterPlan(
+        binding=RevisionBinding(
+            workspace_id="fixture",
+            design_id="fixture",
+            revision_id="r1",
+            source_baseline_sha256="a" * 64,
+        ),
+        cdf_frame_sha256=hashlib.sha256(b"incomplete").hexdigest(),
+        output_library="Owned",
+        dut_cell="Dut",
+        testbench_cell="Bench",
+        nmos_library="FixturePdk",
+        nmos_cell="N",
+        pmos_library="FixturePdk",
+        pmos_cell="P",
+    )
+    try:
+        observed_devices(plan, b"incomplete")
+    except ValueError:
+        pass
+    else:
+        raise ValueError("installed generator must reject unobserved CDF")
     workspace.mkdir()
 
     def run(*args: str) -> dict[str, Any]:
