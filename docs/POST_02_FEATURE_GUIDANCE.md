@@ -1,5 +1,24 @@
 # POST-02: local feature guidance
 
+## Sweep eligibility correction, 2026-10-15
+
+Review4257903728 exposed a misleading sweep route when an authorized analysis has
+only fixed, read-only or unqualified variables. The guide now uses the same
+`owned_copy_only` and `qualified` registered-axis gate as the native sweep planner.
+Without an eligible axis it reports BLOCKED with
+`qualified_mutable_sweep_axis_missing`. An eligible axis still requires explicit
+point values, grant scope, live qualification and all existing execution checks.
+
+The configured resource regression preserves all files while rejecting its
+fixed-only fixture. Four validated synthetic registry cases agree with the real
+sweep planner's fixed/read-only/unqualified rejection and eligible acceptance.
+Related guidance/sweep/setup/native-service tests65 PASS/3 Windows symlink skips;
+Ruff and mypy101 PASS. Initial attempts stopped in pytest temporary-directory
+setup (existing temp ACL, then absent new parent); a dedicated new test root passes.
+These tests perform no VM execution or reservation. Final-head hosted package,
+security and compatibility checks remain separate gates. Further Claude testing
+is EXCLUDED_BY_USER, not PASS. Earlier dated evidence below remains historical.
+
 This development feature follows merged POST-01 (PR153/main67c21a7). It is not
 part of the immutable published v2.0.0 artifacts. Support remains the professor's
 standard CentOS/Cadence/PDK VM on personal VMware; no broader qualification is claimed.

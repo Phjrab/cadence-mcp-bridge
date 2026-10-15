@@ -101,6 +101,9 @@ async def test_loaded_native_resource_is_read_only_and_cannot_attest_live_qualif
         "REQUIRES_EXECUTION_CHECKS",
     }
     assert report["circuits"][0]["remote_route_qualification"] == "NOT_ASSESSED"
+    sweep = report["circuits"][0]["features"]["native_1d_sweep"]
+    assert sweep["state"] == "BLOCKED"
+    assert sweep["reasons"] == ["qualified_mutable_sweep_axis_missing"]
     assert report["remaining_budget"] is None and report["execution_authorized"] is False
     assert snapshot(settings.parent) == before
     assert str(settings.parent) not in json.dumps(report)

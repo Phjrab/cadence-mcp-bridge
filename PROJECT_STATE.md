@@ -1,3 +1,15 @@
+## POST-02 sweep eligibility correction, 2026-10-15
+
+PR154 review4257903728 is corrected: native sweep guidance requires at least one
+registered owned-copy-only, qualified variable, matching the planner's axis gate.
+Fixed/read-only/unqualified fixtures remain BLOCKED; eligible fixtures still need
+job-specific checks. Related65 PASS/3 OS symlink skips, Ruff/mypy101 PASS. Final
+hosted security/package/compatibility and review remain merge gates. No VM/native
+change, simulation, reservation or data deletion; published2.0.0 is preserved.
+The latest user instruction conditionally authorizes normal POST154–158 integration
+in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
+Earlier policy and evidence below retain their original historical scope.
+
 ## Active POST-03 existing-result reports, 2026-10-13
 
 POST-02 PR154 exactd4f23c0 passed both hosted Windows/POSIX checks and remains

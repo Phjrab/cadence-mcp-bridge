@@ -138,8 +138,16 @@ def guidance(
                 **_feature(state, reasons, steps),
             })
         has_native = any(a["state"] == "REQUIRES_EXECUTION_CHECKS" for a in analyses)
-        native_state = "REQUIRES_EXECUTION_CHECKS" if has_native else "BLOCKED"
-        native_reason = [] if has_native else ["native_analysis_unavailable"]
+        # Match the registered-axis gate in NativeSweepSupervisor.plan; local
+        # eligibility still leaves each point's numeric/grant checks mandatory.
+        has_sweep_axis = any(
+            variable.mutation_policy == "owned_copy_only"
+            and variable.range_status == "qualified"
+            for variable in registry.variables(profile.design_id).variables
+        )
+        sweep_reasons = [] if has_native else ["native_analysis_unavailable"]
+        if not has_sweep_axis:
+            sweep_reasons.append("qualified_mutable_sweep_axis_missing")
         result_available = grant is not None and native_tools_registered is not False
         circuits.append({
             "design_id": profile.design_id,
@@ -155,7 +163,8 @@ def guidance(
                     ["cadence_operation_status", "cadence_operation_result"],
                 ),
                 "native_1d_sweep": _feature(
-                    native_state, native_reason, ["cadence_plan_native_sweep"],
+                    "REQUIRES_EXECUTION_CHECKS" if not sweep_reasons else "BLOCKED",
+                    sweep_reasons, ["cadence_plan_native_sweep"],
                 ),
                 "native_specification": _feature(
                     "REQUIRES_EXECUTION_CHECKS"
