@@ -1,5 +1,28 @@
 # POST-04 extraction-only recovery (unpublished experimental development)
 
+## Recovery-plan output protection, 2026-10-15
+
+Final review found that a new plan output could occupy a missing configured
+journal or SQLite sidecar path. The CLI now reserves settings, all configured
+context binding paths, resource locks and both journals' `-wal`, `-shm` and
+`-journal` names before constructing the provider or contacting the VM. Existing
+destinations and missing parents reject before contact as well. Planning still
+creates only an explicitly selected new plan, with no admission or reservation.
+
+Twenty-two disposable collision cases cover the selected and another configured
+context; a valid export roundtrip/repeat preserves the existing plan and inputs.
+The pre-fix failing regression is retained privately. Recovery tests29 PASS/6
+Windows POSIX skips, related setup/native-service checks38 PASS/3 symlink skips,
+Ruff/mypy104 PASS. Hosted final-head checks and installed-package checks remain
+separate gates. This is a host-only output guard: all native source assets remain
+byte-identical to the actual DC-qualified predecessor. No new VM execution,
+reservation, administrator change or native correction was made.
+
+Conditional normal POST154–158 integration is now explicitly authorized by the
+user after review/checks. Further Claude validation is EXCLUDED_BY_USER, not PASS.
+Recovery remains opt-in, experimental, operator-CLI-only and actually qualified
+only for the retained inverter DC case. Earlier receipts below remain historical.
+
 The installed operator CLI `operator-recovery` links a separately identified
 extraction attempt to an original EXTRACTION_FAILED job. The original operation,
 failure events, effective input, PSF and files remain read-only. The fixed worker

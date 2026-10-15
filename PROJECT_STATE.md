@@ -1,3 +1,15 @@
+## POST-04 final host output protection, 2026-10-15
+
+Recovery-plan export now rejects every configured context's journal/sidecar,
+contract/settings and resource-lock paths before provider creation. Twenty-two
+collision cases and valid-export/repeat preservation cover the correction. Final
+recovery29 PASS/6 Windows POSIX skips, related38 PASS/3 symlink skips, Ruff/mypy104
+PASS. Updated hosted/package gates remain required. Native source is unchanged;
+no new VM execution/reservation/correction or administrator action occurred.
+Actual DC-only qualification and opt-in experimental boundary remain. Latest user
+instruction conditionally authorizes normal POST154–158 integration; Claude is
+EXCLUDED_BY_USER, not PASS. Published2.0.0 and all prior evidence are preserved.
+
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 
 Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original

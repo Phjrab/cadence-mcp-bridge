@@ -1,3 +1,14 @@
+## POST-04 final host output protection, 2026-10-15
+
+Complete final hosted/package/review gates for the corrected recovery-plan export
+path. It rejects configured state and SQLite sidecar collisions before source
+lookup across all contexts. Recovery29 PASS/6 POSIX skips and related38 PASS/3
+symlink skips; Ruff/mypy104 PASS. Native assets and actual qualified DC route are
+unchanged. Preserve opt-in experimental CLI and AC/TRAN recovery as unverified.
+Continue latest conditional normal POST154–158 integration in dependency order;
+further Claude testing is EXCLUDED_BY_USER, not PASS. No new simulation or recovery
+is required for this local guard. Earlier checkpoints remain historical.
+
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 
 Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original

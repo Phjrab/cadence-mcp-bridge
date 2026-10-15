@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 from test_native_gate import confirmed_domain, qualified, root
 from test_operator_operations import operator as operator_fixture
+from test_runtime_context import make_settings
 
 from cadence_mcp_bridge import _native_copy as copying
 from cadence_mcp_bridge import _native_eda_worker as eda
@@ -21,11 +22,12 @@ from cadence_mcp_bridge import _operator_confirmation as confirmation
 from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge import _shared_reservations as accounting
 from cadence_mcp_bridge import _storage_worker as storage
-from cadence_mcp_bridge.__main__ import build_parser
+from cadence_mcp_bridge.__main__ import build_parser, main
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.extraction_recovery import ExtractionRecoveryService, RecoveryPlan
 from cadence_mcp_bridge.operator_lifecycle import ProviderObservation
 from cadence_mcp_bridge.operator_operations import OperationRejected, prepare_plan
+from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["confirmed_domain", "qualified", "root", "operator_fixture"]
@@ -128,6 +130,86 @@ def test_submit_requires_explicit_experimental_switch():
         parser.parse_args(["operator-recovery", "submit", "--settings", "s", "--context", "c",
                            "--plan", "p", "--expected-plan-sha256", "a" * 64,
                            "--operation-id", str(uuid4())])
+
+
+@pytest.mark.parametrize("context_index", [0, 1])
+@pytest.mark.parametrize("reserved_name", [
+    "analysis_journal", "sweep_journal", "analysis-wal", "analysis-shm", "analysis-journal",
+    "sweep-wal", "sweep-shm", "sweep-journal", "lock", "settings", "design_registry",
+])
+def test_recovery_plan_reserves_all_context_state_before_provider_contact(
+    tmp_path, monkeypatch, capsys, context_index, reserved_name,
+):
+    settings = make_settings(tmp_path)
+    contexts = load_runtime(settings)
+    context = contexts[context_index]
+    if reserved_name == "lock":
+        output = context.lock_path
+    elif reserved_name == "settings":
+        output = settings
+    elif "-" in reserved_name:
+        journal, suffix = reserved_name.split("-", 1)
+        output = Path(str(getattr(context.binding, journal + "_journal")) + "-" + suffix)
+    else:
+        output = getattr(context.binding, reserved_name)
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+    def no_provider(*args):
+        raise AssertionError("reserved output must reject before constructing the provider")
+
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.extraction_recovery.ExtractionRecoveryService", no_provider,
+    )
+    assert main([
+        "operator-recovery", "plan", "--settings", str(settings), "--context", "context-1",
+        "--request", str(tmp_path / "not-read.json"), "--original-operation-id", str(uuid4()),
+        "--original-plan-sha256", "a" * 64, "--output", str(output),
+    ]) == 1
+    assert json.loads(capsys.readouterr().out)["reason"] == "recovery_plan_output_reserved"
+    assert {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == before
+
+
+def test_recovery_plan_export_preserves_inputs_and_rejects_existing_output_before_contact(
+    operator_fixture, host_plan, tmp_path, monkeypatch, capsys,
+):
+    context, _, request, settings = operator_fixture
+    plan = host_plan[3]
+    request_path = tmp_path / "request.json"
+    request_path.write_text(request.model_dump_json())
+    output = tmp_path / "new-recovery-plan.json"
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    calls = []
+
+    class SourceProvider:
+        def __init__(self, selected):
+            assert selected.binding.context_id == context.binding.context_id
+
+        async def plan(self, requested, original_id, original_digest):
+            calls.append("source_lookup")
+            assert requested == request
+            assert original_id == plan.recovery.original_operation_id
+            assert original_digest == plan.recovery.original_plan_sha256
+            return plan
+
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.extraction_recovery.ExtractionRecoveryService", SourceProvider,
+    )
+    arguments = [
+        "operator-recovery", "plan", "--settings", str(settings),
+        "--context", context.binding.context_id, "--request", str(request_path),
+        "--original-operation-id", plan.recovery.original_operation_id,
+        "--original-plan-sha256", plan.recovery.original_plan_sha256, "--output", str(output),
+    ]
+    assert main(arguments) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "RECOVERY_PLAN_PREPARED_NOT_SUBMITTED"
+    assert report["new_reservations"] == 0
+    assert RecoveryPlan.model_validate_json(output.read_bytes()) == plan
+    assert {p: p.read_bytes() for p in before} == before
+    assert main(arguments) == 1
+    assert json.loads(capsys.readouterr().out)["reason"] == "recovery_plan_new_output_required"
+    assert calls == ["source_lookup"]
+    assert RecoveryPlan.model_validate_json(output.read_bytes()) == plan
 
 
 @pytest.mark.asyncio
