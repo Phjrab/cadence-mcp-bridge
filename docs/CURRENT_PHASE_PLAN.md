@@ -1,5 +1,9 @@
 ## POST-02 final correction and conditional integration, 2026-10-15
 
+Follow-up review also requires an owned-copy design policy for sweep and handles
+recursive provider/grant/specification JSON as closed invalid responses. Updated
+guidance/sweep30 PASS, Ruff/mypy101 PASS; recheck hosted/review gates at the new tip.
+
 The registered sweep-axis prerequisite is now reflected in feature guidance;
 fixed/read-only/unqualified variables cannot advertise a usable sweep route.
 Related65 synthetic checks PASS/3 OS symlink skips, Ruff/mypy101 PASS. Finish exact

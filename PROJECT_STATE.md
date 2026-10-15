@@ -1,5 +1,9 @@
 ## POST-02 sweep eligibility correction, 2026-10-15
 
+Follow-up correction blocks sweep on a read-only containing design and closes
+recursive provider/grant/specification parse failures in the resource and CLI.
+Guidance/sweep30 PASS; Ruff/mypy101 PASS. Hosted final-head gates remain required.
+
 PR154 review4257903728 is corrected: native sweep guidance requires at least one
 registered owned-copy-only, qualified variable, matching the planner's axis gate.
 Fixed/read-only/unqualified fixtures remain BLOCKED; eligible fixtures still need

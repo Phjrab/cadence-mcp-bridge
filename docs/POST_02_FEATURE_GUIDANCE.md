@@ -2,6 +2,16 @@
 
 ## Sweep eligibility correction, 2026-10-15
 
+Follow-up review4279471320/4279471328 now also blocks an otherwise qualified axis
+when its containing design permits only read-only work copies. Recursive but
+size-bounded provider/grant/specification JSON returns a closed invalid-binding
+or invalid-specification response rather than escaping the resource or CLI.
+Thirty guidance/sweep regressions pass, including the actual planner's rejection
+of a read-only design and MCP-resource/CLI checks for all three recursive document
+types. Ruff/mypy101 pass. The synthetic planner fixture now consults its current
+context rather than a captured old context. Earlier counts below remain history;
+updated hosted/review/package gates still apply.
+
 Review4257903728 exposed a misleading sweep route when an authorized analysis has
 only fixed, read-only or unqualified variables. The guide now uses the same
 `owned_copy_only` and `qualified` registered-axis gate as the native sweep planner.

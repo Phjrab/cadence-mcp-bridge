@@ -55,7 +55,7 @@ def _native_check(context: ExecutionContext) -> tuple[OperatorGrant | None, list
         # Expose only the closed authority failure relevant to this guide.
         reason = "authority_inactive" if exc.reason == "authority_inactive" else "authority_invalid"
         return None, [reason]
-    except (OSError, ValueError, BridgeError):
+    except (OSError, ValueError, BridgeError, RecursionError):
         return None, ["native_binding_invalid"]
 
 
@@ -85,7 +85,7 @@ def guidance(
                 context.resolve(spec.design_id)
                 spec_designs.add(spec.design_id)
             spec_reason = "native_specification_not_registered_for_design"
-        except (OSError, ValueError, BridgeError):
+        except (OSError, ValueError, BridgeError, RecursionError):
             spec_designs.clear()
             spec_reason = "native_specifications_invalid"
     circuits = []
@@ -148,6 +148,8 @@ def guidance(
         sweep_reasons = [] if has_native else ["native_analysis_unavailable"]
         if not has_sweep_axis:
             sweep_reasons.append("qualified_mutable_sweep_axis_missing")
+        if profile.work_copy_policy != "owned_copy_only":
+            sweep_reasons.append("design_copy_policy_denied")
         result_available = grant is not None and native_tools_registered is not False
         circuits.append({
             "design_id": profile.design_id,
@@ -239,7 +241,7 @@ def features_cli(arguments: argparse.Namespace) -> int:
         result["native_tools_registered"] = None
         result["observation_source"] = "explicit_local_files"
         code = 0
-    except (OSError, ValueError, BridgeError):
+    except (OSError, ValueError, BridgeError, RecursionError):
         result = {
             "status": "BLOCKED", "reason": "feature_context_invalid",
             "guidance": "Use operator-setup check with the same explicit settings and context.",
