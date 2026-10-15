@@ -4,23 +4,34 @@ import hashlib
 import json
 import subprocess
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from mcp import Client
 from test_native_public_service import configured, operator, operator_base
+from test_native_results import retrieval
 from test_native_specifications import contract as specification_contract
 from test_runtime_context import make_settings
 
 from cadence_mcp_bridge.__main__ import main
+from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.designs import reference_analysis_registry
+from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.feature_guidance import GUIDANCE_URI, guidance, service_guidance
-from cadence_mcp_bridge.native_specifications import NativeSpecificationCatalog
+from cadence_mcp_bridge.native_service import NativeOperationQuery, NativeOperationService
+from cadence_mcp_bridge.native_specifications import (
+    NativeSpecificationCatalog,
+    NativeSpecificationQuery,
+    NativeSpecificationSupervisor,
+)
+from cadence_mcp_bridge.operator_operations import OperationProgress
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 from cadence_mcp_bridge.runtime_context import OperatorService, load_runtime
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.sweep_registry import fixture_sweep_registry
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-__all__ = ["configured", "operator", "operator_base"]
+__all__ = ["configured", "operator", "operator_base", "retrieval"]
 
 
 def snapshot(folder):
@@ -174,6 +185,100 @@ def test_malformed_catalog_never_claims_specification(configured):
         "native_specifications_invalid",
     ]
     assert "secret invalid content" not in json.dumps(report)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", [
+    "grant_id", "resource_domain_sha256", "runner_sha256", "ledger_ref",
+    "environment_sha256", "design_sha256", "pdk_sha256", "attempt_ceiling",
+    "result_ceiling", "unknown_design", "expired", "revoked",
+])
+async def test_parsed_nonmatching_submit_authority_preserves_actual_retained_reads(
+    configured, retrieval, change,
+):
+    _, service, request, settings, grant_path = configured
+    _, plan, operation_id, payload, calls = retrieval
+    context = service.context
+    store = AnalysisStore(context.binding.analysis_journal)
+    store.admit_operation(operation_id, plan, dispatch_intent=True)
+    store.advance_operation(
+        operation_id, store.operation(operation_id).progress,
+        OperationProgress.model_validate_json(json.dumps(payload["observation"]["progress"])),
+    )
+    spec = specification_contract(
+        design_id=plan.request.design_id,
+        operation_plan_sha256=plan.plan_sha256,
+        reader_registration_sha256=payload["receipt"]["reader_registration_sha256"],
+    )
+    catalog = settings.parent / "retained-spec.json"
+    catalog.write_text(NativeSpecificationCatalog(specifications=(spec,)).model_dump_json())
+    data = json.loads(grant_path.read_bytes())
+    if change in ("grant_id", "ledger_ref"):
+        data[change] = "different-authority"
+    elif change.endswith("sha256"):
+        data[change] = "f" * 64
+    elif change == "attempt_ceiling":
+        # The loaded environment, rather than the grant schema, sets this ceiling.
+        context = context.__class__(**{
+            **context.__dict__, "contracts": context.contracts.__class__(**{
+                **context.contracts.__dict__,
+                "environment": context.contracts.environment.model_copy(update={
+                    "limits": context.contracts.environment.limits.model_copy(update={
+                        "spectre_attempts": data["attempt_limit"] - 1,
+                    }),
+                }),
+            }),
+        })
+    elif change == "result_ceiling":
+        data["result_reserved_bytes_limit"] = (
+            context.contracts.environment.limits.result_reserved_bytes + 1
+        )
+    elif change == "unknown_design":
+        data["design_ids"].append("removed-design")
+    elif change == "expired":
+        data["valid_until_unix"] = 2
+    else:
+        data["status"] = "revoked"
+    grant_path.write_text(json.dumps(data))
+    context = context.__class__(**{
+        **context.__dict__, "binding": context.binding.model_copy(update={
+            "operator_grant_sha256": hashlib.sha256(grant_path.read_bytes()).hexdigest(),
+            "native_specifications": catalog,
+            "native_specifications_sha256": hashlib.sha256(catalog.read_bytes()).hexdigest(),
+        }),
+    })
+    native = NativeOperationService(context)
+    before = snapshot(settings.parent)
+    report = guidance(
+        context.contracts.designs, context.contracts.pdks, mode="operator", context=context,
+        native_tools_registered=True,
+    )
+    circuit = report["circuits"][0]
+    assert {a["state"] for a in circuit["analyses"]} == {"BLOCKED"}
+    reason = "authority_inactive" if change in ("expired", "revoked") else "authority_invalid"
+    assert all(reason in a["reasons"] for a in circuit["analyses"])
+    assert circuit["features"]["native_1d_sweep"]["state"] == "BLOCKED"
+    for feature in ("native_result", "native_specification"):
+        assert circuit["features"][feature]["state"] == "REQUIRES_EXECUTION_CHECKS"
+        assert circuit["features"][feature]["reasons"] == []
+    assert calls == [] and snapshot(settings.parent) == before
+    query = NativeOperationQuery(
+        operation_id=operation_id, expected_plan_sha256=plan.plan_sha256,
+    )
+    assert (await native.observe(query)).progress.phase == "SUCCEEDED"
+    assert (await native.result(query)).result["nodes"][1]["value"] == 0.5
+    result = await NativeSpecificationSupervisor(native).result(NativeSpecificationQuery(
+        spec_id=spec.spec_id, expected_contract_sha256=canonical_digest(spec),
+        operation_id=operation_id, expected_plan_sha256=plan.plan_sha256,
+    ))
+    assert result.status == "PASS" and calls == ["result", "result"]
+    assert snapshot(settings.parent) == before
+    with pytest.raises(BridgeError):
+        await native.plan(request)
+    with pytest.raises(BridgeError):
+        await native.observe(query.model_copy(update={"operation_id": str(uuid4())}), request)
+    assert calls == ["result", "result"]
+    assert store.path.read_bytes() == before[store.path.relative_to(settings.parent).as_posix()]
 
 
 @pytest.mark.parametrize("catalog_state", ["registered", "empty", "missing", "invalid", "changed"])
