@@ -14,6 +14,7 @@ from test_operator_operations import operator as operator_fixture
 
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.designs import DesignAnalysisRegistry, DesignProfile
+from cadence_mcp_bridge.feature_guidance import guidance
 from cadence_mcp_bridge.generic_ade import (
     AcInputs,
     AdeExecutionRegistration,
@@ -24,7 +25,7 @@ from cadence_mcp_bridge.generic_ade import (
     verify_effective_input,
 )
 from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant, prepare_plan
-from cadence_mcp_bridge.variable_contracts import canonical_digest
+from cadence_mcp_bridge.variable_contracts import DesignVariables, canonical_digest
 
 operator = operator_fixture
 
@@ -96,6 +97,64 @@ def test_compile_and_match_all_modes_without_native_authority(operator, analysis
     assert report["input_sha256"] == hashlib.sha256(data).hexdigest()
     assert not report["execution_authorized"] and not report["native_source_copy_attested"]
     assert not report["native_model_bytes_attested"] and not report["remote_contact"]
+    assert not context.binding.analysis_journal.exists() and not context.lock_path.exists()
+
+
+@pytest.mark.parametrize("analysis", ["dc", "ac", "tran"])
+@pytest.mark.parametrize("blocker", ["read_only", "ade_xl", "explorer", "assembler", "capability"])
+def test_native_guidance_matches_known_renderer_prerequisites(
+    operator, analysis, blocker, monkeypatch,
+):
+    context, plan, registration, _ = setup(operator, analysis)
+    registry = json.loads(context.contracts.designs.model_dump_json())
+    if blocker == "read_only":
+        registry["designs"][0]["work_copy_policy"] = "read_only"
+    elif blocker != "capability":
+        registry["designs"][0]["binding"]["ade"]["kind"] = blocker
+    profile_hash = canonical_digest(
+        DesignProfile.model_validate_json(json.dumps(registry["designs"][0]))
+    )
+    registry["variable_sets"][0]["design_profile_sha256"] = profile_hash
+    variables_hash = canonical_digest(
+        DesignVariables.model_validate_json(json.dumps(registry["variable_sets"][0]))
+    )
+    for contract in registry["analysis_contracts"]:
+        contract.update(design_profile_sha256=profile_hash, variable_set_sha256=variables_hash)
+    registry = DesignAnalysisRegistry.model_validate_json(json.dumps(registry))
+    context = replace(context, contracts=replace(context.contracts, designs=registry))
+    if blocker == "capability":
+        environment = context.contracts.environment
+        environment = environment.model_copy(update={
+            "requested_capabilities": tuple(
+                item for item in environment.requested_capabilities if item != analysis
+            ),
+        })
+        context = replace(context, contracts=replace(context.contracts, environment=environment))
+    registration = registration.model_copy(update={
+        "design_profile_sha256": profile_hash, "variable_set_sha256": variables_hash,
+    })
+    with pytest.raises(OperationRejected) as failure:
+        render_netlist(context, plan, registration, str(uuid4()))
+    assert failure.value.reason == (
+        "ade_environment_capability_missing" if blocker == "capability"
+        else "ade_subtype_or_copy_policy_unsupported"
+    )
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.feature_guidance._native_check", lambda _: (operator[1], []),
+    )
+    report = guidance(
+        registry, context.contracts.pdks, mode="operator", context=context,
+        native_tools_registered=True,
+    )
+    selected = next(a for a in report["circuits"][0]["analyses"] if a["analysis"] == analysis)
+    assert selected["state"] == "BLOCKED"
+    assert selected["reasons"] == [{
+        "read_only": "design_copy_policy_denied",
+        "capability": "environment_analysis_capability_missing",
+    }.get(blocker, "native_ade_subtype_unsupported")]
+    assert report["circuits"][0]["features"]["native_result"]["state"] == (
+        "REQUIRES_EXECUTION_CHECKS"
+    )
     assert not context.binding.analysis_journal.exists() and not context.lock_path.exists()
 
 

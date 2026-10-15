@@ -2,8 +2,12 @@
 
 import copy
 import json
+import os
 import sqlite3
+import subprocess
+import sys
 import time
+from pathlib import Path
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -12,6 +16,7 @@ from mcp import Client
 from test_native_public_service import configured, operator, operator_base
 from test_runtime_context import make_settings
 
+from cadence_mcp_bridge import result_reports
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.errors import ConfigurationError
@@ -275,3 +280,195 @@ def test_corrupted_event_chain_and_reserved_cross_context_output_are_rejected(
         connection.execute("UPDATE operator_events_v1 SET event_sha256=?", ("0" * 64,))
     with pytest.raises(ConfigurationError):
         job_page(context)
+
+
+@pytest.mark.parametrize("context_number", [0, 1])
+@pytest.mark.parametrize("journal_field", ["analysis_journal", "sweep_journal"])
+@pytest.mark.parametrize("suffix", ["-wal", "-shm", "-journal"])
+def test_all_configured_sqlite_sidecars_reserved_before_capture(
+    tmp_path, monkeypatch, capsys, context_number, journal_field, suffix,
+):
+    settings = make_settings(tmp_path)
+    contexts = load_runtime(settings)
+    journal = getattr(contexts[context_number].binding, journal_field)
+    output = journal.with_name(journal.name + suffix)
+    before = inventory(tmp_path)
+
+    def reject_contact(*args):
+        raise AssertionError("reserved output must reject before provider construction")
+
+    monkeypatch.setattr(result_reports, "NativeOperationService", reject_contact)
+    assert main([
+        "operator-results", "capture", "--settings", str(settings), "--context", "context-1",
+        "--operation-id", str(uuid4()), "--expected-plan-sha256", "a" * 64,
+        "--output", str(output),
+    ]) == 2
+    assert json.loads(capsys.readouterr().out)["remote_contact"] is False
+    assert inventory(tmp_path) == before
+    assert job_page(contexts[0])["jobs"] == []
+    assert job_page(contexts[1])["jobs"] == []
+    assert inventory(tmp_path) == before
+
+
+def test_normalized_other_context_journal_sidecar_is_reserved(tmp_path, monkeypatch, capsys):
+    settings = make_settings(tmp_path)
+    document = json.loads(settings.read_bytes())
+    (tmp_path / "nested").mkdir()
+    document["contexts"][1]["sweep_journal"] = str(tmp_path / "nested/../sweep-2.sqlite3")
+    settings.write_text(json.dumps(document), encoding="utf-8")
+    before = inventory(tmp_path)
+
+    def reject_contact(*args):
+        raise AssertionError("normalized reserved output must reject before provider construction")
+
+    monkeypatch.setattr(result_reports, "NativeOperationService", reject_contact)
+    assert main([
+        "operator-results", "capture", "--settings", str(settings), "--context", "context-1",
+        "--operation-id", str(uuid4()), "--expected-plan-sha256", "a" * 64,
+        "--output", str(tmp_path / "sweep-2.sqlite3-wal"),
+    ]) == 2
+    assert json.loads(capsys.readouterr().out)["remote_contact"] is False
+    assert inventory(tmp_path) == before
+
+
+@pytest.mark.parametrize("stage", ["write", "fsync"])
+def test_incomplete_export_keeps_candidate_outside_catalog_and_retry_succeeds(
+    configured, tmp_path, monkeypatch, capsys, stage,
+):
+    _, record, source = seed(configured)
+    report = make_report(record, source)
+    folder = tmp_path / "reports"
+    folder.mkdir()
+    final = folder / "result.json"
+    expected = report.model_dump_json().encode()
+    real_fdopen = os.fdopen
+
+    class InterruptedWrite:
+        def __init__(self, descriptor, mode):
+            self.stream = real_fdopen(descriptor, mode)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.stream.close()
+
+        def write(self, data):
+            self.stream.write(data[:len(data) // 2])
+            self.stream.flush()
+            raise OSError("synthetic interrupted report write")
+
+    def reject_fsync(_):
+        raise OSError("synthetic report fsync failure")
+
+    with monkeypatch.context() as fault:
+        if stage == "write":
+            fault.setattr(result_reports.os, "fdopen", InterruptedWrite)
+        else:
+            fault.setattr(result_reports.os, "fsync", reject_fsync)
+        with pytest.raises(OSError):
+            export_report(final, report)
+    assert not final.exists()
+    candidates = list(folder.glob(".cadence-report-*.pending"))
+    assert len(candidates) == 1
+    failure_bytes = candidates[0].read_bytes()
+    assert failure_bytes == (expected[:len(expected) // 2] if stage == "write" else expected)
+    assert main(["operator-results", "find", "--directory", str(folder)]) == 0
+    assert json.loads(capsys.readouterr().out)["reports"] == []
+    export_report(final, report)
+    assert read_report(final) == report and final.stat().st_nlink == 1
+    assert candidates[0].read_bytes() == failure_bytes
+    assert main(["operator-results", "find", "--directory", str(folder)]) == 0
+    assert len(json.loads(capsys.readouterr().out)["reports"]) == 1
+
+
+def test_competing_destination_is_not_replaced_at_publication(configured, tmp_path, monkeypatch):
+    _, record, source = seed(configured)
+    report = make_report(record, source)
+    final = tmp_path / "winner.json"
+    original = b"unrelated concurrent writer"
+    publish = result_reports._publish_report
+
+    def racing_publish(candidate, destination):
+        destination.write_bytes(original)
+        publish(candidate, destination)
+
+    monkeypatch.setattr(result_reports, "_publish_report", racing_publish)
+    with pytest.raises(FileExistsError):
+        export_report(final, report)
+    assert final.read_bytes() == original
+    candidates = list(tmp_path.glob(".cadence-report-*.pending"))
+    assert len(candidates) == 1 and candidates[0].read_bytes() == report.model_dump_json().encode()
+
+
+@pytest.mark.parametrize("stage", ["before", "after"])
+def test_process_exit_at_publication_preserves_complete_catalog(
+    configured, tmp_path, capsys, stage,
+):
+    _, record, source = seed(configured)
+    report = make_report(record, source)
+    folder = tmp_path / "reports"
+    folder.mkdir()
+    fixture = tmp_path / "report.fixture"
+    fixture.write_bytes(report.model_dump_json().encode())
+    final = folder / "after-crash.json"
+    code = """
+import os, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from cadence_mcp_bridge import result_reports as reports
+report = reports.ResultReport.model_validate_json(Path(sys.argv[2]).read_bytes())
+publish = reports._publish_report
+def crash(candidate, destination):
+    if sys.argv[4] == "after":
+        publish(candidate, destination)
+    os._exit(23)
+reports._publish_report = crash
+reports.export_report(Path(sys.argv[3]), report)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", code,
+         str(Path(result_reports.__file__).resolve().parents[1]), str(fixture), str(final), stage],
+        capture_output=True, timeout=30, check=False,
+    )
+    assert completed.returncode == 23, completed.stderr
+    candidates = list(folder.glob(".cadence-report-*.pending"))
+    if stage == "before":
+        assert not final.exists()
+        assert len(candidates) == 1 and candidates[0].read_bytes() == fixture.read_bytes()
+    else:
+        assert not candidates and read_report(final) == report and final.stat().st_nlink == 1
+    assert main(["operator-results", "find", "--directory", str(folder)]) == 0
+    assert len(json.loads(capsys.readouterr().out)["reports"]) == (0 if stage == "before" else 1)
+    if stage == "before":
+        export_report(final, report)
+    else:
+        with pytest.raises(FileExistsError):
+            export_report(final, report)
+    assert read_report(final) == report
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="real POSIX directory durability")
+def test_directory_fsync_failure_retains_complete_published_report(
+    configured, tmp_path, monkeypatch,
+):
+    _, record, source = seed(configured)
+    report = make_report(record, source)
+    final = tmp_path / "complete.json"
+    fsync = os.fsync
+    calls = 0
+
+    def fail_directory_fsync(descriptor):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("synthetic directory fsync failure")
+        fsync(descriptor)
+
+    with monkeypatch.context() as fault:
+        fault.setattr(result_reports.os, "fsync", fail_directory_fsync)
+        with pytest.raises(OSError, match="directory fsync"):
+            export_report(final, report)
+    assert read_report(final) == report and final.stat().st_nlink == 1
+    with pytest.raises(FileExistsError):
+        export_report(final, report)

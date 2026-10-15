@@ -1,5 +1,52 @@
 # POST-02: local feature guidance
 
+## Sweep eligibility correction, 2026-10-15
+
+Final adjacent review distinguishes a registered specification with an unavailable
+native result route (`native_result_route_unavailable`) from absent/invalid or
+unregistered catalogs. A20-case catalog/route matrix covers active and expired
+authority, missing bindings and unloaded native tools. Native analysis guidance
+also blocks the renderer's known local prerequisites: unsupported ADE subtype,
+read-only work-copy policy or an analysis absent from the environment's requested
+capabilities. Fifteen DC/AC/TRAN renderer-denial cases verify those reasons;
+legacy/fixture classifications and retained-result access remain separate.
+Final related213 tests PASS, Ruff/mypy101 PASS. These local checks do not assess
+remote qualification, remaining capacity or job-specific numeric/reader conditions.
+
+Follow-up review4279471320/4279471328 now also blocks an otherwise qualified axis
+when its containing design permits only read-only work copies. Recursive but
+size-bounded provider/grant/specification JSON returns a closed invalid-binding
+or invalid-specification response rather than escaping the resource or CLI.
+Thirty guidance/sweep regressions pass, including the actual planner's rejection
+of a read-only design and MCP-resource/CLI checks for all three recursive document
+types. Ruff/mypy101 pass. The synthetic planner fixture now consults its current
+context rather than a captured old context. Earlier counts below remain history;
+updated hosted/review/package gates still apply.
+
+Hosted Linux run38688917237 retained a test-only failure in installation-repair
+rollback coverage: resolving an unchanged symlink updated its access time. The
+fixture now compares mode, inode, device, link count, owner/group, size, nanosecond
+mtime/ctime and link payload explicitly, excluding read-induced atime. Production
+repair code/protections are unchanged. The failed CI evidence remains retained;
+the corrected fixture requires a new exact-head Linux run.
+
+Review4257903728 exposed a misleading sweep route when an authorized analysis has
+only fixed, read-only or unqualified variables. The guide now uses the same
+`owned_copy_only` and `qualified` registered-axis gate as the native sweep planner.
+Without an eligible axis it reports BLOCKED with
+`qualified_mutable_sweep_axis_missing`. An eligible axis still requires explicit
+point values, grant scope, live qualification and all existing execution checks.
+
+The configured resource regression preserves all files while rejecting its
+fixed-only fixture. Four validated synthetic registry cases agree with the real
+sweep planner's fixed/read-only/unqualified rejection and eligible acceptance.
+Related guidance/sweep/setup/native-service tests65 PASS/3 Windows symlink skips;
+Ruff and mypy101 PASS. Initial attempts stopped in pytest temporary-directory
+setup (existing temp ACL, then absent new parent); a dedicated new test root passes.
+These tests perform no VM execution or reservation. Final-head hosted package,
+security and compatibility checks remain separate gates. Further Claude testing
+is EXCLUDED_BY_USER, not PASS. Earlier dated evidence below remains historical.
+
 This development feature follows merged POST-01 (PR153/main67c21a7). It is not
 part of the immutable published v2.0.0 artifacts. Support remains the professor's
 standard CentOS/Cadence/PDK VM on personal VMware; no broader qualification is claimed.

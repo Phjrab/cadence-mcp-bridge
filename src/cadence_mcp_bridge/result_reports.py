@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ctypes
 import hashlib
 import json
 import math
 import os
 import stat
+import sys
+import tempfile
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
@@ -353,6 +356,33 @@ def read_report(path: Path) -> ResultReport:
     return ResultReport.model_validate_json(raw)
 
 
+def _publish_report(candidate: Path, destination: Path) -> None:
+    """Atomically move a complete file without replacing any existing entry."""
+    if os.name == "nt":
+        # Windows rename is atomic and rejects an existing destination. POSIX
+        # rename replaces one, so it must never be used as the Linux fallback.
+        os.rename(candidate, destination)
+    elif sys.platform == "linux":
+        try:
+            rename = ctypes.CDLL(None, use_errno=True).renameat2
+        except AttributeError:
+            raise OperationRejected("report_atomic_publication_unsupported") from None
+        rename.argtypes = [
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+        ]
+        rename.restype = ctypes.c_int
+        if rename(-100, os.fsencode(candidate), -100, os.fsencode(destination), 1) != 0:
+            error = ctypes.get_errno()
+            raise OSError(error, os.strerror(error), destination)
+        descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    else:
+        raise OperationRejected("report_atomic_publication_unsupported")
+
+
 def export_report(path: Path, report: ResultReport) -> str:
     raw = report.model_dump_json().encode("utf-8")
     if len(raw) > REPORT_LIMIT:
@@ -360,11 +390,21 @@ def export_report(path: Path, report: ResultReport) -> str:
     path = _local_path(path)
     if not path.parent.is_dir():
         raise OperationRejected("report_parent_required")
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    if path.exists():
+        raise FileExistsError(path)
+    # Interrupted/failed candidates remain evidence outside find's *.json
+    # namespace. Only the fully written and fsynced record receives its final
+    # name. A link/unlink publication is intentionally avoided: a crash between
+    # them would leave a two-link report rejected by the existing read guard.
+    descriptor, name = tempfile.mkstemp(
+        prefix=".cadence-report-", suffix=".pending", dir=path.parent,
+    )
+    candidate = Path(name)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(raw)
         stream.flush()
         os.fsync(stream.fileno())
+    _publish_report(candidate, path)
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -412,7 +452,15 @@ def results_cli(arguments: argparse.Namespace) -> int:
                     for field in type(loaded.binding).model_fields:
                         value = getattr(loaded.binding, field)
                         if isinstance(value, Path):
-                            reserved.add(value.absolute())
+                            reserved.add(_local_path(value))
+                    for journal in (
+                        loaded.binding.analysis_journal, loaded.binding.sweep_journal,
+                    ):
+                        journal = _local_path(journal)
+                        reserved.update(
+                            journal.with_name(journal.name + suffix).absolute()
+                            for suffix in ("-wal", "-shm", "-journal")
+                        )
                 if output in reserved:
                     raise OperationRejected("report_output_reserved")
                 if output.exists() or not output.parent.is_dir():
