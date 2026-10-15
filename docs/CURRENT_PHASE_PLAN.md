@@ -1,3 +1,15 @@
+## POST-05 current conditional integration scope, 2026-10-15
+
+Finish PR156 as documentation of actual inventory/plan/dry-run safety only.
+Normal POST154–158 integration is explicitly authorized after required checks and
+review; propagate the reviewed155 parent normally and check the exact156 tip.
+No deletion target has been selected, and no actual deletion/compaction acceptance
+is claimed. Current shared ledger126/500 and15,452,864,512/17,179,869,184 bytes;
+native corrections22/24. Preserve all earlier observations without restoring them.
+Further Claude testing is EXCLUDED_BY_USER, not PASS. Published2.0.0, existing
+results/failures/PSF/journals/replay and cumulative usage remain intact. No VM or
+deletion tests are needed for this docs-only update. Earlier records remain history.
+
 ## POST-03 final PASS; independent POST-05 safety record, 2026-10-13
 
 POST-03 final1efc811/PR155 passed local3632 tests and both exact hosted checks;

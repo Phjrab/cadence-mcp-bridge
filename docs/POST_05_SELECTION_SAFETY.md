@@ -1,5 +1,26 @@
 # POST-05: selective-cleanup safety checkpoint
 
+## Current integration scope, 2026-10-15
+
+The user's latest instruction explicitly authorizes conditional normal integration
+of POST154–158 in dependency order after review, CI and actual scope acceptance.
+For PR156 the accepted scope is this documentation and the retained read-only
+inventory/plan/dry-run evidence. No historical deletion target has been selected;
+actual deletion and compaction remain incomplete and separately scoped.
+
+The latest shared managed-VM observation is126 conservative accounting attempts
+of500 and15,452,864,512 of17,179,869,184 reserved bytes, leaving1,727,004,672 bytes.
+Native source correction consumption is22 of24. The112-attempt/13,825,474,560-byte
+dry-run checkpoint below is a historical observation, not a restored ledger or
+available allowance. This documentation update changes no consumption or policy.
+
+Further Claude validation is EXCLUDED_BY_USER, not PASS. Existing actual Codex
+dry-run evidence remains specific to the standard VM and unchanged storage
+implementation. Published2.0.0 artifacts, original results/PSF and all ledgers,
+replay and failure evidence remain preserved. Older approval exclusions below and
+in prior PR descriptions remain historical where this newer instruction supersedes
+them; none authorizes deletion, compaction, budget reset or a new publication.
+
 This phase reuses the existing five path-free storage tools rather than adding a
 second deletion engine. Continuous POST authorization permits safety validation;
 it does not choose a historical artifact for deletion. No existing result, failure,

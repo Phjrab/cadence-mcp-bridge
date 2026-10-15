@@ -1,3 +1,15 @@
+## POST-05 documentation integration scope, 2026-10-15
+
+The latest user instruction conditionally authorizes normal POST154–158 merges
+after review/CI and each PR's bounded acceptance. PR156 remains documentation plus
+the preserved actual inventory/plan/dry-run checkpoint: removed0/refunded0. No
+historical target was selected or deleted; compaction remains separate/unimplemented.
+Latest shared VM ledger126/500 and15,452,864,512/17,179,869,184 bytes, remaining
+1,727,004,672; native corrections22/24. Earlier112/20-ceiling records below are
+historical and must not reset these counters. This docs update performs no VM work.
+Claude is EXCLUDED_BY_USER, not PASS. Published2.0.0 and all original data remain
+preserved. Merge the final reviewed155 parent normally before final156 CI/review.
+
 ## POST-03 verified; POST-05 safety checkpoint and external boundaries, 2026-10-13
 
 POST-03 PR155 final1efc811 is ready for review, stacked on open POST-02 PR154.
