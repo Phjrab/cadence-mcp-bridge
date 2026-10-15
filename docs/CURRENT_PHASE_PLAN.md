@@ -1,3 +1,23 @@
+# Final POST integration verification, 2026-10-15
+
+Final1574cf2ea5 is normally integrated into158 with both documentation histories
+retained. Finish local report/guidance/analog/CLI checks, final exact hosted CI,
+review disposition and a new integrated installed artifact's retained reads/report.
+Conditional normal merges are authorized; merge/publication is not claimed before
+those gates. No new EDA, extraction, native deployment or guarded source correction
+is needed or permitted by this verification step. The13 guarded paths match157;
+measurement/provider modules match the previously qualified dfcac60 installation.
+Integrated local regression350 PASS/10 Windows platform skips; Ruff/mypy108 PASS.
+The existing pytest cache-write warning is retained without changing its ACL.
+Remaining gates are exact hosted/review and integrated installed retained reads.
+
+Retained ledger126/500 and15,452,864,512/17,179,869,184 bytes; corrections24/24.
+Earlier22 counts below are historical. Keep negative sampled loop margins and
+null coarse/slow-ramp/comparator outcomes; do not promote them to scientific PASS.
+Fine slope remains a sampled10/90 average, not intrinsic/max slew. Recovery stays
+experimental/DC-only, Claude EXCLUDED_BY_USER, deletion unselected and compaction
+unimplemented. Preserve published2.0.0, protected data and all consumed resources.
+
 ## POST-04 final host output protection, 2026-10-15
 
 Complete final hosted/package/review gates for the corrected recovery-plan export
@@ -94,6 +114,204 @@ the corrected parent into155–158 without rewriting history. The latest direct
 user instruction authorizes those conditional merges. No new VM work is needed
 for this host-only correction. Claude remains EXCLUDED_BY_USER, not PASS, and
 published2.0.0 is immutable. Earlier checkpoints below remain dated history.
+
+# Current POST continuation, 2026-10-15
+
+Exact dfcac60 package/rights/isolated install/lifecycle PASS; installed actual
+fine retry/two CLI reads/report and retained coarse/slow-ramp null checks PASS.
+Local SDK96 PASS, not app validation. All six observed P2 threads resolved,
+not formal APPROVED. No new spend/native/admin/protected data changes. Finish
+docs-only source-identity/remote synchronization and exact final-head CI/fresh
+automatic review observation. Source-specific hashes/scopes in
+POST_07_FAST_STEP_V1.md; public2.0.0 immutable, no POST merge/publication.
+
+Final72a106a installed retained fine/retry/report/SDK and old-ramp/coarse null
+checks PASS, both hosted OS checks PASS, no spend. Sixth P2 cumulative reversal
+reproduced on rising/falling inputs and fixed in dfcac60, with bounded-noise
+controls;185 related/security tests, Ruff/mypy108 and secret1174 PASS. Final new
+exact installed retained reads and hosted/refreshed review are the remaining
+finishing gates. Current126/15,452,864,512,native22/24; no new simulation planned.
+Use POST_07_FAST_STEP_V1.md for exact source scopes. Further Claude excluded,
+POST05 selection/compaction and POST integration/publication remain separate.
+
+## Earlier continuation checkpoints, 2026-10-14
+
+Fine actual installed12eb747 TRAN/automatic extraction succeeds with231 samples;
+sampled average-44.324575547V/ns,1ps input edge upper/12.092ps output-duration
+lower bound. Shared126 /15,452,864,512,native22/24; coarse null/old ramp preserved.
+Fifth P2 onset-bracket causality guard and223 related/static checks pass; pure
+retained-frame remeasurement agrees. Finish final host build/installed retained
+reads/retry/CI/review only, no further simulation planned. New Linux CI includes
+loop tests. See POST_07_FAST_STEP_V1.md. Claude excluded; no POST merge/publication.
+
+First exact18115b6 actual TRAN/automatic extraction passes but measured15.9ps
+output transition is honestly underresolved (98 samples); null estimate/PSF/
+128MiB spend preserved. Restart/retry/report adds0. Current125 /15,318,646,784,
+native22/24. One separately bounded finer-grid TRAN on identical source is prepared
+for stop.65ns/maxstep3ps/final.6-.65ns; not admitted. Review4269530097's remaining
+selected-transfer coupling is fixed with complete-axis validation and a typed
+loop-waveform source, public report contract unchanged;222 related tests pass.
+Finish rebuilt install, retained loop equivalence and finite fine TRAN/restart/CI/
+review. See POST_07_FAST_STEP_V1.md. Earlier no-new-experiment statements are history.
+
+Fresh automatic P2 review4269249515 found slow input ramps could qualify sampled
+step slope. Host input-edge bracket guard now rejects them; related203 tests
+pass. Historical1ns inverter result is reclassified with null qualified value,
+original report/PSF preserved. Owned1ps source and common actual TRAN input pass;
+one finite128MiB TRAN is prepared, not admitted. Same ledger124 /
+15,184,429,056 bytes and native22/24 remain. Finish exact new install, actual TRAN,
+retained restart/retry/read, review and hosted gates. See POST_07_FAST_STEP_V1.md.
+This supersedes the older "no new experiment needed" checkpoint below.
+
+Corrected exact c8de5a7 installed/package/rights/lifecycle/SDK and hosted both OS
+checks PASS. Two automatic P2s are fixed: loop-waveform projection is independent
+of bandwidth's complete transfer; zero AC sources are checked differentially.
+186 related tests/static PASS. Existing actual loop results/retry/report and
+bandwidth rereads match after restart, add0 and preserve previous DC records and
+journals/settings. Shared124 /15,184,429,056 and native22/24 unchanged. Both
+P2 threads resolved, not formal APPROVED. Claude further checks excluded.
+Finish final docs/PR/source-identity synchronization; no new experiment needed.
+POST05 actual deletion selection/compaction and POST integration stay separate.
+
+The following execution checkpoint predates the review correction:
+
+Actual finite DC1/AC2 execution, automatic extraction, measured injection and
+two-grid loop result checks now PASS on exact installed0f877b6/UID500. Margin is
+negative~-15.543deg; preserve it without a stability/performance PASS claim.
+All three same-ID retries, four separate-process margin reads and three completed
+result reports add0; earlier five DC admissions and journals/settings preserved.
+Actual cumulative124 /15,184,429,056 bytes, remaining1,995,440,128 of16GiB;
+native22/24 unchanged. Exact package/rights/lifecycle/SDK and hosted both OS checks
+PASS. Further Claude checks EXCLUDED_BY_USER. See POST_07_LOOP_RESULT_V1.md.
+Finish final documentation/PR synchronization; independent formal review, exact
+historical deletion selection, separate compaction and POST integration remain
+distinct. No routine phase approval or Codex restart is required.
+
+The following paragraph is the earlier pre-execution checkpoint:
+
+Direct user excludes further Claude qualification. Historical app/SDK evidence is
+retained; exclusion is not PASS and no Claude restart/access request is required.
+Continue the existing owned loop fixture, host-only experimental sampled return
+ratio and finite DC1/AC2 scope in POST_07_LOOP_VALIDATION_V1.md. Latest normal-user
+preflight passes121 /14,781,775,872 bytes; native source22/24 unchanged. Latest main
+67c21a7 and feature6f2f66f hosted Windows/Linux PASS. Public2.0.0 stays immutable;
+POST PRs remain separate. Historical deletion/compaction requires exact selected
+targets; do not select old results on the user's behalf.
+
+## Exact installed POST07 and remaining loop work, 2026-10-14
+
+290aab4 normal feature push/remote SHA and both hosted CI PASS. Exact private
+wheel/sdist rights/install/CLI/SDK/state checks PASS. Installed new-process
+offset read/repeat and all five same-ID requests add0; retained inverter slew
+agrees and comparator plateau rejection persists. UID500 preflight/journals/
+settings/grants/counter remain protected:121 /14,781,775,872,native22/24.
+No formal review submissions/threads are observed; PR158 remains draft.
+See POST_07_INSTALLED_RESULT_V1.md for exact artifact hashes/scoped results.
+
+Continue PM with a separately owned ideal-unilateral-feedback QA fixture,
+explicit injection sign/DC/load checks and actual return-ratio proof. Read-only
+vcvs/vdc symbol inspection passes. Retained first OA preparation failed on
+protected SKILL constant t; local wrapper failures spent0. Minimal variable-only
+v4 correction passes OA pin-map/check/save, followed by common DC/AC netlisting
+and effective-input checks. Observed fixture has unity unilateral VCVS and
+DC0/AC1 series injection with isolated return node. Next verify default zero AC
+on unexcited bias/supply, fixed DC/load, sign/calibration and bounded sampled
+crossings before registering/executing a finite retained-ledger loop experiment.
+Installed fixed vsource help now explicitly confirms mag0/phase0 defaults;
+the read preserves libraries/ledger and reserves0. Measured stimulus proof still
+requires actual AC. POST_07_LOOP_VALIDATION_V1.md records the next proposed
+DC1/AC2 finite384MiB scope and rejection criteria, not a minted grant or actual
+spend. Implement closed loop definition/eligibility before admission.
+Reuse these source/state/input receipts; do not recreate successful preparation.
+Do not equate OA/netlisting with PM or
+ordinary AC phase with loop margin. No new native assets or experiments were
+accepted for this preparation. Claude input remains geometry/capture blocked;
+public app local user-supplied lookup only. Historical deletion selection and
+POST merge/publication remain separate. No Codex restart is required.
+
+## Actual five-point DC continuation, 2026-10-14
+
+Five new registered nominal input-nulling DC jobs now succeed with automatic
+extraction, UID500 gates and same-ID repeat0. Library-registration schema failure
+before spend and subsequent host condition-comparison failure remain preserved.
+Only the explained new-library fingerprint is corrected, preserving all original
+content/metadata and older libraries. Host offset comparison keeps point-specific
+input hashes in each source, while all other conditions/biases remain identical.
+Actual corrected read/repeat returns nominal near0V in[-0.5microV,0V], not physical
+precision/mismatch/PVT evidence. Shared ledger121 /14,781,775,872,remaining
+2,398,093,312 of16GiB; native22/24 unchanged. Related166 tests/static PASS.
+
+Prepare exact updated host wheel, rights/install checks, new-process retained
+offset/slew reads and retry0, final PR158 SHA/CI/review. Continue valid PM loop
+testbench preparation under delegated QA choices; no phase reapproval is needed.
+Fresh Claude accessibility works but click geometry/capture recovery still fail;
+no prompt sent or app execution qualification. POST05 historical target selection
+is still separate. Do not merge POST/public artifacts by inference. Prior history
+remains unchanged.
+
+## Current measurement execution plan, 2026-10-14
+
+Direct user "나머지는 너가 구성해서 검증" delegates remaining scientific QA
+choices. Proceed with the new owned nulling testbench/common registrations,
+exact opt-in installed host measurement build and finite5 DC/640MiB experiment
+under fresh trust/qualification/input/ledger/disk checks. Preserve116 attempts/
+14,110,687,232 reserved bytes, native22/24, source state/model contents, old
+bundles/grants/results and current shared journals/domain. No new ledger or refund.
+Preparation and actual common netlist input already pass; do not recreate them.
+
+Retained inverter sampled slew reads/repeats pass; comparator rejects unsettled
+plateaus. Keep rejection and original PSF, no widened tolerance or metric relabel.
+Refresh exact installed/hosted checks after the code changes. PM needs actual
+valid loop/injection/loading/sign qualification, and remains incomplete.
+
+Record user-supplied Claude published2.0.0 local-runtime lookup success only;
+do not infer remote/health/authority/qualification or whole POST06 PASS. v8 is
+a supported catalog variant, not the currently loaded version. Older requests
+for user testbench choices and UI failure status remain historical. POST05 exact
+deletion selection and POST merge/publication remain outside this continuation.
+No Codex restart is needed. See POST_06_CLAUDE_APP.md/POST_07_GENERIC_ANALOG.md.
+
+## POST-07 installed actual AC checkpoint and remaining work, 2026-10-14
+
+Two exact installed generic registered89-point10Hz–1THz AC runs pass common
+copy/netlisting/effective input/Spectre/OCEAN/result. Inverter has a13.055949GHz
+sample-relative downward3dB estimate; comparator has no downward crossing. Do
+not claim PDK high-frequency validity, application bandwidth or grid convergence.
+Native source22/24 unchanged; this experiment2/256MiB and actual retained ledger
+116 /14,110,687,232 bytes,16GiB remaining3,069,181,952. All old evidence is retained.
+
+Corrected installed host CLI Path error and added regression:133 related tests,
+Ruff/mypy105, d03f3f14 rights/content/isolated install pass. Exact corrected CLI
+new-process reads and same-ID retry spend0, journals/settings/registry/grants stay
+unchanged. UID500 preflight and native SDK96-tool start pass; not actual Claude.
+PR158 stays draft; final hosted CI/review pending. No POST merge/publication.
+
+Continue valid PM/offset/slew scientific testbench preparation after target/loop/
+definition/stimulus clarification, rather than relabelling legacy/synthetic data.
+POST06 app input still fails geometry/capture after user-confirmed Claude restart;
+no Codex restart is required. POST05 actual deletion/compaction waits exact human
+target selection. Public2.0.0 and old journal/budget/replay remain protected.
+See POST_07_GENERIC_ANALOG.md; earlier checkpoints below are historical.
+
+## POST-07 next actual measurement validation, 2026-10-14
+
+Experimental host-only operator-analog implementation reads existing authenticated
+complete AC grids; default/MCP/native source unchanged. Explicit measured-reference
+downward crossing is bounded to an observed bracket; no crossing returns null.
+Related132 tests/Ruff/mypy105 pass. Actual two retained new-circuit16-point10Hz–1MHz
+reads/repeats and UID500 preflight pass, with no observed3dB crossing. Ledger114 /
+13,842,251,776 unchanged, source22/24. Prepare exact installed artifact and a
+prospectively recorded two-job wider finite AC experiment under retained16GiB/500
+and ordinary-user trust/ledger/disk/input gates. Preserve old registrations/results,
+runtime/grants/journals. PM/offset/slew need actual scientific testbench conditions;
+do not relabel legacy/synthetic facts. POST07 partial, no completion claim.
+
+Claude confirmed restart yields readable new window but click geometry and one
+fresh capture retry fail. No prompt sent; POST06 remains NOT_VERIFIED. Existing
+connection preserved beside public2.0.0 QA connection; SDK preflight is separate.
+PR157 exactfa0ebc3 hosted Windows/Linux PASS; review pending. Continue authorized
+POST02–07 independent work; no POST merge/publication or deletion inferred.
+See POST_07_GENERIC_ANALOG.md; older checkpoints retain their original scope.
 
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 

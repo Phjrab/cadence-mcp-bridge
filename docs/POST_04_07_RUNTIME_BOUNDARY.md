@@ -1,3 +1,55 @@
+# Current integrated boundary, 2026-10-15
+
+The original guarded source-path scope includes host extraction_recovery.py.
+Its two reviewed export protections bring the retained total to24/24; installed
+native assets remain unchanged. All13 guarded paths in this158 integration are
+identical to final1574cf2ea5. Do not treat earlier22/24 runtime observations below
+as spare correction capacity. The durable consumed checkpoint and private original
+reconciliation remain authoritative without reset/refund.
+
+Current126/500 conservative accounting attempts and15,452,864,512/17,179,869,184
+bytes remain retained. This parent integration/local testing adds0 VM execution,
+extraction or reservation. Conditional normal POST154–158 merges are authorized;
+final exact hosted/review/installed gates remain pending. No new publication,
+guarded correction, selected historical deletion or compaction is implied.
+Further Claude is EXCLUDED_BY_USER; actual recovery remains the inverter DC case.
+The following original boundaries retain their dated source-specific scope.
+
+# Resumed boundary, 2026-10-15
+
+Actual fast-input coarse/fine TRANs and automatic extraction succeed at UID500.
+Coarse sampled slope is null/underresolved; fine signed average is
+-44.3245755472V/ns, with fast-edge and conservative causality checks. Historical
+slow input-ramp slope is now unqualified. Their original PSF/results persist.
+Shared ledger126/500 and15,452,864,512/17,179,869,184 bytes; native22/24, no pending
+native source change. Both finite fast-input grants and the prior loop grant are
+fully consumed. Final host fixes use retained read/retry/report only, not new
+admissions, extractions, administrator operations or expanded authority.
+
+Exact72a106a installed fine same-ID retry/two CLI reads/report/local SDK and
+retained coarse/slow-ramp null checks PASS with unchanged journals/settings and
+eight prior loop/DC records. New cumulative-input-reversal guard is host-only;
+see POST_07_FAST_STEP_V1.md for its distinct final installation scope. POST04
+actual recovery remains DC-specific. No historical deletion target is selected;
+compaction remains separate. Further Claude EXCLUDED_BY_USER; no POST merge or
+publication inferred. Earlier boundaries below retain their historical scope.
+
+# Current scope overlay, 2026-10-14
+
+Actual installed finite loop batch completes3 attempts/384MiB; shared124 /
+15,184,429,056 bytes, remaining1,995,440,128. This grant is fully consumed.
+Native22/24 remains unchanged. Restarted same-ID/read/report checks spend0 and
+preserve journals/settings/older DC admissions. No administrator repair, reset,
+refund, deletion, fourth job or public change occurred. Negative measured margin
+is retained, not presented as stability acceptance. POST_07_LOOP_RESULT_V1.md
+records exact installed/hosted/VM evidence; further Claude checks remain excluded.
+
+Further Claude qualification is excluded by the user's direct instruction;
+historical app/SDK evidence below remains scoped, and exclusion is not PASS.
+Continue independent standard-VM loop and exact installed POST checks. Existing
+shared journals/domain, grants, replay and spent resources remain authoritative.
+No POST merge/publication or historical deletion target selection is inferred.
+
 # Retained native change boundary for POST-04 and POST-07
 
 ## Durable consumed-source checkpoint, 2026-10-15
@@ -30,6 +82,67 @@ Eleven disposable-history regressions cover retained accounting, normal merge,
 squash, hidden ancestral consumption, committed/pending source changes, merge-only
 tree drift and stale inputs. They run in the Windows unit suite and the dedicated
 Linux CI step; neither synthetic history is a current-VM execution check.
+
+## Actual input-nulling continuation, 2026-10-14
+
+Five new owned DC jobs plus automatic extraction/results/repeat0 succeed.
+Current shared ledger121 /14,781,775,872,remaining2,398,093,312 bytes of16GiB;
+native22/24. Versioned new-library fingerprint correction retains original
+content/metadata and all old libraries/failures/bundles/grants. Host-only combined
+input-hash comparison correction adds no native change or simulation; every source
+hash remains in its own report. Actual read/repeat gives nominal near0V within a
+measured bracket, with no absolute precision/mismatch/PVT claim. Final exact
+installed host/CI/review and actual PM loop remain gates. Claude geometry/capture
+still block app inputs; local user-supplied lookup is the only public app success.
+No counter reset/refund, deletion, POST merge, publication or restart is inferred.
+
+## Current delegated measurement boundary, 2026-10-14
+
+The user supplies actual published-Claude local runtime-info-v2 and delegates
+remaining QA definitions/testbenches. This supersedes earlier scientific-choice
+questions, not protected data, finite budgets or publication boundaries. Loaded
+v4/v2 catalogs are valid; v8 wording refers to supported versions. Remote/app
+execution is not assessed by this response.
+
+Actual retained inverter sampled slew/read/repeat and ordinary UID500 preflight
+pass; comparator fails plateau eligibility and its evidence is retained. Shared
+116 /14,110,687,232 and native22/24 remain. New owned nulling OA/ADE preparation
+and common netlist input pass. A finite5-point/640MiB registration retains the
+same domain/journals; actual activation/runs and exact installed checks remain.
+No source/runtime isolation, private-parent check or original protection is
+relaxed. PM still needs loop qualification. No historical deletion, POST merge,
+public posting or Codex restart is inferred. Earlier overlays remain history.
+
+## Actual POST07 retained boundary, 2026-10-14
+
+Exact installed two wider generic AC runs, common extraction and result pass.
+The host-only measured-reference crossing CLI correction/reinstall/new-process
+lookup/repeat pass without another run. Native source22/24 remains; current ledger
+116 /14,110,687,232 bytes includes this2/256MiB. Same-ID restart/repeat spend0;
+old original/result/failure/runtime/grant/journal protections persist. This is
+sampled-transfer evidence only: PM/offset/slew and actual Claude remain incomplete.
+Source d03f3f14 rights/package/native SDK96 and133 related tests pass, with final
+CI/review pending. See POST_07_GENERIC_ANALOG.md; older counts remain historical.
+
+## Latest implementation and app checkpoint, 2026-10-14
+
+Native source consumption is22/24; two remain. The four-remaining statement below
+is the earlier authorization checkpoint, preserved as history. Actual shared
+ledger114 /13,842,251,776 reserved bytes is retained. POST07 adds an opt-in host
+measurement CLI over existing authenticated complete AC frames; no deployed
+native asset changes, execution or reservation. Two actual retained new-circuit
+reads/repeats and normal-user preflight pass; neither old AC interval contains a
+3dB crossing. PM/offset/slew remain scientifically blocked, not promoted from
+reference or synthetic facts. See POST_07_GENERIC_ANALOG.md.
+
+User-confirmed Claude restart yields a fresh target window. Accessibility reads
+work; indexed input fails `coordinate input geometry is unavailable`. Fresh
+window reselection and the one screenshot recovery retry fail `window capture
+timed out: timed out waiting on channel`. No prompt/input was sent. Exact public
+2.0.0 connection was added preserving the old connection/journals; SDK preflight
+passes but actual Claude acceptance remains NOT_VERIFIED. No Codex restart is
+required by these errors. Public2.0.0 remains unchanged. PR157 exactfa0ebc3 hosted
+Windows/Linux checks now both PASS; independent review remains separate.
 
 ## Current authorization, 2026-10-14
 

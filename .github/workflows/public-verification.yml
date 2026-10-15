@@ -90,6 +90,9 @@ jobs:
       - name: Read-only native result reports and scientific comparison
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_result_reports.py -q --basetemp "$HOME/post03-report-tests"
 
+      - name: Generic complete AC projection and sampled crossing contracts
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"
+
       - name: Extraction-only recovery on disposable PSF and retained accounting
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_extraction_recovery.py -q --basetemp "$HOME/post04-recovery-tests"
 

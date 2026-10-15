@@ -266,8 +266,35 @@ class AuthenticatedOperatorProvider:
         """Same verified result lookup with path-free input/definition context for reports."""
         return await self._result(operation_id, plan, include_report_conditions=True)
 
+    async def analog_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Read bounded AC/TRAN samples through the same terminal/content checks."""
+        if plan.analysis not in ("ac", "tran"):
+            raise OperationRejected("analog_ac_or_tran_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True,
+            include_ac_spectrum=plan.analysis == "ac",
+            include_tran_waveforms=plan.analysis == "tran",
+        )
+
+    async def loop_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Loop reads need saved node phasors, not an unrelated complete transfer."""
+        if plan.analysis != "ac":
+            raise OperationRejected("loop_ac_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True, include_ac_waveforms=True,
+            include_selected_ac_transfer=False,
+        )
+
     async def _result(
         self, operation_id: str, plan: OperationPlan, *, include_report_conditions: bool,
+        include_ac_spectrum: bool = False,
+        include_ac_waveforms: bool = False,
+        include_selected_ac_transfer: bool = True,
+        include_tran_waveforms: bool = False,
     ) -> tuple[ProviderObservation, dict[str, object]]:
         from pydantic import TypeAdapter
 
@@ -327,6 +354,10 @@ class AuthenticatedOperatorProvider:
             operation_id,
             receipt.native_input_sha256,
             frame,
+            include_ac_spectrum=include_ac_spectrum,
+            include_ac_waveforms=include_ac_waveforms,
+            include_selected_ac_transfer=include_selected_ac_transfer,
+            include_tran_waveforms=include_tran_waveforms,
         )
         if projected["reader_script_sha256"] != receipt.reader_script_sha256:
             raise OperationRejected("native_provider_result_reader_drift")

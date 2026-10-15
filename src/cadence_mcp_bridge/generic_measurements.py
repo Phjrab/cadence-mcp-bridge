@@ -302,6 +302,11 @@ def project_frame(
     operation_id: str,
     execution_input_sha256: str,
     frame: bytes,
+    *,
+    include_ac_spectrum: bool = False,
+    include_ac_waveforms: bool = False,
+    include_selected_ac_transfer: bool = True,
+    include_tran_waveforms: bool = False,
 ) -> dict[str, object]:
     """Validate mathematical data only. A future provider must authenticate its origin."""
     script = render_reader(context, plan, ade, reader, operation_id, execution_input_sha256)
@@ -409,9 +414,24 @@ def project_frame(
         if any(tuple(x for x, _ in wave) != axes for wave in waves.values()):
             raise OperationRejected("reader_frame_axes_mismatch")
         if plan.analysis == "ac":
-            output["transfer"] = _transfer(ade, reader, axes, waves)
+            _validate_ac_axes(ade, axes)
+            if include_selected_ac_transfer:
+                output["transfer"] = _transfer(ade, reader, axes, waves)
+            if include_ac_spectrum:
+                output["ac_spectrum"] = _transfer(ade, reader, axes, waves, all_samples=True)
+            if include_ac_waveforms:
+                output["ac_waveforms"] = {
+                    name: [{"frequency_hz": f, "real_v": v.real, "imag_v": v.imag}
+                           for f, v in wave] for name, wave in waves.items()
+                }
+                output["ac_node_mapping"] = [n.model_dump(mode="json") for n in reader.nodes]
         else:
             output["transient"] = _transient(ade, axes, waves)
+            if include_tran_waveforms:
+                output["tran_waveforms"] = {
+                    name: [{"time_s": time, "value_v": value.real} for time, value in wave]
+                    for name, wave in waves.items()
+                }
     return output
 
 
@@ -467,12 +487,7 @@ def _matches_ac_axis(actual: float, expected_axes: tuple[float, ...], index: int
     return math.isclose(actual, expected, rel_tol=0, abs_tol=tolerance)
 
 
-def _transfer(
-    ade: AdeExecutionRegistration,
-    reader: GenericReaderRegistration,
-    axes: tuple[float, ...],
-    waves: dict[str, tuple[tuple[float, complex], ...]],
-) -> list[dict[str, object]]:
+def _validate_ac_axes(ade: AdeExecutionRegistration, axes: tuple[float, ...]) -> None:
     inputs = ade.inputs
     if inputs.analysis != "ac":
         raise OperationRejected("reader_ac_interval_invalid")
@@ -485,10 +500,24 @@ def _transfer(
         not _matches_ac_axis(actual, expected_axes, index) for index, actual in enumerate(axes)
     ):
         raise OperationRejected("reader_ac_grid_incomplete_or_unsupported")
+
+
+def _transfer(
+    ade: AdeExecutionRegistration,
+    reader: GenericReaderRegistration,
+    axes: tuple[float, ...],
+    waves: dict[str, tuple[tuple[float, complex], ...]],
+    *,
+    all_samples: bool = False,
+) -> list[dict[str, object]]:
+    _validate_ac_axes(ade, axes)
     assert reader.transfer is not None
     transfer = reader.transfer
     results: list[dict[str, object]] = []
-    for i in _sample_indices(transfer.gain_frequencies_hz, axes):
+    indices = (
+        range(len(axes)) if all_samples else _sample_indices(transfer.gain_frequencies_hz, axes)
+    )
+    for i in indices:
 
         def differential(positive: str, negative: str | None, index: int) -> complex:
             return waves[positive][index][1] - (waves[negative][index][1] if negative else 0j)
