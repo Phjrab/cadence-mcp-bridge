@@ -2394,6 +2394,7 @@ def test_internal_only_library_parents_are_exact_repair_targets(actual_recipe_la
     link.symlink_to(code_paths[0])
     before = {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
     link_before = link.lstat()
+    link_target = link.readlink()
     prepared = repair.inventory(profile)
     assert str(nested) in prepared["plan"]["scope"]["paths"]
     assert str(nested.parent) in prepared["plan"]["scope"]["paths"]
@@ -2407,7 +2408,15 @@ def test_internal_only_library_parents_are_exact_repair_targets(actual_recipe_la
         repair.mutate(request, True)
         assert stat.S_IMODE(nested.stat().st_mode) == 0o777
         assert stat.S_IMODE(nested.parent.stat().st_mode) == 0o777
-    assert link_before == link.lstat()
+    link_after = link.lstat()
+    # Read-only link resolution may update atime on Linux. Retain every protected
+    # identity/permission/size field and exact mtime/ctime, plus the link payload.
+    protected_fields = (
+        "st_mode", "st_ino", "st_dev", "st_nlink", "st_uid", "st_gid", "st_size",
+        "st_mtime_ns", "st_ctime_ns",
+    )
+    assert all(getattr(link_before, key) == getattr(link_after, key) for key in protected_fields)
+    assert link.readlink() == link_target
     assert before == {str(p): (p.read_bytes(), p.stat().st_mode) for p in code_paths}
 
 

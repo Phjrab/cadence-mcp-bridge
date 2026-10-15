@@ -12,6 +12,13 @@ types. Ruff/mypy101 pass. The synthetic planner fixture now consults its current
 context rather than a captured old context. Earlier counts below remain history;
 updated hosted/review/package gates still apply.
 
+Hosted Linux run38688917237 retained a test-only failure in installation-repair
+rollback coverage: resolving an unchanged symlink updated its access time. The
+fixture now compares mode, inode, device, link count, owner/group, size, nanosecond
+mtime/ctime and link payload explicitly, excluding read-induced atime. Production
+repair code/protections are unchanged. The failed CI evidence remains retained;
+the corrected fixture requires a new exact-head Linux run.
+
 Review4257903728 exposed a misleading sweep route when an authorized analysis has
 only fixed, read-only or unqualified variables. The guide now uses the same
 `owned_copy_only` and `qualified` registered-axis gate as the native sweep planner.
