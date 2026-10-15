@@ -8,11 +8,13 @@ from unittest.mock import MagicMock
 import pytest
 from mcp import Client
 from test_native_public_service import configured, operator, operator_base
+from test_native_specifications import contract as specification_contract
 from test_runtime_context import make_settings
 
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.designs import reference_analysis_registry
 from cadence_mcp_bridge.feature_guidance import GUIDANCE_URI, guidance, service_guidance
+from cadence_mcp_bridge.native_specifications import NativeSpecificationCatalog
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 from cadence_mcp_bridge.runtime_context import OperatorService, load_runtime
 from cadence_mcp_bridge.server import create_server
@@ -101,6 +103,9 @@ async def test_loaded_native_resource_is_read_only_and_cannot_attest_live_qualif
         "REQUIRES_EXECUTION_CHECKS",
     }
     assert report["circuits"][0]["remote_route_qualification"] == "NOT_ASSESSED"
+    sweep = report["circuits"][0]["features"]["native_1d_sweep"]
+    assert sweep["state"] == "BLOCKED"
+    assert sweep["reasons"] == ["qualified_mutable_sweep_axis_missing"]
     assert report["remaining_budget"] is None and report["execution_authorized"] is False
     assert snapshot(settings.parent) == before
     assert str(settings.parent) not in json.dumps(report)
@@ -169,3 +174,106 @@ def test_malformed_catalog_never_claims_specification(configured):
         "native_specifications_invalid",
     ]
     assert "secret invalid content" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("catalog_state", ["registered", "empty", "missing", "invalid", "changed"])
+@pytest.mark.parametrize("route_state", ["available", "no_binding", "not_loaded", "inactive"])
+def test_specification_reasons_distinguish_registration_from_result_route(
+    configured, catalog_state, route_state,
+):
+    _, service, _, settings, grant_path = configured
+    context = service.context
+    design_id = context.contracts.designs.designs[0].design_id
+    updates = {}
+    if catalog_state != "missing":
+        catalog = settings.parent / "guidance-spec.json"
+        spec = specification_contract(design_id=design_id)
+        raw = NativeSpecificationCatalog(
+            specifications=() if catalog_state == "empty" else (spec,),
+        ).model_dump_json().encode()
+        if catalog_state == "invalid":
+            raw = b'{"private-invalid":true}'
+        catalog.write_bytes(raw)
+        updates.update(
+            native_specifications=catalog,
+            native_specifications_sha256="f" * 64 if catalog_state == "changed"
+            else hashlib.sha256(raw).hexdigest(),
+        )
+    if route_state == "no_binding":
+        updates.update(native_provider_binding=None, native_provider_sha256=None,
+                       operator_grant=None, operator_grant_sha256=None)
+    elif route_state == "inactive":
+        grant = json.loads(grant_path.read_bytes())
+        grant["valid_until_unix"] = 2
+        grant_path.write_text(json.dumps(grant))
+        updates["operator_grant_sha256"] = hashlib.sha256(grant_path.read_bytes()).hexdigest()
+    context = context.__class__(**{
+        **context.__dict__, "binding": context.binding.model_copy(update=updates),
+    })
+    before = snapshot(settings.parent)
+    report = guidance(
+        context.contracts.designs, context.contracts.pdks, mode="operator", context=context,
+        native_tools_registered=route_state != "not_loaded",
+    )
+    feature = report["circuits"][0]["features"]["native_specification"]
+    if catalog_state == "registered":
+        reasons = [] if route_state in ("available", "inactive") else [
+            "native_result_route_unavailable",
+        ]
+    else:
+        reasons = [{
+            "empty": "native_specification_not_registered_for_design",
+            "missing": "native_specifications_missing",
+            "invalid": "native_specifications_invalid",
+            "changed": "native_specifications_invalid",
+        }[catalog_state]]
+    assert feature["reasons"] == reasons
+    assert feature["state"] == ("BLOCKED" if reasons else "REQUIRES_EXECUTION_CHECKS")
+    assert report["remote_contact"] is False and report["new_reservations"] == 0
+    assert snapshot(settings.parent) == before
+
+
+@pytest.mark.parametrize("document", ["specifications", "provider", "grant"])
+@pytest.mark.asyncio
+async def test_deeply_nested_bound_document_returns_closed_resource_and_cli_guidance(
+    configured, document, capsys,
+):
+    server, service, _, settings, grant_path = configured
+    context = service.context
+    field, digest_field, path = {
+        "specifications": ("native_specifications", "native_specifications_sha256",
+                           settings.parent / "spec.json"),
+        "provider": ("native_provider_binding", "native_provider_sha256",
+                     context.binding.native_provider_binding),
+        "grant": ("operator_grant", "operator_grant_sha256", grant_path),
+    }[document]
+    raw = b'{"nested":' + b'[' * 2000 + b'0' + b']' * 2000 + b'}'
+    path.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    service.context = context.__class__(**{
+        **context.__dict__, "binding": context.binding.model_copy(update={
+            field: path, digest_field: digest,
+        }),
+    })
+    runtime = json.loads(settings.read_bytes())
+    runtime["contexts"][0].update({field: str(path), digest_field: digest})
+    settings.write_text(json.dumps(runtime))
+    before = snapshot(settings.parent)
+    async with Client(server) as client:
+        report = json.loads((await client.read_resource(GUIDANCE_URI)).contents[0].text)
+    if document == "specifications":
+        assert report["circuits"][0]["features"]["native_specification"]["reasons"] == [
+            "native_specifications_invalid",
+        ]
+    else:
+        assert {a["state"] for a in report["circuits"][0]["analyses"]} == {"BLOCKED"}
+        assert all("native_binding_invalid" in a["reasons"]
+                   for a in report["circuits"][0]["analyses"])
+    assert main([
+        "operator-features", "--settings", str(settings),
+        "--context", context.binding.context_id,
+    ]) in (0, 2)
+    cli = json.loads(capsys.readouterr().out)
+    assert cli["status"] in ("LOCAL_FEATURE_GUIDANCE", "BLOCKED")
+    assert snapshot(settings.parent) == before
+    assert str(settings.parent) not in json.dumps(report) + json.dumps(cli)

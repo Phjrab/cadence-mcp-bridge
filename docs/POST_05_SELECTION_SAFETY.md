@@ -25,6 +25,12 @@ replay and failure evidence remain preserved. Older approval exclusions below an
 in prior PR descriptions remain historical where this newer instruction supersedes
 them; none authorizes deletion, compaction, budget reset or a new publication.
 
+Parent155 fe476db is integrated by a normal merge; conflicting top-of-file status
+entries retain both histories with the current156 scope above dated checkpoints.
+The resulting difference from155 is only this guide and the two status documents.
+All source/scripts/tests/package metadata are byte-identical to the parent.
+Diff/whitespace checks pass; exact156 hosted/review checks remain separate gates.
+
 This phase reuses the existing five path-free storage tools rather than adding a
 second deletion engine. Continuous POST authorization permits safety validation;
 it does not choose a historical artifact for deletion. No existing result, failure,
