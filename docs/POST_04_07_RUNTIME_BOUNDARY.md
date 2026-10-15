@@ -1,3 +1,22 @@
+# Resumed boundary, 2026-10-15
+
+Actual fast-input coarse/fine TRANs and automatic extraction succeed at UID500.
+Coarse sampled slope is null/underresolved; fine signed average is
+-44.3245755472V/ns, with fast-edge and conservative causality checks. Historical
+slow input-ramp slope is now unqualified. Their original PSF/results persist.
+Shared ledger126/500 and15,452,864,512/17,179,869,184 bytes; native22/24, no pending
+native source change. Both finite fast-input grants and the prior loop grant are
+fully consumed. Final host fixes use retained read/retry/report only, not new
+admissions, extractions, administrator operations or expanded authority.
+
+Exact72a106a installed fine same-ID retry/two CLI reads/report/local SDK and
+retained coarse/slow-ramp null checks PASS with unchanged journals/settings and
+eight prior loop/DC records. New cumulative-input-reversal guard is host-only;
+see POST_07_FAST_STEP_V1.md for its distinct final installation scope. POST04
+actual recovery remains DC-specific. No historical deletion target is selected;
+compaction remains separate. Further Claude EXCLUDED_BY_USER; no POST merge or
+publication inferred. Earlier boundaries below retain their historical scope.
+
 # Current scope overlay, 2026-10-14
 
 Actual installed finite loop batch completes3 attempts/384MiB; shared124 /

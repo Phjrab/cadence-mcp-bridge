@@ -1,5 +1,55 @@
 # POST-07 fast-input sampled step validation
 
+## Final corrected installation, 2026-10-15
+
+Exact unpublished code: `dfcac60a209eb46d1ce50a8dd513b7c47014bbd0`.
+Wheel SHA-256:
+`591ebd1427c8b2205d0311ba685a2a226524817664f142983db35b4187643fdc`.
+Sdist SHA-256:
+`a7477291510822d701601427faa0b6795f34080c8a417f47f28e4597eeb4380d`.
+These private feature artifacts inherit development2.0.0 metadata; they are
+not replacements for public2.0.0 or a new approved publication candidate.
+
+Canonical package source,121/122-member distribution rights/content, locked
+isolated install,96-tool protocol compatibility, runtime contexts, bootstrap,
+domain initialization and reinstall/uninstall state preservation PASS. Actual
+final installed fine same-ID retry, two separate-process slew CLI reads and an
+ordinary completed report PASS. The measured-44.3245755472V/ns and complete
+waveform hash agree exactly with the original installed12eb747 execution.
+Installed retained coarse result remains INSUFFICIENT_SAVED_TIME_RESOLUTION,
+null; old1ns ramp remains INPUT_EDGE_NOT_FAST_ENOUGH_FOR_SAMPLED_STEP_RESPONSE,
+null. Exact frame hashes, journals/settings and eight prior loop/DC records
+are preserved. Actual ordinary-user preflight PASS at UID500 before/after.
+Local final native SDK96 startup PASS without remote contact; not app validation.
+
+Fresh final checks cover the changed slew component. Source identity proves
+113 other package files, project metadata/lock/README/licenses unchanged from
+12eb747. Its operation/guided-setup/extraction-recovery and loop/bandwidth
+installed receipts retain that source-specific scope; those full component
+checks were not freshly rerun on dfcac60. No final loop simulation is claimed.
+Related generic/security185 tests, Ruff/mypy108 and secret1174 PASS. Synthetic
+cumulative-reversal regression first failed on the old code, then both input
+directions reject while bounded-noise controls pass. All six observed automatic
+P2 threads are resolved; this is not formal GitHub APPROVED. The last resolve
+operation hit automatic approval-review timeout once and succeeded on its one
+allowed retry, without bypass. Refreshed automatic review and exact final-head
+hosted status remain separately observable GitHub gates.
+
+This continuation's final correction/read checks spend0 attempts/bytes and
+change0 native sources. The actual fast-input experiment total remains2 attempts/
+256MiB. Shared cumulative126/500 and15,452,864,512/17,179,869,184 bytes,
+remaining1,727,004,672 bytes; native22/24 with no pending source change. No
+administrator action, protected original content/metadata change, deletion,
+refund, fresh grant/journal/domain, Claude operation, POST merge or publication.
+Public2.0.0 remains immutable. Historical PSF/reports/failures and consumed grants
+stay preserved. POST05 exact historical deletion selection is still absent and
+compaction remains separate/unimplemented; POST04 actual recovery is DC-specific.
+
+Private evidence: post07-installed-dfcac60-v1 (package/lifecycle, actual-fast-step-
+restart, retained-rejections, component-source-identity) and
+post07-fast-step-runtime-v2/sdk-preflight-dfcac60-fine-v1. Earlier source-specific
+receipts and scientific limits below are preserved history.
+
 ## Resumed review correction, 2026-10-15
 
 Exact72a106a installed same-ID retry, two separate-process fine slope reads,

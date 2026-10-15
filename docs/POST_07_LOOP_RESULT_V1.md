@@ -1,5 +1,23 @@
 # POST-07 exact installed ideal voltage-loop results
 
+## Current source and accounting overlay, 2026-10-15
+
+The later loop-source correction12eb747 removes both selected and complete
+unrelated gain projections. Retained actual loop margins, waveforms and common
+source fields agree on its exact installation; source digest changes intentionally
+to the typed authenticated_loop_waveforms_v1 envelope. Ordinary reports and
+bandwidth are unchanged. Subsequent72a106a/dfcac60 package differences are limited
+to host generic_slew.py, with113 other package files byte-identical to12eb747.
+Their slew-specific actual retained-read proofs are in POST_07_FAST_STEP_V1.md.
+No new loop experiment is claimed for these host corrections.
+
+Two subsequent fast-input TRAN attempts/256MiB bring the shared ledger to126/500
+and15,452,864,512/17,179,869,184 bytes; remaining1,727,004,672. Native22/24 remains.
+The old1ns ramp is unqualified, coarse fast-input grid is underresolved and fine
+inverter average is-44.3245755472V/ns with the documented sampled-only limits.
+All original results, failures, journals and consumed grants remain. Further
+Claude excluded; no POST merge/publication. Older receipts below are history.
+
 Current slew qualification correction is tracked in POST_07_FAST_STEP_V1.md.
 The old1ns input-ramp step estimate below/older reports is reclassified as
 unqualified under measured fast-edge guards; all original receipts remain.

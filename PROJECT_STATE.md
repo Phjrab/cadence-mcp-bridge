@@ -1,4 +1,23 @@
-# Current POST scope, 2026-10-14
+# Current POST scope, 2026-10-15
+
+Exact dfcac60 installed package/rights/lifecycle, actual fine result/retry/report,
+coarse/slow-ramp null preservation and local SDK96 PASS. Six observed P2 threads
+resolved, not formal APPROVED. Final docs-only remote/source-identity and final
+head CI/refreshed review checks remain. No new spend/native/admin changes;
+126/15,452,864,512 bytes and native22/24 preserved. Public2.0.0 immutable.
+See docs/POST_07_FAST_STEP_V1.md for exact source/build hashes and scoped evidence.
+
+Continuation rechecks exact72a106a installed fine result/retry/report/SDK and
+coarse/old-ramp null outcomes with unchanged ledger/journals/settings; hosted
+Windows/Linux PASS. Sixth automatic P2 cumulative input reversal is reproduced
+and fixed in dfcac60;185 related/security tests/Ruff/mypy108/secret1174 PASS.
+Final exact rebuilt install/retained reads and refreshed hosted/review remain.
+Current126/500 and15,452,864,512/17,179,869,184 bytes; native22/24. No further
+simulation needed. Further Claude excluded; public2.0.0 unchanged, no POST merge
+or publication. POST05 needs exact deletion selection; compaction is separate.
+Details: docs/POST_07_FAST_STEP_V1.md. Older checkpoints are preserved below.
+
+## Earlier current scope, 2026-10-14
 
 Fine actual TRAN succeeds on installed12eb747/UID500 with automatic extraction and
 231 samples; signed sampled average-44.324575547V/ns with fast-edge bound PASS.

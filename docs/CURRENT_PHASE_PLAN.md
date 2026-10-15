@@ -1,4 +1,23 @@
-# Current POST continuation, 2026-10-14
+# Current POST continuation, 2026-10-15
+
+Exact dfcac60 package/rights/isolated install/lifecycle PASS; installed actual
+fine retry/two CLI reads/report and retained coarse/slow-ramp null checks PASS.
+Local SDK96 PASS, not app validation. All six observed P2 threads resolved,
+not formal APPROVED. No new spend/native/admin/protected data changes. Finish
+docs-only source-identity/remote synchronization and exact final-head CI/fresh
+automatic review observation. Source-specific hashes/scopes in
+POST_07_FAST_STEP_V1.md; public2.0.0 immutable, no POST merge/publication.
+
+Final72a106a installed retained fine/retry/report/SDK and old-ramp/coarse null
+checks PASS, both hosted OS checks PASS, no spend. Sixth P2 cumulative reversal
+reproduced on rising/falling inputs and fixed in dfcac60, with bounded-noise
+controls;185 related/security tests, Ruff/mypy108 and secret1174 PASS. Final new
+exact installed retained reads and hosted/refreshed review are the remaining
+finishing gates. Current126/15,452,864,512,native22/24; no new simulation planned.
+Use POST_07_FAST_STEP_V1.md for exact source scopes. Further Claude excluded,
+POST05 selection/compaction and POST integration/publication remain separate.
+
+## Earlier continuation checkpoints, 2026-10-14
 
 Fine actual installed12eb747 TRAN/automatic extraction succeeds with231 samples;
 sampled average-44.324575547V/ns,1ps input edge upper/12.092ps output-duration

@@ -1,3 +1,27 @@
+# Current qualification overlay, 2026-10-15
+
+Use POST_07_FAST_STEP_V1.md for the current source-specific installation and
+review evidence. Earlier1ns input-ramp slope below is historical and now null:
+the input edge is too slow to qualify a step response. The fast1ps owned inverter
+fine TRAN gives a signed sampled10/90 average of-44.3245755472V/ns; the coarse
+saved grid is underresolved and remains null. Neither is an intrinsic amplifier
+slew rating or grid-convergence proof. The causal guard excludes the unresolved
+input-onset bracket; the reversal tolerance applies to the running directional
+extremum, not each sample separately. Input10/90 containing-bracket duration must
+be at most25percent of the conservative output-duration lower bound.
+
+Loop reads now omit both selected-frequency and complete unrelated transfer
+calculations. A typed authenticated_loop_waveforms_v1 source retains provenance
+without inventing ordinary gain metrics; its digest intentionally differs from
+the old gain report. Complete AC-axis and measured differential-source checks
+remain. Actual retained loop values agree on corrected installed12eb747.
+
+Current shared126/500 attempts and15,452,864,512/17,179,869,184 reserved bytes;
+native22/24. Final checks reuse completed results and add no simulations or
+extractions. Further Claude work is EXCLUDED_BY_USER, not PASS. Public2.0.0 stays
+immutable and POST integration/publication remain separate. Earlier checkpoints
+retain their original source/time scope.
+
 # Experimental ideal voltage-loop reader, 2026-10-14
 
 Corrected installed c8de5a7 revalidation and both hosted checks pass. Loop lookup
