@@ -1,5 +1,32 @@
 # POST-07 fast-input sampled step validation
 
+## POST closure and M2 transition authorization, 2026-10-15
+
+The user's new direct instruction conditionally authorizes normal integration
+of POST PRs154–158, then local M2-FOUNDATION-01 development/PR and existing
+read-only physical capability investigation. This supersedes prior no-POST-merge
+checkpoints only. No new calculations, extraction, OA writes, native deployment,
+administrator repair, deletion/compaction, budget increase or release is included.
+
+Review4269771708 was already corrected and requalified on installed dfcac60;
+it is not reimplemented. Four additional rising/falling boundary cases use exact
+binary fractions: a reversal equal to tolerance is accepted and a larger reversal
+rejects. The29 slew tests preserve all prior ramp, causality, resolution, plateau
+and repeated-crossing guards. Product code/artifacts remain exactly dfcac60.
+Final1390ae7 Windows/Linux CI both PASS; automatic dfcac60 review completes
+without new findings and all six P2 threads are resolved, not formal APPROVED.
+
+The previously omitted installed comparator reread now returns null with
+slew_plateau_not_settled_in_saved_samples. Its authenticated original frame and
+journals are preserved. Two local harness failures (relative settings path,
+hashing a historically absent sweep journal) are retained; neither submitted
+a calculation. Corrected harness checks existing protected files and uses the
+same original operation. Fresh actual UID500 preflight stays126 accounting
+attempts/15,452,864,512 bytes; these attempts include extraction recovery history,
+not exclusively new Spectre runs. The slow ramp, coarse and fine installed
+rejudgments above retain their original and revised evidence, without promoting
+an expected value into the acceptance criterion. Further Claude remains excluded.
+
 ## Final corrected installation, 2026-10-15
 
 Exact unpublished code: `dfcac60a209eb46d1ce50a8dd513b7c47014bbd0`.

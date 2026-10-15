@@ -175,3 +175,24 @@ def test_small_input_noise_within_running_extremum_tolerance_is_allowed(falling)
     result = sampled_slew(data, definition(input_initial_v=int(falling),
                                           input_final_v=int(not falling)))
     assert result["status"] == "OBSERVED_SAMPLED_STEP_SLOPE"
+
+
+@pytest.mark.parametrize("falling", [False, True])
+@pytest.mark.parametrize("reversal,accepted", [(1 / 64, True), (3 / 128, False)])
+def test_running_extremum_tolerance_boundary(falling, reversal, accepted):
+    data = waves()
+    # Exactly representable values distinguish equality from the next larger
+    # reversal, without a float-rounding tolerance hiding the boundary.
+    for point in data["input"]:
+        value = point["value_v"]
+        if 3 <= point["time_s"] <= 5:
+            value += reversal
+        point["value_v"] = 1 - value if falling else value
+    contract = definition(input_initial_v=int(falling), input_final_v=int(not falling),
+                          plateau_tolerance_v=1 / 64)
+    if accepted:
+        assert sampled_slew(data, contract)["status"] == "OBSERVED_SAMPLED_STEP_SLOPE"
+    else:
+        with pytest.raises(OperationRejected) as caught:
+            sampled_slew(data, contract)
+        assert caught.value.reason == "slew_multiple_or_reversed_input_step"
