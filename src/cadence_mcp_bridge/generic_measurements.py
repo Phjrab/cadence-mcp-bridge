@@ -261,6 +261,13 @@ def render_reader(
     bind_reader(context, plan, ade, reader)
     _header(operation_id, plan, reader, execution_input_sha256)
     # Paths and selectors are validated registration primitives, not MCP paths.
+    recovery = getattr(plan, "recovery", None)
+    if recovery is not None:
+        return _native_rendering.reader(  # type: ignore[no-any-return,no-untyped-call]
+            context.contracts.environment.paths.job_root, plan.analysis,
+            reader.model_dump(mode="json"), operation_id, plan.plan_sha256,
+            execution_input_sha256, canonical_digest(reader), recovery.original_operation_id,
+        )
     return _native_rendering.reader(  # type: ignore[no-any-return,no-untyped-call]
         context.contracts.environment.paths.job_root,
         plan.analysis,

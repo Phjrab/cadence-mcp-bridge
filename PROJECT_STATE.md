@@ -1,3 +1,30 @@
+## POST-04 final host output protection, 2026-10-15
+
+Recovery-plan export now rejects every configured context's journal/sidecar,
+contract/settings and resource-lock paths before provider creation. Forty-four
+collision cases include normalized journal aliases; valid-export/repeat
+preservation covers the correction. Final recovery51 PASS/6 Windows POSIX skips,
+related39 PASS/3 symlink skips, Ruff/mypy104
+PASS. Updated hosted/package gates remain required. Deployed native assets are
+unchanged; no new VM execution/reservation/deployment or administrator action
+occurred. The reviewed source guard includes host extraction recovery, so the
+export and alias corrections consume the remaining two changes:24/24, without
+resetting the earlier22/24 history or changing the approved ceiling.
+Actual DC-only qualification and opt-in experimental boundary remain. Latest user
+instruction conditionally authorizes normal POST154–158 integration; Claude is
+EXCLUDED_BY_USER, not PASS. Published2.0.0 and all prior evidence are preserved.
+
+The durable consumed-source checkpoint binds the original reconciliation, all four
+post-baseline source identities and the unchanged selected-source tree. Eleven
+disposable-history tests reject squash refunds, hidden ancestral corrections,
+pending/committed excess and merge-only source drift. Local guard PASS24/24 with
+zero remaining, no ledger write and no remote contact. Parent1567419620 was
+normally integrated atdd28fe2; both document histories and all source identities
+remain. That merged host regression set passed404 tests with265 Windows POSIX
+skips. Latest15604d1a61 adds the reviewed retained-read guidance correction;
+all46 guidance tests and whole-tree Ruff/mypy104 pass after integration.
+Hosted Linux and exact package gates remain.
+
 ## POST-05 documentation integration scope, 2026-10-15
 
 Parent155 is refreshed normally to7ec9a9e, including154 d8c85a6 retained-read
@@ -78,6 +105,90 @@ change, simulation, reservation or data deletion; published2.0.0 is preserved.
 The latest user instruction conditionally authorizes normal POST154–158 integration
 in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
 Earlier policy and evidence below retain their original historical scope.
+
+## POST-04 actual DC recovery succeeds, 2026-10-14
+
+Preserved first recovery OCEAN shutdown double-free/EXTRACTION_FAILED and original
+failed PSF. One separately recorded revalidation succeeds on the same installed
+0fe7dee runtime4c288204. Successful result and same-ID submit after process restart
+pass, adding0; failed-ID restart/submit also lookup-only. Original job/tree/input/
+PSF and retained host journal preserved. No Spectre/netlisting starts, vendor/
+license/admin changes, deletion or refund. This continuation2 OCEAN accounting
+attempts/16MiB; cumulative114 /13,842,251,776 bytes,16GiB remaining3,337,617,408.
+Source changes22/24. Qualification is only tested inverter DC extraction recovery;
+AC/TRAN recovery, actual app and broader environments are not qualified.
+
+Updated verifier/package/SDK/CLI/reinstall/uninstall63-file preservation passes.
+Final27e83d4 hosted CI/review pending; its native sources equal installed0fe7dee.
+PR157 remains draft/experimental, with no POST merge/publication authority inferred.
+Published2.0.0 unchanged. Claude UWP config still selects historical local legacy
+server, not exact public build; prepare an additive published-native QA connection
+using old retained context/grants/journals. UI capture/click unavailable; Code-tab
+historical reads are not current published chat-mode acceptance. POST07 remains
+scientific implementation/real extraction work, not automatically qualified math.
+Older checkpoints below retain their source/time scope.
+
+## POST-04 exact installed VM failure retained, 2026-10-14
+
+Exact0fe7dee package rights/content checks and isolated installed CLI pass after
+updating the installed verifier to the package LF projection. The initial verifier
+expected raw CRLF and failed; that evidence remains. Hosted Linux's new CRLF
+regression reached an unstubbed Windows ssh.exe lookup; isolate that unused
+transport in the test. These test/harness corrections change no native asset.
+
+Ordinary UID500 update4b0f24c8 ->4c288204, repeat0 and preflight passed, preserving
+all old runtimes, grants and journals. All13 exact installed assets compile on
+actual VM Python2.6. The preserved recovery ID was accepted and reached
+EXTRACTION_FAILED: complete reader frame exists but OCEAN32 shutdown aborted with
+glibc double free/corruption. Nonzero vendor exit remains a failure, never waived.
+Read-only original tree/content/effective-input/PSF revalidation passes. Retained
+ledger113 /13,833,863,168 bytes: this extraction1 attempt/8MiB, Spectre0/netlisting0.
+Preserve the failed recovery, original failure and output; same-ID restart is
+lookup-only. No deletion/refund/reset or vendor/license content change occurred.
+Native source consumption22/24; POST-04 remains unqualified and experimental.
+
+Claude accessibility now exposes the past Code-tab conversation. It documents
+historical local/unreviewed-build reads, not current published2.0.0 qualification.
+Capture still times out and indexed click lacks geometry. No prompt has been sent.
+Keep actual chat-mode POST-06 and POST-07 scientific extraction pending; continue
+independent authorized work. Published2.0.0 and its tag/assets remain immutable.
+Older checkpoints below retain their original source/time scope.
+
+## POST-04 actual runtime diagnosis, 2026-10-14
+
+Exact37c84c9 hosted Windows/POSIX checks, package/installed CLI and63-state
+preservation passed. Ordinary UID500 immutable stage/update/repeat/preflight
+passed; active runtime4b0f24c8 was retained. Actual recovery CLI plan then rejected
+before admission, OCEAN or reservation. Read-only exact VM Python2.6 compilation
+identified modeltrust.py CRLF source: exact bytes fail at line5; LF projection
+passes. All other12 Python assets compile. Original failed job/PSF and112 attempts/
+13,825,474,560 reserved bytes remain; no new spend or Spectre start is claimed.
+
+Bundle generation and installed-source hash checks now share a package-only LF
+projection before hashing. Remote authenticated bytes are never rewritten or
+trusted unconditionally; old bundles/receipts and failed diagnostics are retained.
+The pending correction counts22/24. Updated exact installed/VM execution and
+hosted checks remain required. Recovery remains experimental, unpublished.
+
+Claude fresh selected window capture again timed out. Recovery accessibility
+observation succeeds but exposes only window chrome, no usable editor or content.
+No app input was sent; POST-06 NOT_VERIFIED. Published2.0.0 is unchanged.
+Earlier checkpoints below retain their source/time-specific scope.
+
+## Current POST continuation, 2026-10-14
+
+POST native source ceiling24 confirmed by direct user, retaining20 consumed.
+The pending recovery source change conservatively brings consumption to21/24;
+verify the retained reconciliation before deployment. See
+docs/policy/POST_NATIVE_CORRECTION_LIMIT_V7.json. Historical policies and ledgers
+remain intact;16GiB/500 and published2.0.0 are unchanged. Latest main67c21a7;
+exact POST-05 PR156 CI passes. POST-04 extraction-only recovery implementation,
+fixed worker and operator CLI are active on feat/post-04-extraction-recovery.
+Ruff/mypy104/contract checks pass; affected232 PASS/50 POSIX skips. Hosted POSIX,
+final frozen-source/package and actual failed-PSF recovery remain separate gates.
+Latest actual ledger112/13,825,474,560 and disk floorOK; no actual new spend.
+Claude restored window is returned, but capture/recovery still times out;
+POST-06 NOT_VERIFIED. No live deployment, deletion, app input or publication.
 
 ## POST-03 verified; POST-05 safety checkpoint and external boundaries, 2026-10-13
 

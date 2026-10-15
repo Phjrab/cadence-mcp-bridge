@@ -70,6 +70,51 @@ def test_export_has_exact_fixed_assets_bound_hashes_and_no_authority(registered,
     assert retained == {p.name: p.read_bytes() for p in output.iterdir()}
 
 
+def test_crlf_package_exports_same_authenticated_bytes_and_installer_hashes(
+    registered, tmp_path, monkeypatch
+):
+    from cadence_mcp_bridge import native_runtime as host
+
+    context, _, path = registered
+    first = tmp_path / "lf"
+    receipt = bundle(context, path, first)
+    real_files = host.files
+
+    class CrLfResource:
+        def __init__(self, resource):
+            self.resource = resource
+
+        def joinpath(self, name):
+            return CrLfResource(self.resource.joinpath(name))
+
+        def read_bytes(self):
+            raw = self.resource.read_bytes().replace(b"\r\n", b"\n")
+            return raw.replace(b"\n", b"\r\n")
+
+        def read_text(self, encoding):
+            return self.resource.read_text(encoding)
+
+    monkeypatch.setattr(host, "files", lambda package: CrLfResource(real_files(package)))
+    second = tmp_path / "crlf"
+    assert bundle(context, path, second) == receipt
+    assert {p.name: p.read_bytes() for p in first.iterdir()} == {
+        p.name: p.read_bytes() for p in second.iterdir()
+    }
+    assert all(b"\r\n" not in (second / name).read_bytes() for name in host.SOURCES)
+    contacts = []
+
+    def transport(*args, **kwargs):
+        contacts.append(args)
+        raise OSError("synthetic transport boundary")
+
+    monkeypatch.setattr(host, "run_fixed", transport)
+    monkeypatch.setattr(host, "_ssh", lambda environment: ["synthetic-ssh", "python"])
+    with pytest.raises(host.NativeSetupRemoteRejected) as failure:
+        host.setup_runtime(second, receipt["manifest_sha256"], "stage", "SYNTHETIC-authority")
+    assert failure.value.reason == "native_setup_transport_ambiguous"
+    assert len(contacts) == 1  # The installed-package hash check accepted the same projection.
+
+
 @pytest.mark.parametrize("analysis", ["ac", "tran"])
 def test_native_large_waveform_registration_keeps_existing_sample_contract(registered, analysis):
     context, _, path = registered

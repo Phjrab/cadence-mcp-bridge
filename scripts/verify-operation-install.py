@@ -505,7 +505,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         for name, source in SOURCES.items():
             assert (native_output / name).read_bytes() == files("cadence_mcp_bridge").joinpath(
                 source
-            ).read_bytes()
+            ).read_bytes().replace(b"\r\n", b"\n")
         assert store.path.read_bytes() == before
 
         reader_path = workspace / (design_id + "-reader.json")

@@ -304,8 +304,9 @@ class NativeCoordinator(object):
     reserves again. Unknown outcomes and accepted identities are lookup-only.
     """
 
-    def __init__(self, root, accounting, gate, worker):
+    def __init__(self, root, accounting, gate, worker, action="submit", preflight=None):
         self.root, self.accounting, self.gate, self.worker = root, accounting, gate, worker
+        self.action, self.preflight = action, preflight
 
     def journal(self, operation_id, plan):
         return OperationJournal(self.root, operation_id, plan, self.accounting)
@@ -330,8 +331,10 @@ class NativeCoordinator(object):
             existing = self.lookup(operation_id, plan)
             if existing is not None:
                 return existing
-            binding, observation = self.gate.check(session, plan, "submit")
+            binding, observation = self.gate.check(session, plan, self.action)
             session.observe(binding)
+            if self.preflight is not None:
+                self.preflight(plan)
             journal.create(binding)
             reservation = session.reserve(operation_id, binding)
             if reservation["status"] != "RESERVATION_COMMITTED_NOT_DISPATCHED":
