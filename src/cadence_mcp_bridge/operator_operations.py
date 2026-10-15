@@ -249,10 +249,12 @@ def prepare_plan(
     digest: str,
     request: OperationRequest,
     now: int,
+    *,
+    action: Literal["submit", "recover_extraction"] = "submit",
 ) -> OperationPlan:
     verify_grant_binding(grant, digest)
     match_grant(context, grant, now)
-    if request.design_id not in grant.design_ids or "submit" not in grant.actions:
+    if request.design_id not in grant.design_ids or action not in grant.actions:
         raise OperationRejected("authority_scope_denied")
     registry = context.contracts.designs
     profile = registry.profile(request.design_id)

@@ -103,6 +103,10 @@ try {
     & $python -I -X utf8 $designAcceptance --workspace $designWorkspace
     if ($LASTEXITCODE -ne 0) { throw "Installed local design plan acceptance failed." }
 
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-extraction-recovery-install.py") `
+        --workspace (Join-Path $resolvedTemporaryRoot "extraction-recovery-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed extraction recovery CLI acceptance failed." }
+
     # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
     & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
         --python $python $wheel[0].FullName

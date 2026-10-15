@@ -40,7 +40,10 @@ class ProviderEnvelope(EnvironmentModel):
     schema_version: Literal[1]
     runtime_manifest_sha256: Digest
     identity_manifest_sha256: Digest
-    action: Literal["authorize", "accept", "lookup", "cancel_pending", "result"]
+    action: Literal[
+        "authorize", "accept", "lookup", "cancel_pending", "result",
+        "recover_extraction", "recovery_source",
+    ]
     payload: dict[str, Any] | None
 
 
@@ -133,7 +136,10 @@ class AuthenticatedOperatorProvider:
         plan: OperationPlan,
         operation_id: str | None = None,
     ) -> dict[str, Any] | None:
-        if action not in {"authorize", "accept", "lookup", "cancel_pending", "result"}:
+        if action not in {
+            "authorize", "accept", "lookup", "cancel_pending", "result",
+            "recover_extraction", "recovery_source",
+        }:
             raise OperationRejected("native_provider_fixed_action_required")
         self._plan(plan)
         request = {
@@ -252,6 +258,44 @@ class AuthenticatedOperatorProvider:
     async def result(
         self, operation_id: str, plan: OperationPlan
     ) -> tuple[ProviderObservation, dict[str, object]]:
+        return await self._result(operation_id, plan, include_report_conditions=False)
+
+    async def report_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Same verified result lookup with path-free input/definition context for reports."""
+        return await self._result(operation_id, plan, include_report_conditions=True)
+
+    async def analog_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Read bounded AC/TRAN samples through the same terminal/content checks."""
+        if plan.analysis not in ("ac", "tran"):
+            raise OperationRejected("analog_ac_or_tran_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True,
+            include_ac_spectrum=plan.analysis == "ac",
+            include_tran_waveforms=plan.analysis == "tran",
+        )
+
+    async def loop_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Loop reads need saved node phasors, not an unrelated complete transfer."""
+        if plan.analysis != "ac":
+            raise OperationRejected("loop_ac_result_required")
+        return await self._result(
+            operation_id, plan, include_report_conditions=True, include_ac_waveforms=True,
+            include_selected_ac_transfer=False,
+        )
+
+    async def _result(
+        self, operation_id: str, plan: OperationPlan, *, include_report_conditions: bool,
+        include_ac_spectrum: bool = False,
+        include_ac_waveforms: bool = False,
+        include_selected_ac_transfer: bool = True,
+        include_tran_waveforms: bool = False,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
         from pydantic import TypeAdapter
 
         from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -310,6 +354,10 @@ class AuthenticatedOperatorProvider:
             operation_id,
             receipt.native_input_sha256,
             frame,
+            include_ac_spectrum=include_ac_spectrum,
+            include_ac_waveforms=include_ac_waveforms,
+            include_selected_ac_transfer=include_selected_ac_transfer,
+            include_tran_waveforms=include_tran_waveforms,
         )
         if projected["reader_script_sha256"] != receipt.reader_script_sha256:
             raise OperationRejected("native_provider_result_reader_drift")
@@ -328,6 +376,16 @@ class AuthenticatedOperatorProvider:
             completed_tree_fingerprint=data.completed_size.tree_fingerprint,
             size_observation="COMPLETED_JOB_READONLY",
         )
+        if include_report_conditions:
+            projected["report_conditions"] = {
+                "analysis_inputs": data.ade.inputs.model_dump(mode="json"),
+                "source_tree_sha256": data.ade.source_tree_sha256,
+                "ade_state_tree_sha256": data.ade.ade_state_tree_sha256,
+                "static_statements_sha256": data.ade.static_statements_sha256,
+                "model_file_sha256": [m.file_sha256 for m in data.ade.model_includes],
+                "transfer": None if data.reader.transfer is None
+                else data.reader.transfer.model_dump(mode="json"),
+            }
         return observation, projected
 
 

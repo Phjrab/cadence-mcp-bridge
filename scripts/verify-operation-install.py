@@ -505,7 +505,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         for name, source in SOURCES.items():
             assert (native_output / name).read_bytes() == files("cadence_mcp_bridge").joinpath(
                 source
-            ).read_bytes()
+            ).read_bytes().replace(b"\r\n", b"\n")
         assert store.path.read_bytes() == before
 
         reader_path = workspace / (design_id + "-reader.json")
@@ -728,6 +728,12 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         )
         for _ in range(2):
             async with Client(params) as client:
+                catalog = json.loads(
+                    (await client.read_resource("cadence://operations")).contents[0].text
+                )
+                assert catalog["jobs"][0]["operation_id"] == synthetic_id
+                assert catalog["jobs"][0]["phase"] == "ADMITTED"
+                assert catalog["remote_contact"] is False
                 tools = (await client.list_tools()).tools
                 names = {tool.name for tool in tools}
                 assert len(names) == 96 and "cadence_submit_operation" in names
@@ -744,6 +750,53 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
 
     asyncio.run(native_stdio())
 
+    # Reports imported from synthetic fixtures are local records, not live attestation.
+    from cadence_mcp_bridge.operator_operations import DurableOperation, OperationProgress
+    from cadence_mcp_bridge.result_reports import export_report, make_report
+
+    synthetic_record = DurableOperation(
+        operation_id=synthetic_id, plan=durable_plan,
+        progress=OperationProgress(
+            phase="SUCCEEDED", remote_revision=5, provider_receipt_sha256="a" * 64,
+        ), event_count=5,
+    )
+    report_model = make_report(synthetic_record, {
+        "status": "NATIVE_RESULT_RETRIEVED", "operation_id": synthetic_id,
+        "plan_sha256": durable_plan.plan_sha256,
+        "design_id": durable_plan.request.design_id, "analysis": "dc",
+        "measurement_id": "synthetic-dc", "reader_registration_sha256": "a" * 64,
+        "execution_input_sha256": "b" * 64, "extraction_receipt_sha256": "c" * 64,
+        "frame_sha256": "d" * 64,
+        "native_provenance": "FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+        "nodes": [{"logical_id": "output", "value": 1.0, "unit": "V"}],
+        "report_conditions": {
+            "analysis_inputs": {
+                "analysis": "dc", "mode": "saved_operating_point", "statement_sha256": "a" * 64,
+            },
+            "source_tree_sha256": "b" * 64, "ade_state_tree_sha256": "c" * 64,
+            "static_statements_sha256": "d" * 64, "model_file_sha256": [], "transfer": None,
+        },
+    })
+    report_folder = workspace / "synthetic-reports"
+    report_folder.mkdir(mode=0o700)
+    first, second = report_folder / "one.json", report_folder / "two.json"
+    export_report(first, report_model)
+    export_report(second, report_model.model_copy(update={"operation_id": str(uuid4())}))
+    for report_args in (
+        ["show", "--report", str(first)],
+        ["find", "--directory", str(report_folder)],
+        ["compare", "--reports", str(first), str(second)],
+        ["jobs", "--settings", str(native_settings), "--context", "installed-operation"],
+    ):
+        reply = subprocess.run(
+            [sys.executable, "-I", "-X", "utf8", "-m", "cadence_mcp_bridge",
+             "operator-results", *report_args],
+            cwd=workspace, env=env, capture_output=True, timeout=30, check=True,
+        )
+        reported = json.loads(reply.stdout)
+        assert reported["new_simulations"] == 0 and not reported["remote_contact"]
+        assert store.path.read_bytes() == before
+
     return {
         "status": "PASS",
         "evidence": "INSTALLED_OPERATION_FORMS_SYNTHETIC",
@@ -759,6 +812,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
         "installed_generic_reader_compile_and_frame": "SYNTHETIC_NATIVE_UNATTESTED_PASS",
         "read_only_design_compile": "REJECTED",
         "cached_lifecycle_metadata": "LOCAL_SYNTHETIC_NOT_REMOTE_AUTHORITY",
+        "installed_result_report_cli_and_catalog": "PASS_OFFLINE_SYNTHETIC_NOT_NATIVE_ATTESTATION",
         "execution_authorized": False,
         "remote_contact": False,
     }

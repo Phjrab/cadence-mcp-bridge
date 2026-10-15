@@ -7,6 +7,23 @@ installed-package verification and feature PR; it permits conditional normal
 integration of POST PRs154–158, but does not authorize merging this M2 PR.
 Earlier phase exclusions remain historical records, not current instructions.
 
+## Current integration status, 2026-10-15
+
+The conditionally authorized POST154–158 merges are complete at stable main
+`b3ac2ea3f9e37ce16e670c762e32775d7bfb904a`. This foundation normally incorporates
+that verified tree while retaining its own CLI, metadata store and synthetic
+boundaries. Initial M2 tip2f96697 passed both hosted OS checks; integrated local
+273 tests pass/13 Windows platform skips, Ruff/mypy112 and compatibility pass.
+Final integrated package/installed/hosted evidence remains pending; historical
+M2 and POST artifacts do not substitute for those exact-source checks.
+See [the acceptance record](M2_FOUNDATION_ACCEPTANCE_20261015.md).
+
+Final POST installed retained reads/report checks preserve original report,
+settings and journal hashes. Ledger126/500,15,452,864,512/17,179,869,184 bytes and
+source24/24 remain unchanged; the integration adds no VM work or consumption.
+Published2.0.0 remains immutable. PR159 is still a reviewable unmerged feature;
+this status does not authorize its merge or the actual inverter proposal below.
+
 ## Revision contract
 
 `design_revisions.RevisionStore` uses its own explicitly initialized SQLite

@@ -488,6 +488,16 @@ def create_server(service: CadenceService) -> MCPServer:
         log_level="WARNING",
     )
 
+    from cadence_mcp_bridge.feature_guidance import GUIDANCE_URI, service_guidance
+
+    @server.resource(
+        GUIDANCE_URI, name="Cadence feature guidance", mime_type="application/json",
+        description="Local mode, registered circuits, feature routes and blocking reasons. "
+        "No remote qualification, execution authority or remaining-budget assertion.",
+    )
+    def feature_guidance() -> dict[str, Any]:
+        return service_guidance(service)
+
     @server.tool(
         name="cadence_runtime_info",
         annotations=_READ_ONLY,

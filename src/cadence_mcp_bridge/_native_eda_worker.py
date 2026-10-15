@@ -22,7 +22,7 @@ class EdaWorker(object):
         self.gate, self.operations, self.rendering = gate, operations, rendering
         self.copying, self.installer = copying, installer
 
-    def result(self, journal, plan):
+    def result(self, journal, plan, psf_work=None):
         # Lookup-only: no gate for new spend, process, extraction rerun or writes.
         self.gate.read(plan)
         observed = journal.observation()
@@ -81,7 +81,7 @@ class EdaWorker(object):
         self.operation_id = journal.operation_id
         self.frame(frame, plan, route, receipt["native_input_sha256"])
         io = self.gate.storage.PosixIO()
-        work_fd = io.root(journal.work)
+        work_fd = io.root(journal.work if psf_work is None else psf_work)
         try:
             _, _, fingerprint = self.gate.storage.tree(io, work_fd, "psf", [0])
         finally:

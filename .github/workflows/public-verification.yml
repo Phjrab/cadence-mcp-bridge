@@ -85,7 +85,19 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_bootstrap.py -k operator -q --basetemp "$HOME/grel-operator-tests"
 
       - name: Local operator setup and retained-context preservation
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_operator_setup.py tests/unit/test_onboarding.py tests/unit/test_runtime_context.py -q --basetemp "$HOME/post01-setup-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_operator_setup.py tests/unit/test_feature_guidance.py tests/unit/test_onboarding.py tests/unit/test_runtime_context.py -q --basetemp "$HOME/post01-setup-tests"
+
+      - name: Read-only native result reports and scientific comparison
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_result_reports.py -q --basetemp "$HOME/post03-report-tests"
+
+      - name: Generic complete AC projection and sampled crossing contracts
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"
+
+      - name: Extraction-only recovery on disposable PSF and retained accounting
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_extraction_recovery.py -q --basetemp "$HOME/post04-recovery-tests"
+
+      - name: Consumed correction accounting across disposable Git histories
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_post_native_corrections.py -q --basetemp "$HOME/post04-correction-tests"
 
       - name: Existing domain migration on disposable files
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"

@@ -1,6 +1,6 @@
 """Conditional fixed-operation tools for an explicitly configured operator service."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, ToolAnnotations
@@ -32,6 +32,40 @@ from cadence_mcp_bridge.server import _READ_ONLY, _stable_result
 
 
 def register_native_tools(server: MCPServer, native: NativeOperationService) -> None:
+    from cadence_mcp_bridge.errors import BridgeError
+    from cadence_mcp_bridge.result_reports import capture, job_page, report_view
+
+    @server.resource(
+        "cadence://operations", mime_type="application/json",
+        description="First page of retained native job identities; local journal only.",
+    )
+    def operations() -> dict[str, Any]:
+        try:
+            return job_page(native.context)
+        except (OSError, ValueError, BridgeError):
+            return {"status": "BLOCKED", "reason": "result_catalog_unavailable"}
+
+    @server.resource("cadence://operations/page/{offset}", mime_type="application/json")
+    def operations_page(offset: str) -> dict[str, Any]:
+        try:
+            return job_page(native.context, int(offset))
+        except (OSError, ValueError, BridgeError):
+            return {"status": "BLOCKED", "reason": "result_catalog_unavailable"}
+
+    @server.resource(
+        "cadence://operation/{operation_id}/{plan_sha256}/report", mime_type="application/json",
+        description="Report an already succeeded retained job through verified result lookup. "
+        "Never reconcile, simulate, reserve or rerun extraction; use existing status if stale.",
+    )
+    async def operation_report(operation_id: str, plan_sha256: str) -> dict[str, Any]:
+        try:
+            return {
+                **report_view(await capture(native, operation_id, plan_sha256)),
+                "remote_contact": True,
+            }
+        except (OSError, ValueError, BridgeError, KeyError, TypeError):
+            return {"status": "BLOCKED", "reason": "result_report_unavailable"}
+
     @server.tool(
         name="cadence_plan_operation",
         annotations=_READ_ONLY,

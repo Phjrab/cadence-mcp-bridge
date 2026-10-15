@@ -3,6 +3,42 @@
 These are development-source records. No artifact here replaces published2.0.0,
 and M2 merge/publication or actual OA/EDA execution is not authorized by this file.
 
+## Stable POST integration and current local receipt
+
+POST154–158 are normally merged at main
+`b3ac2ea3f9e37ce16e670c762e32775d7bfb904a`, tree
+`dd6f8fa85adadf50786a523f9f2fbaf372fb39cd`, identical to the tested final158 tree.
+Final POST hosted Windows/Linux, independent review without blockers, exact
+installed package/rights/lifecycle and retained-result/report checks passed.
+The final unpublished POST artifacts are source-specific predecessors, not the
+integrated M2 build:
+
+- Wheel: `d92fc6164557598e85529ebe065d3918d722a06c20b58db14475156d7cb75b5d`.
+- Sdist: `7221dc842a14e0574db0456740a516b558dbaca920d812482cdb987ef27dc294`.
+
+Original retained report/settings/journal hashes stayed equal. Consumption remains
+126/500 and15,452,864,512/17,179,869,184 bytes; source corrections remain24/24.
+Published v2.0.0 stays atff376af and is not replaced by these development files.
+
+The initial independent M2 tip `2f966974f81054e99a32fa1e6e8387c8cb56c8d3`
+subsequently passed both hosted OS checks. This adds the completed observation to
+the earlier Windows-pending record below without altering that historical receipt.
+The M2 feature branch now incorporates stable main normally. Shared CLI dispatch,
+README, package verifier and both state/plan document histories are retained;
+the Linux workflow retains POST reporting/analog/recovery/source-accounting steps
+and the M2 revision/plan/physical step.
+
+Integrated local CLI/design/guidance/report/analog/recovery tests pass273 with13
+Windows POSIX/symlink-fixture skips. Ruff over src/scripts/tests, strict mypy112
+source files and the85-tool/22-legacy-declaration compatibility audit pass.
+Every existing POST execution module matches stable main; only the additive M2
+CLI registration and four new M2 modules differ in package source. The integrated
+exact artifact/install/reinstall/uninstall and hosted checks remain pending until
+the final feature SHA is verified. Earlier artifact/CI success is not inherited.
+This integration adds0 VM contact, simulation, extraction, reservation, remote
+deployment or administrator action. PR159 remains unmerged and unauthorized for
+automatic merge; the next actual inverter scope remains a separate proposal.
+
 ## Initial independent stable-main implementation
 
 Source `90934aec46f596575e1d4784200e87df6cdd371d`, based on main67c21a7,

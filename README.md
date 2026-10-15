@@ -86,6 +86,29 @@ unverified; plan validation cannot grant execution, ERC/LVS or physical signoff.
 See [M2 foundation](docs/M2_FOUNDATION_01.md) for API and preservation limits and
 [physical observations](docs/M2_PHYSICAL_OBSERVATIONS.md) for current unknowns.
 
+## POST-02 development: available features
+
+Read `cadence://feature-guidance` in a resource-capable MCP client, or run
+`operator-features --settings RUNTIME --context ID` for explicit local inspection.
+The report distinguishes the loaded operator/legacy mode, circuit descriptions,
+synthetic fixtures, reference adapters, missing bindings and submit authority scope.
+`REQUIRES_EXECUTION_CHECKS` still requires the normal job-specific checks; it is
+not live qualification or permission to execute. Expired submit authority does
+not imply that admitted results are unavailable. Private paths and remaining
+budget are not exposed. This additive development feature is not in the published
+2.0.0 wheel. See [states and verification scope](docs/POST_02_FEATURE_GUIDANCE.md).
+
+## POST-03 development: existing-result reports
+
+Use `operator-results jobs` to browse retained native jobs, then `capture` with
+the exact successful job ID and plan hash to export a verified existing result.
+Offline `find`, `show` and `compare` preserve quantities, units, definitions and
+provenance and reject incompatible conditions. Dates refer to report capture;
+simulation dates are unknown. Reporting dispatches no simulation or extraction
+and reserves no capacity. Native clients also receive additive catalog/report
+resources. This development feature is not in the published2.0.0 wheel. See
+[commands and evidence scope](docs/POST_03_RESULT_REPORTS.md).
+
 ## Set up your VM and register a circuit
 
 Follow the exported `my-operator-setup/README.md` in order. Every installed command

@@ -174,6 +174,15 @@ def verify(workspace: Path) -> dict[str, object]:
         verified["native_bindings_authenticated"] is False and verified["ledger_assessed"] is False
     )
     assert inventory(workspace) == before
+    features = cli(["operator-features", *context], "LOCAL_FEATURE_GUIDANCE")
+    assert features["context_id"] == context_id
+    assert features["mode"] == "operator" and features["native_tools_registered"] is None
+    assert features["remaining_budget"] is None
+    assert all(
+        a["state"] == "BLOCKED" for c in features["circuits"] for a in c["analyses"]
+    )
+    assert str(workspace) not in json.dumps(features)
+    assert inventory(workspace) == before
     for format, name in (("codex", "client.toml"), ("mcp-json", "client.json")):
         output = workspace / name
         arguments = [

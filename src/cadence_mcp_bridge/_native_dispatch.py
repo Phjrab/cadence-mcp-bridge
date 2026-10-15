@@ -33,6 +33,7 @@ FILES = (
     "operations.py",
     "gate.py",
     "worker.py",
+    "recovery.py",
     "rendering.py",
     "copying.py",
     "confirmation.py",
@@ -168,7 +169,7 @@ def activation(profile, expected):
 
 MODULES = (
     "reservations", "installer", "probe", "confirmation", "storage", "copying",
-    "rendering", "operations", "gate", "worker", "modeltrust",
+    "rendering", "operations", "gate", "worker", "modeltrust", "recovery",
 )
 
 
@@ -261,6 +262,8 @@ def main():
         "lookup",
         "cancel_pending",
         "result",
+        "recover_extraction",
+        "recovery_source",
         "storage_inventory",
         "storage_cleanup",
     ):
@@ -294,7 +297,7 @@ def main():
         raise ValueError("native_runtime_accounting_anchor")
     loaded = verified_modules(here, assets)
     (reservations, installer, probe, confirmation, storage, copying, rendering,
-     operations, gate, worker, modeltrust) = (loaded[name] for name in MODULES)
+     operations, gate, worker, modeltrust, recovery) = (loaded[name] for name in MODULES)
 
     bound_gate = gate.ConfirmedGate(
         profile,
@@ -311,18 +314,38 @@ def main():
     coordinator = operations.NativeCoordinator(
         profile["paths"]["managed_root"], reservations, bound_gate, operations.ForkWorker(eda.run)
     )
+    recovery_worker = None
+    if "recovery" in request["plan"]:
+        recovery_worker = recovery.ExtractionRecovery(eda)
+        coordinator = operations.NativeCoordinator(
+            profile["paths"]["managed_root"], reservations, bound_gate,
+            operations.ForkWorker(recovery_worker.run), "recover_extraction",
+            recovery_worker.preflight,
+        )
+    if action in ("recover_extraction", "recovery_source") and recovery_worker is None:
+        raise ValueError("native_runtime_recovery_plan_required")
+    if action in ("accept", "cancel_pending") and recovery_worker is not None:
+        raise ValueError("native_runtime_recovery_action_mismatch")
     if action == "authorize":
         if request["operation_id"] is not None:
             raise ValueError("native_runtime_authorize_identity")
         result = coordinator.authorize(None, request["plan"])
     else:
         operations.uuid(request["operation_id"])
-        if action == "accept":
+        if action == "recovery_source":
+            if request["operation_id"] != request["plan"]["recovery"]["original_operation_id"]:
+                raise ValueError("native_runtime_recovery_source_identity")
+            result = recovery_worker.source(request["plan"], False)[1]
+        elif action in ("accept", "recover_extraction"):
+            if recovery_worker is not None and request["operation_id"] == (
+                request["plan"]["recovery"]["original_operation_id"]
+            ):
+                raise ValueError("native_runtime_recovery_identity_collision")
             result = coordinator.accept(request["operation_id"], request["plan"])
         elif action == "lookup":
             result = coordinator.lookup(request["operation_id"], request["plan"])
         elif action == "result":
-            result = eda.result(
+            result = (eda if recovery_worker is None else recovery_worker).result(
                 coordinator.journal(request["operation_id"], request["plan"]), request["plan"]
             )
         else:

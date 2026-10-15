@@ -77,6 +77,7 @@ select = ["B", "E", "F", "I", "SIM", "UP"]
 "src/cadence_mcp_bridge/_native_gate.py" = ["UP", "I", "SIM", "B"]
 
 "src/cadence_mcp_bridge/_native_eda_worker.py" = ["UP", "I", "SIM", "B"]
+"src/cadence_mcp_bridge/_native_recovery.py" = ["UP", "I", "SIM", "B"]
 
 "src/cadence_mcp_bridge/_native_dispatch.py" = ["UP", "I", "SIM", "B"]
 

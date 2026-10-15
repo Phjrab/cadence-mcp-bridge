@@ -112,6 +112,15 @@ async def verify(workspace: Path, examples: Path) -> dict[str, object]:
             cwd=str(workspace),
         )
         async with Client(params) as client:
+            resources = await client.list_resources()
+            assert "cadence://feature-guidance" in {str(r.uri) for r in resources.resources}
+            guidance = json.loads(
+                (await client.read_resource("cadence://feature-guidance")).contents[0].text
+            )
+            assert guidance["context_id"] == f"installed-context-{number}"
+            assert guidance["mode"] == "operator" and guidance["native_tools_registered"] is False
+            assert guidance["execution_authorized"] is guidance["remote_contact"] is False
+            assert str(workspace) not in json.dumps(guidance)
             current = [
                 t.model_dump(mode="json", by_alias=True) for t in (await client.list_tools()).tools
             ]
@@ -141,6 +150,10 @@ async def verify(workspace: Path, examples: Path) -> dict[str, object]:
         cwd=str(workspace),
     )
     async with Client(params) as client:
+        guidance = json.loads(
+            (await client.read_resource("cadence://feature-guidance")).contents[0].text
+        )
+        assert guidance["mode"] == "unconfigured" and guidance["circuits"] == []
         denied = await client.call_tool("cadence_health")
         assert denied.is_error and "SETUP_REQUIRED" in str(denied.content)
         listing = await client.call_tool("cadence_list_designs")

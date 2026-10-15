@@ -1,0 +1,215 @@
+# Current integrated boundary, 2026-10-15
+
+The original guarded source-path scope includes host extraction_recovery.py.
+Its two reviewed export protections bring the retained total to24/24; installed
+native assets remain unchanged. All13 guarded paths in this158 integration are
+identical to final1574cf2ea5. Do not treat earlier22/24 runtime observations below
+as spare correction capacity. The durable consumed checkpoint and private original
+reconciliation remain authoritative without reset/refund.
+
+Current126/500 conservative accounting attempts and15,452,864,512/17,179,869,184
+bytes remain retained. This parent integration/local testing adds0 VM execution,
+extraction or reservation. Conditional normal POST154–158 merges are authorized;
+final exact hosted/review/installed gates remain pending. No new publication,
+guarded correction, selected historical deletion or compaction is implied.
+Further Claude is EXCLUDED_BY_USER; actual recovery remains the inverter DC case.
+The following original boundaries retain their dated source-specific scope.
+
+# Resumed boundary, 2026-10-15
+
+Actual fast-input coarse/fine TRANs and automatic extraction succeed at UID500.
+Coarse sampled slope is null/underresolved; fine signed average is
+-44.3245755472V/ns, with fast-edge and conservative causality checks. Historical
+slow input-ramp slope is now unqualified. Their original PSF/results persist.
+Shared ledger126/500 and15,452,864,512/17,179,869,184 bytes; native22/24, no pending
+native source change. Both finite fast-input grants and the prior loop grant are
+fully consumed. Final host fixes use retained read/retry/report only, not new
+admissions, extractions, administrator operations or expanded authority.
+
+Exact72a106a installed fine same-ID retry/two CLI reads/report/local SDK and
+retained coarse/slow-ramp null checks PASS with unchanged journals/settings and
+eight prior loop/DC records. New cumulative-input-reversal guard is host-only;
+see POST_07_FAST_STEP_V1.md for its distinct final installation scope. POST04
+actual recovery remains DC-specific. No historical deletion target is selected;
+compaction remains separate. Further Claude EXCLUDED_BY_USER; no POST merge or
+publication inferred. Earlier boundaries below retain their historical scope.
+
+# Current scope overlay, 2026-10-14
+
+Actual installed finite loop batch completes3 attempts/384MiB; shared124 /
+15,184,429,056 bytes, remaining1,995,440,128. This grant is fully consumed.
+Native22/24 remains unchanged. Restarted same-ID/read/report checks spend0 and
+preserve journals/settings/older DC admissions. No administrator repair, reset,
+refund, deletion, fourth job or public change occurred. Negative measured margin
+is retained, not presented as stability acceptance. POST_07_LOOP_RESULT_V1.md
+records exact installed/hosted/VM evidence; further Claude checks remain excluded.
+
+Further Claude qualification is excluded by the user's direct instruction;
+historical app/SDK evidence below remains scoped, and exclusion is not PASS.
+Continue independent standard-VM loop and exact installed POST checks. Existing
+shared journals/domain, grants, replay and spent resources remain authoritative.
+No POST merge/publication or historical deletion target selection is inferred.
+
+# Retained native change boundary for POST-04 and POST-07
+
+## Durable consumed-source checkpoint, 2026-10-15
+
+The conservative source-path allowance is now24/24. The preserved20-change
+reconciliation is followed by recovery37c84c9, line-ending correction0fe7dee,
+host export protection86d02be and host alias protection0d1eb67. The last two
+change the host recovery module already covered by the guard's reviewed path
+list; they change no deployed native asset and perform no remote execution.
+The earlier22/24 installed-runtime observation remains historical. It must not
+be confused with the current broader conservative source count.
+
+`POST_NATIVE_CORRECTION_CONSUMED_V1.json` records these four immutable source
+identities, the original reconciliation's SHA-256, the unchangedV7 policy digest,
+and the selected-source Git tree. It records consumption, not user approval or
+a new budget/journal. V7 and the private reconciliation remain unchanged.
+
+The read-only guard unions retained identities with qualifying source commits
+and pending edits. Squash/rebase or missing retained ancestry rejects instead of
+reducing consumption; a normal merge preserving identities and source tree is
+accepted. Full history traversal retains extra consumed source commits even when
+an `ours` merge keeps the pinned tree and default path-history simplification
+would hide those commits. A merge-only source edit also rejects, even if
+`git log --no-merges` would omit it. A future history reconciliation must preserve all consumed
+changes, and a new source correction requires a separately approved allowance.
+This guard neither updates policy nor deploys anything, refunds consumption,
+issues a grant or creates a competing resource ledger.
+
+Eleven disposable-history regressions cover retained accounting, normal merge,
+squash, hidden ancestral consumption, committed/pending source changes, merge-only
+tree drift and stale inputs. They run in the Windows unit suite and the dedicated
+Linux CI step; neither synthetic history is a current-VM execution check.
+
+## Actual input-nulling continuation, 2026-10-14
+
+Five new owned DC jobs plus automatic extraction/results/repeat0 succeed.
+Current shared ledger121 /14,781,775,872,remaining2,398,093,312 bytes of16GiB;
+native22/24. Versioned new-library fingerprint correction retains original
+content/metadata and all old libraries/failures/bundles/grants. Host-only combined
+input-hash comparison correction adds no native change or simulation; every source
+hash remains in its own report. Actual read/repeat gives nominal near0V within a
+measured bracket, with no absolute precision/mismatch/PVT claim. Final exact
+installed host/CI/review and actual PM loop remain gates. Claude geometry/capture
+still block app inputs; local user-supplied lookup is the only public app success.
+No counter reset/refund, deletion, POST merge, publication or restart is inferred.
+
+## Current delegated measurement boundary, 2026-10-14
+
+The user supplies actual published-Claude local runtime-info-v2 and delegates
+remaining QA definitions/testbenches. This supersedes earlier scientific-choice
+questions, not protected data, finite budgets or publication boundaries. Loaded
+v4/v2 catalogs are valid; v8 wording refers to supported versions. Remote/app
+execution is not assessed by this response.
+
+Actual retained inverter sampled slew/read/repeat and ordinary UID500 preflight
+pass; comparator fails plateau eligibility and its evidence is retained. Shared
+116 /14,110,687,232 and native22/24 remain. New owned nulling OA/ADE preparation
+and common netlist input pass. A finite5-point/640MiB registration retains the
+same domain/journals; actual activation/runs and exact installed checks remain.
+No source/runtime isolation, private-parent check or original protection is
+relaxed. PM still needs loop qualification. No historical deletion, POST merge,
+public posting or Codex restart is inferred. Earlier overlays remain history.
+
+## Actual POST07 retained boundary, 2026-10-14
+
+Exact installed two wider generic AC runs, common extraction and result pass.
+The host-only measured-reference crossing CLI correction/reinstall/new-process
+lookup/repeat pass without another run. Native source22/24 remains; current ledger
+116 /14,110,687,232 bytes includes this2/256MiB. Same-ID restart/repeat spend0;
+old original/result/failure/runtime/grant/journal protections persist. This is
+sampled-transfer evidence only: PM/offset/slew and actual Claude remain incomplete.
+Source d03f3f14 rights/package/native SDK96 and133 related tests pass, with final
+CI/review pending. See POST_07_GENERIC_ANALOG.md; older counts remain historical.
+
+## Latest implementation and app checkpoint, 2026-10-14
+
+Native source consumption is22/24; two remain. The four-remaining statement below
+is the earlier authorization checkpoint, preserved as history. Actual shared
+ledger114 /13,842,251,776 reserved bytes is retained. POST07 adds an opt-in host
+measurement CLI over existing authenticated complete AC frames; no deployed
+native asset changes, execution or reservation. Two actual retained new-circuit
+reads/repeats and normal-user preflight pass; neither old AC interval contains a
+3dB crossing. PM/offset/slew remain scientifically blocked, not promoted from
+reference or synthetic facts. See POST_07_GENERIC_ANALOG.md.
+
+User-confirmed Claude restart yields a fresh target window. Accessibility reads
+work; indexed input fails `coordinate input geometry is unavailable`. Fresh
+window reselection and the one screenshot recovery retry fail `window capture
+timed out: timed out waiting on channel`. No prompt/input was sent. Exact public
+2.0.0 connection was added preserving the old connection/journals; SDK preflight
+passes but actual Claude acceptance remains NOT_VERIFIED. No Codex restart is
+required by these errors. Public2.0.0 remains unchanged. PR157 exactfa0ebc3 hosted
+Windows/Linux checks now both PASS; independent review remains separate.
+
+## Current authorization, 2026-10-14
+
+The user's direct message "클로드 창 복원 확인과 증액 결정 완료" confirms the
+pending20-to24 source-change proposal. POST_NATIVE_CORRECTION_LIMIT_V7.json is
+the current managed-VM development overlay. Retain all20 consumed changes from
+the private reconciliation; four remain. This policy records the user decision,
+and is not itself a new approval or a new accounting domain. The historicalV5
+andV6 policies and20-change evidence remain unchanged. Spectre500,16GiB, disk
+floors, per-action consent, original data and published2.0.0 remain protected.
+
+The native shared runtime ledger enforces attempts and result reservations;
+source changes are conservatively reconciled from retained native source commits
+before deployment. Do not replace that count with activation counts. Historical
+storage_deploy.py still binds its originalV5 delegation and is not the active POST
+deployer. No remote limit change or reservation follows from this overlay.
+
+Fresh Computer Use selected the restored Claude window on2026-10-14. Capture
+failed with `FrameArrived timed out`; fresh selection/activation and the one
+recovery retry failed with `window capture timed out`. No app input was sent.
+Actual Claude/published-build qualification remains NOT_VERIFIED, independently
+of host and VM work. The earlier proposed/pending statements below are history.
+
+The direct user approves continuing POST-02 through POST-07. Existing cumulative
+limits and consumed corrections remain binding; a new task name or branch cannot
+reset them. The retained 2026-10-13 reconciliation records20 native source changes
+against the explicit same-change ceiling20, including earlier native enhancements.
+POST-03 host result reporting changes no deployed native asset and consumes no
+native source correction, execution or reservation.
+
+POST-04 cannot be implemented solely by exposing the existing grant action name
+`recover_extraction`. The authenticated provider/dispatcher/coordinator currently
+have no extraction-only recovery action. The worker writes its reader and frame
+inside the original job and retains EXTRACTION_FAILED as lookup-only. A real
+recovery needs reviewed fixed worker/dispatch changes, not replaying submit or
+rewriting that original terminal record.
+
+The bounded next implementation must:
+
+- Admit a separate recovery identity linked to the original operation/plan and
+  extraction failure, using retained global accounting and exact operator scope.
+- Verify successful Spectre/effective input, original PSF/content and the fixed
+  reader registration before running only OCEAN extraction in a new owned area.
+- Preserve original failure, PSF, events, grants and consumption; append a linked
+  recovery history and never promote the old failure to a new simulation success.
+- Recheck ordinary-user trust, shared execution lock, disk floor and result limits.
+- Make lookup and repeated recovery IDs dispatch-free, including restart and
+  interrupted/lost acknowledgements; never call netlisting or Spectre for recovery.
+- Qualify the installed helper and actual existing failed PSF separately from
+  synthetic/mock tests and actual-app tests.
+
+POST-07 also needs reviewed common reader changes for new reusable quantities.
+Bandwidth, phase margin, input offset and slew need explicit valid topology,
+stimulus, operating conditions, signal definitions, interpolation/threshold rules
+and eligibility checks before real extraction. Existing inverter/comparator and
+synthetic reference diagnostics are not generic qualification of those measures.
+
+A pending question proposes retaining the20 consumed changes and increasing only
+the source-change ceiling to24 for these two features and up to two necessary
+corrections. **This document is a proposal, not approval and not active policy.**
+Until the user supplies a numeric decision, do not edit/deploy those native assets
+or reset their count. The16GiB/500 ceilings remain unchanged by that proposal;
+experiments still require fresh retained-ledger, scope, integrity and disk checks.
+
+POST-05 may reuse the existing exact-target disposable-intermediate storage path
+and validate its safety without changing native runtime code. No historical result
+has been selected by the user for deletion. Original result/PSF removal or compaction
+is not authorized by a generated selection, and remains protected. POST-06 normal
+app access now succeeds, but screen capture times out; actual Claude verification
+remains pending. Independent host work can continue through these boundaries.

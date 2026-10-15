@@ -317,6 +317,43 @@ def test_update_preserves_old_assets_history_and_counters_and_repeats(prepared):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="durable Linux partial update")
+def test_update_from_exact_pre_recovery_inventory_preserves_predecessor(prepared):
+    root, original, previous, known = prepared
+    setup.apply(original, previous, known)
+    setup.apply(dict(original, action="activate"), previous, known)
+    target = root / "runtime" / previous
+    manifest = setup.closed((target / "manifest.json").read_bytes())
+    del manifest["files"]["recovery.py"]
+    raw = setup.canonical(manifest)
+    legacy = setup.digest(raw)
+    prior = root / "runtime" / legacy
+    prior.mkdir(mode=0o700)
+    for name in manifest["files"]:
+        (prior / name).write_bytes((target / name).read_bytes())
+        (prior / name).chmod(0o600)
+    (prior / "manifest.json").write_bytes(raw)
+    (prior / "manifest.json").chmod(0o600)
+    record = setup.closed((root / "native-provider-history" / f"{previous}.json").read_bytes())
+    record["manifest_sha256"] = legacy
+    history = root / "native-provider-history" / f"{legacy}.json"
+    history.write_bytes(setup.canonical(record))
+    history.chmod(0o600)
+    (root / "active-native-provider.json").write_bytes(setup.canonical({
+        "schema_version": 1, "manifest_sha256": legacy,
+    }))
+    before = snapshot(root)
+    result = setup.apply(dict(original, action="update", previous_manifest_sha256=legacy),
+                         previous, known)
+    assert result["active"] and result["new_reservations"] == 0
+    after = snapshot(root)
+    for name, data in before.items():
+        if name != "active-native-provider.json":
+            assert after[name] == data
+    assert setup.apply(dict(original, action="update", previous_manifest_sha256=legacy),
+                       previous, known)["changed_files"] == 0
+
+
+@pytest.mark.skipif(os.name != "posix", reason="durable Linux partial update")
 @pytest.mark.parametrize("failure", ["pending", "receipt", "history", "rename"])
 def test_partial_update_resumes_without_spend(prepared, monkeypatch, failure):
     root, request, expected, previous, known = replacement(prepared)

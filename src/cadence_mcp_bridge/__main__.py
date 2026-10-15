@@ -69,6 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.design_cli import add_design_plan_parser
 
     add_design_plan_parser(subparsers)
+    from cadence_mcp_bridge.feature_guidance import add_features_parser
+
+    add_features_parser(subparsers)
+    from cadence_mcp_bridge.result_reports import add_results_parser
+
+    add_results_parser(subparsers)
+    from cadence_mcp_bridge.extraction_recovery import add_recovery_parser
+
+    add_recovery_parser(subparsers)
+    from cadence_mcp_bridge.generic_analog import add_analog_parser
+
+    add_analog_parser(subparsers)
     runtime = subparsers.add_parser(
         "runtime", help="Operator-only local immutable context inspection."
     )
@@ -356,6 +368,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         from cadence_mcp_bridge.design_cli import run_design_plan
 
         return run_design_plan(arguments)
+    if arguments.command == "operator-recovery":
+        from cadence_mcp_bridge.extraction_recovery import recovery_cli
+
+        return recovery_cli(arguments)
+    if arguments.command == "operator-analog":
+        from cadence_mcp_bridge.generic_analog import analog_cli
+
+        return analog_cli(arguments)
+    if arguments.command == "operator-results":
+        from cadence_mcp_bridge.result_reports import results_cli
+
+        return results_cli(arguments)
+    if arguments.command == "operator-features":
+        from cadence_mcp_bridge.feature_guidance import features_cli
+
+        return features_cli(arguments)
     if arguments.command == "operator-setup":
         from cadence_mcp_bridge.operator_setup import run_setup
 
