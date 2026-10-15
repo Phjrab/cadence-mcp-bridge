@@ -18,7 +18,9 @@ Existing fixed discovery failed its runner binding gate before SSH; connected
 allowlisted metadata discovery returned RUNNER_SETUP_REQUIRED. Physical readiness
 therefore remains UNKNOWN/license and execution unverified. No new collector was
 deployed. Current retained observation126/500 attempts,15,452,864,512/16GiB and
-native22/24 is unchanged; this foundation adds zero simulation/extraction/reservation.
+native22/24 predates the two host recovery protection corrections counted by the
+existing source-path guard. Their conservative total is24/24; deployed native
+assets remain unchanged. This foundation adds zero simulation/extraction/reservation.
 Further Claude validation is EXCLUDED_BY_USER. POST04 AC/TRAN recovery, POST05
 actual deletion/compaction and generic amplifier/PVT claims remain unqualified.
 See M2_FOUNDATION_01.md and M2_PHYSICAL_OBSERVATIONS.md for contracts and the

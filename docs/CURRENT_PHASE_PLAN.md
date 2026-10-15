@@ -18,7 +18,10 @@ Finalize exact package/source identity, security/compatibility/hosted evidence,
 then propose one finite actual inverter/CDF/owned-OA/DC/TRAN scope. Do not merge
 M2 or perform that proposal until separately authorized. Current physical reads
 failed closed and yielded no support claim. Preserve126 attempts/15,452,864,512
-bytes, source22/24 and all existing journals/grants. See M2_FOUNDATION_01.md.
+bytes and all existing journals/grants. Source22/24 was the pre-integration
+observation; two host recovery corrections under the existing path policy bring
+the conservative total to24/24 without deploying new native assets. A next-scope
+source extension must be explicitly approved, never inferred. See M2_FOUNDATION_01.md.
 Earlier dated instructions below are historical where superseded by this request.
 
 ## Active POST-01: guided local operator setup, 2026-10-13

@@ -103,8 +103,11 @@ transport was introduced. A read failure is not proof of missing installation.
 
 Current preserved accounting observation is126/500 attempts and15,452,864,512 /
 17,179,869,184 reserved bytes; remaining1,727,004,672 bytes (1647MiB), native source
-changes22/24. Attempts include extraction recovery, not only new Spectre runs.
-This foundation adds zero simulation/extraction/reservation/native/admin changes.
+changes were22/24 before POST integration fixes. The existing conservative source
+path policy also counts the two host extraction-recovery protection corrections,
+so current source consumption reaches24/24; deployed native assets stay unchanged.
+Attempts include extraction recovery, not only new Spectre runs.
+This foundation adds zero simulation/extraction/reservation/native deployment/admin changes.
 Consumed grants are not reused. Original OA/ADE, PDK/vendor contents, retained
 results/failures, journals, policy and replay remain protected.
 
@@ -129,9 +132,11 @@ Proposed finite execution: at most one fresh DC and one fresh TRAN, at most128Mi
 per job (256MiB total), no automatic retry with a new ID, no budget reset and no
 AC/Sweep/optimization. Stop on unknown CDF, unsafe tool behavior, source drift,
 netlist mismatch, extraction failure, disk/resource guard failure or exceeded
-scope. Reuse same IDs to verify no duplicate dispatch. Native deployment and any
-source correction must be separately enumerated within the current22/24 counter;
-do not silently spend remaining corrections to fit the proposal.
+scope. Reuse same IDs to verify no duplicate dispatch. The conservative source
+counter is now24/24. The proposed next scope would require an explicit extension
+to26, preserving consumed24, for at most one fixed metadata-collector version and
+one owned-inverter-generator version. This is a proposal only, with no allowance
+for extra automatic corrective deployments. If it cannot fit, stop and report.
 
 The next approval must explicitly cover the new fixed collector/generator runtime,
 bounded ordinary-user OA creation and the finite DC/TRAN grant, after latest
