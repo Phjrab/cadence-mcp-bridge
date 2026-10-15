@@ -84,6 +84,36 @@ are local content records and can be edited by their owner; their stored provena
 is not a new remote attestation. Output explicitly reports
 `LOCAL_RECORD_CONTENT_ONLY_NOT_REMOTE_REATTESTATION` at offline read/compare time.
 
+## Integrated installed correction receipt, 2026-10-15
+
+Source `5069e65b5c7170ef28a9cdf7d363264022aa6608` includes corrected154 parent
+`ef8c800ced9f92ea52be1cb6fea45909f0493c8d`. Report/guidance/native-sweep tests:
+65 PASS with one Linux-only directory-durability skip on Windows. Ruff and
+report-module mypy PASS. Curated wheel/sdist content/license checks PASS with
+zero unexpected or protected-content files. Exact local verification artifacts:
+
+- Wheel SHA-256: `26c5de4c31867232de9579d928c9a7ae3e16fc4f6588294fefa1db9e07c5fb4b`.
+- Sdist SHA-256: `8d9d55c288a2f8ffd908551c3d2f2f366db08633a59228d774da3e414245c321`.
+- Installed report-module SHA-256: `2d1dd85637e655b9f9cfa27999a4240e2bad12ff9e2e56af96f06357704a6979`.
+
+An isolated CPython3.12.10 install with the repository's locked runtime dependencies
+passes the96-schema local-plan/restart/no-transport and offline report/catalog
+checks. Dedicated installed fault checks reject all six journal sidecar targets
+before contact, preserve an fsync-failed pending record, publish a complete
+single-link report on retry, preserve an existing final report, exclude pending
+evidence from find and retain19 synthetic configuration/journal files unchanged.
+This is disposable synthetic installed-package evidence; it is neither a new VM
+attestation nor actual-app acceptance. New simulations/extractions/reservations0.
+
+Normal merge `e99b755cd13890326731ac5f3c1cf7b357c5772a` incorporates154
+`f73b2f0cfd2e057f9e3c8694f9b4f07a1f3d7996`, correcting only a hosted POSIX fixture
+that incorrectly treated read-induced symlink atime as protected metadata.
+Packaged source, scripts and dependency records remain identical to the tested
+artifacts. The failed hosted receipt is retained; production integrity checks are
+unchanged. Final-head hosted CI and refreshed review are recorded separately in
+the PR; neither historical actual-VM results nor local checks imply their success.
+These are development verification artifacts, not replacements for public2.0.0.
+
 ## Publication correction checkpoint, 2026-10-15
 
 Review findings4258486405 and4258486421 are addressed by sidecar reservation and

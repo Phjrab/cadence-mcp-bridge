@@ -1,3 +1,17 @@
+## POST-03 integrated installed correction receipt, 2026-10-15
+
+Integrated155 source5069e65 and parent154 ef8c800 pass the related report/guidance/
+sweep checks65 PASS/one Linux-only Windows skip. Exact wheel/sdist content/license
+audit and locked isolated installation pass:96-schema local-plan/restart, offline
+report/catalog and installed publication fault/sidecar/retry checks. Six sidecar
+targets reject before contact;19 synthetic context files, failed candidates and
+existing reports stay intact. No VM contact/simulation/extraction/reservation.
+The subsequent normal merge e99b755 of154 f73b2f0 changes only a POSIX symlink
+atime test fixture and its documentation; packaged source/scripts/lock are identical.
+Final hosted Linux/Windows and refreshed review remain separate integration gates.
+See docs/POST_03_RESULT_REPORTS.md for exact artifacts and evidence scope. Earlier
+receipts remain history; public2.0.0 stays immutable and Claude EXCLUDED_BY_USER.
+
 ## POST-03 publication and journal protection correction, 2026-10-15
 
 PR155 reviews4258486405/4258486421 are corrected: capture reserves normalized

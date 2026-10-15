@@ -1,3 +1,16 @@
+## POST-03 installed correction complete; hosted gates, 2026-10-15
+
+Final integrated packaged source5069e65 passes locked isolated operation/report
+and publication-fault checks, including six sidecar rejections before contact,
+pending-file preservation, complete single-link retry and19 unchanged synthetic
+context files. Related report/guidance/sweep65 PASS/one Linux-only Windows skip;
+Ruff/mypy and wheel/sdist content/license checks pass. Parent f73b2f0 is normally
+merged through e99b755; only test/document files differ from the installed source.
+Finish final-head hosted Linux/Windows and refreshed review, resolve addressed
+threads, then normal integration subject to platform protections. No new VM
+execution/extraction is needed. Current user permits conditional POST154–158
+integration, not another release; Claude remains EXCLUDED_BY_USER.
+
 ## POST-03 remaining integration checks, 2026-10-15
 
 The two confirmed reporting defects are fixed: no configured SQLite sidecar
