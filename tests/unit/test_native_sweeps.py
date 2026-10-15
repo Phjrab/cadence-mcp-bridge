@@ -200,7 +200,7 @@ async def test_feature_guidance_matches_registered_sweep_axis_gate(
         assert (await NativeSweepSupervisor(native).plan(request)).point_count == 3
     elif policy == "read_only_profile":
         assert sweep["state"] == "BLOCKED"
-        assert sweep["reasons"] == ["design_copy_policy_denied"]
+        assert sweep["reasons"] == ["native_analysis_unavailable", "design_copy_policy_denied"]
         with pytest.raises(OperationRejected) as failure:
             await NativeSweepSupervisor(native).plan(request)
         assert failure.value.reason == "registered_numeric_contract_denied"
