@@ -1,3 +1,44 @@
+## POST-02 final correction and conditional integration, 2026-10-15
+
+The latest review correction keeps parsed-grant retained read guidance separate
+from submit matching: mismatched bindings/ceilings/removed grant designs remain
+blocked for new work without disabling historical status/result/specification.
+Twelve actual-service synthetic lifecycle cases pass; related354/Ruff/mypy101 PASS and
+independent agent review has no actionable finding. Malformed/stale bindings
+remain blocked. Update final hosted gates and propagate this source normally.
+
+Final static-prerequisite/reason audit covers registered specification versus
+missing result route and native ADE subtype/copy-policy/environment-capability
+blocks. Related213 PASS, Ruff/mypy101 PASS; independent agent review finds no
+remaining actionable issue in these branches. Complete final hosted/review checks
+before normal integration; retain actual runtime and dynamic checks as mandatory.
+
+Follow-up review also requires an owned-copy design policy for sweep and handles
+recursive provider/grant/specification JSON as closed invalid responses. Updated
+guidance/sweep30 PASS, Ruff/mypy101 PASS; recheck hosted/review gates at the new tip.
+
+The registered sweep-axis prerequisite is now reflected in feature guidance;
+fixed/read-only/unqualified variables cannot advertise a usable sweep route.
+Related65 synthetic checks PASS/3 OS symlink skips, Ruff/mypy101 PASS. Finish exact
+hosted CI/package/security and review before normal PR154 integration, then carry
+the corrected parent into155–158 without rewriting history. The latest direct
+user instruction authorizes those conditional merges. No new VM work is needed
+for this host-only correction. Claude remains EXCLUDED_BY_USER, not PASS, and
+published2.0.0 is immutable. Earlier checkpoints below remain dated history.
+
+## Active POST-02; POST-03--07 continuous approval, 2026-10-13
+
+POST-01 PR153 merged normally at67c21a7. Implement/test/document POST-02 feature
+guidance over actual loaded mode and circuit contracts without changing existing
+tool schemas or claiming live readiness. Verify local isolation, inactive/scoped
+authority, stale hashes, fixtures and installed MCP resource discovery/read.
+Then continue approved POST-03--07 with separate phase evidence. Preserve published
+2.0.0, all operator data/accounting and per-action gates. No new publication is
+authorized. User has opened Claude for computer-use actual app verification in
+POST-06. Do not replace that with SDK results. Full roadmap approval alone selects
+no exact deletion target or scientifically valid measurement testbench.
+See POST_02_FEATURE_GUIDANCE.md. Prior sections below are dated history.
+
 ## Active POST-01: guided local operator setup, 2026-10-13
 
 The user has approved the first proposed postrelease phase. Published2.0.0 at

@@ -1,3 +1,51 @@
+## POST-02 sweep eligibility correction, 2026-10-15
+
+Final read-route correction preserves retained result/specification guidance after
+a parsed grant fails submit-only binding, ceiling or design membership checks.
+Malformed/stale documents remain blocked. Twelve actual-service synthetic cases
+verify retained status/result/spec reads and denied new plan/submit; related354
+PASS, Ruff/mypy101 PASS with unchanged journal/result contents. Independent agent review reports no
+actionable issue; final hosted checks remain required. No VM work or spend.
+
+Final adjacent guidance review distinguishes missing native result route from a
+registered specification and blocks the renderer's known ADE subtype/copy-policy/
+environment-capability prerequisites. Related213 PASS, Ruff/mypy101 PASS; separate
+agent review found no remaining actionable defect in those static predicates or
+reason branches. Final hosted checks remain required; agent review is not formal
+GitHub APPROVED. Retained-result access and legacy/fixture meanings are preserved.
+
+Follow-up correction blocks sweep on a read-only containing design and closes
+recursive provider/grant/specification parse failures in the resource and CLI.
+Guidance/sweep30 PASS; Ruff/mypy101 PASS. Hosted final-head gates remain required.
+
+PR154 review4257903728 is corrected: native sweep guidance requires at least one
+registered owned-copy-only, qualified variable, matching the planner's axis gate.
+Fixed/read-only/unqualified fixtures remain BLOCKED; eligible fixtures still need
+job-specific checks. Related65 PASS/3 OS symlink skips, Ruff/mypy101 PASS. Final
+hosted security/package/compatibility and review remain merge gates. No VM/native
+change, simulation, reservation or data deletion; published2.0.0 is preserved.
+The latest user instruction conditionally authorizes normal POST154–158 integration
+in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
+Earlier policy and evidence below retain their original historical scope.
+
+## Active POST-02 and continuous POST-03--07 approval, 2026-10-13
+
+POST-01 PR153 normally merged at67c21a70b1eb5af1f82d2b21e0b6e3df1239bc01.
+The latest direct user instruction authorizes continuous POST-02 through POST-07;
+the earlier proposal-only statements below remain dated history. Published2.0.0
+atff376af remains immutable. Feature work does not authorize another publication.
+
+POST-02 implements read-only loaded-mode/circuit guidance as an additive MCP
+resource and explicit local CLI. Existing public tool contracts remain preserved.
+Local guidance never attests live qualification, OS approval or remaining budget.
+No VM mutation or execution is needed. Subsequent phases cover result/report,
+extraction-only recovery, exact-target deletion before compaction, Claude actual
+app verification of the published build and scientifically defined measurements.
+Exact deletion targets and measurement testbench/authority gates remain binding.
+No native correction or resource history is reset. Last actual ledger observation
+112 attempts/13,825,474,560 reserved bytes is historical, not a fresh quota check.
+See docs/POST_02_FEATURE_GUIDANCE.md. Older checkpoints retain their original scope.
+
 ## POST-01 local operator setup implementation, 2026-10-13
 
 The user approved proceeding with the first proposed postrelease phase after
