@@ -1,3 +1,14 @@
+## POST-02 final correction and conditional integration, 2026-10-15
+
+The registered sweep-axis prerequisite is now reflected in feature guidance;
+fixed/read-only/unqualified variables cannot advertise a usable sweep route.
+Related65 synthetic checks PASS/3 OS symlink skips, Ruff/mypy101 PASS. Finish exact
+hosted CI/package/security and review before normal PR154 integration, then carry
+the corrected parent into155–158 without rewriting history. The latest direct
+user instruction authorizes those conditional merges. No new VM work is needed
+for this host-only correction. Claude remains EXCLUDED_BY_USER, not PASS, and
+published2.0.0 is immutable. Earlier checkpoints below remain dated history.
+
 ## Active POST-02; POST-03--07 continuous approval, 2026-10-13
 
 POST-01 PR153 merged normally at67c21a7. Implement/test/document POST-02 feature

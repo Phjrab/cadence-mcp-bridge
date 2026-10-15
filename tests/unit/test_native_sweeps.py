@@ -1,6 +1,7 @@
 """Synthetic orchestration, retaining one authoritative native lifecycle/ledger."""
 
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from test_operator_operations import operator
 
 from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.errors import InvalidInputError
+from cadence_mcp_bridge.feature_guidance import guidance
 from cadence_mcp_bridge.native_service import NativeOperationRequest
 from cadence_mcp_bridge.native_sweeps import (
     NativeSweepQuery,
@@ -19,6 +21,7 @@ from cadence_mcp_bridge.native_sweeps import (
 )
 from cadence_mcp_bridge.operator_operations import OperationProgress, prepare_plan
 from cadence_mcp_bridge.runtime_context import load_runtime
+from cadence_mcp_bridge.variable_contracts import DesignVariables, canonical_digest
 
 __all__ = ["operator"]
 
@@ -131,6 +134,57 @@ def sweep_native(operator):
         values=("0.8", "1", "1.2"),
     )
     return native, sweep
+
+
+@pytest.mark.parametrize("policy", ["fixed", "read_only", "unqualified", "eligible"])
+async def test_feature_guidance_matches_registered_sweep_axis_gate(
+    sweep_native, monkeypatch, policy,
+):
+    native, request = sweep_native
+    registry = native.context.contracts.designs
+    data = json.loads(registry.model_dump_json())
+    axis = next(v for v in data["variable_sets"][0]["variables"] if v["logical_id"] == "bias-n")
+    if policy == "read_only":
+        axis["mutation_policy"] = "read_only"
+    elif policy in ("fixed", "unqualified"):
+        axis.update(
+            mutation_policy="fixed" if policy == "fixed" else "owned_copy_only",
+            range_status="unqualified", minimum=None, maximum=None, step=None, review_id=None,
+            default="1" if policy == "fixed" else None,
+            fixed_value="1" if policy == "fixed" else None,
+            step_policy="fixed" if policy == "fixed" else "unqualified",
+        )
+        data["range_reviews"] = []
+    variables = DesignVariables.model_validate_json(json.dumps(data["variable_sets"][0]))
+    for review in data["range_reviews"]:
+        review["variable_contract_sha256"] = canonical_digest(
+            next(v for v in variables.variables if v.logical_id == "bias-n")
+        )
+    for contract in data["analysis_contracts"]:
+        contract["variable_set_sha256"] = canonical_digest(variables)
+    registry = type(registry).model_validate_json(json.dumps(data))
+    native.context = replace(
+        native.context, contracts=replace(native.context.contracts, designs=registry),
+    )
+    # Synthetic authority isolates the axis gate; the existing configured-resource
+    # test covers real local binding validation and unchanged settings/journals.
+    monkeypatch.setattr(
+        "cadence_mcp_bridge.feature_guidance._native_check", lambda _: (native.grant, []),
+    )
+    report = guidance(
+        registry, native.context.contracts.pdks, mode="operator", context=native.context,
+        native_tools_registered=True,
+    )
+    sweep = report["circuits"][0]["features"]["native_1d_sweep"]
+    if policy == "eligible":
+        assert sweep["state"] == "REQUIRES_EXECUTION_CHECKS" and sweep["reasons"] == []
+        assert (await NativeSweepSupervisor(native).plan(request)).point_count == 3
+    else:
+        assert sweep["state"] == "BLOCKED"
+        assert sweep["reasons"] == ["qualified_mutable_sweep_axis_missing"]
+        with pytest.raises(InvalidInputError, match="qualified mutable region"):
+            await NativeSweepSupervisor(native).plan(request)
+    assert native.calls == []
 
 
 async def admit(native, request):
