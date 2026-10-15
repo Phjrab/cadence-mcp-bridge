@@ -1,3 +1,19 @@
+## Latest owned-inverter execution outcome, 2026-10-15
+
+PR159 is merged atf572fd9; its foundation is now followed by draft PR160.
+The new observed-CDF-bound owned inverter/symbol/testbench passed actual UID500
+creation, reopened read-back, independent effective DC/TRAN inputs, both new
+analyses and automatic extraction from exact installed source0ae58c5.
+Same-ID submit/result after process restart adds0 attempts/0 reserved bytes.
+Ledger128/500 and15,721,299,968/17,179,869,184 bytes preserves every earlier spend.
+The short1pF TRAN window does not establish successful logic switching or performance.
+Source33 fixes a subsequent local topology review gap; retained actual inputs
+revalidate without new simulation. Exact final package/hosted/review evidence is
+separate. See [current outcome](M2_OWNED_INVERTER_01.md) and
+[acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+Published2.0.0, physical/Claude exclusions and original evidence remain unchanged.
+Earlier blocker and unmerged-PR159 statements below are preserved history.
+
 ## Superseding bounded M2 outcome, 2026-10-15
 
 Direct human approval subsequently authorized PR159 normal merge and the finite

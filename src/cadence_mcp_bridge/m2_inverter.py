@@ -134,7 +134,9 @@ def verify_generated_netlist(plan: OwnedInverterPlan, frame: bytes, native: byte
             raise ValueError("generated effective MOS values mismatch")
         expected.add(candidates[0])
     actual_devices = [
-        line for line in static if re.match(r"(?:[A-Za-z][A-Za-z0-9_]* \(|subckt |ends )", line)
+        line
+        for line in static
+        if re.match(r"(?:[A-Za-z][A-Za-z0-9_#-]{0,63} \(|subckt |ends )", line)
     ]
     if len(actual_devices) != len(expected) or set(actual_devices) != expected:
         raise ValueError("generated hierarchy/stimulus/load mismatch")

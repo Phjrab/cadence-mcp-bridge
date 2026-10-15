@@ -1,3 +1,42 @@
+## Current actual outcome and final review correction, 2026-10-15
+
+The ordinary UID500 path created a new owned inverter, symbol and hierarchical
+testbench from the complete observed CDF frame. Saved/reopened connectivity and
+properties passed. Independent DC/TRAN effective-input checks passed, including
+the intended PMOS effective width. Exact installed source
+`0ae58c5d374d69c26d63f31cf1ebd0a1c72e8bf6` then completed both new analyses and
+automatic extraction. Same-process and new-process same-ID submit/query/result
+repeats passed without another dispatch or reservation. Original OA/ADE, registered
+models, previous results, failure artifacts and accounting history remain retained.
+
+Actual cumulative shared accounting is128/500 attempts and15,721,299,968 /
+17,179,869,184 reserved bytes; remaining1,458,569,216 bytes (1391MiB).
+This slice spent exactly2 attempts/256MiB. The two-job grant is fully consumed;
+this record authorizes no replacement IDs, additional simulation or refund.
+
+Conditions: NN/27C,1V supply,1pF load; DC input0.5V; TRAN0–1V pulse,
+1ns delay,100ps rise/fall,2ns width,4ns period,6ns stop,100ps maxstep.
+The earlier netlisting diagnostic used20ps; the admitted experiment explicitly
+selected100ps before execution to stay within the unchanged256-sample reader.
+DC output0.4046511906V; TRAN98 saved samples per registered node. Output spans
+0.8317364241–0.9999859756V in this short loaded window. This verifies execution
+and extraction, **not successful logic switching, settling, slew or signoff**.
+
+Fresh review4284536573 found a local topology verifier omitted parser-legal
+hyphen/hash instance identifiers. Source33 matches the parser grammar and rejects
+extra hyphen/hash/max-length devices. Both retained actual netlists pass and six
+mutations reject locally; no new Cadence calculation or changed writer/runtime
+is needed. V15 preserves32 consumed source versions and records one finite local
+review correction, reaching33/33. The user's direct additional approval is the
+authority; policy/checkpoint files only record its bounded use.
+
+PR160 remains draft/unmerged. Final corrected-source hosted, package and review
+evidence is recorded separately in [the acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+Actual Codex submission is NOT_TESTED_THIS_M2_SLICE; Claude is EXCLUDED_BY_USER.
+Layout/DRC/LVS/PEX and publication remain outside this completed execution slice.
+All older pending/failure sections below are historical, superseded only where
+the actual evidence above applies. Published2.0.0 remains unchanged.
+
 ## Independent review disposition in current source32 correction
 
 PR160 automated review4284403269 found vpulse vdc was written without requiring

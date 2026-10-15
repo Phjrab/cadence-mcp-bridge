@@ -158,7 +158,7 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
-@pytest.mark.parametrize("port_correction", [0, 11, 12, 13, 14])
+@pytest.mark.parametrize("port_correction", [0, 11, 12, 13, 14, 15])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
     port_correction: int,
@@ -308,7 +308,7 @@ def test_current_additional_approval_preserves_both_failed_versions(
         with pytest.raises(ValueError, match="version exhausted"):
             guard.inspect(reconciliation)
         generator.write_text("corrected_generator = 2\n", encoding="utf-8")
-        if port_correction == 14:
+        if port_correction >= 14:
             next_failed = json.loads(
                 (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V7.json").read_bytes()
             )
@@ -336,11 +336,44 @@ def test_current_additional_approval_preserves_both_failed_versions(
             assert guard.inspect(reconciliation)["conservative_consumed"] == 31
             generator.write_text("derived_value_correction = 3\n", encoding="utf-8")
             assert guard.inspect(reconciliation)["conservative_consumed"] == 32
-            commit(repository, "synthetic derived-value correction")
+            third_generator = commit(repository, "synthetic derived-value correction")
             generator.write_text("unrecorded_generator = 4\n", encoding="utf-8")
             with pytest.raises(ValueError, match="version exhausted"):
                 guard.inspect(reconciliation)
             generator.write_text("derived_value_correction = 3\n", encoding="utf-8")
+            if port_correction == 15:
+                review_checkpoint = json.loads(
+                    (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V8.json").read_bytes()
+                )
+                review_checkpoint.update(
+                    generator_commit=third_generator,
+                    generator_module_lf_sha256=hashlib.sha256(
+                        generator.read_bytes().replace(b"\r\n", b"\n")
+                    ).hexdigest(),
+                    prior_consumed_checkpoint_sha256=canonical(next_failed),
+                )
+                review_policy = json.loads(
+                    (ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V15.json").read_bytes()
+                )
+                review_policy.update(
+                    base_commit=next_extension["base_commit"],
+                    prior_policy_sha256=canonical(next_extension),
+                    prior_consumed_checkpoint_sha256=canonical(review_checkpoint),
+                )
+                for name, value in (
+                    ("M2_NATIVE_CORRECTION_CONSUMED_V8.json", review_checkpoint),
+                    ("M2_NATIVE_CORRECTION_LIMIT_V15.json", review_policy),
+                ):
+                    (directory / name).write_text(json.dumps(value), encoding="utf-8")
+                commit(repository, "synthetic finite topology review fix retaining32")
+                assert guard.inspect(reconciliation)["conservative_consumed"] == 32
+                generator.write_text("topology_review_correction = 4\n", encoding="utf-8")
+                assert guard.inspect(reconciliation)["conservative_consumed"] == 33
+                commit(repository, "synthetic topology review fix")
+                generator.write_text("unrecorded_generator = 5\n", encoding="utf-8")
+                with pytest.raises(ValueError, match="version exhausted"):
+                    guard.inspect(reconciliation)
+                generator.write_text("topology_review_correction = 4\n", encoding="utf-8")
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)

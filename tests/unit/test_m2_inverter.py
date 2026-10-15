@@ -209,6 +209,9 @@ dc dc write="spectre.dc" annotate=status
         native.replace(b"(vout vin vdd vdd)", b"(vout vin 0 0)"),
         native.replace(b"c=1p", b"c=2p"),
         native + b"EXTRA (vin 0) resistor r=1\n",
+        native + b"EXTRA-1 (vin 0) resistor r=1\n",
+        native + b"EXTRA#1 (vin 0) resistor r=1\n",
+        native + b"E" + b"x" * 63 + b" (vin 0) resistor r=1\n",
         native + b"DUT (vdd vin vout 0) Dut\n",
     ):
         with pytest.raises(ValueError):

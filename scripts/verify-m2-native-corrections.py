@@ -168,7 +168,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         if (directory / "M2_NATIVE_CORRECTION_LIMIT_V13.json").exists()
         else {}
     )
-    for version in (13, 14):
+    for version in (13, 14, 15):
         generator_extension = directory / f"M2_NATIVE_CORRECTION_LIMIT_V{version}.json"
         if not generator_extension.exists():
             break

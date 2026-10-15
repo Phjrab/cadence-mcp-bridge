@@ -1,3 +1,23 @@
+## Latest actual owned-inverter checkpoint, 2026-10-15
+
+New owned inverter/symbol/hierarchical testbench creation, reopened connectivity
+and property checks, independent DC/TRAN effective inputs, exact-installed UID500
+execution and automatic extraction PASS at0ae58c5. Same-process and new-process
+same-ID submit/query/result repeat adds0 dispatch/reservation. Actual ledger128/500,
+15,721,299,968/17,179,869,184 bytes, remaining1391MiB; slice2 attempts/256MiB.
+Original OA/ADE/model contents and historical jobs/failures/journals remain retained.
+
+Source33 closes review4284536573's parser-legal hyphen/hash topology-filter gap.
+V15 preserves32 consumed versions and allows only this finite local correction;
+retained actual inputs pass and six injected extra devices reject without new runs.
+Final corrected-source hosted/package/review gates are tracked in the
+[acceptance/runbook](docs/M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+PR160 remains draft/unmerged; main stays atPR159'sf572fd9 and published2.0.0 is
+unchanged. The short1pF TRAN window does not prove successful logic switching,
+settling or performance. Actual app NOT_TESTED_THIS_M2_SLICE, Claude excluded;
+physical verification and publication remain excluded. Older pending statements
+below retain their historical scope; continue closeout without routine reapproval.
+
 ## Independent review disposition in current source32 correction
 
 PR160 automated review4284403269 found vpulse vdc was written without requiring

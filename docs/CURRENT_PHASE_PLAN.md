@@ -1,3 +1,20 @@
+## Current bounded M2 closeout, 2026-10-15
+
+Actual owned OA/symbol/testbench, saved/reopened checks, independent DC/TRAN inputs,
+exact-installed ordinary-user execution and automatic extraction PASS at0ae58c5.
+New-process same-ID submit/query/result PASS with0 new dispatch/reservation.
+Ledger128/500 and15,721,299,968/17,179,869,184 bytes; this slice2/256MiB,
+remaining1391MiB. Preserve both spent jobs/grant and all earlier failures.
+
+Finish the minimum source33 topology review correction, exact final installed and
+hosted checks, review disposition and documentation. V15 retains32 and records only
+one local correction; no added simulation or runtime deployment is required.
+Do not expand the short loaded TRAN result into switching/performance acceptance.
+PR160 stays draft/unmerged; published2.0.0, physical/Claude exclusions remain.
+See [current outcome](M2_OWNED_INVERTER_01.md) and
+[acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+Earlier source32 pending and collector blockers below remain historical evidence.
+
 ## Independent review disposition in current source32 correction
 
 PR160 automated review4284403269 found vpulse vdc was written without requiring

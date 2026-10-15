@@ -1,0 +1,27 @@
+{
+  "schema_version": 15,
+  "authority": "direct-human-all-additional-approvals-within-current-inverter-slice-2026-10-15",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_M2_OWNED_INVERTER_01",
+  "retained_consumed_source_changes": 28,
+  "maximum_corrections_same_change": 33,
+  "maximum_collector_versions": 1,
+  "maximum_generator_versions": 4,
+  "base_commit": "8c341a79767ec22816e3c45db3f563f3807e40d6",
+  "max_new_attempts": 2,
+  "allowed_analyses": [
+    "dc",
+    "tran"
+  ],
+  "max_each_result_bytes": 134217728,
+  "max_phase_result_bytes": 268435456,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "preserve_consumption_and_original_domain": true,
+  "automatic_extra_corrective_deployment": false,
+  "new_phase_pr_merge_authorized": false,
+  "publication_authorized": false,
+  "prior_policy_sha256": "8eafefe97281011ee7b8aea3abc89832804b78e49df9752b3c94ad59d355b02f",
+  "prior_consumed_checkpoint_sha256": "1c03637e7a58ad23fea50731cc8abb18e8c1c292727a1e1de384d9254652a55a",
+  "maximum_collector_corrections": 1,
+  "reason": "One minimum local topology verifier correction for parser-legal hyphen/hash instance names under latest direct human additional approval; retain source32, all successful runs and spent two-job grant. No new simulation allowance."
+}
