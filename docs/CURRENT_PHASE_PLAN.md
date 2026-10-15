@@ -1,3 +1,23 @@
+## POST-05 current conditional integration scope, 2026-10-15
+
+Latest parent1557ec9a9e now includes the reviewed154 retained-read correction.
+Preserve all historical overlays and verify the156 delta remains three Markdown
+files only; final-head hosted/review gates remain required before normal merge.
+
+Finish PR156 as documentation of actual inventory/plan/dry-run safety only.
+Normal POST154–158 integration is explicitly authorized after required checks and
+review. Parent155 fe476db is normally integrated, preserving both dated histories.
+Source/scripts/tests/package metadata match that parent exactly; check the final
+156 hosted/review gates for this three-Markdown-file difference.
+No deletion target has been selected, and no actual deletion/compaction acceptance
+is claimed. Current shared ledger126/500 and15,452,864,512/17,179,869,184 bytes;
+guarded-source corrections24/24, including the host recovery output guards while
+installed native assets remain unchanged. Earlier22/24 is historical, not spare
+correction capacity. Preserve all earlier observations without restoring them.
+Further Claude testing is EXCLUDED_BY_USER, not PASS. Published2.0.0, existing
+results/failures/PSF/journals/replay and cumulative usage remain intact. No VM or
+deletion tests are needed for this docs-only update. Earlier records remain history.
+
 ## POST-03 installed correction complete; hosted gates, 2026-10-15
 
 Final integrated packaged source5069e65 passes locked isolated operation/report
@@ -50,6 +70,27 @@ the corrected parent into155–158 without rewriting history. The latest direct
 user instruction authorizes those conditional merges. No new VM work is needed
 for this host-only correction. Claude remains EXCLUDED_BY_USER, not PASS, and
 published2.0.0 is immutable. Earlier checkpoints below remain dated history.
+
+## POST-03 final PASS; independent POST-05 safety record, 2026-10-13
+
+POST-03 final1efc811/PR155 passed local3632 tests and both exact hosted checks;
+installed actual existing DC reporting/repeat and synthetic protocol/package
+preservation pass. Keep PR155 stacked on154, published2.0.0 and all existing data
+unchanged. No POST merge/publication authority is inferred.
+
+Record the existing five-tool selective cleanup flow and actual connected Codex
+plan/dry-run/repeat. Protected DC groups are excluded; the inspected intermediate
+dry-run removes0, refunds0 and preserves snapshot and112/13,825,474,560. This is
+safety evidence, not a real user deletion selection or compaction qualification.
+The user's exact future selection and existing independent operator consent remain
+required; do not choose/delete historical objects on their behalf.
+
+Continue approved extraction recovery and measurements when the retained native
+20/20 source ceiling receives a numeric decision; proposed24 is not active policy.
+Actual Claude access passes but screen capture/reconnect times out. Wait for window
+restoration/capture recovery before UI actions; keep POST-06 unverified. No current
+Codex restart is required. See POST_05_SELECTION_SAFETY.md and
+POST_04_07_RUNTIME_BOUNDARY.md. Older entries below retain their checkpoint scope.
 
 ## Active POST-03; continuous POST-04--07, 2026-10-13
 

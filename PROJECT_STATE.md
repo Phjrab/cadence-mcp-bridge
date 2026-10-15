@@ -1,3 +1,22 @@
+## POST-05 documentation integration scope, 2026-10-15
+
+Parent155 is refreshed normally to7ec9a9e, including154 d8c85a6 retained-read
+guidance and its354 local tests/independent review. This156 still differs only in
+three Markdown files; no new source, resource use or actual deletion is introduced.
+
+The latest user instruction conditionally authorizes normal POST154–158 merges
+after review/CI and each PR's bounded acceptance. PR156 remains documentation plus
+the preserved actual inventory/plan/dry-run checkpoint: removed0/refunded0. No
+historical target was selected or deleted; compaction remains separate/unimplemented.
+Latest shared VM ledger126/500 and15,452,864,512/17,179,869,184 bytes, remaining
+1,727,004,672; guarded-source corrections24/24, including host recovery-module
+corrections without changes to installed native assets. Earlier22/24 and112/20-ceiling records are
+historical and must not reset these counters. This docs update performs no VM work.
+Claude is EXCLUDED_BY_USER, not PASS. Published2.0.0 and all original data remain
+preserved. Parent155 fe476db is normally integrated with both dated histories.
+All source/scripts/tests/package metadata are identical to that parent; the156
+delta is three Markdown files. Final156 hosted/review gates remain separate.
+
 ## POST-03 integrated installed correction receipt, 2026-10-15
 
 Integrated155 source5069e65 and parent154 ef8c800 pass the related report/guidance/
@@ -59,6 +78,29 @@ change, simulation, reservation or data deletion; published2.0.0 is preserved.
 The latest user instruction conditionally authorizes normal POST154–158 integration
 in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
 Earlier policy and evidence below retain their original historical scope.
+
+## POST-03 verified; POST-05 safety checkpoint and external boundaries, 2026-10-13
+
+POST-03 PR155 final1efc811 is ready for review, stacked on open POST-02 PR154.
+Final local full3632 PASS/392 skips/56 existing warnings; hosted Windows3643 PASS/
+373 skips, both Windows/POSIX checks SUCCESS at that exact head. Static/security/
+locked audit/compatibility/package PASS; locked installed wheel actual existing
+DC report/repeat preserves four quantities, selected inputs and journal. No POST
+merge or publication is inferred, and published2.0.0 remains immutable.
+
+POST-05 reuses the existing storage engine. Actual connected Codex/native VM
+inventory/plan excludes protected DC results; permitted12288-byte intermediate
+dry-run and identical-ID repeat preserve snapshot and112/13,825,474,560 consumption.
+No deletion/refund/new simulation/reservation/native update/admin change occurred.
+Current user has selected no historical deletion target. Original PSF/results remain
+protected; compaction is a separate unimplemented step. See POST_05_SELECTION_SAFETY.md.
+
+Continuous POST-04--07 approval remains, with current native source ceiling20/20.
+Proposed24 is awaiting a numeric user decision; no source count or policy reset.
+Claude app access now passes; screenshot and fresh-window recovery timed out.
+Actual Claude verification awaits window restoration/capture recovery, not repeated
+task approval. Existing operator/data/security boundaries remain binding.
+Earlier pending statements below retain their original checkpoint scope.
 
 ## Active POST-03 existing-result reports, 2026-10-13
 
