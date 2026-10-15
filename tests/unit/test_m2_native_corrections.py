@@ -158,10 +158,10 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
-@pytest.mark.parametrize("port_correction", [False, True])
+@pytest.mark.parametrize("port_correction", [0, 11, 12])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
-    port_correction: bool,
+    port_correction: int,
 ) -> None:
     guard, repository, reconciliation = v9_scenario
     directory = repository / "docs/policy"
@@ -225,9 +225,39 @@ def test_current_additional_approval_preserves_both_failed_versions(
         assert guard.inspect(reconciliation)["conservative_consumed"] == 27
         collector.write_text("exact_basic_port_exclusion = 4\n", encoding="utf-8")
         assert guard.inspect(reconciliation)["conservative_consumed"] == 28
-        commit(repository, "synthetic corrected port collection")
+        fourth = commit(repository, "synthetic corrected port collection")
+        if port_correction == 12:
+            latest_checkpoint = json.loads(
+                (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V4.json").read_bytes()
+            )
+            latest_checkpoint.update(
+                corrected_collector_commit=fourth,
+                collector_module_lf_sha256=hashlib.sha256(
+                    collector.read_bytes().replace(b"\r\n", b"\n")
+                ).hexdigest(),
+                prior_consumed_checkpoint_sha256=canonical(next_checkpoint),
+            )
+            latest_policy = json.loads(
+                (ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V12.json").read_bytes()
+            )
+            latest_policy.update(
+                base_commit=fourth,
+                prior_policy_sha256=canonical(next_policy),
+                prior_consumed_checkpoint_sha256=canonical(latest_checkpoint),
+            )
+            for name, value in (
+                ("M2_NATIVE_CORRECTION_CONSUMED_V4.json", latest_checkpoint),
+                ("M2_NATIVE_CORRECTION_LIMIT_V12.json", latest_policy),
+            ):
+                (directory / name).write_text(json.dumps(value), encoding="utf-8")
+            commit(repository, "synthetic finite host parse scope retaining28")
+            collector.write_text("host_data_parser = 5\n", encoding="utf-8")
+            assert guard.inspect(reconciliation)["conservative_consumed"] == 29
+            commit(repository, "synthetic local parser correction")
     (repository / guard.SOURCES[1]).write_text("generator = 1\n", encoding="utf-8")
-    assert guard.inspect(reconciliation)["conservative_consumed"] == (29 if port_correction else 28)
+    assert guard.inspect(reconciliation)["conservative_consumed"] == (
+        30 if port_correction == 12 else 29 if port_correction else 28
+    )
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)

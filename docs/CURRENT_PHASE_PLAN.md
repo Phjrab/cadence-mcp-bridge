@@ -1,3 +1,17 @@
+## Complete actual CDF frame; host parser correction, 2026-10-15
+
+The fixed source28 OCEAN collector completed normally and emitted a COMPLETE
+five-device frame: two original MOS instances plus analogLib vdc/vpulse/cap.
+Original library snapshots, seven model contents and ledger matched before/after.
+The host rejected standard SKILL symbol-headed list printing in instParameters
+(e.g. a(b c)); this is a parser compatibility defect, not failed VM collection.
+Keep the complete raw frame and failed parse. Correct only that typed list-data
+position and replay the retained frame locally; no new OCEAN run is necessary.
+Direct broad additional authority is bounded in V12: retain28, ceiling30 for one
+host parser correction and unused generator. DC1/TRAN1/256MiB and500/16GiB stay.
+Actual attempts126/reserved15,452,864,512 bytes unchanged; no OA generation or
+simulation yet. Production semantics still need assessment, not a PASS label.
+
 ## Retained source27 and exact basic port exclusion, 2026-10-15
 
 Source27 passed the legacy API point and observed both MOS CDF scopes, then

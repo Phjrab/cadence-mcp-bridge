@@ -173,7 +173,18 @@ def parse_frame(raw: bytes) -> tuple[dict[str, object], ...]:
         fields = line.split("|")
         kind = fields.pop(0)
         values = []
-        for field in fields:
+        for index, field in enumerate(fields):
+            # %L can print a symbol-headed list as a(b c). Recognize only the
+            # observed typed instParameters data position, never expressions.
+            if (
+                kind == "META"
+                and index == 4
+                and len(fields) == 5
+                and fields[1:4] == ['"instParameters"', '"observed"', "list"]
+            ):
+                printed = re.fullmatch(r"([A-Za-z][A-Za-z0-9_]*)\(([A-Za-z0-9_ ]*)\)", field)
+                if printed:
+                    field = "(" + printed[1] + " " + printed[2] + ")"
             value = _atoms(field)
             if len(value) != 1:
                 raise ValueError("invalid CDF field")

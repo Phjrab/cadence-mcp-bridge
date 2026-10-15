@@ -130,10 +130,12 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         ):
             raise ValueError("M2 failed corrected collector identity changed")
         consumed, ceiling = 26, 28
-        next_path = directory / "M2_NATIVE_CORRECTION_LIMIT_V11.json"
-        if next_path.exists():
+        for version in (11, 12):
+            next_path = directory / f"M2_NATIVE_CORRECTION_LIMIT_V{version}.json"
+            if not next_path.exists():
+                break
             next_checkpoint = json.loads(
-                (directory / "M2_NATIVE_CORRECTION_CONSUMED_V3.json").read_bytes()
+                (directory / f"M2_NATIVE_CORRECTION_CONSUMED_V{version - 8}.json").read_bytes()
             )
             next_policy = json.loads(next_path.read_bytes())
             if (
@@ -142,7 +144,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
                 != post.canonical_sha256(next_checkpoint)
                 or next_checkpoint["prior_consumed_checkpoint_sha256"]
                 != post.canonical_sha256(current_checkpoint)
-                or next_checkpoint["retained_consumed_source_changes"] != 27
+                or next_checkpoint["retained_consumed_source_changes"] != version + 16
                 or next_checkpoint["generator_versions_consumed"] != 0
                 or next_policy["base_commit"] != next_checkpoint["corrected_collector_commit"]
             ):
@@ -158,7 +160,8 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             ):
                 raise ValueError("M2 source27 identity changed")
             policy = next_policy
-            consumed, ceiling = 27, 29
+            current_checkpoint = next_checkpoint
+            consumed, ceiling = version + 16, version + 18
     if (
         retained["conservative_consumed"] != 24
         or v9["prior_policy_sha256"] != post.canonical_sha256(old)

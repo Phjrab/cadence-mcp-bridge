@@ -101,6 +101,22 @@ def test_typed_metadata_conflict_rejects() -> None:
         )
 
 
+def test_observed_symbol_headed_list_printer_is_data_only() -> None:
+    raw = v2_frame().replace(
+        b'"instParameters"|"observed"|string|nil',
+        b'"instParameters"|"observed"|list|dc(mag phase type)',
+    )
+    result = parse_frame(raw)[0]
+    rows = result["metadata_fields"]
+    assert any(row[-1] == ("dc", "mag", "phase", "type") for row in rows)  # type: ignore[union-attr]
+    with pytest.raises(ValueError):
+        parse_frame(raw.replace(b"dc(mag phase type)", b'load("evil")'))
+    with pytest.raises(ValueError):
+        parse_frame(raw.replace(b"dc(mag phase type)", b"dc(mag) other"))
+    with pytest.raises(ValueError):
+        parse_frame(raw.replace(b"dc(mag phase type)", b"dc(mag(nested))"))
+
+
 def test_typed_metadata_truncation_rejects() -> None:
     with pytest.raises(ValueError, match="incomplete typed"):
         parse_frame(v2_frame().replace(b'META|"base"|"simInfo"|"observed"|string|nil\n', b""))
