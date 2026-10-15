@@ -162,6 +162,32 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             policy = next_policy
             current_checkpoint = next_checkpoint
             consumed, ceiling = version + 16, version + 18
+    generator_limit = 1
+    generator_extension = directory / "M2_NATIVE_CORRECTION_LIMIT_V13.json"
+    if generator_extension.exists():
+        extension = json.loads(generator_extension.read_bytes())
+        failed = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V6.json").read_bytes())
+        completed = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V5.json").read_bytes())
+        if (
+            consumed != 28
+            or extension["prior_policy_sha256"] != post.canonical_sha256(policy)
+            or extension["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(failed)
+            or failed["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(completed)
+            or failed["retained_consumed_source_changes"] != 30
+            or failed["generator_versions_consumed"] != 1
+            or extension["base_commit"] != policy["base_commit"]
+        ):
+            raise ValueError("M2 failed generator retention chain conflict")
+        post.require_ancestor(failed["generator_commit"])
+        previous = subprocess.check_output(
+            ["git", "show", failed["generator_commit"] + ":" + SOURCES[1]], cwd=post.ROOT
+        )
+        if (
+            hashlib.sha256(previous.replace(b"\r\n", b"\n")).hexdigest()
+            != (failed["generator_module_lf_sha256"])
+        ):
+            raise ValueError("M2 failed generator identity changed")
+        policy, ceiling, generator_limit = extension, 31, 2
     if (
         retained["conservative_consumed"] != 24
         or v9["prior_policy_sha256"] != post.canonical_sha256(old)
@@ -171,7 +197,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         or policy["retained_consumed_source_changes"] != consumed
         or policy["maximum_corrections_same_change"] != ceiling
         or policy["maximum_collector_corrections"] != 1
-        or policy["maximum_generator_versions"] != 1
+        or policy["maximum_generator_versions"] != generator_limit
         or policy["max_new_attempts"] != 2
         or policy["allowed_analyses"] != ["dc", "tran"]
         or policy["max_phase_result_bytes"] != 268435456
@@ -190,7 +216,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
     ):
         raise ValueError("retained failed collector identity changed")
     counts = []
-    for path in SOURCES:
+    for path, limit in zip(SOURCES, (1, generator_limit), strict=True):
         commits = set(
             post.git(
                 "log",
@@ -204,10 +230,19 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         )
         pending = bool(post.git("status", "--porcelain", "--", path))
         count = len(commits) + int(pending)
-        if count > 1:
+        if count > limit:
             raise ValueError("M2 V9 fixed source version exhausted; preserve failure")
         if commits:
-            commit = next(iter(commits))
+            commit = post.git(
+                "log",
+                "--full-history",
+                "--no-merges",
+                "-1",
+                "--format=%H",
+                policy["base_commit"] + "..HEAD",
+                "--",
+                path,
+            )
             if post.git("ls-tree", commit, "--", path) != post.git("ls-tree", "HEAD", "--", path):
                 raise ValueError("M2 V9 uncounted merge source change")
         elif post.git("ls-tree", policy["base_commit"], "--", path) != (
@@ -250,7 +285,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         "generator_versions": counts[1],
         "conservative_consumed": consumed + sum(counts),
         "ceiling": ceiling,
-        "remaining": 2 - sum(counts),
+        "remaining": ceiling - consumed - sum(counts),
         "ledger_modified": False,
         "remote_contact": False,
         "authority": "DIRECT_HUMAN_APPROVAL_NOT_THIS_GUARD",

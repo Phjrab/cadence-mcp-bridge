@@ -1,0 +1,14 @@
+{
+  "schema_version": 6,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 30,
+  "generator_versions_consumed": 1,
+  "generator_commit": "ee93750ea3872831c57eca42225ea926943da929",
+  "generator_module_lf_sha256": "2e1c574d1781b7141e1c6bc91b09e29a74e6fc17cabd372627a287ffa58303d7",
+  "generator_script_sha256": "2bfa742c30ce7b2005a29c87fe2d5ff9afd4de288957cb165d0333de0a8b54f3",
+  "fixed_wrapper_sha256": "bfe20f6f69036c9d06772c9d027a7e155e2a00facfc56856e59797001a74e258",
+  "generator_outcome": "FAILED_RETAINED_SCHCHECK_TERMINAL_SHORTS_NO_SIMULATION",
+  "prior_consumed_checkpoint_sha256": "e05bda6182c212fc6abf55ab19f9d64882c231890eca9f14f14cec04960f6d4a",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

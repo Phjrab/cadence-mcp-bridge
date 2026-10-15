@@ -158,7 +158,7 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
-@pytest.mark.parametrize("port_correction", [0, 11, 12])
+@pytest.mark.parametrize("port_correction", [0, 11, 12, 13])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
     port_correction: int,
@@ -226,7 +226,7 @@ def test_current_additional_approval_preserves_both_failed_versions(
         collector.write_text("exact_basic_port_exclusion = 4\n", encoding="utf-8")
         assert guard.inspect(reconciliation)["conservative_consumed"] == 28
         fourth = commit(repository, "synthetic corrected port collection")
-        if port_correction == 12:
+        if port_correction >= 12:
             latest_checkpoint = json.loads(
                 (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V4.json").read_bytes()
             )
@@ -253,11 +253,61 @@ def test_current_additional_approval_preserves_both_failed_versions(
             commit(repository, "synthetic finite host parse scope retaining28")
             collector.write_text("host_data_parser = 5\n", encoding="utf-8")
             assert guard.inspect(reconciliation)["conservative_consumed"] == 29
-            commit(repository, "synthetic local parser correction")
+            fifth = commit(repository, "synthetic local parser correction")
+            if port_correction == 13:
+                completed = json.loads(
+                    (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V5.json").read_bytes()
+                )
+                completed.update(
+                    corrected_collector_commit=fifth,
+                    collector_module_lf_sha256=hashlib.sha256(
+                        collector.read_bytes().replace(b"\r\n", b"\n")
+                    ).hexdigest(),
+                    prior_consumed_checkpoint_sha256=canonical(latest_checkpoint),
+                )
+                (directory / "M2_NATIVE_CORRECTION_CONSUMED_V5.json").write_text(
+                    json.dumps(completed), encoding="utf-8"
+                )
+                commit(repository, "synthetic completed collection checkpoint")
     (repository / guard.SOURCES[1]).write_text("generator = 1\n", encoding="utf-8")
     assert guard.inspect(reconciliation)["conservative_consumed"] == (
-        30 if port_correction == 12 else 29 if port_correction else 28
+        30 if port_correction >= 12 else 29 if port_correction else 28
     )
+    if port_correction == 13:
+        generator = repository / guard.SOURCES[1]
+        deployed = commit(repository, "synthetic failed generator")
+        failed = json.loads(
+            (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V6.json").read_bytes()
+        )
+        failed.update(
+            generator_commit=deployed,
+            generator_module_lf_sha256=hashlib.sha256(
+                generator.read_bytes().replace(b"\r\n", b"\n")
+            ).hexdigest(),
+            prior_consumed_checkpoint_sha256=canonical(completed),
+        )
+        extension = json.loads(
+            (ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V13.json").read_bytes()
+        )
+        extension.update(
+            base_commit=latest_policy["base_commit"],
+            prior_policy_sha256=canonical(latest_policy),
+            prior_consumed_checkpoint_sha256=canonical(failed),
+        )
+        for name, value in (
+            ("M2_NATIVE_CORRECTION_CONSUMED_V6.json", failed),
+            ("M2_NATIVE_CORRECTION_LIMIT_V13.json", extension),
+        ):
+            (directory / name).write_text(json.dumps(value), encoding="utf-8")
+        commit(repository, "synthetic one corrected generator scope preserving30")
+        assert guard.inspect(reconciliation)["conservative_consumed"] == 30
+        generator.write_text("corrected_generator = 2\n", encoding="utf-8")
+        assert guard.inspect(reconciliation)["conservative_consumed"] == 31
+        commit(repository, "synthetic corrected generator")
+        generator.write_text("excess_generator = 3\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="version exhausted"):
+            guard.inspect(reconciliation)
+        generator.write_text("corrected_generator = 2\n", encoding="utf-8")
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)

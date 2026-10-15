@@ -108,6 +108,8 @@ def test_generator_binds_observed_values_and_checks_before_and_after_save() -> N
     assert program.count('m2Property(cv "MP" "w" "350n")') == 2
     assert program.index("M2_OWNED_LIBRARY_COLLISION") < program.index("ddCreateLib(")
     assert program.index('m2Net(cv "MN" "B" "vss")') < program.index("dbSave(cv)")
+    assert "span=min(span separation/8.0)" in program
+    assert 'm2Port(cv "vin" "input" 100 100)' in program
     assert plan.semantic_sha256 in program
     for forbidden in ("dbCopyCellView", "dbDelete", "cdfSet", "eval(", "load("):
         assert forbidden not in program

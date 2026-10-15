@@ -1,3 +1,22 @@
+## First generated OA failed connectivity; minimum correction, 2026-10-15
+
+Source30 reached schematic extraction/check on a new owned inverter and correctly
+rejected terminal shorts between vin and rails. Its fixed0.25 wire stubs can cross
+nearby MOS terminals; the old primitive-only QA wiring did not establish safety
+for those smaller symbols. The correction derives each stub length from one-eighth
+of the nearest observed terminal spacing, caps it at0.0625, uses that snap spacing,
+and places ports far from devices. Before/after connectivity checks remain.
+Keep source30, its failed owned library, panic files and diagnostic logs intact;
+never retry or modify that failed revision. The next attempt uses a new owned
+library/revision and cannot become a simulation PASS merely by creation.
+
+Direct broad additional human authority covers the minimum correction. V13 keeps
+all policies/checkpoints and the failed generator identity; finite ceiling31
+counts collector29, failed generator30 and correction31. DC1/TRAN1/256MiB and
+500/16GiB are unchanged. Actual UID500 original libraries, seven model contents,
+workspace cds.lib and ledger all matched after failure:126/15,452,864,512 bytes.
+No grant, netlist, Spectre, extraction, merge, publication or physical work occurred.
+
 ## Observed-CDF-bound generator prepared, 2026-10-15
 
 Complete source28 VM CDF evidence was replayed successfully by source29's local

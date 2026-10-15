@@ -160,12 +160,20 @@ def observed_devices(plan: OwnedInverterPlan, frame: bytes) -> tuple[dict[str, o
 _PRELUDE = r"""
 procedure(m2Require(value) unless(value error("M2_OWNED_READBACK_FAILED")) value)
 procedure(m2Wire(cv inst termName netName)
- let((term fig start stop wires)
+ let((term fig start stop wires span otherFig otherPoint separation)
   term=car(setof(termEntry inst~>master~>terminals termEntry~>name==termName))
   m2Require(term) fig=car(car(term~>pins)~>figs) m2Require(fig)
   start=dbTransformPoint(centerBox(fig~>bBox) inst~>transform)
-  stop=list(xCoord(start)+0.25 yCoord(start))
-  wires=schCreateWire(cv "draw" "full" list(start stop) 0.0625 0.0625 0)
+  span=0.0625
+  foreach(other inst~>master~>terminals
+   unless(other==term
+    otherFig=car(car(other~>pins)~>figs) m2Require(otherFig)
+    otherPoint=dbTransformPoint(centerBox(otherFig~>bBox) inst~>transform)
+    separation=max(abs(xCoord(otherPoint)-xCoord(start))
+                   abs(yCoord(otherPoint)-yCoord(start)))
+    m2Require(separation>0) span=min(span separation/8.0)))
+  stop=list(xCoord(start)+span yCoord(start))
+  wires=schCreateWire(cv "draw" "full" list(start stop) span span 0)
   m2Require(wires)
   foreach(wire wires m2Require(schCreateWireLabel(cv wire stop netName
    "lowerLeft" "R0" "stick" 0.0625 nil))) t))
@@ -230,7 +238,7 @@ def render_generator(plan: OwnedInverterPlan, frame: bytes, *, owned_library_pat
         maps.append((name, links, props))
     for index, name in enumerate(("vin", "vout", "vdd", "vss")):
         direction = "input" if name == "vin" else "output" if name == "vout" else "inputOutput"
-        lines += [f"m2Port(cv {q(name)} {q(direction)} {index * 2} 4)"]
+        lines += [f"m2Port(cv {q(name)} {q(direction)} {100 + index * 2} 100)"]
 
     def checks(items: list[tuple[str, dict[str, str], dict[str, str]]]) -> list[str]:
         result = []
