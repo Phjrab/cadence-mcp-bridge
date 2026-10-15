@@ -1,3 +1,15 @@
+## POST-03 remaining integration checks, 2026-10-15
+
+The two confirmed reporting defects are fixed: no configured SQLite sidecar
+can be selected as capture output, and incomplete exports cannot occupy the
+final report/catalog name. Failed pending evidence and existing destinations
+remain preserved. Focused35 source tests PASS/one Windows POSIX skip; relevant
+security, compatibility and earlier installed synthetic reporting checks pass.
+Refresh the exact installed/hosted checks after the final154 parent correction,
+then resolve review and normally integrate only when GitHub protections pass.
+No new VM execution or extraction is required for host file-publication fixes.
+Claude is EXCLUDED_BY_USER; source history/accounting/published2.0.0 stay intact.
+
 ## POST-02 final correction and conditional integration, 2026-10-15
 
 The registered sweep-axis prerequisite is now reflected in feature guidance;

@@ -1,3 +1,21 @@
+## POST-03 publication and journal protection correction, 2026-10-15
+
+PR155 reviews4258486405/4258486421 are corrected: capture reserves normalized
+analysis/sweep journal sidecars for every configured context before provider
+contact. Complete reports are staged/fsynced then atomically published without
+replacement; failed pending files remain evidence outside the JSON catalog.
+Existing report bytes, read-only journals and single-link read validation stay
+protected. Process interruption before/after publication and destination races
+have dedicated disposable tests. Current focused35 PASS/one Windows POSIX skip,
+Ruff/mypy PASS; earlier related110 PASS/two platform skips and isolated installed
+publication/sidecar/report/96-tool checks PASS for their source. Final integrated
+parent/source installed and hosted review gates remain pending. No VM contact,
+simulation, extraction, reservation, native source or public2.0.0 change occurred.
+The normal merge of154 parent79086b preserves both historical document overlays;
+further154 corrections will propagate before final integration qualification.
+Conditional normal POST merges remain authorized; new releases remain excluded.
+See docs/POST_03_RESULT_REPORTS.md. Prior checkpoints retain their source scope.
+
 ## POST-02 sweep eligibility correction, 2026-10-15
 
 PR154 review4257903728 is corrected: native sweep guidance requires at least one

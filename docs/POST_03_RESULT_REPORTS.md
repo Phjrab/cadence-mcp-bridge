@@ -30,6 +30,22 @@ does not require new submit authority for an already admitted job. Existing
 context/runtime/result integrity checks remain mandatory. Output is exclusive:
 an existing file or any selected operator settings, contract, provider, grant,
 journal or lock destination is rejected. Reports are bounded to262144 bytes.
+The `-wal`, `-shm` and `-journal` names of every configured analysis/sweep journal
+are also reserved, including journals belonging to another loaded context.
+
+Capture stages the bounded report in an exclusive same-directory
+`.cadence-report-*.pending` file, flushes and fsyncs it, then atomically publishes
+the complete file without replacing any existing destination. Windows uses its
+no-replace rename; Linux requires `renameat2(RENAME_NOREPLACE)` and syncs the parent
+directory. An unavailable operation fails closed with the staged evidence
+preserved. The implementation does not fall back to an overwriting rename or a
+hardlink/unlink pair that could leave a two-link report after interruption.
+
+Failed or interrupted candidates remain outside `find`'s `*.json` catalog and do
+not block retry to an unpublished destination. If interruption or a directory
+sync failure follows publication, the final file is already complete: inspect it
+with `show`; retry never overwrites it. This is process interruption and filesystem
+error handling, not an unconditional guarantee against hardware failure.
 
 Native resource-capable clients can read `cadence://operations`,
 `cadence://operations/page/{offset}` and
@@ -68,7 +84,25 @@ are local content records and can be edited by their owner; their stored provena
 is not a new remote attestation. Output explicitly reports
 `LOCAL_RECORD_CONTENT_ONLY_NOT_REMOTE_REATTESTATION` at offline read/compare time.
 
-## Verification checkpoint, 2026-10-13
+## Publication correction checkpoint, 2026-10-15
+
+Review findings4258486405 and4258486421 are addressed by sidecar reservation and
+complete no-replace publication. New disposable-file regressions cover both
+journals in two configured contexts, partial writes, file fsync errors, a racing
+destination, process exit before/after publication and Linux directory fsync
+failure. Existing report scientific conditions, single-link read protection,
+read-only admission and public contracts remain unchanged. The actual VM data
+and source-specific checks below remain historical; this host file-publication
+correction does not require a new simulation, extraction or remote deployment.
+Fresh source, installed-package and exact-head hosted results are recorded in
+the PR after this correction's checks complete.
+
+Additional Claude validation is now `EXCLUDED_BY_USER`; the earlier access
+failures below remain history. The latest direct user instruction conditionally
+authorizes normal POST PR integration after applicable checks and review. It
+does not authorize a new release or changes to published2.0.0.
+
+## Historical verification checkpoint, 2026-10-13
 
 Initial focused report/provider tests36 PASS; after the WAL preservation guard,
 affected report/result/admission/lifecycle tests126 PASS. Ruff/mypy102 source files
