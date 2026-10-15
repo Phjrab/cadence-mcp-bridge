@@ -47,9 +47,15 @@ def _native_check(context: ExecutionContext) -> tuple[OperatorGrant | None, list
         try:
             match_grant(context, grant, int(time.time()))
         except OperationRejected as exc:
-            if exc.reason == "authority_inactive":
-                return grant, ["authority_inactive"]
-            raise
+            # A parsed, hash-bound grant permits loading the retained read routes;
+            # matching its authority is a separate prerequisite for new work.
+            reason = (
+                "authority_inactive" if exc.reason == "authority_inactive" else "authority_invalid"
+            )
+            return grant, [reason]
+        except BridgeError:
+            # Resolving a grant's removed design can fail after parsing succeeds.
+            return grant, ["authority_invalid"]
         return grant, []
     except OperationRejected as exc:
         # Expose only the closed authority failure relevant to this guide.

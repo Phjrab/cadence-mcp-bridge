@@ -1,5 +1,9 @@
 ## POST-05 current conditional integration scope, 2026-10-15
 
+Latest parent1557ec9a9e now includes the reviewed154 retained-read correction.
+Preserve all historical overlays and verify the156 delta remains three Markdown
+files only; final-head hosted/review gates remain required before normal merge.
+
 Finish PR156 as documentation of actual inventory/plan/dry-run safety only.
 Normal POST154–158 integration is explicitly authorized after required checks and
 review. Parent155 fe476db is normally integrated, preserving both dated histories.
@@ -40,6 +44,13 @@ No new VM execution or extraction is required for host file-publication fixes.
 Claude is EXCLUDED_BY_USER; source history/accounting/published2.0.0 stay intact.
 
 ## POST-02 final correction and conditional integration, 2026-10-15
+
+The latest review correction keeps parsed-grant retained read guidance separate
+from submit matching: mismatched bindings/ceilings/removed grant designs remain
+blocked for new work without disabling historical status/result/specification.
+Twelve actual-service synthetic lifecycle cases pass; related354/Ruff/mypy101 PASS and
+independent agent review has no actionable finding. Malformed/stale bindings
+remain blocked. Update final hosted gates and propagate this source normally.
 
 Final static-prerequisite/reason audit covers registered specification versus
 missing result route and native ADE subtype/copy-policy/environment-capability
