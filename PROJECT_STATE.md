@@ -1,3 +1,52 @@
+## POST integrated; M2 final verification scope, 2026-10-15
+
+POST154–158 are normally merged into stable main
+`b3ac2ea3f9e37ce16e670c762e32775d7bfb904a`; its tree
+`dd6f8fa85adadf50786a523f9f2fbaf372fb39cd` matches the verified final POST158
+tree. Both hosted OS checks, exact package/rights/lifecycle and installed retained
+result/report checks passed before merge. Original report/settings/journal hashes
+remain equal; the retained ledger is126/500 and15,452,864,512/17,179,869,184 bytes.
+The conservative source count stays24/24. New simulation/extraction/reservation0.
+Published v2.0.0 remains atff376af; no public artifact was replaced.
+
+M2 started independently at2f96697 and now normally incorporates that stable main.
+Both prior documentation histories, all POST CLI routes and their package/CI
+checks remain alongside operator-design and its local state-preservation checks.
+The initial M2 tip2f96697 passed both Windows and Linux hosted checks; earlier
+pending statements remain source-specific history. Integrated M2 local checks
+are recorded in M2_FOUNDATION_ACCEPTANCE_20261015.md; final exact installed/hosted
+evidence is still pending and is not inherited from the earlier tips.
+PR159 remains unmerged; actual OA/EDA/physical work and publication remain outside
+this scope. No new VM read, remote change, grant or consumption occurred here.
+
+## M2-FOUNDATION-01 local implementation and current authority, 2026-10-15
+
+The latest direct user request conditionally authorizes normal POST154–158
+integration after their actual scope/review/CI gates, then this independent
+M2 foundation through a feature PR. M2 merge and new remote runtime/OA/EDA
+execution are not authorized. Published2.0.0 remains unchanged. Prior dated
+no-POST-merge/excluded-phase statements below are historical for this scope.
+
+This branch started from stable main67c21a7, independently of the pending POST
+stack. Local immutable revision metadata, bounded typed inverter plans and a
+physical observation model are implemented with an explicit operator-design CLI.
+It adds no MCP tools, resource ledger or remote backend. Synthetic plan validation
+and external evidence references cannot grant execution or ERC/DRC/LVS signoff.
+The exact installed build and final hosted checks are tracked separately; do not
+promote local unit evidence into actual OA or physical execution qualification.
+
+Existing fixed discovery failed its runner binding gate before SSH; connected
+allowlisted metadata discovery returned RUNNER_SETUP_REQUIRED. Physical readiness
+therefore remains UNKNOWN/license and execution unverified. No new collector was
+deployed. Current retained observation126/500 attempts,15,452,864,512/16GiB and
+native22/24 predates the two host recovery protection corrections counted by the
+existing source-path guard. Their conservative total is24/24; deployed native
+assets remain unchanged. This foundation adds zero simulation/extraction/reservation.
+Further Claude validation is EXCLUDED_BY_USER. POST04 AC/TRAN recovery, POST05
+actual deletion/compaction and generic amplifier/PVT claims remain unqualified.
+See M2_FOUNDATION_01.md and M2_PHYSICAL_OBSERVATIONS.md for contracts and the
+proposed separately approved next actual inverter step. Earlier history follows.
+
 # Current POST integration scope, 2026-10-15
 
 PR158 normally integrates final1574cf2ea5 and the reviewed154–156 parent fixes.

@@ -98,6 +98,11 @@ try {
         --workspace (Join-Path $resolvedTemporaryRoot "operator-setup-acceptance")
     if ($LASTEXITCODE -ne 0) { throw "Installed guided operator setup acceptance failed." }
 
+    $designAcceptance = Join-Path $projectRoot "scripts\verify-design-install.py"
+    $designWorkspace = Join-Path $resolvedTemporaryRoot "design-state-acceptance"
+    & $python -I -X utf8 $designAcceptance --workspace $designWorkspace
+    if ($LASTEXITCODE -ne 0) { throw "Installed local design plan acceptance failed." }
+
     & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-extraction-recovery-install.py") `
         --workspace (Join-Path $resolvedTemporaryRoot "extraction-recovery-acceptance")
     if ($LASTEXITCODE -ne 0) { throw "Installed extraction recovery CLI acceptance failed." }
@@ -110,6 +115,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Reinstall changed synthetic operator state." }
     & $python -I -X utf8 $domainAcceptance --workspace $domainWorkspace --verify-preserved
     if ($LASTEXITCODE -ne 0) { throw "Reinstall changed synthetic migration state." }
+    & $python -I -X utf8 $designAcceptance --workspace $designWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Reinstall changed local design state." }
 
     & $uv pip uninstall --python $python cadence-mcp-bridge
     if ($LASTEXITCODE -ne 0) {
@@ -124,6 +131,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Uninstall changed synthetic operator state." }
     & $python -I -X utf8 $domainAcceptance --workspace $domainWorkspace --verify-preserved
     if ($LASTEXITCODE -ne 0) { throw "Uninstall changed synthetic migration state." }
+    & $python -I -X utf8 $designAcceptance --workspace $designWorkspace --verify-preserved
+    if ($LASTEXITCODE -ne 0) { throw "Uninstall changed local design state." }
 
     Write-Output "Package build, installed protocol/bootstrap, reinstall and uninstall preservation passed."
 }

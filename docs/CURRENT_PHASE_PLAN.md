@@ -1,3 +1,49 @@
+## Current M2 integration finishing gates, 2026-10-15
+
+POST154–158 completed conditional normal integration at stable mainb3ac2ea.
+The exact final POST tree matches the qualified158 tree; hosted Windows/Linux,
+package/rights/lifecycle and installed retained-result/report checks passed.
+M2 now incorporates stable main through a normal merge, preserving both CLI,
+documentation and installed/hosted verification paths. Initial M2 tip2f96697 also
+passed both hosted OS checks; those are historical source receipts, not proof of
+the new integrated M2 artifact. Finish impacted local/static checks, then freeze
+the feature SHA for exact package/install/hosted verification. PR159 merge remains
+subject to separate authorization. No additional POST experiment is required.
+
+Retain126/500 attempts,15,452,864,512/17,179,869,184 reserved bytes and24/24 source
+corrections. Original report/settings/journal hashes stayed equal in final POST
+verification; this M2 integration adds0 simulation, extraction, reservation or VM
+change. Keep Claude EXCLUDED_BY_USER, recovery DC-only/experimental, deletion
+unselected, compaction unimplemented and physical capability UNKNOWN/unverified.
+The finite next actual inverter proposal remains unexecuted in M2_FOUNDATION_01.md.
+Earlier dated pending and no-merge statements below retain their historical scope.
+
+## Active M2 foundation and conditional POST integration, 2026-10-15
+
+Complete confirmed POST correctness defects and exact affected installed/hosted
+checks, then normally integrate154→155→156→157→158 in dependency order under
+the latest direct user instruction. Preserve review protections, actual DC-only
+recovery and experimental analog claims. Additional Claude work is excluded;
+actual deletion/compaction is not a prerequisite. No new measurement experiment,
+native deployment, OA change or resource grant belongs to this continuation.
+
+In parallel while POST reviews run, finish M2-FOUNDATION-01 from stable main:
+dedicated local immutable revision metadata, typed bounded inverter plan/dry-run,
+physical observation contracts, installed CLI lifecycle, independent review and
+feature PR. The implementation has no execution backend and cannot qualify real
+designs. Foreign/hot operational SQLite journals are rejected before SQLite can
+recover or mutate them. Existing metadata/failed transactions remain retained.
+
+Finalize exact package/source identity, security/compatibility/hosted evidence,
+then propose one finite actual inverter/CDF/owned-OA/DC/TRAN scope. Do not merge
+M2 or perform that proposal until separately authorized. Current physical reads
+failed closed and yielded no support claim. Preserve126 attempts/15,452,864,512
+bytes and all existing journals/grants. Source22/24 was the pre-integration
+observation; two host recovery corrections under the existing path policy bring
+the conservative total to24/24 without deploying new native assets. A next-scope
+source extension must be explicitly approved, never inferred. See M2_FOUNDATION_01.md.
+Earlier dated instructions below are historical where superseded by this request.
+
 # Final POST integration verification, 2026-10-15
 
 Final1574cf2ea5 is normally integrated into158 with both documentation histories
