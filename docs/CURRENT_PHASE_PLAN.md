@@ -5,7 +5,9 @@ Normal POST154–158 integration is explicitly authorized after required checks 
 review; propagate the reviewed155 parent normally and check the exact156 tip.
 No deletion target has been selected, and no actual deletion/compaction acceptance
 is claimed. Current shared ledger126/500 and15,452,864,512/17,179,869,184 bytes;
-native corrections22/24. Preserve all earlier observations without restoring them.
+guarded-source corrections24/24, including the host recovery output guards while
+installed native assets remain unchanged. Earlier22/24 is historical, not spare
+correction capacity. Preserve all earlier observations without restoring them.
 Further Claude testing is EXCLUDED_BY_USER, not PASS. Published2.0.0, existing
 results/failures/PSF/journals/replay and cumulative usage remain intact. No VM or
 deletion tests are needed for this docs-only update. Earlier records remain history.

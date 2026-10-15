@@ -10,7 +10,11 @@ actual deletion and compaction remain incomplete and separately scoped.
 
 The latest shared managed-VM observation is126 conservative accounting attempts
 of500 and15,452,864,512 of17,179,869,184 reserved bytes, leaving1,727,004,672 bytes.
-Native source correction consumption is22 of24. The112-attempt/13,825,474,560-byte
+The conservative guarded-source correction counter is now24 of24: its original
+scope includes the host recovery module, so the two host output-guard corrections
+remain charged even though installed native assets did not change. The earlier22
+observation is historical, not remaining correction capacity.
+The112-attempt/13,825,474,560-byte
 dry-run checkpoint below is a historical observation, not a restored ledger or
 available allowance. This documentation update changes no consumption or policy.
 

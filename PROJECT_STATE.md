@@ -5,7 +5,8 @@ after review/CI and each PR's bounded acceptance. PR156 remains documentation pl
 the preserved actual inventory/plan/dry-run checkpoint: removed0/refunded0. No
 historical target was selected or deleted; compaction remains separate/unimplemented.
 Latest shared VM ledger126/500 and15,452,864,512/17,179,869,184 bytes, remaining
-1,727,004,672; native corrections22/24. Earlier112/20-ceiling records below are
+1,727,004,672; guarded-source corrections24/24, including host recovery-module
+corrections without changes to installed native assets. Earlier22/24 and112/20-ceiling records are
 historical and must not reset these counters. This docs update performs no VM work.
 Claude is EXCLUDED_BY_USER, not PASS. Published2.0.0 and all original data remain
 preserved. Merge the final reviewed155 parent normally before final156 CI/review.
