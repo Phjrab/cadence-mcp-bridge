@@ -1,3 +1,17 @@
+## Active approved M2 owned inverter slice, 2026-10-15
+
+Direct human approval covers PR159 normal merge (completed f572fd9), one fixed
+CDF collector and one fixed owned-inverter generator, then at most DC1/TRAN1
+with128MiB each. New source ceiling26 preserves consumed24 and the old frozen
+POST guard; no extra corrective deployment, new phase PR merge or publication.
+Latest actual ordinary UID500 preflight126/500 and15,452,864,512/17,179,869,184
+bytes; zero new attempts/reservations. Collector local19 PASS/static PASS;
+actual metadata, OA/read-back, netlisting and DC/TRAN remain pending.
+See docs/M2_OWNED_INVERTER_01.md (from docs: M2_OWNED_INVERTER_01.md).
+Earlier M2 not-authorized/PR159 pending paragraphs are retained dated history.
+Claude remains EXCLUDED_BY_USER; original OA/ADE/PDK/vendor/results/journals and
+all accounting/replay/failure evidence stay protected. No user action needed.
+
 ## POST integrated; M2 final verification scope, 2026-10-15
 
 POST154–158 are normally merged into stable main
