@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "campaign_id": "AUTO-PHASE-01",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_POST04_POST07_NOT_INSTALL_DEFAULT",
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "baseline_commit": "5e642986b10a11aa5f38d462bc39127fb280fd91",
+  "retained_reconciliation_sha256": "c8432e65bf9cd6c6f6a4b620ee7d3da355ca9efb16171b84f9b3c04b9bb4a5b4",
+  "policy_sha256": "bacd38fd4f67be4dd0bd5e4f9018e04601610655a20f0d02349fa94000571738",
+  "retained_consumed_source_changes": 24,
+  "retained_post_source_commits": [
+    "37c84c988f056c08f2f14dad80a8ba5fa3c3602e",
+    "0fe7dee0842511c1a184a53bf09f7528da900ff5",
+    "86d02be81845490575372c761958a869b2230235",
+    "0d1eb676d482a3ac3cd8e095461a4aecbada8d99"
+  ],
+  "source_paths": [
+    "src/cadence_mcp_bridge/_native_dispatch.py",
+    "src/cadence_mcp_bridge/_native_operations.py",
+    "src/cadence_mcp_bridge/_native_gate.py",
+    "src/cadence_mcp_bridge/_native_eda_worker.py",
+    "src/cadence_mcp_bridge/_native_rendering.py",
+    "src/cadence_mcp_bridge/_native_copy.py",
+    "src/cadence_mcp_bridge/_native_setup.py",
+    "src/cadence_mcp_bridge/_operator_confirmation.py",
+    "src/cadence_mcp_bridge/native_runtime.py",
+    "src/cadence_mcp_bridge/native_service.py",
+    "src/cadence_mcp_bridge/native_sweeps.py",
+    "src/cadence_mcp_bridge/_native_recovery.py",
+    "src/cadence_mcp_bridge/extraction_recovery.py"
+  ],
+  "source_tree_sha256": "2276aaea5e931cf32bd02b469dcea9446737d650c3f5c66a1742d38a47cb0d31"
+}

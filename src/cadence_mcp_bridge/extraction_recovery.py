@@ -146,19 +146,36 @@ def add_recovery_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
 
 def recovery_cli(arguments: argparse.Namespace) -> int:
     async def perform() -> dict[str, object]:
-        context = next((c for c in load_runtime(arguments.settings.resolve())
+        settings = _local_path(arguments.settings)
+        contexts = load_runtime(settings)
+        context = next((c for c in contexts
                         if c.binding.context_id == arguments.context), None)
         if context is None:
             raise OperationRejected("unknown_context_id")
-        service = ExtractionRecoveryService(context)
         if arguments.recovery_action == "plan":
+            target = _local_path(arguments.output)
+            reserved = {settings}
+            for loaded in contexts:
+                reserved.add(loaded.lock_path)
+                for field in type(loaded.binding).model_fields:
+                    value = getattr(loaded.binding, field)
+                    if isinstance(value, Path):
+                        reserved.add(_local_path(value))
+                for journal in (loaded.binding.analysis_journal, loaded.binding.sweep_journal):
+                    journal = _local_path(journal)
+                    for suffix in ("-wal", "-shm", "-journal"):
+                        reserved.add(journal.with_name(journal.name + suffix))
+            if target in reserved:
+                raise OperationRejected("recovery_plan_output_reserved")
+            if target.exists() or not target.parent.is_dir():
+                raise OperationRejected("recovery_plan_new_output_required")
+            # Reject collisions across every configured context before contacting
+            # the source provider; a fresh journal name is still retained state.
+            service = ExtractionRecoveryService(context)
             plan = await service.plan(
                 OperationRequest.model_validate_json(bounded_document(arguments.request)),
                 arguments.original_operation_id, arguments.original_plan_sha256,
             )
-            target = _local_path(arguments.output)
-            if not target.parent.is_dir():
-                raise OperationRejected("recovery_plan_parent_required")
             # Never replace operator inputs, previous evidence or an existing plan.
             descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(descriptor, "wb") as stream:
@@ -170,6 +187,7 @@ def recovery_cli(arguments: argparse.Namespace) -> int:
                 "plan_sha256": plan.plan_sha256, "remote_contact": True,
                 "admission_created": False, "new_reservations": 0,
             }
+        service = ExtractionRecoveryService(context)
         plan = RecoveryPlan.model_validate_json(bounded_document(arguments.plan))
         if plan.plan_sha256 != arguments.expected_plan_sha256:
             raise OperationRejected("recovery_plan_digest_mismatch")

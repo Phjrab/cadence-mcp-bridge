@@ -1,3 +1,135 @@
+# Current POST integration scope, 2026-10-15
+
+PR158 normally integrates final1574cf2ea5 and the reviewed154–156 parent fixes.
+Both historical documentation branches remain below. The user permits conditional
+normal integration after checks/review; final hosted gates and exact installed
+retained-result/report checks are pending, so merged/released status is not claimed.
+Analog and authenticated measurement/provider modules match installed dfcac60;
+the inherited report/guidance/recovery guards require final integrated validation.
+Integrated report/guidance/analog/recovery/setup/CLI/correction tests350 PASS/10
+Windows platform skips; Ruff/mypy108 PASS. Existing pytest cache ACL produced one
+nonfatal cache-write warning; no ACL or retained cache was changed.
+
+Current retained accounting126/500 and15,452,864,512/17,179,869,184 bytes;
+remaining1,727,004,672. Guarded-source corrections24/24 include two host recovery
+fixes without changing installed native assets. All13 guarded source paths match
+final157; this integration adds0 source corrections, VM work or reservations.
+Earlier22/24 observations remain historical, not available correction capacity.
+Measured negative loop margin is not a stability PASS; fine signed sampled10/90
+inverter slope is-44.3245755472V/ns, while coarse/slow-ramp/comparator rejection
+records remain null. Further Claude verification is EXCLUDED_BY_USER, recovery
+is actually DC-only, historical deletion is unselected and compaction unimplemented.
+Public2.0.0, original data/journals/replay and all failed evidence remain intact.
+See docs/POST_07_FAST_STEP_V1.md for scoped verification and remaining gates.
+
+## POST-04 final host output protection, 2026-10-15
+
+Recovery-plan export now rejects every configured context's journal/sidecar,
+contract/settings and resource-lock paths before provider creation. Forty-four
+collision cases include normalized journal aliases; valid-export/repeat
+preservation covers the correction. Final recovery51 PASS/6 Windows POSIX skips,
+related39 PASS/3 symlink skips, Ruff/mypy104
+PASS. Updated hosted/package gates remain required. Deployed native assets are
+unchanged; no new VM execution/reservation/deployment or administrator action
+occurred. The reviewed source guard includes host extraction recovery, so the
+export and alias corrections consume the remaining two changes:24/24, without
+resetting the earlier22/24 history or changing the approved ceiling.
+Actual DC-only qualification and opt-in experimental boundary remain. Latest user
+instruction conditionally authorizes normal POST154–158 integration; Claude is
+EXCLUDED_BY_USER, not PASS. Published2.0.0 and all prior evidence are preserved.
+
+The durable consumed-source checkpoint binds the original reconciliation, all four
+post-baseline source identities and the unchanged selected-source tree. Eleven
+disposable-history tests reject squash refunds, hidden ancestral corrections,
+pending/committed excess and merge-only source drift. Local guard PASS24/24 with
+zero remaining, no ledger write and no remote contact. Parent1567419620 was
+normally integrated atdd28fe2; both document histories and all source identities
+remain. That merged host regression set passed404 tests with265 Windows POSIX
+skips. Latest15604d1a61 adds the reviewed retained-read guidance correction;
+all46 guidance tests and whole-tree Ruff/mypy104 pass after integration.
+Hosted Linux and exact package gates remain.
+
+## POST-05 documentation integration scope, 2026-10-15
+
+Parent155 is refreshed normally to7ec9a9e, including154 d8c85a6 retained-read
+guidance and its354 local tests/independent review. This156 still differs only in
+three Markdown files; no new source, resource use or actual deletion is introduced.
+
+The latest user instruction conditionally authorizes normal POST154–158 merges
+after review/CI and each PR's bounded acceptance. PR156 remains documentation plus
+the preserved actual inventory/plan/dry-run checkpoint: removed0/refunded0. No
+historical target was selected or deleted; compaction remains separate/unimplemented.
+Latest shared VM ledger126/500 and15,452,864,512/17,179,869,184 bytes, remaining
+1,727,004,672; guarded-source corrections24/24, including host recovery-module
+corrections without changes to installed native assets. Earlier22/24 and112/20-ceiling records are
+historical and must not reset these counters. This docs update performs no VM work.
+Claude is EXCLUDED_BY_USER, not PASS. Published2.0.0 and all original data remain
+preserved. Parent155 fe476db is normally integrated with both dated histories.
+All source/scripts/tests/package metadata are identical to that parent; the156
+delta is three Markdown files. Final156 hosted/review gates remain separate.
+
+## POST-03 integrated installed correction receipt, 2026-10-15
+
+Integrated155 source5069e65 and parent154 ef8c800 pass the related report/guidance/
+sweep checks65 PASS/one Linux-only Windows skip. Exact wheel/sdist content/license
+audit and locked isolated installation pass:96-schema local-plan/restart, offline
+report/catalog and installed publication fault/sidecar/retry checks. Six sidecar
+targets reject before contact;19 synthetic context files, failed candidates and
+existing reports stay intact. No VM contact/simulation/extraction/reservation.
+The subsequent normal merge e99b755 of154 f73b2f0 changes only a POSIX symlink
+atime test fixture and its documentation; packaged source/scripts/lock are identical.
+Final hosted Linux/Windows and refreshed review remain separate integration gates.
+See docs/POST_03_RESULT_REPORTS.md for exact artifacts and evidence scope. Earlier
+receipts remain history; public2.0.0 stays immutable and Claude EXCLUDED_BY_USER.
+
+## POST-03 publication and journal protection correction, 2026-10-15
+
+PR155 reviews4258486405/4258486421 are corrected: capture reserves normalized
+analysis/sweep journal sidecars for every configured context before provider
+contact. Complete reports are staged/fsynced then atomically published without
+replacement; failed pending files remain evidence outside the JSON catalog.
+Existing report bytes, read-only journals and single-link read validation stay
+protected. Process interruption before/after publication and destination races
+have dedicated disposable tests. Current focused35 PASS/one Windows POSIX skip,
+Ruff/mypy PASS; earlier related110 PASS/two platform skips and isolated installed
+publication/sidecar/report/96-tool checks PASS for their source. Final integrated
+parent/source installed and hosted review gates remain pending. No VM contact,
+simulation, extraction, reservation, native source or public2.0.0 change occurred.
+The normal merge of154 parent79086b preserves both historical document overlays;
+further154 corrections will propagate before final integration qualification.
+Conditional normal POST merges remain authorized; new releases remain excluded.
+See docs/POST_03_RESULT_REPORTS.md. Prior checkpoints retain their source scope.
+
+## POST-02 sweep eligibility correction, 2026-10-15
+
+Final read-route correction preserves retained result/specification guidance after
+a parsed grant fails submit-only binding, ceiling or design membership checks.
+Malformed/stale documents remain blocked. Twelve actual-service synthetic cases
+verify retained status/result/spec reads and denied new plan/submit; related354
+PASS, Ruff/mypy101 PASS with unchanged journal/result contents. Independent agent review reports no
+actionable issue; final hosted checks remain required. No VM work or spend.
+
+Final adjacent guidance review distinguishes missing native result route from a
+registered specification and blocks the renderer's known ADE subtype/copy-policy/
+environment-capability prerequisites. Related213 PASS, Ruff/mypy101 PASS; separate
+agent review found no remaining actionable defect in those static predicates or
+reason branches. Final hosted checks remain required; agent review is not formal
+GitHub APPROVED. Retained-result access and legacy/fixture meanings are preserved.
+
+Follow-up correction blocks sweep on a read-only containing design and closes
+recursive provider/grant/specification parse failures in the resource and CLI.
+Guidance/sweep30 PASS; Ruff/mypy101 PASS. Hosted final-head gates remain required.
+
+PR154 review4257903728 is corrected: native sweep guidance requires at least one
+registered owned-copy-only, qualified variable, matching the planner's axis gate.
+Fixed/read-only/unqualified fixtures remain BLOCKED; eligible fixtures still need
+job-specific checks. Related65 PASS/3 OS symlink skips, Ruff/mypy101 PASS. Final
+hosted security/package/compatibility and review remain merge gates. No VM/native
+change, simulation, reservation or data deletion; published2.0.0 is preserved.
+The latest user instruction conditionally authorizes normal POST154–158 integration
+in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
+Earlier policy and evidence below retain their original historical scope.
+
 # Current POST scope, 2026-10-15
 
 Exact dfcac60 installed package/rights/lifecycle, actual fine result/retry/report,

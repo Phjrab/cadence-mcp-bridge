@@ -47,15 +47,21 @@ def _native_check(context: ExecutionContext) -> tuple[OperatorGrant | None, list
         try:
             match_grant(context, grant, int(time.time()))
         except OperationRejected as exc:
-            if exc.reason == "authority_inactive":
-                return grant, ["authority_inactive"]
-            raise
+            # A parsed, hash-bound grant permits loading the retained read routes;
+            # matching its authority is a separate prerequisite for new work.
+            reason = (
+                "authority_inactive" if exc.reason == "authority_inactive" else "authority_invalid"
+            )
+            return grant, [reason]
+        except BridgeError:
+            # Resolving a grant's removed design can fail after parsing succeeds.
+            return grant, ["authority_invalid"]
         return grant, []
     except OperationRejected as exc:
         # Expose only the closed authority failure relevant to this guide.
         reason = "authority_inactive" if exc.reason == "authority_inactive" else "authority_invalid"
         return None, [reason]
-    except (OSError, ValueError, BridgeError):
+    except (OSError, ValueError, BridgeError, RecursionError):
         return None, ["native_binding_invalid"]
 
 
@@ -85,7 +91,7 @@ def guidance(
                 context.resolve(spec.design_id)
                 spec_designs.add(spec.design_id)
             spec_reason = "native_specification_not_registered_for_design"
-        except (OSError, ValueError, BridgeError):
+        except (OSError, ValueError, BridgeError, RecursionError):
             spec_designs.clear()
             spec_reason = "native_specifications_invalid"
     circuits = []
@@ -117,6 +123,14 @@ def guidance(
                 steps = ["cadence_list_analyses", "cadence_plan_analysis"]
             elif contract is None:
                 reasons.append("analysis_contract_missing")
+            elif profile.binding.ade.kind != "ade_l":
+                reasons.append("native_ade_subtype_unsupported")
+            elif profile.work_copy_policy != "owned_copy_only":
+                reasons.append("design_copy_policy_denied")
+            elif context is not None and (
+                analysis not in context.contracts.environment.requested_capabilities
+            ):
+                reasons.append("environment_analysis_capability_missing")
             elif grant is not None:
                 if profile.design_id not in grant.design_ids or "submit" not in grant.actions:
                     reasons.append("authority_scope_denied")
@@ -138,9 +152,22 @@ def guidance(
                 **_feature(state, reasons, steps),
             })
         has_native = any(a["state"] == "REQUIRES_EXECUTION_CHECKS" for a in analyses)
-        native_state = "REQUIRES_EXECUTION_CHECKS" if has_native else "BLOCKED"
-        native_reason = [] if has_native else ["native_analysis_unavailable"]
+        # Match the registered-axis gate in NativeSweepSupervisor.plan; local
+        # eligibility still leaves each point's numeric/grant checks mandatory.
+        has_sweep_axis = any(
+            variable.mutation_policy == "owned_copy_only"
+            and variable.range_status == "qualified"
+            for variable in registry.variables(profile.design_id).variables
+        )
+        sweep_reasons = [] if has_native else ["native_analysis_unavailable"]
+        if not has_sweep_axis:
+            sweep_reasons.append("qualified_mutable_sweep_axis_missing")
+        if profile.work_copy_policy != "owned_copy_only":
+            sweep_reasons.append("design_copy_policy_denied")
         result_available = grant is not None and native_tools_registered is not False
+        specification_reasons = (
+            [] if result_available else ["native_result_route_unavailable"]
+        ) if profile.design_id in spec_designs else [spec_reason]
         circuits.append({
             "design_id": profile.design_id,
             "description_registered": True,
@@ -155,13 +182,12 @@ def guidance(
                     ["cadence_operation_status", "cadence_operation_result"],
                 ),
                 "native_1d_sweep": _feature(
-                    native_state, native_reason, ["cadence_plan_native_sweep"],
+                    "REQUIRES_EXECUTION_CHECKS" if not sweep_reasons else "BLOCKED",
+                    sweep_reasons, ["cadence_plan_native_sweep"],
                 ),
                 "native_specification": _feature(
-                    "REQUIRES_EXECUTION_CHECKS"
-                    if result_available and profile.design_id in spec_designs else "BLOCKED",
-                    [] if result_available and profile.design_id in spec_designs
-                    else [spec_reason],
+                    "REQUIRES_EXECUTION_CHECKS" if not specification_reasons else "BLOCKED",
+                    specification_reasons,
                     ["cadence_evaluate_native_specification"],
                 ),
                 "legacy_measurements": _feature(
@@ -230,7 +256,7 @@ def features_cli(arguments: argparse.Namespace) -> int:
         result["native_tools_registered"] = None
         result["observation_source"] = "explicit_local_files"
         code = 0
-    except (OSError, ValueError, BridgeError):
+    except (OSError, ValueError, BridgeError, RecursionError):
         result = {
             "status": "BLOCKED", "reason": "feature_context_invalid",
             "guidance": "Use operator-setup check with the same explicit settings and context.",

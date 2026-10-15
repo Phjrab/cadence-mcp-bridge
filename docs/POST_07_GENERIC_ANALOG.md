@@ -1,4 +1,18 @@
-# Current qualification overlay, 2026-10-15
+# Current integrated qualification boundary, 2026-10-15
+
+Final parent1574cf2ea5 is normally integrated; final installed/hosted/review gates
+remain pending before normal158 merge. All analog measurement/provider modules
+retain the qualified dfcac60 bytes; inherited host protections have their own
+tests and must be included in the final integrated package check. No scientific
+qualification or actual app claim is broadened by this merge.
+
+Current retained accounting126/500 and15,452,864,512/17,179,869,184 bytes;
+guarded-source corrections24/24, including the host recovery output guards.
+All13 guarded paths match final157; no new correction/execution/reservation occurs.
+Earlier22/24 records are historical. Further Claude stays EXCLUDED_BY_USER;
+published2.0.0, null rejected measurements and original evidence remain preserved.
+
+# Earlier qualification overlay, 2026-10-15
 
 Use POST_07_FAST_STEP_V1.md for the current source-specific installation and
 review evidence. Earlier1ns input-ramp slope below is historical and now null:

@@ -1,3 +1,20 @@
+# Current integrated boundary, 2026-10-15
+
+The original guarded source-path scope includes host extraction_recovery.py.
+Its two reviewed export protections bring the retained total to24/24; installed
+native assets remain unchanged. All13 guarded paths in this158 integration are
+identical to final1574cf2ea5. Do not treat earlier22/24 runtime observations below
+as spare correction capacity. The durable consumed checkpoint and private original
+reconciliation remain authoritative without reset/refund.
+
+Current126/500 conservative accounting attempts and15,452,864,512/17,179,869,184
+bytes remain retained. This parent integration/local testing adds0 VM execution,
+extraction or reservation. Conditional normal POST154–158 merges are authorized;
+final exact hosted/review/installed gates remain pending. No new publication,
+guarded correction, selected historical deletion or compaction is implied.
+Further Claude is EXCLUDED_BY_USER; actual recovery remains the inverter DC case.
+The following original boundaries retain their dated source-specific scope.
+
 # Resumed boundary, 2026-10-15
 
 Actual fast-input coarse/fine TRANs and automatic extraction succeed at UID500.
@@ -34,6 +51,37 @@ shared journals/domain, grants, replay and spent resources remain authoritative.
 No POST merge/publication or historical deletion target selection is inferred.
 
 # Retained native change boundary for POST-04 and POST-07
+
+## Durable consumed-source checkpoint, 2026-10-15
+
+The conservative source-path allowance is now24/24. The preserved20-change
+reconciliation is followed by recovery37c84c9, line-ending correction0fe7dee,
+host export protection86d02be and host alias protection0d1eb67. The last two
+change the host recovery module already covered by the guard's reviewed path
+list; they change no deployed native asset and perform no remote execution.
+The earlier22/24 installed-runtime observation remains historical. It must not
+be confused with the current broader conservative source count.
+
+`POST_NATIVE_CORRECTION_CONSUMED_V1.json` records these four immutable source
+identities, the original reconciliation's SHA-256, the unchangedV7 policy digest,
+and the selected-source Git tree. It records consumption, not user approval or
+a new budget/journal. V7 and the private reconciliation remain unchanged.
+
+The read-only guard unions retained identities with qualifying source commits
+and pending edits. Squash/rebase or missing retained ancestry rejects instead of
+reducing consumption; a normal merge preserving identities and source tree is
+accepted. Full history traversal retains extra consumed source commits even when
+an `ours` merge keeps the pinned tree and default path-history simplification
+would hide those commits. A merge-only source edit also rejects, even if
+`git log --no-merges` would omit it. A future history reconciliation must preserve all consumed
+changes, and a new source correction requires a separately approved allowance.
+This guard neither updates policy nor deploys anything, refunds consumption,
+issues a grant or creates a competing resource ledger.
+
+Eleven disposable-history regressions cover retained accounting, normal merge,
+squash, hidden ancestral consumption, committed/pending source changes, merge-only
+tree drift and stale inputs. They run in the Windows unit suite and the dedicated
+Linux CI step; neither synthetic history is a current-VM execution check.
 
 ## Actual input-nulling continuation, 2026-10-14
 

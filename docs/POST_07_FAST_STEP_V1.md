@@ -1,5 +1,33 @@
 # POST-07 fast-input sampled step validation
 
+## Final parent integration, 2026-10-15
+
+PR158 normally integrates final1574cf2ea5, preserving both dated histories and
+all earlier source-specific receipts. The seven generic_analog/generic_slew/
+generic_offset/generic_loop/analog_measurements/generic_measurements/
+authenticated_provider modules remain byte-identical to installed dfcac60.
+Inherited report publication, feature guidance, recovery export and correction
+accounting fixes are separately validated; earlier artifacts are not relabeled
+as the new integrated package. Final exact installation/retained-report checks,
+hosted CI and review disposition remain required before normal integration.
+
+Integrated local report/guidance/analog/recovery/setup/native-CLI/correction-guard
+tests350 PASS/10 Windows platform skips, Ruff/mypy108 PASS. The sole warning is
+an existing pytest cache ACL preventing an optional cache write; its ACL/content
+were preserved. POSIX-only durability/recovery and unprivileged-symlink cases
+remain hosted-platform gates. This suite performs no actual VM/app validation.
+
+All13 guarded source paths match final157. The retained conservative count is
+24/24, including two host recovery corrections without installed native asset
+changes; earlier22/24 observations below are historical. Current accounting stays
+126/500 and15,452,864,512/17,179,869,184 bytes, remaining1,727,004,672. This
+integration adds0 native correction, VM execution/extraction or reservation.
+Negative sampled loop margins remain measured values without a stability PASS.
+The fine inverter value remains a signed sampled10/90 average, not intrinsic or
+maximum slew; coarse/slow-ramp/comparator unqualified/null outcomes persist.
+Claude is EXCLUDED_BY_USER, recovery is actually inverter-DC-only, historical
+deletion remains unselected and compaction is unimplemented. Public2.0.0 is intact.
+
 ## POST closure and M2 transition authorization, 2026-10-15
 
 The user's new direct instruction conditionally authorizes normal integration
