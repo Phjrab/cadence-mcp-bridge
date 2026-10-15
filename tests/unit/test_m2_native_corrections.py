@@ -101,3 +101,58 @@ def test_squash_does_not_refund_failed_collector(
     commit(repository, "synthetic squash")
     with pytest.raises(ValueError, match="history missing.*without refund"):
         guard.inspect(reconciliation)
+
+
+@pytest.fixture
+def v9_scenario(m2_scenario: tuple[ModuleType, Path, Path]) -> tuple[ModuleType, Path, Path]:
+    guard, repository, reconciliation = m2_scenario
+    directory = repository / "docs/policy"
+    old = json.loads((directory / "M2_NATIVE_CORRECTION_LIMIT_V8.json").read_bytes())
+    checkpoint = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V1.json").read_bytes())
+    policy = json.loads((ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V9.json").read_bytes())
+    canonical = guard.load_post().canonical_sha256
+    policy.update(
+        base_commit=command(repository, "rev-parse", "HEAD"),
+        prior_policy_sha256=canonical(old),
+        prior_consumed_checkpoint_sha256=canonical(checkpoint),
+    )
+    (directory / "M2_NATIVE_CORRECTION_LIMIT_V9.json").write_text(
+        json.dumps(policy), encoding="utf-8"
+    )
+    commit(repository, "synthetic explicit V9 extension retaining25")
+    return guard, repository, reconciliation
+
+
+def test_v9_preserves25_and_counts_one_corrected_collector(
+    v9_scenario: tuple[ModuleType, Path, Path],
+) -> None:
+    guard, repository, reconciliation = v9_scenario
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 25
+    (repository / guard.SOURCES[0]).write_text("corrected_collector = 2\n", encoding="utf-8")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 26
+    commit(repository, "synthetic corrected collector")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 26
+    (repository / guard.SOURCES[1]).write_text("generator = 1\n", encoding="utf-8")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 27
+
+
+def test_v9_does_not_allow_second_correction(
+    v9_scenario: tuple[ModuleType, Path, Path],
+) -> None:
+    guard, repository, reconciliation = v9_scenario
+    source = repository / guard.SOURCES[0]
+    source.write_text("corrected_collector = 2\n", encoding="utf-8")
+    commit(repository, "synthetic one approved correction")
+    source.write_text("extra_collector = 3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="version exhausted"):
+        guard.inspect(reconciliation)
+
+
+def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Path, Path]) -> None:
+    guard, repository, reconciliation = v9_scenario
+    path = repository / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V1.json"
+    checkpoint = json.loads(path.read_bytes())
+    checkpoint["retained_consumed_source_changes"] = 24
+    path.write_text(json.dumps(checkpoint), encoding="utf-8")
+    with pytest.raises(ValueError, match="retained consumption conflict"):
+        guard.inspect(reconciliation)

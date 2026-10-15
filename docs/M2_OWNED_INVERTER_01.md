@@ -1,3 +1,20 @@
+## Approved corrected collector continuation, 2026-10-15
+
+The human explicitly approved the preceding concrete continuation and all its
+listed additional approvals. Active source ceiling27 retains consumed25: one
+corrected collector version plus the still-unused generator. DC1/TRAN1 at128MiB
+each/256MiB total,500 cumulative attempts,16GiB cumulative reservations and the
+original domain/ledger/locks/replay remain binding. V8 and consumedV1 are retained;
+V9 records this extension. It is not a fresh ledger or another operator default.
+PR160 continues on its existing branch; new phase merge/publication and physical
+DRC/LVS/PEX are outside the proposed continuation. Earlier proposal/unapproved
+paragraphs below remain dated history. Further Claude work stays excluded.
+
+Current actual ordinary-user preflight126/15,452,864,512 matches the retained
+counter. The corrected collector adds typed field observations and a clean
+nonzero exit after load errors. Complete output is observation only: missing
+or wrong-type required production metadata still blocks OA/simulation.
+
 # M2 owned inverter: active bounded authorization, 2026-10-15
 
 The direct human response approving the concrete M2 proposal authorizes normal

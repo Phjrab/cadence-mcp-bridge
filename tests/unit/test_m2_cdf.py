@@ -43,6 +43,73 @@ def test_fixed_readonly_script() -> None:
     for forbidden in ("dbSave", "dbReplaceProp", "cdfSet", "eval", "load("):
         assert forbidden not in program
     assert 'list("vdc" "vpulse" "cap")' in program
+    assert "~>simInfo~>spectre" not in program
+    assert '"wrong_type"' in program
+    assert "errset(m2Collect() t)" in program
+    assert "else exit(1)" in program
+
+
+def v2_frame(*, unknown: bool = False) -> bytes:
+    raw = frame().replace(b"M2_CDF_V1", b"M2_CDF_V2")
+    rows = []
+    for scope in ("base", "effective"):
+        for name in (
+            "simInfo",
+            "spectre",
+            "componentName",
+            "termOrder",
+            "namePrefix",
+            "modelName",
+            "instParameters",
+            "netlistProcedure",
+        ):
+            value = (
+                '"nmos"'
+                if name == "componentName"
+                else ('("D" "G" "S" "B")' if name == "termOrder" else "nil")
+            )
+            status = "wrong_type" if unknown else "observed"
+            rows.append(
+                f'META|"{scope}"|"{name}"|"{status}"|string|{value if not unknown else "nil"}'
+            )
+    if unknown:
+        raw = raw.replace(b'"nmos"|("D" "G" "S" "B")', b"nil|nil")
+    return raw.replace(b"END\n", ("\n".join(rows) + "\nEND\n").encode())
+
+
+def test_missing_or_wrong_type_is_complete_but_unqualified_data() -> None:
+    result = parse_frame(v2_frame(unknown=True))[0]
+    assert result["spectre"] == (("base", None, None), ("effective", None, None))
+    assert len(result["metadata_fields"]) == 16  # type: ignore[arg-type]
+    assert "qualified" not in result
+
+
+def test_typed_metadata_conflict_rejects() -> None:
+    assert len(parse_frame(v2_frame())) == 1
+    with pytest.raises(ValueError, match="conflicting"):
+        parse_frame(
+            v2_frame().replace(
+                b'"componentName"|"observed"|string|"nmos"',
+                b'"componentName"|"observed"|string|"pmos"',
+            )
+        )
+
+
+def test_typed_metadata_truncation_rejects() -> None:
+    with pytest.raises(ValueError, match="incomplete typed"):
+        parse_frame(v2_frame().replace(b'META|"base"|"simInfo"|"observed"|string|nil\n', b""))
+
+
+def test_emitted_program_has_balanced_forms() -> None:
+    import re
+
+    text = render_collector(CdfSource("RegisteredLib", "RegisteredCell")).decode()
+    without_strings = re.sub(r'"(?:[^"\\]|\\.)*"', "", text)
+    depth = 0
+    for char in without_strings:
+        depth += int(char == "(") - int(char == ")")
+        assert depth >= 0
+    assert depth == 0
 
 
 @pytest.mark.parametrize(
