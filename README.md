@@ -86,6 +86,12 @@ unverified; plan validation cannot grant execution, ERC/LVS or physical signoff.
 See [M2 foundation](docs/M2_FOUNDATION_01.md) for API and preservation limits and
 [physical observations](docs/M2_PHYSICAL_OBSERVATIONS.md) for current unknowns.
 
+The experimental operator-only CDF renderer/parser adds no MCP tool or remote
+execution CLI and never runs at import/server startup. Its first bounded VM
+observation failed on a CDF metadata type and timed out; incomplete metadata
+does not qualify production devices. New OA generation and DC/TRAN remain
+blocked. See [the retained result and limits](docs/M2_OWNED_INVERTER_01.md).
+
 ## POST-02 development: available features
 
 Read `cadence://feature-guidance` in a resource-capable MCP client, or run

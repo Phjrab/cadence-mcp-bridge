@@ -1,3 +1,20 @@
+## M2 collector failed safely; actual inverter blocked, 2026-10-15
+
+PR159 normally merged at f572fd9. One fixed collector e0d10f1 ran at UID500;
+CDF Spectre metadata access hit an unexpected empty-string type, leaving an
+incomplete frame. The owned60s process guard stopped that group. Library
+snapshots, seven model file contents and ledger stayed equal; retained native
+preflight passed. No original OA/ADE save, new DUT/bench, netlisting, Spectre,
+extraction, activation or new simulation grant. This slice adds0 attempts/0 bytes.
+Actual ledger126/500 and15,452,864,512/17,179,869,184; source25/26 consumed.
+The failed collector stays frozen; the unused generator slot does not permit a
+collector correction. New observed production registry/OA/DC/TRAN remain blocked.
+Local19 collector tests pass; final accounting/security/install/hosted checks are
+recorded separately in M2_OWNED_INVERTER_01.md. Keep earlier overlays as history.
+Proposed next decision is one corrected collector plus generator with ceiling27,
+preserving consumed25 and existing DC1/TRAN1/256MiB total; no approval is inferred.
+This new feature PR has no merge/publication authority. Claude stays excluded.
+
 ## Active approved M2 owned inverter slice, 2026-10-15
 
 Direct human approval covers PR159 normal merge (completed f572fd9), one fixed

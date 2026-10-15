@@ -3,21 +3,28 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = ("src/cadence_mcp_bridge/m2_cdf.py", "src/cadence_mcp_bridge/m2_inverter.py")
 
 
-def inspect(reconciliation: Path) -> dict[str, object]:
+def load_post() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
         "post_guard", ROOT / "scripts/verify-post-native-corrections.py"
     )
     assert spec is not None and spec.loader is not None
     post = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(post)
+    return post
+
+
+def inspect(reconciliation: Path) -> dict[str, object]:
+    post = load_post()
     retained = post.inspect(reconciliation)
     policy = json.loads((ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V8.json").read_bytes())
     if (
@@ -31,6 +38,22 @@ def inspect(reconciliation: Path) -> dict[str, object]:
     ):
         raise ValueError("M2 retained source/policy conflict")
     post.require_ancestor(policy["base_commit"])
+    checkpoint = json.loads(
+        (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V1.json").read_bytes()
+    )
+    if (
+        checkpoint["retained_consumed_source_changes"] != 25
+        or checkpoint["authority"] != "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY"
+        or checkpoint["base_commit"] != policy["base_commit"]
+        or checkpoint["generator_versions_consumed"] != 0
+    ):
+        raise ValueError("M2 consumed checkpoint conflict; no refund")
+    post.require_ancestor(checkpoint["collector_commit"])
+    if (
+        hashlib.sha256((ROOT / SOURCES[0]).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        != (checkpoint["collector_module_lf_sha256"])
+    ):
+        raise ValueError("M2 deployed collector differs; no corrective deployment")
     counts = []
     for path in SOURCES:
         commits = set(

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "base_commit": "f572fd9fea286e34bc62cc964a90b18a3c8afd7b",
+  "retained_consumed_source_changes": 25,
+  "collector_commit": "e0d10f13d8a23fc1fac596e31fea62ff9c4b4c49",
+  "collector_module_lf_sha256": "5bf92d854791707da7a2ebc9b99a2bf3b89462f705739eebe6e29a12017d0ec5",
+  "collector_script_sha256": "d1c27386fb11434b77330d4a44f45923036fb179b0aea7cffe13642cbbc9009f",
+  "fixed_wrapper_sha256": "77d796df0bbfd295d7fd50303ffd94c2e8e05b4824ddffdf5d1013b4166bcce3",
+  "collector_outcome": "FAILED_RETAINED_CDF_TYPE_ERROR_AND_OWNED_TIMEOUT",
+  "generator_versions_consumed": 0,
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

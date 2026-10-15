@@ -21,9 +21,19 @@ def verify(workspace: Path, *, preserved: bool) -> None:
         print(json.dumps({"status": "M2_LOCAL_STATE_PRESERVED"}))
         return
     import cadence_mcp_bridge
+    from cadence_mcp_bridge.m2_cdf import CdfSource, parse_frame, render_collector
 
     if not Path(cadence_mcp_bridge.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()):
         raise ValueError("installed package origin required")
+    # Pure local generation/parsing is not CDF/PDK qualification or execution.
+    script = render_collector(CdfSource("RegisteredLibrary", "RegisteredCell"))
+    assert b'"schematic" "" "r"' in script and b"dbSave" not in script
+    try:
+        parse_frame(b'M2_CDF_V1\nDEVICE|"fixture"|"fixture"|nil\n')
+    except ValueError:
+        pass
+    else:
+        raise ValueError("incomplete observed CDF must remain blocked")
     workspace.mkdir()
 
     def run(*args: str) -> dict[str, Any]:

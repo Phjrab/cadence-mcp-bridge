@@ -1,3 +1,14 @@
+## Superseding bounded M2 outcome, 2026-10-15
+
+Direct human approval subsequently authorized PR159 normal merge and the finite
+actual inverter proposal below, with source24 to26. PR159 merged at f572fd9.
+The first fixed collector failed on CDF metadata typing and its60s timeout;
+partial observations are unqualified. Source25/26 is retained, actual ledger
+126/15,452,864,512 unchanged, and generator/DC/TRAN are blocked. No corrective
+collector version, this new phase PR merge or publication is implied.
+See [current boundary and proposed next decision](M2_OWNED_INVERTER_01.md).
+Earlier pending/not-authorized sections below retain their original scope.
+
 # M2-FOUNDATION-01: local design revision and inverter plan
 
 This development feature provides the first local design foundation after POST.

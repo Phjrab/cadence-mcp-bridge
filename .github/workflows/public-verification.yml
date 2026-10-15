@@ -105,6 +105,9 @@ jobs:
       - name: Local design revision, inverter plan and physical evidence contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py -q --basetemp "$HOME/m2-foundation-tests"
 
+      - name: Bounded CDF data parsing and retained source allowance
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_m2_cdf.py tests/unit/test_m2_native_corrections.py -q --basetemp "$HOME/m2-cdf-tests"
+
       - name: Fresh storage and result counter policy consumers
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_storage_worker.py tests/unit/test_storage_lock.py tests/unit/test_storage_runtime.py tests/unit/test_native_storage_groups.py tests/unit/test_storage.py tests/unit/test_resource_policy.py tests/unit/test_fresh_policy_consumers.py -q --basetemp "$HOME/grel-consumer-tests"
 

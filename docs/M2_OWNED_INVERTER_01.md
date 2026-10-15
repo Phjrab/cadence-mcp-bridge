@@ -39,3 +39,57 @@ increase is included. Claude remains EXCLUDED_BY_USER.
 
 Local tests, installed checks, actual metadata, OA creation, simulator/extractor
 and actual app evidence are separate. None is inherited merely from PR159 merge.
+
+## Actual collector failure and enforced stop
+
+Frozen collector e0d10f13d8a23fc1fac596e31fea62ff9c4b4c49 was invoked once under
+the retained accounting lock at UID500. It produced an incomplete private frame:
+one device, four terminals and46 parameter records, without a Spectre record or
+COMPLETE marker. A nested CDF Spectre metadata accessor encountered an empty
+string where SKILL expected a symbol/list/structure/object. The exact member of
+that chain is not isolated. Do not infer simulator semantics from the partials.
+The load error prevented normal exit; the60-second owned-process guard terminated
+only its own process group. This is a collector failure, not evidence that the
+PDK, installation or source circuit is corrupt or unsupported.
+
+Before/after registered library snapshots matched. All seven registered model
+file contents and the existing ledger matched; latest retained preflight passed.
+The model-content check is not an independent whole-model metadata attestation.
+OCEAN diagnostic logs/frame and its panic/lock artifacts remain preserved under
+the exclusive owned diagnostic job. No original OA/ADE was saved, no DUT/bench
+was created, no netlisting/Spectre/extraction or grant activation occurred.
+Attempts remain126 and result reservations15,452,864,512 bytes; this slice adds0/0.
+
+One fixed collector version is consumed:25/26 total. The remaining version is
+reserved for the generator and cannot silently become a collector correction.
+The durable M2 consumed checkpoint pins the failed commit/script/wrapper hashes;
+squashing history, changing source or creating another name cannot refund it.
+The old POST24 checkpoint and policies are unchanged. The generator, DC and TRAN
+are blocked on complete observed CDF and have not consumed their proposed scope.
+
+Read-only evidence retrieval initially rejected a whole diagnostic snapshot due
+to retained panic/lock artifacts. A separate fixed-leaf observation read the
+existing logs/frame with content/metadata stability checks, without removing or
+ignoring artifacts for any execution admission. It started no Cadence process.
+
+Next proposed scope, **not authorized by this record**: preserve consumed25 and
+raise the source ceiling26 to27 for one defensive collector correction plus the
+still-unspent generator. Retain at most DC1/TRAN1 and256MiB combined, unchanged
+500/16GiB cumulative limits, original domain/ledger and all stop conditions.
+The correction must record missing/wrong-type Spectre metadata as unknown,
+validate complete evidence before OA generation and exit cleanly on load errors.
+No extra simulation allowance, repeated blind collector deployment, phase PR
+merge or publication is implied. Exact implementation/review and any source
+deployment require that separate bounded decision.
+
+## Local evidence at feature freeze
+
+Collector/design/retained POST guard regression:107 passed,6 Windows symlink
+fixture skips. New collector/source-accounting/security batch:42 passed.
+The new checkpoint fixtures initially hashed CRLF while the guard correctly
+normalizes LF; only disposable fixture hashing was corrected, not the deployed
+collector. Whole src/scripts/tests Ruff and strict mypy113 source files passed.
+Secret preflight1195 files and85-tool/22-legacy compatibility check passed.
+The initial temporary test-path invocation and fixture failures are retained.
+Exact unpublished package/installed lifecycle and hosted checks remain pending
+until recorded against their source SHA; none can qualify the failed VM path.
