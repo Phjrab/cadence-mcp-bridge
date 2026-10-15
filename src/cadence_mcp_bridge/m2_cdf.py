@@ -101,7 +101,9 @@ procedure(m2Collect()
  count=0
  foreach(inst cv~>instances
   count=count+1 when(count>8 error("M2_INSTANCE_BOUND"))
-  m2CdfDump(port inst~>libName inst~>cellName inst))
+  unless(and(inst~>libName=="basic"
+             member(inst~>cellName list("ipin" "opin" "iopin")))
+   m2CdfDump(port inst~>libName inst~>cellName inst)))
  dbClose(cv)
  foreach(cell list("vdc" "vpulse" "cap") m2CdfDump(port "analogLib" cell nil))
  fprintf(port "COMPLETE\n") close(port) t))

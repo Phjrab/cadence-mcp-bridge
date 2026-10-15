@@ -130,6 +130,35 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
         ):
             raise ValueError("M2 failed corrected collector identity changed")
         consumed, ceiling = 26, 28
+        next_path = directory / "M2_NATIVE_CORRECTION_LIMIT_V11.json"
+        if next_path.exists():
+            next_checkpoint = json.loads(
+                (directory / "M2_NATIVE_CORRECTION_CONSUMED_V3.json").read_bytes()
+            )
+            next_policy = json.loads(next_path.read_bytes())
+            if (
+                next_policy["prior_policy_sha256"] != post.canonical_sha256(policy)
+                or next_policy["prior_consumed_checkpoint_sha256"]
+                != post.canonical_sha256(next_checkpoint)
+                or next_checkpoint["prior_consumed_checkpoint_sha256"]
+                != post.canonical_sha256(current_checkpoint)
+                or next_checkpoint["retained_consumed_source_changes"] != 27
+                or next_checkpoint["generator_versions_consumed"] != 0
+                or next_policy["base_commit"] != next_checkpoint["corrected_collector_commit"]
+            ):
+                raise ValueError("M2 V11 retained failure chain conflict")
+            post.require_ancestor(next_checkpoint["corrected_collector_commit"])
+            previous = subprocess.check_output(
+                ["git", "show", next_checkpoint["corrected_collector_commit"] + ":" + SOURCES[0]],
+                cwd=post.ROOT,
+            )
+            if (
+                hashlib.sha256(previous.replace(b"\r\n", b"\n")).hexdigest()
+                != (next_checkpoint["collector_module_lf_sha256"])
+            ):
+                raise ValueError("M2 source27 identity changed")
+            policy = next_policy
+            consumed, ceiling = 27, 29
     if (
         retained["conservative_consumed"] != 24
         or v9["prior_policy_sha256"] != post.canonical_sha256(old)

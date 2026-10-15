@@ -1,0 +1,14 @@
+{
+  "schema_version": 3,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 27,
+  "corrected_collector_commit": "9716851a3f4b85859c886c98e1c6db2870cf89db",
+  "collector_module_lf_sha256": "8651ccd87b1c72b1a498708e670e33d5531585c66fe3e3231938bd30dc993d33",
+  "collector_script_sha256": "2542f90a2284bad8746b5fff24c6184692f0bf8c2f4a82ce4c2e597a9ab05563",
+  "fixed_wrapper_sha256": "fa5728abab98818f06321af1281bf9219c63ed99e67ea5bbbfbc8b4dbcdf2b36",
+  "collector_outcome": "FAILED_RETAINED_BASIC_PORT_MARKER_HAS_NO_CDF",
+  "generator_versions_consumed": 0,
+  "prior_consumed_checkpoint_sha256": "6bd00f15528269f4a4798180eb0caa2016d2e136573166ba055c9370bd3139da",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

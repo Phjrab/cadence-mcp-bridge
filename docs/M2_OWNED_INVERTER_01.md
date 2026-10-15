@@ -1,3 +1,17 @@
+## Retained source27 and exact basic port exclusion, 2026-10-15
+
+Source27 passed the legacy API point and observed both MOS CDF scopes, then
+failed cleanly on basic/opin, a schematic port marker with no base CDF. Preserve
+that failure, partial frame and all prior policy/checkpoint history. The minimum
+collector correction omits only exact basic ipin/opin/iopin markers; unknown
+instances still require CDF and block. Direct broad additional user authority
+covers this necessary correction: V11 retains27, finite ceiling29, one collector
+and the unused generator. No new experiment or result ceiling is introduced.
+Ordinary UID500 before/after library/model-content/ledger checks passed;
+126 attempts and15,452,864,512 reserved bytes remain unchanged. Actual complete
+CDF, owned OA, netlisting and DC/TRAN are still unqualified. PR160 stays draft;
+no merge/publication, Claude, DRC/LVS/PEX or protected-data modification.
+
 ## Current broad additional delegation and bounded legacy API correction
 
 The human subsequently explicitly approved all additional approvals required

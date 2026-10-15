@@ -49,6 +49,10 @@ def test_fixed_readonly_script() -> None:
     assert "else exit(1)" in program
     assert "symbolToString(field)" in program
     assert "symbolName(" not in program
+    assert 'inst~>libName=="basic"' in program
+    assert 'member(inst~>cellName list("ipin" "opin" "iopin"))' in program
+    # Only known port markers are omitted; every other instance still needs CDF.
+    assert 'unless(base error("M2_CDF_MISSING"))' in program
 
 
 def v2_frame(*, unknown: bool = False) -> bytes:

@@ -158,8 +158,10 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
+@pytest.mark.parametrize("port_correction", [False, True])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
+    port_correction: bool,
 ) -> None:
     guard, repository, reconciliation = v9_scenario
     directory = repository / "docs/policy"
@@ -194,9 +196,38 @@ def test_current_additional_approval_preserves_both_failed_versions(
     assert guard.inspect(reconciliation)["conservative_consumed"] == 26
     collector.write_text("minimum_legacy_api_correction = 3\n", encoding="utf-8")
     assert guard.inspect(reconciliation)["conservative_consumed"] == 27
-    commit(repository, "synthetic one additional bounded correction")
+    third = commit(repository, "synthetic one additional bounded correction")
+    if port_correction:
+        next_checkpoint = json.loads(
+            (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V3.json").read_bytes()
+        )
+        next_checkpoint.update(
+            corrected_collector_commit=third,
+            collector_module_lf_sha256=hashlib.sha256(
+                collector.read_bytes().replace(b"\r\n", b"\n")
+            ).hexdigest(),
+            prior_consumed_checkpoint_sha256=canonical(checkpoint),
+        )
+        next_policy = json.loads(
+            (ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V11.json").read_bytes()
+        )
+        next_policy.update(
+            base_commit=third,
+            prior_policy_sha256=canonical(policy),
+            prior_consumed_checkpoint_sha256=canonical(next_checkpoint),
+        )
+        for name, value in (
+            ("M2_NATIVE_CORRECTION_CONSUMED_V3.json", next_checkpoint),
+            ("M2_NATIVE_CORRECTION_LIMIT_V11.json", next_policy),
+        ):
+            (directory / name).write_text(json.dumps(value), encoding="utf-8")
+        commit(repository, "synthetic finite port correction scope retaining27")
+        assert guard.inspect(reconciliation)["conservative_consumed"] == 27
+        collector.write_text("exact_basic_port_exclusion = 4\n", encoding="utf-8")
+        assert guard.inspect(reconciliation)["conservative_consumed"] == 28
+        commit(repository, "synthetic corrected port collection")
     (repository / guard.SOURCES[1]).write_text("generator = 1\n", encoding="utf-8")
-    assert guard.inspect(reconciliation)["conservative_consumed"] == 28
+    assert guard.inspect(reconciliation)["conservative_consumed"] == (29 if port_correction else 28)
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)
