@@ -1,5 +1,12 @@
 ## POST-02 final correction and conditional integration, 2026-10-15
 
+The latest review correction keeps parsed-grant retained read guidance separate
+from submit matching: mismatched bindings/ceilings/removed grant designs remain
+blocked for new work without disabling historical status/result/specification.
+Twelve actual-service synthetic lifecycle cases pass; related354/Ruff/mypy101 PASS and
+independent agent review has no actionable finding. Malformed/stale bindings
+remain blocked. Update final hosted gates and propagate this source normally.
+
 Final static-prerequisite/reason audit covers registered specification versus
 missing result route and native ADE subtype/copy-policy/environment-capability
 blocks. Related213 PASS, Ruff/mypy101 PASS; independent agent review finds no

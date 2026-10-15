@@ -1,5 +1,12 @@
 ## POST-02 sweep eligibility correction, 2026-10-15
 
+Final read-route correction preserves retained result/specification guidance after
+a parsed grant fails submit-only binding, ceiling or design membership checks.
+Malformed/stale documents remain blocked. Twelve actual-service synthetic cases
+verify retained status/result/spec reads and denied new plan/submit; related354
+PASS, Ruff/mypy101 PASS with unchanged journal/result contents. Independent agent review reports no
+actionable issue; final hosted checks remain required. No VM work or spend.
+
 Final adjacent guidance review distinguishes missing native result route from a
 registered specification and blocks the renderer's known ADE subtype/copy-policy/
 environment-capability prerequisites. Related213 PASS, Ruff/mypy101 PASS; separate
