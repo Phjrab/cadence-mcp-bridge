@@ -109,7 +109,13 @@ def inspect(reconciliation: Path) -> dict[str, object]:
     added = sorted(
         set(
             git(
-                "log", "--no-merges", "--format=%H", BASELINE + "..HEAD", "--", *NATIVE_PATHS
+                "log",
+                "--full-history",
+                "--no-merges",
+                "--format=%H",
+                BASELINE + "..HEAD",
+                "--",
+                *NATIVE_PATHS,
             ).splitlines()
         )
     )

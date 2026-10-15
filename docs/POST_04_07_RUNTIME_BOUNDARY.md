@@ -18,11 +18,18 @@ a new budget/journal. V7 and the private reconciliation remain unchanged.
 The read-only guard unions retained identities with qualifying source commits
 and pending edits. Squash/rebase or missing retained ancestry rejects instead of
 reducing consumption; a normal merge preserving identities and source tree is
-accepted. A merge-only source edit also rejects, even if `git log --no-merges`
-would omit it. A future history reconciliation must preserve all consumed
+accepted. Full history traversal retains extra consumed source commits even when
+an `ours` merge keeps the pinned tree and default path-history simplification
+would hide those commits. A merge-only source edit also rejects, even if
+`git log --no-merges` would omit it. A future history reconciliation must preserve all consumed
 changes, and a new source correction requires a separately approved allowance.
 This guard neither updates policy nor deploys anything, refunds consumption,
 issues a grant or creates a competing resource ledger.
+
+Eleven disposable-history regressions cover retained accounting, normal merge,
+squash, hidden ancestral consumption, committed/pending source changes, merge-only
+tree drift and stale inputs. They run in the Windows unit suite and the dedicated
+Linux CI step; neither synthetic history is a current-VM execution check.
 
 ## Current authorization, 2026-10-14
 

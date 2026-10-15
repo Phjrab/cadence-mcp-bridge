@@ -143,6 +143,29 @@ def test_normal_merge_preserves_all_consumed_identities(
     assert guard.inspect(reconciliation)["conservative_consumed"] == 24
 
 
+def test_ours_merge_cannot_hide_an_additional_consumed_source_change(
+    scenario: tuple[ModuleType, Path, Path],
+) -> None:
+    guard, repository, reconciliation = scenario
+    command(repository, "checkout", "-b", "extra")
+    (repository / guard.NATIVE_PATHS[0]).write_text("extra = 5\n", encoding="utf-8")
+    extra = commit(repository, "additional consumed correction")
+    command(repository, "checkout", "source")
+    command(repository, "merge", "--no-ff", "-s", "ours", "extra", "-m", "retain original tree")
+    simplified = command(
+        repository,
+        "log",
+        "--no-merges",
+        "--format=%H",
+        guard.BASELINE + "..HEAD",
+        "--",
+        *guard.NATIVE_PATHS,
+    )
+    assert extra not in simplified.splitlines()  # Default simplification hides the consumption.
+    with pytest.raises(ValueError, match="ceiling exceeded"):
+        guard.inspect(reconciliation)
+
+
 @pytest.mark.parametrize("committed", [False, True])
 def test_further_selected_source_change_exceeds_exhausted_allowance(
     scenario: tuple[ModuleType, Path, Path],
