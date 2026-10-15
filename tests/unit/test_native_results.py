@@ -14,6 +14,19 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 __all__ = ["operator", "operator_base"]
 
 
+@pytest.mark.asyncio
+async def test_report_lookup_retains_conditions_without_changing_original_result(retrieval):
+    provider, plan, op, payload, calls = retrieval
+    original_observation, original = await provider.result(op, plan)
+    observed, report = await provider.report_result(op, plan)
+    conditions = report.pop("report_conditions")
+    assert report == original and observed == original_observation
+    assert conditions["analysis_inputs"] == payload["ade"]["inputs"]
+    assert conditions["source_tree_sha256"] == payload["ade"]["source_tree_sha256"]
+    assert "path" not in __import__("json").dumps(conditions)
+    assert calls == ["result", "result"]
+
+
 @pytest.fixture
 def retrieval(operator, monkeypatch):
     context, plan, ade, reader, op, native_input = args = reader_for(operator)

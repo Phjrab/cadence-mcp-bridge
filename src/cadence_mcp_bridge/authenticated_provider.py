@@ -252,6 +252,17 @@ class AuthenticatedOperatorProvider:
     async def result(
         self, operation_id: str, plan: OperationPlan
     ) -> tuple[ProviderObservation, dict[str, object]]:
+        return await self._result(operation_id, plan, include_report_conditions=False)
+
+    async def report_result(
+        self, operation_id: str, plan: OperationPlan,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
+        """Same verified result lookup with path-free input/definition context for reports."""
+        return await self._result(operation_id, plan, include_report_conditions=True)
+
+    async def _result(
+        self, operation_id: str, plan: OperationPlan, *, include_report_conditions: bool,
+    ) -> tuple[ProviderObservation, dict[str, object]]:
         from pydantic import TypeAdapter
 
         from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -328,6 +339,16 @@ class AuthenticatedOperatorProvider:
             completed_tree_fingerprint=data.completed_size.tree_fingerprint,
             size_observation="COMPLETED_JOB_READONLY",
         )
+        if include_report_conditions:
+            projected["report_conditions"] = {
+                "analysis_inputs": data.ade.inputs.model_dump(mode="json"),
+                "source_tree_sha256": data.ade.source_tree_sha256,
+                "ade_state_tree_sha256": data.ade.ade_state_tree_sha256,
+                "static_statements_sha256": data.ade.static_statements_sha256,
+                "model_file_sha256": [m.file_sha256 for m in data.ade.model_includes],
+                "transfer": None if data.reader.transfer is None
+                else data.reader.transfer.model_dump(mode="json"),
+            }
         return observation, projected
 
 

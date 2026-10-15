@@ -1,3 +1,28 @@
+## POST-03 installed correction complete; hosted gates, 2026-10-15
+
+Final integrated packaged source5069e65 passes locked isolated operation/report
+and publication-fault checks, including six sidecar rejections before contact,
+pending-file preservation, complete single-link retry and19 unchanged synthetic
+context files. Related report/guidance/sweep65 PASS/one Linux-only Windows skip;
+Ruff/mypy and wheel/sdist content/license checks pass. Parent f73b2f0 is normally
+merged through e99b755; only test/document files differ from the installed source.
+Finish final-head hosted Linux/Windows and refreshed review, resolve addressed
+threads, then normal integration subject to platform protections. No new VM
+execution/extraction is needed. Current user permits conditional POST154–158
+integration, not another release; Claude remains EXCLUDED_BY_USER.
+
+## POST-03 remaining integration checks, 2026-10-15
+
+The two confirmed reporting defects are fixed: no configured SQLite sidecar
+can be selected as capture output, and incomplete exports cannot occupy the
+final report/catalog name. Failed pending evidence and existing destinations
+remain preserved. Focused35 source tests PASS/one Windows POSIX skip; relevant
+security, compatibility and earlier installed synthetic reporting checks pass.
+Refresh the exact installed/hosted checks after the final154 parent correction,
+then resolve review and normally integrate only when GitHub protections pass.
+No new VM execution or extraction is required for host file-publication fixes.
+Claude is EXCLUDED_BY_USER; source history/accounting/published2.0.0 stay intact.
+
 ## POST-02 final correction and conditional integration, 2026-10-15
 
 The latest review correction keeps parsed-grant retained read guidance separate
@@ -25,6 +50,33 @@ the corrected parent into155–158 without rewriting history. The latest direct
 user instruction authorizes those conditional merges. No new VM work is needed
 for this host-only correction. Claude remains EXCLUDED_BY_USER, not PASS, and
 published2.0.0 is immutable. Earlier checkpoints below remain dated history.
+
+## Active POST-03; continuous POST-04--07, 2026-10-13
+
+Finish read-only retained job catalog, authenticated existing-result report capture
+and condition-compatible offline search/comparison. Preserve quantities, units,
+definitions, job/plan/provenance and explicit capture-date semantics. Reporting
+must never submit/reconcile/extract/reserve or initialize an absent journal.
+Existing85+11 tool contracts and immutable published2.0.0 remain unchanged.
+
+Final affected126/static/security/package/compatibility PASS. Locked installed
+actual existing DC result capture/repeat PASS with journal/selected inputs unchanged.
+Initial full3628 PASS/392 skips/three long Windows fixture failures retained;
+short-path report/storage91 PASS/8 skips with no storage code change. Final full
+and feature-SHA hosted checks remain separate gates. Actual accounting112 attempts/
+13,825,474,560 bytes and corrections20/20 remain retained. Document installed
+synthetic, source-host VM and actual-client evidence separately, then create a
+stacked feature PR over POST-02. Do not infer POST merge/publication permission.
+
+Continue approved POST-04 recovery, POST-05 safe exact-target deletion before
+separate compaction, POST-06 published-build actual Claude and POST-07 scientific
+measurement work. Latest explicit Claude access passes accessibility reading;
+screen capture/reconnect timed out. No stale-coordinate inputs or permission
+bypass; actual app acceptance is pending. Exact deletion targets and scientific
+testbench/action authority remain binding. Native source ceiling20/20 is retained;
+the numeric24 proposal remains pending, without further worker changes or resets.
+See POST_03_RESULT_REPORTS.md and POST_04_07_RUNTIME_BOUNDARY.md.
+Earlier entries below remain dated history.
 
 ## Active POST-02; POST-03--07 continuous approval, 2026-10-13
 

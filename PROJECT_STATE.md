@@ -1,3 +1,35 @@
+## POST-03 integrated installed correction receipt, 2026-10-15
+
+Integrated155 source5069e65 and parent154 ef8c800 pass the related report/guidance/
+sweep checks65 PASS/one Linux-only Windows skip. Exact wheel/sdist content/license
+audit and locked isolated installation pass:96-schema local-plan/restart, offline
+report/catalog and installed publication fault/sidecar/retry checks. Six sidecar
+targets reject before contact;19 synthetic context files, failed candidates and
+existing reports stay intact. No VM contact/simulation/extraction/reservation.
+The subsequent normal merge e99b755 of154 f73b2f0 changes only a POSIX symlink
+atime test fixture and its documentation; packaged source/scripts/lock are identical.
+Final hosted Linux/Windows and refreshed review remain separate integration gates.
+See docs/POST_03_RESULT_REPORTS.md for exact artifacts and evidence scope. Earlier
+receipts remain history; public2.0.0 stays immutable and Claude EXCLUDED_BY_USER.
+
+## POST-03 publication and journal protection correction, 2026-10-15
+
+PR155 reviews4258486405/4258486421 are corrected: capture reserves normalized
+analysis/sweep journal sidecars for every configured context before provider
+contact. Complete reports are staged/fsynced then atomically published without
+replacement; failed pending files remain evidence outside the JSON catalog.
+Existing report bytes, read-only journals and single-link read validation stay
+protected. Process interruption before/after publication and destination races
+have dedicated disposable tests. Current focused35 PASS/one Windows POSIX skip,
+Ruff/mypy PASS; earlier related110 PASS/two platform skips and isolated installed
+publication/sidecar/report/96-tool checks PASS for their source. Final integrated
+parent/source installed and hosted review gates remain pending. No VM contact,
+simulation, extraction, reservation, native source or public2.0.0 change occurred.
+The normal merge of154 parent79086b preserves both historical document overlays;
+further154 corrections will propagate before final integration qualification.
+Conditional normal POST merges remain authorized; new releases remain excluded.
+See docs/POST_03_RESULT_REPORTS.md. Prior checkpoints retain their source scope.
+
 ## POST-02 sweep eligibility correction, 2026-10-15
 
 Final read-route correction preserves retained result/specification guidance after
@@ -27,6 +59,36 @@ change, simulation, reservation or data deletion; published2.0.0 is preserved.
 The latest user instruction conditionally authorizes normal POST154–158 integration
 in dependency order. Further Claude verification is EXCLUDED_BY_USER, not PASS.
 Earlier policy and evidence below retain their original historical scope.
+
+## Active POST-03 existing-result reports, 2026-10-13
+
+POST-02 PR154 exactd4f23c0 passed both hosted Windows/POSIX checks and remains
+open. POST-03 branches from that head; neither feature changes published2.0.0.
+Read-only native journal catalogs and authenticated existing-result captures now
+preserve verified conditions, quantities, units, definitions and provenance.
+Offline search/comparison rejects condition mismatches and labels imported files
+as local content, not new remote attestations. No submit/extraction path is used.
+
+Final affected126 tests, Ruff/mypy102, security18/locked audit, package/compatibility
+PASS. Initial full3628 PASS/392 skips/three failures: traced a271-character Windows
+disposable fixture audit path; short report/storage91 PASS/8 platform skips without
+changing storage code. Final short-root full/hosted checks remain separate gates.
+Source-host CLI captured one existing actual VM DC
+result twice, four quantities equal, selected local inputs and journal unchanged.
+No simulation/extraction/reservation; fresh ledger112/13,825,474,560 and native
+correction20/20 retained. Installed report checks use synthetic data. Locked final
+wheel also captured/repeated the actual VM result with selected inputs/journal
+preserved. No actual
+POST-03 app qualification is claimed. See docs/POST_03_RESULT_REPORTS.md.
+
+Latest explicit Claude access authorization passes window/accessibility reading.
+Screenshot capture and one normal reconnect timed out; POST-06 actual app/build
+verification stays pending, not substituted by SDK success. Continuous POST-04--07
+implementation approval remains; exact deletion and scientific testbench/action
+gates persist. Retained native source correction ceiling20/20 blocks required new
+worker changes until a numeric decision; proposal24 is not active policy. See
+docs/POST_04_07_RUNTIME_BOUNDARY.md. POST PRs have no new inferred merge/publication authority.
+Earlier dated checkpoints below retain their original evidence and scope.
 
 ## Active POST-02 and continuous POST-03--07 approval, 2026-10-13
 
