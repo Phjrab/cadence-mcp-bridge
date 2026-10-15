@@ -12,7 +12,7 @@ creates only an explicitly selected new plan, with no admission or reservation.
 Twenty-two disposable collision cases cover the selected and another configured
 context; a valid export roundtrip/repeat preserves the existing plan and inputs.
 The pre-fix failing regression is retained privately. Recovery tests29 PASS/6
-Windows POSIX skips, related setup/native-service checks38 PASS/3 symlink skips,
+Windows POSIX skips, related setup/native-service checks39 PASS/3 symlink skips,
 Ruff/mypy104 PASS. Hosted final-head checks and installed-package checks remain
 separate gates. This is a host-only output guard: all native source assets remain
 byte-identical to the actual DC-qualified predecessor. No new VM execution,

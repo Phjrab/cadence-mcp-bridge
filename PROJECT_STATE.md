@@ -3,7 +3,7 @@
 Recovery-plan export now rejects every configured context's journal/sidecar,
 contract/settings and resource-lock paths before provider creation. Twenty-two
 collision cases and valid-export/repeat preservation cover the correction. Final
-recovery29 PASS/6 Windows POSIX skips, related38 PASS/3 symlink skips, Ruff/mypy104
+recovery29 PASS/6 Windows POSIX skips, related39 PASS/3 symlink skips, Ruff/mypy104
 PASS. Updated hosted/package gates remain required. Native source is unchanged;
 no new VM execution/reservation/correction or administrator action occurred.
 Actual DC-only qualification and opt-in experimental boundary remain. Latest user

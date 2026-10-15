@@ -2,7 +2,7 @@
 
 Complete final hosted/package/review gates for the corrected recovery-plan export
 path. It rejects configured state and SQLite sidecar collisions before source
-lookup across all contexts. Recovery29 PASS/6 POSIX skips and related38 PASS/3
+lookup across all contexts. Recovery29 PASS/6 POSIX skips and related39 PASS/3
 symlink skips; Ruff/mypy104 PASS. Native assets and actual qualified DC route are
 unchanged. Preserve opt-in experimental CLI and AC/TRAN recovery as unverified.
 Continue latest conditional normal POST154–158 integration in dependency order;
