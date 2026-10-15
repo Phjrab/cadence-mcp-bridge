@@ -1,5 +1,29 @@
 # POST-07 fast-input sampled step validation
 
+## Resumed review correction, 2026-10-15
+
+Exact72a106a installed same-ID retry, two separate-process fine slope reads,
+ordinary report, local96-tool SDK and retained coarse/slow-ramp rejections PASS.
+Fresh ordinary-user preflight still reports126/15,452,864,512 bytes; journals,
+settings and eight prior loop/DC records are preserved, with0 new execution,
+extraction or reservation. Both exact72 hosted OS checks PASS. The prior
+automatic approval-review usage-limit interruption executed no final reads;
+resumed checks now completed without bypassing that service or changing ACLs.
+Onset-bracket thread4269660319 is resolved, not formal GitHub APPROVED.
+
+New automatic P2 review4269771708 demonstrates cumulative small input reversals:
+each saved decrement can fit the plateau tolerance while their sum materially
+overshoots the intended step. Two rising/falling synthetic cases first reproduce
+the defect. The host guard now compares against the running directional extremum;
+the tolerance applies to the complete reversal. Two bounded-noise controls retain
+eligible slopes. Related153 tests, Ruff and mypy108 PASS. The first local run also
+encountered a disposable pytest-directory ACL error; existing ACLs were preserved
+and the authorized run used a fresh evidence directory. This correction needs
+its own exact installed retained-frame verification and hosted checks. No new
+simulation, native source, administrator repair or Claude operation is needed.
+
+Older source-specific checkpoints below remain preserved history.
+
 ## Actual finer-grid result and final causality correction
 
 The separately granted finer TRAN succeeds on exact installed12eb747 at UID500:

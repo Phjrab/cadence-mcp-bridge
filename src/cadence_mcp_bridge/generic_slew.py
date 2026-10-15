@@ -89,10 +89,13 @@ def sampled_slew(
     sign = 1 if input_final > input_initial else -1
     transition = [v for t, v in zip(times, input_wave, strict=True)
                   if definition.initial_stop_s <= t <= definition.final_start_s]
-    if any(sign * (b - a) < -definition.plateau_tolerance_v for a, b in zip(
-        transition, transition[1:], strict=False,
-    )):
-        raise OperationRejected("slew_multiple_or_reversed_input_step")
+    extremum = -math.inf
+    for value in transition:
+        directed = sign * value
+        extremum = max(extremum, directed)
+        # Tolerance applies to the whole reversal, not anew at each sample.
+        if extremum - directed > definition.plateau_tolerance_v:
+            raise OperationRejected("slew_multiple_or_reversed_input_step")
     initial = plateau(output_wave, definition.initial_start_s, definition.initial_stop_s)
     final = plateau(output_wave, definition.final_start_s, definition.final_stop_s)
     step = final - initial

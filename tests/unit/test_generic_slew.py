@@ -147,3 +147,31 @@ def test_monotonic_slow_input_ramp_cannot_qualify_step_slope():
 def test_input_edge_bound_cannot_be_widened_to_hide_ramp():
     with pytest.raises(ValidationError):
         definition(maximum_input_edge_ratio=.5)
+
+
+@pytest.mark.parametrize("falling", [False, True])
+def test_cumulative_small_input_reversals_reject_overshooting_step(falling):
+    data = waves()
+    # Every reversal is below tolerance, but the cumulative return from1.05V
+    # is five times the tolerance. The edge remains above the90% threshold.
+    for point in data["input"]:
+        t = point["time_s"]
+        value = 0 if t < 3 else 1 + max(0, .05 - .005 * (t - 3))
+        point["value_v"] = 1 - value if falling else value
+    with pytest.raises(OperationRejected) as caught:
+        sampled_slew(data, definition(input_initial_v=int(falling),
+                                      input_final_v=int(not falling)))
+    assert caught.value.reason == "slew_multiple_or_reversed_input_step"
+
+
+@pytest.mark.parametrize("falling", [False, True])
+def test_small_input_noise_within_running_extremum_tolerance_is_allowed(falling):
+    data = waves()
+    for point in data["input"]:
+        value = point["value_v"]
+        if 4 <= point["time_s"] <= 12:
+            value += .005
+        point["value_v"] = 1 - value if falling else value
+    result = sampled_slew(data, definition(input_initial_v=int(falling),
+                                          input_final_v=int(not falling)))
+    assert result["status"] == "OBSERVED_SAMPLED_STEP_SLOPE"
