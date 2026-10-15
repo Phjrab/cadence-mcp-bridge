@@ -63,6 +63,29 @@ derives its paths from that selected context. Exports never overwrite an existin
 file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
 for required inputs, retained-state handling and error recovery.
 
+## M2 development: local design plans
+
+The development-only `operator-design` CLI stores immutable local revisions and
+validates a bounded CMOS inverter plan. It is not included in published 2.0.0.
+It has no remote execution backend. Start in a new operator-owned directory:
+
+```powershell
+python -m cadence_mcp_bridge operator-design example --output inverter-example
+python -m cadence_mcp_bridge operator-design init --store revisions.sqlite3
+python -m cadence_mcp_bridge operator-design validate --plan inverter-example/plan.json --registry inverter-example/registry.json --binding inverter-example/binding.json
+python -m cadence_mcp_bridge operator-design record --store revisions.sqlite3 --plan inverter-example/plan.json --registry inverter-example/registry.json --binding inverter-example/binding.json
+python -m cadence_mcp_bridge operator-design show --store revisions.sqlite3 --workspace synthetic-work --design inverter --revision draft-one
+```
+
+The exported device values and zero source hash are explicitly synthetic. They
+are not PDK/CDF guidance. Use a separate metadata store, never the existing
+analysis/sweep journal. Retry retains the same revision; a changed plan needs a
+new revision ID and exact parent binding. External result references remain
+unverified; plan validation cannot grant execution, ERC/LVS or physical signoff.
+`physical-assess --inventory FILE` assesses supplied typed metadata locally.
+See [M2 foundation](docs/M2_FOUNDATION_01.md) for API and preservation limits and
+[physical observations](docs/M2_PHYSICAL_OBSERVATIONS.md) for current unknowns.
+
 ## Set up your VM and register a circuit
 
 Follow the exported `my-operator-setup/README.md` in order. Every installed command

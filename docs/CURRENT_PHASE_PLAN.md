@@ -1,3 +1,26 @@
+## Active M2 foundation and conditional POST integration, 2026-10-15
+
+Complete confirmed POST correctness defects and exact affected installed/hosted
+checks, then normally integrate154→155→156→157→158 in dependency order under
+the latest direct user instruction. Preserve review protections, actual DC-only
+recovery and experimental analog claims. Additional Claude work is excluded;
+actual deletion/compaction is not a prerequisite. No new measurement experiment,
+native deployment, OA change or resource grant belongs to this continuation.
+
+In parallel while POST reviews run, finish M2-FOUNDATION-01 from stable main:
+dedicated local immutable revision metadata, typed bounded inverter plan/dry-run,
+physical observation contracts, installed CLI lifecycle, independent review and
+feature PR. The implementation has no execution backend and cannot qualify real
+designs. Foreign/hot operational SQLite journals are rejected before SQLite can
+recover or mutate them. Existing metadata/failed transactions remain retained.
+
+Finalize exact package/source identity, security/compatibility/hosted evidence,
+then propose one finite actual inverter/CDF/owned-OA/DC/TRAN scope. Do not merge
+M2 or perform that proposal until separately authorized. Current physical reads
+failed closed and yielded no support claim. Preserve126 attempts/15,452,864,512
+bytes, source22/24 and all existing journals/grants. See M2_FOUNDATION_01.md.
+Earlier dated instructions below are historical where superseded by this request.
+
 ## Active POST-01: guided local operator setup, 2026-10-13
 
 The user has approved the first proposed postrelease phase. Published2.0.0 at

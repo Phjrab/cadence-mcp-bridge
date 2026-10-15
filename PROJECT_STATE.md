@@ -1,3 +1,29 @@
+## M2-FOUNDATION-01 local implementation and current authority, 2026-10-15
+
+The latest direct user request conditionally authorizes normal POST154–158
+integration after their actual scope/review/CI gates, then this independent
+M2 foundation through a feature PR. M2 merge and new remote runtime/OA/EDA
+execution are not authorized. Published2.0.0 remains unchanged. Prior dated
+no-POST-merge/excluded-phase statements below are historical for this scope.
+
+This branch started from stable main67c21a7, independently of the pending POST
+stack. Local immutable revision metadata, bounded typed inverter plans and a
+physical observation model are implemented with an explicit operator-design CLI.
+It adds no MCP tools, resource ledger or remote backend. Synthetic plan validation
+and external evidence references cannot grant execution or ERC/DRC/LVS signoff.
+The exact installed build and final hosted checks are tracked separately; do not
+promote local unit evidence into actual OA or physical execution qualification.
+
+Existing fixed discovery failed its runner binding gate before SSH; connected
+allowlisted metadata discovery returned RUNNER_SETUP_REQUIRED. Physical readiness
+therefore remains UNKNOWN/license and execution unverified. No new collector was
+deployed. Current retained observation126/500 attempts,15,452,864,512/16GiB and
+native22/24 is unchanged; this foundation adds zero simulation/extraction/reservation.
+Further Claude validation is EXCLUDED_BY_USER. POST04 AC/TRAN recovery, POST05
+actual deletion/compaction and generic amplifier/PVT claims remain unqualified.
+See M2_FOUNDATION_01.md and M2_PHYSICAL_OBSERVATIONS.md for contracts and the
+proposed separately approved next actual inverter step. Earlier history follows.
+
 ## POST-01 local operator setup implementation, 2026-10-13
 
 The user approved proceeding with the first proposed postrelease phase after
