@@ -1,11 +1,15 @@
 ## POST-04 final host output protection, 2026-10-15
 
 Recovery-plan export now rejects every configured context's journal/sidecar,
-contract/settings and resource-lock paths before provider creation. Twenty-two
-collision cases and valid-export/repeat preservation cover the correction. Final
-recovery29 PASS/6 Windows POSIX skips, related39 PASS/3 symlink skips, Ruff/mypy104
-PASS. Updated hosted/package gates remain required. Native source is unchanged;
-no new VM execution/reservation/correction or administrator action occurred.
+contract/settings and resource-lock paths before provider creation. Forty-four
+collision cases include normalized journal aliases; valid-export/repeat
+preservation covers the correction. Final recovery51 PASS/6 Windows POSIX skips,
+related39 PASS/3 symlink skips, Ruff/mypy104
+PASS. Updated hosted/package gates remain required. Deployed native assets are
+unchanged; no new VM execution/reservation/deployment or administrator action
+occurred. The reviewed source guard includes host extraction recovery, so the
+export and alias corrections consume the remaining two changes:24/24, without
+resetting the earlier22/24 history or changing the approved ceiling.
 Actual DC-only qualification and opt-in experimental boundary remain. Latest user
 instruction conditionally authorizes normal POST154–158 integration; Claude is
 EXCLUDED_BY_USER, not PASS. Published2.0.0 and all prior evidence are preserved.

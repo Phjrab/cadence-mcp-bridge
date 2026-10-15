@@ -2,12 +2,16 @@
 
 Complete final hosted/package/review gates for the corrected recovery-plan export
 path. It rejects configured state and SQLite sidecar collisions before source
-lookup across all contexts. Recovery29 PASS/6 POSIX skips and related39 PASS/3
+lookup across all contexts, including normalized journal aliases and sidecars.
+Recovery51 PASS/6 POSIX skips and related39 PASS/3
 symlink skips; Ruff/mypy104 PASS. Native assets and actual qualified DC route are
 unchanged. Preserve opt-in experimental CLI and AC/TRAN recovery as unverified.
 Continue latest conditional normal POST154–158 integration in dependency order;
 further Claude testing is EXCLUDED_BY_USER, not PASS. No new simulation or recovery
 is required for this local guard. Earlier checkpoints remain historical.
+The source-path guard also counts the host export/alias corrections, reaching24/24;
+remote deployed assets remain unchanged. No further source correction is authorized
+within that exhausted allowance, and this checkpoint does not increase it.
 
 ## POST-04 actual DC recovery succeeds, 2026-10-14
 

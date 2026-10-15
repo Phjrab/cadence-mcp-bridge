@@ -133,14 +133,24 @@ def test_submit_requires_explicit_experimental_switch():
 
 
 @pytest.mark.parametrize("context_index", [0, 1])
+@pytest.mark.parametrize("alias", [False, True])
 @pytest.mark.parametrize("reserved_name", [
     "analysis_journal", "sweep_journal", "analysis-wal", "analysis-shm", "analysis-journal",
     "sweep-wal", "sweep-shm", "sweep-journal", "lock", "settings", "design_registry",
 ])
 def test_recovery_plan_reserves_all_context_state_before_provider_contact(
-    tmp_path, monkeypatch, capsys, context_index, reserved_name,
+    tmp_path, monkeypatch, capsys, context_index, alias, reserved_name,
 ):
     settings = make_settings(tmp_path)
+    if alias:
+        runtime = json.loads(settings.read_bytes())
+        for entry in runtime["contexts"]:
+            for field in ("analysis_journal", "sweep_journal"):
+                journal = Path(entry[field])
+                intermediate = journal.parent / "alias"
+                intermediate.mkdir(exist_ok=True)
+                entry[field] = str(intermediate / ".." / journal.name)
+        settings.write_text(json.dumps(runtime))
     contexts = load_runtime(settings)
     context = contexts[context_index]
     if reserved_name == "lock":

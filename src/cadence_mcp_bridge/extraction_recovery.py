@@ -160,10 +160,11 @@ def recovery_cli(arguments: argparse.Namespace) -> int:
                 for field in type(loaded.binding).model_fields:
                     value = getattr(loaded.binding, field)
                     if isinstance(value, Path):
-                        reserved.add(value.absolute())
+                        reserved.add(_local_path(value))
                 for journal in (loaded.binding.analysis_journal, loaded.binding.sweep_journal):
+                    journal = _local_path(journal)
                     for suffix in ("-wal", "-shm", "-journal"):
-                        reserved.add(journal.with_name(journal.name + suffix).absolute())
+                        reserved.add(journal.with_name(journal.name + suffix))
             if target in reserved:
                 raise OperationRejected("recovery_plan_output_reserved")
             if target.exists() or not target.parent.is_dir():
