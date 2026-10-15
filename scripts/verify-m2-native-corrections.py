@@ -100,15 +100,44 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
     directory = ROOT / "docs/policy"
     old = json.loads((directory / "M2_NATIVE_CORRECTION_LIMIT_V8.json").read_bytes())
     checkpoint = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V1.json").read_bytes())
-    policy = json.loads((directory / "M2_NATIVE_CORRECTION_LIMIT_V9.json").read_bytes())
+    v9 = json.loads((directory / "M2_NATIVE_CORRECTION_LIMIT_V9.json").read_bytes())
+    policy = v9
+    consumed, ceiling = 25, 27
+    latest_path = directory / "M2_NATIVE_CORRECTION_LIMIT_V10.json"
+    if latest_path.exists():
+        current_checkpoint = json.loads(
+            (directory / "M2_NATIVE_CORRECTION_CONSUMED_V2.json").read_bytes()
+        )
+        policy = json.loads(latest_path.read_bytes())
+        if (
+            policy["prior_policy_sha256"] != post.canonical_sha256(v9)
+            or policy["prior_consumed_checkpoint_sha256"]
+            != post.canonical_sha256(current_checkpoint)
+            or current_checkpoint["prior_consumed_checkpoint_sha256"]
+            != post.canonical_sha256(checkpoint)
+            or current_checkpoint["retained_consumed_source_changes"] != 26
+            or current_checkpoint["generator_versions_consumed"] != 0
+        ):
+            raise ValueError("M2 latest policy/consumption chain conflict")
+        post.require_ancestor(current_checkpoint["corrected_collector_commit"])
+        previous_source = subprocess.check_output(
+            ["git", "show", current_checkpoint["corrected_collector_commit"] + ":" + SOURCES[0]],
+            cwd=post.ROOT,
+        )
+        if (
+            hashlib.sha256(previous_source.replace(b"\r\n", b"\n")).hexdigest()
+            != (current_checkpoint["collector_module_lf_sha256"])
+        ):
+            raise ValueError("M2 failed corrected collector identity changed")
+        consumed, ceiling = 26, 28
     if (
         retained["conservative_consumed"] != 24
-        or policy["prior_policy_sha256"] != post.canonical_sha256(old)
-        or policy["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(checkpoint)
+        or v9["prior_policy_sha256"] != post.canonical_sha256(old)
+        or v9["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(checkpoint)
         or checkpoint["retained_consumed_source_changes"] != 25
         or checkpoint["generator_versions_consumed"] != 0
-        or policy["retained_consumed_source_changes"] != 25
-        or policy["maximum_corrections_same_change"] != 27
+        or policy["retained_consumed_source_changes"] != consumed
+        or policy["maximum_corrections_same_change"] != ceiling
         or policy["maximum_collector_corrections"] != 1
         or policy["maximum_generator_versions"] != 1
         or policy["max_new_attempts"] != 2
@@ -155,7 +184,7 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             raise ValueError("M2 V9 source change without history")
         counts.append(count)
     consumed_path = directory / "M2_NATIVE_CORRECTION_CONSUMED_V2.json"
-    if consumed_path.exists():
+    if consumed_path.exists() and not latest_path.exists():
         current = json.loads(consumed_path.read_bytes())
         post.require_ancestor(current["corrected_collector_commit"])
         if current["retained_consumed_source_changes"] != 26 or counts[0] != 1:
@@ -167,11 +196,11 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             raise ValueError("M2 corrected collector source drift")
     return {
         "status": "M2_NATIVE_SOURCE_BOUNDARY_PASS",
-        "retained_consumed": 25,
+        "retained_consumed": consumed,
         "collector_corrections": counts[0],
         "generator_versions": counts[1],
-        "conservative_consumed": 25 + sum(counts),
-        "ceiling": 27,
+        "conservative_consumed": consumed + sum(counts),
+        "ceiling": ceiling,
         "remaining": 2 - sum(counts),
         "ledger_modified": False,
         "remote_contact": False,

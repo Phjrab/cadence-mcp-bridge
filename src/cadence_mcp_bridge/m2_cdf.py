@@ -64,7 +64,7 @@ procedure(m2Scope(port scope cdf)
   foreach(field list('componentName 'termOrder 'namePrefix 'modelName
                      'instParameters 'netlistProcedure)
    observation=m2ReadField(caddr(simulator) field)
-   m2Meta(port scope symbolName(field) observation t)
+   m2Meta(port scope symbolToString(field) observation t)
    when(field=='componentName component=caddr(observation))
    when(field=='termOrder terminals=caddr(observation)))
   fprintf(port "SIM|%L|%L|%L\n" scope component terminals)

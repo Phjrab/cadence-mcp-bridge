@@ -1,3 +1,22 @@
+## Current broad additional delegation and bounded legacy API correction
+
+The human subsequently explicitly approved all additional approvals required
+for this current inverter slice and asked to continue. Apply that latest direct
+instruction to the necessary minimum correction: preserve consumed26, retain
+V8/V9 and consumedV1/V2, and set V10 ceiling28 for one legacy-API correction and
+the still-unused generator. This is a finite recording of the necessary source
+work, not an unlimited experiment, reset or installation default. The500/16GiB,
+DC1/TRAN1/256MiB and original domain/ledger/locks/replay remain unchanged.
+
+Source26 cleanly exited1 because symbolName is undefined on this standard VM.
+Both root CDF simInfo and Spectre descriptors were observed as lists before
+that error. Use symbolToString, already present in the retained standard-VM API
+probe, while retaining defensive property access and immediate error exit.
+All original registered libraries/seven model contents/ledger stayed equal;
+count126 and15,452,864,512 bytes, no new reservation or OA save. The failed
+source26/frame/logs are preserved. Latest instruction, rather than these
+policy files, is the authority. Earlier narrower approvals remain history.
+
 ## Approved corrected collector continuation, 2026-10-15
 
 The human explicitly approved the preceding concrete continuation and all its

@@ -156,3 +156,47 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
     path.write_text(json.dumps(checkpoint), encoding="utf-8")
     with pytest.raises(ValueError, match="retained consumption conflict"):
         guard.inspect(reconciliation)
+
+
+def test_current_additional_approval_preserves_both_failed_versions(
+    v9_scenario: tuple[ModuleType, Path, Path],
+) -> None:
+    guard, repository, reconciliation = v9_scenario
+    directory = repository / "docs/policy"
+    collector = repository / guard.SOURCES[0]
+    collector.write_text("failed_corrected_collector = 2\n", encoding="utf-8")
+    failed = commit(repository, "synthetic failed corrected collector")
+    canonical = guard.load_post().canonical_sha256
+    old_checkpoint = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V1.json").read_bytes())
+    checkpoint = json.loads(
+        (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V2.json").read_bytes()
+    )
+    checkpoint.update(
+        corrected_collector_commit=failed,
+        collector_module_lf_sha256=hashlib.sha256(
+            collector.read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest(),
+        prior_consumed_checkpoint_sha256=canonical(old_checkpoint),
+    )
+    old_policy = json.loads((directory / "M2_NATIVE_CORRECTION_LIMIT_V9.json").read_bytes())
+    policy = json.loads((ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V10.json").read_bytes())
+    policy.update(
+        base_commit=failed,
+        prior_policy_sha256=canonical(old_policy),
+        prior_consumed_checkpoint_sha256=canonical(checkpoint),
+    )
+    for name, value in (
+        ("M2_NATIVE_CORRECTION_CONSUMED_V2.json", checkpoint),
+        ("M2_NATIVE_CORRECTION_LIMIT_V10.json", policy),
+    ):
+        (directory / name).write_text(json.dumps(value), encoding="utf-8")
+    commit(repository, "synthetic bounded additional approval preserving26")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 26
+    collector.write_text("minimum_legacy_api_correction = 3\n", encoding="utf-8")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 27
+    commit(repository, "synthetic one additional bounded correction")
+    (repository / guard.SOURCES[1]).write_text("generator = 1\n", encoding="utf-8")
+    assert guard.inspect(reconciliation)["conservative_consumed"] == 28
+    collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="version exhausted"):
+        guard.inspect(reconciliation)

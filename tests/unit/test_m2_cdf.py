@@ -47,6 +47,8 @@ def test_fixed_readonly_script() -> None:
     assert '"wrong_type"' in program
     assert "errset(m2Collect() t)" in program
     assert "else exit(1)" in program
+    assert "symbolToString(field)" in program
+    assert "symbolName(" not in program
 
 
 def v2_frame(*, unknown: bool = False) -> bytes:
