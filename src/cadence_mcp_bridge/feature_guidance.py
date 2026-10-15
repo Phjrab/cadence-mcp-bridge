@@ -117,6 +117,14 @@ def guidance(
                 steps = ["cadence_list_analyses", "cadence_plan_analysis"]
             elif contract is None:
                 reasons.append("analysis_contract_missing")
+            elif profile.binding.ade.kind != "ade_l":
+                reasons.append("native_ade_subtype_unsupported")
+            elif profile.work_copy_policy != "owned_copy_only":
+                reasons.append("design_copy_policy_denied")
+            elif context is not None and (
+                analysis not in context.contracts.environment.requested_capabilities
+            ):
+                reasons.append("environment_analysis_capability_missing")
             elif grant is not None:
                 if profile.design_id not in grant.design_ids or "submit" not in grant.actions:
                     reasons.append("authority_scope_denied")
@@ -151,6 +159,9 @@ def guidance(
         if profile.work_copy_policy != "owned_copy_only":
             sweep_reasons.append("design_copy_policy_denied")
         result_available = grant is not None and native_tools_registered is not False
+        specification_reasons = (
+            [] if result_available else ["native_result_route_unavailable"]
+        ) if profile.design_id in spec_designs else [spec_reason]
         circuits.append({
             "design_id": profile.design_id,
             "description_registered": True,
@@ -169,10 +180,8 @@ def guidance(
                     sweep_reasons, ["cadence_plan_native_sweep"],
                 ),
                 "native_specification": _feature(
-                    "REQUIRES_EXECUTION_CHECKS"
-                    if result_available and profile.design_id in spec_designs else "BLOCKED",
-                    [] if result_available and profile.design_id in spec_designs
-                    else [spec_reason],
+                    "REQUIRES_EXECUTION_CHECKS" if not specification_reasons else "BLOCKED",
+                    specification_reasons,
                     ["cadence_evaluate_native_specification"],
                 ),
                 "legacy_measurements": _feature(

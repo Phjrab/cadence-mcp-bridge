@@ -8,11 +8,13 @@ from unittest.mock import MagicMock
 import pytest
 from mcp import Client
 from test_native_public_service import configured, operator, operator_base
+from test_native_specifications import contract as specification_contract
 from test_runtime_context import make_settings
 
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.designs import reference_analysis_registry
 from cadence_mcp_bridge.feature_guidance import GUIDANCE_URI, guidance, service_guidance
+from cadence_mcp_bridge.native_specifications import NativeSpecificationCatalog
 from cadence_mcp_bridge.pdk_reference import reference_pdk_registry
 from cadence_mcp_bridge.runtime_context import OperatorService, load_runtime
 from cadence_mcp_bridge.server import create_server
@@ -172,6 +174,63 @@ def test_malformed_catalog_never_claims_specification(configured):
         "native_specifications_invalid",
     ]
     assert "secret invalid content" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("catalog_state", ["registered", "empty", "missing", "invalid", "changed"])
+@pytest.mark.parametrize("route_state", ["available", "no_binding", "not_loaded", "inactive"])
+def test_specification_reasons_distinguish_registration_from_result_route(
+    configured, catalog_state, route_state,
+):
+    _, service, _, settings, grant_path = configured
+    context = service.context
+    design_id = context.contracts.designs.designs[0].design_id
+    updates = {}
+    if catalog_state != "missing":
+        catalog = settings.parent / "guidance-spec.json"
+        spec = specification_contract(design_id=design_id)
+        raw = NativeSpecificationCatalog(
+            specifications=() if catalog_state == "empty" else (spec,),
+        ).model_dump_json().encode()
+        if catalog_state == "invalid":
+            raw = b'{"private-invalid":true}'
+        catalog.write_bytes(raw)
+        updates.update(
+            native_specifications=catalog,
+            native_specifications_sha256="f" * 64 if catalog_state == "changed"
+            else hashlib.sha256(raw).hexdigest(),
+        )
+    if route_state == "no_binding":
+        updates.update(native_provider_binding=None, native_provider_sha256=None,
+                       operator_grant=None, operator_grant_sha256=None)
+    elif route_state == "inactive":
+        grant = json.loads(grant_path.read_bytes())
+        grant["valid_until_unix"] = 2
+        grant_path.write_text(json.dumps(grant))
+        updates["operator_grant_sha256"] = hashlib.sha256(grant_path.read_bytes()).hexdigest()
+    context = context.__class__(**{
+        **context.__dict__, "binding": context.binding.model_copy(update=updates),
+    })
+    before = snapshot(settings.parent)
+    report = guidance(
+        context.contracts.designs, context.contracts.pdks, mode="operator", context=context,
+        native_tools_registered=route_state != "not_loaded",
+    )
+    feature = report["circuits"][0]["features"]["native_specification"]
+    if catalog_state == "registered":
+        reasons = [] if route_state in ("available", "inactive") else [
+            "native_result_route_unavailable",
+        ]
+    else:
+        reasons = [{
+            "empty": "native_specification_not_registered_for_design",
+            "missing": "native_specifications_missing",
+            "invalid": "native_specifications_invalid",
+            "changed": "native_specifications_invalid",
+        }[catalog_state]]
+    assert feature["reasons"] == reasons
+    assert feature["state"] == ("BLOCKED" if reasons else "REQUIRES_EXECUTION_CHECKS")
+    assert report["remote_contact"] is False and report["new_reservations"] == 0
+    assert snapshot(settings.parent) == before
 
 
 @pytest.mark.parametrize("document", ["specifications", "provider", "grant"])

@@ -2,6 +2,17 @@
 
 ## Sweep eligibility correction, 2026-10-15
 
+Final adjacent review distinguishes a registered specification with an unavailable
+native result route (`native_result_route_unavailable`) from absent/invalid or
+unregistered catalogs. A20-case catalog/route matrix covers active and expired
+authority, missing bindings and unloaded native tools. Native analysis guidance
+also blocks the renderer's known local prerequisites: unsupported ADE subtype,
+read-only work-copy policy or an analysis absent from the environment's requested
+capabilities. Fifteen DC/AC/TRAN renderer-denial cases verify those reasons;
+legacy/fixture classifications and retained-result access remain separate.
+Final related213 tests PASS, Ruff/mypy101 PASS. These local checks do not assess
+remote qualification, remaining capacity or job-specific numeric/reader conditions.
+
 Follow-up review4279471320/4279471328 now also blocks an otherwise qualified axis
 when its containing design permits only read-only work copies. Recursive but
 size-bounded provider/grant/specification JSON returns a closed invalid-binding
