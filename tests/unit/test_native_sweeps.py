@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from test_operator_operations import operator
 
 from cadence_mcp_bridge.analysis_store import AnalysisStore
+from cadence_mcp_bridge.designs import DesignProfile
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.feature_guidance import guidance
 from cadence_mcp_bridge.native_service import NativeOperationRequest
@@ -19,7 +20,11 @@ from cadence_mcp_bridge.native_sweeps import (
     NativeSweepSubmission,
     NativeSweepSupervisor,
 )
-from cadence_mcp_bridge.operator_operations import OperationProgress, prepare_plan
+from cadence_mcp_bridge.operator_operations import (
+    OperationProgress,
+    OperationRejected,
+    prepare_plan,
+)
 from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.variable_contracts import DesignVariables, canonical_digest
 
@@ -99,7 +104,9 @@ def sweep_native(operator):
             from cadence_mcp_bridge.operator_operations import OperationRequest
 
             requested = OperationRequest.model_validate_json(requested.model_dump_json())
-            plan = prepare_plan(context, self.grant, canonical_digest(self.grant), requested, 100)
+            plan = prepare_plan(
+                self.context, self.grant, canonical_digest(self.grant), requested, 100,
+            )
             if self.changed:
                 plan = plan.model_copy(update={"runner_sha256": "c" * 64})
             return SimpleNamespace(plan=plan)
@@ -136,13 +143,25 @@ def sweep_native(operator):
     return native, sweep
 
 
-@pytest.mark.parametrize("policy", ["fixed", "read_only", "unqualified", "eligible"])
+@pytest.mark.parametrize("policy", [
+    "fixed", "read_only", "unqualified", "read_only_profile", "eligible",
+])
 async def test_feature_guidance_matches_registered_sweep_axis_gate(
     sweep_native, monkeypatch, policy,
 ):
     native, request = sweep_native
     registry = native.context.contracts.designs
     data = json.loads(registry.model_dump_json())
+    if policy == "read_only_profile":
+        data["designs"][0]["work_copy_policy"] = "read_only"
+        profile_digest = canonical_digest(
+            DesignProfile.model_validate_json(json.dumps(data["designs"][0]))
+        )
+        data["variable_sets"][0]["design_profile_sha256"] = profile_digest
+        for contract in data["analysis_contracts"]:
+            contract["design_profile_sha256"] = profile_digest
+        for review in data["range_reviews"]:
+            review["design_profile_sha256"] = profile_digest
     axis = next(v for v in data["variable_sets"][0]["variables"] if v["logical_id"] == "bias-n")
     if policy == "read_only":
         axis["mutation_policy"] = "read_only"
@@ -179,6 +198,12 @@ async def test_feature_guidance_matches_registered_sweep_axis_gate(
     if policy == "eligible":
         assert sweep["state"] == "REQUIRES_EXECUTION_CHECKS" and sweep["reasons"] == []
         assert (await NativeSweepSupervisor(native).plan(request)).point_count == 3
+    elif policy == "read_only_profile":
+        assert sweep["state"] == "BLOCKED"
+        assert sweep["reasons"] == ["design_copy_policy_denied"]
+        with pytest.raises(OperationRejected) as failure:
+            await NativeSweepSupervisor(native).plan(request)
+        assert failure.value.reason == "registered_numeric_contract_denied"
     else:
         assert sweep["state"] == "BLOCKED"
         assert sweep["reasons"] == ["qualified_mutable_sweep_axis_missing"]

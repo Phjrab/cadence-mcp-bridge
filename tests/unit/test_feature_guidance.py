@@ -172,3 +172,49 @@ def test_malformed_catalog_never_claims_specification(configured):
         "native_specifications_invalid",
     ]
     assert "secret invalid content" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("document", ["specifications", "provider", "grant"])
+@pytest.mark.asyncio
+async def test_deeply_nested_bound_document_returns_closed_resource_and_cli_guidance(
+    configured, document, capsys,
+):
+    server, service, _, settings, grant_path = configured
+    context = service.context
+    field, digest_field, path = {
+        "specifications": ("native_specifications", "native_specifications_sha256",
+                           settings.parent / "spec.json"),
+        "provider": ("native_provider_binding", "native_provider_sha256",
+                     context.binding.native_provider_binding),
+        "grant": ("operator_grant", "operator_grant_sha256", grant_path),
+    }[document]
+    raw = b'{"nested":' + b'[' * 2000 + b'0' + b']' * 2000 + b'}'
+    path.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    service.context = context.__class__(**{
+        **context.__dict__, "binding": context.binding.model_copy(update={
+            field: path, digest_field: digest,
+        }),
+    })
+    runtime = json.loads(settings.read_bytes())
+    runtime["contexts"][0].update({field: str(path), digest_field: digest})
+    settings.write_text(json.dumps(runtime))
+    before = snapshot(settings.parent)
+    async with Client(server) as client:
+        report = json.loads((await client.read_resource(GUIDANCE_URI)).contents[0].text)
+    if document == "specifications":
+        assert report["circuits"][0]["features"]["native_specification"]["reasons"] == [
+            "native_specifications_invalid",
+        ]
+    else:
+        assert {a["state"] for a in report["circuits"][0]["analyses"]} == {"BLOCKED"}
+        assert all("native_binding_invalid" in a["reasons"]
+                   for a in report["circuits"][0]["analyses"])
+    assert main([
+        "operator-features", "--settings", str(settings),
+        "--context", context.binding.context_id,
+    ]) in (0, 2)
+    cli = json.loads(capsys.readouterr().out)
+    assert cli["status"] in ("LOCAL_FEATURE_GUIDANCE", "BLOCKED")
+    assert snapshot(settings.parent) == before
+    assert str(settings.parent) not in json.dumps(report) + json.dumps(cli)
