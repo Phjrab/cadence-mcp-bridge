@@ -1,3 +1,36 @@
+## Independent review disposition in current source32 correction
+
+PR160 automated review4284403269 found vpulse vdc was written without requiring
+its observed CDF unit in the accepted fixture. The actual standard-VM frame does
+observe vdc with voltage units; the pending source32 now requires that field and
+rejects missing/wrong-unit pulse vdc before generation. Seventeen focused tests
+pass, including effective PMOS width/topology drift and both review regressions.
+This review is not formal human APPROVED. Actual-source32 OA/netlist validation
+and exact installed/hosted checks are still pending; no simulation was admitted.
+
+## Source31 OA passes but effective PMOS width fails; correction32
+
+Fresh owned DUT/symbol/hierarchical testbench generation and saved/reopened
+terminal/property checks passed at UID500. Common DC/TRAN template netlisting
+and generic input checks also passed without simulation/reservation. Independent
+comparison then found PMOS netlist width120nm despite OA w350nm. The generic
+candidate-derived static hash alone did not establish agreement with design intent.
+Preserve the successful structural read-back and the failed semantic qualification
+as separate outcomes. Do not call this an actual simulation or acceptance PASS.
+
+Retained source CDF explains the mismatch: simW references fw, and simM references
+m*fingers. Source devices have one finger, w=fw, and observed derived areas and
+perimeters. The bounded correction preserves those exact observed fields, rejects
+unknown derived expressions/multifinger meanings, and adds an independent verifier
+for effective MOS widths/lengths/multiplicities/geometry, hierarchy, rails, pulse
+and load. It never evaluates CDF callbacks or invents ranges/nf semantics.
+
+Direct broad additional authority covers this minimum source32 correction. V14
+retains all31 consumed source versions, previous policies, mismatched revision and
+netlists; finite ceiling32, no further experiment allowance. Actual resource ledger
+remains126/15,452,864,512 bytes with500/16GiB and DC1/TRAN1/256MiB unchanged.
+The next generated revision is fresh; failed/unqualified old cells stay intact.
+
 ## First generated OA failed connectivity; minimum correction, 2026-10-15
 
 Source30 reached schematic extraction/check on a new owned inverter and correctly

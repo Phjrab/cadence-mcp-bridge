@@ -15,6 +15,7 @@ from typing import Literal
 
 from pydantic import model_validator
 
+from cadence_mcp_bridge import _native_rendering as native_rendering
 from cadence_mcp_bridge.m2_cdf import CdfSource, parse_frame
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
@@ -68,27 +69,75 @@ def _mos_parameters(device: dict[str, object]) -> dict[str, str]:
     if not isinstance(rows, tuple):
         raise ValueError("missing observed CDF parameters")
     selected: dict[str, str] = {}
-    for name in ("w", "l", "m", "model"):
+    for name in ("w", "fw", "l", "m", "fingers", "model", "as", "ad", "ps", "pd"):
         entries = [row for row in rows if row[:2] == ("effective", name)]
         if len(entries) != 1 or not isinstance(entries[0][5], str):
             raise ValueError("missing observed MOS value")
         value = entries[0][5]
         if name == "model":
             CdfSource("ObservedModel", value)
-        elif name == "m":
+        elif name in ("m", "fingers"):
             if re.fullmatch(r"[1-9][0-9]{0,5}", value) is None:
                 raise ValueError("observed multiplicity is not a bounded integer")
         else:
-            if (
-                entries[0][3] != "lengthMetric"
-                or re.fullmatch(r"[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?", value)
-                is None
-            ):
+            if (name not in ("as", "ad") and entries[0][3] != "lengthMetric") or re.fullmatch(
+                r"[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?", value
+            ) is None:
                 raise ValueError("observed length needs explicit numeric units")
             if Decimal(value.rstrip("afpnum")) <= 0 or len(value) > 32:
                 raise ValueError("observed length must be positive and bounded")
         selected[name] = value
+    # This bounded slice preserves observed single-finger devices. It does not
+    # infer total/per-finger semantics or a general nf range from a name.
+    if selected["fingers"] != "1" or selected["w"] != selected["fw"]:
+        raise ValueError("only observed equal-width single-finger MOS is supported")
+    for name, expected in (("simW", 'iPar("fw")'), ("simM", 'iPar("m")*iPar("fingers")')):
+        matches = [row for row in rows if row[:2] == ("effective", name)]
+        if len(matches) != 1 or matches[0][5] != expected:
+            raise ValueError("unknown derived MOS netlist expression")
     return selected
+
+
+def verify_generated_netlist(plan: OwnedInverterPlan, frame: bytes, native: bytes) -> None:
+    """Compare effective generated topology/values against independent CDF plan.
+
+    A fingerprint computed from the candidate alone cannot establish this match.
+    This deliberately accepts only the observed standard-VM single-finger form.
+    """
+    devices = observed_devices(plan, frame)
+    _, _, _, static = native_rendering.partition_input(native)  # type: ignore[no-untyped-call]
+    expected: set[str] = {
+        f"subckt {plan.dut_cell} vdd vin vout vss",
+        f"ends {plan.dut_cell}",
+        f"DUT (vdd vin vout 0) {plan.dut_cell}",
+        "VDD (vdd 0) vsource dc=1 type=dc",
+        "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=4n "
+        "delay=1n rise=100p fall=100p width=2n",
+        "CL (vout 0) capacitor c=1p",
+    }
+    for device, name, rail in zip(devices[:2], ("MN", "MP"), ("vss", "vdd"), strict=True):
+        values = _mos_parameters(device)
+        candidates = [line for line in static if line.startswith(name + " ")]
+        prefix = f"{name} (vout vin {rail} {rail}) {values['model']} "
+        if len(candidates) != 1 or not candidates[0].startswith(prefix):
+            raise ValueError("generated MOS topology/model mismatch")
+        options = candidates[0][len(prefix) :].split()
+        if any(token.count("=") != 1 for token in options):
+            raise ValueError("generated MOS options invalid")
+        pairs = [token.split("=", 1) for token in options]
+        actual = dict(pairs)
+        expected_options = {key: values[key] for key in ("l", "as", "ad", "ps", "pd")}
+        expected_options.update(
+            w=f"({values['fw']})", m=f"({values['m']})*(1)", simM=f"({values['m']})*(1)"
+        )
+        if len(actual) != len(pairs) or actual != expected_options:
+            raise ValueError("generated effective MOS values mismatch")
+        expected.add(candidates[0])
+    actual_devices = [
+        line for line in static if re.match(r"(?:[A-Za-z][A-Za-z0-9_]* \(|subckt |ends )", line)
+    ]
+    if len(actual_devices) != len(expected) or set(actual_devices) != expected:
+        raise ValueError("generated hierarchy/stimulus/load mismatch")
 
 
 def observed_devices(plan: OwnedInverterPlan, frame: bytes) -> tuple[dict[str, object], ...]:
@@ -137,6 +186,7 @@ def observed_devices(plan: OwnedInverterPlan, frame: bytes) -> tuple[dict[str, o
             {
                 "v1": "voltage",
                 "v2": "voltage",
+                "vdc": "voltage",
                 "td": "time",
                 "tr": "time",
                 "tf": "time",

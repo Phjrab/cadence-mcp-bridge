@@ -1,0 +1,14 @@
+{
+  "schema_version": 7,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 31,
+  "generator_versions_consumed": 2,
+  "generator_commit": "20476bea7e93e0c1ecd6164d50aa755b23fc7d46",
+  "generator_module_lf_sha256": "801327e59ee517cf39dad0222d12b8559a095d55f2dfbabeec85c90087752dbc",
+  "generator_script_sha256": "955600860006ee97b8d7b60402b46e68d4f39ea84a2922332b830900ebaf54d3",
+  "fixed_wrapper_sha256": "66d5f7d1a7fe07de414fce6fbed6126925e3d4c5b76321d6341910f9fcbbc244",
+  "generator_outcome": "OA_READBACK_PASS_EFFECTIVE_PMOS_WIDTH_MISMATCH_NO_SIMULATION",
+  "prior_consumed_checkpoint_sha256": "bf23ea4e64ee6aa59a3cefb6d27eb388ab3d54b3e838a22a872e1151a47aa149",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

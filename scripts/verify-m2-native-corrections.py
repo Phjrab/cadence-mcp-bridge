@@ -163,18 +163,26 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             current_checkpoint = next_checkpoint
             consumed, ceiling = version + 16, version + 18
     generator_limit = 1
-    generator_extension = directory / "M2_NATIVE_CORRECTION_LIMIT_V13.json"
-    if generator_extension.exists():
+    completed = (
+        json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V5.json").read_bytes())
+        if (directory / "M2_NATIVE_CORRECTION_LIMIT_V13.json").exists()
+        else {}
+    )
+    for version in (13, 14):
+        generator_extension = directory / f"M2_NATIVE_CORRECTION_LIMIT_V{version}.json"
+        if not generator_extension.exists():
+            break
         extension = json.loads(generator_extension.read_bytes())
-        failed = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V6.json").read_bytes())
-        completed = json.loads((directory / "M2_NATIVE_CORRECTION_CONSUMED_V5.json").read_bytes())
+        failed = json.loads(
+            (directory / f"M2_NATIVE_CORRECTION_CONSUMED_V{version - 7}.json").read_bytes()
+        )
         if (
             consumed != 28
             or extension["prior_policy_sha256"] != post.canonical_sha256(policy)
             or extension["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(failed)
             or failed["prior_consumed_checkpoint_sha256"] != post.canonical_sha256(completed)
-            or failed["retained_consumed_source_changes"] != 30
-            or failed["generator_versions_consumed"] != 1
+            or failed["retained_consumed_source_changes"] != version + 17
+            or failed["generator_versions_consumed"] != version - 12
             or extension["base_commit"] != policy["base_commit"]
         ):
             raise ValueError("M2 failed generator retention chain conflict")
@@ -187,7 +195,8 @@ def inspect_v9(post: ModuleType, retained: dict[str, object]) -> dict[str, objec
             != (failed["generator_module_lf_sha256"])
         ):
             raise ValueError("M2 failed generator identity changed")
-        policy, ceiling, generator_limit = extension, 31, 2
+        policy, ceiling, generator_limit = extension, version + 18, version - 11
+        completed = failed
     if (
         retained["conservative_consumed"] != 24
         or v9["prior_policy_sha256"] != post.canonical_sha256(old)

@@ -158,7 +158,7 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
-@pytest.mark.parametrize("port_correction", [0, 11, 12, 13])
+@pytest.mark.parametrize("port_correction", [0, 11, 12, 13, 14])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
     port_correction: int,
@@ -254,7 +254,7 @@ def test_current_additional_approval_preserves_both_failed_versions(
             collector.write_text("host_data_parser = 5\n", encoding="utf-8")
             assert guard.inspect(reconciliation)["conservative_consumed"] == 29
             fifth = commit(repository, "synthetic local parser correction")
-            if port_correction == 13:
+            if port_correction >= 13:
                 completed = json.loads(
                     (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V5.json").read_bytes()
                 )
@@ -273,7 +273,7 @@ def test_current_additional_approval_preserves_both_failed_versions(
     assert guard.inspect(reconciliation)["conservative_consumed"] == (
         30 if port_correction >= 12 else 29 if port_correction else 28
     )
-    if port_correction == 13:
+    if port_correction >= 13:
         generator = repository / guard.SOURCES[1]
         deployed = commit(repository, "synthetic failed generator")
         failed = json.loads(
@@ -303,11 +303,44 @@ def test_current_additional_approval_preserves_both_failed_versions(
         assert guard.inspect(reconciliation)["conservative_consumed"] == 30
         generator.write_text("corrected_generator = 2\n", encoding="utf-8")
         assert guard.inspect(reconciliation)["conservative_consumed"] == 31
-        commit(repository, "synthetic corrected generator")
+        second = commit(repository, "synthetic corrected generator")
         generator.write_text("excess_generator = 3\n", encoding="utf-8")
         with pytest.raises(ValueError, match="version exhausted"):
             guard.inspect(reconciliation)
         generator.write_text("corrected_generator = 2\n", encoding="utf-8")
+        if port_correction == 14:
+            next_failed = json.loads(
+                (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V7.json").read_bytes()
+            )
+            next_failed.update(
+                generator_commit=second,
+                generator_module_lf_sha256=hashlib.sha256(
+                    generator.read_bytes().replace(b"\r\n", b"\n")
+                ).hexdigest(),
+                prior_consumed_checkpoint_sha256=canonical(failed),
+            )
+            next_extension = json.loads(
+                (ROOT / "docs/policy/M2_NATIVE_CORRECTION_LIMIT_V14.json").read_bytes()
+            )
+            next_extension.update(
+                base_commit=extension["base_commit"],
+                prior_policy_sha256=canonical(extension),
+                prior_consumed_checkpoint_sha256=canonical(next_failed),
+            )
+            for name, value in (
+                ("M2_NATIVE_CORRECTION_CONSUMED_V7.json", next_failed),
+                ("M2_NATIVE_CORRECTION_LIMIT_V14.json", next_extension),
+            ):
+                (directory / name).write_text(json.dumps(value), encoding="utf-8")
+            commit(repository, "synthetic finite derived-value correction retaining31")
+            assert guard.inspect(reconciliation)["conservative_consumed"] == 31
+            generator.write_text("derived_value_correction = 3\n", encoding="utf-8")
+            assert guard.inspect(reconciliation)["conservative_consumed"] == 32
+            commit(repository, "synthetic derived-value correction")
+            generator.write_text("unrecorded_generator = 4\n", encoding="utf-8")
+            with pytest.raises(ValueError, match="version exhausted"):
+                guard.inspect(reconciliation)
+            generator.write_text("derived_value_correction = 3\n", encoding="utf-8")
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)

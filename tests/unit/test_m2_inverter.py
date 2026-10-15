@@ -1,11 +1,17 @@
 """Synthetic observations test closed generation, never qualify a real PDK."""
 
 import hashlib
+import json
 import re
 
 import pytest
 
-from cadence_mcp_bridge.m2_inverter import OwnedInverterPlan, observed_devices, render_generator
+from cadence_mcp_bridge.m2_inverter import (
+    OwnedInverterPlan,
+    observed_devices,
+    render_generator,
+    verify_generated_netlist,
+)
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 
 
@@ -43,19 +49,34 @@ def fixture() -> tuple[OwnedInverterPlan, bytes]:
             "vsource",
             ("PLUS", "MINUS"),
             {
-                k: ("voltage" if k in ("v1", "v2", "dc") else "time", "")
-                for k in ("v1", "v2", "dc", "td", "tr", "tf", "pw", "per")
+                k: ("voltage" if k in ("v1", "v2", "dc", "vdc") else "time", "")
+                for k in ("v1", "v2", "dc", "vdc", "td", "tr", "tf", "pw", "per")
             },
         ),
         ("analogLib", "cap", "capacitor", ("PLUS", "MINUS"), {"c": ("capacitance", "1p")}),
     ):
+        if library == "TestPdk":
+            parameters.update(
+                fw=parameters["w"],
+                fingers=(None, "1"),
+                simW=("lengthMetric", 'iPar("fw")'),
+                simM=(None, 'iPar("m")*iPar("fingers")'),
+                **{
+                    "as": (None, "1f"),
+                    "ad": (None, "1f"),
+                    "ps": ("lengthMetric", "1u"),
+                    "pd": ("lengthMetric", "1u"),
+                },
+            )
         lines += [f'DEVICE|"{library}"|"{cell}"|nil']
         lines += [f'TERM|"{t}"' for t in terms]
         order = "(" + " ".join(terms) + ")"
         for scope in ("base", "effective"):
             for key, (unit, value) in parameters.items():
                 unit_data = f'"{unit}"' if unit else "nil"
-                lines.append(f'PARAM|"{scope}"|"{key}"|"instData"|{unit_data}|"{value}"|"{value}"')
+                lines.append(
+                    f'PARAM|"{scope}"|"{key}"|"instData"|{unit_data}|{json.dumps(value)}|{json.dumps(value)}'
+                )
             for key in (
                 "simInfo",
                 "spectre",
@@ -164,3 +185,43 @@ def test_target_or_master_role_collision_rejects() -> None:
         OwnedInverterPlan.model_validate(plan.model_dump() | {"output_library": "TestPdk"})
     with pytest.raises(ValueError):
         OwnedInverterPlan.model_validate(plan.model_dump() | {"dut_cell": "Bench"})
+
+
+def test_effective_netlist_must_match_observed_derived_values_and_topology() -> None:
+    plan, frame = fixture()
+    native = b"""simulator lang=spectre
+global 0
+parameters m2_vin=0.5
+subckt Dut vdd vin vout vss
+MN (vout vin vss vss) test_n w=(120n) l=100n as=1f ad=1f ps=1u pd=1u m=(1)*(1) simM=(1)*(1)
+MP (vout vin vdd vdd) test_p w=(350n) l=100n as=1f ad=1f ps=1u pd=1u m=(1)*(1) simM=(1)*(1)
+ends Dut
+DUT (vdd vin vout 0) Dut
+VDD (vdd 0) vsource dc=1 type=dc
+VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=4n \
+delay=1n rise=100p fall=100p width=2n
+CL (vout 0) capacitor c=1p
+dc dc write="spectre.dc" annotate=status
+"""
+    verify_generated_netlist(plan, frame, native)
+    for bad in (
+        native.replace(b"w=(350n)", b"w=(120n)"),
+        native.replace(b"(vout vin vdd vdd)", b"(vout vin 0 0)"),
+        native.replace(b"c=1p", b"c=2p"),
+        native + b"EXTRA (vin 0) resistor r=1\n",
+        native + b"DUT (vdd vin vout 0) Dut\n",
+    ):
+        with pytest.raises(ValueError):
+            verify_generated_netlist(plan, frame, bad)
+
+
+@pytest.mark.parametrize("replacement", [b"", b'PARAM|"base"|"vdc"|"instData"|"time"|""|""\n'])
+def test_unobserved_or_wrong_unit_pulse_vdc_rejects(replacement: bytes) -> None:
+    plan, frame = fixture()
+    # Keep vdc's own observation, alter only the pulse record.
+    prefix, pulse = frame.split(b'DEVICE|"analogLib"|"vpulse"', 1)
+    pulse = pulse.replace(b'PARAM|"base"|"vdc"|"instData"|"voltage"|""|""\n', replacement)
+    frame = prefix + b'DEVICE|"analogLib"|"vpulse"' + pulse
+    plan = plan.model_copy(update={"cdf_frame_sha256": hashlib.sha256(frame).hexdigest()})
+    with pytest.raises(ValueError, match="parameter/unit"):
+        render_generator(plan, frame, owned_library_path="/owned/work/new-library")

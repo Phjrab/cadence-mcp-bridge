@@ -1,0 +1,27 @@
+{
+  "schema_version": 14,
+  "authority": "direct-human-all-additional-approvals-within-current-inverter-slice-2026-10-15",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_M2_OWNED_INVERTER_01",
+  "retained_consumed_source_changes": 28,
+  "maximum_corrections_same_change": 32,
+  "maximum_collector_versions": 1,
+  "maximum_generator_versions": 3,
+  "base_commit": "8c341a79767ec22816e3c45db3f563f3807e40d6",
+  "max_new_attempts": 2,
+  "allowed_analyses": [
+    "dc",
+    "tran"
+  ],
+  "max_each_result_bytes": 134217728,
+  "max_phase_result_bytes": 268435456,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "preserve_consumption_and_original_domain": true,
+  "automatic_extra_corrective_deployment": false,
+  "new_phase_pr_merge_authorized": false,
+  "publication_authorized": false,
+  "prior_policy_sha256": "c8056f14cea36c7d881d148d4af1f4538c68bd0cf9d4c1cbbf158d959e3c4225",
+  "prior_consumed_checkpoint_sha256": "4881af8ac32fc8ef12d87f91580a6d5ac136bedb84e5a7131dfc529537187e3f",
+  "maximum_collector_corrections": 1,
+  "reason": "One minimum observed fw/fingers/derived geometry preservation and independent effective netlist check; retain source31 and mismatched OA/netlists. No new simulation allowance."
+}
