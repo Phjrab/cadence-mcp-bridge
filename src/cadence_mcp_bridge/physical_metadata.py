@@ -14,6 +14,7 @@ import math
 import os
 import shlex
 import stat
+import uuid
 from contextlib import suppress
 from importlib.resources import files
 from pathlib import Path
@@ -29,6 +30,8 @@ from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_transport import run_fixed
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
+
+INITIAL_COLLECTOR_SHA256 = "42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d"
 
 
 def _sha(raw: bytes) -> str:
@@ -244,6 +247,117 @@ def _resource(name: str) -> bytes:
     return files("cadence_mcp_bridge").joinpath(name).read_bytes().replace(b"\r\n", b"\n")
 
 
+def _followup_identity(environment: EnvironmentProfile) -> str:
+    return _sha(
+        _canonical(
+            {
+                "hostname": environment.host.hostname.lower().rstrip("."),
+                "architecture": environment.host.architecture,
+                "user": environment.host.user,
+            }
+        )
+    )
+
+
+def _followup_pool(environment: EnvironmentProfile, create: bool) -> Path:
+    home = _local_path(_operator_home())
+    if os.name == "nt":
+        _windows_private(home, ancestor=True)
+    elif home.stat().st_uid != os.getuid() or home.stat().st_mode & 0o022:  # type: ignore[attr-defined]
+        raise ValueError("physical_intent_home_permissions")
+    parent = home / ".cadence-mcp-physical-intents-v1"
+    _intent_metadata(parent, True)  # predecessor must already exist; never reinitialize
+    pool = parent / ("followup-" + _followup_identity(environment))
+    _local_path(pool)
+    if create:
+        with suppress(FileExistsError):
+            pool.mkdir(mode=0o700)
+        _sync_directory(parent)
+    if pool.exists():
+        _intent_metadata(pool, True)
+        if len(list(pool.iterdir())) > 64:
+            raise ValueError("physical_followup_state_bound")
+    return pool
+
+
+def _exclusive_intent(path: Path, value: dict[str, Any]) -> None:
+    parent_before = _intent_metadata(path.parent, True)
+    _local_path(path)
+    raw = _canonical(value)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+        held = os.fstat(stream.fileno())
+        named = _intent_metadata(path, False)
+        _sync_directory(path.parent)
+        if (
+            named[:2] != (held.st_dev, held.st_ino)
+            or _payload(path) != raw
+            or _intent_metadata(path, False) != named
+            or _intent_metadata(path.parent, True) != parent_before
+        ):
+            raise ValueError("physical_followup_intent_drift")
+
+
+def _local_predecessor(environment: EnvironmentProfile, grant: dict[str, Any]) -> None:
+    key = _sha(
+        _canonical(
+            {
+                "hostname": environment.host.hostname.lower().rstrip("."),
+                "architecture": environment.host.architecture,
+                "user": environment.host.user,
+                "collector_sha256": grant["predecessor_collector_sha256"],
+            }
+        )
+    )
+    directory = _local_path(_operator_home()) / ".cadence-mcp-physical-intents-v1"
+    _intent_metadata(directory, True)
+    path = directory / (key + ".private.json")
+    _intent_metadata(path, False)
+    expected = {
+        "schema_version": 1,
+        "status": "ATTEMPT_SPENT_NO_RETRY",
+        "identity_sha256": key,
+        "plan_sha256": grant["predecessor_plan_sha256"],
+        "request_sha256": grant["predecessor_host_request_sha256"],
+    }
+    if _payload(path) != _canonical(expected):
+        raise ValueError("physical_local_predecessor_binding")
+
+
+def _claim_followup(environment: EnvironmentProfile, plan: dict[str, Any]) -> None:
+    value = plan["followup"]
+    grant = collector.validate_followup(value, plan["environment_sha256"], plan["manifest_sha256"])  # type: ignore[no-untyped-call]
+    _local_predecessor(environment, grant)
+    pool = _followup_pool(environment, True)
+    ancestry = {path: _intent_metadata(path, True) for path in (pool, pool.parent)}
+
+    def guard() -> None:
+        if any(_intent_metadata(path, True) != before for path, before in ancestry.items()):
+            raise ValueError("physical_followup_namespace_drift")
+        _local_predecessor(environment, grant)
+
+    slot = pool / (f"slot-{value['slot']:02d}.private.json")
+    if slot.exists():
+        raise FileExistsError("physical_followup_slot_spent")
+    claim = {
+        "status": "ATTEMPT_SPENT_NO_RETRY",
+        "plan_sha256": _sha(_canonical(plan)),
+        "request_sha256": plan["request_sha256"],
+        "slot": value["slot"],
+        "invocation_id": value["invocation_id"],
+        "authorization_sha256": _sha(_canonical(grant)),
+        "collector_sha256": plan["collector_sha256"],
+    }
+    # Stable invocation and numbered-domain slots survive source/grant/plan changes.
+    _exclusive_intent(pool / ("invocation-" + value["invocation_id"] + ".private.json"), claim)
+    guard()
+    _exclusive_intent(slot, claim)
+    guard()
+
+
 def _read(path: Path) -> bytes:
     return installer.regular(str(_local_path(path)))  # type: ignore[no-any-return,no-untyped-call]
 
@@ -283,7 +397,10 @@ def _load_bundle(bundle: Path, expected: str) -> tuple[dict[str, bytes], dict[st
 
 
 def _plan(
-    assets: dict[str, bytes], expected: str, known: dict[str, str]
+    assets: dict[str, bytes],
+    expected: str,
+    known: dict[str, str],
+    followup: dict[str, Any] | None = None,
 ) -> tuple[bytes, dict[str, Any]]:
     profile = json.loads(assets["profile.json"])
     registration = json.loads(assets["registration.json"])
@@ -295,6 +412,9 @@ def _plan(
         "manifest_sha256": expected,
         "files": {name: base64.b64encode(data).decode("ascii") for name, data in assets.items()},
     }
+    if followup is not None:
+        collector.validate_followup(followup, _sha(assets["profile.json"]), expected)  # type: ignore[no-untyped-call]
+        request.update(operation="physical-metadata-followup-v1", followup=followup)
     envelope = {
         "request": request,
         "setup": base64.b64encode(_resource("_native_setup.py")).decode("ascii"),
@@ -322,7 +442,44 @@ def _plan(
         "candidate_content_reads": False,
         "eda_execution": False,
     }
+    if followup is not None:
+        plan.update(kind="PHYSICAL_METADATA_FOLLOWUP_V1", followup=followup)
     return payload, plan
+
+
+def prepare_followup(
+    bundle: Path, expected: str, authorization: Path, output: Path
+) -> dict[str, object]:
+    """Operator-only explicit allowance; preparation never contacts the guest."""
+    assets, known = _load_bundle(bundle, expected)
+    environment = EnvironmentProfile.model_validate_json(assets["profile.json"])
+    grant = json.loads(_payload(_local_path(authorization)))
+    value = {"authorization": grant, "slot": 1, "invocation_id": uuid.uuid4().hex}
+    collector.validate_followup(value, _sha(assets["profile.json"]), expected)  # type: ignore[no-untyped-call]
+    _local_predecessor(environment, grant)
+    pool = _followup_pool(environment, False)
+    free = [
+        n
+        for n in range(1, grant["max_additional_attempts"] + 1)
+        if not (pool / f"slot-{n:02d}.private.json").exists()
+    ]
+    if not free:
+        raise ValueError("physical_followup_allowance_exhausted")
+    value["slot"] = free[0]
+    payload, plan = _plan(assets, expected, known, value)
+    output = _local_path(output)
+    output.mkdir(mode=0o700, exist_ok=False)
+    for name, data in (("request.private.json", payload), ("plan.private.json", _canonical(plan))):
+        with (output / name).open("xb") as stream:
+            stream.write(data)
+        (output / name).chmod(0o600)
+    return {
+        "status": "PHYSICAL_METADATA_FOLLOWUP_PREPARED_LOCAL_ONLY",
+        "plan_sha256": _sha(_canonical(plan)),
+        "slot": value["slot"],
+        "collector_sha256": plan["collector_sha256"],
+        "remote_contact": False,
+    }
 
 
 def prepare(bundle: Path, expected: str, output: Path) -> dict[str, object]:
@@ -408,8 +565,17 @@ def _validate_result(result: Any, plan: dict[str, Any]) -> None:
         "new_extractions",
         "stage_files_created",
     }
+    if "followup" in plan:
+        fields.update(("followup_slot", "followup_authorization_sha256"))
     if type(result) is not dict or set(result) != fields:
         raise ValueError("physical_response_shape")
+    if "followup" in plan and (
+        type(result["followup_slot"]) is not int
+        or result["followup_slot"] != plan["followup"]["slot"]
+        or result["followup_authorization_sha256"]
+        != _sha(_canonical(plan["followup"]["authorization"]))
+    ):
+        raise ValueError("physical_followup_response_binding")
     for name, expected in (
         ("schema_version", 1),
         ("stage_files_created", 3),
@@ -524,7 +690,9 @@ def collect(prepared: Path, expected_plan: str) -> dict[str, object]:
     assets = {name: base64.b64decode(data) for name, data in envelope["request"]["files"].items()}
     known = {k: _sha(v) for k, v in source_assets().items()}
     setup.inventory(assets, plan["manifest_sha256"], known)  # type: ignore[no-untyped-call]
-    expected_raw, expected_value = _plan(assets, plan["manifest_sha256"], known)
+    expected_raw, expected_value = _plan(
+        assets, plan["manifest_sha256"], known, plan.get("followup")
+    )
     if raw != expected_raw or plan_raw != _canonical(expected_value):
         raise ValueError("physical_closed_plan_binding")
     profile_raw = assets["profile.json"]
@@ -532,7 +700,13 @@ def collect(prepared: Path, expected_plan: str) -> dict[str, object]:
     if _sha(profile_raw) != plan["environment_sha256"]:
         raise ValueError("physical_environment_binding")
     # Durable account-scoped intent precedes SSH and the replaceable plan marker.
-    _claim_intent(environment, plan["collector_sha256"], expected_plan, _sha(raw))
+    if "followup" in plan:
+        _claim_followup(environment, plan)
+    else:
+        # New package bytes cannot reopen the retired original single-query path.
+        if plan["collector_sha256"] != INITIAL_COLLECTOR_SHA256:
+            raise ValueError("physical_initial_collection_retired_use_explicit_followup")
+        _claim_intent(environment, plan["collector_sha256"], expected_plan, _sha(raw))
     with (prepared / "collection-started.private.json").open("xb") as stream:
         stream.write(_canonical({"plan_sha256": expected_plan, "request_sha256": _sha(raw)}))
     try:
@@ -570,6 +744,11 @@ def collect(prepared: Path, expected_plan: str) -> dict[str, object]:
             )
         }
         summary.update(remote_contact=True, evidence_sha256=_sha(stdout))
+        if "followup" in plan:
+            summary.update(
+                followup_slot=result["followup_slot"],
+                followup_authorization_sha256=result["followup_authorization_sha256"],
+            )
         with (prepared / "summary.private.json").open("xb") as stream:
             stream.write(_canonical(summary))
         return summary

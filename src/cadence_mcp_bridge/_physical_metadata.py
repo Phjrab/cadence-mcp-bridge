@@ -4,11 +4,18 @@
 import hashlib
 import json
 import os
+import re
 import stat
 import time
 
 LIMIT = 1048576
 ENTRY_LIMIT = 128
+FOLLOWUP_LIMIT = 10
+INITIAL_COLLECTOR_SHA256 = "42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d"
+try:
+    TEXT = (basestring,)  # noqa: F821
+except NameError:
+    TEXT = (str,)
 
 
 def canonical(value):
@@ -82,7 +89,7 @@ def chain(path, roots):
             or target.st_uid not in (0, os.getuid())
             or target.st_mode & 18
         ):
-            raise ValueError("physical_untrusted_ancestor")
+            raise ValueError("physical_untrusted_ancestor:" + digest(current.encode("utf-8")))
         result.append((current, metadata(info), resolved, metadata(target)))
         parent = os.path.dirname(current)
         if parent == current:
@@ -174,18 +181,104 @@ def same_listings(listings):
             raise ValueError("physical_namespace_drift")
 
 
+def validate_followup(value, profile_sha, manifest_sha):
+    """Closed operator allowance; source/plan/alias changes cannot add slots."""
+    if not isinstance(value, dict) or set(value) != set(("authorization", "slot", "invocation_id")):
+        raise ValueError("physical_followup_shape")
+    grant = value["authorization"]
+    fields = (
+        "schema_version",
+        "kind",
+        "max_additional_attempts",
+        "profile_sha256",
+        "manifest_sha256",
+        "predecessor_collector_sha256",
+        "predecessor_plan_sha256",
+        "predecessor_host_request_sha256",
+        "predecessor_remote_request_sha256",
+    )
+    if not isinstance(grant, dict) or set(grant) != set(fields):
+        raise ValueError("physical_followup_authorization")
+    if (
+        type(grant["schema_version"]) is not int
+        or grant["schema_version"] != 1
+        or grant["kind"] != "OPERATOR_APPROVED_PHYSICAL_METADATA_FOLLOWUP_V1"
+        or type(grant["max_additional_attempts"]) is not int
+        or not 1 <= grant["max_additional_attempts"] <= FOLLOWUP_LIMIT
+        or type(value["slot"]) is not int
+        or not 1 <= value["slot"] <= grant["max_additional_attempts"]
+        or grant["profile_sha256"] != profile_sha
+        or grant["manifest_sha256"] != manifest_sha
+    ):
+        raise ValueError("physical_followup_binding")
+    for key in fields:
+        if key.endswith("_sha256") and (
+            not isinstance(grant[key], TEXT)
+            or re.match(r"^[0-9a-f]{64}\Z", grant[key]) is None
+        ):
+            raise ValueError("physical_followup_digest")
+    nonce = value["invocation_id"]
+    if (
+        not isinstance(nonce, TEXT)
+        or re.match(r"^[0-9a-f]{32}\Z", nonce) is None
+    ):
+        raise ValueError("physical_followup_invocation")
+    return grant
+
+
+def predecessor(root, grant, setup):
+    directory = root + "/physical-metadata-v1/" + grant["predecessor_collector_sha256"]
+    setup.private(root + "/physical-metadata-v1", True)
+    setup.private(directory, True)
+    before = metadata(os.lstat(directory))
+    if set(os.listdir(directory)) != set(("collector.py", "request.json")):
+        raise ValueError("physical_predecessor_not_incomplete")
+    source = setup.read(directory + "/collector.py")
+    raw = setup.read(directory + "/request.json")
+    value = setup.closed(raw)
+    if (
+        digest(source) != grant["predecessor_collector_sha256"]
+        or set(value) != set(("operation", "manifest_sha256", "collector_sha256", "request_sha256"))
+        or value["operation"] != "physical-metadata-once-v1"
+        or value["manifest_sha256"] != grant["manifest_sha256"]
+        or value["collector_sha256"] != grant["predecessor_collector_sha256"]
+        or value["request_sha256"] != grant["predecessor_remote_request_sha256"]
+    ):
+        raise ValueError("physical_predecessor_binding")
+    if metadata(os.lstat(directory)) != before:
+        raise ValueError("physical_predecessor_namespace_drift")
+    return (
+        before,
+        source,
+        raw,
+        setup.metadata(directory + "/collector.py"),
+        setup.metadata(directory + "/request.json"),
+    )
+
+
 def run(request, setup, assets, known, collector_source):
     """One source-hash stage+query under the existing lifetime resource lock."""
     if os.name != "posix" or os.getuid() == 0:
         raise ValueError("physical_normal_user_required")
-    if set(request) != set(("schema_version", "operation", "manifest_sha256", "files")):
+    followup = request.get("operation") == "physical-metadata-followup-v1"
+    if set(request) != set(
+        ("schema_version", "operation", "manifest_sha256", "files")
+        + (("followup",) if followup else ())
+    ):
         raise ValueError("physical_request_shape")
     if type(request["schema_version"]) is not int or request["schema_version"] != 1:
         raise ValueError("physical_request_version")
-    if request["operation"] != "physical-metadata-once-v1":
+    if request["operation"] not in ("physical-metadata-once-v1", "physical-metadata-followup-v1"):
         raise ValueError("physical_fixed_operation")
+    if not followup and digest(collector_source) != INITIAL_COLLECTOR_SHA256:
+        raise ValueError("physical_initial_collection_retired_use_explicit_followup")
     expected = request["manifest_sha256"]
     manifest, profile, registration = setup.inventory(assets, expected, known)
+    grant = (
+        validate_followup(request["followup"], digest(assets["profile.json"]), expected)
+        if followup
+        else None
+    )
     accounting, installer, probe, confirmation = setup.modules(assets)
     probe.validate_profile(profile)
     root, binding, username, uid = confirmation.domain(
@@ -207,9 +300,16 @@ def run(request, setup, assets, known, collector_source):
         if setup.closed(controls["active-native-provider.json"])["manifest_sha256"] != expected:
             raise ValueError("physical_inactive_runtime")
         source_sha = digest(collector_source)
-        parent = root + "/physical-metadata-v1"
+        prior = predecessor(root, grant, setup) if followup else None
+        parent = root + ("/physical-metadata-followup-v1" if followup else "/physical-metadata-v1")
         setup.directory(parent, accounting)
-        destination = parent + "/" + source_sha
+        if followup and any(
+            name not in ["attempt-" + str(n).zfill(2) for n in range(1, FOLLOWUP_LIMIT + 1)]
+            for name in os.listdir(parent)
+        ):
+            raise ValueError("physical_followup_namespace")
+        suffix = "attempt-" + str(request["followup"]["slot"]).zfill(2) if followup else source_sha
+        destination = parent + "/" + suffix
         # This is the one-shot claim. It remains on failure; no retry/removal.
         os.mkdir(destination, 448)
         accounting.sync_directory(parent)
@@ -222,6 +322,16 @@ def run(request, setup, assets, known, collector_source):
                 "request_sha256": digest(canonical(request)),
             }
         )
+        if followup:
+            claim = canonical(
+                {
+                    "operation": request["operation"],
+                    "manifest_sha256": expected,
+                    "collector_sha256": source_sha,
+                    "request_sha256": digest(canonical(request)),
+                    "followup": request["followup"],
+                }
+            )
         installer.exclusive(destination + "/request.json", claim)
         stage_names = sorted(os.listdir(destination))
         started = time.time()
@@ -254,6 +364,8 @@ def run(request, setup, assets, known, collector_source):
             or setup.read(destination + "/request.json") != claim
         ):
             raise ValueError("physical_stage_drift")
+        if followup and predecessor(root, grant, setup) != prior:
+            raise ValueError("physical_predecessor_drift")
         result = {
             "schema_version": 1,
             "status": "PHYSICAL_METADATA_OBSERVED",
@@ -278,6 +390,9 @@ def run(request, setup, assets, known, collector_source):
             "new_extractions": 0,
             "stage_files_created": 3,
         }
+        if followup:
+            result["followup_slot"] = request["followup"]["slot"]
+            result["followup_authorization_sha256"] = digest(canonical(grant))
         if len(canonical(result)) > LIMIT:
             raise ValueError("physical_output_bound")
         # Completion receipt is additional evidence, never execution authority.

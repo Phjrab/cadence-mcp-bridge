@@ -204,6 +204,10 @@ def test_preparation_is_local_and_tamper_fails_before_transport(
 def test_failed_transport_preserves_intent_and_prevents_retry(
     registered: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Historical original-source regression; production retires this path.
+    monkeypatch.setattr(
+        host, "INITIAL_COLLECTOR_SHA256", host._sha(host._resource("_physical_metadata.py"))
+    )
     context, _, registration = registered
     exported = tmp_path / "native"
     receipt = bundle(context, registration, exported)
@@ -228,6 +232,9 @@ def test_failed_transport_preserves_intent_and_prevents_retry(
 def test_cross_plan_alias_and_bundle_identity_cannot_retry(
     registered: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(
+        host, "INITIAL_COLLECTOR_SHA256", host._sha(host._resource("_physical_metadata.py"))
+    )
     context, _, registration = registered
     exported = tmp_path / "native"
     receipt = bundle(context, registration, exported)
@@ -653,7 +660,13 @@ def physical_runtime(prepared: Any, tmp_path: Path) -> Any:
 
 
 @pytest.mark.skipif(os.name != "posix", reason="actual owned Linux flock/claim")
-def test_one_shot_preserves_existing_ledger_and_runtime(physical_runtime: Any) -> None:
+def test_one_shot_preserves_existing_ledger_and_runtime(
+    physical_runtime: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        native, "INITIAL_COLLECTOR_SHA256", native.digest(b"# fixed synthetic source\n")
+    )
     root, query, assets, known, install = physical_runtime
     before = (root / accounting.LEDGER).read_bytes()
     result = native.run(query, setup, assets, known, b"# fixed synthetic source\n")
@@ -682,6 +695,7 @@ def test_one_shot_preserves_existing_ledger_and_runtime(physical_runtime: Any) -
 def test_metadata_drift_retains_failed_claim(
     physical_runtime: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(native, "INITIAL_COLLECTOR_SHA256", native.digest(b"# drift source\n"))
     root, query, assets, known, install = physical_runtime
     original = native.same_listings
 
