@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "authority": "DIRECT_HUMAN_SANITIZED_SUMMARY_DISCLOSURE_APPROVAL_NOT_THIS_RECORD",
+  "destination_repository": "Phjrab/cadence-mcp-bridge",
+  "destination_pull_request": 161,
+  "scope": "Sanitized failure summary in repository documentation and PR description",
+  "local_summary_checkpoint_commit": "7b86cf0bf88c29aaa34183269524552faebfd624",
+  "historical_terminal_record": "PHYSICAL_METADATA_CONSUMED_V3.json",
+  "historical_terminal_record_unchanged": true,
+  "disclosed_fields": [
+    "failure_error_code",
+    "failed_stage",
+    "evidence_and_counter_preservation",
+    "zero_new_simulations_extractions_reservations",
+    "consumed_source_and_query_allowances"
+  ],
+  "excluded_fields": [
+    "private_paths",
+    "raw_metadata",
+    "internal_vm_resource_values",
+    "credentials",
+    "proprietary_contents"
+  ],
+  "additional_query_authorized": false,
+  "source_correction_authorized": false,
+  "repair_authorized": false,
+  "merge_authorized": false,
+  "release_authorized": false
+}

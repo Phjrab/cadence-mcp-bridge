@@ -1,9 +1,13 @@
 ## Terminal source36 one-shot outcome, 2026-10-16
 
-LOCAL ONLY: automatic approval review rejected exporting this actual-environment
-failure summary to PR161. Keep this overlay and V3 terminal record unpushed until
-the user explicitly approves this summary's disclosure to that repository.
-The remote PR description contains public code/CI facts only.
+Disclosure update: the user's subsequent direct approval authorizes publishing
+this sanitized failure summary in Phjrab/cadence-mcp-bridge documentation and PR161.
+Only the error code, failed stage and preservation outcome are disclosed; private
+paths, raw metadata and internal VM/resource values remain excluded. This approval
+does not authorize another query, source correction, repair, merge or release.
+The previous automatic-review rejection and local-only hold are preserved in
+commit7b86cf0 and V3's historical disclosure field; this approval supersedes that
+hold for this summary only. Generated records are not independent user consent.
 
 **METADATA COLLECTION FAILED; NO RETRY REMAINS.** The approved one-shot operation
 reached the actual registered VM and failed with `physical_untrusted_ancestor`
