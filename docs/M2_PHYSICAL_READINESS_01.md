@@ -1,3 +1,52 @@
+## Terminal source36 one-shot outcome, 2026-10-16
+
+LOCAL ONLY: automatic approval review rejected exporting this actual-environment
+failure summary to PR161. Keep this overlay and V3 terminal record unpushed until
+the user explicitly approves this summary's disclosure to that repository.
+The remote PR description contains public code/CI facts only.
+
+**METADATA COLLECTION FAILED; NO RETRY REMAINS.** The approved one-shot operation
+reached the actual registered VM and failed with `physical_untrusted_ancestor`
+in the remote collector's ancestor ownership/shared-write guard. No validated
+metadata result or success receipt was returned. The error identifies the guard,
+not the exact rejected ancestor or which ownership/write condition failed.
+Do not infer that every installation ancestor is untrusted or change permissions
+from this traceback alone. This is actual VM failure evidence, not a successful
+physical inventory, license assessment or DRC/LVS/PEX qualification.
+
+The preserved traceback reaches `run` line229 after the fixed collector and request
+claim writes. Remote partial stage is therefore reached; its current exact file
+inventory is not separately reobserved. Durable account intent, local started/failed
+markers, stderr and partial remote evidence remain spent and protected. No second
+query, alternate plan, cleanup, permission repair or redeployment was performed.
+
+Source36 remains `759d84ec435d7ef3636024f78608b34aee13000b`, with unchanged remote
+collector bytes; the final tests/docs commit is
+`16e8b4d08c2cdf068e106b942cc05b1abc61fe68`. Both hosted jobs PASS in
+[run38873949948](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/38873949948),
+including Windows unit/security/contracts/package lifecycle and Linux real disposable
+filesystem/flock cases. Fresh automated review of that commit reports no major issues
+([receipt6211460380](https://github.com/Phjrab/cadence-mcp-bridge/pull/161#issuecomment-6211460380));
+both previous review threads are resolved. Automated review is not formal APPROVED.
+Local full suite4074 PASS/405 platform skips precedes the final test-only fixture
+commit; updated focused47 PASS/7 skips includes boundary tests. The earlier Windows
+CI failure and nonreproduced ACL fixture remain preserved, with their original status.
+
+Existing runtime, local journal content/metadata and shared counters were equal
+before/after. New simulations/extractions/reserved bytes/admin changes are all0;
+the existing disk floor passes. Detailed VM values and raw metadata remain private.
+Source consumption is36/36; actual collection attempts1/1, successful inventories0.
+The additive [terminal consumption record](policy/PHYSICAL_METADATA_CONSUMED_V3.json) preserves V1/V2 checkpoints.
+The original single query is now consumed, including its failure; no reset/refund.
+
+The exact installed development wheel/sdist and their prior audits are unchanged;
+this final overlay and terminal record are evidence-only, outside curated artifacts.
+The metadata slice remains limited to the qualified Windows/Python3.12.10 host.
+PR161 remains draft/unmerged; published2.0.0 and main are unchanged.
+Further exact-ancestor investigation, any finite correction/repair and another actual
+query need a separately bounded follow-up decision. No merge/publication authority
+is added. Earlier checkpoints below remain dated historical evidence.
+
 ## Approved host-only correction overlay, 2026-10-16
 
 The latest direct user reply explicitly approves retain35/ceiling36 and exactly
