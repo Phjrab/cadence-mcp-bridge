@@ -74,7 +74,7 @@ native runtime assets are unchanged, so no additional simulation is needed.
 Subsequent local regression reproduced MOS statements moved outside the DUT being
 accepted by set comparison. Source34 requires the exact ordered hierarchy/device
 sequence, including exactly one top-level `global 0`. Review4284696734's unexpected
-global declaration gap is covered in this same pending correction. Both retained
+global declaration gap is covered in the committed correction. Both retained
 actual inputs pass and all sixteen identifier/scope/global mutations reject.
 The generator bytes match the actual writer exactly:
 `faff12552314872cb83b6bf9cae2e4f0212d8f2ff7428f7b7dc12a64666dcfdf`.
@@ -83,8 +83,25 @@ spend one finite local correction:34/34, with no extra experiment allowance.
 V15/checkpointV8 and the reproduced regression stay preserved. Direct human
 approval is the authority, not the generated policy record.
 
-Final corrected-source artifacts/hosted checks and refreshed automated review
-are pending until their exact source SHA is recorded. Automated review is never
+Corrected verifier source `c578e8e97b3807a182b19ae38aae305acce9a6db` passed exact
+isolated package/lifecycle checks and installed replay of both retained actual
+inputs/all16 mutation denials. The interrupted local validation retained five
+completed receipts and its partial setup workspace; only remaining checks resumed
+in fresh named workspaces. Reinstall/uninstall preserved43 bootstrap,20 migration
+and5 M2 state files. Its automated review6206111666 found no major issues and
+Linux CI passed. Windows unit tests4045 PASS/381 platform skips, but the strict
+dependency audit correctly blocked that source on CVE-2026-59951 in mcp2.1.1.
+
+The minimum host-only correction raises the package floor to mcp>=2.2,<3 and
+updates only mcp/mcp-types2.1.1 to2.2.0 in the lock. The upstream
+[advisory](https://github.com/modelcontextprotocol/python-sdk/security/advisories/GHSA-84m7-p3x7-pcfv)
+identifies2.2.0 as patched and limits exposure to stateful Streamable HTTP;
+the bridge's stdio transport is outside that exposure. The strict audit remains
+required. Installed MIT license texts for both updated distributions are verified.
+This does not update system Python, Cadence/PDK or the active VM runtime, and
+adds0 source corrections/attempts/reservations. Published2.0.0 stays unchanged.
+Final dependency-corrected artifacts/CI are recorded separately by exact source;
+the c578 artifacts/failed CI remain retained history. Automated review is never
 formal human APPROVED. No PR160 merge or publication is inferred.
 
 Actual app submission is NOT_TESTED_THIS_M2_SLICE; local installed SDK execution

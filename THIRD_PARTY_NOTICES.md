@@ -9,8 +9,8 @@ it does not replace an external component's license or required attribution.
 
 | Component | Reviewed local version | Observed license | Classification |
 | --- | --- | --- | --- |
-| MCP Python SDK | 2.1.1 | MIT | DEPENDENCY_ONLY |
-| mcp-types | 2.1.1 | MIT | DEPENDENCY_ONLY |
+| MCP Python SDK | 2.2.0 | MIT | DEPENDENCY_ONLY |
+| mcp-types | 2.2.0 | MIT | DEPENDENCY_ONLY |
 | Pydantic | 2.13.4 | MIT | DEPENDENCY_ONLY |
 | pydantic-core | 2.46.4 | MIT | DEPENDENCY_ONLY |
 | pydantic-settings | 2.15.0 | MIT | DEPENDENCY_ONLY |

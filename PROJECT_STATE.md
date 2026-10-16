@@ -1,3 +1,17 @@
+## Host dependency security correction, 2026-10-16
+
+c578e8e's exact package/lifecycle and installed actual-input replay passed; its
+automated review6206111666 found no major issue and Linux CI passed. Windows
+4045 unit tests passed/381 platform skips, then the strict dependency audit blocked
+mcp2.1.1 onCVE-2026-59951. Keep that failed CI and earlier clean-audit evidence;
+do not suppress the new finding or claim a full c578 hosted PASS.
+
+Apply only host mcp/mcp-types2.2.0 and floor mcp>=2.2,<3, with verified MIT license
+texts, then exact installed/compatibility/security/hosted checks. The advisory
+concerns stateful HTTP; bridge stdio is not that exposure. No VM runtime/code,
+Cadence/PDK/system-Python or journal changes; ledger128/15,721,299,968, source34/34.
+See [acceptance/runbook](docs/M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+
 ## Latest actual owned-inverter checkpoint, 2026-10-15
 
 New owned inverter/symbol/hierarchical testbench creation, reopened connectivity

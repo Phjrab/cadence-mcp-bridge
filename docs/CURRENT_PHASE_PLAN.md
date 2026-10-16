@@ -1,3 +1,13 @@
+## Host dependency correction during closeout, 2026-10-16
+
+Actual OA/DC/TRAN/replay acceptance remains recorded below. c578 exact installed
+package/replay and Linux CI passed; Windows4045 unit PASS then strict security
+audit foundCVE-2026-59951 in mcp2.1.1. Preserve that failure. Update only host
+mcp/mcp-types2.2.0 and minimum mcp>=2.2,<3; keep audit/compatibility/package gates.
+Refresh the dependency-corrected exact installed and hosted source, without new
+VM activation/calculation or consumed-source reset. Ledger128/15,721,299,968 and
+source34/34 remain. No PR160 merge, publication or physical/Claude work is inferred.
+
 ## Current bounded M2 closeout, 2026-10-15
 
 Actual owned OA/symbol/testbench, saved/reopened checks, independent DC/TRAN inputs,
