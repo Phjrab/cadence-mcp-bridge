@@ -100,9 +100,42 @@ the bridge's stdio transport is outside that exposure. The strict audit remains
 required. Installed MIT license texts for both updated distributions are verified.
 This does not update system Python, Cadence/PDK or the active VM runtime, and
 adds0 source corrections/attempts/reservations. Published2.0.0 stays unchanged.
-Final dependency-corrected artifacts/CI are recorded separately by exact source;
-the c578 artifacts/failed CI remain retained history. Automated review is never
+The c578 artifacts/failed CI remain retained history. Automated review is never
 formal human APPROVED. No PR160 merge or publication is inferred.
+
+## Dependency-corrected installed evidence, 2026-10-16
+
+Exact package source: `99af9fdf3a001da179734a1aed76eaab6811ec11`.
+The companion documentation closeout changes no packaged source/metadata/notice
+or native asset. Actual DC/TRAN execution remains attributed to0ae58c5; the
+99af package additionally carries the local verifier fixes and SDK2.2.0.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| cadence_mcp_bridge-2.0.0-py3-none-any.whl | 17cf03e725ca8b7a4f3b2c697ef1179c8d40e05477151d7e7429d755be215d0b |
+| cadence_mcp_bridge-2.0.0.tar.gz | 85e327b59fa3d2c82f1ca53852ec3d7c74befdfee0a87b6db548470502c03a74 |
+
+Canonical package members match Git. Distribution license/notice/secret/protected
+content exclusions pass. Eight isolated installed verifiers pass: protocol,
+runtime context, operations, bootstrap, domain, setup, extraction recovery and
+design. Reinstall/uninstall preserve43 bootstrap+20 migration+5 M2 state files.
+These are installed synthetic/local checks, separate from actual VM execution.
+Installed SDK2.2.0 revalidates both retained actual inputs and all16 mutation
+denials; its rendered OA program is byte-identical to the actual writer.
+
+The final installed ordinary UID500 VM preflight passes read-only, changed_files0,
+new_simulations0/new_reservations0. Fresh ledger remains128/500 and
+15,721,299,968/17,179,869,184 bytes. No new grant, admission or replay authority
+was created. Local strict security audit finds no known vulnerabilities; lint,
+mypy114 and85-tool/22-legacy declaration compatibility pass. Latest automatic
+review6206259097 on99af finds no major issues; all three earlier review threads
+are resolved with fixes/regressions, without claiming formal human APPROVED.
+
+Source99af's Linux CI passes. The final branch's exact Windows/Linux check status
+and head SHA are recorded on [PR160](https://github.com/Phjrab/cadence-mcp-bridge/pull/160)
+after the companion documentation push; only the exact final head's results count
+for closeout. A green code/package check is not physical or actual-app acceptance.
+These development artifacts are retained privately, not a new published release.
 
 Actual app submission is NOT_TESTED_THIS_M2_SLICE; local installed SDK execution
 does not substitute for actual Codex/Claude app evidence. Claude is excluded.

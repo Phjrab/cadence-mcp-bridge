@@ -1,3 +1,21 @@
+## Current bounded slice closeout, 2026-10-16
+
+Source99af exact installed/package/security/compatibility/lifecycle PASS and clean
+automated review6206259097, plus installed retained-input replay16 denials and
+fresh UID500 read-only VM preflight changed0. Latest ledger128/15,721,299,968,
+remaining1391MiB of16GiB; source34/34 with all consumed records preserved.
+Actual two-job automatic-extraction and new-process same-ID0-spend evidence stays
+at0ae58c5, with byte-identical generator/native runtime. Final branch Windows/Linux
+checks use the exact PR160 head; documentation closeout changes no package members.
+See [acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md) for artifact hashes.
+
+Finish exact final-head CI/status verification and report this reviewable PR.
+No further experiment is admitted by the exhausted two-job grant. Functional
+switching/performance and physical layout/DRC/LVS/PEX remain separate future work;
+do not expand this short loaded TRAN observation into their acceptance.
+No inferred PR160 merge/publication or Claude work. Older pending sections below
+retain their source/time scope rather than overriding this completed evidence.
+
 ## Host dependency correction during closeout, 2026-10-16
 
 Actual OA/DC/TRAN/replay acceptance remains recorded below. c578 exact installed

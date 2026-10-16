@@ -1,3 +1,24 @@
+## Bounded M2 implementation and installed closeout, 2026-10-16
+
+Package source99af9fdf3a001da179734a1aed76eaab6811ec11 passes eight isolated
+installed verifiers, distribution rights/exclusion checks, reinstall/uninstall
+43+20+5 state preservation and installed replay of two retained actual inputs /
+16 mutation denials. Host SDK2.2.0 strict audit finds no known vulnerabilities;
+lint/mypy114 and85-tool/22-legacy compatibility pass. Automatic review6206259097
+finds no major issues and all three previous threads are resolved. Linux CI passes;
+final branch head's required Windows/Linux status is recorded onPR160 after the
+documentation-only push. Package identity and hashes are in the acceptance record.
+
+Final installed ordinary UID500 read-only VM preflight PASS, changed0 and ledger
+128/500,15,721,299,968/17,179,869,184 bytes, remaining1391MiB. Source34/34.
+Actual owned OA/read-back/DC/TRAN/automatic extraction at0ae58c5 and new-process
+same-ID0-spend PASS remain distinct from this installed/local verification.
+Writer bytes/native runtime assets stay identical. Short loaded TRAN is not
+switching/performance acceptance; actual app remains untested in this M2 slice.
+PR160 stays draft/unmerged; published2.0.0, physical/Claude exclusions remain.
+Earlier pending/source-specific failures below are retained history, superseded
+only by [the exact evidence](docs/M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+
 ## Host dependency security correction, 2026-10-16
 
 c578e8e's exact package/lifecycle and installed actual-input replay passed; its

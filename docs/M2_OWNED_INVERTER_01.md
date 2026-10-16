@@ -1,3 +1,18 @@
+## Final installed evidence overlay, 2026-10-16
+
+Exact package source99af9fdf3a001da179734a1aed76eaab6811ec11 includes the local
+topology fixes and security-patched mcp/mcp-types2.2.0. Eight installed verifiers,
+distribution audit,43+20+5 reinstall/uninstall preservation, installed retained
+actual-input replay16 mutation denials, strict security audit and compatibility
+pass. Automated review6206259097 finds no major issues; three earlier threads
+are resolved. Fresh installed UID500 read-only VM preflight passes/changed0;
+ledger128/15,721,299,968 unchanged. Final head CI is recorded onPR160.
+Actual execution source0ae58c5, package source99af and documentation-only closeout
+remain separate identities. See [exact hashes and evidence](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+No new calculation/admission, PR160 merge or publication occurred. The earlier
+pending package/review statements below are historical; performance/physical/app
+limits are preserved. Published2.0.0 remains unchanged.
+
 ## Current actual outcome and final review correction, 2026-10-15
 
 The ordinary UID500 path created a new owned inverter, symbol and hierarchical

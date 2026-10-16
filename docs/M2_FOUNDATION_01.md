@@ -1,3 +1,15 @@
+## Current owned-inverter installed closeout, 2026-10-16
+
+PR160 now has actual owned OA/read-back/DC/TRAN/automatic-extraction and same-ID
+restart evidence at0ae58c5, plus exact dependency-corrected installed package99af,
+eight local verifiers, state preservation, security/compatibility and clean
+automatic review. Final fresh UID500 preflight passes with ledger128 /
+15,721,299,968 bytes, no new calculation or changed files. Source34/34 retained.
+Final PR160 checks track the exact head. See [acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+Unpublished M2 code, actual execution, package and actual-app claims stay separate;
+short loaded TRAN does not prove switching/performance. No physical/Claude work,
+PR160 merge or published2.0.0 change. Prior pending blockers below are history.
+
 ## Latest owned-inverter execution outcome, 2026-10-15
 
 PR159 is merged atf572fd9; its foundation is now followed by draft PR160.
