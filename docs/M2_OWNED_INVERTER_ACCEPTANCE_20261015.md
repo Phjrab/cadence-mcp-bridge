@@ -71,8 +71,17 @@ Review4284536573's instance-identifier gap is corrected by matching the parser's
 full hyphen/hash/64-character grammar. Both retained actual netlists pass the
 corrected verifier and six extra-device mutations reject. Writer output and all
 native runtime assets are unchanged, so no additional simulation is needed.
-V15/checkpointV8 retain32 source versions and spend one local correction:33/33.
-Direct human approval is the authority, not the generated policy record.
+Subsequent local regression reproduced MOS statements moved outside the DUT being
+accepted by set comparison. Source34 requires the exact ordered hierarchy/device
+sequence, including exactly one top-level `global 0`. Review4284696734's unexpected
+global declaration gap is covered in this same pending correction. Both retained
+actual inputs pass and all sixteen identifier/scope/global mutations reject.
+The generator bytes match the actual writer exactly:
+`faff12552314872cb83b6bf9cae2e4f0212d8f2ff7428f7b7dc12a64666dcfdf`.
+Native runtime assets are unchanged. V16/checkpointV9 retain33 source versions and
+spend one finite local correction:34/34, with no extra experiment allowance.
+V15/checkpointV8 and the reproduced regression stay preserved. Direct human
+approval is the authority, not the generated policy record.
 
 Final corrected-source artifacts/hosted checks and refreshed automated review
 are pending until their exact source SHA is recorded. Automated review is never

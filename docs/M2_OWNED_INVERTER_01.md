@@ -30,6 +30,17 @@ is needed. V15 preserves32 consumed source versions and records one finite local
 review correction, reaching33/33. The user's direct additional approval is the
 authority; policy/checkpoint files only record its bounded use.
 
+Subsequent local reproduction found set comparison could accept the same MOS
+statements relocated outside the DUT. Source34 compares the exact ordered
+hierarchy/device/global sequence. Review4284696734 additionally found unexpected
+global declarations were discarded; only one top-level `global 0` now matches.
+Both retained actual inputs pass; all sixteen extra-device, scope-relocation and
+global-declaration mutations reject. The rendered generator is byte-identical
+to the actual OA writer (SHA256faff12552314872cb83b6bf9cae2e4f0212d8f2ff7428f7b7dc12a64666dcfdf).
+V16 retains33 and records one necessary local correction:34/34. V15/source33 and
+the failing local regression remain preserved; no additional VM calculation,
+activation, attempt or reservation occurred.
+
 PR160 remains draft/unmerged. Final corrected-source hosted, package and review
 evidence is recorded separately in [the acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
 Actual Codex submission is NOT_TESTED_THIS_M2_SLICE; Claude is EXCLUDED_BY_USER.

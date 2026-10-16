@@ -106,15 +106,15 @@ def verify_generated_netlist(plan: OwnedInverterPlan, frame: bytes, native: byte
     """
     devices = observed_devices(plan, frame)
     _, _, _, static = native_rendering.partition_input(native)  # type: ignore[no-untyped-call]
-    expected: set[str] = {
-        f"subckt {plan.dut_cell} vdd vin vout vss",
+    expected_tail = [
         f"ends {plan.dut_cell}",
         f"DUT (vdd vin vout 0) {plan.dut_cell}",
         "VDD (vdd 0) vsource dc=1 type=dc",
         "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=4n "
         "delay=1n rise=100p fall=100p width=2n",
         "CL (vout 0) capacitor c=1p",
-    }
+    ]
+    expected = ["global 0", f"subckt {plan.dut_cell} vdd vin vout vss"]
     for device, name, rail in zip(devices[:2], ("MN", "MP"), ("vss", "vdd"), strict=True):
         values = _mos_parameters(device)
         candidates = [line for line in static if line.startswith(name + " ")]
@@ -132,13 +132,14 @@ def verify_generated_netlist(plan: OwnedInverterPlan, frame: bytes, native: byte
         )
         if len(actual) != len(pairs) or actual != expected_options:
             raise ValueError("generated effective MOS values mismatch")
-        expected.add(candidates[0])
+        expected.append(candidates[0])
+    expected.extend(expected_tail)
     actual_devices = [
         line
         for line in static
-        if re.match(r"(?:[A-Za-z][A-Za-z0-9_#-]{0,63} \(|subckt |ends )", line)
+        if re.match(r"(?:[A-Za-z][A-Za-z0-9_#-]{0,63} \(|global |(?:inline )?subckt |ends )", line)
     ]
-    if len(actual_devices) != len(expected) or set(actual_devices) != expected:
+    if actual_devices != expected:
         raise ValueError("generated hierarchy/stimulus/load mismatch")
 
 

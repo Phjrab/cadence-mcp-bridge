@@ -213,6 +213,13 @@ dc dc write="spectre.dc" annotate=status
         native + b"EXTRA#1 (vin 0) resistor r=1\n",
         native + b"E" + b"x" * 63 + b" (vin 0) resistor r=1\n",
         native + b"DUT (vdd vin vout 0) Dut\n",
+        native + b"global vss\n",
+        native + b"global 0\n",
+        native.replace(b"global 0\n", b"global 0 vss\n"),
+        native.replace(b"global 0\n", b"").replace(b"ends Dut\n", b"global 0\nends Dut\n"),
+        native.replace(b"subckt Dut vdd vin vout vss\n", b"").replace(
+            b"ends Dut\n", b"subckt Dut vdd vin vout vss\nends Dut\n"
+        ),
     ):
         with pytest.raises(ValueError):
             verify_generated_netlist(plan, frame, bad)

@@ -6,9 +6,10 @@ New-process same-ID submit/query/result PASS with0 new dispatch/reservation.
 Ledger128/500 and15,721,299,968/17,179,869,184 bytes; this slice2/256MiB,
 remaining1391MiB. Preserve both spent jobs/grant and all earlier failures.
 
-Finish the minimum source33 topology review correction, exact final installed and
-hosted checks, review disposition and documentation. V15 retains32 and records only
-one local correction; no added simulation or runtime deployment is required.
+Finish the minimum source34 ordered-hierarchy correction, exact final installed and
+hosted checks, review disposition and documentation. V16 retains33 and records only
+one local correction after reproducing scope relocation; no added simulation or
+runtime deployment is required. The actual OA writer bytes remain identical.
 Do not expand the short loaded TRAN result into switching/performance acceptance.
 PR160 stays draft/unmerged; published2.0.0, physical/Claude exclusions remain.
 See [current outcome](M2_OWNED_INVERTER_01.md) and

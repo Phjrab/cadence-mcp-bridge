@@ -158,7 +158,7 @@ def test_v9_cannot_rewrite_failed_consumption(v9_scenario: tuple[ModuleType, Pat
         guard.inspect(reconciliation)
 
 
-@pytest.mark.parametrize("port_correction", [0, 11, 12, 13, 14, 15])
+@pytest.mark.parametrize("port_correction", [0, 11, 12, 13, 14, 15, 16])
 def test_current_additional_approval_preserves_both_failed_versions(
     v9_scenario: tuple[ModuleType, Path, Path],
     port_correction: int,
@@ -341,7 +341,7 @@ def test_current_additional_approval_preserves_both_failed_versions(
             with pytest.raises(ValueError, match="version exhausted"):
                 guard.inspect(reconciliation)
             generator.write_text("derived_value_correction = 3\n", encoding="utf-8")
-            if port_correction == 15:
+            if port_correction >= 15:
                 review_checkpoint = json.loads(
                     (ROOT / "docs/policy/M2_NATIVE_CORRECTION_CONSUMED_V8.json").read_bytes()
                 )
@@ -369,11 +369,45 @@ def test_current_additional_approval_preserves_both_failed_versions(
                 assert guard.inspect(reconciliation)["conservative_consumed"] == 32
                 generator.write_text("topology_review_correction = 4\n", encoding="utf-8")
                 assert guard.inspect(reconciliation)["conservative_consumed"] == 33
-                commit(repository, "synthetic topology review fix")
+                fourth_generator = commit(repository, "synthetic topology review fix")
                 generator.write_text("unrecorded_generator = 5\n", encoding="utf-8")
                 with pytest.raises(ValueError, match="version exhausted"):
                     guard.inspect(reconciliation)
                 generator.write_text("topology_review_correction = 4\n", encoding="utf-8")
+                if port_correction == 16:
+                    scope_checkpoint = dict(
+                        review_checkpoint,
+                        schema_version=9,
+                        retained_consumed_source_changes=33,
+                        generator_versions_consumed=4,
+                        generator_commit=fourth_generator,
+                        generator_module_lf_sha256=hashlib.sha256(
+                            generator.read_bytes().replace(b"\r\n", b"\n")
+                        ).hexdigest(),
+                        prior_consumed_checkpoint_sha256=canonical(review_checkpoint),
+                    )
+                    scope_policy = dict(
+                        review_policy,
+                        schema_version=16,
+                        maximum_corrections_same_change=34,
+                        maximum_generator_versions=5,
+                        prior_policy_sha256=canonical(review_policy),
+                        prior_consumed_checkpoint_sha256=canonical(scope_checkpoint),
+                    )
+                    for name, value in (
+                        ("M2_NATIVE_CORRECTION_CONSUMED_V9.json", scope_checkpoint),
+                        ("M2_NATIVE_CORRECTION_LIMIT_V16.json", scope_policy),
+                    ):
+                        (directory / name).write_text(json.dumps(value), encoding="utf-8")
+                    commit(repository, "synthetic finite scope-order fix retaining33")
+                    assert guard.inspect(reconciliation)["conservative_consumed"] == 33
+                    generator.write_text("scope_order_correction = 5\n", encoding="utf-8")
+                    assert guard.inspect(reconciliation)["conservative_consumed"] == 34
+                    commit(repository, "synthetic scope-order fix")
+                    generator.write_text("unrecorded_generator = 6\n", encoding="utf-8")
+                    with pytest.raises(ValueError, match="version exhausted"):
+                        guard.inspect(reconciliation)
+                    generator.write_text("scope_order_correction = 5\n", encoding="utf-8")
     collector.write_text("unrecorded_extra = 4\n", encoding="utf-8")
     with pytest.raises(ValueError, match="version exhausted"):
         guard.inspect(reconciliation)

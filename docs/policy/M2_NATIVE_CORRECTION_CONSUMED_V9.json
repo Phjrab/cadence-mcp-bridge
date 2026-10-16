@@ -1,0 +1,14 @@
+{
+  "schema_version": 9,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 33,
+  "generator_versions_consumed": 4,
+  "generator_commit": "9d062819fdfb8b3b638762056697a03f6828388c",
+  "generator_module_lf_sha256": "1df92b714813d2f69b346db8da263168eed3bbfced622975c50d169e35a2c699",
+  "generator_outcome": "EXTRA_IDENTIFIERS_DENIED_SCOPE_RELOCATION_REPRODUCED_LOCALLY_NO_NEW_SIMULATION",
+  "prior_consumed_checkpoint_sha256": "1c03637e7a58ad23fea50731cc8abb18e8c1c292727a1e1de384d9254652a55a",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0,
+  "cumulative_attempts": 128,
+  "cumulative_reserved_bytes": 15721299968
+}

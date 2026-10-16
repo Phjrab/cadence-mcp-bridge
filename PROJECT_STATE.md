@@ -8,8 +8,10 @@ same-ID submit/query/result repeat adds0 dispatch/reservation. Actual ledger128/
 Original OA/ADE/model contents and historical jobs/failures/journals remain retained.
 
 Source33 closes review4284536573's parser-legal hyphen/hash topology-filter gap.
-V15 preserves32 consumed versions and allows only this finite local correction;
-retained actual inputs pass and six injected extra devices reject without new runs.
+Source34 additionally rejects locally reproduced relocation of MOS outside the DUT.
+V16 retains33 and records this one finite local correction:34/34. Retained actual
+inputs pass and sixteen topology/global mutations reject, with byte-identical OA writer
+and unchanged native runtime assets; no new runs or reservations.
 Final corrected-source hosted/package/review gates are tracked in the
 [acceptance/runbook](docs/M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
 PR160 remains draft/unmerged; main stays atPR159'sf572fd9 and published2.0.0 is
