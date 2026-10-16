@@ -1,3 +1,16 @@
+## PHYSICAL-METADATA-01 deployment hold, 2026-10-16
+
+Keep source35883eb and consumed35/35 frozen. Review4291980402's pre-claim intent
+replay defect is reproduced offline; no actual collector stage/query ran. The
+one approved remote operation remains unused. Do not create another plan to retry,
+change source, extend policy or deploy under the exhausted one-version allowance.
+Complete independent verification and preserve the failure/review. The next minimum
+scope is one host-only durable-intent correction (retain35/ceiling36), then exact
+tests/review and the same single actual query; it needs separate explicit approval.
+Remote collector bytes and simulation budgets need no expansion. Current existing
+inspect/storage and journals PASS; ledger128/15,721,299,968 unchanged, disk floorOK.
+See [evidence and proposal](M2_PHYSICAL_METADATA_01_STATUS.md). No merge/publication.
+
 ## Active PHYSICAL-METADATA-01 implementation, 2026-10-16
 
 The direct limited-collector approval is now active: retain34, source ceiling35,

@@ -20,7 +20,8 @@ Development-only physical metadata inspection is an explicit operator API with a
 separate bounded staging/query approval. It launches no EDA or license utilities
 and cannot qualify layout/DRC/LVS/PEX from file presence. See the
 [fixed collector runbook](docs/M2_PHYSICAL_READINESS_01.md). It is not included in
-the already published2.0.0 artifacts.
+the already published2.0.0 artifacts. **Current development build is blocked before
+deployment** by the reproduced pre-claim replay defect; do not invoke its collector.
 
 Actual host evidence is Windows/Python3.12.10. The reference VM observation is
 CentOS6.5/i686/Python2.6.6, Virtuoso IC6.1.5.500.15 and Spectre12.1.0.347.isr3.

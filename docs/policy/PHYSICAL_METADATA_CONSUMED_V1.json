@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_prior_source_changes": 34,
+  "conservative_consumed_source_changes": 35,
+  "collector_versions_consumed": 1,
+  "source_commit": "35883eba22e4d8697787a59462e497d29575be23",
+  "source_lf_sha256": {
+    "src/cadence_mcp_bridge/_physical_metadata.py": "42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d",
+    "src/cadence_mcp_bridge/physical_metadata.py": "ed53fa30974425d11f038140c3fcb520fba339de706bb1e22ff34fc2f0433cc9"
+  },
+  "outcome": "BLOCKED_BEFORE_DEPLOYMENT_REVIEW_4291980402_REPRODUCED_OFFLINE",
+  "collector_deployed": false,
+  "actual_collector_queries": 0,
+  "new_simulations": 0,
+  "new_extractions": 0,
+  "new_reserved_bytes": 0,
+  "cumulative_attempts": 128,
+  "cumulative_reserved_bytes": 15721299968,
+  "automatic_corrective_deployment_authorized": false
+}

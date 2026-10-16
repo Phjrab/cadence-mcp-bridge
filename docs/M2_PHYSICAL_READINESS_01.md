@@ -2,6 +2,12 @@
 
 ## Active approved collector slice
 
+**Current gate: BLOCKED BEFORE DEPLOYMENT.** Source35883eb consumes35/35; valid
+review4291980402 reproduced a pre-claim replay window across new local plan
+directories. Do not call `collect` on this build. No collector deployment or query
+occurred. See the [exact status and minimum correction](M2_PHYSICAL_METADATA_01_STATUS.md).
+The implementation description below does not imply that this review passed.
+
 The user's explicit **limited collector stage approval** supersedes the earlier
 proposal below for PHYSICAL-METADATA-01 only: retain34 consumed source versions,
 ceiling35, one collector/host-parser version, ordinary-user staging and one query.

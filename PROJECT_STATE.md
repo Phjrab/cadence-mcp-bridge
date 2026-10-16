@@ -1,3 +1,22 @@
+## Physical metadata source35 held before deployment, 2026-10-16
+
+Source35883eba22e4d8697787a59462e497d29575be23 implements the one approved
+collector/host-parser version; consumed35/35 with original34 preserved. Valid
+P1 review4291980402 is reproduced offline: fresh plan directories admit two
+synthetic pre-claim transport calls, expected1. No actual collector stage/query
+occurred. Do not deploy or bypass the blocking review with a new plan.
+
+Exact installed local preparation, existing native inspect/storage PASS at UID500,
+changed0; ledger128/15,721,299,968, remaining1391MiB. Disk free25,541,607,424 above
+floor6,238,251,418; local journals/absence preserved. New EDA/simulation/extraction/
+reservation/admin changes0. Both exact-source hosted jobs PASS (Windows4071/387
+platform skips; Linux collector foundation154/no skips); run38867080476.
+Exact artifact rights/exclusion/install/protocol checks PASS; physical execution
+remains unqualified. See [status and minimum host-only correction proposal](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+Need one finite source36 allowance retaining35 before correcting durable intent;
+the original single actual query remains unused. No merge/publication authority.
+Earlier implementation/proposal statements below retain their historical scope.
+
 ## Approved fixed physical metadata collector, 2026-10-16
 
 Direct human limited-collector approval retains source34 and extends only to35:
