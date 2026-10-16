@@ -1,3 +1,21 @@
+## Explicit finite metadata follow-up extension, 2026-10-16
+
+The latest direct operator approval retains36 consumed source versions and the
+original failed collection1, and raises ceilings to source40 and10 additional
+collections (total11). Immutable policyV3 and its source guard preserve prior
+policies, consumed history and current simulation/result limits. No merge or
+publication authority is added. Earlier no-retry/source36 statements below remain
+source-specific history, superseded only by this explicit finite extension.
+
+Source37 adds a separate operator-only registered-library-ancestor permission
+recipe and predecessor-bound numbered follow-ups. Active native assets stay
+unchanged; no public repair/shell tool is added. Windows focused59 PASS/20 POSIX
+skips, security18 PASS, Ruff and mypy118, original85 tools/22 contracts PASS.
+Hosted POSIX, exact package/install checks, refreshed review and actual VM
+provisioning/collection remain pending. No actual repair or follow-up collection
+is claimed. Private diagnostic paths/raw metadata stay outside this branch.
+See [operator workflow](docs/PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md).
+
 ## Terminal source36 one-shot outcome, 2026-10-16
 
 Disclosure update: the user's subsequent direct approval authorizes publishing
