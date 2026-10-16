@@ -13,6 +13,8 @@ reservation/admin changes0. Both exact-source hosted jobs PASS (Windows4071/387
 platform skips; Linux collector foundation154/no skips); run38867080476.
 Exact artifact rights/exclusion/install/protocol checks PASS; physical execution
 remains unqualified. See [status and minimum host-only correction proposal](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+Earlier-variant local full suite7 failures are preserved; final source/targeted
+rerun30 PASS/6 Windows POSIX skips, without storage/WP14 product changes.
 Need one finite source36 allowance retaining35 before correcting durable intent;
 the original single actual query remains unused. No merge/publication authority.
 Earlier implementation/proposal statements below retain their historical scope.

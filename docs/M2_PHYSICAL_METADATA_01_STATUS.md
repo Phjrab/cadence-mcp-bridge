@@ -73,8 +73,9 @@ These are private verification artifacts of35883eb, **not new public2.0.0 files*
 | `cadence_mcp_bridge-2.0.0.tar.gz` |`ec208949959e182e3873a2a1440d7655b987a3c369154830f2911fa4f2ade5ab` |
 
 Exact distribution/source/license/exclusion audit, isolated installed source pins,
-local plan and installed85-tool/22-legacy protocol checks PASS. Local focused
-collector/guard26 PASS/6 Windows POSIX skips; Ruff/mypy116 and contract audit PASS.
+local plan and installed85-tool/22-legacy protocol checks PASS. Final local focused
+collector/guard plus targeted failure rerun30 PASS/6 Windows POSIX skips;
+Ruff/mypy116 and contract audit PASS.
 Both hosted jobs at35883eb PASS in
 [run38867080476](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/38867080476).
 Linux job116862274157 includes disposable filesystem/flock and the154-test
@@ -84,9 +85,14 @@ package/reinstall/uninstall/state-preservation gates.
 The original tests lack the reproduced cross-plan case and do not invalidate P1.
 
 The broader local suite started before the final enumeration adjustment and is
-not exact-final-source proof. It is still running and has displayed
-four failures; its final failure details must be retained and investigated, not
-replaced by the hosted success. Initial full-suite isolation and installed-verifier
+not exact-final-source proof:7 failed/4047 passed/404 skipped. Three boundary tests
+loaded fixture code before the BASELINE fixture update while dynamically loading
+the newer guard, hence base-commit mismatches. Four storage/WP14 cases also failed
+in the long workspace fixture path (one reports WinError3 while copying a deeply
+nested checkout). All seven, plus the final collector suite, pass in a fresh process
+with a short temporary root, with no storage/WP14 product change. Both broad failure
+and focused rerun logs remain preserved; do not relabel the broad run as PASS.
+Initial full-suite isolation and installed-verifier
 relative-workspace failures are retained host harness failures. The exact installed
 protocol rerun uses absolute paths and passes. The earlier package lifecycle
 rehearsal passed43+20+5 disposable-state preservation but preceded the final change.
