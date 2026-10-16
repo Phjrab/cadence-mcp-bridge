@@ -1,3 +1,23 @@
+## Physical readiness continuation after PR160 integration, 2026-10-16
+
+PR160 normally merged as06f407a3bba814ad2823323bed9604624f7b3061 after the
+user's explicit exact-head merge approval. Its tree matches approvedfb75f0d;
+post-merge Windows/Linux CI both PASS. Prior draft/unmerged statements below
+are historical. Published2.0.0 and the actual execution source are unchanged.
+
+Fresh connected metadata discovery still rejects RUNNER_SETUP_REQUIRED before
+invocation: OperatorTransport has no attested legacy runner. Existing native
+installed preflight separately PASS at UID500/changed0 and retained ledger128 /
+15,721,299,968 bytes, remaining1391MiB. Journals including an absent unused sweep
+journal are preserved. This continuation adds0 runs/extractions/reservations.
+Physical tools/decks/layout APIs remain UNKNOWN; licenses/execution unverified.
+
+See [readiness investigation](docs/M2_PHYSICAL_READINESS_01.md) for the actual
+route distinction and proposed fixed metadata-only collector. Source34/34 stays
+retained; new collector implementation/deployment requires a finite extension,
+not a counter reset or an inference from the PR160 integration approval.
+This branch is documentation only, with no new physical execution authority.
+
 ## Bounded M2 implementation and installed closeout, 2026-10-16
 
 Package source99af9fdf3a001da179734a1aed76eaab6811ec11 passes eight isolated

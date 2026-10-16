@@ -1,3 +1,23 @@
+## Current physical-readiness investigation, 2026-10-16
+
+PR160 integration is complete at06f407a3bba814ad2823323bed9604624f7b3061,
+with identical approved source and both post-merge CI jobs PASS. The user's
+continuation selects investigation of physical readiness, not physical compute.
+Existing local physical contracts are reused; no duplicate model is introduced.
+
+The connected allowlisted library call rejects the unattested legacy operator
+runner. The separate exact-installed native preflight passes read-only at UID500,
+changed0; ledger128/15,721,299,968 and journal states are preserved. No source,
+runtime, circuit, policy, administrator or resource mutation is made here.
+
+Complete the [readiness record](M2_PHYSICAL_READINESS_01.md) and its finite
+PHYSICAL-METADATA-01 proposal. Physical installation/deck/API facts remain unknown;
+do not call the backend absent or qualified. The34/34 source allowance and spent
+two-job grant remain binding. A new fixed collector version/stage/invocation
+requires the proposed explicit extension before execution. Do not infer it from
+PR160's merge approval, launch EDA as a read-only shortcut, or start layout/DRC/LVS/PEX.
+Older pending, draft and phase limits below retain their historical scope.
+
 ## Current bounded slice closeout, 2026-10-16
 
 Source99af exact installed/package/security/compatibility/lifecycle PASS and clean
