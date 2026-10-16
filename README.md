@@ -1,3 +1,12 @@
+## Development metadata collector correction, 2026-10-16
+
+PR161 source36 is a bounded host-only replay correction under explicit user approval.
+It is not part of the published2.0.0 build. Actual metadata deployment remains held
+until exact-source CI/review/install gates pass. The fixed OS-account intent state
+must be preserved across plans, upgrades and process restarts; failed/unknown claims
+are never reset. No physical-tool execution or license qualification is claimed.
+See [current status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+
 # Cadence MCP Bridge
 
 Register your own circuits and run bounded DC/AC/TRAN analyses and 1D Sweeps in

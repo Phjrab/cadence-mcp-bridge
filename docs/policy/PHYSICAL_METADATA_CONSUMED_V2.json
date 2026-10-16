@@ -1,0 +1,22 @@
+{
+  "actual_collector_queries": 0,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "automatic_corrective_deployment_authorized": false,
+  "collector_deployed": false,
+  "conservative_consumed_source_changes": 36,
+  "cumulative_attempts_last_observed": 128,
+  "cumulative_reserved_bytes_last_observed": 15721299968,
+  "host_correction_versions_consumed": 1,
+  "new_extractions": 0,
+  "new_reserved_bytes": 0,
+  "new_simulations": 0,
+  "original_single_query_unused": true,
+  "outcome": "HOST_CORRECTION_IMPLEMENTED_FINAL_GATES_PENDING",
+  "retained_prior_source_changes": 35,
+  "schema_version": 2,
+  "source_commit_record": "Record exact source36 commit after final tests and single source commit",
+  "source_lf_sha256": {
+    "src/cadence_mcp_bridge/_physical_metadata.py": "42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d",
+    "src/cadence_mcp_bridge/physical_metadata.py": "6ed61f14f35fc7755d4be8cce0e0d46d6122b579d07892c53eafe19c2fba381b"
+  }
+}

@@ -1,3 +1,47 @@
+## Approved host-only correction overlay, 2026-10-16
+
+The latest direct user reply explicitly approves retain35/ceiling36 and exactly
+one host-only correction for review4291980402, followed by the original unused
+single metadata stage/query only after tests and review pass. This supersedes
+older statements that source36 is unapproved; those records remain historical.
+The authority is the direct user reply, not this generated record or policy.
+
+`physical_metadata.collect` now claims a fixed OS-account state location before
+SSH, independent of the prepared plan, SSH alias, environment/bundle/request IDs
+and process lifetime. The key uses the existing declared VM resource domain
+(hostname/architecture), guest account and unchanged collector SHA. Even a changed
+managed root cannot reset it. Exclusive creation arbitrates concurrent callers;
+partial, malformed, failed and unknown claims remain spent. Private ownership,
+Windows DACL/POSIX modes, symlink/junction checks and namespace revalidation reject
+untrusted state. This trusted local state is evidence: preserve and migrate it with
+the operator account; do not delete it to retry. It does not protect deliberate
+external deletion by the owning operator/admin or substitution of the OS itself.
+
+The remote collector remains LF SHA256
+`42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d`.
+V1 policies/consumption and the frozen POST/M2 guards are preserved. The additive
+[version2 guard](../scripts/verify-physical-metadata-boundary-v2.py) enforces
+35 retained plus one host correction, no remote source change or added query.
+Final tests/review/exact installed checks and actual single query remain pending.
+No simulation, extraction, reservation, administrator action, merge or publication
+is authorized by this extension. PR161 stays draft/unmerged; published2.0.0 unchanged.
+
+### Source36 local verification checkpoint
+
+Frozen host correction: focused46 PASS/7 Windows POSIX skips; Ruff/mypy116
+PASS; security18 PASS and strict locked dependency audit clean. Actual OS-account
+home and read-only security validation PASS. SYSTEM ownership of a trusted Windows
+home is accepted only as an ancestor; claim directory/file ownership still requires
+the current token. Windows shared-write ACL and junction rejection are actual
+owned disposable tests. Full local unit suite and package lifecycle are in progress;
+hosted exact source/review and actual single metadata stage/query remain pending.
+
+Development failure logs are preserved privately: an initial inaccessible Windows
+system-temp selection, OWNER RIGHTS ACL handling, fixture CRLF pins, and unloaded
+sandbox OS-profile refusal. These did not contact the VM or create the actual
+singleton intent. Later focused results replace only their local test scope.
+The prior broad7-failure/source35 record below remains unchanged.
+
 # PHYSICAL-METADATA-01 status, 2026-10-16
 
 **BLOCKED BEFORE DEPLOYMENT.** Source35883eb is implemented and locally installed,

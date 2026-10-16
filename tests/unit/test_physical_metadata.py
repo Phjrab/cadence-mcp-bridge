@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,14 @@ from cadence_mcp_bridge import physical_metadata as host
 from cadence_mcp_bridge.native_runtime import bundle
 
 __all__ = ["operator", "operator_base", "registered", "confirmed_domain", "prepared", "root"]
+
+
+@pytest.fixture(autouse=True)
+def isolated_intents(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    home = tmp_path / "operator-home"
+    home.mkdir(mode=0o700)
+    monkeypatch.setattr(host, "_operator_home", lambda: home)
+    return home
 
 
 def test_targets_exclude_user_circuits_and_unregistered_search_roots() -> None:
@@ -157,6 +166,204 @@ def test_failed_transport_preserves_intent_and_prevents_retry(
     with pytest.raises(FileExistsError):
         host.collect(output, result["plan_sha256"])
     assert calls == [1]
+
+
+def test_cross_plan_alias_and_bundle_identity_cannot_retry(
+    registered: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context, _, registration = registered
+    exported = tmp_path / "native"
+    receipt = bundle(context, registration, exported)
+    calls: list[int] = []
+    monkeypatch.setattr(host, "_ssh", lambda _: ["synthetic-not-executed"])
+
+    def timeout(*_args: Any, **_kwargs: Any) -> Any:
+        calls.append(1)
+        raise ValueError("synthetic before remote claim")
+
+    monkeypatch.setattr(host, "run_fixed", timeout)
+    for index in range(2):
+        output = tmp_path / str(index)
+        result = host.prepare(exported, receipt["manifest_sha256"], output)
+        error = ValueError if index == 0 else FileExistsError
+        with pytest.raises(error):
+            host.collect(output, result["plan_sha256"])
+    assert calls == [1]
+
+
+def test_claim_process_restart_and_alias_independence(
+    registered: Any, isolated_intents: Path
+) -> None:
+    context, _, _ = registered
+    environment = context.contracts.environment
+    # Inspect fixture's typed environment through the registered source profile.
+    assert environment is not None
+    raw = environment.model_dump_json()
+    script = (
+        "import sys; from pathlib import Path; "
+        "from cadence_mcp_bridge import physical_metadata as h; "
+        "from cadence_mcp_bridge.environments import EnvironmentProfile; "
+        "h._operator_home=lambda:Path(sys.argv[1]); "
+        "e=EnvironmentProfile.model_validate_json(sys.argv[2]); "
+        "h._claim_intent(e,'a'*64,sys.argv[3],'b'*64)"
+    )
+    for index in range(2):
+        changed = environment.model_copy(
+            update={"ssh_alias": "another-alias", "environment_id": "another-id"}
+        )
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                script,
+                str(isolated_intents),
+                raw if index == 0 else changed.model_dump_json(),
+                str(index),
+            ],
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+        if index == 0:
+            assert completed.returncode == 0, completed.stderr
+        else:
+            assert completed.returncode != 0 and b"FileExistsError" in completed.stderr
+
+
+def test_concurrent_claims_exactly_one_winner(registered: Any) -> None:
+    context, _, _ = registered
+    assert context.contracts.environment is not None
+
+    def attempt(index: int) -> bool:
+        try:
+            host._claim_intent(context.contracts.environment, "a" * 64, str(index), "b" * 64)
+            return True
+        except FileExistsError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        assert sum(pool.map(attempt, range(8))) == 1
+
+
+@pytest.mark.parametrize("partial", [b"", b"{", b"{}"])
+def test_partial_or_malformed_claim_remains_spent(
+    registered: Any, isolated_intents: Path, partial: bytes
+) -> None:
+    context, _, _ = registered
+    assert context.contracts.environment is not None
+    host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+    claim = next((isolated_intents / ".cadence-mcp-physical-intents-v1").iterdir())
+    claim.write_bytes(partial)
+    with pytest.raises(FileExistsError):
+        host._claim_intent(context.contracts.environment, "a" * 64, "second", "c" * 64)
+    assert claim.read_bytes() == partial
+
+
+def test_claim_write_failure_stays_spent(registered: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    context, _, _ = registered
+    assert context.contracts.environment is not None
+    monkeypatch.setattr(host, "_sync_directory", lambda _: None)
+
+    def failed_sync(_: int) -> None:
+        raise OSError("synthetic disk failure")
+
+    monkeypatch.setattr(host.os, "fsync", failed_sync)
+    with pytest.raises(OSError, match="disk failure"):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+    with pytest.raises(FileExistsError):
+        host._claim_intent(context.contracts.environment, "a" * 64, "second", "b" * 64)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual POSIX ownership/modes/symlinks")
+def test_untrusted_intent_directory_and_symlink_rejected(
+    registered: Any, isolated_intents: Path
+) -> None:
+    context, _, _ = registered
+    assert context.contracts.environment is not None
+    directory = isolated_intents / ".cadence-mcp-physical-intents-v1"
+    directory.mkdir(mode=0o777)
+    directory.chmod(0o777)
+    with pytest.raises(ValueError, match="permissions"):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+    directory.rmdir()
+    elsewhere = isolated_intents / "elsewhere"
+    elsewhere.mkdir(mode=0o700)
+    directory.symlink_to(elsewhere, target_is_directory=True)
+    with pytest.raises(ValueError, match="local_path_invalid"):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+
+
+def test_intent_directory_replacement_during_flush_rejected(
+    registered: Any, isolated_intents: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context, _, _ = registered
+    assert context.contracts.environment is not None
+    directory = isolated_intents / ".cadence-mcp-physical-intents-v1"
+    original = host.os.fsync
+
+    def replace(fd: int) -> None:
+        original(fd)
+        if directory.exists():
+            directory.rename(isolated_intents / "retained-detached")
+            directory.mkdir(mode=0o700)
+
+    monkeypatch.setattr(host.os, "fsync", replace)
+    # Windows refuses renaming the directory while its claim handle is open.
+    with pytest.raises((ValueError, OSError)):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="actual Windows junction and ACL")
+def test_windows_junction_and_shared_write_rejected(
+    registered: Any, isolated_intents: Path, tmp_path: Path
+) -> None:
+    context, _, _ = registered
+    directory = isolated_intents / ".cadence-mcp-physical-intents-v1"
+    target = tmp_path / "junction-target"
+    target.mkdir()
+    junction = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(directory), str(target)],
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert junction.returncode == 0, junction.stderr
+    with pytest.raises(ValueError, match="local_path_invalid"):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+    # Remove only the exact disposable junction, never its target recursively.
+    directory.rmdir()
+    directory.mkdir()
+    acl = subprocess.run(
+        ["icacls", str(directory), "/grant", "*S-1-1-0:(OI)(CI)(M)"],
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert acl.returncode == 0, acl.stderr
+    with pytest.raises(ValueError, match="intent_security"):
+        host._claim_intent(context.contracts.environment, "a" * 64, "first", "b" * 64)
+
+
+def test_synthetic_claim_does_not_consult_environment_home(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HOME", "Z:/untrusted-home")
+    monkeypatch.setenv("USERPROFILE", "Z:/untrusted-profile")
+    # Bypass only the test's synthetic-home override, to read OS metadata. No writes.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("physical_os_home", host.__file__)
+    assert spec is not None and spec.loader is not None
+    loaded = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(loaded)
+    try:
+        home = loaded._operator_home()
+    except ValueError as error:
+        # An unloaded sandbox profile may reject; it must never use supplied paths.
+        assert str(error) == "physical_operator_home"
+    else:
+        assert "untrusted" not in str(home)
 
 
 @pytest.mark.parametrize(

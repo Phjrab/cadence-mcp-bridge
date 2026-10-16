@@ -7,12 +7,14 @@ Preparation is local; collection requires the operator's separate authorization.
 from __future__ import annotations
 
 import base64
+import ctypes
 import hashlib
 import json
 import math
 import os
 import shlex
 import stat
+from contextlib import suppress
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,211 @@ from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 
 def _sha(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _operator_home() -> Path:
+    # OS account database, never HOME/USERPROFILE, the plan, CWD or an SSH alias.
+    if os.name == "nt":
+        from ctypes import wintypes as w
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        api = ctypes.WinDLL("advapi32", use_last_error=True)
+        profiles = ctypes.WinDLL("userenv", use_last_error=True)
+        kernel.GetCurrentProcess.restype = w.HANDLE
+        kernel.CloseHandle.argtypes = [w.HANDLE]
+        api.OpenProcessToken.argtypes = [w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE)]
+        profiles.GetUserProfileDirectoryW.argtypes = [w.HANDLE, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+        token = w.HANDLE()
+        if not api.OpenProcessToken(kernel.GetCurrentProcess(), 8, ctypes.byref(token)):
+            raise ValueError("physical_operator_home")
+        folder = ctypes.create_unicode_buffer(32768)
+        size = w.DWORD(len(folder))
+        try:
+            if not profiles.GetUserProfileDirectoryW(token, folder, ctypes.byref(size)):
+                raise ValueError("physical_operator_home")
+        finally:
+            kernel.CloseHandle(token)
+        if not folder.value:
+            raise ValueError("physical_operator_home")
+        return Path(folder.value)
+    import pwd
+
+    return Path(pwd.getpwuid(os.getuid()).pw_dir)  # type: ignore[attr-defined]
+
+
+def _windows_private(path: Path, ancestor: bool = False) -> None:
+    """Require current-token ownership and no non-admin write-capable allow ACE."""
+    from ctypes import wintypes as w
+
+    api = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    pointer = ctypes.c_void_p
+    kernel.GetCurrentProcess.restype = w.HANDLE
+    kernel.LocalFree.argtypes, kernel.LocalFree.restype = [pointer], pointer
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    api.OpenProcessToken.argtypes = [w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE)]
+    api.GetTokenInformation.argtypes = [
+        w.HANDLE,
+        ctypes.c_int,
+        pointer,
+        w.DWORD,
+        ctypes.POINTER(w.DWORD),
+    ]
+    api.GetNamedSecurityInfoW.argtypes = [
+        w.LPWSTR,
+        ctypes.c_int,
+        w.DWORD,
+        ctypes.POINTER(pointer),
+        pointer,
+        ctypes.POINTER(pointer),
+        pointer,
+        ctypes.POINTER(pointer),
+    ]
+    api.GetNamedSecurityInfoW.restype = w.DWORD
+    api.ConvertSidToStringSidW.argtypes = [pointer, ctypes.POINTER(pointer)]
+    api.GetAce.argtypes = [pointer, w.DWORD, ctypes.POINTER(pointer)]
+
+    def sid_text(sid: Any) -> str:
+        value = pointer()
+        if not api.ConvertSidToStringSidW(sid, ctypes.byref(value)):
+            raise ValueError("physical_intent_security")
+        try:
+            return ctypes.wstring_at(value)
+        finally:
+            kernel.LocalFree(value)
+
+    token = w.HANDLE()
+    if not api.OpenProcessToken(kernel.GetCurrentProcess(), 8, ctypes.byref(token)):
+        raise ValueError("physical_intent_security")
+    try:
+        size = w.DWORD()
+        api.GetTokenInformation(token, 1, None, 0, ctypes.byref(size))
+        buffer = ctypes.create_string_buffer(size.value)
+        if not api.GetTokenInformation(token, 1, buffer, size, ctypes.byref(size)):
+            raise ValueError("physical_intent_security")
+        user = sid_text(pointer.from_buffer(buffer))
+    finally:
+        kernel.CloseHandle(token)
+    owner, acl, descriptor = pointer(), pointer(), pointer()
+    if api.GetNamedSecurityInfoW(
+        str(path),
+        1,
+        5,
+        ctypes.byref(owner),
+        None,
+        ctypes.byref(acl),
+        None,
+        ctypes.byref(descriptor),
+    ):
+        raise ValueError("physical_intent_security")
+    try:
+        owners = {user, "S-1-5-18", "S-1-5-32-544"} if ancestor else {user}
+        if not owner or sid_text(owner) not in owners or not acl:
+            raise ValueError("physical_intent_security")
+        # ACL header: revision/reserved/size/ACE count. Reject unhandled ACE types.
+        assert acl.value is not None
+        count = ctypes.c_ushort.from_address(acl.value + 4).value
+        for index in range(count):
+            ace = pointer()
+            if not api.GetAce(acl, index, ctypes.byref(ace)) or not ace.value:
+                raise ValueError("physical_intent_security")
+            kind, flags = ctypes.string_at(ace, 2)
+            if flags & 8 or kind == 1:  # inherit-only / deny cannot grant access
+                continue
+            if kind != 0:
+                raise ValueError("physical_intent_security")
+            mask = ctypes.c_uint32.from_address(ace.value + 4).value
+            if mask & 0x500D0156 and sid_text(ace.value + 8) not in {
+                user,
+                "S-1-5-18",
+                "S-1-5-32-544",
+                "S-1-3-4",  # OWNER RIGHTS; owner was required to equal this token
+            }:
+                raise ValueError("physical_intent_security")
+    finally:
+        kernel.LocalFree(descriptor)
+
+
+def _intent_metadata(path: Path, directory: bool) -> tuple[int, int, int, int, int]:
+    _local_path(path)
+    info = path.lstat()
+    if not (stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode)) or (
+        not directory and info.st_nlink != 1
+    ):
+        raise ValueError("physical_intent_type")
+    if os.name == "nt":
+        _windows_private(path)
+    elif info.st_uid != os.getuid() or info.st_mode & 0o077:  # type: ignore[attr-defined]
+        raise ValueError("physical_intent_permissions")
+    return info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode
+
+
+def _sync_directory(path: Path) -> None:
+    if os.name != "nt":
+        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)  # type: ignore[attr-defined]
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+
+def _claim_intent(
+    environment: EnvironmentProfile, collector_sha: str, expected_plan: str, request_sha: str
+) -> None:
+    # The key follows the existing VM resource domain, not mutable bundle/grant IDs.
+    key = _sha(
+        _canonical(
+            {
+                "hostname": environment.host.hostname.lower().rstrip("."),
+                "architecture": environment.host.architecture,
+                "user": environment.host.user,
+                "collector_sha256": collector_sha,
+            }
+        )
+    )
+    home = _local_path(_operator_home())
+    # Home may be traversable on POSIX, but no other account may write it.
+    home_info = home.stat()
+    if os.name == "nt":
+        _windows_private(home, ancestor=True)
+    elif home_info.st_uid != os.getuid() or home_info.st_mode & 0o022:  # type: ignore[attr-defined]
+        raise ValueError("physical_intent_home_permissions")
+    directory = home / ".cadence-mcp-physical-intents-v1"
+    _local_path(directory)
+    with suppress(FileExistsError):
+        directory.mkdir(mode=0o700)
+    before = _intent_metadata(directory, True)
+    _sync_directory(home)
+    if _intent_metadata(directory, True) != before:
+        raise ValueError("physical_intent_drift")
+    target = directory / (key + ".private.json")
+    # Any preexisting entry, including malformed/partial/symlink, is spent.
+    # O_EXCL arbitrates independent processes. Never remove or overwrite it.
+    data = _canonical(
+        {
+            "schema_version": 1,
+            "status": "ATTEMPT_SPENT_NO_RETRY",
+            "identity_sha256": key,
+            "plan_sha256": expected_plan,
+            "request_sha256": request_sha,
+        }
+    )
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+        held = os.fstat(stream.fileno())
+        named = _intent_metadata(target, False)
+        _sync_directory(directory)
+        if (
+            named[:2] != (held.st_dev, held.st_ino)
+            or _payload(target) != data
+            or _intent_metadata(target, False) != named
+            or _intent_metadata(directory, True) != before
+            or (home.stat().st_dev, home.stat().st_ino) != (home_info.st_dev, home_info.st_ino)
+        ):
+            raise ValueError("physical_intent_drift")
 
 
 def _resource(name: str) -> bytes:
@@ -324,7 +531,8 @@ def collect(prepared: Path, expected_plan: str) -> dict[str, object]:
     environment = EnvironmentProfile.model_validate_json(profile_raw)
     if _sha(profile_raw) != plan["environment_sha256"]:
         raise ValueError("physical_environment_binding")
-    # Exclusive local intent precedes SSH. Unknown outcomes cannot be retried.
+    # Durable account-scoped intent precedes SSH and the replaceable plan marker.
+    _claim_intent(environment, plan["collector_sha256"], expected_plan, _sha(raw))
     with (prepared / "collection-started.private.json").open("xb") as stream:
         stream.write(_canonical({"plan_sha256": expected_plan, "request_sha256": _sha(raw)}))
     try:
