@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import base64
 import ctypes
+import errno
 import hashlib
+import importlib
 import json
 import math
 import os
 import shlex
 import stat
 import uuid
+from collections.abc import Callable
 from contextlib import suppress
 from importlib.resources import files
 from pathlib import Path
@@ -275,9 +278,49 @@ def _followup_pool(environment: EnvironmentProfile, create: bool) -> Path:
         _sync_directory(parent)
     if pool.exists():
         _intent_metadata(pool, True)
-        if len(list(pool.iterdir())) > 64:
-            raise ValueError("physical_followup_state_bound")
+        # Never enumerate orphan invocation files from an older package. Only
+        # ten fixed slot names and this invocation's exact legacy name matter.
     return pool
+
+
+def _lock_followup(pool: Path) -> tuple[int, Callable[[], None]]:
+    path = _local_path(pool / "claims.lock")
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        named = _intent_metadata(path, False)
+        held = os.fstat(fd)
+        if named[:2] != (held.st_dev, held.st_ino) or held.st_size != 0:
+            raise ValueError("physical_followup_lock_identity")
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl = importlib.import_module("fcntl")
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                raise FileExistsError("physical_followup_claim_busy_no_attempt_spent") from None
+            raise
+
+        def guard() -> None:
+            current = os.fstat(fd)
+            if (
+                _intent_metadata(path, False) != named
+                or (current.st_dev, current.st_ino) != named[:2]
+                or current.st_nlink != 1
+                or current.st_size != 0
+            ):
+                raise ValueError("physical_followup_lock_drift")
+
+        os.fsync(fd)
+        _sync_directory(pool)
+        guard()
+        return fd, guard
+    except Exception:
+        os.close(fd)
+        raise
 
 
 def _exclusive_intent(path: Path, value: dict[str, Any]) -> None:
@@ -351,11 +394,39 @@ def _claim_followup(environment: EnvironmentProfile, plan: dict[str, Any]) -> No
         "authorization_sha256": _sha(_canonical(grant)),
         "collector_sha256": plan["collector_sha256"],
     }
-    # Stable invocation and numbered-domain slots survive source/grant/plan changes.
-    _exclusive_intent(pool / ("invocation-" + value["invocation_id"] + ".private.json"), claim)
-    guard()
-    _exclusive_intent(slot, claim)
-    guard()
+    # One atomic slot contains its invocation identity. Serialize the bounded
+    # nonce scan and publication, so losers create no orphan intent files and the
+    # same invocation cannot concurrently select two different slots.
+    fd, lock_guard = _lock_followup(pool)
+    try:
+        guard()
+        if (
+            slot.exists()
+            or (pool / ("invocation-" + value["invocation_id"] + ".private.json")).exists()
+        ):
+            raise FileExistsError("physical_followup_slot_or_invocation_spent")
+        for number in range(1, collector.FOLLOWUP_LIMIT + 1):
+            prior = pool / f"slot-{number:02d}.private.json"
+            if prior.exists():
+                _intent_metadata(prior, False)
+                old = json.loads(_payload(prior))
+                if (
+                    set(old) != set(claim)
+                    or old["status"] != claim["status"]
+                    or type(old["slot"]) is not int
+                    or old["slot"] != number
+                    or type(old["invocation_id"]) is not str
+                    or len(old["invocation_id"]) != 32
+                ):
+                    raise ValueError("physical_followup_partial_or_invalid_claim")
+                if old["invocation_id"] == value["invocation_id"]:
+                    raise FileExistsError("physical_followup_invocation_spent")
+        lock_guard()
+        _exclusive_intent(slot, claim)
+        guard()
+        lock_guard()
+    finally:
+        os.close(fd)  # releases the kernel lock on both Windows and POSIX
 
 
 def _read(path: Path) -> bytes:

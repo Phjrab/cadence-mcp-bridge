@@ -1,8 +1,10 @@
 ## Development metadata collector correction, 2026-10-16
 
-PR161 source36 is a bounded host-only replay correction under explicit user approval.
-It is not part of the published2.0.0 build. Actual metadata deployment remains held
-until exact-source CI/review/install gates pass. The fixed OS-account intent state
+PR161 includes the corrected durable replay guard and an explicitly bounded
+follow-up workflow. These development changes are not part of published2.0.0.
+The original actual collection reached the VM but failed its ancestor trust check;
+the failure remains spent. Follow-up provisioning/collection awaits the exact-source
+CI/review/install and VM gates. The fixed OS-account intent state
 must be preserved across plans, upgrades and process restarts; failed/unknown claims
 are never reset. No physical-tool execution or license qualification is claimed.
 See [current status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
@@ -29,8 +31,11 @@ Development-only physical metadata inspection is an explicit operator API with a
 separate bounded staging/query approval. It launches no EDA or license utilities
 and cannot qualify layout/DRC/LVS/PEX from file presence. See the
 [fixed collector runbook](docs/M2_PHYSICAL_READINESS_01.md). It is not included in
-the already published2.0.0 artifacts. **Current development build is blocked before
-deployment** by the reproduced pre-claim replay defect; do not invoke its collector.
+the already published2.0.0 artifacts. The earlier pre-claim replay defect is fixed.
+Current gates are final follow-up qualification and actual VM evidence, not that
+historical defect. Use only the explicitly authorized finite operator workflow in
+[metadata recovery](docs/PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md); source/grant
+changes never restore spent collections.
 
 Actual host evidence is Windows/Python3.12.10. The reference VM observation is
 CentOS6.5/i686/Python2.6.6, Virtuoso IC6.1.5.500.15 and Spectre12.1.0.347.isr3.

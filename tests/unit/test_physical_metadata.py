@@ -121,6 +121,19 @@ def test_targets_exclude_user_circuits_and_unregistered_search_roots() -> None:
         native.targets(broken, registration)
 
 
+def test_fractional_times_are_cross_python_canonical_strings(tmp_path: Path) -> None:
+    path = tmp_path / "data"
+    path.write_bytes(b"unread synthetic contents")
+    os.utime(path, (1234567890.1234567, 1234567890.1234567))
+    info = path.stat()
+    value = native.metadata(info)
+    assert value["mtime"] == format(info.st_mtime, ".17g")
+    assert value["ctime"] == format(info.st_ctime, ".17g")
+    assert isinstance(value["mtime"], str) and isinstance(value["ctime"], str)
+    wire = native.canonical(value)
+    assert native.digest(wire) == host._sha(host._canonical(json.loads(wire)))
+
+
 @pytest.mark.skipif(os.name != "posix", reason="actual Linux filesystem trust")
 def test_metadata_never_opens_candidate_contents(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

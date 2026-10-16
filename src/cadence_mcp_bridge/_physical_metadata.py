@@ -66,8 +66,10 @@ def metadata(info):
         "gid": info.st_gid,
         "nlink": info.st_nlink,
         "size": info.st_size,
-        "mtime": info.st_mtime,
-        "ctime": info.st_ctime,
+        # Python2.6 JSON float rendering differs from modern Python. Round-trip
+        # strings preserve the observed binary64 value and cross-host digests.
+        "mtime": "%.17g" % info.st_mtime,  # noqa: UP031
+        "ctime": "%.17g" % info.st_ctime,  # noqa: UP031
     }
 
 

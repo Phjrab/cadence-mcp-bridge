@@ -6,6 +6,7 @@ import copy
 import os
 import subprocess
 import sys
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -148,6 +149,113 @@ def test_concurrent_same_slot_has_one_winner(followup: Any) -> None:
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         assert sum(executor.map(claim, range(4))) == 1
+
+
+def test_many_concurrent_losers_cannot_exhaust_unused_slots(
+    followup: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    environment, _, value, _, assets, known = followup
+    prior = host._exclusive_intent
+    barrier = threading.Barrier(72)
+
+    def synchronize_old_nonatomic_claim(path: Path, claim: dict[str, Any]) -> None:
+        # Reproduce the old >64 simultaneous orphan window deterministically.
+        # Corrected slot-only claims never enter this legacy branch.
+        if path.name.startswith("invocation-"):
+            barrier.wait(timeout=30)
+        prior(path, claim)
+
+    monkeypatch.setattr(host, "_exclusive_intent", synchronize_old_nonatomic_claim)
+
+    def claim(_: int) -> bool:
+        _, plan = host._plan(
+            assets,
+            value["manifest_sha256"],
+            known,
+            {"authorization": value, "slot": 1, "invocation_id": uuid.uuid4().hex},
+        )
+        try:
+            host._claim_followup(environment, plan)
+            return True
+        except FileExistsError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=72) as executor:
+        assert sum(executor.map(claim, range(72))) == 1
+    pool = host._followup_pool(environment, False)
+    assert {p.name for p in pool.iterdir()} == {"claims.lock", "slot-01.private.json"}
+    _, plan = host._plan(
+        assets,
+        value["manifest_sha256"],
+        known,
+        {"authorization": value, "slot": 2, "invocation_id": uuid.uuid4().hex},
+    )
+    host._claim_followup(environment, plan)
+    assert (pool / "slot-02.private.json").exists()
+
+
+def test_partial_slot_publication_preserves_nonce_and_cannot_retry_new_slot(
+    followup: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    environment, _, value, _, assets, known = followup
+    allowance = {"authorization": value, "slot": 1, "invocation_id": uuid.uuid4().hex}
+    _, plan = host._plan(assets, value["manifest_sha256"], known, allowance)
+    original = host._exclusive_intent
+
+    def interrupted(path: Path, claim: dict[str, Any]) -> None:
+        original(path, claim)
+        raise OSError("synthetic post-publication failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(host, "_exclusive_intent", interrupted)
+        with pytest.raises(OSError, match="post-publication"):
+            host._claim_followup(environment, plan)
+    plan["followup"]["slot"] = 2
+    with pytest.raises(FileExistsError, match="invocation_spent"):
+        host._claim_followup(environment, plan)
+    assert (host._followup_pool(environment, False) / "slot-01.private.json").exists()
+
+
+def test_old_orphans_are_retained_without_blocking_new_slots(followup: Any) -> None:
+    environment, _, value, _, assets, known = followup
+    pool = host._followup_pool(environment, True)
+    orphans = []
+    for _ in range(72):
+        path = pool / ("invocation-" + uuid.uuid4().hex + ".private.json")
+        path.write_bytes(b"retained legacy partial evidence")
+        orphans.append(path)
+    _, plan = host._plan(
+        assets,
+        value["manifest_sha256"],
+        known,
+        {"authorization": value, "slot": 1, "invocation_id": uuid.uuid4().hex},
+    )
+    host._claim_followup(environment, plan)
+    assert all(p.read_bytes() == b"retained legacy partial evidence" for p in orphans)
+    assert (pool / "slot-01.private.json").exists()
+
+
+def test_same_invocation_concurrent_different_slots_has_one_winner(followup: Any) -> None:
+    environment, _, value, _, assets, known = followup
+    nonce = uuid.uuid4().hex
+
+    def claim(number: int) -> bool:
+        _, plan = host._plan(
+            assets,
+            value["manifest_sha256"],
+            known,
+            {"authorization": value, "slot": number, "invocation_id": nonce},
+        )
+        try:
+            host._claim_followup(environment, plan)
+            return True
+        except FileExistsError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        assert sum(executor.map(claim, (1, 2))) == 1
 
 
 def test_partial_local_claim_prevents_transport_retry(

@@ -70,17 +70,21 @@ The closed `OPERATOR_APPROVED_PHYSICAL_METADATA_FOLLOWUP_V1` schema requires:
 
 The remote-request digest hashes the canonical original inner request; the host
 request digest hashes the original full envelope. Preserve both without substitution.
-Preparation chooses the first unused slot; collection spends that slot and a unique
-invocation before SSH. Failures, partial writes and unknown transport outcomes stay
+Preparation chooses the first unused slot; collection atomically stores that slot and its unique
+invocation together before SSH. Failures, partial writes and unknown transport outcomes stay
 spent. Account-scoped host claims and VM numbered stages survive new source, grant,
 plan, aliases and process restart. An unchanged invocation cannot select another
-slot. Concurrent claims have one winner. Do not remove markers to retry.
+slot. A short OS lock serializes the ten-slot nonce scan and publication; concurrent
+losers create no extra invocation files. Existing legacy orphan evidence is retained
+without enumerating it or letting its count block unused slots. A partial or unknown
+slot remains spent. Do not remove markers to retry.
 
 For the current managed validation scope only, immutable V3 preserves source36
 and failed collection1, raising the finite ceilings to source40 and total11
 collections (ten additional). New source commits and reverts remain counted by
-`scripts/verify-physical-metadata-boundary-v3.py`; historical V1/V2 guards and records
-stay intact. These are not fresh-install defaults or simulation budget increases.
+`scripts/verify-physical-metadata-boundary-v4.py`; its new source checkpoint
+preserves the original V3 limit and source37 pins. V1/V2/V3 guards and records stay
+intact and continue to describe their own source versions. These are not fresh-install defaults or simulation budget increases.
 
 Before each justified collection, pin package sources, record purpose/conditions/
 limits/stop criteria, and freshly check the existing ledger, disk floor, runtime
@@ -88,3 +92,7 @@ and journals. Keep128 entries,60seconds and1MiB per output stream. New simulatio
 extraction and result reservation are zero. Begin with one collection; ten is a
 ceiling, not a batch request. Retain actual outcomes privately and distinguish
 portable tests, hosted POSIX tests, installed-package checks and actual VM evidence.
+
+Filesystem mtime/ctime values in collected metadata and private repair plans use
+round-trip17-digit strings. They preserve binary64 observations while avoiding
+Python2.6/modern-Python JSON float rendering differences in authenticated digests.
