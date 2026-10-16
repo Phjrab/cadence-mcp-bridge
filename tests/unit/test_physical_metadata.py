@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import base64
 import copy
+import ctypes
 import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +28,66 @@ from cadence_mcp_bridge.native_runtime import bundle
 __all__ = ["operator", "operator_base", "registered", "confirmed_domain", "prepared", "root"]
 
 
+@contextmanager
+def current_account_owner() -> Iterator[None]:
+    """Emulate ordinary-account default ownership in elevated Windows CI only.
+
+    Changes this test process's default object owner, never an OS account, ACL or
+    product guard. Child tests explicitly use the same fixture. Restore on exit.
+    """
+    if os.name != "nt":
+        yield
+        return
+    from ctypes import wintypes as w
+
+    api = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.GetCurrentProcess.restype = w.HANDLE
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    api.OpenProcessToken.argtypes = [w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE)]
+    api.GetTokenInformation.argtypes = [
+        w.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        w.DWORD,
+        ctypes.POINTER(w.DWORD),
+    ]
+    api.SetTokenInformation.argtypes = [w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD]
+    api.EqualSid.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    token = w.HANDLE()
+    assert api.OpenProcessToken(kernel.GetCurrentProcess(), 0x88, ctypes.byref(token))
+
+    def information(kind: int) -> Any:
+        size = w.DWORD()
+        api.GetTokenInformation(token, kind, None, 0, ctypes.byref(size))
+        data = ctypes.create_string_buffer(size.value)
+        assert api.GetTokenInformation(token, kind, data, size, ctypes.byref(size))
+        return data
+
+    changed = False
+    previous = information(4)  # TOKEN_OWNER, retained for restoration
+    user = information(1)  # TOKEN_USER
+    user_sid = ctypes.c_void_p.from_buffer(user)
+    try:
+        assert api.SetTokenInformation(token, 4, ctypes.byref(user_sid), ctypes.sizeof(user_sid))
+        changed = True
+        assert api.EqualSid(ctypes.c_void_p.from_buffer(information(4)), user_sid)
+        yield
+    finally:
+        try:
+            if changed:
+                assert api.SetTokenInformation(token, 4, previous, ctypes.sizeof(previous))
+        finally:
+            kernel.CloseHandle(token)
+
+
 @pytest.fixture(autouse=True)
-def isolated_intents(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    home = tmp_path / "operator-home"
-    home.mkdir(mode=0o700)
-    monkeypatch.setattr(host, "_operator_home", lambda: home)
-    return home
+def isolated_intents(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    with current_account_owner():
+        home = tmp_path / "operator-home"
+        home.mkdir(mode=0o700)
+        monkeypatch.setattr(host, "_operator_home", lambda: home)
+        yield home
 
 
 def test_targets_exclude_user_circuits_and_unregistered_search_roots() -> None:
@@ -205,7 +262,10 @@ def test_claim_process_restart_and_alias_independence(
         "from cadence_mcp_bridge.environments import EnvironmentProfile; "
         "h._operator_home=lambda:Path(sys.argv[1]); "
         "e=EnvironmentProfile.model_validate_json(sys.argv[2]); "
-        "h._claim_intent(e,'a'*64,sys.argv[3],'b'*64)"
+        "sys.path.insert(0,sys.argv[4]); "
+        "from test_physical_metadata import current_account_owner\n"
+        "with current_account_owner():\n"
+        " h._claim_intent(e,'a'*64,sys.argv[3],'b'*64)"
     )
     for index in range(2):
         changed = environment.model_copy(
@@ -220,6 +280,7 @@ def test_claim_process_restart_and_alias_independence(
                 str(isolated_intents),
                 raw if index == 0 else changed.model_dump_json(),
                 str(index),
+                str(Path(__file__).parent),
             ],
             capture_output=True,
             timeout=15,
@@ -364,6 +425,56 @@ def test_synthetic_claim_does_not_consult_environment_home(
         assert str(error) == "physical_operator_home"
     else:
         assert "untrusted" not in str(home)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="actual qualified Windows directory DACL")
+def test_prepared_directory_has_private_protected_dacl_under_shared_parent(
+    registered: Any, tmp_path: Path
+) -> None:
+    if sys.version_info < (3, 12, 4):
+        pytest.skip("metadata slice is not qualified on pre3.12.4 Windows")
+    context, _, registration = registered
+    exported = tmp_path / "native"
+    receipt = bundle(context, registration, exported)
+    shared = tmp_path / "shared-parent"
+    shared.mkdir()
+    result = subprocess.run(
+        ["icacls", str(shared), "/grant", "*S-1-1-0:(OI)(CI)(F)"],
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    output = shared / "plan"
+    host.prepare(exported, receipt["manifest_sha256"], output)
+    for path in (output, output / "request.private.json", output / "plan.private.json"):
+        host._windows_private(path)
+    # Verify the actual descriptor, not chmod mode bits. GetFileSecurityW is local
+    # read-only metadata; SE_DACL_PROTECTED prevents Everyone inheritance.
+    from ctypes import wintypes as w
+
+    api = ctypes.WinDLL("advapi32", use_last_error=True)
+    api.GetFileSecurityW.argtypes = [
+        w.LPCWSTR,
+        w.DWORD,
+        ctypes.c_void_p,
+        w.DWORD,
+        ctypes.POINTER(w.DWORD),
+    ]
+    api.GetSecurityDescriptorControl.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(w.WORD),
+        ctypes.POINTER(w.DWORD),
+    ]
+    needed = w.DWORD()
+    api.GetFileSecurityW(str(output), 4, None, 0, ctypes.byref(needed))
+    descriptor = ctypes.create_string_buffer(needed.value)
+    assert api.GetFileSecurityW(str(output), 4, descriptor, needed, ctypes.byref(needed))
+    control, revision = w.WORD(), w.DWORD()
+    assert api.GetSecurityDescriptorControl(
+        descriptor, ctypes.byref(control), ctypes.byref(revision)
+    )
+    assert control.value & 0x1000
 
 
 @pytest.mark.parametrize(

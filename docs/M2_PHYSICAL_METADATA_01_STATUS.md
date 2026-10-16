@@ -1,3 +1,41 @@
+## Source36 final-code checkpoint and CI fixture correction
+
+Source commit `759d84ec435d7ef3636024f78608b34aee13000b` is pushed and retains
+36/36 with unchanged remote collector. Local full unit4074 PASS/405 Windows skips/
+56 warnings; exact installed protocol/package/build/reinstall/uninstall/state
+preservation, security18/clean strict audit, lint/mypy116 and public contracts PASS.
+Private source36 wheel SHA256
+`1962630aa37ae7d4f969a8dd532e472ac5e47cfdd10ea813095dd46e227c2867`;
+sdist `6973cda91c659a05bdc7c4904ae9d2f751aa97a150165a6c8e9920c17d18fd38`.
+These remain development artifacts, not replacement published2.0.0 assets.
+
+[CI38871918132](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/38871918132)
+Linux PASS; Windows reports8 failures/4083 PASS/388 skips at the strict current-user
+owner check in disposable claims. Elevated CI uses an Administrators default object
+owner. Tests now set only their process's default object owner to its account SID,
+verify it, and restore it on exit, including child tests. No product guard, account,
+system security setting, installation, original ACL, remote source or budget changes.
+Updated physical tests29 PASS/7 POSIX skips (both token set and restore exercised);
+unchanged boundary tests had18 PASS. Exact updated-test hosted CI remains pending.
+The failed hosted receipt remains failure evidence, not relabelled PASS.
+
+Review4292347803's inheritance premise is nonreproduced on the qualified Windows/
+Python3.12.10 host: `mkdir(0o700)` creates a protected private DACL under an
+Everyone-full-control parent; request/plan files inherit only trusted principals.
+A0o777 control inherits Everyone. Exact installed plan/file ACL audit also PASS.
+[Python3.12 documentation](https://docs.python.org/3.12/library/os.html#os.mkdir)
+records Windows0o700 handling since3.12.4. The attempted offline reproduction fails
+at its shared-ACL fixture assertion and consumes no singleton/SSH; preserve that
+failure honestly. A real owned-ACL regression now checks protected DACL metadata.
+This **development metadata slice is qualified only on the exact3.12.10 host**;
+broader package Python compatibility does not qualify3.12.0–3.12.3 metadata use.
+Other older-host/drift hardening is not silently claimed or added to this source.
+
+[Fresh review6211333170](https://github.com/Phjrab/cadence-mcp-bridge/pull/161#issuecomment-6211333170)
+of759d84e reports no major issues; automated summary has no findings/unresolved
+findings. This is automated review, not formal GitHub APPROVED. Actual single
+collector query is still unused and held until final checks pass. No merge/publication.
+
 ## Approved host-only correction overlay, 2026-10-16
 
 The latest direct user reply explicitly approves retain35/ceiling36 and exactly
