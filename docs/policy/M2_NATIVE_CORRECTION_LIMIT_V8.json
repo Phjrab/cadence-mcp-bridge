@@ -1,0 +1,20 @@
+{
+  "schema_version": 8,
+  "authority": "direct-human-approval-of-M2-owned-inverter-proposal-2026-10-15",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_M2_OWNED_INVERTER_01",
+  "retained_consumed_source_changes": 24,
+  "maximum_corrections_same_change": 26,
+  "maximum_collector_versions": 1,
+  "maximum_generator_versions": 1,
+  "base_commit": "f572fd9fea286e34bc62cc964a90b18a3c8afd7b",
+  "max_new_attempts": 2,
+  "allowed_analyses": ["dc", "tran"],
+  "max_each_result_bytes": 134217728,
+  "max_phase_result_bytes": 268435456,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "preserve_consumption_and_original_domain": true,
+  "automatic_extra_corrective_deployment": false,
+  "new_phase_pr_merge_authorized": false,
+  "publication_authorized": false
+}

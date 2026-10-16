@@ -1,3 +1,215 @@
+## Current bounded slice closeout, 2026-10-16
+
+Source99af exact installed/package/security/compatibility/lifecycle PASS and clean
+automated review6206259097, plus installed retained-input replay16 denials and
+fresh UID500 read-only VM preflight changed0. Latest ledger128/15,721,299,968,
+remaining1391MiB of16GiB; source34/34 with all consumed records preserved.
+Actual two-job automatic-extraction and new-process same-ID0-spend evidence stays
+at0ae58c5, with byte-identical generator/native runtime. Final branch Windows/Linux
+checks use the exact PR160 head; documentation closeout changes no package members.
+See [acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md) for artifact hashes.
+
+Finish exact final-head CI/status verification and report this reviewable PR.
+No further experiment is admitted by the exhausted two-job grant. Functional
+switching/performance and physical layout/DRC/LVS/PEX remain separate future work;
+do not expand this short loaded TRAN observation into their acceptance.
+No inferred PR160 merge/publication or Claude work. Older pending sections below
+retain their source/time scope rather than overriding this completed evidence.
+
+## Host dependency correction during closeout, 2026-10-16
+
+Actual OA/DC/TRAN/replay acceptance remains recorded below. c578 exact installed
+package/replay and Linux CI passed; Windows4045 unit PASS then strict security
+audit foundCVE-2026-59951 in mcp2.1.1. Preserve that failure. Update only host
+mcp/mcp-types2.2.0 and minimum mcp>=2.2,<3; keep audit/compatibility/package gates.
+Refresh the dependency-corrected exact installed and hosted source, without new
+VM activation/calculation or consumed-source reset. Ledger128/15,721,299,968 and
+source34/34 remain. No PR160 merge, publication or physical/Claude work is inferred.
+
+## Current bounded M2 closeout, 2026-10-15
+
+Actual owned OA/symbol/testbench, saved/reopened checks, independent DC/TRAN inputs,
+exact-installed ordinary-user execution and automatic extraction PASS at0ae58c5.
+New-process same-ID submit/query/result PASS with0 new dispatch/reservation.
+Ledger128/500 and15,721,299,968/17,179,869,184 bytes; this slice2/256MiB,
+remaining1391MiB. Preserve both spent jobs/grant and all earlier failures.
+
+Finish the minimum source34 ordered-hierarchy correction, exact final installed and
+hosted checks, review disposition and documentation. V16 retains33 and records only
+one local correction after reproducing scope relocation; no added simulation or
+runtime deployment is required. The actual OA writer bytes remain identical.
+Do not expand the short loaded TRAN result into switching/performance acceptance.
+PR160 stays draft/unmerged; published2.0.0, physical/Claude exclusions remain.
+See [current outcome](M2_OWNED_INVERTER_01.md) and
+[acceptance/runbook](M2_OWNED_INVERTER_ACCEPTANCE_20261015.md).
+Earlier source32 pending and collector blockers below remain historical evidence.
+
+## Independent review disposition in current source32 correction
+
+PR160 automated review4284403269 found vpulse vdc was written without requiring
+its observed CDF unit in the accepted fixture. The actual standard-VM frame does
+observe vdc with voltage units; the pending source32 now requires that field and
+rejects missing/wrong-unit pulse vdc before generation. Seventeen focused tests
+pass, including effective PMOS width/topology drift and both review regressions.
+This review is not formal human APPROVED. Actual-source32 OA/netlist validation
+and exact installed/hosted checks are still pending; no simulation was admitted.
+
+## Source31 OA passes but effective PMOS width fails; correction32
+
+Fresh owned DUT/symbol/hierarchical testbench generation and saved/reopened
+terminal/property checks passed at UID500. Common DC/TRAN template netlisting
+and generic input checks also passed without simulation/reservation. Independent
+comparison then found PMOS netlist width120nm despite OA w350nm. The generic
+candidate-derived static hash alone did not establish agreement with design intent.
+Preserve the successful structural read-back and the failed semantic qualification
+as separate outcomes. Do not call this an actual simulation or acceptance PASS.
+
+Retained source CDF explains the mismatch: simW references fw, and simM references
+m*fingers. Source devices have one finger, w=fw, and observed derived areas and
+perimeters. The bounded correction preserves those exact observed fields, rejects
+unknown derived expressions/multifinger meanings, and adds an independent verifier
+for effective MOS widths/lengths/multiplicities/geometry, hierarchy, rails, pulse
+and load. It never evaluates CDF callbacks or invents ranges/nf semantics.
+
+Direct broad additional authority covers this minimum source32 correction. V14
+retains all31 consumed source versions, previous policies, mismatched revision and
+netlists; finite ceiling32, no further experiment allowance. Actual resource ledger
+remains126/15,452,864,512 bytes with500/16GiB and DC1/TRAN1/256MiB unchanged.
+The next generated revision is fresh; failed/unqualified old cells stay intact.
+
+## First generated OA failed connectivity; minimum correction, 2026-10-15
+
+Source30 reached schematic extraction/check on a new owned inverter and correctly
+rejected terminal shorts between vin and rails. Its fixed0.25 wire stubs can cross
+nearby MOS terminals; the old primitive-only QA wiring did not establish safety
+for those smaller symbols. The correction derives each stub length from one-eighth
+of the nearest observed terminal spacing, caps it at0.0625, uses that snap spacing,
+and places ports far from devices. Before/after connectivity checks remain.
+Keep source30, its failed owned library, panic files and diagnostic logs intact;
+never retry or modify that failed revision. The next attempt uses a new owned
+library/revision and cannot become a simulation PASS merely by creation.
+
+Direct broad additional human authority covers the minimum correction. V13 keeps
+all policies/checkpoints and the failed generator identity; finite ceiling31
+counts collector29, failed generator30 and correction31. DC1/TRAN1/256MiB and
+500/16GiB are unchanged. Actual UID500 original libraries, seven model contents,
+workspace cds.lib and ledger all matched after failure:126/15,452,864,512 bytes.
+No grant, netlist, Spectre, extraction, merge, publication or physical work occurred.
+
+## Observed-CDF-bound generator prepared, 2026-10-15
+
+Complete source28 VM CDF evidence was replayed successfully by source29's local
+bounded data parser. Both MOS terminal orders, exact effective W/L/m/model and
+vdc/vpulse/cap parameter units are observed. No MOS nf meaning or PDK-wide range
+is inferred. CheckpointV5 pins successful observation/parser identity and all
+failed source versions remain retained. V12 ceiling30 is reached conservatively
+by the one pending generator source; no new simulation or reservation occurred.
+
+The new operator-only m2_inverter model binds RevisionBinding, raw CDF hash,
+exact source masters and fresh owned DUT/symbol/testbench names. It reuses typed
+contracts without relabeling the synthetic DeviceRegistry. It rejects unknown
+required metadata, expression-valued MOS sizes, collisions and malformed names.
+The fixed writer checks connections/properties before save and after reopen;
+runner snapshots/lock/trusted ordinary-user OCEAN are required independently.
+No public MCP code/path/command input or startup action is added. Local generator
+14 tests and type checks pass; actual OA/netlist/DC/TRAN are still NOT_RUN.
+PR160 remains draft; published2.0.0 and all excluded physical/Claude work stay.
+
+## Complete actual CDF frame; host parser correction, 2026-10-15
+
+The fixed source28 OCEAN collector completed normally and emitted a COMPLETE
+five-device frame: two original MOS instances plus analogLib vdc/vpulse/cap.
+Original library snapshots, seven model contents and ledger matched before/after.
+The host rejected standard SKILL symbol-headed list printing in instParameters
+(e.g. a(b c)); this is a parser compatibility defect, not failed VM collection.
+Keep the complete raw frame and failed parse. Correct only that typed list-data
+position and replay the retained frame locally; no new OCEAN run is necessary.
+Direct broad additional authority is bounded in V12: retain28, ceiling30 for one
+host parser correction and unused generator. DC1/TRAN1/256MiB and500/16GiB stay.
+Actual attempts126/reserved15,452,864,512 bytes unchanged; no OA generation or
+simulation yet. Production semantics still need assessment, not a PASS label.
+
+## Retained source27 and exact basic port exclusion, 2026-10-15
+
+Source27 passed the legacy API point and observed both MOS CDF scopes, then
+failed cleanly on basic/opin, a schematic port marker with no base CDF. Preserve
+that failure, partial frame and all prior policy/checkpoint history. The minimum
+collector correction omits only exact basic ipin/opin/iopin markers; unknown
+instances still require CDF and block. Direct broad additional user authority
+covers this necessary correction: V11 retains27, finite ceiling29, one collector
+and the unused generator. No new experiment or result ceiling is introduced.
+Ordinary UID500 before/after library/model-content/ledger checks passed;
+126 attempts and15,452,864,512 reserved bytes remain unchanged. Actual complete
+CDF, owned OA, netlisting and DC/TRAN are still unqualified. PR160 stays draft;
+no merge/publication, Claude, DRC/LVS/PEX or protected-data modification.
+
+## Current broad additional delegation and bounded legacy API correction
+
+The human subsequently explicitly approved all additional approvals required
+for this current inverter slice and asked to continue. Apply that latest direct
+instruction to the necessary minimum correction: preserve consumed26, retain
+V8/V9 and consumedV1/V2, and set V10 ceiling28 for one legacy-API correction and
+the still-unused generator. This is a finite recording of the necessary source
+work, not an unlimited experiment, reset or installation default. The500/16GiB,
+DC1/TRAN1/256MiB and original domain/ledger/locks/replay remain unchanged.
+
+Source26 cleanly exited1 because symbolName is undefined on this standard VM.
+Both root CDF simInfo and Spectre descriptors were observed as lists before
+that error. Use symbolToString, already present in the retained standard-VM API
+probe, while retaining defensive property access and immediate error exit.
+All original registered libraries/seven model contents/ledger stayed equal;
+count126 and15,452,864,512 bytes, no new reservation or OA save. The failed
+source26/frame/logs are preserved. Latest instruction, rather than these
+policy files, is the authority. Earlier narrower approvals remain history.
+
+## Approved corrected collector continuation, 2026-10-15
+
+The human explicitly approved the preceding concrete continuation and all its
+listed additional approvals. Active source ceiling27 retains consumed25: one
+corrected collector version plus the still-unused generator. DC1/TRAN1 at128MiB
+each/256MiB total,500 cumulative attempts,16GiB cumulative reservations and the
+original domain/ledger/locks/replay remain binding. V8 and consumedV1 are retained;
+V9 records this extension. It is not a fresh ledger or another operator default.
+PR160 continues on its existing branch; new phase merge/publication and physical
+DRC/LVS/PEX are outside the proposed continuation. Earlier proposal/unapproved
+paragraphs below remain dated history. Further Claude work stays excluded.
+
+Current actual ordinary-user preflight126/15,452,864,512 matches the retained
+counter. The corrected collector adds typed field observations and a clean
+nonzero exit after load errors. Complete output is observation only: missing
+or wrong-type required production metadata still blocks OA/simulation.
+
+## M2 collector failed safely; actual inverter blocked, 2026-10-15
+
+PR159 normally merged at f572fd9. One fixed collector e0d10f1 ran at UID500;
+CDF Spectre metadata access hit an unexpected empty-string type, leaving an
+incomplete frame. The owned60s process guard stopped that group. Library
+snapshots, seven model file contents and ledger stayed equal; retained native
+preflight passed. No original OA/ADE save, new DUT/bench, netlisting, Spectre,
+extraction, activation or new simulation grant. This slice adds0 attempts/0 bytes.
+Actual ledger126/500 and15,452,864,512/17,179,869,184; source25/26 consumed.
+The failed collector stays frozen; the unused generator slot does not permit a
+collector correction. New observed production registry/OA/DC/TRAN remain blocked.
+Local19 collector tests pass; final accounting/security/install/hosted checks are
+recorded separately in M2_OWNED_INVERTER_01.md. Keep earlier overlays as history.
+Proposed next decision is one corrected collector plus generator with ceiling27,
+preserving consumed25 and existing DC1/TRAN1/256MiB total; no approval is inferred.
+This new feature PR has no merge/publication authority. Claude stays excluded.
+
+## Active approved M2 owned inverter slice, 2026-10-15
+
+Direct human approval covers PR159 normal merge (completed f572fd9), one fixed
+CDF collector and one fixed owned-inverter generator, then at most DC1/TRAN1
+with128MiB each. New source ceiling26 preserves consumed24 and the old frozen
+POST guard; no extra corrective deployment, new phase PR merge or publication.
+Latest actual ordinary UID500 preflight126/500 and15,452,864,512/17,179,869,184
+bytes; zero new attempts/reservations. Collector local19 PASS/static PASS;
+actual metadata, OA/read-back, netlisting and DC/TRAN remain pending.
+See docs/M2_OWNED_INVERTER_01.md (from docs: M2_OWNED_INVERTER_01.md).
+Earlier M2 not-authorized/PR159 pending paragraphs are retained dated history.
+Claude remains EXCLUDED_BY_USER; original OA/ADE/PDK/vendor/results/journals and
+all accounting/replay/failure evidence stay protected. No user action needed.
+
 ## Current M2 integration finishing gates, 2026-10-15
 
 POST154–158 completed conditional normal integration at stable mainb3ac2ea.

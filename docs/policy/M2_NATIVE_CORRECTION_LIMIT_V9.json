@@ -1,0 +1,26 @@
+{
+  "schema_version": 9,
+  "authority": "direct-human-approval-of-one-corrected-collector-and-generator-2026-10-15",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_M2_OWNED_INVERTER_01",
+  "retained_consumed_source_changes": 25,
+  "maximum_corrections_same_change": 27,
+  "maximum_collector_versions": 1,
+  "maximum_generator_versions": 1,
+  "base_commit": "74e7c629343990420ae8959dc7a69b8633cb4edb",
+  "max_new_attempts": 2,
+  "allowed_analyses": [
+    "dc",
+    "tran"
+  ],
+  "max_each_result_bytes": 134217728,
+  "max_phase_result_bytes": 268435456,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "preserve_consumption_and_original_domain": true,
+  "automatic_extra_corrective_deployment": false,
+  "new_phase_pr_merge_authorized": false,
+  "publication_authorized": false,
+  "prior_policy_sha256": "bbb6bc021476d893a787b8063bd4da28b34d4330644d9bce57bc54ae58b45971",
+  "prior_consumed_checkpoint_sha256": "36049a430e19710550f0effb98fbcf2f2e2a3397f4e666b438120b2fffce9ada",
+  "maximum_collector_corrections": 1
+}

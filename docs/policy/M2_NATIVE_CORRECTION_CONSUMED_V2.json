@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 26,
+  "corrected_collector_commit": "0eafec6545bdb952dd75372774e72b2f40224206",
+  "collector_module_lf_sha256": "7f82b8e4d0477708295e03ae937dee0011641ae124daec543db1fd78a0c50b69",
+  "collector_script_sha256": "8602cafcbc5d87f4c681e71af483403b4375a93d00541c42bf7497ba17f3f25f",
+  "fixed_wrapper_sha256": "b1a8ca061b6707ed0144b31d05bd0e01c9f72e8b6e6a902abd52a4ab03b6a2f2",
+  "collector_outcome": "FAILED_RETAINED_UNSUPPORTED_SYMBOLNAME_CLEAN_EXIT",
+  "generator_versions_consumed": 0,
+  "prior_consumed_checkpoint_sha256": "36049a430e19710550f0effb98fbcf2f2e2a3397f4e666b438120b2fffce9ada",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

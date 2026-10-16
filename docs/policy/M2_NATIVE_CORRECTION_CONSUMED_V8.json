@@ -1,0 +1,14 @@
+{
+  "schema_version": 8,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 32,
+  "generator_versions_consumed": 3,
+  "generator_commit": "0ae58c5d374d69c26d63f31cf1ebd0a1c72e8bf6",
+  "generator_module_lf_sha256": "dbf3aa3407433ac8803a1f187b57f88e5e65ca75394c8bdfa991786341741861",
+  "generator_outcome": "ACTUAL_OA_READBACK_EFFECTIVE_INPUT_DC_TRAN_AUTOMATIC_EXTRACTION_PASS_REVIEW_TOPOLOGY_FILTER_GAP_RETAINED",
+  "prior_consumed_checkpoint_sha256": "4881af8ac32fc8ef12d87f91580a6d5ac136bedb84e5a7131dfc529537187e3f",
+  "new_attempts": 2,
+  "new_reserved_bytes": 268435456,
+  "cumulative_attempts": 128,
+  "cumulative_reserved_bytes": 15721299968
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 4,
+  "authority": "CONSUMPTION_RECORD_NOT_EXECUTION_AUTHORITY",
+  "retained_consumed_source_changes": 28,
+  "corrected_collector_commit": "8c341a79767ec22816e3c45db3f563f3807e40d6",
+  "collector_module_lf_sha256": "f28aecc8331e96101383d4b77b27795291d94b03801908ce307c3c307c9e0b33",
+  "collector_script_sha256": "a4bfb26a40a4d10d200aae1b16e168e0af874582e7cfbdabb3c271aa8a4096d3",
+  "fixed_wrapper_sha256": "9f67c44822f88bdc646aa84bad59d6398dc61d6e87f035d0fef1f4f9a9783acd",
+  "collector_outcome": "VM_COLLECTOR_COMPLETE_HOST_LIST_PRINTER_PARSE_FAILED_RETAINED",
+  "generator_versions_consumed": 0,
+  "prior_consumed_checkpoint_sha256": "92ad28ac04fd2b162baf64dfdd15075a4ad560122fc87a946fc58fe8cee8c78a",
+  "new_attempts": 0,
+  "new_reserved_bytes": 0
+}

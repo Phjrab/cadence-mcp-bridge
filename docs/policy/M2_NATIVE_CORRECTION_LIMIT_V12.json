@@ -1,0 +1,27 @@
+{
+  "schema_version": 12,
+  "authority": "direct-human-all-additional-approvals-within-current-inverter-slice-2026-10-15",
+  "scope": "CURRENT_MANAGED_STANDARD_VM_M2_OWNED_INVERTER_01",
+  "retained_consumed_source_changes": 28,
+  "maximum_corrections_same_change": 30,
+  "maximum_collector_versions": 1,
+  "maximum_generator_versions": 1,
+  "base_commit": "8c341a79767ec22816e3c45db3f563f3807e40d6",
+  "max_new_attempts": 2,
+  "allowed_analyses": [
+    "dc",
+    "tran"
+  ],
+  "max_each_result_bytes": 134217728,
+  "max_phase_result_bytes": 268435456,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "preserve_consumption_and_original_domain": true,
+  "automatic_extra_corrective_deployment": false,
+  "new_phase_pr_merge_authorized": false,
+  "publication_authorized": false,
+  "prior_policy_sha256": "a238155a6f9b42ba6f5dfd70fbe29fa6953947a580bfbf08e8e11ae8f891aa8f",
+  "prior_consumed_checkpoint_sha256": "5bf7d467e7c672c3e02e1283e7f7c847a7d5107685418da9e7cd3acac572fdcb",
+  "maximum_collector_corrections": 1,
+  "reason": "One bounded host parser correction for observed SKILL list printer notation; replay retained complete frame without new collector execution, plus unused generator"
+}
