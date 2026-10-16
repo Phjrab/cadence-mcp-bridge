@@ -1,3 +1,17 @@
+## Active PHYSICAL-METADATA-01 implementation, 2026-10-16
+
+The direct limited-collector approval is now active: retain34, source ceiling35,
+one fixed collector version and one ordinary-user stage/query. Implement/test,
+freeze exact source, verify installed package/security/hosted POSIX behavior, then
+perform the one bounded metadata action using existing registration and lock.
+Retain local intent and partial remote claims; no automatic retry/redeployment.
+Record raw paths/names privately and report metadata-only limitations honestly.
+The unchanged ledger/active runtime and local journal states must be rechecked.
+Limits128 entries/60s/1MiB per stream; new simulations/extractions/reservations0.
+No physical EDA/license/API/deck execution, merge or publication authority is added.
+The [runbook](M2_PHYSICAL_READINESS_01.md) and additive policy record this scope;
+older proposed/unapproved statements below retain their historical meaning.
+
 ## Current physical-readiness investigation, 2026-10-16
 
 PR160 integration is complete at06f407a3bba814ad2823323bed9604624f7b3061,

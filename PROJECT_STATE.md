@@ -1,3 +1,16 @@
+## Approved fixed physical metadata collector, 2026-10-16
+
+Direct human limited-collector approval retains source34 and extends only to35:
+one fixed package collector/host parser, normal-user stage and one metadata query,
+128 entries/60s/1MiB per stream. No simulation/extraction/license/EDA invocation,
+corrective redeployment, merge or publication. Old policy/consumption records stay.
+The additive source35 policy/guard preserves the frozen POST/M234 result.
+Implementation and local tests are in progress on the existing PR161 branch;
+actual deployment/query has not occurred. Hosted POSIX/package/security checks
+remain gates; do not promote synthetic tests into actual physical qualification.
+See [current collector scope/runbook](docs/M2_PHYSICAL_READINESS_01.md).
+Prior proposal/no-authority statements below are historical for this exact slice.
+
 ## Physical readiness continuation after PR160 integration, 2026-10-16
 
 PR160 normally merged as06f407a3bba814ad2823323bed9604624f7b3061 after the

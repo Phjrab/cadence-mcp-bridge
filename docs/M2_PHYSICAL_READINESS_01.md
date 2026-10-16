@@ -1,9 +1,74 @@
 # M2 physical readiness investigation, 2026-10-16
 
-This is the bounded continuation after the owned-inverter PR160 merge. It
-reconciles the available read routes and defines the next finite collection
-scope. It does not implement or qualify a physical backend. The authority is
-the user's continuation instruction; this document is not an approval record.
+## Active approved collector slice
+
+The user's explicit **limited collector stage approval** supersedes the earlier
+proposal below for PHYSICAL-METADATA-01 only: retain34 consumed source versions,
+ceiling35, one collector/host-parser version, ordinary-user staging and one query.
+The actual authority is that direct reply; this document and the generated policy
+are records, not independent user consent. Merge/publication remain unapproved.
+
+`physical_metadata.prepare` freezes the existing authenticated native bundle and
+package-owned collector into a local private plan. `collect` accepts that exact
+plan hash, reconstructs its complete fixed envelope, and uses the existing strict
+operator transport. No MCP tools, generic commands, startup/import operations,
+privileges or active simulation runtime are added or changed.
+
+The collector uses the existing resource lock and registered ordinary account.
+It enumerates only direct children of the outer registered installation roots.
+Nested registered libraries are exact metadata leaves, not cell inventories;
+exact bound OCEAN/Virtuoso/Spectre paths are also observed.
+It reads candidate **metadata only**, never their contents or executable
+output. Installation-contained links are resolved; escaping links, untrusted
+ancestors, special files, ambiguous/missing bindings, namespace drift and overflow
+reject. Shared-write leaves are observations, never permission repairs.
+
+Maximum128 entries,60 seconds and1MiB per output stream are fixed. The fixed
+bootstrap has a55-second alarm; collection has an internal45-second deadline.
+One source-hash directory exclusively claims the remote action; a local intent
+is written before transport. Failed/unknown stages and raw private receipts are
+retained. No retry or corrective redeployment is automatic. Making another local
+plan does not remove an already claimed remote source. A transport failure before
+the remote claim still consumes this VM's authorized invocation; do not retry it.
+
+Stage effects are a new private metadata directory and three files: collector,
+request binding and completion receipt (possibly partial on failure). Existing
+active-pointer and ledger bytes/metadata and installed runtime bytes are checked
+before/after. Candidate metadata includes inode/owner/group/mode/link/size and
+mtime/ctime; directory enumeration may affect atime, which is explicitly excluded.
+A metadata digest is **not** a content hash, binary attestation, ACL audit, license
+check or physical qualification. No permissions or candidate contents are changed.
+This cannot detect a content edit that restores all observed metadata.
+
+The additive [source35 policy](policy/PHYSICAL_METADATA_LIMIT_V1.json) and
+`scripts/verify-physical-metadata-boundary.py` retain the original V16/V9 identities
+and run the unchanged POST/M2 guards before counting the two new files together
+once. No simulation grant, ledger, journal or other operator's defaults are reset.
+Deployment requires exact installed/package checks and hosted Linux trust/claim
+tests. Local synthetic success is not VM evidence. Actual outcome will be recorded
+after the single authorized operation; it has not yet been performed.
+
+For an installed development build, an operator can prepare locally:
+
+```python
+from pathlib import Path
+from cadence_mcp_bridge.physical_metadata import prepare, collect
+
+plan = prepare(Path("<existing-authenticated-native-bundle>"),
+               "<existing-native-manifest-sha256>", Path("<new-private-plan-directory>"))
+# Review the private target manifest and obtain the VM operator's bounded consent.
+# For the current managed VM, the direct user approval above already supplies it.
+result = collect(Path("<same-private-plan-directory>"), plan["plan_sha256"])
+```
+
+Run the source boundary guard with the retained reconciliation before deployment;
+never replace its consumed history with fresh installation state. Keep target paths,
+raw stdout/stderr, journals and candidate names private. Only the fixed summary
+and evidence hashes should be shared. The published2.0.0 wheel does not contain
+this development API. Other VMs need their own explicit staging/query consent.
+
+The original investigation/proposal below is retained history. This slice implements
+metadata observation, not a physical backend, EDA invocation or qualification.
 
 ## Integrated baseline and current observations
 
@@ -75,7 +140,7 @@ should be added to the public MCP surface.
 deck filename or configured license variable cannot qualify their combination.
 No exact physical tool/version/deck combination was freshly observed here.
 
-## Next bounded slice: PHYSICAL-METADATA-01, proposed
+## Original proposal: PHYSICAL-METADATA-01 (now approved as bounded above)
 
 The next useful slice is one fixed ordinary-user collector, rather than a
 physical computation or another inverter performance experiment. Its initial
@@ -124,7 +189,7 @@ the connected-server library response, installed preflight receipt, local
 failure record and current route/source identities. They are not distribution
 files or new execution authority. The original owned-inverter worktree is retained.
 
-This branch changes documentation only. Validate whitespace and local document
+The initial fa8d01b checkpoint changed documentation only. Validate whitespace and local document
 links and confirm no package, native source or policy changes. Existing source
 CI at the identical integrated tree remains applicable; do not rerun Cadence or
 call the physical acceptance criteria complete to validate prose.

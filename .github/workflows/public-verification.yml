@@ -103,7 +103,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"
 
       - name: Local design revision, inverter plan and physical evidence contracts
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py -q --basetemp "$HOME/m2-foundation-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py tests/unit/test_physical_metadata.py tests/unit/test_physical_metadata_boundary.py -q --basetemp "$HOME/m2-foundation-tests"
 
       - name: Bounded CDF data, owned generator and retained source allowance
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_m2_cdf.py tests/unit/test_m2_inverter.py tests/unit/test_m2_native_corrections.py -q --basetemp "$HOME/m2-cdf-tests"
