@@ -1,3 +1,20 @@
+## Current operator entry point, 2026-10-17
+
+Use [metadata recovery](PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md) for the current
+fixed ancestor-provisioning and predecessor-bound follow-up APIs. Its finite
+admission preserves spent claims across plans, aliases and restarts. The original
+`prepare`/`collect` initial entry shown later is retired in the current package;
+that example is historical and must not be used for a follow-up.
+
+Source38 and its additive V5 lineage guard have passed exact hosted Linux/Windows,
+independent automated review and canonical package/install checks; see
+[current source status](M2_PHYSICAL_METADATA_01_STATUS.md). These source checks do
+not authorize an operation on another VM. Per-VM authority and fresh integrity,
+ledger, disk and journal checks remain required. Metadata observation does not
+establish callable layout APIs, deck compatibility, licenses or physical execution.
+Operational evidence remains separate, and published2.0.0 is unchanged.
+The dated pending/failure checkpoints below preserve their original evidence scope.
+
 ## Explicit finite metadata follow-up extension, 2026-10-16
 
 The latest direct operator approval retains36 consumed source versions and the
@@ -153,7 +170,8 @@ Deployment requires exact installed/package checks and hosted Linux trust/claim
 tests. Local synthetic success is not VM evidence. Actual outcome will be recorded
 after the single authorized operation; it has not yet been performed.
 
-For an installed development build, an operator can prepare locally:
+Historical initial-query example (retired; use the current recovery workflow
+linked above for an explicitly authorized follow-up):
 
 ```python
 from pathlib import Path

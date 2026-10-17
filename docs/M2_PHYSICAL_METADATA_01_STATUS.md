@@ -1,3 +1,21 @@
+## Current workflow and source checks, 2026-10-17
+
+The current product source is38, with an additive V5 history guard that preserves
+source37/source38 ancestry and the unchanged V4 checkpoint. Exact candidate
+15a5ab33ed9c59ffc45b5801088023e6c30f88fa passed hosted Linux and Windows checks in
+[run38998161537](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/38998161537).
+Independent automated review6228959128 reported no major issues; this is not
+formal GitHub APPROVED. Canonical wheel/sdist and isolated installed source,
+protocol, context and bootstrap checks passed. Product bytes are unchanged here.
+
+Use the [current operator workflow](PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md).
+Provisioning and collection remain explicit per-VM actions with current authority,
+integrity, accounting and finite admission checks. Source qualification grants no
+execution authority. Environment-specific operational evidence is retained
+separately; no physical backend, license or DRC/LVS/PEX qualification is asserted.
+The published2.0.0 artifacts are unchanged. Dated checkpoints below retain their
+original source and evidence scope; their pending statements are historical.
+
 ## Explicit finite metadata follow-up extension, 2026-10-16
 
 The latest direct operator approval retains36 consumed source versions and the
