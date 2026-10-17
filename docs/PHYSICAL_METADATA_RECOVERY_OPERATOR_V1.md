@@ -82,7 +82,7 @@ slot remains spent. Do not remove markers to retry.
 For the current managed validation scope only, immutable V3 preserves source36
 and failed collection1, raising the finite ceilings to source40 and total11
 collections (ten additional). New source commits and reverts remain counted by
-`scripts/verify-physical-metadata-boundary-v4.py`; its new source checkpoint
+`scripts/verify-physical-metadata-boundary-v5.py`; its retained source checkpoint
 preserves the original V3 limit and source37 pins. V1/V2/V3 guards and records stay
 intact and continue to describe their own source versions. These are not fresh-install defaults or simulation budget increases.
 
@@ -96,3 +96,11 @@ portable tests, hosted POSIX tests, installed-package checks and actual VM evide
 Filesystem mtime/ctime values in collected metadata and private repair plans use
 round-trip17-digit strings. They preserve binary64 observations while avoiding
 Python2.6/modern-Python JSON float rendering differences in authenticated digests.
+
+The additive V5 guard retains V4 byte-for-byte and additionally requires the
+retained source37 and source38 commits to be ancestors of the checked candidate.
+Objects merely remaining in Git storage do not satisfy history preservation.
+Run this gate on the canonical candidate lineage; a separately cherry-picked
+local development history is not a substitute for that evidence. This guard-only
+correction changes no product source or source allowance and does not retire
+existing failed collection claims.
