@@ -190,6 +190,23 @@ def test_new_source_needs_bound_checkpoint_before_and_after_commit(boundary: Any
         guard.inspect()
 
 
+@pytest.mark.parametrize("root", ["src", "remote"])
+def test_untracked_product_counts_when_user_status_hides_it(boundary: Any, root: str) -> None:
+    guard, repository = boundary
+    command(repository, "config", "status.showUntrackedFiles", "no")
+    source = repository / root / "new_variant.py"
+    source.parent.mkdir(exist_ok=True)
+    source.write_bytes(b"# synthetic untracked source41\n")
+    assert not command(repository, "status", "--porcelain", "--", "src", "remote")
+    with pytest.raises(ValueError, match="additive checkpoint"):
+        guard.inspect()
+    checkpoint(guard, repository, 41)
+    before = guard.inspect(CHECKPOINT)
+    assert before["conservative_consumed"] == 41 and before["remaining"] == 19
+    commit(repository)
+    assert guard.inspect(CHECKPOINT) == before
+
+
 def test_reverted_source_stays_charged_and_needs_new_checkpoint(boundary: Any) -> None:
     guard, repository = boundary
     source = repository / "src/cadence_mcp_bridge/physical_metadata.py"
@@ -224,8 +241,12 @@ def test_new_checkpoint_cannot_alias_historical_files(boundary: Any, name: str) 
         guard.inspect(name)
 
 
-def test_source60_ceiling_counts_every_commit_even_if_content_repeats(boundary: Any) -> None:
+@pytest.mark.parametrize("untracked", [False, True])
+def test_source60_ceiling_counts_every_commit_even_if_content_repeats(
+    boundary: Any, untracked: bool
+) -> None:
     guard, repository = boundary
+    command(repository, "config", "status.showUntrackedFiles", "no")
     source = repository / "src/cadence_mcp_bridge/physical_metadata.py"
     for version in range(41, 61):
         source.write_bytes(f"# synthetic alternating variant {version % 2}\n".encode("ascii"))
@@ -233,6 +254,8 @@ def test_source60_ceiling_counts_every_commit_even_if_content_repeats(boundary: 
     checkpoint(guard, repository, 60)
     result = guard.inspect(CHECKPOINT)
     assert result["conservative_consumed"] == 60 and result["remaining"] == 0
+    if untracked:
+        source = repository / "src/untracked_source61.py"
     source.write_bytes(b"# synthetic source61\n")
     with pytest.raises(ValueError, match="source60 exhausted"):
         guard.inspect(CHECKPOINT)

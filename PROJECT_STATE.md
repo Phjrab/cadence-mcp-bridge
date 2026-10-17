@@ -1,3 +1,15 @@
+## Source60 final-review correction, 2026-10-17
+
+The final PR162 review found that a user's `status.showUntrackedFiles=no` could
+hide a pending product file from source accounting. The V6 guard now explicitly
+requests all untracked files. Seven focused synthetic cases pass, including
+hidden src/remote additions charged as source41 and both tracked/untracked
+source61 rejection. Ruff passes. The full current-head hosted checks and refreshed
+review remain final gates. These changes affect only verification/tests and this
+record: product/native bytes and the retained40/60 consumption are unchanged.
+Original failed regression output, policies, claims and earlier receipts remain
+preserved. No actual VM collection, execution, extraction or reservation occurred.
+
 ## Explicit source60 extension and release integration, 2026-10-17
 
 The direct user instruction raises the cumulative product-source ceiling from40

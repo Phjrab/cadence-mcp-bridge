@@ -177,7 +177,8 @@ def inspect(checkpoint_name: str | None = None) -> dict[str, object]:
     retained = retained_history()
     policy = load_policy()
     events = source_events("HEAD")
-    pending = bool(git("status", "--porcelain", "--", *SOURCE_ROOTS))
+    # User status.showUntrackedFiles settings must not hide a product version.
+    pending = bool(git("status", "--porcelain", "--untracked-files=all", "--", *SOURCE_ROOTS))
     if not retained <= events:
         raise ValueError("physical retained source events missing")
     consumed = 36 + len(events) + int(pending)
