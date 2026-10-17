@@ -1,0 +1,31 @@
+{
+  "authority": "DIRECT_USER_SOURCE40_AND_TEN_ADDITIONAL_COLLECTIONS_2026_10_16",
+  "authority_note": "Records direct human instruction; this generated file is not separate approval. Historical failure and all accounting remain spent.",
+  "base_commit": "a215500e9f7b2c5e20fad26b4bde9b40059e3be0",
+  "max_bytes_per_output_stream": 1048576,
+  "max_cumulative_attempts": 500,
+  "max_cumulative_result_bytes": 17179869184,
+  "max_entries": 128,
+  "max_new_extractions": 0,
+  "max_new_reserved_bytes": 0,
+  "max_new_simulations": 0,
+  "maximum_additional_collection_attempts": 10,
+  "maximum_corrections_same_change": 40,
+  "maximum_new_source_versions": 4,
+  "maximum_stage_and_query_attempts": 11,
+  "merge_authorized": false,
+  "publication_authorized": false,
+  "retained_collection_attempts": 1,
+  "retained_consumed_source_changes": 36,
+  "retained_source_commit": "759d84ec435d7ef3636024f78608b34aee13000b",
+  "schema_version": 3,
+  "scope": "CURRENT_MANAGED_STANDARD_VM_PHYSICAL_METADATA_02",
+  "source_lf_sha256": {
+    "src/cadence_mcp_bridge/_physical_ancestor_repair.py": "0898e94c1eca10d415a241b1c52e755c573d9076d8604535b7059c91569ef6bf",
+    "src/cadence_mcp_bridge/_physical_metadata.py": "fd0ac5a7eea7d1bb4db9831fc4b3bc824a953116472d1ee1a809172453cb2db0",
+    "src/cadence_mcp_bridge/physical_ancestor_repair.py": "039101a433a9c4377a21a87a7641155ef2f4977f3a042e576c1fbbbcc83e8bc9",
+    "src/cadence_mcp_bridge/physical_metadata.py": "9a20a760b62cd37273ffad748cb60129f89355bce81f91de8c6c69199435d151"
+  },
+  "timeout_seconds": 60,
+  "version_unit": "Every product source commit or pending product change; no refund for reverts or aliases."
+}

@@ -1,0 +1,15 @@
+{
+  "authority": "SAME_DIRECT_USER_SOURCE40_AND_TEN_ADDITIONAL_COLLECTIONS_NOT_THIS_CHECKPOINT",
+  "limit_policy": "docs/policy/PHYSICAL_METADATA_LIMIT_V3.json",
+  "limit_policy_canonical_sha256": "a1d7b1b621657b68f777972aea50d5779bb259d5462c682aa42689f62773335a",
+  "reason": "Atomic slot/nonce claim fixes concurrent orphan exhaustion; canonical timestamp strings avoid Python2.6 float digest drift. Prior sources/limits/failure remain preserved.",
+  "retained_source37_public_commit": "d456bf8228647a1171c028e3bea9d92b9377e9c0",
+  "schema_version": 4,
+  "source_lf_sha256": {
+    "src/cadence_mcp_bridge/_physical_ancestor_repair.py": "0898e94c1eca10d415a241b1c52e755c573d9076d8604535b7059c91569ef6bf",
+    "src/cadence_mcp_bridge/_physical_metadata.py": "e06629aaf7e72d67fa2bd176794b2ebe4cdcb407aaba9b84ae6c01d427024a17",
+    "src/cadence_mcp_bridge/physical_ancestor_repair.py": "039101a433a9c4377a21a87a7641155ef2f4977f3a042e576c1fbbbcc83e8bc9",
+    "src/cadence_mcp_bridge/physical_metadata.py": "daae3c12bd5616b5bf8760b284449ae2ca762d196fbd0568acb4faaa645125ba"
+  },
+  "source_version": 38
+}

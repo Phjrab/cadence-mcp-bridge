@@ -1,3 +1,149 @@
+## Explicit finite metadata follow-up extension, 2026-10-16
+
+The latest direct operator approval retains36 consumed source versions and the
+original failed collection1, and raises ceilings to source40 and10 additional
+collections (total11). Immutable policyV3 and its source guard preserve prior
+policies, consumed history and current simulation/result limits. No merge or
+publication authority is added. Earlier no-retry/source36 statements below remain
+source-specific history, superseded only by this explicit finite extension.
+
+Source37 adds a separate operator-only registered-library-ancestor permission
+recipe and predecessor-bound numbered follow-ups. Active native assets stay
+unchanged; no public repair/shell tool is added. Windows focused59 PASS/20 POSIX
+skips, security18 PASS, Ruff and mypy118, original85 tools/22 contracts PASS.
+Hosted POSIX, exact package/install checks, refreshed review and actual VM
+provisioning/collection remain pending. No actual repair or follow-up collection
+is claimed. Private diagnostic paths/raw metadata stay outside this branch.
+See [operator workflow](PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md).
+
+## Terminal source36 one-shot outcome, 2026-10-16
+
+Disclosure update: the user's subsequent direct approval authorizes publishing
+this sanitized failure summary in Phjrab/cadence-mcp-bridge documentation and PR161.
+Only the error code, failed stage and preservation outcome are disclosed; private
+paths, raw metadata and internal VM/resource values remain excluded. This approval
+does not authorize another query, source correction, repair, merge or release.
+The previous automatic-review rejection and local-only hold are preserved in
+commit7b86cf0 and V3's historical disclosure field; this approval supersedes that
+hold for this summary only. Generated records are not independent user consent.
+
+**METADATA COLLECTION FAILED; NO RETRY REMAINS.** The approved one-shot operation
+reached the actual registered VM and failed with `physical_untrusted_ancestor`
+in the remote collector's ancestor ownership/shared-write guard. No validated
+metadata result or success receipt was returned. The error identifies the guard,
+not the exact rejected ancestor or which ownership/write condition failed.
+Do not infer that every installation ancestor is untrusted or change permissions
+from this traceback alone. This is actual VM failure evidence, not a successful
+physical inventory, license assessment or DRC/LVS/PEX qualification.
+
+The preserved traceback reaches `run` line229 after the fixed collector and request
+claim writes. Remote partial stage is therefore reached; its current exact file
+inventory is not separately reobserved. Durable account intent, local started/failed
+markers, stderr and partial remote evidence remain spent and protected. No second
+query, alternate plan, cleanup, permission repair or redeployment was performed.
+
+Source36 remains `759d84ec435d7ef3636024f78608b34aee13000b`, with unchanged remote
+collector bytes; the final tests/docs commit is
+`16e8b4d08c2cdf068e106b942cc05b1abc61fe68`. Both hosted jobs PASS in
+[run38873949948](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/38873949948),
+including Windows unit/security/contracts/package lifecycle and Linux real disposable
+filesystem/flock cases. Fresh automated review of that commit reports no major issues
+([receipt6211460380](https://github.com/Phjrab/cadence-mcp-bridge/pull/161#issuecomment-6211460380));
+both previous review threads are resolved. Automated review is not formal APPROVED.
+Local full suite4074 PASS/405 platform skips precedes the final test-only fixture
+commit; updated focused47 PASS/7 skips includes boundary tests. The earlier Windows
+CI failure and nonreproduced ACL fixture remain preserved, with their original status.
+
+Existing runtime, local journal content/metadata and shared counters were equal
+before/after. New simulations/extractions/reserved bytes/admin changes are all0;
+the existing disk floor passes. Detailed VM values and raw metadata remain private.
+Source consumption is36/36; actual collection attempts1/1, successful inventories0.
+The additive [terminal consumption record](policy/PHYSICAL_METADATA_CONSUMED_V3.json) preserves V1/V2 checkpoints.
+The original single query is now consumed, including its failure; no reset/refund.
+
+The exact installed development wheel/sdist and their prior audits are unchanged;
+this final overlay and terminal record are evidence-only, outside curated artifacts.
+The metadata slice remains limited to the qualified Windows/Python3.12.10 host.
+PR161 remains draft/unmerged; published2.0.0 and main are unchanged.
+Further exact-ancestor investigation, any finite correction/repair and another actual
+query need a separately bounded follow-up decision. No merge/publication authority
+is added. Earlier checkpoints below remain dated historical evidence.
+
+## Approved host-only correction overlay, 2026-10-16
+
+The latest direct user reply explicitly approves retain35/ceiling36 and exactly
+one host-only correction for review4291980402, followed by the original unused
+single metadata stage/query only after tests and review pass. This supersedes
+older statements that source36 is unapproved; those records remain historical.
+The authority is the direct user reply, not this generated record or policy.
+
+`physical_metadata.collect` now claims a fixed OS-account state location before
+SSH, independent of the prepared plan, SSH alias, environment/bundle/request IDs
+and process lifetime. The key uses the existing declared VM resource domain
+(hostname/architecture), guest account and unchanged collector SHA. Even a changed
+managed root cannot reset it. Exclusive creation arbitrates concurrent callers;
+partial, malformed, failed and unknown claims remain spent. Private ownership,
+Windows DACL/POSIX modes, symlink/junction checks and namespace revalidation reject
+untrusted state. This trusted local state is evidence: preserve and migrate it with
+the operator account; do not delete it to retry. It does not protect deliberate
+external deletion by the owning operator/admin or substitution of the OS itself.
+
+The remote collector remains LF SHA256
+`42da5bd7a1bee41176e0578dc5e04c438b618735c667566db454421b7d6ff15d`.
+V1 policies/consumption and the frozen POST/M2 guards are preserved. The additive
+[version2 guard](../scripts/verify-physical-metadata-boundary-v2.py) enforces
+35 retained plus one host correction, no remote source change or added query.
+Final tests/review/exact installed checks and actual single query remain pending.
+No simulation, extraction, reservation, administrator action, merge or publication
+is authorized by this extension. PR161 stays draft/unmerged; published2.0.0 unchanged.
+
+## PHYSICAL-METADATA-01 deployment hold, 2026-10-16
+
+Keep source35883eb and consumed35/35 frozen. Review4291980402's pre-claim intent
+replay defect is reproduced offline; no actual collector stage/query ran. The
+one approved remote operation remains unused. Do not create another plan to retry,
+change source, extend policy or deploy under the exhausted one-version allowance.
+Complete independent verification and preserve the failure/review. The next minimum
+scope is one host-only durable-intent correction (retain35/ceiling36), then exact
+tests/review and the same single actual query; it needs separate explicit approval.
+Remote collector bytes and simulation budgets need no expansion. Current existing
+inspect/storage and journals PASS; ledger128/15,721,299,968 unchanged, disk floorOK.
+See [evidence and proposal](M2_PHYSICAL_METADATA_01_STATUS.md). No merge/publication.
+
+## Active PHYSICAL-METADATA-01 implementation, 2026-10-16
+
+The direct limited-collector approval is now active: retain34, source ceiling35,
+one fixed collector version and one ordinary-user stage/query. Implement/test,
+freeze exact source, verify installed package/security/hosted POSIX behavior, then
+perform the one bounded metadata action using existing registration and lock.
+Retain local intent and partial remote claims; no automatic retry/redeployment.
+Record raw paths/names privately and report metadata-only limitations honestly.
+The unchanged ledger/active runtime and local journal states must be rechecked.
+Limits128 entries/60s/1MiB per stream; new simulations/extractions/reservations0.
+No physical EDA/license/API/deck execution, merge or publication authority is added.
+The [runbook](M2_PHYSICAL_READINESS_01.md) and additive policy record this scope;
+older proposed/unapproved statements below retain their historical meaning.
+
+## Current physical-readiness investigation, 2026-10-16
+
+PR160 integration is complete at06f407a3bba814ad2823323bed9604624f7b3061,
+with identical approved source and both post-merge CI jobs PASS. The user's
+continuation selects investigation of physical readiness, not physical compute.
+Existing local physical contracts are reused; no duplicate model is introduced.
+
+The connected allowlisted library call rejects the unattested legacy operator
+runner. The separate exact-installed native preflight passes read-only at UID500,
+changed0; ledger128/15,721,299,968 and journal states are preserved. No source,
+runtime, circuit, policy, administrator or resource mutation is made here.
+
+Complete the [readiness record](M2_PHYSICAL_READINESS_01.md) and its finite
+PHYSICAL-METADATA-01 proposal. Physical installation/deck/API facts remain unknown;
+do not call the backend absent or qualified. The34/34 source allowance and spent
+two-job grant remain binding. A new fixed collector version/stage/invocation
+requires the proposed explicit extension before execution. Do not infer it from
+PR160's merge approval, launch EDA as a read-only shortcut, or start layout/DRC/LVS/PEX.
+Older pending, draft and phase limits below retain their historical scope.
+
 ## Current bounded slice closeout, 2026-10-16
 
 Source99af exact installed/package/security/compatibility/lifecycle PASS and clean

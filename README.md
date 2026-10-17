@@ -1,3 +1,16 @@
+## Development metadata workflow, 2026-10-17
+
+PR161 includes the corrected durable replay guard and an explicitly bounded
+follow-up workflow. These development changes are not part of published2.0.0.
+The original actual collection reached the VM but failed its ancestor trust check;
+the failure remains spent. Source38 and its additive V5 history guard have passed
+hosted Linux/Windows CI, independent automated review and canonical package/install
+checks. Each VM operation still requires its own operator authority, fresh
+integrity/accounting checks and finite admission. The fixed OS-account intent state
+must be preserved across plans, upgrades and process restarts; failed/unknown claims
+are never reset. No physical-tool execution or license qualification is claimed.
+See [current status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+
 # Cadence MCP Bridge
 
 Register your own circuits and run bounded DC/AC/TRAN analyses and 1D Sweeps in
@@ -15,6 +28,16 @@ artifact and acceptance reports. Earlier source checkpoints remain in the
 [acceptance record](docs/generic_release/GENERIC_ACCEPTANCE_CURRENT.json).
 
 ## Supported environment
+
+Development-only physical metadata inspection is an explicit operator API with a
+separate bounded staging/query approval. It launches no EDA or license utilities
+and cannot qualify layout/DRC/LVS/PEX from file presence. See the
+[fixed collector runbook](docs/M2_PHYSICAL_READINESS_01.md). It is not included in
+the already published2.0.0 artifacts. The earlier pre-claim replay defect is fixed.
+Source checks do not authorize another VM operation or qualify a physical backend.
+Use only the explicitly authorized finite operator workflow in
+[metadata recovery](docs/PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md); source/grant
+changes never restore spent collections.
 
 Actual host evidence is Windows/Python3.12.10. The reference VM observation is
 CentOS6.5/i686/Python2.6.6, Virtuoso IC6.1.5.500.15 and Spectre12.1.0.347.isr3.
