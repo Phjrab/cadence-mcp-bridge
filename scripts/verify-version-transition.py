@@ -29,6 +29,8 @@ PUBLISHED_VERSION = "2.0.0"
 PUBLISHED_WHEEL_SHA256 = "4633549b869ba8e6fc3b900454dbd96d96d51dd6e52d04bde3a78400d548203c"
 PUBLISHED_LOCK_SHA256 = "272f9ba4528ee335b13bd838f582f141691b6a6c4afc8f4175ced14e5cc0831f"
 OPERATION_ID = "8c3bb876-4c6a-4cc2-bf4a-0ec2977f7919"
+LEGACY_SWEEP_KEY = "7f354fe5-655b-42bc-b25a-7fb66d519fbe"
+NATIVE_SWEEP_ID = "b5ae8b42-1d27-47ae-86c4-ff59276d1d6e"
 
 
 def sha(path: Path) -> str:
@@ -143,7 +145,6 @@ def installed_files(wheel: Path) -> int:
 def create_state(root: Path) -> None:
     from cadence_mcp_bridge.analysis_store import AnalysisStore
     from cadence_mcp_bridge.operator_operations import OperationPlan, OperationProgress
-    from cadence_mcp_bridge.sweeps import SweepStore
 
     root.mkdir(mode=0o700)
     frozen = OperationPlan.model_validate_json(json.dumps({
@@ -166,7 +167,7 @@ def create_state(root: Path) -> None:
         OPERATION_ID, current.progress,
         OperationProgress(phase="SUCCEEDED", remote_revision=1, provider_receipt_sha256="a" * 64),
     )
-    SweepStore(root / "sweep.sqlite3")
+    seed_sweeps(root, frozen, store)
     values = {
         "operation-plan.json": json.loads(frozen.model_dump_json()),
         "context.json": {"synthetic": True, "journal": "analysis.sqlite3", "context": "retained"},
@@ -192,9 +193,75 @@ def create_state(root: Path) -> None:
         write_json(target, value)
 
 
+def seed_sweeps(root: Path, frozen: Any, analysis_store: Any) -> None:
+    """Use real installed stores, with disposable failed/unfinished fixtures."""
+    from uuid import UUID
+
+    from cadence_mcp_bridge.native_sweeps import (
+        NativeSweepPlan,
+        NativeSweepQuery,
+        NativeSweepRequest,
+        NativeSweepStore,
+    )
+    from cadence_mcp_bridge.operator_operations import OperationProgress, OperationRequest
+    from cadence_mcp_bridge.sweeps import SweepRequest, SweepStore, SweepSubmission, make_plan
+
+    legacy = SweepStore(root / "sweep.sqlite3")
+    submission = SweepSubmission(
+        plan=make_plan(SweepRequest.model_validate({
+            "profile_id": "fixture-rc-transient", "axis": "resistance_ohm", "unit": "ohm",
+            "values": ("900", "1000"),
+            "fixed": {"capacitance_f": "1e-12", "stop_time_s": "1e-9"},
+        })), experiment_key=UUID(LEGACY_SWEEP_KEY),
+    )
+    record = legacy.create_or_get(submission)
+    record["points"][0].update(
+        state="FAILED", measurement_value=False, quality="invalid",
+        error="synthetic retained failure", phase="complete",
+    )
+    legacy.put(record)
+    write_json(root / "legacy-sweep.json", {
+        "synthetic": True, "submission": submission.model_dump(mode="json"), "record": record,
+    })
+    request = NativeSweepRequest.model_validate_json(json.dumps({
+        "template": {**frozen.request.model_dump(mode="json"), "values": [
+            {"logical_id": "synthetic-axis", "unit": "V", "value": "0.4"},
+        ]}, "variable_id": "synthetic-axis", "values": ["0.4", "0.6"],
+    }))
+    plan = NativeSweepPlan(request=request, points=tuple(
+        frozen.model_copy(update={"request": OperationRequest.model_validate_json(
+            request.point_request(index).model_dump_json()
+        )}) for index in range(2)
+    ))
+    query = NativeSweepQuery(sweep_id=NATIVE_SWEEP_ID, expected_plan_sha256=plan.plan_sha256)
+    native = NativeSweepStore(analysis_store).admit(query, plan)
+    for index, identity in enumerate(native.operation_ids):
+        if not analysis_store.admit_operation(
+            identity, plan.points[index], dispatch_intent=True, sweep_id=NATIVE_SWEEP_ID,
+        ):
+            raise ValueError("fresh disposable sweep child already admitted")
+        if index == 0:
+            progress = analysis_store.operation(identity).progress
+            analysis_store.advance_operation(identity, progress, OperationProgress(
+                phase="SUCCEEDED", remote_revision=1, provider_receipt_sha256="b" * 64,
+            ))
+    write_json(root / "native-sweep.json", {
+        "synthetic": True, "query": query.model_dump(mode="json"),
+        "record": native.model_dump(mode="json"),
+    })
+
+
 def state_replay(root: Path) -> None:
+    from uuid import UUID
+
     from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.native_sweeps import (
+        NativeSweepQuery,
+        NativeSweepRecord,
+        NativeSweepStore,
+    )
     from cadence_mcp_bridge.operator_operations import OperationPlan
+    from cadence_mcp_bridge.sweeps import SweepStore, SweepSubmission
 
     frozen = OperationPlan.model_validate_json((root / "operation-plan.json").read_bytes())
     store = AnalysisStore(root / "analysis.sqlite3")
@@ -202,6 +269,25 @@ def state_replay(root: Path) -> None:
         raise ValueError("retained result state changed")
     if store.admit_operation(OPERATION_ID, frozen):
         raise ValueError("same-ID replay admitted duplicate work")
+    legacy = json.loads((root / "legacy-sweep.json").read_bytes())
+    sweeps = SweepStore(root / "sweep.sqlite3")
+    submission = SweepSubmission.model_validate_json(json.dumps(legacy["submission"]))
+    if sweeps.get(UUID(legacy["record"]["sweep_id"])) != legacy["record"] or (
+        sweeps.create_or_get(submission) != legacy["record"]
+    ):
+        raise ValueError("retained legacy sweep or same-ID replay changed")
+    native = json.loads((root / "native-sweep.json").read_bytes())
+    query = NativeSweepQuery.model_validate_json(json.dumps(native["query"]))
+    expected = NativeSweepRecord.model_validate_json(json.dumps(native["record"]))
+    native_store = NativeSweepStore(store)
+    if native_store.read(query) != expected or native_store.admit(query, expected.plan) != expected:
+        raise ValueError("retained native sweep parent/child identities changed")
+    for index, identity in enumerate(expected.operation_ids):
+        phase = "SUCCEEDED" if index == 0 else "UNKNOWN_OUTCOME"
+        if store.operation(identity).progress.phase != phase or store.admit_operation(
+            identity, expected.plan.points[index], sweep_id=expected.sweep_id,
+        ):
+            raise ValueError("native sweep child replay admitted work or changed progress")
 
 
 def account_claim(workspace: Path, state: Path, first: bool) -> None:
@@ -316,6 +402,7 @@ def installed_probe(workspace: Path, wheel: Path, label: str) -> None:
         "duplicate_operation_admitted": False, "public_tools": len(declarations),
         "remote_contact": False, "native_runtime_activated": False,
         "protocol_mode": "UNCONFIGURED_OPERATOR_EMPTY_CATALOG_SETUP_REQUIRED",
+        "populated_sweep_replay": "LEGACY_FAILED_NOT_RUN_NATIVE_SUCCEEDED_UNKNOWN_SAME_IDS",
         "scope": "ISOLATED_INSTALLED_SYNTHETIC_HOST_TRANSITION_NOT_VM_OR_APP",
         "account_claim_scope": (
             "INSTALLED_DURABLE_API_SYNTHETIC_HOME_DUPLICATE_DENIED"
@@ -344,6 +431,15 @@ def run(
             "partial_output_preserved": True,
         })
         raise ValueError("transition step timed out; retained logs: " + label) from None
+    except OSError as error:
+        (workspace / (label + ".stdout.log")).write_bytes(b"")
+        (workspace / (label + ".stderr.log")).write_bytes(b"")
+        write_json(workspace / (label + ".launch-error.json"), {
+            "status": "START_FAILED", "error_type": type(error).__name__,
+            "errno": error.errno, "winerror": getattr(error, "winerror", None),
+            "captured_output_available": False,
+        })
+        raise ValueError("transition step could not start; retained logs: " + label) from None
     (workspace / (label + ".stdout.log")).write_bytes(result.stdout)
     (workspace / (label + ".stderr.log")).write_bytes(result.stderr)
     if result.returncode:
@@ -393,6 +489,7 @@ def verify(args: argparse.Namespace) -> None:
         "published_lock_sha256": sha(old_lock), "candidate_lock_sha256": sha(new_lock),
         "full_public_declarations_equal": 85,
         "protocol_mode": "UNCONFIGURED_OPERATOR_EMPTY_CATALOG_SETUP_REQUIRED",
+        "populated_sweep_replay": "LEGACY_FAILED_NOT_RUN_NATIVE_SUCCEEDED_UNKNOWN_SAME_IDS",
         "retained_state_files": len(snapshot(workspace / "state")),
         "dependencies": "EACH_VERSION_HASH_LOCKED_SYNC_NOT_LATEST_RESOLUTION",
         "remote_contact": False, "new_simulations": 0, "new_reservations": 0,

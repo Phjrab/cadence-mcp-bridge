@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sqlite3
 import subprocess
 from pathlib import Path
 
@@ -61,3 +62,46 @@ def test_successful_step_returns_captured_result_and_keeps_diagnostics(tmp_path,
     assert (tmp_path / "ok.stdout.log").read_bytes() == b"2.1.0\n"
     assert (tmp_path / "ok.stderr.log").read_bytes() == b""
     assert not (tmp_path / "ok.timeout.json").exists()
+
+
+def test_missing_executable_preserves_explicit_start_failure_without_private_filename(tmp_path):
+    executable = str(tmp_path / "does-not-exist-transition-program")
+    with pytest.raises(ValueError, match="could not start; retained logs: missing-executable"):
+        TRANSITION.run([executable], tmp_path, "missing-executable")
+    receipt = (tmp_path / "missing-executable.launch-error.json").read_text(encoding="utf-8")
+    assert executable not in receipt
+    assert json.loads(receipt)["status"] == "START_FAILED"
+    assert json.loads(receipt)["error_type"] == "FileNotFoundError"
+    assert (tmp_path / "missing-executable.stdout.log").read_bytes() == b""
+    assert (tmp_path / "missing-executable.stderr.log").read_bytes() == b""
+
+
+def test_populated_sweep_replay_preserves_failed_unknown_rows_and_child_ids(tmp_path):
+    state = tmp_path / "state"
+    with TRANSITION.ordinary_fixture_owner():
+        TRANSITION.create_state(state)
+        before = TRANSITION.snapshot(state)
+        for _ in range(2):
+            TRANSITION.state_replay(state)
+            assert TRANSITION.snapshot(state) == before
+        with sqlite3.connect(state / "analysis.sqlite3") as connection:
+            assert connection.execute("SELECT COUNT(*) FROM admissions").fetchone()[0] == 3
+            assert connection.execute("SELECT COUNT(*) FROM native_sweeps_v1").fetchone()[0] == 1
+        with sqlite3.connect(state / "sweep.sqlite3") as connection:
+            assert connection.execute("SELECT COUNT(*) FROM sweeps").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_unreadable_populated_sweep_cannot_certify_transition(tmp_path, native):
+    from cadence_mcp_bridge.errors import InvalidInputError
+
+    state = tmp_path / "state"
+    with TRANSITION.ordinary_fixture_owner():
+        TRANSITION.create_state(state)
+        database, table = ("analysis.sqlite3", "native_sweeps_v1") if native else (
+            "sweep.sqlite3", "sweeps"
+        )
+        with sqlite3.connect(state / database) as connection:
+            connection.execute(f"UPDATE {table} SET document='{{}}'")
+        with pytest.raises(InvalidInputError):
+            TRANSITION.state_replay(state)
