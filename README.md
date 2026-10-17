@@ -1,15 +1,13 @@
-## Development metadata workflow, 2026-10-17
+## 2.1.0 candidate preparation, 2026-10-17
 
-PR161 includes the corrected durable replay guard and an explicitly bounded
-follow-up workflow. These development changes are not part of published2.0.0.
-The original actual collection reached the VM but failed its ancestor trust check;
-the failure remains spent. Source38 and its additive V5 history guard have passed
-hosted Linux/Windows CI, independent automated review and canonical package/install
-checks. Each VM operation still requires its own operator authority, fresh
-integrity/accounting checks and finite admission. The fixed OS-account intent state
-must be preserved across plans, upgrades and process restarts; failed/unknown claims
-are never reset. No physical-tool execution or license qualification is claimed.
-See [current status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+This checkout prepares additive2.1.0; the public release remains2.0.0. Candidate
+features include guided local setup, feature guidance and existing-result reports.
+Extraction recovery and analog measurements remain explicit experimental operator
+paths with limited standard-VM evidence. General user-defined W/L and mixed
+candidate execution/comparison are separate unfinished work, outside this release.
+See [release notes](docs/releases/2.1.0/RELEASE_NOTES.md) and the
+[current qualification table](docs/releases/2.1.0/QUALIFICATION.md). Final exact
+candidate checks and public approval are required before publication.
 
 # Cadence MCP Bridge
 
@@ -71,10 +69,10 @@ environment/design/PDK templates. It needs no developer checkout, private journa
 or past job. Keep setup and journals outside the package. Import, doctor and MCP
 startup do not initialize accounting, repair permissions or run EDA.
 
-## POST-01 development: guided local setup
+## 2.1.0 candidate: guided local setup
 
-The current feature adds `operator-setup` to reduce manual context and client
-configuration. This command is not included in the published 2.0.0 wheel yet.
+`operator-setup` reduces manual context and client configuration. This command
+is included in the2.1.0 candidate and absent from the published2.0.0 wheel.
 Start with `operator-setup guide --mode fresh` for a genuinely new installation,
 or `--mode existing` when preserving an existing resource domain. The guide is
 local and does not inspect or initialize the VM.
@@ -86,11 +84,12 @@ derives its paths from that selected context. Exports never overwrite an existin
 file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
 for required inputs, retained-state handling and error recovery.
 
-## M2 development: local design plans
+## Experimental operator design and physical metadata
 
-The development-only `operator-design` CLI stores immutable local revisions and
-validates a bounded CMOS inverter plan. It is not included in published 2.0.0.
-It has no remote execution backend. Start in a new operator-owned directory:
+The candidate's `operator-design` CLI stores immutable local revisions and
+validates a bounded CMOS inverter plan. Its public CLI is local-only and has no
+remote execution backend. It is absent from published2.0.0. Start in a new
+operator-owned directory:
 
 ```powershell
 python -m cadence_mcp_bridge operator-design example --output inverter-example
@@ -109,13 +108,22 @@ unverified; plan validation cannot grant execution, ERC/LVS or physical signoff.
 See [M2 foundation](docs/M2_FOUNDATION_01.md) for API and preservation limits and
 [physical observations](docs/M2_PHYSICAL_OBSERVATIONS.md) for current unknowns.
 
-The experimental operator-only CDF renderer/parser adds no MCP tool or remote
-execution CLI and never runs at import/server startup. Its first bounded VM
-observation failed on a CDF metadata type and timed out; incomplete metadata
-does not qualify production devices. New OA generation and DC/TRAN remain
-blocked. See [the retained result and limits](docs/M2_OWNED_INVERTER_01.md).
+The experimental operator-only CDF API adds no MCP tool or remote execution CLI
+and never runs at import/server startup. A separately authorized, observed-CDF
+inverter case created owned OA and completed DC/TRAN plus automatic extraction.
+Independent effective-input checks verified that narrow source's device geometry;
+this does not provide general W/L editing or prove logic switching, settling,
+performance or signoff. Earlier failed observations/netlists remain preserved.
+See [the actual result and limits](docs/M2_OWNED_INVERTER_01.md).
 
-## POST-02 development: available features
+Physical metadata collection is also an explicit, finitely authorized operator
+API. Durable OS-account claims survive plans, package transitions and restarts;
+failed/unknown claims stay spent. File presence does not establish a usable API,
+license or layout/DRC/LVS/PEX backend. The candidate's framing correction has
+synthetic boundary tests and requires no new VM collection. See
+[metadata status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+
+## 2.1.0 candidate: available features
 
 Read `cadence://feature-guidance` in a resource-capable MCP client, or run
 `operator-features --settings RUNTIME --context ID` for explicit local inspection.
@@ -124,10 +132,10 @@ synthetic fixtures, reference adapters, missing bindings and submit authority sc
 `REQUIRES_EXECUTION_CHECKS` still requires the normal job-specific checks; it is
 not live qualification or permission to execute. Expired submit authority does
 not imply that admitted results are unavailable. Private paths and remaining
-budget are not exposed. This additive development feature is not in the published
-2.0.0 wheel. See [states and verification scope](docs/POST_02_FEATURE_GUIDANCE.md).
+budget are not exposed. This additive candidate feature is absent from the
+published2.0.0 wheel. See [states and verification scope](docs/POST_02_FEATURE_GUIDANCE.md).
 
-## POST-03 development: existing-result reports
+## 2.1.0 candidate: existing-result reports
 
 Use `operator-results jobs` to browse retained native jobs, then `capture` with
 the exact successful job ID and plan hash to export a verified existing result.
@@ -135,8 +143,16 @@ Offline `find`, `show` and `compare` preserve quantities, units, definitions and
 provenance and reject incompatible conditions. Dates refer to report capture;
 simulation dates are unknown. Reporting dispatches no simulation or extraction
 and reserves no capacity. Native clients also receive additive catalog/report
-resources. This development feature is not in the published2.0.0 wheel. See
+resources. This candidate feature is absent from the published2.0.0 wheel. See
 [commands and evidence scope](docs/POST_03_RESULT_REPORTS.md).
+
+`operator-results compare` checks repetitions with matching complete conditions;
+it does not compare changed W/L or mixed-input candidates. Experimental
+`operator-analog` readers preserve sampled definitions and null/unqualified
+outcomes. `operator-recovery` is explicit extraction-only recovery, actually
+qualified only on one registered inverter DC route. Neither is automatically
+activated by import, doctor, reporting or ordinary same-ID retry. See the
+[qualification table](docs/releases/2.1.0/QUALIFICATION.md) before use.
 
 ## Set up your VM and register a circuit
 
@@ -169,8 +185,9 @@ the bridge does not infer arbitrary measurements.
 ## Run, query and repeat
 
 Export `client-config` for your context, add its explicit `serve-operator` fragment
-to your client and reconnect. Actual Codex is validated; SDK compatibility of
-another client is separate from actual application qualification.
+to your client and reconnect. Actual Codex qualification belongs to published
+2.0.0 and its recorded configuration; an actual2.1.0 client update is not tested.
+SDK compatibility is separate from actual application qualification.
 
 Use `operation plan`, then `operation submit` with that plan hash and one chosen
 UUID. MCP equivalents are `cadence_plan_operation`, `cadence_submit_operation`,
@@ -207,6 +224,12 @@ separate integrity-checked operations. Old1.0 cannot launch `serve-operator`;
 restore explicit old settings without deleting new state. Uninstall preserves
 external journals and every remote source/result/ledger/history. See
 [installation and recovery](docs/generic_release/INSTALL_DRAFT_2_0_0.md).
+
+For the2.1.0 candidate, use the separate
+[upgrade and rollback guide](docs/releases/2.1.0/INSTALL.md). A host package
+transition does not activate or roll back the native runtime. Existing journals,
+grants, shared accounting, account-scoped metadata claims and unrelated client
+settings must be retained. Installing a version grants no new execution scope.
 
 ## Troubleshooting and limits
 

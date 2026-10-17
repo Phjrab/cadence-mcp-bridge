@@ -1,3 +1,65 @@
+## Source60 final-review correction, 2026-10-17
+
+The final PR162 review found that a user's `status.showUntrackedFiles=no` could
+hide a pending product file from source accounting. The V6 guard now explicitly
+requests all untracked files. Seven focused synthetic cases pass, including
+hidden src/remote additions charged as source41 and both tracked/untracked
+source61 rejection. Ruff passes. The full current-head hosted checks and refreshed
+review remain final gates. These changes affect only verification/tests and this
+record: product/native bytes and the retained40/60 consumption are unchanged.
+Original failed regression output, policies, claims and earlier receipts remain
+preserved. No actual VM collection, execution, extraction or reservation occurred.
+
+## Explicit source60 extension and release integration, 2026-10-17
+
+The direct user instruction raises the cumulative product-source ceiling from40
+to60 and continues the follow-up work. Retain all40 consumed versions, source-
+bearing merge accounting, collection claims, journals and failure evidence.
+The additive [limitV4](docs/policy/PHYSICAL_METADATA_LIMIT_V4.json) and V6 verifier
+record this authority; generated records do not grant authority themselves.
+All previous limit/consumption records and V1–V5 guards stay immutable. Collection,
+simulation, disk, extraction and result-reservation limits are not increased.
+
+PR162's framing/runtime bytes at4ba577f passed hosted Windows4,150 tests with401
+platform skips and56 warnings, hosted POSIX, security/package checks, populated
+2.0→2.1→2.0→2.1 journal/replay transitions and a clear fresh automated review.
+This subsequent policy/documentation-only update requires its own final checks;
+it changes no product/native bytes. Normal PR162 integration is now authorized
+subject to GitHub rules and refreshed validation. Its product-bearing merge counts
+as source41, without refunding the original product commit.
+
+Freeze the exact integrated2.1.0 candidate before asking once for tag/Release/assets
+publication. No exact2.1.0 publication approval exists. Keep B candidate execution
+on a separate follow-up branch after A integration; general W/L and mixed-candidate
+execution remain unfinished and excluded from2.1.0. A new actual experiment still
+requires its finite inputs, valid grant and retained shared accounting.
+
+## Additive 2.1 release preparation, 2026-10-17 (earlier checkpoint)
+
+The current work separates A, a release of reviewed POST functionality, from B,
+future user-defined bias/geometry candidate execution. Work starts from integrated
+main9a10f66 on `feat/v21-release-candidate`; published2.0.0 and prior dated records
+remain intact. The current source/runtime/lock version is2.1.0. This is preparation,
+not a published release or authority for another VM operation.
+
+The metadata response framing correction removes the redundant trailing newline
+from the fixed host bootstrap, preserving the existing JSON-body/transport limit
+and collector/native bytes. Synthetic exact-boundary tests cover below/equal/above
+the limit; final full-suite, isolated upgrade/rollback, distribution, hosted and
+independent review evidence must belong to the final frozen candidate.
+
+Existing complete-vector operation preparation and sequential native execution
+remain the basis for future V/I candidates. General candidate orchestration and
+comparison, changed W/L and mixed candidates are not claimed as supported.
+Observed CDF defaults do not establish permitted ranges, callbacks or grids.
+See [candidate proposal](docs/CANDIDATE_EXECUTION_PROPOSAL_V1.md).
+
+No new Cadence/metadata collection, extraction, source deployment or reservation is
+authorized by the release-preparation step. Keep prior grants, consumed claims,
+resource/source limits and the original account domain. Final source integration
+and exact tag/Release/assets publication retain their applicable separate gates.
+No source-limit extension or historical checkpoint rewrite is implied.
+
 ## Explicit finite metadata follow-up extension, 2026-10-16
 
 The latest direct operator approval retains36 consumed source versions and the

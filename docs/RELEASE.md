@@ -1,5 +1,27 @@
 # Packaging and Release
 
+## Current 2.1.0 candidate preparation, 2026-10-17
+
+The published2.0.0 tag/files remain immutable. Current source/runtime/lock metadata
+select additive2.1.0: existing v2 launch commands, configuration and public tool
+declarations are retained. The candidate packages reviewed POST setup/guidance/
+result-report features and explicitly experimental bounded operator APIs.
+General W/L and mixed-candidate execution/comparison remain separate work.
+
+Use [current notes](releases/2.1.0/RELEASE_NOTES.md),
+[qualification](releases/2.1.0/QUALIFICATION.md) and
+[upgrade/rollback instructions](releases/2.1.0/INSTALL.md). The exact candidate,
+CI/review, artifacts/hashes, locked dependencies and isolated published2.0.0
+to2.1.0 to2.0.0 to2.1.0 checks must be bound in its final release receipt.
+The package verifier below performs same-version reinstall preservation only;
+`scripts/verify-version-transition.py` supplies the separate version-transition
+test. Neither grants native activation, VM execution or actual-app acceptance.
+
+This instruction authorizes preparation. GitHub tag/Release/assets publication
+still requires approval of the identical finished candidate. PyPI/MCPB/marketplace
+and historical release changes are excluded. All dated sections below preserve
+their original checkpoint; pending statements there do not replace current notes.
+
 ## Current 2.0.0 preparation, 2026-10-13
 
 The current release targets the professor-provided standard CentOS/Cadence/PDK
