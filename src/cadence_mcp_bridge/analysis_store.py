@@ -151,6 +151,31 @@ class AnalysisStore:
             for operation_id, plan in zip(record.operation_ids, record.plan.points, strict=True):
                 yield operation_id, plan, sweep_id
 
+    @staticmethod
+    def candidate_batch_claims(
+        connection: sqlite3.Connection,
+    ) -> Iterator[tuple[str, OperationPlan | None, str]]:
+        if connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='candidate_batches_v1'"
+        ).fetchone() is None:
+            return
+        from cadence_mcp_bridge.candidate_contracts import CandidateBatchPlan
+
+        for index, (batch_id, raw) in enumerate(
+            connection.execute("SELECT batch_id,document FROM candidate_batches_v1")
+        ):
+            try:
+                if index >= MAX_RECORDS or not isinstance(raw, str) or len(raw) > 524288:
+                    raise ValueError("capacity")
+                plan = CandidateBatchPlan.model_validate_json(raw)
+                if plan.request.batch_id != batch_id:
+                    raise ValueError("identity")
+            except ValueError:
+                raise InvalidInputError("Candidate batch checkpoint identity is invalid") from None
+            yield batch_id, None, batch_id
+            for candidate, point in zip(plan.request.candidates, plan.plans, strict=True):
+                yield candidate.operation_id, point, batch_id
+
     @classmethod
     def _check_native_sweep_claim(
         cls,
@@ -158,17 +183,27 @@ class AnalysisStore:
         operation_id: str,
         plan: OperationPlan | None = None,
         sweep_id: str | None = None,
+        candidate_batch_id: str | None = None,
     ) -> None:
+        if sweep_id is not None and candidate_batch_id is not None:
+            raise InvalidInputError("Operation cannot belong to two parent owners")
         claims = [
-            (point, owner)
+            (point, "native_sweep", owner)
             for identity, point, owner in cls.native_sweep_claims(connection)
             if identity == operation_id
         ]
+        claims.extend(
+            (point, "candidate_batch", owner)
+            for identity, point, owner in cls.candidate_batch_claims(connection)
+            if identity == operation_id
+        )
+        kind = "candidate_batch" if candidate_batch_id is not None else "native_sweep"
+        owner = candidate_batch_id if candidate_batch_id is not None else sweep_id
         if claims:
-            if len(claims) != 1 or plan is None or claims[0] != (plan, sweep_id):
-                raise InvalidInputError("Operation ID is reserved by a native sweep")
-        elif sweep_id is not None:
-            raise InvalidInputError("Native sweep point identity is not reserved")
+            if len(claims) != 1 or plan is None or claims[0] != (plan, kind, owner):
+                raise InvalidInputError("Operation ID is reserved by an immutable parent")
+        elif owner is not None:
+            raise InvalidInputError("Parent point identity is not reserved")
 
     @classmethod
     def native_sweep_identity_available(
@@ -181,6 +216,8 @@ class AnalysisStore:
             (operation_id,),
         ).fetchone() is None and not any(
             identity == operation_id for identity, _, _ in cls.native_sweep_claims(connection)
+        ) and not any(
+            identity == operation_id for identity, _, _ in cls.candidate_batch_claims(connection)
         )
 
     def admit(self, operation_id: str, design_id: str, analysis_id: str, plan_hash: str) -> bool:
@@ -328,12 +365,15 @@ class AnalysisStore:
         *,
         dispatch_intent: bool = False,
         sweep_id: str | None = None,
+        candidate_batch_id: str | None = None,
     ) -> bool:
         raw = plan.model_dump_json()
         if len(raw) > 32768:
             raise ConfigurationError("Analysis lifecycle plan exceeds capacity")
         with self.connection(create=True) as connection:
-            self._check_native_sweep_claim(connection, operation_id, plan, sweep_id)
+            self._check_native_sweep_claim(
+                connection, operation_id, plan, sweep_id, candidate_batch_id
+            )
             existing = connection.execute(
                 "SELECT 1 FROM admissions WHERE operation_id=?", (operation_id,)
             ).fetchone()

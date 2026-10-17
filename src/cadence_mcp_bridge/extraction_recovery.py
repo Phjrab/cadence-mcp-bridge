@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from cadence_mcp_bridge.domain_provisioning import _canonical
-from cadence_mcp_bridge.errors import ConfigurationError
+from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationService
 from cadence_mcp_bridge.onboarding import _local_path
@@ -23,7 +23,7 @@ from cadence_mcp_bridge.operator_operations import (
     bounded_document,
     prepare_plan,
 )
-from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
+from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime, resource_lock
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
 
@@ -96,19 +96,47 @@ class ExtractionRecoveryService:
             raise OperationRejected("recovery_identity_must_be_distinct")
         # Repeated IDs remain lookup-only even after consent expiry or exhaustion.
         existing = await self.native.provider.lookup(operation_id, plan)
-        if existing is not None or not submit:
+        if existing is not None:
             return existing
         store = self.native.lifecycle.store
-        if store.path.exists():
+        # A distinct analysis marker cannot be adopted as a simulation lifecycle.
+        # The exact recovery hash includes its original job and retained PSF binding.
+        identity = (plan.request.design_id, "extraction-recovery:" + plan.request.analysis_id,
+                    plan.plan_sha256)
+
+        def check_local() -> None:
+            if not store.path.exists():
+                return
             with store.connection(create=False, read_only=True) as connection:
+                row = connection.execute(
+                    "SELECT design_id,analysis_id,plan_hash FROM admissions WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchone()
+                if row is not None:
+                    if row == identity:
+                        raise OperationRejected("recovery_local_intent_unknown_no_resend")
+                    raise OperationRejected("recovery_local_identity_occupied")
                 if not store.native_sweep_identity_available(connection, operation_id):
                     raise OperationRejected("recovery_local_identity_occupied")
-        self.validate(plan)
-        accounting = await self.native.provider.authorize(plan, self.native.grant)
-        accounting.check(self.native.context, self.native.grant, plan)
-        # Remote intent is durable before fork. No automatic resend on uncertainty;
-        # the same-ID restart route first looks up that exact immutable admission.
-        return await self.native.provider._observation("recover_extraction", operation_id, plan)
+
+        check_local()
+        if not submit:
+            return None
+        with resource_lock(self.native.context):
+            check_local()
+            self.validate(plan)
+            accounting = await self.native.provider.authorize(plan, self.native.grant)
+            accounting.check(self.native.context, self.native.grant, plan)
+            try:
+                first = store.admit(operation_id, *identity)
+            except InvalidInputError:
+                raise OperationRejected("recovery_local_identity_occupied") from None
+            if not first:
+                raise OperationRejected("recovery_local_intent_unknown_no_resend")
+            # The existing admission table atomically excludes every parent/child
+            # claim before sending. Loss after this commit stays UNKNOWN; even an
+            # absent remote lookup never authorizes resending or refunding it.
+            return await self.native.provider._observation("recover_extraction", operation_id, plan)
 
     async def result(self, operation_id: str, plan: RecoveryPlan) -> dict[str, object]:
         self.native.current()

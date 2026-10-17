@@ -1,13 +1,20 @@
-## 2.1.0 candidate preparation, 2026-10-17
+## Published2.1.0 and separate candidate development, 2026-10-18
 
-This checkout prepares additive2.1.0; the public release remains2.0.0. Candidate
-features include guided local setup, feature guidance and existing-result reports.
-Extraction recovery and analog measurements remain explicit experimental operator
-paths with limited standard-VM evidence. General user-defined W/L and mixed
-candidate execution/comparison are separate unfinished work, outside this release.
-See [release notes](docs/releases/2.1.0/RELEASE_NOTES.md) and the
-[current qualification table](docs/releases/2.1.0/QUALIFICATION.md). Final exact
-candidate checks and public approval are required before publication.
+**[2.1.0 is published](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.1.0)**
+at `36f75834b8556c9dd88761120a4442a25379d7ae`. Its approved nine attachments were
+downloaded and checked against the frozen SHA256SUMS. See its
+[release notes](docs/releases/2.1.0/RELEASE_NOTES.md) and
+[qualification limits](docs/releases/2.1.0/QUALIFICATION.md); those files preserve
+their prepublication assessment. No fresh2.1.0 native activation or app upgrade
+is implied by publication.
+
+This separate checkout is **unreleased2.2.0.dev0**. Its explicit experimental
+operator candidate workflow plans complete registered V/A vectors, coordinates
+one child per advance and compares retained scalar reports/CSV. Source/installed
+software checks are separate from actual circuit qualification. No new native
+candidate experiment or W/L support is established. See
+[candidate workflow and remaining evidence](docs/EXPLICIT_CANDIDATES_01.md).
+This development work does not modify the published2.1.0 artifacts.
 
 # Cadence MCP Bridge
 
@@ -16,7 +23,7 @@ the professor-provided CentOS/Cadence/PDK VM running in your personal VMware.
 Operator settings select a common execution template; another supported circuit
 requires no bridge-core patch or circuit-specific Python extractor.
 
-**[2.0.0 is published](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.0.0).**
+**[Earlier2.0.0 qualification](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.0.0).**
 Two distinct new inverter/comparator test circuits completed DC/AC/TRAN,
 automatic extraction and a bounded AC Sweep on the standard VM. Exact installed
 2.0.0 also submitted a new job through the actual Codex app. Result retrieval,
@@ -52,13 +59,13 @@ circuit is bundled. Your existing software entitlement remains required.
 
 Use the wheel, locked runtime file and SHA256SUMS from the same published release.
 Compare every file's hash before installation. The following commands install
-2.0.0; a later development checkout does not change those published files.
+the stable2.1.0 release; the development checkout is a separate unreleased build.
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\cadence_mcp_bridge-2.0.0-py3-none-any.whl
+Get-FileHash -Algorithm SHA256 .\cadence_mcp_bridge-2.1.0-py3-none-any.whl
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --require-hashes -r locked-runtime-2.0.0.txt
-.\.venv\Scripts\python.exe -m pip install --no-deps .\cadence_mcp_bridge-2.0.0-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install --require-hashes -r locked-runtime-2.1.0.txt
+.\.venv\Scripts\python.exe -m pip install --no-deps .\cadence_mcp_bridge-2.1.0-py3-none-any.whl
 .\.venv\Scripts\python.exe -m cadence_mcp_bridge --version
 .\.venv\Scripts\python.exe -m cadence_mcp_bridge doctor
 .\.venv\Scripts\python.exe -m cadence_mcp_bridge operator-starter --output .\my-operator-setup

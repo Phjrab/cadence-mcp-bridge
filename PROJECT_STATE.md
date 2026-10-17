@@ -1,3 +1,25 @@
+## Published2.1.0 and separate explicit-candidate development, 2026-10-18
+
+PR162 normally integrated as36f75834b8556c9dd88761120a4442a25379d7ae. Final reviewed
+tree b4504a7 passed both hosted jobs, Windows4175/401 platform skips/56 warnings,
+and a refreshed automated review without findings. The merge tree is identical.
+The direct human approved this exact commit and nine-file candidate; v2.1.0 tag,
+GitHub Release and attachments are now published. Downloaded nine-file hashes
+match SHA256SUMS c82d9e1b9f5fa770ea34dcf89c26498ab178cf73600cd5e22ef7d31548476bd5.
+Earlier2.0.0 and all preparation/failed-draft records remain preserved. No actual
+client/native update or new collection/simulation/extraction was performed.
+
+The separate `feat/explicit-candidate-batches` branch is unreleased2.2.0.dev0,
+an additive development marker rather than a qualified release promise. It adds
+complete qualified registered V/A manifests, explicit sequential coordination in
+the existing journal, shared ID reservation with native Sweep/direct/recovery,
+and retained scalar comparison/BOM CSV. The operator CLI is explicit and submit/
+advance require experimental opt-in. Existing MCP tools and same-input comparison
+remain unchanged. W/L and actual mixed-candidate qualification are unfinished.
+See [workflow](docs/EXPLICIT_CANDIDATES_01.md). Actual B trials still need their
+finite circuit/revision/input/analysis scope and valid unspent grant; capacity
+and the source60 extension are not a new experiment. Preserve all consumption.
+
 ## Source60 final-review correction, 2026-10-17
 
 The final PR162 review found that a user's `status.showUntrackedFiles=no` could
