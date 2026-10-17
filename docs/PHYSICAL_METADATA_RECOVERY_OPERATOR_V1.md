@@ -1,5 +1,10 @@
 # Operator metadata recovery on the supported standard VM
 
+Current managed-VM source accounting uses the additive
+[source60 policy](policy/PHYSICAL_METADATA_LIMIT_V4.md) and V6 guard. It preserves
+the source40 and collection history described below; no collection allowance or
+actual VM execution scope is increased by that source-only extension.
+
 This development operator path inspects registered installation metadata. It does
 not qualify a physical EDA backend, license, DRC/LVS/PEX, or a different VM/PDK.
 No public MCP repair/shell tool is added. Import, server startup and doctor never

@@ -1,4 +1,28 @@
-## Additive 2.1 release preparation, 2026-10-17
+## Explicit source60 extension and release integration, 2026-10-17
+
+The direct user instruction raises the cumulative product-source ceiling from40
+to60 and continues the follow-up work. Retain all40 consumed versions, source-
+bearing merge accounting, collection claims, journals and failure evidence.
+The additive [limitV4](docs/policy/PHYSICAL_METADATA_LIMIT_V4.json) and V6 verifier
+record this authority; generated records do not grant authority themselves.
+All previous limit/consumption records and V1–V5 guards stay immutable. Collection,
+simulation, disk, extraction and result-reservation limits are not increased.
+
+PR162's framing/runtime bytes at4ba577f passed hosted Windows4,150 tests with401
+platform skips and56 warnings, hosted POSIX, security/package checks, populated
+2.0→2.1→2.0→2.1 journal/replay transitions and a clear fresh automated review.
+This subsequent policy/documentation-only update requires its own final checks;
+it changes no product/native bytes. Normal PR162 integration is now authorized
+subject to GitHub rules and refreshed validation. Its product-bearing merge counts
+as source41, without refunding the original product commit.
+
+Freeze the exact integrated2.1.0 candidate before asking once for tag/Release/assets
+publication. No exact2.1.0 publication approval exists. Keep B candidate execution
+on a separate follow-up branch after A integration; general W/L and mixed-candidate
+execution remain unfinished and excluded from2.1.0. A new actual experiment still
+requires its finite inputs, valid grant and retained shared accounting.
+
+## Additive 2.1 release preparation, 2026-10-17 (earlier checkpoint)
 
 The current work separates A, a release of reviewed POST functionality, from B,
 future user-defined bias/geometry candidate execution. Work starts from integrated

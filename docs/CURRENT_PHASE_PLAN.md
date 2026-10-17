@@ -1,4 +1,23 @@
-## Current bounded release preparation, 2026-10-17
+## Current source60 and integration scope, 2026-10-17
+
+The latest direct user instruction extends the cumulative product-source ceiling
+to60, preserving40 consumed versions and all historical limits/guards. Use
+[limitV4](policy/PHYSICAL_METADATA_LIMIT_V4.json) and the additive V6 verifier.
+Source-bearing merges continue to consume one version each. The unchanged finite
+collection allowance and existing VM500/16GiB/disk/journal/replay protections remain.
+This is a source extension, not another actual experiment or publication grant.
+
+Complete the policy-only PR162 follow-up checks and review, then normally integrate
+the approved PR without bypassing GitHub rules. Its merge is source41. The earlier
+4ba577f source-specific Windows/POSIX/security/install/transition/review receipts
+remain preserved; new head checks must identify the policy-only difference.
+Freeze the exact integrated2.1.0 files and hashes and present the one final public
+posting decision. Keep general candidate B implementation on a separate branch;
+do not fold it into the2.1.0 candidate. Continue authorized local implementation,
+synthetic checks and retained-result validation while any actual B trial still
+needs its complete finite inputs, scoped authority and retained shared ledger.
+
+## Bounded release preparation, 2026-10-17 (earlier checkpoint)
 
 Prepare additive2.1.0 on `feat/v21-release-candidate` from main9a10f66. Preserve
 published2.0.0 and separate A (existing reviewed functionality and framing fix)
