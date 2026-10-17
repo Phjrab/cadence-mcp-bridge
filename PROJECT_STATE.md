@@ -1,3 +1,29 @@
+## Additive 2.1 release preparation, 2026-10-17
+
+The current work separates A, a release of reviewed POST functionality, from B,
+future user-defined bias/geometry candidate execution. Work starts from integrated
+main9a10f66 on `feat/v21-release-candidate`; published2.0.0 and prior dated records
+remain intact. The current source/runtime/lock version is2.1.0. This is preparation,
+not a published release or authority for another VM operation.
+
+The metadata response framing correction removes the redundant trailing newline
+from the fixed host bootstrap, preserving the existing JSON-body/transport limit
+and collector/native bytes. Synthetic exact-boundary tests cover below/equal/above
+the limit; final full-suite, isolated upgrade/rollback, distribution, hosted and
+independent review evidence must belong to the final frozen candidate.
+
+Existing complete-vector operation preparation and sequential native execution
+remain the basis for future V/I candidates. General candidate orchestration and
+comparison, changed W/L and mixed candidates are not claimed as supported.
+Observed CDF defaults do not establish permitted ranges, callbacks or grids.
+See [candidate proposal](docs/CANDIDATE_EXECUTION_PROPOSAL_V1.md).
+
+No new Cadence/metadata collection, extraction, source deployment or reservation is
+authorized by the release-preparation step. Keep prior grants, consumed claims,
+resource/source limits and the original account domain. Final source integration
+and exact tag/Release/assets publication retain their applicable separate gates.
+No source-limit extension or historical checkpoint rewrite is implied.
+
 ## Explicit finite metadata follow-up extension, 2026-10-16
 
 The latest direct operator approval retains36 consumed source versions and the

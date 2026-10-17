@@ -1,3 +1,24 @@
+## Current bounded release preparation, 2026-10-17
+
+Prepare additive2.1.0 on `feat/v21-release-candidate` from main9a10f66. Preserve
+published2.0.0 and separate A (existing reviewed functionality and framing fix)
+from B (new user-defined candidates). Do not delay A for layout, signoff or an
+autonomous optimizer. B remains a proposal until its implementation, bindings and
+execution evidence pass their own finite scope. General W/L/mixed support is not
+part of A's feature claims.
+
+Complete local synthetic framing tests, full software/security/compatibility gates,
+curated package audit and isolated published2.0.0→candidate2.1.0→published2.0.0→
+candidate2.1.0 host-package transitions. Preserve journals/replay/context/client
+settings and account-claim evidence. Distinguish disposable installed tests from
+actual VM activation, actual client use and earlier source-specific results.
+
+Freeze one exact source candidate, review and draft PR. Existing source accounting,
+merge rules and exact-candidate public approval remain binding; do not reset a
+counter or treat a generated checkpoint/plan as user approval. No new actual
+collection, startup, simulation, extraction, grant or reservation in this step.
+Original OA/ADE/PDK/vendor contents and all failure evidence remain protected.
+
 ## Explicit finite metadata follow-up extension, 2026-10-16
 
 The latest direct operator approval retains36 consumed source versions and the

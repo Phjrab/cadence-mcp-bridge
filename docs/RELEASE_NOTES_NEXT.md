@@ -1,5 +1,10 @@
 # Next release notes — proposal
 
+Current2026-10-17 preparation uses
+[the additive2.1.0 candidate notes](releases/2.1.0/RELEASE_NOTES.md).
+The following v1-era proposal is preserved historical evidence; it does not select
+the current version or qualify later features. Published2.0.0 remains unchanged.
+
 Status: **unpublished proposal**. Conditional version recommendation: **v1.1.0**.
 Current package version remains 1.0.0. These notes describe reviewed post-v1
 capabilities through the containing SPEC-CONTRACT-01 feature PR, including

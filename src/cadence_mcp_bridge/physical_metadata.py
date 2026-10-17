@@ -606,8 +606,9 @@ def _bootstrap(plan: dict[str, Any]) -> str:
         "encoded=data['request']['files']\n"
         "assets=dict((name,base64.b64decode(value)) for name,value in encoded.items())\n"
         f"result=loaded['collector'].run(data['request'],loaded['setup'],assets,{plan['known_native_sources']!r},base64.b64decode(data['collector']))\n"
+        # EOF frames the single canonical JSON document. An extra newline would
+        # exceed the fixed transport ceiling for an allowed exact-limit body.
         "sys.stdout.write(loaded['collector'].canonical(result).decode('ascii'))\n"
-        "sys.stdout.write(chr(10))\n"
     )
 
 
