@@ -50,7 +50,7 @@ jobs:
 
   posix-shared-reservations:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
       UV_NO_PROGRESS: "1"
@@ -89,6 +89,9 @@ jobs:
 
       - name: Read-only native result reports and scientific comparison
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_result_reports.py -q --basetemp "$HOME/post03-report-tests"
+
+      - name: Explicit candidates, retained captures and durable child identity
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_candidate_contracts.py tests/unit/test_candidate_reports.py tests/unit/test_candidate_batches.py tests/unit/test_candidate_cli.py -q --basetemp "$HOME/explicit-candidate-tests"
 
       - name: Generic complete AC projection and sampled crossing contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"

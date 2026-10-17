@@ -107,6 +107,11 @@ try {
         --workspace (Join-Path $resolvedTemporaryRoot "extraction-recovery-acceptance")
     if ($LASTEXITCODE -ne 0) { throw "Installed extraction recovery CLI acceptance failed." }
 
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-candidates-install.py") `
+        --examples (Join-Path $projectRoot "docs\examples\onboarding") `
+        --workspace (Join-Path $resolvedTemporaryRoot "candidates-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed synthetic candidate workflow acceptance failed." }
+
     # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
     & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
         --python $python $wheel[0].FullName

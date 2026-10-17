@@ -24,6 +24,7 @@ from cadence_mcp_bridge import _shared_reservations as accounting
 from cadence_mcp_bridge import _storage_worker as storage
 from cadence_mcp_bridge.__main__ import build_parser, main
 from cadence_mcp_bridge.analysis_store import AnalysisStore
+from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.extraction_recovery import ExtractionRecoveryService, RecoveryPlan
 from cadence_mcp_bridge.operator_lifecycle import ProviderObservation
 from cadence_mcp_bridge.operator_operations import OperationRejected, prepare_plan
@@ -67,7 +68,7 @@ def service_with_provider(host_plan, provider):
     service.native = SimpleNamespace(
         context=context, grant=grant, grant_sha256=canonical_digest(grant), provider=provider,
         current=lambda: None,
-        lifecycle=SimpleNamespace(store=SimpleNamespace(path=context.binding.analysis_journal)),
+        lifecycle=SimpleNamespace(store=AnalysisStore(context.binding.analysis_journal)),
     )
     return service
 
@@ -118,10 +119,21 @@ async def test_recovery_transport_uncertainty_is_not_resent(host_plan):
 
     provider = SimpleNamespace(lookup=lookup, authorize=authorize, _observation=observe)
     service = service_with_provider(host_plan, provider)
+    operation_id = str(uuid4())
     with pytest.raises(OperationRejected) as failure:
-        await service.observe(str(uuid4()), plan, submit=True)
+        await service.observe(operation_id, plan, submit=True)
     assert failure.value.reason == "native_provider_transport_unknown"
     assert calls == ["lookup", "authorize", "recover"]
+    # New-process retry must retain an absent remote outcome as unknown, rather
+    # than sending recovery again or adopting this marker as a simulation.
+    restarted = service_with_provider(host_plan, provider)
+    for submit in (False, True):
+        with pytest.raises(OperationRejected) as failure:
+            await restarted.observe(operation_id, plan, submit=submit)
+        assert failure.value.reason == "recovery_local_intent_unknown_no_resend"
+    assert calls == ["lookup", "authorize", "recover", "lookup", "lookup"]
+    with pytest.raises(InvalidInputError, match="not admitted"):
+        restarted.native.lifecycle.store.admit_operation(operation_id, plan)
 
 
 def test_submit_requires_explicit_experimental_switch():
