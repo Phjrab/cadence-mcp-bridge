@@ -1,3 +1,30 @@
+## Local observer bootstrap and preservation increment, 2026-10-18
+
+Continue draft PR164 on the existing feature, separate from published2.1.0 and
+normally merged PR163. Corrective head9b3f61a completed exact hosted Windows4462
+PASS/417 platform skips and Linux binding170 PASS/one Windows skip, isolated
+package/state preservation, security and fresh automated review. Its earlier
+failed receipts remain unchanged. Those results do not cover this new increment.
+
+The next local-only source47 adds canonical closed fixed-resource construction,
+actual retained worker-byte binding and fresh memory modules; explicit private
+library-map/log argv; private HOME/TMP and limited inherited environment; and
+whole registered-library preservation with bounded content/namespace/identity/
+ctime checks. Installed synthetic construction replaces the former NOT_TESTED
+construction result. Successful installed operator preparation remains NOT_TESTED.
+Observe is still unconditionally disabled; no remote/activation/MCP tool is added.
+
+Historical library hashes/sizes support bounded conservation tests, not runtime
+trust: recorded library initialization files were shared-writable and the vendor
+inventory explicitly did not attest dynamic startup/loader dependencies. Exact
+current closure evidence and reviewed operational bootstrap/admission remain
+unimplemented/unqualified. Do not offer an executable observation as consent-only.
+This continuation makes0 VM contacts, deployments, EDA starts, simulations,
+extractions, real account claims and reservations. Source47/60 is additive;
+original journals, claims, failed evidence and published assets stay preserved.
+PR164 remains draft, without merge/publication authority. See
+[component boundary](docs/SOURCE_BINDING_OBSERVATION_01.md).
+
 ## Binding preparation correction checkpoint, 2026-10-18
 
 Draft PR164's P2 directory-durability review is corrected: verified POSIX parent

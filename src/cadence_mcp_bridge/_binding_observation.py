@@ -27,6 +27,9 @@ except NameError:
 
 SNAPSHOT_ENTRIES = 64
 SNAPSHOT_BYTES = 1048576
+DEPENDENCY_LIBRARIES = 8
+DEPENDENCY_ENTRIES = 8192
+DEPENDENCY_BYTES = 67108864
 FRAME_BYTES = 65536
 STAGE_BYTES = 8388608
 PROCESS_SECONDS = 45
@@ -339,7 +342,90 @@ class BindingObservationWorker(object):
             state["tree_sha256"] != self.route["ade"]["ade_state_tree_sha256"]
         ):
             raise ValueError("binding_observation_original_registration_drift")
-        return {"source": source, "state": state}
+        return {"source": source, "state": state, "libraries": self._dependencies()}
+
+    def _dependencies(self):
+        # Conservation, not trust: unchanged library init code may still execute
+        # implicitly. Two full bounded passes also catch an earlier tree changing
+        # while later registered trees are being read. No new baseline is made.
+        libraries = self.route["libraries"]
+        if not 1 <= len(libraries) <= DEPENDENCY_LIBRARIES:
+            raise ValueError("binding_observation_dependency_library_bound")
+        names, paths = set(), set()
+        for library in libraries:
+            name = token(library["name"], r"^[A-Za-z][A-Za-z0-9_#-]{0,63}$")
+            location = self.copying.path(library["path"])
+            token(library["tree_sha256"], r"^[0-9a-f]{64}$")
+            if name in names or location in paths:
+                raise ValueError("binding_observation_dependency_alias")
+            names.add(name)
+            paths.add(location)
+        namespace = self._dependency_namespace(libraries)
+        passes = []
+        try:
+            for unused in range(2):
+                remaining_entries, remaining_bytes = DEPENDENCY_ENTRIES, DEPENDENCY_BYTES
+                observed = []
+                for library in libraries:
+                    if remaining_entries < 1 or remaining_bytes < 0:
+                        raise ValueError("binding_observation_combined_dependency_bound")
+                    self.copying.MAX_ENTRIES = min(4096, remaining_entries)
+                    self.copying.MAX_BYTES = remaining_bytes
+                    snapshot = self.copying.dependency_snapshot(library["path"])
+                    if snapshot["tree_sha256"] != library["tree_sha256"]:
+                        raise ValueError("binding_observation_registered_dependency_drift")
+                    remaining_entries -= snapshot["entries"]
+                    remaining_bytes -= snapshot["bytes"]
+                    observed.append((library["name"], library["path"], snapshot))
+                passes.append(observed)
+            if passes[0] != passes[1] or self._dependency_namespace(libraries) != namespace:
+                raise ValueError("binding_observation_dependency_scan_drift")
+            return passes[1]
+        finally:
+            self.copying.MAX_ENTRIES, self.copying.MAX_BYTES = SNAPSHOT_ENTRIES, SNAPSHOT_BYTES
+
+    def _dependency_namespace(self, libraries):
+        # Ephemeral identity/ctime guards are deliberately not a new registered
+        # content baseline. Recheck the whole union after every content read, so
+        # a later library cannot change an earlier tree unnoticed on pass two.
+        records, entries = [], [0]
+
+        def record(location):
+            self.copying.path(location)
+            info = os.lstat(location)
+            records.append((location, self.copying.identity(info), info.st_nlink,
+                            "%.9f" % info.st_ctime))
+            return info
+
+        def tree(location, depth):
+            if depth > 16 or entries[0] >= DEPENDENCY_ENTRIES:
+                raise ValueError("binding_observation_dependency_namespace_bound")
+            entries[0] += 1
+            info = record(location)
+            if stat.S_ISDIR(info.st_mode):
+                names = sorted(os.listdir(location))
+                records.append((location, names))
+                for name in names:
+                    tree(os.path.join(location, name), depth + 1)
+                if sorted(os.listdir(location)) != names:
+                    raise ValueError("binding_observation_dependency_namespace_drift")
+            elif not stat.S_ISREG(info.st_mode):
+                raise ValueError("binding_observation_dependency_namespace_type")
+
+        for library in libraries:
+            ancestor = os.path.dirname(library["path"])
+            for unused in range(128):
+                info = record(ancestor)
+                if not stat.S_ISDIR(info.st_mode):
+                    raise ValueError("binding_observation_dependency_ancestor_type")
+                parent = os.path.dirname(ancestor)
+                if parent == ancestor:
+                    break
+                ancestor = parent
+            else:
+                raise ValueError("binding_observation_dependency_ancestor_bound")
+            tree(library["path"], 0)
+        return records
 
     def _stage(self, request, session):
         # Review-only owned-file piece. Not reachable from observe() or a CLI.
@@ -358,6 +444,9 @@ class BindingObservationWorker(object):
             raise ValueError("binding_observation_attempt_already_exists")
         os.mkdir(stage, 448)
         self.copying.sync(parent)
+        for name in ("home", "tmp"):
+            os.mkdir(stage + "/" + name, 448)
+        self.copying.sync(stage)
         self._write(stage + "/request.json", canonical(request))
         os.mkdir(stage + "/library", 448)
         copied = self.copying.copy_owned(self.route["source_cell"],
@@ -509,6 +598,30 @@ class BindingObservationWorker(object):
             except OSError as error:
                 if error.errno not in (2, 3):
                     raise
+
+    def _environment(self, stage):
+        # This is a fixed review-only launch recipe, not attestation of dynamic
+        # Cadence dependencies. Do not inherit loader/site/user startup knobs.
+        for name in ("home", "tmp"):
+            location = stage + "/" + name
+            self.copying.owned_parent(location)
+            if stat.S_IMODE(os.lstat(location).st_mode) != 448 or os.listdir(location):
+                raise ValueError("binding_observation_private_runtime_directory")
+        environment = {
+            "HOME": stage + "/home", "TMPDIR": stage + "/tmp",
+            "TMP": stage + "/tmp", "TEMP": stage + "/tmp",
+            "PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C",
+        }
+        # Preserve only existing license routing, without logging/querying it or
+        # inventing a fallback. Values are private process inputs, never evidence.
+        for name in ("CDS_LIC_FILE", "LM_LICENSE_FILE"):
+            if name in os.environ:
+                value = os.environ[name]
+                if len(value) > 4096 or any(c in value for c in ("\x00", "\r", "\n")):
+                    raise ValueError("binding_observation_license_environment_bound")
+                environment[name] = value
+        return environment
+
     def _program(self, stage, session, request):
         # Review-only process piece. observe() never calls this while closure and
         # library-init side effects remain unqualified. argv is compiled here.
@@ -520,6 +633,9 @@ class BindingObservationWorker(object):
             os.path.dirname(stage) != self.root + "/binding-observations"
         ):
             raise ValueError("binding_observation_stage_identity")
+        marker = stage + "/ocean-start-claimed.json"
+        if os.path.lexists(marker):
+            raise ValueError("binding_observation_process_attempt_spent")
         if self._read(stage + "/observer.ocn") != render_collector(request):
             raise ValueError("binding_observation_collector_drift")
         ledger = self._preflight(session)
@@ -532,11 +648,9 @@ class BindingObservationWorker(object):
         if cds_raw != self._cds_lib(request, stage):
             raise ValueError("binding_observation_registered_library_mapping_drift")
         trust = self._ocean_trust()
+        environment = self._environment(stage)
         deadline = min(os.times()[4] + PROCESS_SECONDS,
                        self._deadline - 3 if self._deadline is not None else os.times()[4] + 45)
-        marker = stage + "/ocean-start-claimed.json"
-        if os.path.lexists(marker):
-            raise ValueError("binding_observation_process_attempt_spent")
         self._write(marker, canonical({"schema_version": 1,
                     "observation_id": request["observation_id"],
                     "request_sha256": self.selection["request_sha256"],
@@ -548,9 +662,10 @@ class BindingObservationWorker(object):
             session.check()
             null = open(os.devnull, "rb")
             process = subprocess.Popen(
-                [trust["named"], "-nograph", "-nocdsinit", "-restore", "observer.ocn"],
+                [trust["named"], "-nograph", "-nocdsinit", "-log", stage + "/ocean.log",
+                 "-cdslib", stage + "/cds.lib", "-restore", stage + "/observer.ocn"],
                 cwd=stage, stdin=null, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                close_fds=True, shell=False, preexec_fn=os.setsid,
+                close_fds=True, shell=False, preexec_fn=os.setsid, env=environment,
             )
             identity = self.processes.process_identity(process.pid)
             streams = [process.stdout, process.stderr]

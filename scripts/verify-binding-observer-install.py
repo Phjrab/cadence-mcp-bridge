@@ -1,19 +1,23 @@
 """Installed binding-observer synthetic checks; no VM, EDA, claims or grants.
 
-Run with the installed interpreter in isolated mode. Successful local preparation
-and authenticated worker construction are explicitly outside this small checker.
+Run with the installed interpreter in isolated mode. Worker construction uses
+fictional canonical configuration and the installed fixed-resource factory.
+Successful operator preparation and actual runtime trust remain outside this check.
 """
 
 from __future__ import annotations
 
 import argparse
+import builtins
 import contextlib
 import hashlib
 import io
 import json
+import os
 import sys
 from importlib.resources import files
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import patch
 
 import cadence_mcp_bridge
@@ -24,6 +28,9 @@ from cadence_mcp_bridge import (
     binding_observation as contract,
 )
 from cadence_mcp_bridge import (
+    binding_observation_bootstrap as bootstrap,
+)
+from cadence_mcp_bridge import (
     binding_observation_claim,
     physical_metadata,
 )
@@ -31,8 +38,12 @@ from cadence_mcp_bridge import (
     binding_observer_operator as operator,
 )
 from cadence_mcp_bridge.__main__ import main as cli_main
+from cadence_mcp_bridge.designs import DesignProfile
+from cadence_mcp_bridge.environments import EnvironmentProfile
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
+from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
 from cadence_mcp_bridge.runtime_context import ExecutionContext
-from cadence_mcp_bridge.variable_contracts import canonical_digest
+from cadence_mcp_bridge.variable_contracts import DesignVariables, canonical_digest
 
 
 def _require(condition: bool, message: str) -> None:
@@ -42,7 +53,7 @@ def _require(condition: bool, message: str) -> None:
 
 def _verify_origins() -> None:
     for module in (
-        cadence_mcp_bridge, worker, contract, operator, binding_observation_claim,
+        cadence_mcp_bridge, worker, contract, bootstrap, operator, binding_observation_claim,
         physical_metadata,
     ):
         filename = module.__file__
@@ -56,6 +67,41 @@ def _verify_origins() -> None:
 
 def _forbidden(*args: object, **kwargs: object) -> None:
     raise AssertionError("synthetic checker reached process, transport, home or claim boundary")
+
+
+@contextlib.contextmanager
+def _readonly_file_opens():
+    # Guard common Python file-open APIs during this synthetic check. These are
+    # regression guards, not a sandbox against arbitrary hostile interpreter code.
+    open_builtin, open_io, open_os = builtins.open, io.open, os.open
+
+    def check_mode(mode):
+        if not isinstance(mode, str) or any(flag in mode for flag in "wax+"):
+            raise AssertionError("synthetic checker reached write-capable file-open boundary")
+
+    def readonly_builtin(file, mode="r", *args, **kwargs):
+        check_mode(mode)
+        return open_builtin(file, mode, *args, **kwargs)
+
+    def readonly_io(file, mode="r", *args, **kwargs):
+        check_mode(mode)
+        return open_io(file, mode, *args, **kwargs)
+
+    def readonly_os(file, flags, *args, **kwargs):
+        write_flags = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_APPEND | os.O_TRUNC
+        # O_TMPFILE includes O_DIRECTORY on Linux; directory reads remain valid.
+        temporary = getattr(os, "O_TMPFILE", 0) & ~getattr(os, "O_DIRECTORY", 0)
+        temporary |= getattr(os, "O_TEMPORARY", 0)
+        if flags & (write_flags | temporary):
+            raise AssertionError("synthetic checker reached write-capable file-open boundary")
+        return open_os(file, flags, *args, **kwargs)
+
+    with (
+        patch.object(builtins, "open", readonly_builtin),
+        patch.object(io, "open", readonly_io),
+        patch.object(os, "open", readonly_os),
+    ):
+        yield
 
 
 def _schema() -> None:
@@ -160,12 +206,134 @@ def _blocked_worker(request: contract.BindingScanRequest, rendered: bytes) -> No
         "collector_sha256": hashlib.sha256(rendered).hexdigest(),
     }
     report = instance.observe(request.model_dump(mode="json"))  # type: ignore[no-untyped-call]
+    _blocked_report(report)
+
+
+def _blocked_report(report: dict[str, object]) -> None:
     _require(report["status"] == "CAPABILITY_NOT_QUALIFIED", "worker became operational")
     _require(report["remote_execution_enabled"] is False, "worker remote execution enabled")
     _require(report["qualified"] is False, "worker claimed qualification")
     _require(report["closure_trust"] == "NOT_ESTABLISHED", "worker claimed closure trust")
     for name in ("new_eda_starts", "new_simulations", "new_extractions", "new_reservations"):
         _require(report[name] == 0, "worker claimed operational side effects")
+
+
+def _canonical(value: object) -> bytes:
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False,
+    ).encode("ascii")
+
+
+def _factory_inputs(request: contract.BindingScanRequest) -> tuple[bytes, bytes, bytes, bytes]:
+    # Reuse shipped, explicitly fictional starter data. No developer profile,
+    # runtime settings, journal, filesystem source or grant is loaded or created.
+    starter = files("cadence_mcp_bridge").joinpath("operator_starter")
+    environment = EnvironmentProfile.model_validate_json(
+        starter.joinpath("environment.json").read_bytes()
+    )
+    registry = json.loads(starter.joinpath("designs.json").read_bytes())
+    profile_data = registry["designs"][0]
+    profile_data.update(
+        design_id="synthetic-binding", work_copy_policy="owned_copy_only",
+        allowed_analyses=["dc"], allowed_variables=["input"],
+        allowed_measurements=["dc-output"],
+    )
+    profile_data["binding"].update(library=request.library, cell=request.cell, view=request.view)
+    profile = DesignProfile.model_validate_json(json.dumps(profile_data))
+    variable_data = registry["variable_sets"][0]["variables"][0]
+    variable_data.update(logical_id="input", cadence_binding="qa_input")
+    variables = DesignVariables.model_validate_json(json.dumps({
+        "design_id": profile.design_id,
+        "design_profile_sha256": canonical_digest(profile),
+        "variables": [variable_data],
+    }))
+    ade = AdeExecutionRegistration.model_validate_json(json.dumps({
+        "schema_version": 1, "design_id": profile.design_id,
+        "analysis_id": "synthetic-binding-dc",
+        "design_profile_sha256": canonical_digest(profile),
+        "variable_set_sha256": canonical_digest(variables),
+        "source_tree_sha256": "b" * 64, "ade_state_tree_sha256": "c" * 64,
+        "static_statements_sha256": "d" * 64, "model_includes": [],
+        "inputs": {
+            "analysis": "dc", "mode": "saved_operating_point", "statement_sha256": "e" * 64,
+        },
+    }))
+    reader = GenericReaderRegistration.model_validate_json(json.dumps({
+        "schema_version": 1, "design_id": profile.design_id, "analysis_id": ade.analysis_id,
+        "measurement_id": "dc-output", "ade_registration_sha256": canonical_digest(ade),
+        "measurement_contract_sha256": "f" * 64,
+        "nodes": [{"logical_id": "input", "selector": "/in"}],
+        "sources": [], "transfer": None, "maximum_samples": 2,
+    }))
+    profile_raw = _canonical(environment.model_dump(mode="json"))
+    library = environment.paths.workspace_root + "/" + request.library
+    registration_raw = _canonical({
+        "schema_version": 1, "identity_manifest_sha256": "a" * 64,
+        "environment_sha256": hashlib.sha256(profile_raw).hexdigest(),
+        "design_sha256": "b" * 64, "pdk_sha256": "c" * 64,
+        "routes": [{
+            "design_id": profile.design_id, "analysis_id": ade.analysis_id, "analysis": "dc",
+            "profile": profile.model_dump(mode="json"),
+            "variables": [v.model_dump(mode="json") for v in variables.variables],
+            "source_cell": library + "/" + request.cell,
+            "source_state": environment.paths.workspace_root + "/synthetic-binding-state",
+            "model_files": [],
+            "libraries": [{"name": request.library, "path": library, "tree_sha256": "d" * 64}],
+            "ade": ade.model_dump(mode="json"), "reader": reader.model_dump(mode="json"),
+        }],
+    })
+    request_raw = _canonical(request.model_dump(mode="json"))
+    worker_raw = files("cadence_mcp_bridge").joinpath("_binding_observation.py").read_bytes()
+    selection_raw = _canonical({
+        "schema_version": 1, "design_id": profile.design_id, "analysis_id": ade.analysis_id,
+        "profile_sha256": hashlib.sha256(profile_raw).hexdigest(),
+        "registration_sha256": hashlib.sha256(registration_raw).hexdigest(),
+        "request_sha256": hashlib.sha256(request_raw).hexdigest(),
+        "collector_sha256": hashlib.sha256(contract.render_collector(request)).hexdigest(),
+        "helper_sha256": hashlib.sha256(worker_raw.replace(b"\r\n", b"\n")).hexdigest(),
+    })
+    return profile_raw, registration_raw, selection_raw, request_raw
+
+
+def _authenticated_factory(request: contract.BindingScanRequest) -> None:
+    arguments = _factory_inputs(request)
+    names = (
+        "cadence_mcp_bridge._binding_observation", "cadence_mcp_bridge._native_copy",
+        "cadence_mcp_bridge._shared_reservations", "cadence_mcp_bridge._native_eda_worker",
+        "_cadence_binding_observation_retained",
+        "binding_observation_copy", "binding_observation_reservations",
+        "binding_observation_process",
+    )
+    poisoned = {name: ModuleType(name) for name in names}
+    for module in poisoned.values():
+        module.BindingObservationWorker = _forbidden
+        module.authenticated_modules = _forbidden
+        module.EdaWorker = _forbidden
+        module.snapshot = _forbidden
+        module.ReservationSession = _forbidden
+    with contextlib.ExitStack() as poison:
+        poison.enter_context(patch.dict(sys.modules, poisoned))
+        for name, module in poisoned.items():
+            if name.startswith("cadence_mcp_bridge."):
+                poison.enter_context(patch.object(
+                    cadence_mcp_bridge, name.rsplit(".", 1)[1], module, create=True,
+                ))
+        instance = bootstrap.construct_worker(*arguments)
+        _require(type(instance) is not worker.BindingObservationWorker, "cached worker reused")
+        with patch.object(type(instance), "_stage", _forbidden):
+            _blocked_report(instance.observe(request.model_dump(mode="json")))
+    selected = json.loads(arguments[2])
+    selected["helper_sha256"] = "0" * 64
+    # A wrong worker identity must reject before the first worker/helper compile.
+    with patch.object(bootstrap, "compile", _forbidden, create=True):
+        try:
+            bootstrap.construct_worker(
+                arguments[0], arguments[1], _canonical(selected), arguments[3],
+            )
+        except ValueError:
+            pass
+        else:
+            raise ValueError("wrong selected worker digest accepted")
 
 
 def _pins() -> None:
@@ -188,6 +356,7 @@ def verify(workspace: Path) -> dict[str, object]:
     _verify_origins()
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
     with contextlib.ExitStack() as guards:
+        guards.enter_context(_readonly_file_opens())
         for target in (
             "subprocess.Popen", "socket.socket", "pathlib.Path.home",
             "cadence_mcp_bridge.physical_metadata._operator_home",
@@ -201,19 +370,23 @@ def verify(workspace: Path) -> dict[str, object]:
         request = _request()
         rendered, rejected_frames = _protocol(request)
         _blocked_worker(request, rendered)
+        _authenticated_factory(request)
         _pins()
     _require(not list(workspace.iterdir()), "synthetic checker wrote unexpected state")
     return {
         "status": "PASS",
         "scope": "INSTALLED_BINDING_OBSERVER_SYNTHETIC_NOT_CADENCE",
         "installed_origin": True,
+        "file_open_guards": "READ_ONLY_BUILTINS_IO_OS_OPEN",
         "schema_cli": "INSTALLED_IN_PROCESS_WITH_SIDE_EFFECT_GUARDS",
         "observe_cli": "ABSENT",
         "successful_preparation": "NOT_TESTED_BY_THIS_CHECKER",
         "fixed_renderer": True,
         "strict_parser_rejected_frames": rejected_frames,
         "worker_observe": "BLOCKED_METHOD_WITH_SYNTHETIC_BOUND_ROUTE",
-        "authenticated_worker_construction": "NOT_TESTED_BY_THIS_CHECKER",
+        "authenticated_worker_construction": "INSTALLED_FIXED_RESOURCE_FACTORY_SYNTHETIC_CONFIG",
+        "cached_worker_and_helper_poisoning": "IGNORED_BY_FRESH_AUTHENTICATED_MODULES",
+        "wrong_selected_worker_digest": "REJECTED_BEFORE_CODE_LOAD",
         "normalized_installed_helper_pins": True,
         "new_simulations": 0,
         "new_extractions": 0,

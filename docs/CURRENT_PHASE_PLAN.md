@@ -1,3 +1,26 @@
+## Local observer construction and preservation, 2026-10-18
+
+Finish the software-only source47 increment on existing draft PR164: strict
+canonical native projection and complete DC/V-A selection; fixed installed
+resources retained and verified before fresh module construction; isolated
+synthetic installation check; explicit library-map/log launch arguments;
+private HOME/TMP with fixed PATH/locale and only unchanged bounded license-routing
+values; whole registered-library pre/post conservation. Keep observe disabled.
+
+Run focused/full Windows, hosted POSIX owned-process/late-drift regressions,
+static/security/contract/package preservation checks and fresh exact-head review.
+Preserve the Windows sandbox ancestor-pin failure and temp-directory access
+failure as environment-specific failed receipts; retry only in a new normal-user
+disposable path. Do not relax the owner/path/disk/process guards.
+
+Prior9b3f61a exact CI/package/review is complete and source46 retained. Add one
+checkpoint03 for source47/60; no counter reset or new operational permission.
+Actual runtime/library-init trust, finite operational admission and a fresh
+authorized current-VM observation remain separate unfinished gates. Historical
+inventory is NOT_ATTESTED; old non-EDA allowances/expired grants/global capacity
+cannot authorize a new OCEAN observation. No VM contact, deployment, EDA or
+candidate trial in this software continuation. No PR164 merge/publication.
+
 ## PR164 corrective verification, 2026-10-18
 
 Finish current parent-directory durability P2 and Linux/Windows fixture corrections

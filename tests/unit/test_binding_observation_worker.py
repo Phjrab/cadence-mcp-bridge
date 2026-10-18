@@ -60,7 +60,8 @@ def selected(tmp_path, root):
         design_id="synthetic", analysis_id="synthetic-dc",
         profile=dict(binding=dict(library="Synthetic", cell="Cell", view="schematic")),
         source_cell=str(source), source_state=str(state), variables=scan["variables"],
-        libraries=[dict(name="Synthetic", path=str(source.parent))],
+        libraries=[dict(name="Synthetic", path=str(source.parent),
+                        tree_sha256=copying.dependency_snapshot(str(source.parent))["tree_sha256"])],
         ade=dict(source_tree_sha256=copying.snapshot(str(source))["tree_sha256"],
                  ade_state_tree_sha256=copying.snapshot(str(state))["tree_sha256"]),
     )
@@ -185,6 +186,119 @@ def test_scan_must_match_registered_route_and_reviewed_digest(selected):
         worker.observe(scan)
 
 
+def test_whole_registered_library_drift_is_separate_from_selected_cell(selected):
+    worker, _, _ = selected
+    before = worker._snapshots()
+    library = Path(worker.route["libraries"][0]["path"])
+    (library / "libInit.il").write_bytes(b"synthetic init placeholder")
+    assert worker.copying.snapshot(worker.route["source_cell"]) == before["source"]
+    with pytest.raises(ValueError, match="registered_dependency_drift"):
+        worker._snapshots()
+    assert worker.copying.MAX_ENTRIES == observer.SNAPSHOT_ENTRIES
+    assert worker.copying.MAX_BYTES == observer.SNAPSHOT_BYTES
+
+
+def test_dependency_budget_is_aggregate_and_always_restored(selected, tmp_path, monkeypatch):
+    worker, _, _ = selected
+    extra = tmp_path / "dependency"
+    extra.mkdir()
+    (extra / "code").write_bytes(b"synthetic dependency")
+    snapshot = copying.dependency_snapshot(str(extra))
+    worker.route["libraries"].append(dict(
+        name="Other", path=str(extra), tree_sha256=snapshot["tree_sha256"],
+    ))
+    total = sum(s[2]["bytes"] for s in worker._dependencies())
+    monkeypatch.setattr(observer, "DEPENDENCY_BYTES", total - 1)
+    with pytest.raises(ValueError, match="drift_or_size|combined_dependency_bound"):
+        worker._dependencies()
+    assert (worker.copying.MAX_ENTRIES, worker.copying.MAX_BYTES) == (
+        observer.SNAPSHOT_ENTRIES, observer.SNAPSHOT_BYTES,
+    )
+
+
+def test_dependency_scan_rechecks_earlier_library_after_later_read(selected, tmp_path, monkeypatch):
+    worker, _, _ = selected
+    extra = tmp_path / "dependency"
+    extra.mkdir()
+    tree_sha256 = copying.dependency_snapshot(str(extra))["tree_sha256"]
+    worker.route["libraries"].append(dict(
+        name="Other", path=str(extra), tree_sha256=tree_sha256,
+    ))
+    real_snapshot = worker.copying.dependency_snapshot
+
+    def drifting(path):
+        observed = real_snapshot(path)
+        if path == str(extra):
+            library = Path(worker.route["libraries"][0]["path"])
+            (library / "late-init.il").write_bytes(b"synthetic late drift")
+        return observed
+
+    monkeypatch.setattr(worker.copying, "dependency_snapshot", drifting)
+    with pytest.raises(ValueError, match="registered_dependency_drift"):
+        worker._dependencies()
+
+
+@pytest.mark.parametrize("change", ["new-leaf", "same-size-restored-mtime", "mode"])
+def test_second_pass_late_dependency_drift_is_checked_over_whole_union(
+    selected, tmp_path, monkeypatch, change,
+):
+    worker, _, _ = selected
+    extra = tmp_path / "later-dependency"
+    extra.mkdir()
+    worker.route["libraries"].append(dict(
+        name="Later", path=str(extra),
+        tree_sha256=copying.dependency_snapshot(str(extra))["tree_sha256"],
+    ))
+    leaf = Path(worker.route["source_cell"]) / "sch.oa"
+    original = leaf.stat()
+    if change == "same-size-restored-mtime" and os.name != "posix":
+        pytest.skip("POSIX change time, not Windows creation time")
+    real_snapshot = worker.copying.dependency_snapshot
+    later_reads = 0
+
+    def late_drift(path):
+        nonlocal later_reads
+        snapshot = real_snapshot(path)
+        if path == str(extra):
+            later_reads += 1
+            if later_reads == 2:
+                if change == "new-leaf":
+                    (leaf.parent.parent / "late-init.il").write_bytes(b"synthetic")
+                elif change == "mode":
+                    leaf.chmod(0o400)
+                else:
+                    leaf.write_bytes(b"x" * original.st_size)
+                    os.utime(leaf, ns=(original.st_atime_ns, original.st_mtime_ns))
+        return snapshot
+
+    monkeypatch.setattr(worker.copying, "dependency_snapshot", late_drift)
+    with pytest.raises(ValueError, match="dependency_scan_drift"):
+        worker._dependencies()
+    assert later_reads == 2
+    assert worker.copying.MAX_ENTRIES == observer.SNAPSHOT_ENTRIES
+
+
+@pytest.mark.parametrize("change", ["alias", "link", "missing", "count", "entries"])
+def test_dependency_namespace_and_entry_bounds_reject(selected, tmp_path, monkeypatch, change):
+    worker, _, _ = selected
+    library = worker.route["libraries"][0]
+    if change == "alias":
+        worker.route["libraries"].append(dict(library))
+    elif change == "link":
+        if os.name == "nt":
+            pytest.skip("symlink creation privilege is not required for Windows fixtures")
+        (Path(library["path"]) / "linked").symlink_to(tmp_path / "state", target_is_directory=True)
+    elif change == "missing":
+        library["path"] = str(tmp_path / "nonexistent")
+    elif change == "count":
+        worker.route["libraries"] *= observer.DEPENDENCY_LIBRARIES + 1
+    else:
+        monkeypatch.setattr(observer, "DEPENDENCY_ENTRIES", 1)
+    with pytest.raises((ValueError, OSError)):
+        worker._dependencies()
+    assert worker.copying.MAX_ENTRIES == observer.SNAPSHOT_ENTRIES
+
+
 def test_library_map_is_reconstructed_from_registration_and_owned_stage(selected):
     worker, scan, _ = selected
     stage = "/synthetic-owned-stage/" + scan["observation_id"]
@@ -240,6 +354,14 @@ def test_private_program_piece_bounds_own_synthetic_process_and_preserves_ledger
     executable.write_text(f"#!{sys.executable}\n{body}\n", encoding="utf-8")
     executable.chmod(0o700)
     worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    launches = []
+    real_popen = observer.subprocess.Popen
+
+    def launch(argv, **options):
+        launches.append((argv, options["env"]))
+        return real_popen(argv, **options)
+
+    monkeypatch.setattr(observer.subprocess, "Popen", launch)
     ledger = (Path(worker.root) / worker.accounting.LEDGER).read_bytes()
     original = worker._snapshots()
     monkeypatch.setattr(observer, "PROCESS_SECONDS", 0.2 if case == "timeout" else 5)
@@ -261,10 +383,102 @@ def test_private_program_piece_bounds_own_synthetic_process_and_preserves_ledger
         session.check()
         with pytest.raises(ValueError, match="attempt_already_exists"):
             worker._stage(scan, session)
+    assert len(launches) == 1
+    assert launches[0][0] == [
+        str(executable), "-nograph", "-nocdsinit", "-log", stage + "/ocean.log",
+        "-cdslib", stage + "/cds.lib", "-restore", stage + "/observer.ocn",
+    ]
+    assert launches[0][1]["HOME"] == stage + "/home"
+    assert launches[0][1]["TMPDIR"] == stage + "/tmp"
     assert (Path(worker.root) / worker.accounting.LEDGER).read_bytes() == ledger
     assert worker._snapshots() == original
     assert all((Path(stage) / ("ocean." + stream)).stat().st_size <= observer.FRAME_BYTES
                for stream in ("stdout", "stderr"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="owned POSIX runtime directories")
+@pytest.mark.parametrize("case", ["clean", "content", "mode", "license"])
+def test_private_environment_excludes_inherited_loader_and_init_inputs(
+    selected, controlled_inventory, monkeypatch, case,
+):
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    for name in ("LD_PRELOAD", "LD_LIBRARY_PATH", "PYTHONPATH", "CDS_SITE", "CDS_LOAD_ENV",
+                 "CDS_LIB_PATH", "DISPLAY", "HOME", "PATH"):
+        monkeypatch.setenv(name, "synthetic-untrusted-setting")
+    monkeypatch.setenv("CDS_LIC_FILE", "synthetic-private-route")
+    monkeypatch.delenv("LM_LICENSE_FILE", raising=False)
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        if case == "content":
+            (Path(stage) / "home" / ".cdsinit").write_bytes(b"synthetic")
+        elif case == "mode":
+            (Path(stage) / "tmp").chmod(0o750)
+        elif case == "license":
+            monkeypatch.setenv("CDS_LIC_FILE", "x" * 4097)
+        if case == "clean":
+            environment = worker._environment(stage)
+            assert environment == dict(
+                HOME=stage + "/home", TMPDIR=stage + "/tmp", TMP=stage + "/tmp",
+                TEMP=stage + "/tmp", PATH="/usr/bin:/bin", LANG="C", LC_ALL="C",
+                CDS_LIC_FILE="synthetic-private-route",
+            )
+        else:
+            with pytest.raises(ValueError, match="runtime_directory|license_environment_bound"):
+                worker._environment(stage)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual dependency prelaunch guards")
+def test_dependency_drift_prevents_private_program_start(
+    selected, controlled_inventory, monkeypatch,
+):
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    monkeypatch.setattr(observer.subprocess, "Popen", lambda *a, **k: pytest.fail("EDA start"))
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        library = Path(worker.route["libraries"][0]["path"])
+        (library / "libInit.il").write_bytes(b"synthetic changed init")
+        with pytest.raises(ValueError, match="registered_dependency_drift"):
+            worker._program(stage, session, scan)
+        assert not (Path(stage) / "ocean-start-claimed.json").exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual synthetic child postfailure guards")
+@pytest.mark.parametrize("exit_code", [0, 3])
+def test_private_child_dependency_drift_is_retained_even_on_failure(
+    selected, controlled_inventory, monkeypatch, exit_code,
+):
+    import json
+
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    changed = Path(worker.route["libraries"][0]["path"]) / "libInit.il"
+    executable = Path(worker.profile["tools"]["ocean"]["path"])
+    executable.write_text(
+        f"#!{sys.executable}\nopen({str(changed)!r},'wb').write(b'synthetic drift')\n"
+        f"raise SystemExit({exit_code})\n", encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        ledger = worker._ledger()
+        with pytest.raises(ValueError, match="post_process_protection_failed"):
+            worker._program(stage, session, scan)
+        guard = json.loads((Path(stage) / "protection-check.json").read_bytes())
+        assert guard["originals_preserved"] is False
+        assert guard["owned_copy_preserved"] is guard["ledger_preserved"] is True
+        assert changed.read_bytes() == b"synthetic drift"
+        assert worker._ledger() == ledger
+        assert (Path(stage) / "ocean-start-claimed.json").is_file()
+        assert (Path(stage) / "ocean.stderr").is_file()
+        with pytest.raises(ValueError, match="process_attempt_spent"):
+            worker._program(stage, session, scan)
 
 
 @pytest.mark.skipif(os.name != "posix", reason="actual permissions and ordinary-user preflight")

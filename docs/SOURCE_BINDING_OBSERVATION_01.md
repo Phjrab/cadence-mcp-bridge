@@ -1,5 +1,69 @@
 # Source binding preparation — unqualified development components
 
+## Local fixed-resource construction increment, 2026-10-18
+
+Source47 adds an internal local factory accepting four bounded canonical ASCII
+JSON documents: the complete environment, native registration projection, closed
+selection and complete saved-DC V/A request. It validates their closed schemas,
+route/profile/ADE/reader/variable relations and digests. Only four fixed installed
+resources are read once. The selected worker digest is compared to retained
+worker bytes and all three helper pins are independently checked before any
+compile. Fresh unregistered memory modules ignore cached namesake workers/helpers.
+The installed package/interpreter remains the local trust root; a digest is not
+external provenance, remote attestation or execution authority.
+
+Private review-only launch pieces now supply absolute owned `-cdslib`, `-log`
+and `-restore` arguments, private empty0700 HOME/TMP, fixed `/usr/bin:/bin` PATH
+and C locale. Only existing bounded `CDS_LIC_FILE`/`LM_LICENSE_FILE` values pass
+through privately and unchanged; no license lookup or setting change occurs.
+Loader, site, display and user-startup environment values are not inherited.
+This recipe has not been qualified against actual Cadence startup dependencies.
+
+Whole registered libraries are checked against existing registered tree hashes,
+separately from the64-entry/1MiB source/state copy. Fixed preservation limits are
+eight libraries,4096 entries per library,8192 combined entries and64MiB combined
+content per pass. Two complete content passes plus a whole-union before/after
+namespace/ancestor identity/ctime check catch late drift, restored mtime and
+changed links/membership. Limits are restored on failure. Original/copy/ledger
+guards run after a private child fails as well as succeeds; retained failure
+evidence and its spent marker prevent another start. These are bounded drift
+guards under the existing lock, not an atomic adversarial-filesystem proof.
+
+Historical evidence covers four matching library hashes with6743 entries and
+37,350,362 bytes. Current size of the fifth registered source library is not
+proved; historical pre-registration data is not rebaselined. Historical init
+files include shared-writable libInit/context code and the vendor inventory is
+explicitly NOT_ATTESTED. Conservation does not establish executable trust.
+
+The installed checker now constructs the actual fresh worker from fixed package
+resources using fictional canonical configuration, rejects wrong worker identity
+before code load and ignores poisoned caches under process/network/home/claim
+and read-only file-open regression guards. This is installed synthetic evidence;
+successful installed operator preparation remains NOT_TESTED. It is not a
+malicious-interpreter sandbox or actual VM/app verification.
+
+The source46 corrective head9b3f61a finished Windows4462 PASS/417 platform skips,
+Linux binding170 PASS/one Windows-only skip, package/reinstall/uninstall state
+preservation and clear automated review. All previous failures remain historical.
+New source47 exact-head verification is separate. Runtime/library-initialization
+closure evidence and operational bootstrap/admission remain unfinished, observe
+always returns CAPABILITY_NOT_QUALIFIED and there is no operational transport.
+No VM contact/deployment/EDA/simulation/extraction/reservation/real claim occurs.
+DraftPR164 is not approved for merge or publication. Later sections retain the
+earlier source-specific implementation/verification history.
+
+Current local source47 focused checks pass241 tests with25 Windows platform
+skips. Ruff/mypy127,85-tool/22-legacy compatibility, security18 and secret1279
+pass; the strict locked dependency audit reports no known vulnerabilities after
+correcting the host's UTF-8 subprocess environment. Its earlier encoding failure
+is retained. Isolated wheel/sdist/content/license and installed synthetic factory
+checks pass; reinstall/uninstall preserve43 operator and20 migration files.
+Independent static review found and corrected a second-pass late-library-drift
+P2; its final diff review found no further P1/P2. This is agent review, not formal
+GitHub APPROVED. Full Windows, exact-head hosted POSIX and automated review are
+separate pending gates for the new source. Sandbox ancestor-pin/temp access
+failures remain retained and the same tests pass in the new normal-user D: path.
+
 This work follows normally merged PR163 (`a713eb6b1db2a90652501bb71a3dacbe75c65460`).
 It is separate from published2.1.0 and remains in2.2.0.dev0. Support remains the
 professor-provided standard VM and its existing PDK. No other Cadence/PDK/host

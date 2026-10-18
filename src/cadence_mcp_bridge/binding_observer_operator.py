@@ -38,6 +38,7 @@ from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
 ASSETS = (
     "_binding_observation.py",
     "binding_observation.py",
+    "binding_observation_bootstrap.py",
     "binding_observation_claim.py",
     "binding_observer_operator.py",
     "_native_copy.py",
@@ -51,6 +52,10 @@ LIMITS = {
     "ocean_seconds": 45,
     "source_state_entries": 64,
     "source_state_content_bytes": 1048576,
+    "registered_libraries": 8,
+    "dependency_entries_per_library": 4096,
+    "dependency_entries_combined": 8192,
+    "dependency_content_bytes_combined": 67108864,
     "top_level_instances": 64,
     "properties_per_instance": 32,
     "matches_per_variable": 4,

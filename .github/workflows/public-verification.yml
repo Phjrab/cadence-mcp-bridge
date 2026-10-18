@@ -94,7 +94,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_candidate_contracts.py tests/unit/test_candidate_reports.py tests/unit/test_candidate_batches.py tests/unit/test_candidate_cli.py -q --basetemp "$HOME/explicit-candidate-tests"
 
       - name: Local binding preparation, bounded frames and owned-process guards
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py -q --basetemp "$HOME/binding-observer-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_bootstrap.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py -q --basetemp "$HOME/binding-observer-tests"
 
       - name: Generic complete AC projection and sampled crossing contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"
