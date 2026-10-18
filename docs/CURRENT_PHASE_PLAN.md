@@ -1,3 +1,18 @@
+## PR164 corrective verification, 2026-10-18
+
+Finish current parent-directory durability P2 and Linux/Windows fixture corrections
+on the same draft feature. Preserve actual conflicting-work, unknown-process,
+disk, ordinary-owner/DACL and owned-group guards. Use additive binding checkpoint02
+for46/60; no historical checkpoint or counter is rewritten. Refresh focused,
+installed, exact-head hosted and independent review receipts. Prior head7eadec2's
+Windows4452-pass/3-fail and Linux150-pass/8-fail results remain historical failures.
+
+Operational work remains separate: explicit private library-map/log argv, bounded
+inherited loader/init environment, registered dependency/initialization closure
+and authenticated bootstrap/admission must be implemented and reviewed before a
+finite actual observation decision. Never activate the review-only worker or
+treat source capacity as a VM/EDA grant. Published2.1.0 remains unchanged.
+
 ## Local source-binding components; actual observation still blocked, 2026-10-18
 
 PR163 normally merged as a713eb6 after exact-head91c4919 user approval and final

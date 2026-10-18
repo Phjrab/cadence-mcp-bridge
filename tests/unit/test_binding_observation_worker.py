@@ -1,10 +1,12 @@
 """Disposable helper pieces; no actual VM, Cadence, authority or source deployment."""
 
 import copy
+import errno
 import os
 import platform
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -77,6 +79,14 @@ def selected(tmp_path, root):
         profile_raw, registration_raw, selection, assets(), observer.HELPER_PINS,
     )
     return worker, scan, (profile_raw, registration_raw, selection)
+
+
+@pytest.fixture
+def controlled_inventory(selected, monkeypatch):
+    # Only the external conflicting-work inventory is synthetic. The dedicated
+    # child's /proc identity, group ownership and termination remain real.
+    worker, _, _ = selected
+    monkeypatch.setattr(worker, "_check_conflicting_processes", lambda: None)
 
 
 def test_observe_is_unconditionally_blocked_and_never_writes_or_starts(selected, monkeypatch):
@@ -188,7 +198,9 @@ def test_library_map_is_reconstructed_from_registration_and_owned_stage(selected
     b"DEFINE Synthetic /unregistered/other-library\n",
     b"INCLUDE /unregistered/cds.lib\n",
 ])
-def test_staged_mapping_tamper_rejects_before_any_ocean_start(selected, monkeypatch, replacement):
+def test_staged_mapping_tamper_rejects_before_any_ocean_start(
+    selected, controlled_inventory, monkeypatch, replacement,
+):
     worker, scan, _ = selected
     if os.getuid() == 0:
         pytest.skip("ordinary-user POSIX requirement")
@@ -212,7 +224,7 @@ def test_staged_mapping_tamper_rejects_before_any_ocean_start(selected, monkeypa
 @pytest.mark.skipif(os.name != "posix", reason="actual ordinary-user resource flock and process")
 @pytest.mark.parametrize("case", ["success", "nonzero", "timeout", "stdout", "stderr"])
 def test_private_program_piece_bounds_own_synthetic_process_and_preserves_ledger(
-    selected, monkeypatch, case,
+    selected, controlled_inventory, monkeypatch, case,
 ):
     worker, scan, _ = selected
     if os.getuid() == 0:
@@ -256,7 +268,9 @@ def test_private_program_piece_bounds_own_synthetic_process_and_preserves_ledger
 
 
 @pytest.mark.skipif(os.name != "posix", reason="actual permissions and ordinary-user preflight")
-def test_preflight_rejects_active_work_and_disk_floor_without_start(selected, monkeypatch):
+def test_preflight_rejects_active_work_and_disk_floor_without_start(
+    selected, controlled_inventory, monkeypatch,
+):
     worker, scan, _ = selected
     if os.getuid() == 0:
         pytest.skip("ordinary-user POSIX requirement")
@@ -272,4 +286,57 @@ def test_preflight_rejects_active_work_and_disk_floor_without_start(selected, mo
         worker.profile["limits"]["disk_floor_bytes"] = 10**30
         with pytest.raises(ValueError, match="disk_floor"):
             worker._stage(scan, session)
+    assert worker._ledger() == before
+
+
+@pytest.mark.parametrize("case", ["eda", "benign", "other-uid", "denied", "vanished", "gone"])
+def test_conflicting_process_inventory_is_fail_closed(selected, monkeypatch, case):
+    worker, _, _ = selected
+    uid = 12345
+    with monkeypatch.context() as patch:
+        patch.setattr(observer.os, "getuid", lambda: uid, raising=False)
+        patch.setattr(observer.os, "getpid", lambda: 98764)
+        patch.setattr(observer.os, "listdir", lambda path: ["self", "98764", "98765"])
+        patch.setattr(observer.os, "stat", lambda path: SimpleNamespace(
+            st_uid=uid + (case == "other-uid")))
+
+        def target(path):
+            assert path == "/proc/98765/exe"
+            if case in ("denied", "vanished", "gone"):
+                code = {"denied": errno.EACCES, "vanished": errno.ENOENT,
+                        "gone": errno.ESRCH}[case]
+                raise OSError(code, "synthetic process visibility")
+            assert case != "other-uid"
+            return "/synthetic/Spectre" if case == "eda" else "/synthetic/python"
+
+        patch.setattr(observer.os, "readlink", target)
+        if case == "eda":
+            with pytest.raises(ValueError, match="active_eda_process"):
+                worker._check_conflicting_processes()
+        elif case == "denied":
+            with pytest.raises(PermissionError) as raised:
+                worker._check_conflicting_processes()
+            assert raised.value.errno == errno.EACCES
+        else:
+            worker._check_conflicting_processes()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="ordinary-user POSIX prelaunch failure")
+def test_unknown_same_uid_process_prevents_stage_and_start(selected, monkeypatch):
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    before = worker._ledger()
+
+    def denied():
+        raise OSError(errno.EACCES, "synthetic protected same-UID process")
+
+    monkeypatch.setattr(worker, "_check_conflicting_processes", denied)
+    monkeypatch.setattr(observer.subprocess, "Popen", lambda *a, **k: pytest.fail("EDA start"))
+    with (
+        worker.accounting.ReservationSession(worker.root) as session,
+        pytest.raises(PermissionError),
+    ):
+        worker._stage(scan, session)
+    assert not (Path(worker.root) / "binding-observations").exists()
     assert worker._ledger() == before

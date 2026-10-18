@@ -1,3 +1,23 @@
+## Binding preparation correction checkpoint, 2026-10-18
+
+Draft PR164's P2 directory-durability review is corrected: verified POSIX parent
+sync precedes export, output and parent sync run on success/interruption, and
+descriptor cleanup remains guaranteed on sync failure. Hosted prior head7eadec2
+failed Linux on a protected unrelated same-UID process and Windows on elevated
+runner default ownership. Component tests now isolate only external inventory;
+real owned-group identity/termination and fail-closed EACCES remain tested.
+Windows disposable output ownership uses the existing ordinary-account fixture;
+actual shared-write DACL rejection stays covered. Product guards are unchanged.
+
+Additive checkpoint02 charges46/60, preserving checkpoint01 and all consumption.
+Ruff/mypy126/85-tool22-legacy contract audit and focused180 tests pass (16 Windows
+platform skips). Updated package/hosted checks and fresh review remain pending;
+the first package retry failed on an overlong disposable Windows path and is
+retained, with the identical source retried in a short D: directory.
+Observe stays unconditionally disabled. Runtime/environment/library trust and
+authenticated operational bootstrap are still implementation gaps, not pending
+execution approval. No VM contact, deployment, EDA start or reservation occurred.
+
 ## Source binding preparation after normal PR163 integration, 2026-10-18
 
 PR163 was normally merged after the user's exact-head approval of91c4919, final

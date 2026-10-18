@@ -95,7 +95,7 @@ observer needs its own explicit resource-domain initialization/authority contrac
 
 ## Resource and release boundary
 
-The additive source checkpoint for this product change charges45/60, retaining
+The first additive source checkpoint for this product change charged45/60, retaining
 the source-bearing PR163 merge as44. Historical policies/checkpoints and spent
 claims remain unchanged. That software ceiling does not authorize another
 physical query, deployment, OCEAN start or candidate simulation. An OCEAN start
@@ -115,7 +115,34 @@ W/L, mixed geometry, numeric range/grid qualification and physical verification
 are not added here. Published2.1.0 tag/assets are untouched; a new draft feature
 PR is not approved for merge or publication by PR163's exact-head approval.
 
-## Verification checkpoint, 2026-10-18
+## Corrective verification checkpoint, 2026-10-18
+
+Additive source checkpoint02 records46/60 after the POSIX directory-durability
+correction and separate process-inventory test seam. Checkpoint01 and prior
+failed test records are preserved. A held verified parent is synced before export;
+both output and parent are synced after success or interruption, including cleanup
+on sync errors. This does not assert Windows power-loss directory durability.
+
+The prior hosted7eadec2 run failed Linux on unreadable unrelated same-UID process
+metadata and Windows on elevated runner default object ownership. Owned-process
+component tests now control only external conflicting-process inventory, retaining
+actual own-group identity/termination and separate fail-closed unknown-process
+coverage. Windows fixtures emulate ordinary-account ownership and separately test
+real shared-write DACL refusal. No product permission or conflict guard is relaxed.
+Corrected local Windows focused checks pass180 tests with16 platform skips;
+Ruff/mypy126 and85-tool/22-legacy declaration checks pass. Final corrected-head
+hosted verification, exact installed recheck and fresh review are pending. A
+long disposable Windows package path failed during domain-fixture creation;
+its retained failure is followed by the identical-source short-D:-path retry.
+
+Remaining executable gaps include explicit private `-cdslib`/log arguments,
+loader/init environment control, full registered library/initialization dependency
+guards and a hash-bound trusted bootstrap with finite admission. Existing wrapper
+metadata/hash checks do not attest this closure. These must be implemented before
+an executable observation is offered for one finite user decision; the current
+worker still returns `CAPABILITY_NOT_QUALIFIED` and makes no remote contact.
+
+## Earlier verification checkpoint, 2026-10-18
 
 Ruff, mypy126 source modules, the85-tool/22-legacy declaration audit, security18
 tests/secret preflight and strict locked dependency audit pass. The isolated

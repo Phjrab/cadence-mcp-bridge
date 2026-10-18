@@ -480,6 +480,22 @@ class BindingObservationWorker(object):
         self.copying.owned_parent(self.root)
         if os.path.lexists(self.root + "/" + self.accounting.JOBS + "/active"):
             raise ValueError("binding_observation_active_work")
+        self._check_conflicting_processes()
+        fs = os.statvfs(self.root)
+        free, total = fs.f_bavail * fs.f_frsize, fs.f_blocks * fs.f_frsize
+        limits = self.profile["limits"]
+        floor = max(limits["disk_floor_bytes"],
+                    (total * limits["disk_floor_percent"] + 99) // 100)
+        if free < floor + STAGE_BYTES:
+            raise ValueError("binding_observation_disk_floor")
+        if self._deadline is not None and os.times()[4] >= self._deadline:
+            raise ValueError("binding_observation_outer_deadline")
+        return self._ledger()
+
+    def _check_conflicting_processes(self):
+        # Kept separate so owned-process component tests can supply a controlled
+        # external inventory without replacing /proc used by group identity and
+        # termination. Unknown same-UID executables must still fail closed.
         for name in os.listdir("/proc"):
             if not name.isdigit() or int(name) == os.getpid():
                 continue
@@ -493,17 +509,6 @@ class BindingObservationWorker(object):
             except OSError as error:
                 if error.errno not in (2, 3):
                     raise
-        fs = os.statvfs(self.root)
-        free, total = fs.f_bavail * fs.f_frsize, fs.f_blocks * fs.f_frsize
-        limits = self.profile["limits"]
-        floor = max(limits["disk_floor_bytes"],
-                    (total * limits["disk_floor_percent"] + 99) // 100)
-        if free < floor + STAGE_BYTES:
-            raise ValueError("binding_observation_disk_floor")
-        if self._deadline is not None and os.times()[4] >= self._deadline:
-            raise ValueError("binding_observation_outer_deadline")
-        return self._ledger()
-
     def _program(self, stage, session, request):
         # Review-only process piece. observe() never calls this while closure and
         # library-init side effects remain unqualified. argv is compiled here.

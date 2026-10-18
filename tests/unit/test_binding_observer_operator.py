@@ -7,6 +7,7 @@ from dataclasses import replace
 
 import pytest
 from test_native_runtime import operator, operator_base, registered
+from test_physical_metadata import current_account_owner
 
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.binding_observation import BindingScanRequest, render_collector
@@ -15,6 +16,15 @@ from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.operator_operations import OperationRejected
 
 __all__ = ["operator", "operator_base", "registered"]
+
+
+@pytest.fixture(autouse=True)
+def ordinary_account_output_owner():
+    # Hosted elevated Windows defaults new objects to the Administrators group.
+    # Create only disposable fixtures with an ordinary account's default owner;
+    # retain the product's real token ownership and DACL checks unchanged.
+    with current_account_owner():
+        yield
 
 
 def selection(registered):
@@ -61,6 +71,28 @@ def test_preparation_binds_exact_registration_and_all_variables_without_executio
     assert path.read_bytes() == original
     assert not context.binding.analysis_journal.exists()
     assert not context.binding.sweep_journal.exists() and not context.lock_path.exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="actual Windows output DACL validation")
+def test_shared_write_output_is_rejected_with_real_windows_descriptor(tmp_path):
+    import subprocess
+
+    from cadence_mcp_bridge import binding_observer_operator as host
+
+    output = tmp_path / "disposable-shared-output"
+    output.mkdir(mode=0o700)
+    parents = {path: host._directory_identity(path) for path in output.parents}
+    host._intent_metadata(output, True)
+    result = subprocess.run(
+        ["icacls", str(output), "/grant", "*S-1-1-0:(OI)(CI)(M)"],
+        capture_output=True, timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    with pytest.raises(ValueError, match="physical_intent_security"), host._held_output(
+        output, parents,
+    ):
+        pytest.fail("a shared-write descriptor must reject before yielding the output")
+    assert output.is_dir() and not list(output.iterdir())
 
 
 @pytest.mark.parametrize("kind", ["file", "directory", "reserved_journal"])
@@ -265,3 +297,93 @@ def test_detached_output_cannot_redirect_file_creation(registered, tmp_path, mon
     assert failure.value.reason == "binding_observation_output_namespace_drift"
     assert not list(output.iterdir())
     assert (detached / "binding-plan.private.json").read_bytes() == b""
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory-entry durability")
+@pytest.mark.parametrize("interrupt", [False, True])
+def test_output_parent_and_partial_evidence_are_synced_on_every_exit(
+    tmp_path, monkeypatch, interrupt,
+):
+    from cadence_mcp_bridge import binding_observer_operator as host
+
+    output = tmp_path / "output"
+    output.mkdir(mode=0o700)
+    parents = {path: host._directory_identity(path) for path in output.parents}
+    identities = {
+        (path.stat().st_dev, path.stat().st_ino): name
+        for path, name in ((output, "output"), (output.parent, "parent"))
+    }
+    real_fsync = os.fsync
+    events = []
+    held = []
+
+    def sync(descriptor):
+        info = os.fstat(descriptor)
+        events.append(identities[(info.st_dev, info.st_ino)])
+        real_fsync(descriptor)
+
+    monkeypatch.setattr(host.os, "fsync", sync)
+
+    def export():
+        with host._held_output(output, parents) as (descriptor, guard):
+            held.append(descriptor)
+            assert events == ["parent"]
+            events.append("write")
+            (output / "retained.partial").write_bytes(b"partial evidence")
+            guard()
+            if interrupt:
+                raise RuntimeError("interrupted preparation")
+
+    if interrupt:
+        with pytest.raises(RuntimeError, match="interrupted preparation"):
+            export()
+    else:
+        export()
+    assert events == ["parent", "write", "output", "parent"]
+    assert (output / "retained.partial").read_bytes() == b"partial evidence"
+    with pytest.raises(OSError):
+        os.fstat(held[0])
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory-entry durability")
+@pytest.mark.parametrize("failure", ["initial_parent", "final_output", "final_parent"])
+def test_directory_sync_failure_still_syncs_parent_and_closes_all_descriptors(
+    tmp_path, monkeypatch, failure,
+):
+    from cadence_mcp_bridge import binding_observer_operator as host
+
+    output = tmp_path / "output"
+    output.mkdir(mode=0o700)
+    parents = {path: host._directory_identity(path) for path in output.parents}
+    parent_inode = output.parent.stat().st_ino
+    real_open, real_fsync = os.open, os.fsync
+    opened, events = [], []
+
+    def opened_directory(*args, **kwargs):
+        descriptor = real_open(*args, **kwargs)
+        opened.append(descriptor)
+        return descriptor
+
+    def sync(descriptor):
+        label = "parent" if os.fstat(descriptor).st_ino == parent_inode else "output"
+        events.append(label)
+        stage = {
+            1: "initial_parent", 2: "final_output", 3: "final_parent",
+        }[len(events)]
+        if stage == failure:
+            raise OSError("synthetic fsync failure")
+        real_fsync(descriptor)
+
+    monkeypatch.setattr(host.os, "open", opened_directory)
+    monkeypatch.setattr(host.os, "fsync", sync)
+    with (
+        pytest.raises(OSError, match="synthetic fsync failure"),
+        host._held_output(output, parents),
+    ):
+        (output / "retained.partial").write_bytes(b"partial evidence")
+    assert events == ["parent", "output", "parent"]
+    if failure != "initial_parent":
+        assert (output / "retained.partial").read_bytes() == b"partial evidence"
+    for descriptor in opened:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)

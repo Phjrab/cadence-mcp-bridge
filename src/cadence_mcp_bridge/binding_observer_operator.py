@@ -157,15 +157,28 @@ def _held_output(
         guard()
         if any(output.iterdir()):
             raise OperationRejected("binding_observation_exclusive_output_required")
+        if descriptors:
+            # Publish the newly created directory durably before retaining any
+            # evidence inside it. The held parent is the verified original inode.
+            os.fsync(descriptors[1])
         yield (descriptors[0] if descriptors else None), guard
         guard()
-        if descriptors:
-            os.fsync(descriptors[0])
     finally:
-        for descriptor in reversed(descriptors):
-            os.close(descriptor)
-        for handle in reversed(handles):
-            kernel.CloseHandle(handle)
+        try:
+            if descriptors:
+                try:
+                    # Retain completed or partial evidence even when preparation
+                    # fails. A sync failure must still try the parent and close
+                    # every held descriptor.
+                    os.fsync(descriptors[0])
+                finally:
+                    if len(descriptors) > 1:
+                        os.fsync(descriptors[1])
+        finally:
+            for descriptor in reversed(descriptors):
+                os.close(descriptor)
+            for handle in reversed(handles):
+                kernel.CloseHandle(handle)
 
 
 def prepare(
