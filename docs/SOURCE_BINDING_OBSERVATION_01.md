@@ -129,8 +129,9 @@ owned-process tests are actual Cadence or app evidence.
 The local Windows full run reports4433 pass/428 platform skips/56 warnings and
 five failures at the unchanged real physical-disk-floor gate: the C: test volume
 had only180,244,480 bytes available. The failed records are retained. Targeted
-accounting tests are being rechecked in a new disposable D: test directory with
-adequate physical capacity; no product disk check, existing result, consumed
-reservation or policy is modified. Final exact-head hosted Windows/POSIX and
+accounting rechecks in a new disposable D: test directory with adequate physical
+capacity pass85 tests/five Windows POSIX skips, including all five earlier failing
+cases. No product disk check, existing result, consumed reservation or policy is
+modified. Final exact-head hosted Windows/POSIX and
 fresh automated review remain separate gates; do not treat this checkpoint as
 their completion or as permission to activate the observer.
