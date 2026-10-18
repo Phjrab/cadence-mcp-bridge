@@ -1,3 +1,28 @@
+## Source binding preparation after normal PR163 integration, 2026-10-18
+
+PR163 was normally merged after the user's exact-head approval of91c4919, final
+Windows4307/POSIX CI, installed package/security/compatibility checks and fresh
+automated review without findings. Current main is
+`a713eb6b1db2a90652501bb71a3dacbe75c65460`; its tree equals that tested feature head.
+The source-bearing merge is44/60. Published2.1.0/36f7583 and its nine assets remain
+unchanged. No actual candidate batch/native/client upgrade is implied.
+
+The separate `feat/candidate-binding-observer` implements local private plan
+preparation, a fixed bounded OA collector/strict frame parser, retained-campaign
+one-shot claims and review-only owned-copy/process pieces. Actual observe is
+unconditionally CAPABILITY_NOT_QUALIFIED: runtime/library initialization trust and
+a concrete operational bootstrap are unfinished. There is no remote/activation
+CLI or new MCP tool. The new additive checkpoint charges45/60 without resetting
+consumption. Existing source policies and physical collection claims are retained.
+
+Finish source-specific synthetic/POSIX/install/security/CI and independent review
+on this draft. Before real observation, complete the trust boundary and present
+one finite OCEAN observation scope; old non-EDA claims/spent experiments are not
+authority. Original OA/ADE/PDK/results/journals and resource counters are preserved;
+this continuation has zero VM contacts/deployments/EDA starts/new reservations.
+See [current scope](docs/SOURCE_BINDING_OBSERVATION_01.md). Earlier records below
+remain historical and are superseded only where this checkpoint says so.
+
 ## Candidate recovery identity correction, 2026-10-18
 
 Draft PR163's automated P2 review identified an early remote-lookup return that

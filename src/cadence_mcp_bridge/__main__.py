@@ -78,6 +78,9 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.candidate_cli import add_candidates_parser
 
     add_candidates_parser(subparsers)
+    from cadence_mcp_bridge.binding_observer_operator import add_binding_observer_parser
+
+    add_binding_observer_parser(subparsers)
     from cadence_mcp_bridge.extraction_recovery import add_recovery_parser
 
     add_recovery_parser(subparsers)
@@ -387,6 +390,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         from cadence_mcp_bridge.candidate_cli import candidates_cli
 
         return candidates_cli(arguments)
+    if arguments.command == "operator-binding-observation":
+        from cadence_mcp_bridge.binding_observer_operator import binding_observer_cli
+
+        return binding_observer_cli(arguments)
     if arguments.command == "operator-features":
         from cadence_mcp_bridge.feature_guidance import features_cli
 

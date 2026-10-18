@@ -1,3 +1,29 @@
+## Local source-binding components; actual observation still blocked, 2026-10-18
+
+PR163 normally merged as a713eb6 after exact-head91c4919 user approval and final
+hosted/package/security/review gates. Its tree is identical to that tested head;
+merge accounting is44/60. Published2.1.0 remains unchanged. Do not reimplement or
+republish those completed changes; previous draft/no-merge statements are history.
+
+Continue the isolated `feat/candidate-binding-observer` draft: local-only prepared
+request/plan/script, strict complete bounded frame validation, same-account
+failure/restart claims and review-only owned-copy/process components. Preparation
+has no remote action or claim side effect. Observe always fails closed; no public
+MCP/SSH/activation entrypoint is added. Final source45/60 checkpoint must retain
+all prior history. Complete focused/full Windows, actual owned POSIX, static,
+security, compatibility, isolated installed checks and independent review before
+reporting the draft software result.
+
+The remaining runtime/library-initialization trust guard and trusted operational
+bootstrap are implementation gaps, not just missing consent. Establish them,
+freeze exact runnable bytes and present one finite source-binding observation
+decision before any VM deployment/OCEAN start. Only then prepare the separate
+bounded explicit V-only candidate trial with current qualification, valid unspent
+grant and live existing ledger. Source60/global capacity/old physical grants do
+not authorize new EDA-backed observation or experiments. Preserve originals,
+spent failures, all journals/claims and published assets. See
+[component contract and remaining work](SOURCE_BINDING_OBSERVATION_01.md).
+
 ## Final candidate software correction gates, 2026-10-18
 
 PR163's recovery lookup P2 is corrected with shared local identity checks before
