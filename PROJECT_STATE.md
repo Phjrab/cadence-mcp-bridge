@@ -1,3 +1,26 @@
+## Candidate recovery identity correction, 2026-10-18
+
+Draft PR163's automated P2 review identified an early remote-lookup return that
+could accept an operation ID already claimed by another local lifecycle. Recovery
+observe/result now inspect the shared direct/candidate/Sweep namespace before and
+after awaited provider reads. Only the exact existing recovery marker can replay;
+an unmatched local intent remains unknown and is never resent. Fresh dispatch
+retains the existing resource lock and atomic admission checks.
+
+Current focused candidate/recovery/lifecycle tests:236 PASS, six Windows POSIX
+skips. Ruff and mypy122 PASS; independent live-diff review found no confirmed
+P1/P2. These are software checks, not fresh native qualification. Updated exact
+feature-head hosted checks, installed package checks and automated review remain
+required. The earlier98741d1 local full4254/418 skips and hosted Windows4271/401
+skips/POSIX PASS remain evidence for that earlier source, not this correction.
+
+Additive source checkpoint02 records43/60 consumed,17 remaining, preserving
+checkpoint01 and all earlier policy/consumption history. No VM contact, deployment,
+collection, simulation, extraction or result reservation occurs in this fix.
+Published2.1.0 remains unchanged; PR163 is draft and has no merge/publication
+approval. Actual candidate trials still lack exact source-binding observation,
+current qualification and a valid finite unspent grant.
+
 ## Published2.1.0 and separate explicit-candidate development, 2026-10-18
 
 PR162 normally integrated as36f75834b8556c9dd88761120a4442a25379d7ae. Final reviewed

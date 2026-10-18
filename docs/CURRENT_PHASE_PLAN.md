@@ -1,3 +1,20 @@
+## Final candidate software correction gates, 2026-10-18
+
+PR163's recovery lookup P2 is corrected with shared local identity checks before
+and after remote reads. Exact prior recovery markers remain lookup-only after
+grant expiry/exhaustion; a marker without a remote result cannot resend. Current
+focused236 PASS/six POSIX skips, Ruff/mypy122 PASS and independent live-diff review
+are local evidence. Finish exact-head hosted Windows/POSIX, installed package and
+fresh automated review before presenting the draft software result. Preserve
+earlier full-suite/install receipts under their original source identities.
+
+Use additive PHYSICAL_METADATA_SOURCE_V6_EXPLICIT_CANDIDATES_02.json for source43
+of60; checkpoint01 remains immutable. This source charge grants no collection,
+deployment or actual candidate experiment. Continue software verification only.
+Published2.1.0 and its approved nine assets remain frozen. PR163 is not approved
+for merge; real candidate bindings/qualification/finite trial authority remain
+separate from software readiness and available global capacity.
+
 ## Explicit candidates after published2.1.0, 2026-10-18
 
 A is complete: approved exact36f7583/tagv2.1.0/GitHub Release/nine attachments are

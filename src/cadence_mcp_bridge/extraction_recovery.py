@@ -85,45 +85,55 @@ class ExtractionRecoveryService:
             }),
         }))
 
-    async def observe(
-        self, operation_id: str, plan: RecoveryPlan, *, submit: bool = False,
-    ) -> ProviderObservation | None:
-        self.native.current()
+    def _local_recovery_marker(self, operation_id: str, plan: RecoveryPlan) -> bool:
         from pydantic import TypeAdapter
 
         TypeAdapter(OperationId).validate_python(operation_id)
         if operation_id == plan.recovery.original_operation_id:
             raise OperationRejected("recovery_identity_must_be_distinct")
-        # Repeated IDs remain lookup-only even after consent expiry or exhaustion.
-        existing = await self.native.provider.lookup(operation_id, plan)
-        if existing is not None:
-            return existing
         store = self.native.lifecycle.store
+        if not store.path.exists():
+            return False
         # A distinct analysis marker cannot be adopted as a simulation lifecycle.
         # The exact recovery hash includes its original job and retained PSF binding.
         identity = (plan.request.design_id, "extraction-recovery:" + plan.request.analysis_id,
                     plan.plan_sha256)
+        with store.connection(create=False, read_only=True) as connection:
+            # Exact recovery markers may replay, but no parent or child claim
+            # can be adopted merely because a matching remote result exists.
+            try:
+                store._check_native_sweep_claim(connection, operation_id)
+            except InvalidInputError:
+                raise OperationRejected("recovery_local_identity_occupied") from None
+            row = connection.execute(
+                "SELECT design_id,analysis_id,plan_hash FROM admissions WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if row is not None and row != identity:
+                raise OperationRejected("recovery_local_identity_occupied")
+            return row is not None
 
-        def check_local() -> None:
-            if not store.path.exists():
-                return
-            with store.connection(create=False, read_only=True) as connection:
-                row = connection.execute(
-                    "SELECT design_id,analysis_id,plan_hash FROM admissions WHERE operation_id=?",
-                    (operation_id,),
-                ).fetchone()
-                if row is not None:
-                    if row == identity:
-                        raise OperationRejected("recovery_local_intent_unknown_no_resend")
-                    raise OperationRejected("recovery_local_identity_occupied")
-                if not store.native_sweep_identity_available(connection, operation_id):
-                    raise OperationRejected("recovery_local_identity_occupied")
-
-        check_local()
+    async def observe(
+        self, operation_id: str, plan: RecoveryPlan, *, submit: bool = False,
+    ) -> ProviderObservation | None:
+        self.native.current()
+        self._local_recovery_marker(operation_id, plan)
+        # Repeated IDs remain lookup-only even after consent expiry or exhaustion.
+        existing = await self.native.provider.lookup(operation_id, plan)
+        # A foreign claim may have appeared while awaiting the remote read.
+        pending = self._local_recovery_marker(operation_id, plan)
+        if existing is not None:
+            return existing
+        if pending:
+            raise OperationRejected("recovery_local_intent_unknown_no_resend")
         if not submit:
             return None
+        store = self.native.lifecycle.store
+        identity = (plan.request.design_id, "extraction-recovery:" + plan.request.analysis_id,
+                    plan.plan_sha256)
         with resource_lock(self.native.context):
-            check_local()
+            if self._local_recovery_marker(operation_id, plan):
+                raise OperationRejected("recovery_local_intent_unknown_no_resend")
             self.validate(plan)
             accounting = await self.native.provider.authorize(plan, self.native.grant)
             accounting.check(self.native.context, self.native.grant, plan)
@@ -140,7 +150,9 @@ class ExtractionRecoveryService:
 
     async def result(self, operation_id: str, plan: RecoveryPlan) -> dict[str, object]:
         self.native.current()
+        self._local_recovery_marker(operation_id, plan)
         observed, projected = await self.native.provider.result(operation_id, plan)
+        self._local_recovery_marker(operation_id, plan)
         projected.update(
             operation_id=observed.operation_id, plan_sha256=plan.plan_sha256,
             original_operation_id=plan.recovery.original_operation_id,

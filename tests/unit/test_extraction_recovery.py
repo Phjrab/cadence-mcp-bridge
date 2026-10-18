@@ -412,3 +412,80 @@ def test_gate_requires_recovery_action_and_ordinary_submit_stays_denied(qualifie
             gate.check(session, plan, "submit")
         with pytest.raises(ValueError, match="action_denied"):
             gate.check(session, plan, "recover_extraction")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("submit", [False, True])
+@pytest.mark.parametrize("remote_found", [False, True])
+async def test_exact_local_recovery_marker_remains_lookup_only(host_plan, submit, remote_found):
+    context, _, _, plan = host_plan
+    operation_id = str(uuid4())
+    store = AnalysisStore(context.binding.analysis_journal)
+    assert store.admit(
+        operation_id, plan.request.design_id,
+        "extraction-recovery:" + plan.request.analysis_id, plan.plan_sha256,
+    )
+    before = store.path.read_bytes()
+    observed = ProviderObservation.model_validate_json(json.dumps({
+        "operation_id": operation_id, "plan_sha256": plan.plan_sha256,
+        "resource_domain_sha256": plan.resource_domain_sha256, "ledger_ref": plan.ledger_ref,
+        "progress": {"phase": "DISPATCHED", "remote_revision": 2,
+                     "provider_receipt_sha256": "f" * 64},
+    }))
+    calls = []
+
+    async def lookup(identity, actual):
+        calls.append("lookup")
+        assert identity == operation_id and actual == plan
+        return observed if remote_found else None
+
+    # No authorization/dispatch methods: this exact durable marker can only look up.
+    service = service_with_provider(host_plan, SimpleNamespace(lookup=lookup))
+    if remote_found:
+        assert await service.observe(operation_id, plan, submit=submit) == observed
+    else:
+        with pytest.raises(OperationRejected) as failure:
+            await service.observe(operation_id, plan, submit=submit)
+        assert failure.value.reason == "recovery_local_intent_unknown_no_resend"
+    assert calls == ["lookup"]
+    assert store.path.read_bytes() == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remote_found", [False, True])
+async def test_exact_local_recovery_marker_result_is_read_only(host_plan, remote_found):
+    context, _, _, plan = host_plan
+    operation_id = str(uuid4())
+    store = AnalysisStore(context.binding.analysis_journal)
+    assert store.admit(
+        operation_id, plan.request.design_id,
+        "extraction-recovery:" + plan.request.analysis_id, plan.plan_sha256,
+    )
+    before = store.path.read_bytes()
+    observed = ProviderObservation.model_validate_json(json.dumps({
+        "operation_id": operation_id, "plan_sha256": plan.plan_sha256,
+        "resource_domain_sha256": plan.resource_domain_sha256, "ledger_ref": plan.ledger_ref,
+        "progress": {"phase": "SUCCEEDED", "remote_revision": 6,
+                     "provider_receipt_sha256": "f" * 64},
+    }))
+    calls = []
+
+    async def result(identity, actual):
+        calls.append("result")
+        assert identity == operation_id and actual == plan
+        if not remote_found:
+            raise OperationRejected("synthetic_retained_result_unavailable")
+        return observed, {"synthetic_fixture_only": True}
+
+    service = service_with_provider(host_plan, SimpleNamespace(result=result))
+    if remote_found:
+        projected = await service.result(operation_id, plan)
+        assert projected["operation_id"] == operation_id
+        assert projected["original_operation_id"] == plan.recovery.original_operation_id
+        assert projected["synthetic_fixture_only"] is True
+    else:
+        with pytest.raises(OperationRejected) as failure:
+            await service.result(operation_id, plan)
+        assert failure.value.reason == "synthetic_retained_result_unavailable"
+    assert calls == ["result"]
+    assert store.path.read_bytes() == before

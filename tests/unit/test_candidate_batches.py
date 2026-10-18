@@ -376,3 +376,97 @@ def test_recovery_marker_blocks_manifest_without_resetting_legacy_data(candidate
         ), plan)
     store.require(child.operation_id, child.design_id,
                   "extraction-recovery:" + child.analysis_id, "c" * 64)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["status", "submit", "result"])
+@pytest.mark.parametrize("late_claim", [False, True])
+@pytest.mark.parametrize("owner", [
+    "direct", "candidate_parent", "candidate_child", "sweep_parent", "sweep_child",
+])
+async def test_matching_remote_recovery_cannot_adopt_foreign_local_claim(
+    candidate_native, monkeypatch, owner, late_claim, action,
+):
+    from cadence_mcp_bridge.operator_lifecycle import ProviderObservation
+
+    make_native, provider, request = candidate_native
+    native = make_native()
+    supervisor = CandidateBatchSupervisor(native)
+    plan = await supervisor.plan(request)
+    store = native.lifecycle.store
+    query = CandidateBatchQuery(batch_id=request.batch_id, expected_plan_sha256=plan.plan_sha256)
+    sweep_id = str(uuid4())
+    sweep_children = (str(uuid4()), str(uuid4()))
+    sweep_ids = iter(sweep_children)
+    monkeypatch.setattr("cadence_mcp_bridge.native_sweeps.uuid4", lambda: next(sweep_ids))
+    sweep_request = NativeSweepRequest(
+        template=NativeOperationRequest.model_validate_json(plan.plans[0].request.model_dump_json()),
+        variable_id=plan.varied_variables[0].logical_id, values=("1", "1.1"),
+    )
+    sweep_plan = NativeSweepPlan(request=sweep_request, points=plan.plans[:2])
+    operation_id = {
+        "direct": str(uuid4()),
+        "candidate_parent": request.batch_id,
+        "candidate_child": request.candidates[0].operation_id,
+        "sweep_parent": sweep_id,
+        "sweep_child": sweep_children[0],
+    }[owner]
+    snapshots = []
+
+    def reserve_foreign():
+        if owner == "direct":
+            store.admit(operation_id, "other-design", "other-analysis", "e" * 64)
+        elif owner.startswith("candidate"):
+            supervisor.store.admit(query, plan)
+        else:
+            NativeSweepStore(store).admit(NativeSweepQuery(
+                sweep_id=sweep_id, expected_plan_sha256=sweep_plan.plan_sha256,
+            ), sweep_plan)
+        snapshots.append(store.path.read_bytes())
+
+    recovery_grant = native.grant.model_copy(update={"actions": ("recover_extraction",)})
+    prepared = prepare_plan(native.context, recovery_grant, canonical_digest(recovery_grant),
+                            plan.plans[0].request, int(time.time()), action="recover_extraction")
+    recovery_plan = RecoveryPlan.model_validate_json(json.dumps({
+        **prepared.model_dump(mode="json"), "recovery": {
+            "original_operation_id": str(uuid4()), "original_plan_sha256": "a" * 64,
+            "original_tree_fingerprint": "b" * 64,
+        },
+    }))
+    observed = ProviderObservation.model_validate_json(json.dumps({
+        "operation_id": operation_id, "plan_sha256": recovery_plan.plan_sha256,
+        "resource_domain_sha256": recovery_plan.resource_domain_sha256,
+        "ledger_ref": recovery_plan.ledger_ref,
+        "progress": {"phase": "DISPATCHED", "remote_revision": 2,
+                     "provider_receipt_sha256": "f" * 64},
+    }))
+    calls = []
+
+    async def remote_read(identity, actual):
+        calls.append(action)
+        assert identity == operation_id and actual == recovery_plan
+        if late_claim:
+            reserve_foreign()
+        return observed
+
+    async def result(identity, actual):
+        return await remote_read(identity, actual), {"synthetic_fixture_only": True}
+
+    recovery = object.__new__(ExtractionRecoveryService)
+    recovery.native = SimpleNamespace(
+        context=native.context, grant=recovery_grant, grant_sha256=canonical_digest(recovery_grant),
+        lifecycle=native.lifecycle, current=lambda: None,
+        provider=SimpleNamespace(lookup=remote_read, result=result),
+    )
+    if not late_claim:
+        reserve_foreign()
+    before = (provider.attempts, provider.reserved, list(provider.calls))
+    with pytest.raises(OperationRejected) as failure:
+        if action == "result":
+            await recovery.result(operation_id, recovery_plan)
+        else:
+            await recovery.observe(operation_id, recovery_plan, submit=action == "submit")
+    assert failure.value.reason == "recovery_local_identity_occupied"
+    assert calls == ([action] if late_claim else [])
+    assert store.path.read_bytes() == snapshots[0]
+    assert before == (provider.attempts, provider.reserved, provider.calls)

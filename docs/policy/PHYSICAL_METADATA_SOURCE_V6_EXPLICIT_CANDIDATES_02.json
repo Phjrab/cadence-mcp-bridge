@@ -1,0 +1,26 @@
+{
+  "approval_anchor_commit": "4ba577fe141fddd44fd0a9dd28d6ab326776a130",
+  "authority_note": "Records the direct human source60 approval; this file is not an execution, deployment, collection, merge or publication grant. All prior consumption and policies are retained.",
+  "limit_policy": "docs/policy/PHYSICAL_METADATA_LIMIT_V4.json",
+  "limit_policy_canonical_sha256": "cc3b8954be93f3633da9327652ac18b2f25cfe64b74ddbd9d3c50f95dd4820b5",
+  "purpose": "EXPLICIT_CANDIDATE_RECOVERY_SHARED_IDENTITY_CORRECTION_SOFTWARE_ONLY_UNRELEASED",
+  "retained_source_changes": 40,
+  "schema_version": 6,
+  "source_lf_sha256": {
+    "src/cadence_mcp_bridge/__init__.py": "2666081d0a9823eb3ba16b035d2259a57ec9dc97b4eefae26750856046467e54",
+    "src/cadence_mcp_bridge/__main__.py": "137c8708a983c65126f4296438bc6d0cbac1d48e2868c623d3f6f651d78914f8",
+    "src/cadence_mcp_bridge/_physical_ancestor_repair.py": "0898e94c1eca10d415a241b1c52e755c573d9076d8604535b7059c91569ef6bf",
+    "src/cadence_mcp_bridge/_physical_metadata.py": "e06629aaf7e72d67fa2bd176794b2ebe4cdcb407aaba9b84ae6c01d427024a17",
+    "src/cadence_mcp_bridge/analysis_store.py": "10d991f2d47a266f2571226a2e43cb8c6223fe4a47160088260225b822ec7d19",
+    "src/cadence_mcp_bridge/candidate_batches.py": "fc2ddd7707b3b6f42855dc6a29e5a041f77cf5cbbc3b0f02d3d45c163073e1b6",
+    "src/cadence_mcp_bridge/candidate_cli.py": "1514c9d704f1cf3895d3ae684d6c37075992979aa7488905c9381bd5f8b52ffd",
+    "src/cadence_mcp_bridge/candidate_contracts.py": "7fde664cc2d1da1aa9f7a2e199d289d472386b4ed9434e7f3605afa3f63ce6ba",
+    "src/cadence_mcp_bridge/candidate_reports.py": "3d8b10c3b8ab439c0cd6135b20235fe0739762d46a698ab98af93d2195bc5b80",
+    "src/cadence_mcp_bridge/extraction_recovery.py": "6b6de9ff5a46cc34ff298ef92ec838d7c6dc31c6ef97ec928d3b0408ff23338a",
+    "src/cadence_mcp_bridge/native_service.py": "58e01b6223421902a30246a19c3f0517c828953945c93000c235c47cbbce6ff6",
+    "src/cadence_mcp_bridge/operator_lifecycle.py": "09dbb777531703125054f9f577d2817165932e8a73267c9afb86ea6d5682a1e8",
+    "src/cadence_mcp_bridge/physical_ancestor_repair.py": "039101a433a9c4377a21a87a7641155ef2f4977f3a042e576c1fbbbcc83e8bc9",
+    "src/cadence_mcp_bridge/physical_metadata.py": "781fdc6a02bb0adb2c98f662f1822e586932efe3cdf6632122c349afa0c77a6d"
+  },
+  "source_version": 43
+}

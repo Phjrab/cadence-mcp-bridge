@@ -58,6 +58,10 @@ fresh admission. Parent/child claims share the existing AnalysisStore transactio
 with direct operations and native Sweep. Extraction recovery uses a distinct
 durable admission marker before its remote request; a lost reply is lookup-only,
 including when lookup returns no result. No force-unlock/termination is added.
+Recovery status/result inspect the same local namespace before and after remote
+reads, so an existing remote result cannot adopt a direct operation or a batch/
+Sweep parent or child ID. An exact recovery marker still permits lookup after
+grant expiry/exhaustion; an absent remote result never causes a resend.
 
 ## Reporting and evidence limits
 
