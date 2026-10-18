@@ -1,3 +1,24 @@
+## Observer finalizer corrective increment, 2026-10-18
+
+Prior source47/headb9a3b5e passed hosted Windows4548/426 platform skips,
+Ruff/mypy127, security/dependency audit and exact installed synthetic package
+checks. Hosted Linux binding264 PASS/one FAIL/one Windows skip exposed only a
+fixture error expectation: native_copy_destination_trust correctly rejected
+a0750 private runtime directory. Local full4530 PASS/one FAIL/443 skips retained
+a collection-time expiry parameter that expired during its30-minute run; the
+product correctly rejected it. Resolve that test input at test execution without
+weakening expiry or accounting checks.
+
+Automated review found a real finalizer P2: child-created ocean.stdout/stderr
+could collide with exclusive evidence writes and skip protection observations.
+Fix and test close/publication collisions, preservation of existing evidence,
+all conservation observations and original child failures on the same draft.
+Source48 is additive to immutable47; no real VM/EDA/claim/reservation follows.
+Refresh exact final-source package, focused/static/security/hosted and review
+receipts before reporting the correction verified. Runtime/library-init closure
+and operational admission remain unfinished; observe stays disabled. No merge
+or publication authority forPR164; published2.1.0 remains unchanged.
+
 ## Local observer bootstrap and preservation increment, 2026-10-18
 
 Continue draft PR164 on the existing feature, separate from published2.1.0 and

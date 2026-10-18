@@ -495,7 +495,7 @@ class BindingObservationWorker(object):
             stream.close()
         self.copying.sync(os.path.dirname(filename))
 
-    def _stage_size(self, stage):
+    def _stage_size(self, stage, reserved_entries=0, reserved_bytes=0):
         logical, allocated, entries = 0, 0, [0]
         for parent, directories, names in os.walk(stage):
             if self.copying.path(parent) != parent:
@@ -510,7 +510,9 @@ class BindingObservationWorker(object):
                 entries[0] += 1
                 logical += info.st_size if stat.S_ISREG(info.st_mode) else 0
                 allocated += getattr(info, "st_blocks", (info.st_size + 511) // 512) * 512
-                if entries[0] > 256 or max(logical, allocated) > STAGE_BYTES:
+                if entries[0] + reserved_entries > 256 or (
+                    max(logical, allocated) + reserved_bytes > STAGE_BYTES
+                ):
                     raise ValueError("binding_observation_stage_capacity")
         return logical, allocated
 
@@ -658,6 +660,7 @@ class BindingObservationWorker(object):
                     "semantics": "SPENT_BEFORE_ONE_START_NO_RETRY"}))
         process, identity, null = None, None, None
         streams, data = [], [b"", b""]
+        body_failed = False
         try:
             session.check()
             null = open(os.devnull, "rb")
@@ -702,7 +705,11 @@ class BindingObservationWorker(object):
             self._stage_size(stage)
             return {"returncode": code, "frame": frame, "ocean": trust,
                     "qualified": False, "closure_trust": "NOT_ESTABLISHED"}
+        except BaseException:
+            body_failed = True
+            raise
         finally:
+            cleanup_failed = False
             try:
                 if process is not None:
                     if identity is None:
@@ -722,32 +729,79 @@ class BindingObservationWorker(object):
                         while self.processes.group_active(process, identity):
                             time.sleep(0.02)
                     process.wait()
+            except BaseException:
+                cleanup_failed = True
+                raise
             finally:
-                for stream in streams:
-                    stream.close()
-                if null is not None:
-                    null.close()
-                for index, name in enumerate(("stdout", "stderr")):
-                    self._write(stage + "/ocean." + name, data[index])
-                guard = {"schema_version": 1, "originals_preserved": False,
-                         "owned_copy_preserved": False, "ledger_preserved": False,
-                         "cds_lib_preserved": False, "qualified": False,
-                         "closure_trust": "NOT_ESTABLISHED"}
-                observations = (
-                    ("originals_preserved", lambda: self._snapshots() == original),
-                    ("owned_copy_preserved",
-                     lambda: self.copying.snapshot(copied_path) == owned_copy),
-                    ("ledger_preserved", lambda: self._ledger() == ledger),
-                    ("cds_lib_preserved", lambda: self._read(stage + "/cds.lib") == cds_raw),
+                self._finalize_evidence(
+                    stage, streams, null, data, original, copied_path, owned_copy,
+                    ledger, cds_raw, body_failed or cleanup_failed, cleanup_failed,
                 )
-                for name, check in observations:
-                    try:
-                        guard[name] = check()
-                    except (OSError, IOError, ValueError):
-                        guard[name] = False
-                self._write(stage + "/protection-check.json", canonical(guard))
-                if not all(guard[name] for name, check in observations):
-                    raise ValueError("binding_observation_post_process_protection_failed")
+
+    def _finalize_evidence(self, stage, streams, null, data, original, copied_path,
+                           owned_copy, ledger, cds_raw, failure_active, cleanup_failed):
+        # Every close/publication is independent: a child-created evidence name
+        # must not skip conservation or replace the original process failure.
+        errors = []
+        for index, stream in enumerate(streams + ([null] if null is not None else [])):
+            try:
+                stream.close()
+            except Exception:
+                errors.append("close_stream_" + str(index))
+        publications = {}
+        for index, name in enumerate(("stdout", "stderr")):
+            try:
+                self._write(stage + "/ocean." + name, data[index])
+                publications[name] = "PRIMARY"
+            except Exception:
+                errors.append("publish_" + name)
+                try:
+                    self._write(stage + "/ocean." + name + "-fallback", data[index])
+                    publications[name] = "FALLBACK"
+                except Exception:
+                    errors.append("publish_" + name + "_fallback")
+                    publications[name] = "FAILED"
+        guard = {"schema_version": 1, "originals_preserved": False,
+                 "owned_copy_preserved": False, "ledger_preserved": False,
+                 "cds_lib_preserved": False, "qualified": False,
+                 "closure_trust": "NOT_ESTABLISHED", "failure_active": failure_active,
+                 "cleanup_failed": cleanup_failed,
+                 "finalization_errors": errors, "stream_publication": publications,
+                 "protection_record": "PRIMARY"}
+        observations = (
+            ("originals_preserved", lambda: self._snapshots() == original),
+            ("owned_copy_preserved", lambda: self.copying.snapshot(copied_path) == owned_copy),
+            ("ledger_preserved", lambda: self._ledger() == ledger),
+            ("cds_lib_preserved", lambda: self._read(stage + "/cds.lib") == cds_raw),
+        )
+        for name, check in observations:
+            try:
+                guard[name] = check()
+            except Exception:
+                guard[name] = False
+        try:
+            # At most the primary and one fallback guard remain to publish.
+            # Reserve their bounded contents and directory allocation before
+            # serializing status; a late size failure must not disappear from it.
+            self._stage_size(stage, 2, 2 * FRAME_BYTES + 8192)
+        except Exception:
+            errors.append("final_evidence_stage_bound")
+        try:
+            self._write(stage + "/protection-check.json", canonical(guard))
+        except Exception:
+            errors.append("publish_protection")
+            guard["protection_record"] = "FALLBACK"
+            try:
+                # Exactly one fixed, exclusive fallback. Never overwrite a
+                # child-created record or search for another retry filename.
+                self._write(stage + "/protection-check-fallback.json", canonical(guard))
+            except Exception:
+                errors.append("publish_protection_fallback")
+        if not failure_active:
+            if not all(guard[name] for name, check in observations):
+                raise ValueError("binding_observation_post_process_protection_failed")
+            if errors:
+                raise ValueError("binding_observation_evidence_publication_failed")
 
     def _read(self, filename):
         info = os.lstat(filename)

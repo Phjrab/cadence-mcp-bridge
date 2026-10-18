@@ -425,7 +425,9 @@ def test_private_environment_excludes_inherited_loader_and_init_inputs(
                 CDS_LIC_FILE="synthetic-private-route",
             )
         else:
-            with pytest.raises(ValueError, match="runtime_directory|license_environment_bound"):
+            with pytest.raises(
+                ValueError, match="runtime_directory|license_environment_bound|destination_trust",
+            ):
                 worker._environment(stage)
 
 
@@ -468,7 +470,8 @@ def test_private_child_dependency_drift_is_retained_even_on_failure(
     with worker.accounting.ReservationSession(worker.root) as session:
         stage, _, _ = worker._stage(scan, session)
         ledger = worker._ledger()
-        with pytest.raises(ValueError, match="post_process_protection_failed"):
+        reason = "registered_dependency_drift" if exit_code == 0 else "program_failed"
+        with pytest.raises(ValueError, match=reason):
             worker._program(stage, session, scan)
         guard = json.loads((Path(stage) / "protection-check.json").read_bytes())
         assert guard["originals_preserved"] is False
@@ -476,6 +479,236 @@ def test_private_child_dependency_drift_is_retained_even_on_failure(
         assert changed.read_bytes() == b"synthetic drift"
         assert worker._ledger() == ledger
         assert (Path(stage) / "ocean-start-claimed.json").is_file()
+        assert (Path(stage) / "ocean.stderr").is_file()
+        with pytest.raises(ValueError, match="process_attempt_spent"):
+            worker._program(stage, session, scan)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual synthetic child evidence collisions")
+@pytest.mark.parametrize("collision", [
+    "stdout", "stderr", "both-stdout", "both-stderr", "protection", "both-protection",
+])
+@pytest.mark.parametrize("outcome", ["success", "nonzero", "drift"])
+def test_child_evidence_collisions_never_skip_guards_or_replace_primary_failure(
+    selected, controlled_inventory, monkeypatch, collision, outcome,
+):
+    import json
+
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    names = {
+        "stdout": ["ocean.stdout"], "stderr": ["ocean.stderr"],
+        "both-stdout": ["ocean.stdout", "ocean.stdout-fallback"],
+        "both-stderr": ["ocean.stderr", "ocean.stderr-fallback"],
+        "protection": ["protection-check.json"],
+        "both-protection": ["protection-check.json", "protection-check-fallback.json"],
+    }[collision]
+    changed = Path(worker.route["libraries"][0]["path"]) / "libInit.il"
+    executable = Path(worker.profile["tools"]["ocean"]["path"])
+    body = [f"open({name!r},'wb').write(b'child-owned evidence')" for name in names]
+    body.extend(["import os", "os.write(1,b'captured stdout')", "os.write(2,b'captured stderr')"])
+    body.append("open('binding-frame.txt','wb').write(b'synthetic complete frame\\n')")
+    if outcome == "drift":
+        body.append(f"open({str(changed)!r},'wb').write(b'synthetic protected drift')")
+    body.append(f"raise SystemExit({3 if outcome == 'nonzero' else 0})")
+    executable.write_text(f"#!{sys.executable}\n" + "\n".join(body) + "\n", encoding="utf-8")
+    executable.chmod(0o700)
+    worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        copied_path = stage + "/library/" + scan["cell"]
+        ledger = worker._ledger()
+        checked = dict(original=0, copied=0, ledger=0, config=0)
+        real_snapshots, real_snapshot = worker._snapshots, worker.copying.snapshot
+        real_ledger, real_read = worker._ledger, worker._read
+
+        def snapshots():
+            checked["original"] += 1
+            return real_snapshots()
+
+        def snapshot(path):
+            if path == copied_path:
+                checked["copied"] += 1
+            return real_snapshot(path)
+
+        def current_ledger():
+            checked["ledger"] += 1
+            return real_ledger()
+
+        def read(path):
+            if path == stage + "/cds.lib":
+                checked["config"] += 1
+            return real_read(path)
+
+        monkeypatch.setattr(worker, "_snapshots", snapshots)
+        monkeypatch.setattr(worker.copying, "snapshot", snapshot)
+        monkeypatch.setattr(worker, "_ledger", current_ledger)
+        monkeypatch.setattr(worker, "_read", read)
+        reason = {
+            "success": "evidence_publication_failed", "nonzero": "program_failed",
+            "drift": "registered_dependency_drift",
+        }[outcome]
+        with pytest.raises(ValueError, match=reason):
+            worker._program(stage, session, scan)
+        # Prelaunch plus finalization must observe every protected category,
+        # including when neither protection receipt can be published.
+        assert all(count >= 2 for count in checked.values())
+        assert all((Path(stage) / name).read_bytes() == b"child-owned evidence" for name in names)
+        if collision != "both-protection":
+            guard_name = ("protection-check-fallback.json" if collision == "protection"
+                          else "protection-check.json")
+            guard = json.loads((Path(stage) / guard_name).read_bytes())
+            assert guard["originals_preserved"] is (outcome != "drift")
+            assert guard["owned_copy_preserved"] is guard["ledger_preserved"] is True
+            assert guard["cds_lib_preserved"] is True
+            assert guard["failure_active"] is (outcome != "success")
+            stream_name = collision.removeprefix("both-")
+            if collision.startswith("both-"):
+                assert guard["finalization_errors"] == [
+                    "publish_" + stream_name, "publish_" + stream_name + "_fallback",
+                ]
+                assert guard["stream_publication"][stream_name] == "FAILED"
+            elif collision == "protection":
+                assert guard["finalization_errors"] == ["publish_protection"]
+                assert guard["stream_publication"] == dict(stdout="PRIMARY", stderr="PRIMARY")
+            else:
+                assert guard["finalization_errors"] == ["publish_" + collision]
+                assert guard["stream_publication"][collision] == "FALLBACK"
+                assert (Path(stage) / ("ocean." + collision + "-fallback")).read_bytes() == (
+                    "captured " + collision
+                ).encode()
+            assert guard["protection_record"] == (
+                "FALLBACK" if collision == "protection" else "PRIMARY"
+            )
+        assert real_ledger() == ledger
+        assert (Path(stage) / "ocean-start-claimed.json").is_file()
+        with pytest.raises(ValueError, match="process_attempt_spent"):
+            worker._program(stage, session, scan)
+
+
+@pytest.mark.parametrize("case", [
+    "stdout", "stderr", "both-stdout", "both-stderr", "protection", "both-protection",
+    "close", "capacity",
+])
+@pytest.mark.parametrize("failure_active", [False, True])
+def test_finalization_file_collisions_and_close_faults_are_independent(
+    selected, tmp_path, monkeypatch, case, failure_active,
+):
+    import json
+
+    worker, _, _ = selected
+    stage = tmp_path / "finalization"
+    stage.mkdir(mode=0o700)
+    names = {
+        "stdout": ["ocean.stdout"], "stderr": ["ocean.stderr"],
+        "both-stdout": ["ocean.stdout", "ocean.stdout-fallback"],
+        "both-stderr": ["ocean.stderr", "ocean.stderr-fallback"],
+        "protection": ["protection-check.json"],
+        "both-protection": ["protection-check.json", "protection-check-fallback.json"],
+    }.get(case, [])
+    for name in names:
+        (stage / name).write_bytes(b"retained collision")
+    if case == "capacity":
+        monkeypatch.setattr(observer, "STAGE_BYTES", 2 * observer.FRAME_BYTES + 8192 - 1)
+    checked = []
+
+    def record(name, value):
+        checked.append(name)
+        return value
+
+    monkeypatch.setattr(worker, "_snapshots", lambda: record("original", "original"))
+    monkeypatch.setattr(worker.copying, "snapshot", lambda path: record("copy", "copy"))
+    monkeypatch.setattr(worker, "_ledger", lambda: record("ledger", "ledger"))
+    monkeypatch.setattr(worker, "_read", lambda path: record("config", b"config"))
+
+    class CloseFault:
+        def close(self):
+            raise OSError("synthetic close fault")
+
+    def finish():
+        worker._finalize_evidence(
+            str(stage), [CloseFault()] if case == "close" else [], None,
+            [b"captured stdout", b"captured stderr"], "original", "synthetic-copy", "copy",
+            "ledger", b"config", failure_active, False,
+        )
+
+    if failure_active:
+        with pytest.raises(ValueError, match="original_child_failure"):
+            try:
+                raise ValueError("original_child_failure")
+            finally:
+                finish()
+    else:
+        with pytest.raises(ValueError, match="evidence_publication_failed"):
+            finish()
+    assert checked == ["original", "copy", "ledger", "config"]
+    assert all((stage / name).read_bytes() == b"retained collision" for name in names)
+    if case != "both-protection":
+        guard_name = ("protection-check-fallback.json" if case == "protection"
+                      else "protection-check.json")
+        guard = json.loads((stage / guard_name).read_bytes())
+        assert all(guard[name] for name in (
+            "originals_preserved", "owned_copy_preserved", "ledger_preserved", "cds_lib_preserved",
+        ))
+        assert guard["failure_active"] is failure_active
+        assert guard["cleanup_failed"] is False
+        if case == "capacity":
+            assert guard["finalization_errors"] == ["final_evidence_stage_bound"]
+        elif case == "close":
+            assert guard["finalization_errors"] == ["close_stream_0"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual synthetic child stream-close failure")
+@pytest.mark.parametrize("exit_code", [0, 3])
+def test_stream_close_failure_keeps_conservation_and_primary_child_failure(
+    selected, controlled_inventory, monkeypatch, exit_code,
+):
+    import json
+
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    executable = Path(worker.profile["tools"]["ocean"]["path"])
+    executable.write_text(
+        f"#!{sys.executable}\nopen('binding-frame.txt','wb').write(b'synthetic frame')\n"
+        f"raise SystemExit({exit_code})\n", encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    real_popen = observer.subprocess.Popen
+
+    class CloseFault:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def fileno(self):
+            return self.stream.fileno()
+
+        def close(self):
+            self.stream.close()
+            raise OSError("synthetic close failure")
+
+    def launch(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        process.stdout = CloseFault(process.stdout)
+        return process
+
+    monkeypatch.setattr(observer.subprocess, "Popen", launch)
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        reason = "evidence_publication_failed" if exit_code == 0 else "program_failed"
+        with pytest.raises(ValueError, match=reason):
+            worker._program(stage, session, scan)
+        guard = json.loads((Path(stage) / "protection-check.json").read_bytes())
+        assert all(guard[name] for name in (
+            "originals_preserved", "owned_copy_preserved", "ledger_preserved", "cds_lib_preserved",
+        ))
+        assert guard["finalization_errors"] == ["close_stream_0"]
+        assert guard["failure_active"] is (exit_code != 0)
+        assert (Path(stage) / "ocean.stdout").is_file()
         assert (Path(stage) / "ocean.stderr").is_file()
         with pytest.raises(ValueError, match="process_attempt_spent"):
             worker._program(stage, session, scan)

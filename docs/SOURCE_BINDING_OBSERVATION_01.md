@@ -1,5 +1,36 @@
 # Source binding preparation — unqualified development components
 
+## Finalizer collision correction, 2026-10-18
+
+Source48 preserves all source47 receipts and corrects its automated P2 review:
+an OCEAN/library-init child could create a stdout/stderr name before exclusive
+publication and thereby skip protection observations. Each stream close/write
+is now independent; all four conservation checks run despite ordinary evidence
+errors. Primary artifacts are never overwritten; each stream and protection
+record has one fixed exclusive fallback, without suffix search or retry start.
+Original child failures remain primary over close/publication failures; existing
+process termination errors retain their fail-closed propagation and are recorded
+as cleanup uncertainty. Successful bodies with evidence errors fail explicitly.
+Space for two remaining bounded guard leaves is reserved during final stage
+accounting before serialization, retaining the8MiB stage limit and failure status.
+
+Regression coverage includes portable collision/close/capacity cases plus actual
+POSIX synthetic child success/nonzero/protection-drift collisions and close
+faults. No actual OCEAN/VM execution is added. The source47 Linux failure was a
+fixture expecting a narrower error string than the correct underlying permission
+denial; that expectation is corrected without changing the permission guard.
+Its local full-suite failure came from a collection-time grant expiry expiring
+during a30-minute run. That one test now derives the changed expiry from its
+fresh grant at test execution; relevant accounting tests pass71/five Windows
+platform skips. Product expiry/drift/accounting remains unchanged.
+
+Source47/headb9a3b5e's hosted Windows4548 PASS/426 platform skips, installed
+package/security and local focused241 PASS/25 skips remain historical results;
+its Linux264 PASS/one failure/one skip and local4530 PASS/one failure/443 skips
+are preserved. Source48 needs its own exact-head hosted/package/review evidence.
+The operational trust/admission gaps below remain; observe is always disabled.
+DraftPR164 still has no merge/publication authority. New VM/EDA/claims/reservations0.
+
 ## Local fixed-resource construction increment, 2026-10-18
 
 Source47 adds an internal local factory accepting four bounded canonical ASCII

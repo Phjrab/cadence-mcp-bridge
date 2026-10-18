@@ -286,7 +286,7 @@ def test_conflicting_replay_is_preserved(root, change):
     [
         {"max_attempts": 9},
         {"max_reserved_bytes": 9 * AMOUNT},
-        {"expires_at": int(time.time()) + 1200},
+        "expires-at-plus-600",
         {"runner_sha256": "e" * 64},
         {"resource_domain_sha256": "e" * 64},
     ],
@@ -295,6 +295,10 @@ def test_same_grant_policy_drift_cannot_reset_usage(root, change):
     permit = binding(root)
     reserve(root, job(root), permit)
     before = snapshot(root)
+    if change == "expires-at-plus-600":
+        # Resolve against this test's fresh grant, not the module collection time:
+        # a long full suite must still exercise binding drift rather than expiry.
+        change = {"expires_at": permit["expires_at"] + 600}
     with pytest.raises(ValueError, match="grant_binding_drift|identity_manifest_binding"):
         reserve(root, job(root), {**permit, **change})
     assert snapshot(root) == before

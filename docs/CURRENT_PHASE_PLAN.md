@@ -1,3 +1,20 @@
+## Finalizer collision correction, 2026-10-18
+
+Continue existing draftPR164 with one additive source48 checkpoint. Preserve
+source47/headb9a3b5e's Windows4548-pass/package/security receipts and its Linux
+264-pass/one-error-expectation failure. Correct that fixture only; production
+owner checks remain strict. Preserve local full4530-pass/one expired-test-input
+failure and make the changed grant expiry originate at test execution, never
+disable expiry or reset consumption.
+
+Fix automated P2 PRRT_kwDOUGi5886to-mG: child-created log/protection filenames
+must not skip conservation, overwrite existing evidence or mask primary child
+failure. Refresh meaningful owned-process/collision tests, exact package and
+hosted/review gates. Observe remains unconditionally disabled; no VM contact,
+deployment, EDA-backed observation, claim/reservation or candidate trial is
+authorized in this software continuation. Runtime closure/current evidence and
+reviewed finite operational admission remain unfinished implementation gates.
+
 ## Local observer construction and preservation, 2026-10-18
 
 Finish the software-only source47 increment on existing draft PR164: strict
