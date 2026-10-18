@@ -590,7 +590,7 @@ def test_child_evidence_collisions_never_skip_guards_or_replace_primary_failure(
 
 @pytest.mark.parametrize("case", [
     "stdout", "stderr", "both-stdout", "both-stderr", "protection", "both-protection",
-    "close", "capacity",
+    "close",
 ])
 @pytest.mark.parametrize("failure_active", [False, True])
 def test_finalization_file_collisions_and_close_faults_are_independent(
@@ -610,8 +610,6 @@ def test_finalization_file_collisions_and_close_faults_are_independent(
     }.get(case, [])
     for name in names:
         (stage / name).write_bytes(b"retained collision")
-    if case == "capacity":
-        monkeypatch.setattr(observer, "STAGE_BYTES", 2 * observer.FRAME_BYTES + 8192 - 1)
     checked = []
 
     def record(name, value):
@@ -654,10 +652,285 @@ def test_finalization_file_collisions_and_close_faults_are_independent(
         ))
         assert guard["failure_active"] is failure_active
         assert guard["cleanup_failed"] is False
-        if case == "capacity":
-            assert guard["finalization_errors"] == ["final_evidence_stage_bound"]
-        elif case == "close":
+        if case == "close":
             assert guard["finalization_errors"] == ["close_stream_0"]
+
+
+@pytest.mark.parametrize("bound", ["logical", "allocated", "entries", "directory", "walk"])
+@pytest.mark.parametrize("failure_active", [False, True])
+def test_full_stage_skips_every_evidence_write_but_attempts_all_conservation_checks(
+    selected, tmp_path, monkeypatch, bound, failure_active,
+):
+    worker, _, _ = selected
+    stage = tmp_path / "full-finalization"
+    stage.mkdir(mode=0o700)
+    retained = stage / "retained-child-file"
+    retained.write_bytes(b"retained child bytes")
+    if bound == "entries":
+        for index in range(254):
+            (stage / f"retained-{index:03d}").write_bytes(b"")
+    elif bound in ("logical", "allocated"):
+        real_lstat = observer.os.lstat
+
+        def observed_lstat(path, *args, **kwargs):
+            info = real_lstat(path, *args, **kwargs)
+            if os.path.normpath(path) == str(retained):
+                # Synthetic metadata isolates the two independent size axes;
+                # actual sparse-file behavior is exercised by the POSIX child.
+                values = {name: getattr(info, name) for name in dir(info)
+                          if name.startswith("st_")}
+                values.update(st_size=observer.STAGE_BYTES if bound == "logical" else 1,
+                              st_blocks=0 if bound == "logical" else observer.STAGE_BYTES // 512)
+                return SimpleNamespace(**values)
+            return info
+
+        monkeypatch.setattr(observer.os, "lstat", observed_lstat)
+    elif bound == "directory":
+        logical, allocated = worker._stage_size(str(stage))
+        unit = max(512, getattr(stage.stat(), "st_blksize", 4096))
+        if hasattr(os, "statvfs"):
+            fs = os.statvfs(stage)
+            unit = max(unit, fs.f_bsize, fs.f_frsize)
+        # Content allocation fits, but the directory-growth allowance does not.
+        monkeypatch.setattr(observer, "STAGE_BYTES", max(logical, allocated) + unit)
+    else:
+        def unavailable_walk(*args, **kwargs):
+            kwargs["onerror"](OSError(errno.EACCES, "synthetic unreadable subtree"))
+            return iter(())
+
+        monkeypatch.setattr(observer.os, "walk", unavailable_walk)
+    before = {p.name: p.read_bytes() for p in stage.iterdir()}
+    checked, closed = [], []
+
+    def record(name, value):
+        checked.append(name)
+        return value
+
+    class Closed:
+        def close(self):
+            closed.append(True)
+
+    monkeypatch.setattr(worker, "_snapshots", lambda: record("original", "original"))
+    monkeypatch.setattr(worker.copying, "snapshot", lambda path: record("copy", "copy"))
+    monkeypatch.setattr(worker, "_ledger", lambda: record("ledger", "ledger"))
+    monkeypatch.setattr(worker, "_read", lambda path: record("config", b"config"))
+    monkeypatch.setattr(worker, "_write", lambda *args: pytest.fail("unbudgeted evidence write"))
+
+    def finish():
+        worker._finalize_evidence(
+            str(stage), [Closed()], Closed(), [b"captured stdout", b"captured stderr"],
+            "original", "synthetic-copy", "copy", "ledger", b"config", failure_active, False,
+        )
+
+    if failure_active:
+        with pytest.raises(ValueError, match="original_child_failure"):
+            try:
+                raise ValueError("original_child_failure")
+            finally:
+                finish()
+    else:
+        with pytest.raises(ValueError, match="evidence_publication_failed"):
+            finish()
+    assert checked == ["original", "copy", "ledger", "config"]
+    assert closed == [True, True]
+    assert {p.name: p.read_bytes() for p in stage.iterdir()} == before
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual unreadable owned directory")
+@pytest.mark.parametrize("failure_active", [False, True])
+def test_unreadable_child_subtree_denies_evidence_growth_and_preserves_all_guards(
+    selected, tmp_path, monkeypatch, failure_active,
+):
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    worker, _, _ = selected
+    stage = tmp_path / "unreadable-finalization"
+    stage.mkdir(mode=0o700)
+    hidden = stage / "hidden-child-directory"
+    hidden.mkdir(mode=0o700)
+    retained = hidden / "retained-child-file"
+    content = b"retained child content" * 1024
+    retained.write_bytes(content)
+    retained_info = retained.stat()
+    hidden.chmod(0)
+    hidden_info = hidden.stat()
+    checked, writes = [], []
+
+    def record(name, value):
+        checked.append(name)
+        return value
+
+    monkeypatch.setattr(worker, "_snapshots", lambda: record("original", "original"))
+    monkeypatch.setattr(worker.copying, "snapshot", lambda path: record("copy", "copy"))
+    monkeypatch.setattr(worker, "_ledger", lambda: record("ledger", "ledger"))
+    monkeypatch.setattr(worker, "_read", lambda path: record("config", b"config"))
+    monkeypatch.setattr(worker, "_write", lambda *args: writes.append(args))
+
+    def finish():
+        worker._finalize_evidence(
+            str(stage), [], None, [b"captured stdout", b"captured stderr"],
+            "original", "synthetic-copy", "copy", "ledger", b"config", failure_active, False,
+        )
+
+    try:
+        if failure_active:
+            with pytest.raises(ValueError, match="original_child_failure"):
+                try:
+                    raise ValueError("original_child_failure")
+                finally:
+                    finish()
+        else:
+            with pytest.raises(ValueError, match="evidence_publication_failed"):
+                finish()
+        assert checked == ["original", "copy", "ledger", "config"]
+        assert writes == []
+        assert list(stage.iterdir()) == [hidden]
+        assert hidden.stat() == hidden_info
+    finally:
+        # Disposable fixture restoration only; the worker never repairs or
+        # deletes the child's unreadable directory to make an observation pass.
+        hidden.chmod(0o700)
+    assert retained.stat() == retained_info
+    assert retained.read_bytes() == content
+
+
+@pytest.mark.parametrize("publication", ["stdout", "protection"])
+@pytest.mark.parametrize("failure_active", [False, True])
+def test_partial_primary_is_preserved_and_fallback_rechecks_remaining_capacity(
+    selected, tmp_path, monkeypatch, publication, failure_active,
+):
+    import json
+
+    worker, _, _ = selected
+    stage = tmp_path / "partial-finalization"
+    stage.mkdir(mode=0o700)
+    unit = max(512, getattr(stage.stat(), "st_blksize", 4096))
+    if hasattr(os, "statvfs"):
+        fs = os.statvfs(stage)
+        unit = max(unit, fs.f_bsize, fs.f_frsize)
+    logical, allocated = worker._stage_size(str(stage))
+    data = [b"x" * observer.FRAME_BYTES, b""] if publication == "stdout" else [b"", b""]
+    content_blocks = (len(data[0]) + unit - 1) // unit if publication == "stdout" else 1
+    limit = max(logical, allocated) + (content_blocks + 2) * unit
+    monkeypatch.setattr(observer, "STAGE_BYTES", limit)
+    checked, writes = [], []
+    real_write = worker._write
+    leaf = "ocean.stdout" if publication == "stdout" else "protection-check.json"
+    partial = []
+
+    def write(path, raw):
+        writes.append(Path(path).name)
+        if Path(path).name == leaf:
+            partial.append(raw[:max(1, len(raw) // 2)])
+            real_write(path, partial[-1])
+            raise OSError("synthetic partial publication")
+        real_write(path, raw)
+
+    def record(name, value):
+        checked.append(name)
+        return value
+
+    monkeypatch.setattr(worker, "_write", write)
+    monkeypatch.setattr(worker, "_snapshots", lambda: record("original", "original"))
+    monkeypatch.setattr(worker.copying, "snapshot", lambda path: record("copy", "copy"))
+    monkeypatch.setattr(worker, "_ledger", lambda: record("ledger", "ledger"))
+    monkeypatch.setattr(worker, "_read", lambda path: record("config", b"config"))
+
+    def finish():
+        worker._finalize_evidence(
+            str(stage), [], None, data, "original", "synthetic-copy", "copy", "ledger",
+            b"config", failure_active, False,
+        )
+
+    if failure_active:
+        with pytest.raises(ValueError, match="original_child_failure"):
+            try:
+                raise ValueError("original_child_failure")
+            finally:
+                finish()
+    else:
+        with pytest.raises(ValueError, match="evidence_publication_failed"):
+            finish()
+    assert checked == ["original", "copy", "ledger", "config"]
+    assert (stage / leaf).read_bytes() == partial[0]
+    assert not (stage / ("ocean.stdout-fallback" if publication == "stdout"
+                         else "protection-check-fallback.json")).exists()
+    assert not any(name.endswith("fallback") or name.endswith("fallback.json") for name in writes)
+    assert max(worker._stage_size(str(stage))) <= limit
+    if publication == "stdout":
+        guard = json.loads((stage / "protection-check.json").read_bytes())
+        assert guard["stream_publication"]["stdout"] == "FAILED"
+        assert guard["finalization_errors"] == ["publish_stdout", "publish_stdout_fallback"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual sparse child stage and allocated blocks")
+@pytest.mark.parametrize("exit_code", [0, 3])
+def test_sparse_child_near_logical_bound_prevents_unbudgeted_final_evidence(
+    selected, controlled_inventory, monkeypatch, exit_code,
+):
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    executable = Path(worker.profile["tools"]["ocean"]["path"])
+    executable.write_text(
+        f"#!{sys.executable}\nimport os\n"
+        "open('binding-frame.txt','wb').write(b'synthetic frame')\n"
+        "os.write(1,b'captured stdout')\nos.write(2,b'captured stderr')\n"
+        "size=sum(os.lstat(os.path.join(p,n)).st_size for p,ds,ns in os.walk('.') for n in ns)\n"
+        f"open('retained-sparse','wb').truncate({observer.STAGE_BYTES}-size-1)\n"
+        f"raise SystemExit({exit_code})\n", encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        writes, checked = [], []
+        real_write = worker._write
+        real_snapshots, real_snapshot = worker._snapshots, worker.copying.snapshot
+        real_ledger, real_read = worker._ledger, worker._read
+        copied_path = stage + "/library/" + scan["cell"]
+
+        def write(path, raw):
+            writes.append(Path(path).name)
+            return real_write(path, raw)
+
+        def snapshots():
+            checked.append("original")
+            return real_snapshots()
+
+        def snapshot(path):
+            if path == copied_path:
+                checked.append("copy")
+            return real_snapshot(path)
+
+        def ledger():
+            checked.append("ledger")
+            return real_ledger()
+
+        def read(path):
+            if path == stage + "/cds.lib":
+                checked.append("config")
+            return real_read(path)
+
+        monkeypatch.setattr(worker, "_write", write)
+        monkeypatch.setattr(worker, "_snapshots", snapshots)
+        monkeypatch.setattr(worker.copying, "snapshot", snapshot)
+        monkeypatch.setattr(worker, "_ledger", ledger)
+        monkeypatch.setattr(worker, "_read", read)
+        reason = "evidence_publication_failed" if exit_code == 0 else "program_failed"
+        with pytest.raises(ValueError, match=reason):
+            worker._program(stage, session, scan)
+        assert writes == ["ocean-start-claimed.json"]
+        assert all(checked.count(name) >= 2 for name in ("original", "copy", "ledger", "config"))
+        sparse = Path(stage) / "retained-sparse"
+        logical, allocated = worker._stage_size(stage)
+        assert sparse.stat().st_size > observer.STAGE_BYTES // 2
+        assert allocated < logical < observer.STAGE_BYTES
+        assert not (Path(stage) / "protection-check.json").exists()
+        assert not (Path(stage) / "protection-check-fallback.json").exists()
+        with pytest.raises(ValueError, match="process_attempt_spent"):
+            worker._program(stage, session, scan)
 
 
 @pytest.mark.skipif(os.name != "posix", reason="actual synthetic child stream-close failure")

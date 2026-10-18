@@ -1,3 +1,22 @@
+## Pre-publication stage-capacity correction, 2026-10-18
+
+Continue current draftPR164 with additive source49/checkpoint05. Automated
+review4307185677 ofa753cc3 found stream publication preceded its capacity guard.
+Check stage logical/allocated bytes and entry headroom before each exclusive
+primary/fallback/guard write. Recheck after partial writes; never exceed the
+bound merely to publish a failure receipt. Still close all streams and run all
+four preservation observations. Existing/partial child evidence and original
+body failures remain intact; successful bodies cannot hide evidence failure.
+Reject stage traversal errors explicitly: an unreadable child directory cannot
+be silently omitted from the byte/entry inventory or treated as spare capacity.
+
+Retain source48's exact Linux PASS and its open capacity finding. Refresh focused
+portable/POSIX regressions, package/static/security/contracts, final hosted checks
+and independent review for the corrected head. Source capacity remains software
+only. No VM/SSH/deployment/EDA/claim/reservation/candidate trial, PR164 merge or
+publication follows. Runtime/init trust and operational admission remain actual
+implementation gaps; do not present a premature observation decision as ready.
+
 ## Finalizer collision correction, 2026-10-18
 
 Continue existing draftPR164 with one additive source48 checkpoint. Preserve

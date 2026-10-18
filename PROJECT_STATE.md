@@ -1,3 +1,31 @@
+## Observer pre-publication capacity correction, 2026-10-18
+
+Source48/heada753cc3 passed the exact hosted Linux job117686214865, including
+301 binding component tests/one Windows-only skip. Its automated review found
+P2 finding4307185677: checking capacity only after publishing stdout/stderr
+could itself exceed the8MiB stage bound. Retain this finding and every prior
+source-specific result. An additive source49 correction checks capacity
+before each primary/fallback/guard publication, including possible partial-file
+growth, and skips unbudgeted writes. Close and all four conservation observations
+still run; existing artifacts and the original body failure are preserved.
+Independent review also found the stage walker silently skipped unreadable
+subdirectories. The same correction rejects traversal errors before any
+evidence publication, with an ordinary-user POSIX denial regression for CI.
+
+Local focused269 PASS/49 Windows platform skips; one pytest-cache permission
+warning does not change test results. Ruff/mypy127 and85-tool/22-legacy contract
+checks PASS. Independent final static review found no further P1/P2; this is
+agent review, not formal GitHub APPROVED. Exact hosted/package/security and
+automated review still need refreshed receipts. Additive checkpoint05 retains
+49/60 source changes and every prior immutable policy/checkpoint.
+
+This remains draftPR164 software work with observe unconditionally disabled.
+Actual runtime/library-init trust and immutable operational bootstrap/admission
+are unfinished; neither approval nor global budget capacity fills those gaps.
+No current VM contact, deployment, EDA start, simulation, extraction, real claim,
+reservation, merge or publication is performed. New exact-source validation is
+required; earlier checkpoints/policies/journals/failed evidence remain unchanged.
+
 ## Observer finalizer corrective increment, 2026-10-18
 
 Prior source47/headb9a3b5e passed hosted Windows4548/426 platform skips,

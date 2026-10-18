@@ -495,9 +495,35 @@ class BindingObservationWorker(object):
             stream.close()
         self.copying.sync(os.path.dirname(filename))
 
+    def _write_evidence(self, stage, leaf, raw):
+        # Reserve before every exclusive publication, including a fallback after
+        # a partial write. Existing child evidence is never a replaceable leaf.
+        if len(raw) > FRAME_BYTES:
+            raise ValueError("binding_observation_record_bound")
+        filename = stage + "/" + leaf
+        if os.path.lexists(filename):
+            raise ValueError("binding_observation_evidence_leaf_exists")
+        self.copying.owned_parent(stage)
+        unit = max(512, getattr(os.lstat(stage), "st_blksize", 4096))
+        if hasattr(os, "statvfs"):
+            fs = os.statvfs(stage)
+            unit = max(unit, fs.f_bsize, fs.f_frsize)
+        # Charge rounded content allocation and two directory blocks, rather
+        # than treating sparse logical size or an empty leaf as free capacity.
+        # This is a bounded local precheck, not atomic exclusion of another
+        # same-UID writer changing the filesystem after the observation.
+        reservation = ((len(raw) + unit - 1) // unit + 2) * unit
+        self._stage_size(stage, 1, reservation)
+        self._write(filename, raw)
+
     def _stage_size(self, stage, reserved_entries=0, reserved_bytes=0):
         logical, allocated, entries = 0, 0, [0]
-        for parent, directories, names in os.walk(stage):
+
+        def walk_error(error):
+            # An unreadable child directory is unknown consumption, never zero.
+            raise error
+
+        for parent, directories, names in os.walk(stage, onerror=walk_error):
             if self.copying.path(parent) != parent:
                 raise ValueError("binding_observation_stage_path")
             for name in [""] + directories + names:
@@ -751,12 +777,12 @@ class BindingObservationWorker(object):
         publications = {}
         for index, name in enumerate(("stdout", "stderr")):
             try:
-                self._write(stage + "/ocean." + name, data[index])
+                self._write_evidence(stage, "ocean." + name, data[index])
                 publications[name] = "PRIMARY"
             except Exception:
                 errors.append("publish_" + name)
                 try:
-                    self._write(stage + "/ocean." + name + "-fallback", data[index])
+                    self._write_evidence(stage, "ocean." + name + "-fallback", data[index])
                     publications[name] = "FALLBACK"
                 except Exception:
                     errors.append("publish_" + name + "_fallback")
@@ -780,21 +806,14 @@ class BindingObservationWorker(object):
             except Exception:
                 guard[name] = False
         try:
-            # At most the primary and one fallback guard remain to publish.
-            # Reserve their bounded contents and directory allocation before
-            # serializing status; a late size failure must not disappear from it.
-            self._stage_size(stage, 2, 2 * FRAME_BYTES + 8192)
-        except Exception:
-            errors.append("final_evidence_stage_bound")
-        try:
-            self._write(stage + "/protection-check.json", canonical(guard))
+            self._write_evidence(stage, "protection-check.json", canonical(guard))
         except Exception:
             errors.append("publish_protection")
             guard["protection_record"] = "FALLBACK"
             try:
                 # Exactly one fixed, exclusive fallback. Never overwrite a
                 # child-created record or search for another retry filename.
-                self._write(stage + "/protection-check-fallback.json", canonical(guard))
+                self._write_evidence(stage, "protection-check-fallback.json", canonical(guard))
             except Exception:
                 errors.append("publish_protection_fallback")
         if not failure_active:

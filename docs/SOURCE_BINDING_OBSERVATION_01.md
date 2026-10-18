@@ -2,6 +2,22 @@
 
 ## Finalizer collision correction, 2026-10-18
 
+### Later capacity review of source48
+
+Exact a753cc3 hosted Linux passed, including301 binding tests/one Windows-only
+skip. Automated review4307185677 found the finalizer's late capacity reservation
+could detect an excess only after stdout/stderr had already added bytes. The
+source49 correction puts bounded-capacity admission before every new stream
+or guard leaf, including the fixed fallback after partial publication failure.
+When no bounded guard fits, retain the existing stage and report failure without
+adding an over-limit receipt. All conservation observations still run. This is
+a last-observation bound, not atomic exclusion of external filesystem writers.
+The stage traversal also rejects unreadable subdirectories rather than let
+`os.walk` silently omit their contents and undercount capacity. An independent
+review identified that failure mode; owned POSIX-file denial covers it.
+Source49 requires refreshed exact-head validation; source48 receipts and its
+finding remain historical evidence. Observe stays unconditionally disabled.
+
 Source48 preserves all source47 receipts and corrects its automated P2 review:
 an OCEAN/library-init child could create a stdout/stderr name before exclusive
 publication and thereby skip protection observations. Each stream close/write
