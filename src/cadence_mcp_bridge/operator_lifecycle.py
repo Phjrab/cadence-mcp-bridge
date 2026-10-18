@@ -193,6 +193,7 @@ class OperatorLifecycle:
         expected_plan_sha256: str,
         *,
         sweep_id: str | None = None,
+        candidate_batch_id: str | None = None,
     ) -> DurableOperation:
         TypeAdapter(OperationId).validate_python(operation_id)
         provider = self._provider()
@@ -223,7 +224,8 @@ class OperatorLifecycle:
                 )
                 observed.check(candidate)
                 self.store.admit_operation(
-                    operation_id, plan, dispatch_intent=True, sweep_id=sweep_id
+                    operation_id, plan, dispatch_intent=True, sweep_id=sweep_id,
+                    candidate_batch_id=candidate_batch_id,
                 )
                 return self._observe(self.read(operation_id, expected_plan_sha256), observed)
             accounting = await provider.authorize(plan, grant)
@@ -231,7 +233,8 @@ class OperatorLifecycle:
             # Recheck expiry immediately before durable admission; remote accept also rechecks it.
             match_grant(self.context, grant, int(time.time()))
             first = self.store.admit_operation(
-                operation_id, plan, dispatch_intent=True, sweep_id=sweep_id
+                operation_id, plan, dispatch_intent=True, sweep_id=sweep_id,
+                candidate_batch_id=candidate_batch_id,
             )
             record = self.read(operation_id, expected_plan_sha256)
             if not first:

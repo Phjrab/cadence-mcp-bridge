@@ -142,6 +142,7 @@ class NativeOperationService:
         cancel: bool = False,
         *,
         sweep_id: str | None = None,
+        candidate_batch_id: str | None = None,
     ) -> NativeOperationStatus:
         self.current()
         try:
@@ -154,6 +155,7 @@ class NativeOperationService:
                     submission,
                     request.expected_plan_sha256,
                     sweep_id=sweep_id,
+                    candidate_batch_id=candidate_batch_id,
                 )
             elif cancel:
                 record = await self.lifecycle.cancel_pending(

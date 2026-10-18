@@ -1,3 +1,41 @@
+## Final candidate software correction gates, 2026-10-18
+
+PR163's recovery lookup P2 is corrected with shared local identity checks before
+and after remote reads. Exact prior recovery markers remain lookup-only after
+grant expiry/exhaustion; a marker without a remote result cannot resend. Current
+focused236 PASS/six POSIX skips, Ruff/mypy122 PASS and independent live-diff review
+are local evidence. Finish exact-head hosted Windows/POSIX, installed package and
+fresh automated review before presenting the draft software result. Preserve
+earlier full-suite/install receipts under their original source identities.
+
+Use additive PHYSICAL_METADATA_SOURCE_V6_EXPLICIT_CANDIDATES_02.json for source43
+of60; checkpoint01 remains immutable. This source charge grants no collection,
+deployment or actual candidate experiment. Continue software verification only.
+Published2.1.0 and its approved nine assets remain frozen. PR163 is not approved
+for merge; real candidate bindings/qualification/finite trial authority remain
+separate from software readiness and available global capacity.
+
+## Explicit candidates after published2.1.0, 2026-10-18
+
+A is complete: approved exact36f7583/tagv2.1.0/GitHub Release/nine attachments are
+published and download hashes verified. Historical preparation statements below
+remain source-specific records. No actual native/client upgrade follows from that
+publication. Continue B separately on `feat/explicit-candidate-batches`, an
+unreleased2.2.0.dev0 development build, without changing published2.1.0 files.
+
+Finish complete registered V/A contracts, sequential existing-lifecycle admission,
+atomic shared ID reservation, retained-result capture/comparison/CSV, meaningful
+local/POSIX/install/compatibility/security tests and a separate draft feature PR.
+Native execution is experimental opt-in and remains actually unqualified for a
+new candidate batch. Keep original same-input repeat comparison unchanged. W/L
+stays rejected until exact observed PDK bindings, legal range/grid/callback and
+independent readback/netlist evidence are available. A new finite actual trial
+and any missing EDA-backed observation require the scoped decision described in
+[the workflow](EXPLICIT_CANDIDATES_01.md), not another journal or spent grant.
+Source60, original resource limits and protection history remain binding. Only
+PR162 integration was newly approved; this later draft is not automatically merged
+or published. Continue independent software work while exact live scope is pending.
+
 ## Current source60 and integration scope, 2026-10-17
 
 The latest direct user instruction extends the cumulative product-source ceiling

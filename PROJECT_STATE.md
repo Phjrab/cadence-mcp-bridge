@@ -1,3 +1,48 @@
+## Candidate recovery identity correction, 2026-10-18
+
+Draft PR163's automated P2 review identified an early remote-lookup return that
+could accept an operation ID already claimed by another local lifecycle. Recovery
+observe/result now inspect the shared direct/candidate/Sweep namespace before and
+after awaited provider reads. Only the exact existing recovery marker can replay;
+an unmatched local intent remains unknown and is never resent. Fresh dispatch
+retains the existing resource lock and atomic admission checks.
+
+Current focused candidate/recovery/lifecycle tests:236 PASS, six Windows POSIX
+skips. Ruff and mypy122 PASS; independent live-diff review found no confirmed
+P1/P2. These are software checks, not fresh native qualification. Updated exact
+feature-head hosted checks, installed package checks and automated review remain
+required. The earlier98741d1 local full4254/418 skips and hosted Windows4271/401
+skips/POSIX PASS remain evidence for that earlier source, not this correction.
+
+Additive source checkpoint02 records43/60 consumed,17 remaining, preserving
+checkpoint01 and all earlier policy/consumption history. No VM contact, deployment,
+collection, simulation, extraction or result reservation occurs in this fix.
+Published2.1.0 remains unchanged; PR163 is draft and has no merge/publication
+approval. Actual candidate trials still lack exact source-binding observation,
+current qualification and a valid finite unspent grant.
+
+## Published2.1.0 and separate explicit-candidate development, 2026-10-18
+
+PR162 normally integrated as36f75834b8556c9dd88761120a4442a25379d7ae. Final reviewed
+tree b4504a7 passed both hosted jobs, Windows4175/401 platform skips/56 warnings,
+and a refreshed automated review without findings. The merge tree is identical.
+The direct human approved this exact commit and nine-file candidate; v2.1.0 tag,
+GitHub Release and attachments are now published. Downloaded nine-file hashes
+match SHA256SUMS c82d9e1b9f5fa770ea34dcf89c26498ab178cf73600cd5e22ef7d31548476bd5.
+Earlier2.0.0 and all preparation/failed-draft records remain preserved. No actual
+client/native update or new collection/simulation/extraction was performed.
+
+The separate `feat/explicit-candidate-batches` branch is unreleased2.2.0.dev0,
+an additive development marker rather than a qualified release promise. It adds
+complete qualified registered V/A manifests, explicit sequential coordination in
+the existing journal, shared ID reservation with native Sweep/direct/recovery,
+and retained scalar comparison/BOM CSV. The operator CLI is explicit and submit/
+advance require experimental opt-in. Existing MCP tools and same-input comparison
+remain unchanged. W/L and actual mixed-candidate qualification are unfinished.
+See [workflow](docs/EXPLICIT_CANDIDATES_01.md). Actual B trials still need their
+finite circuit/revision/input/analysis scope and valid unspent grant; capacity
+and the source60 extension are not a new experiment. Preserve all consumption.
+
 ## Source60 final-review correction, 2026-10-17
 
 The final PR162 review found that a user's `status.showUntrackedFiles=no` could
