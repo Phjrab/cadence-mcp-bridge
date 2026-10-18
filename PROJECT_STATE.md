@@ -1,3 +1,28 @@
+## Observer bounded directory enumeration correction, 2026-10-18
+
+Source49/head8cea9e5 passes local269/49 Windows skips, static127, security18,
+staged secret1282, locked audit and isolated package/state preservation. Its
+exact hosted Windows4576 PASS/450 skips and Linux binding317 PASS/one Windows
+skip are preserved. Automated review
+4307248489 found os.walk materializes an entire directory before the entry cap
+on Python2.6, leaving memory/time unbounded despite later accounting checks.
+
+Continue on the same draft with additive source50/checkpoint06. Reuse the fixed
+Linux dirent64 enumeration already reviewed in storage/migration components,
+plus Windows host scandir for synthetic checks; do not add a new platform layer.
+Stop at the first over-budget entry, close all iterators/descriptors on rejection,
+retain conservative whole-stage accounting and reject unreadable directories.
+Local source50 focused284 PASS/54 Windows platform skips/no warnings; Ruff/mypy127
+and85-tool/22-legacy contracts PASS. Independent final static review found no
+further P1/P2; it is not formal GitHub APPROVED. New exact-source package/security/
+hosted/automatic-review receipts remain required. Additive checkpoint06 records
+50/60 source changes and verifies every retained product pin/history boundary.
+Observe stays disabled. This is software-only correction with0 VM/EDA/claim/
+reservation activity; source49 and all earlier receipts/checkpoints stay intact.
+Refresh exact-source tests/package/security/hosted/review. No PR164 merge or
+publication authority; runtime/init closure trust and operational admission remain
+unfinished implementation, not an approval-only gate.
+
 ## Observer pre-publication capacity correction, 2026-10-18
 
 Source48/heada753cc3 passed the exact hosted Linux job117686214865, including

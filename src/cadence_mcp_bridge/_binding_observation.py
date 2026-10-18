@@ -517,30 +517,95 @@ class BindingObservationWorker(object):
         self._write(filename, raw)
 
     def _stage_size(self, stage, reserved_entries=0, reserved_bytes=0):
-        logical, allocated, entries = 0, 0, [0]
+        sizes, entries = [0, 0], [0]
 
-        def walk_error(error):
-            # An unreadable child directory is unknown consumption, never zero.
-            raise error
+        def account(selected):
+            # Preserve the prior conservative accounting: a directory is
+            # charged as a child and again when its own entries are visited.
+            # Mutable counters avoid Python3-only nonlocal syntax.
+            info = os.lstat(selected)
+            if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
+                raise ValueError("binding_observation_stage_special")
+            if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
+                raise ValueError("binding_observation_stage_hardlink")
+            entries[0] += 1
+            sizes[0] += info.st_size if stat.S_ISREG(info.st_mode) else 0
+            sizes[1] += getattr(info, "st_blocks", (info.st_size + 511) // 512) * 512
+            if entries[0] + reserved_entries > 256 or (
+                max(sizes) + reserved_bytes > STAGE_BYTES
+            ):
+                raise ValueError("binding_observation_stage_capacity")
+            return info
 
-        for parent, directories, names in os.walk(stage, onerror=walk_error):
+        pending = [stage]
+        while pending:
+            parent = pending.pop()
             if self.copying.path(parent) != parent:
                 raise ValueError("binding_observation_stage_path")
-            for name in [""] + directories + names:
-                selected = parent if not name else os.path.join(parent, name)
-                info = os.lstat(selected)
-                if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
-                    raise ValueError("binding_observation_stage_special")
-                if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
-                    raise ValueError("binding_observation_stage_hardlink")
-                entries[0] += 1
-                logical += info.st_size if stat.S_ISREG(info.st_mode) else 0
-                allocated += getattr(info, "st_blocks", (info.st_size + 511) // 512) * 512
-                if entries[0] + reserved_entries > 256 or (
-                    max(logical, allocated) + reserved_bytes > STAGE_BYTES
-                ):
-                    raise ValueError("binding_observation_stage_capacity")
-        return logical, allocated
+            account(parent)
+            names = self._stage_directory_entries(parent)
+            try:
+                for name in names:
+                    selected = os.path.join(parent, name)
+                    info = account(selected)
+                    if stat.S_ISDIR(info.st_mode):
+                        pending.append(selected)
+            finally:
+                names.close()
+        return tuple(sizes)
+
+    def _stage_directory_entries(self, path):
+        # Stream names: Python2.6 os.walk/listdir materialize an unbounded child
+        # directory before the stage's 257th-entry rejection can take effect.
+        if os.name == "nt":
+            names = os.scandir(path)
+            try:
+                for entry in names:
+                    yield entry.name
+            finally:
+                names.close()
+            return
+        if platform.system() != "Linux" or platform.machine() not in ("i686", "x86_64"):
+            raise ValueError("binding_observation_directory_platform")
+        import ctypes
+
+        # Linux dirent64 uses the same fixed offsets on the standard i686 VM
+        # and x86_64 CI. Configure libc before opening any owned descriptor.
+        libc = ctypes.CDLL(None, use_errno=True)
+        libc.fdopendir.argtypes, libc.fdopendir.restype = [ctypes.c_int], ctypes.c_void_p
+        libc.readdir64.argtypes, libc.readdir64.restype = [ctypes.c_void_p], ctypes.c_void_p
+        libc.closedir.argtypes, libc.closedir.restype = [ctypes.c_void_p], ctypes.c_int
+        before = os.lstat(path)
+        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        stream = None
+        try:
+            if self.copying.identity(os.fstat(fd)) != self.copying.identity(before):
+                raise ValueError("binding_observation_directory_drift")
+            stream = libc.fdopendir(fd)
+            if not stream:
+                raise OSError(ctypes.get_errno(), "binding_observation_directory_stream")
+            while True:
+                ctypes.set_errno(0)
+                entry = libc.readdir64(stream)
+                if not entry:
+                    if ctypes.get_errno():
+                        raise OSError(ctypes.get_errno(), "binding_observation_directory_stream")
+                    break
+                length = ctypes.c_ushort.from_address(entry + 16).value
+                if not 20 <= length <= 280:
+                    raise ValueError("binding_observation_directory_record")
+                raw = ctypes.string_at(entry + 19, length - 19).split(b"\x00", 1)[0]
+                if raw not in (b".", b".."):
+                    yield raw.decode("utf-8")
+            if (self.copying.identity(os.fstat(fd)) != self.copying.identity(before) or
+                    self.copying.identity(os.lstat(path)) != self.copying.identity(before)):
+                raise ValueError("binding_observation_directory_drift")
+        finally:
+            if stream:
+                if libc.closedir(stream) != 0:
+                    raise OSError(ctypes.get_errno(), "binding_observation_directory_close")
+            else:
+                os.close(fd)
 
     def _ocean_trust(self):
         binding = self.profile["tools"]["ocean"]

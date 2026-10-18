@@ -1,5 +1,23 @@
 # Source binding preparation — unqualified development components
 
+## Bounded enumeration correction, 2026-10-18
+
+Source49's pre-publication guards pass local269 tests/49 Windows platform skips,
+static/security/isolated package checks and exact Linux CI. Its automatic review
+4307248489 found an independent bound gap: Python2.6 os.walk first materializes
+the complete directory list, so the later256-entry cap cannot bound that allocation
+or its time. Source50 replaces stage enumeration with the existing fixed Linux
+dirent64 approach and Windows host scandir for synthetic tests. Enumeration must
+stop at the first excess entry, retain conservative whole-tree accounting, reject
+read errors and close every directory stream/descriptor on early exits.
+Local source50 regression284 PASS/54 Windows platform skips/no warnings and
+Ruff/mypy127/85-tool22-legacy contracts PASS; independent final static review
+found no further P1/P2. Exact installed/hosted/automatic-review receipts remain
+separate gates; no actual Linux/Python2.6 execution is inferred from Windows.
+Actual runtime closure/finite operational bootstrap remain unfinished; observe is still
+unconditionally disabled. This correction adds no VM contact or EDA authority.
+Earlier source-specific checks/findings/failed receipts remain preserved below.
+
 ## Finalizer collision correction, 2026-10-18
 
 ### Later capacity review of source48

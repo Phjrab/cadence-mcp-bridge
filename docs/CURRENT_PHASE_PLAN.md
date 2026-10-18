@@ -1,3 +1,16 @@
+## Bounded stage directory enumeration, 2026-10-18
+
+Correct automatic P2 finding4307248489 on existing draftPR164: Python2.6 os.walk
+allocates the complete directory result before accounting can reject entry257.
+Use the existing fixed Linux dirent64 pattern and Windows host scandir; bound
+the global tree traversal before materializing more names, preserve exact size/
+entry/permission/special-file guards, and close iterators/descriptors on all exits.
+Test synthetic infinite enumeration and actual Linux many-entry/read-error/early
+close paths. Add checkpoint06/source50 without editing any source49 record.
+Refresh affected/package/static/security/hosted and exact automated review.
+No remote contact, observation, activation, real claim/reservation, candidate
+trial, PR164 merge or publication follows from this software correction.
+
 ## Pre-publication stage-capacity correction, 2026-10-18
 
 Continue current draftPR164 with additive source49/checkpoint05. Automated

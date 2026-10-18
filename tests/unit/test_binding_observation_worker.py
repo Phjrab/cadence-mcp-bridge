@@ -694,11 +694,10 @@ def test_full_stage_skips_every_evidence_write_but_attempts_all_conservation_che
         # Content allocation fits, but the directory-growth allowance does not.
         monkeypatch.setattr(observer, "STAGE_BYTES", max(logical, allocated) + unit)
     else:
-        def unavailable_walk(*args, **kwargs):
-            kwargs["onerror"](OSError(errno.EACCES, "synthetic unreadable subtree"))
-            return iter(())
+        def unavailable_names(path):
+            raise OSError(errno.EACCES, "synthetic unreadable subtree")
 
-        monkeypatch.setattr(observer.os, "walk", unavailable_walk)
+        monkeypatch.setattr(worker, "_stage_directory_entries", unavailable_names)
     before = {p.name: p.read_bytes() for p in stage.iterdir()}
     checked, closed = [], []
 
@@ -734,6 +733,213 @@ def test_full_stage_skips_every_evidence_write_but_attempts_all_conservation_che
     assert checked == ["original", "copy", "ledger", "config"]
     assert closed == [True, True]
     assert {p.name: p.read_bytes() for p in stage.iterdir()} == before
+
+
+@pytest.mark.parametrize("reserved", [0, 1])
+def test_stage_limit_stops_an_infinite_name_stream_without_materializing_it(
+    selected, tmp_path, monkeypatch, reserved,
+):
+    worker, _, _ = selected
+    stage = tmp_path / "stream-bound"
+    stage.mkdir(mode=0o700)
+    (stage / "retained").write_bytes(b"")
+    consumed, closed = [], []
+
+    def infinite_entries(path):
+        try:
+            while True:
+                consumed.append(True)
+                assert len(consumed) <= 256 - reserved
+                yield "retained"
+        finally:
+            closed.append(True)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded directory materialization")
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", infinite_entries)
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    monkeypatch.setattr(observer.os, "walk", forbidden)
+    with pytest.raises(ValueError, match="stage_capacity"):
+        worker._stage_size(str(stage), reserved_entries=reserved)
+    # The root itself is charged first. Reject the next child immediately when
+    # existing plus reserved entries would become 257; never request another.
+    assert len(consumed) == 256 - reserved
+    assert closed == [True]
+
+
+@pytest.mark.parametrize("files,reserved,accepted", [
+    (250, 1, True), (251, 0, True), (251, 1, False), (252, 0, False),
+])
+def test_stage_streaming_keeps_one_shared_tree_budget_and_directory_double_count(
+    selected, tmp_path, monkeypatch, files, reserved, accepted,
+):
+    worker, _, _ = selected
+    stage = tmp_path / "tree-bound"
+    stage.mkdir(mode=0o700)
+    directories = [stage / "left", stage / "right"]
+    for directory in directories:
+        directory.mkdir(mode=0o700)
+    leaves = [directories[index % 2] / f"leaf-{index:03d}" for index in range(files)]
+    for leaf in leaves:
+        leaf.write_bytes(b"")
+    expected_allocated = sum(
+        getattr(path.stat(), "st_blocks", (path.stat().st_size + 511) // 512) * 512
+        for path in [stage] + directories * 2 + leaves
+    )
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded directory materialization")
+
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    monkeypatch.setattr(observer.os, "walk", forbidden)
+    if accepted:
+        assert worker._stage_size(str(stage), reserved_entries=reserved) == (0, expected_allocated)
+    else:
+        with pytest.raises(ValueError, match="stage_capacity"):
+            worker._stage_size(str(stage), reserved_entries=reserved)
+
+
+@pytest.mark.parametrize("fault", ["read", "stat"])
+def test_stage_stream_closes_on_read_or_stat_failure(selected, tmp_path, monkeypatch, fault):
+    worker, _, _ = selected
+    stage = tmp_path / "stream-fault"
+    stage.mkdir(mode=0o700)
+    (stage / "retained").write_bytes(b"")
+    closed = []
+
+    def entries(path):
+        try:
+            yield "retained"
+            if fault == "read":
+                raise OSError(errno.EACCES, "synthetic incremental read failure")
+            yield "missing"
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", entries)
+    with pytest.raises(OSError):
+        worker._stage_size(str(stage))
+    assert closed == [True]
+
+
+@pytest.mark.parametrize("fault", [
+    "configure", "identity", "fdopendir", "read", "record", "close", "close-error",
+])
+def test_linux_directory_stream_cleans_up_opened_handles_on_every_exit(
+    selected, tmp_path, monkeypatch, fault,
+):
+    import ctypes
+
+    worker, _, _ = selected
+    stage = tmp_path / "libc-stream"
+    stage.mkdir(mode=0o700)
+    info = stage.stat()
+    opened, descriptors_closed, streams_closed = [], [], []
+    buffer = ctypes.create_string_buffer(32)
+    ctypes.c_ushort.from_buffer(buffer, 16).value = 19 if fault == "record" else 32
+    buffer[19:24] = b"leaf\x00"
+
+    def fdopendir(fd):
+        return 0 if fault == "fdopendir" else 456
+
+    def readdir(stream):
+        if fault == "read":
+            ctypes.set_errno(errno.EACCES)
+            return None
+        return ctypes.addressof(buffer)
+
+    def closedir(stream):
+        streams_closed.append(stream)
+        return -1 if fault == "close-error" else 0
+
+    libc = SimpleNamespace(fdopendir=fdopendir, readdir64=readdir, closedir=closedir)
+    if fault == "configure":
+        del libc.readdir64
+
+    def opened_fd(*args):
+        opened.append(args)
+        return 123
+
+    def fstat(fd):
+        if fault == "identity":
+            values = {name: getattr(info, name) for name in dir(info) if name.startswith("st_")}
+            values["st_ino"] += 1
+            return SimpleNamespace(**values)
+        return info
+
+    monkeypatch.setattr(ctypes, "CDLL", lambda *args, **kwargs: libc)
+    monkeypatch.setattr(observer.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(observer.platform, "machine", lambda: "i686")
+    # A local os facade exercises the fixed Linux branch on Windows without
+    # changing the process-wide platform used by pathlib or the test runner.
+    monkeypatch.setattr(observer, "os", SimpleNamespace(
+        name="posix", O_RDONLY=os.O_RDONLY, O_DIRECTORY=0, O_NOFOLLOW=0,
+        lstat=os.lstat, open=opened_fd, close=lambda fd: descriptors_closed.append(fd), fstat=fstat,
+    ))
+    names = worker._stage_directory_entries(str(stage))
+    if fault in ("close", "close-error"):
+        assert next(names) == "leaf"
+        if fault == "close-error":
+            with pytest.raises(OSError, match="directory_close"):
+                names.close()
+        else:
+            names.close()
+    else:
+        with pytest.raises((AttributeError, ValueError, OSError)):
+            next(names)
+    assert len(opened) == (0 if fault == "configure" else 1)
+    assert descriptors_closed == ([123] if fault in ("identity", "fdopendir") else [])
+    assert streams_closed == ([456] if fault in ("read", "record", "close", "close-error") else [])
+
+
+@pytest.mark.skipif(
+    platform.system() != "Linux" or platform.machine() not in ("i686", "x86_64"),
+    reason="actual supported Linux readdir64 ABI and handle cleanup",
+)
+@pytest.mark.parametrize("count,reserved,accepted", [
+    (255, 0, True), (256, 0, False), (257, 0, False), (254, 1, True), (255, 1, False),
+])
+def test_actual_linux_directory_stream_stops_at_the_global_entry_bound_and_closes(
+    selected, tmp_path, monkeypatch, count, reserved, accepted,
+):
+    import ctypes
+
+    worker, _, _ = selected
+    stage = tmp_path / "actual-libc-stream"
+    stage.mkdir(mode=0o700)
+    for index in range(count):
+        (stage / f"leaf-{index:03d}").write_bytes(b"")
+    real_cdll = ctypes.CDLL
+    reads, closes = [], []
+
+    def library(*args, **kwargs):
+        libc = real_cdll(*args, **kwargs)
+        read, close = libc.readdir64, libc.closedir
+        read.argtypes, read.restype = [ctypes.c_void_p], ctypes.c_void_p
+        close.argtypes, close.restype = [ctypes.c_void_p], ctypes.c_int
+
+        def readdir(stream):
+            reads.append(True)
+            assert len(reads) <= 259
+            return read(stream)
+
+        def closedir(stream):
+            closes.append(True)
+            return close(stream)
+
+        return SimpleNamespace(fdopendir=libc.fdopendir, readdir64=readdir, closedir=closedir)
+
+    monkeypatch.setattr(ctypes, "CDLL", library)
+    if accepted:
+        worker._stage_size(str(stage), reserved_entries=reserved)
+        assert len(reads) == count + 3  # two dot entries and one EOF read
+    else:
+        with pytest.raises(ValueError, match="stage_capacity"):
+            worker._stage_size(str(stage), reserved_entries=reserved)
+        assert len(reads) == 258 - reserved
+    assert closes == [True]
+    assert sum(1 for _ in stage.iterdir()) == count
 
 
 @pytest.mark.skipif(os.name != "posix", reason="actual unreadable owned directory")
