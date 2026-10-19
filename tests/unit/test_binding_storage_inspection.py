@@ -3,6 +3,7 @@
 import ast
 import errno
 import importlib.util
+import io
 import json
 import os
 import posixpath
@@ -769,3 +770,271 @@ def test_actual_owned_file_reads_reject_links_and_races_without_mutation(
         assert raw == before and observed["inode"] == leaf.stat().st_ino
         assert sorted(path.name for path in parent.iterdir()) == ["binary"]
     assert leaf.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "selected, magic",
+    [
+        ("/proc", 0x9FA0),
+        ("/proc/321", 0x9FA0),
+        ("/sys", 0x62656572),
+        ("/sys/block", 0x62656572),
+        ("/sys/devices", 0x62656572),
+        ("/sys/devices/virtual", 0x62656572),
+        ("/sys/devices/virtual/block", 0x62656572),
+        ("/sys/devices/virtual/block/loop0", 0x62656572),
+        ("/sys/devices/virtual/block/loop999/loop", 0x62656572),
+    ],
+)
+@pytest.mark.parametrize("field", ["nlink", "size", "mtime", "ctime"])
+def test_only_proven_closed_kernel_directories_allow_volatile_metadata(
+    inspection_request, monkeypatch, selected, magic, field
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    expected = probe.metadata(synthetic_stat(stat.S_IFDIR | 0o555))
+    actual = dict(expected, **{field: "changed" if field in ("mtime", "ctime") else 77})
+    assert not inspector.metadata_equal(selected, expected, actual)
+    inspector.kernel_directories[selected] = magic
+    assert inspector.metadata_equal(selected, expected, actual)
+    assert expected[field] != actual[field], "observed metadata must remain unmodified"
+
+
+@pytest.mark.parametrize(
+    "selected, magic",
+    [
+        ("/home/operator/vendor", 0x9FA0),
+        ("/var/lib/cadence-mcp-bridge", 0x62656572),
+        ("/proc/self", 0x9FA0),
+        ("/proc/322", 0x9FA0),
+        ("/proc/321/fd", 0x9FA0),
+        ("/sys/devices/other", 0x62656572),
+        ("/sys/devices/virtual/block/loop1000", 0x62656572),
+        ("/sys/devices/virtual/block/loop0/loop/other", 0x62656572),
+        ("/proc", 0x62656572),
+        ("/sys", 0x9FA0),
+    ],
+)
+def test_kernel_exception_never_spreads_to_static_paths_other_processes_or_wrong_filesystems(
+    inspection_request, monkeypatch, selected, magic
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    inspector.kernel_directories[selected] = magic
+    expected = probe.metadata(synthetic_stat(stat.S_IFDIR | 0o555))
+    for field in ("nlink", "size", "mtime", "ctime"):
+        actual = dict(expected, **{field: "changed" if field in ("mtime", "ctime") else 77})
+        assert not inspector.metadata_equal(selected, expected, actual)
+
+
+@pytest.mark.parametrize("field", ["device", "inode", "mode", "uid", "gid", "rdev"])
+def test_proven_kernel_directory_retains_every_namespace_and_permission_guard(
+    inspection_request, monkeypatch, field
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    inspector.kernel_directories["/proc"] = 0x9FA0
+    expected = probe.metadata(synthetic_stat(stat.S_IFDIR | 0o555))
+    actual = dict(expected, **{field: expected[field] + 1})
+    assert not inspector.metadata_equal("/proc", expected, actual)
+    assert inspector.failure_context["changed_fields"] == [field]
+
+
+def test_kernel_directory_pin_is_not_a_regular_file_metadata_exception(
+    inspection_request, monkeypatch
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    inspector.kernel_directories["/proc"] = 0x9FA0
+    expected = probe.metadata(synthetic_stat(stat.S_IFREG | 0o555))
+    assert not inspector.metadata_equal("/proc", expected, dict(expected, size=100))
+
+
+@pytest.mark.parametrize("selected", ["/proc", "/proc/321", "/sys/block"])
+@pytest.mark.parametrize("change", ["valid", "fs-type", "owner", "group-write", "type"])
+def test_pin_requires_closed_kernel_path_exact_filesystem_and_safe_opened_directory(
+    inspection_request, monkeypatch, selected, change
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    monkeypatch.setattr(facade, "getuid", lambda: 500, raising=False)
+    inspector = probe.Inspector(inspection_request)
+    mode = stat.S_IFDIR | 0o555
+    if change == "group-write":
+        mode |= stat.S_IWGRP
+    elif change == "type":
+        mode = stat.S_IFREG | 0o555
+    info = types.SimpleNamespace(st_mode=mode, st_uid=123 if change == "owner" else 0)
+    observed = []
+    magic = 0x9FA0 if selected.startswith("/proc") else 0x62656572
+    monkeypatch.setattr(facade, "fstat", lambda fd: info if fd == 97 else pytest.fail("wrong fd"))
+
+    def filesystem(fd):
+        assert fd == 97
+        observed.append(fd)
+        return 0xEF53 if change == "fs-type" else magic
+
+    monkeypatch.setattr(probe, "kernel_filesystem_type", filesystem)
+    if change == "valid":
+        inspector.pin_kernel_directory(selected, 97)
+        assert inspector.kernel_directories == {selected: magic} and observed == [97]
+    else:
+        with pytest.raises(ValueError, match="^kernel_directory_identity$"):
+            inspector.pin_kernel_directory(selected, 97)
+        assert inspector.kernel_directories == {}
+
+
+@pytest.mark.parametrize("selected", ["/proc/321", "/proc", "/sys"])
+def test_only_current_process_kernel_directory_can_be_owned_by_operator(
+    inspection_request, monkeypatch, selected
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    monkeypatch.setattr(facade, "getuid", lambda: 500, raising=False)
+    inspector = probe.Inspector(inspection_request)
+    monkeypatch.setattr(
+        facade, "fstat", lambda fd: types.SimpleNamespace(st_mode=stat.S_IFDIR | 0o555, st_uid=500)
+    )
+    monkeypatch.setattr(probe, "kernel_filesystem_type", lambda fd: 0x9FA0)
+    if selected == "/proc/321":
+        inspector.pin_kernel_directory(selected, 97)
+        assert inspector.kernel_directories == {selected: 0x9FA0}
+    else:
+        with pytest.raises(ValueError, match="^kernel_directory_identity$"):
+            inspector.pin_kernel_directory(selected, 97)
+        assert not inspector.kernel_directories
+
+
+@pytest.mark.parametrize(
+    "selected",
+    ["/", "/tmp", "/proc/self", "/proc/322", "/sys/other", "/sys/block/loop0", "/sys/../sys"],
+)
+def test_unclosed_paths_never_trigger_kernel_filesystem_probe(
+    inspection_request, monkeypatch, selected
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    monkeypatch.setattr(facade, "fstat", lambda fd: pytest.fail("unclosed directory inspected"))
+    monkeypatch.setattr(
+        probe, "kernel_filesystem_type", lambda fd: pytest.fail("unclosed filesystem probed")
+    )
+    inspector.pin_kernel_directory(selected, 97)
+    assert inspector.kernel_directories == {}
+
+
+def test_metadata_drift_provenance_is_bounded_hashed_and_retains_static_guard(
+    inspection_request, monkeypatch
+):
+    os_facade(monkeypatch)
+    inspector = probe.Inspector(inspection_request)
+    inspector.phase = "binaries"
+    selected = "/private/operator/" + "secret" * 1000
+    expected = probe.metadata(synthetic_stat())
+    actual = dict(expected, size=25, inode=3)
+    assert not inspector.metadata_equal(selected, expected, actual)
+    assert inspector.failure_context == {
+        "phase": "binaries",
+        "path_sha256": probe.digest(selected.encode("ascii")),
+        "changed_fields": ["inode", "size"],
+    }
+    record = inspector.record_error("mount-bin", ValueError("path_metadata_drift"))
+    assert record["status"] == "INCOMPLETE"
+    assert record["error_context"] == inspector.failure_context
+    raw = probe.canonical(record)
+    assert len(raw) < 1024 and b"secret" not in raw and b"/private" not in raw
+
+
+def test_main_preserves_bounded_drift_context_without_authorizing_or_claiming_success(
+    inspection_request, monkeypatch
+):
+    inspector = probe.Inspector(inspection_request)
+    inspector.phase = "final"
+    expected = probe.metadata(synthetic_stat())
+
+    def incomplete():
+        assert not inspector.metadata_equal(
+            "/private/static-file", expected, dict(expected, size=99),
+        )
+        raise ValueError("path_metadata_drift")
+
+    monkeypatch.setattr(inspector, "run", incomplete)
+    monkeypatch.setattr(probe, "Inspector", lambda request: inspector)
+    monkeypatch.setattr(probe, "parse_request", lambda raw: inspection_request)
+    monkeypatch.setattr(probe, "_FIXED_BOOTSTRAP_ACTIVE", True, raising=False)
+    monkeypatch.setattr(probe, "signal", types.SimpleNamespace(SIGALRM=14))
+    output = io.BytesIO()
+    monkeypatch.setattr(
+        probe,
+        "sys",
+        types.SimpleNamespace(argv=["fixed-inspector"], stdin=io.BytesIO(b"{}"), stdout=output),
+    )
+    probe.main()
+    result = json.loads(output.getvalue())
+    assert result["status"] == "INCOMPLETE" and result["error_code"] == "path_metadata_drift"
+    assert not result["ready_for_apply"] and not result["execution_authorized"]
+    assert result["error_context"] == inspector.failure_context
+    assert b"/private" not in output.getvalue() and len(output.getvalue()) < 1024
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="local Linux kernel directory and owned child")
+def test_actual_local_proc_guard_survives_owned_child_churn_without_relaxing_static_files(
+    inspection_request,
+):
+    import select
+
+    inspector = probe.Inspector(inspection_request)
+    before = probe.metadata(os.lstat("/proc"))
+    fd = inspector.opened("/proc", True)
+    try:
+        assert inspector.kernel_directories["/proc"] == 0x9FA0
+        assert inspector.seen["/proc"]["inode"] == before["inode"]
+        # This is a disposable local Python child, never Cadence or an SSH process.
+        child = subprocess.Popen(
+            [sys.executable, "-E", "-s", "-B", "-c", "import sys; sys.stdout.write('R'); "
+             "sys.stdout.flush(); sys.stdin.buffer.read(1)"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            assert select.select([child.stdout], [], [], 10)[0], "owned child did not become ready"
+            assert child.stdout.read(1) == b"R"
+            assert os.path.isdir("/proc/" + str(child.pid))
+            inspector.guard()
+            child.stdin.write(b"X")
+            child.stdin.flush()
+            out, error = child.communicate(timeout=10)
+            assert child.returncode == 0 and out == error == b""
+            inspector.guard()
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.communicate(timeout=10)
+    finally:
+        os.close(fd)
+    assert inspector.hashed == 0 and inspector.records == []
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="local Linux retained static metadata")
+def test_actual_static_directory_volatile_metadata_is_still_exact(
+    inspection_request, tmp_path,
+):
+    parent = tmp_path / "static-installation-fixture"
+    parent.mkdir(mode=0o700)
+    inspector = probe.Inspector(inspection_request)
+    fd = inspector.opened(str(parent), True)
+    try:
+        assert str(parent) not in inspector.kernel_directories
+        before = parent.stat()
+        os.utime(parent, (before.st_atime, before.st_mtime + 2))
+        with pytest.raises(ValueError, match="^path_metadata_drift$"):
+            inspector.guard()
+        assert inspector.failure_context["path_sha256"] == probe.digest(str(parent).encode("ascii"))
+        assert "mtime" in inspector.failure_context["changed_fields"]
+    finally:
+        os.close(fd)

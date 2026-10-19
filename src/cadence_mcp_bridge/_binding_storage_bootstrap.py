@@ -10,8 +10,8 @@ Never deploy or execute on a VM without the separate bounded read authorization.
 
 import sys
 
-SOURCE_BYTES = 33919
-SOURCE_SHA256 = "cfa2da5bfbb432a9b702f070b70be3c6a2dbdb797972bc6537555e81ae58ab53"
+SOURCE_BYTES = 38105
+SOURCE_SHA256 = "7c05f71321375dc9553a8322200f39d7faf45b6f8d71c494b0ec62932d0ffa80"
 SOURCE_NAME = "<cadence-storage-prerequisite-readonly>"
 MODULE_NAME = "_cadence_storage_prerequisite_readonly"
 MAX_SECONDS = 60

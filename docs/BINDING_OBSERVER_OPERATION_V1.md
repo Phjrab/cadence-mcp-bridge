@@ -9,6 +9,32 @@ the existing resource lock, owned-copy staging, one fixed OCEAN start, protectio
 checks and terminal evidence. No current-VM observation is established by this
 document. Synthetic subprocess evidence is not Cadence evidence.
 
+## Storage facts and failure provenance
+
+The separately authorized source56 storage inspection returned
+`INCOMPLETE/path_metadata_drift`; its actual failing path was not returned.
+That one-shot attempt remains spent and its original evidence is retained.
+A local reproduction shows that normal proc-directory link-count variation can
+trigger the same old guard. This is a software finding, not identification of
+the actual VM failure or storage qualification.
+
+Source57 keeps exact metadata checks for installation, workspace, backing paths
+and all regular files. Only a closed set of proc/sysfs fact-source directories
+can distinguish volatile `nlink`, `size`, `mtime`, `ctime` observations from
+namespace identity. Each requires a held no-follow directory descriptor,
+expected proc/sysfs filesystem magic, restricted owner and no shared-write mode.
+Device/inode/type/mode/uid/gid/rdev checks remain exact. Arbitrary PIDs and paths
+cannot select this behavior. Raw captured metadata is retained and each path
+reports `EXACT_METADATA` or `KERNEL_DIRECTORY_IDENTITY` comparison scope.
+
+Metadata-drift errors report only the fixed execution phase, path SHA-256 and
+changed metadata field names. They expose no raw path and grant no authority.
+An incomplete response without facts cannot establish persistence, apply
+readiness or runtime trust. Source57 requires fresh exact software verification
+and a separately approved new inspection before any further actual VM read.
+Provisioning and runtime/initializer qualification remain distinct unfinished
+prerequisites; no inspection or document authorizes those operations.
+
 ## Execution trust and authority
 
 Two different records are required, in addition to the prepared plan:

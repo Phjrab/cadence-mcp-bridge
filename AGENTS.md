@@ -1,3 +1,40 @@
+## Source57 bounded kernel-directory observation correction, 2026-10-20
+
+The exact source56 head56cc916 completed hosted Windows4916 PASS/522 skips,
+Linux binding728 PASS/two skips and separate disposable kernel capacity1 PASS;
+package/security/static/compatibility and automated review6278506435 passed.
+All eight prior review threads are resolved. These are software receipts only.
+
+One separately human-approved installed storage facts read was then performed
+exactly once. It returned INCOMPLETE/path_metadata_drift, not storage acceptance.
+The approval is spent; all failed evidence and its exclusive marker are retained.
+No failed-path/phase or mount/loop facts were returned, so its actual cause is
+unknown. Local synthetic /proc nlink drift reproduces the same rejection; this
+does not identify the actual VM path. Do not resend the source56 plan.
+
+Source57/checkpoint13 permits only nlink/size/mtime/ctime volatility for a closed
+set of proc/sysfs fact-source directories after held-fd filesystem magic, owner,
+mode and directory proof. Device/inode/type/owner/group/mode/rdev and every static
+path/file remain exact. Retain raw observation metadata and label its comparison
+scope; metadata-drift failures include bounded phase/path-hash/field provenance.
+No workspace, installation, backing, arbitrary PID or regular-file exception is
+introduced. Local storage regression130 PASS/six explicit Linux skips and an
+independent review without confirmed P1/P2 are not actual VM/Python2.6 proof.
+Affected Windows regression689 PASS/123 explicit platform or opt-in skips;
+Ruff/mypy130,85/22 contracts, security18,1299-file secret scan and strict locked
+dependency audit pass. Isolated installed/exact-head hosted/review remain gates.
+Preserve the first local Windows temp-path setup failure and successful fresh-path
+rerun without weakening guards.
+
+Source use57/60 is additive; no counters, reservations, policies or old checkpoints
+are reset. Existing latest separate ledger observation128/15,721,299,968 bytes is
+not refreshed by this failed facts read. Fresh VM access remains separately gated.
+Initializer remediation/behavior review, full reviewed runtime trust, persistent
+bounded stage provisioning, actual binding observation and selected three-DC
+comparison remain unfinished. This is not an approval-only ready state. PR164
+stays draft, unmerged and unpublished; no new remote action follows from this fix.
+Earlier entries below retain their original source/time scope.
+
 ## Fixed prerequisite reads and command-free host checks, 2026-10-20
 
 Source55 heada35fdcb completed local full4848 PASS/530 platform skips and exact

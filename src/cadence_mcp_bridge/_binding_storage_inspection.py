@@ -165,6 +165,35 @@ def metadata(info):
     )
 
 
+def kernel_directory_type(selected):
+    # Closed fact-source ancestors only. Never extend this exception to a
+    # workspace, installation, backing directory, regular file or arbitrary PID.
+    if selected in ("/proc", "/proc/%d" % os.getpid()):
+        return 0x9FA0
+    if selected in (
+        "/sys",
+        "/sys/block",
+        "/sys/devices",
+        "/sys/devices/virtual",
+        "/sys/devices/virtual/block",
+    ) or matches(re.compile(r"^/sys/devices/virtual/block/loop[0-9]{1,3}(/loop)?$"), selected):
+        return 0x62656572
+    return None
+
+
+def kernel_filesystem_type(fd):
+    # Linux statfs starts with a native signed long on both supported ABIs.
+    # Reserve more than either ABI's complete structure; only f_type is read.
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.fstatfs.argtypes, libc.fstatfs.restype = [ctypes.c_int, ctypes.c_void_p], ctypes.c_int
+    result = ctypes.create_string_buffer(256)
+    if libc.fstatfs(fd, result) != 0:
+        raise OSError(ctypes.get_errno(), "kernel_filesystem_type")
+    return ctypes.c_long.from_buffer(result).value
+
+
 class Inspector(object):
     def __init__(self, request):
         self.request, self.profile = request, request["profile"]
@@ -173,6 +202,46 @@ class Inspector(object):
         if "_FIXED_BOOTSTRAP_DEADLINE" in globals():
             self.deadline = min(self.deadline, globals()["_FIXED_BOOTSTRAP_DEADLINE"])
         self.seen, self.paths, self.hashed, self.errors, self.records = {}, set(), 0, [], []
+        self.kernel_directories, self.failure_context = {}, None
+        self.phase = "initial"
+
+    def pin_kernel_directory(self, selected, fd):
+        expected = kernel_directory_type(selected)
+        if expected is None:
+            return
+        info = os.fstat(fd)
+        owners = (0, os.getuid()) if selected == "/proc/%d" % os.getpid() else (0,)
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid not in owners
+            or info.st_mode & 18
+            or kernel_filesystem_type(fd) != expected
+        ):
+            raise ValueError("kernel_directory_identity")
+        self.kernel_directories[selected] = expected
+
+    def metadata_equal(self, selected, expected, actual):
+        ignored = ()
+        kind = kernel_directory_type(selected)
+        if (
+            kind is not None
+            and self.kernel_directories.get(selected) == kind
+            and stat.S_ISDIR(expected["mode"])
+            and stat.S_ISDIR(actual["mode"])
+        ):
+            # proc process counts and sysfs membership/timestamps are observations,
+            # not stable namespace identity. Keep all raw fields in the receipt.
+            ignored = ("nlink", "size", "mtime", "ctime")
+        changed = sorted(
+            key for key in expected if expected[key] != actual[key] and key not in ignored
+        )
+        if changed:
+            self.failure_context = dict(
+                phase=self.phase,
+                path_sha256=digest(selected.encode("ascii")),
+                changed_fields=changed,
+            )
+        return not changed
 
     def check(self):
         if os.times()[4] >= self.deadline:
@@ -189,7 +258,9 @@ class Inspector(object):
     def remember(self, selected, info):
         self.reserve(selected)
         current = metadata(info)
-        if selected in self.seen and self.seen[selected] != current:
+        if selected in self.seen and not self.metadata_equal(
+            selected, self.seen[selected], current
+        ):
             raise ValueError("path_metadata_drift")
         self.seen[selected] = current
         return info
@@ -217,11 +288,13 @@ class Inspector(object):
         flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_DIRECTORY
         held, parents = [], {}
         try:
-            if "/" not in self.seen or metadata(os.lstat("/")) != self.seen["/"]:
+            if "/" not in self.seen or not self.metadata_equal(
+                "/", self.seen["/"], metadata(os.lstat("/"))
+            ):
                 raise ValueError("path_metadata_drift")
             root = os.open("/", flags)
             held.append(root)
-            if metadata(os.fstat(root)) != self.seen["/"]:
+            if not self.metadata_equal("/", self.seen["/"], metadata(os.fstat(root))):
                 raise ValueError("path_open_drift")
             parents["/"] = root
             for selected in sorted(self.seen, key=lambda name: (name.count("/"), name)):
@@ -233,12 +306,15 @@ class Inspector(object):
                     raise ValueError("unanchored_path_record")
                 anchored = "/proc/self/fd/%d/%s" % (parent, os.path.basename(selected))
                 info = os.lstat(anchored)
-                if metadata(info) != self.seen[selected]:
+                if not self.metadata_equal(selected, self.seen[selected], metadata(info)):
                     raise ValueError("path_metadata_drift")
                 if stat.S_ISDIR(info.st_mode):
                     child = os.open(anchored, flags)
                     held.append(child)
-                    if metadata(os.fstat(child)) != self.seen[selected]:
+                    self.pin_kernel_directory(selected, child)
+                    if not self.metadata_equal(
+                        selected, self.seen[selected], metadata(os.fstat(child))
+                    ):
                         raise ValueError("path_open_drift")
                     parents[selected] = child
         finally:
@@ -256,14 +332,14 @@ class Inspector(object):
             root_info = self.remember("/", os.lstat("/"))
             current = os.open("/", flags | os.O_DIRECTORY)
             held.append(current)
-            if metadata(os.fstat(current)) != metadata(root_info):
+            if not self.metadata_equal("/", metadata(root_info), metadata(os.fstat(current))):
                 raise ValueError("path_open_drift")
             named = ""
             parts = selected.split("/")[1:] if selected != "/" else []
             for index, part in enumerate(parts):
                 named += "/" + part
                 self.reserve(named)
-                expected = self.remember(named, os.lstat("/proc/self/fd/%d/%s" % (current, part)))
+                expected = os.lstat("/proc/self/fd/%d/%s" % (current, part))
                 is_directory = directory or index < len(parts) - 1
                 if not (
                     stat.S_ISDIR(expected.st_mode)
@@ -276,8 +352,11 @@ class Inspector(object):
                     flags | (os.O_DIRECTORY if is_directory else 0),
                 )
                 held.append(child)
-                if metadata(os.fstat(child)) != metadata(expected):
+                if is_directory:
+                    self.pin_kernel_directory(named, child)
+                if not self.metadata_equal(named, metadata(expected), metadata(os.fstat(child))):
                     raise ValueError("path_open_drift")
+                self.remember(named, expected)
                 current = child
             self.guard()
             result = held.pop()
@@ -306,7 +385,7 @@ class Inspector(object):
                 self.hashed += len(part)
                 if total > limit or self.hashed > MAX_HASH_BYTES:
                     raise ValueError("read_byte_bound")
-            if metadata(os.fstat(fd)) != before:
+            if not self.metadata_equal(selected, before, metadata(os.fstat(fd))):
                 raise ValueError("file_content_metadata_drift")
             self.guard()
             return b"".join(parts), before
@@ -324,6 +403,11 @@ class Inspector(object):
             else ("INACCESSIBLE" if number in (errno.EACCES, errno.EPERM) else "INCOMPLETE")
         )
         result = dict(role=role, status=status, error_code=code, errno=number)
+        if (
+            code in ("path_metadata_drift", "path_open_drift", "file_content_metadata_drift")
+            and self.failure_context
+        ):
+            result["error_context"] = self.failure_context
         self.records.append(result)
         if status != "MISSING":
             self.errors.append(result)
@@ -635,8 +719,11 @@ class Inspector(object):
         )
         if host != self.profile["host"]:
             raise ValueError("observed_host_binding")
+        self.phase = "identity"
         self.identity()
+        self.phase = "stage"
         self.stage()
+        self.phase = "paths"
         for role, selected in (
             ("var", "/var"),
             ("var-lib", "/var/lib"),
@@ -648,17 +735,21 @@ class Inspector(object):
         self.observe_path(
             "backing-image", BACKING + "/" + self.request["resource_domain_sha256"] + ".ext2"
         )
+        self.phase = "binaries"
         for role, selected in BINARIES:
             self.binary(role, selected)
         kernel, loops = {}, []
         try:
+            self.phase = "kernel"
             kernel = self.kernel()
         except (ValueError, OSError, IOError) as error:
             self.record_error("kernel", error)
         try:
+            self.phase = "loops"
             loops = self.loops()
         except (ValueError, OSError, IOError) as error:
             self.record_error("loops", error)
+        self.phase = "final"
         self.guard()
         return dict(
             schema_version=1,
@@ -676,6 +767,9 @@ class Inspector(object):
                     metadata=info,
                     root_owned=info["uid"] == 0,
                     shared_write=bool(info["mode"] & 18),
+                    comparison_scope="KERNEL_DIRECTORY_IDENTITY"
+                    if name in self.kernel_directories
+                    else "EXACT_METADATA",
                 )
                 for name, info in sorted(self.seen.items())
             ],
@@ -708,6 +802,7 @@ def main():
         raise ValueError("inspection_deadline")
 
     prior_handler = None
+    inspector = None
     try:
         if len(sys.argv) != 1:
             raise ValueError("no_command_or_path_arguments")
@@ -718,21 +813,32 @@ def main():
             signal.alarm(MAX_SECONDS)
         stream = getattr(sys.stdin, "buffer", sys.stdin)
         request = parse_request(stream.read(INPUT_BYTES + 1))
-        result = Inspector(request).run()
+        inspector = Inspector(request)
+        result = inspector.run()
         raw = bounded_result(result)
     except (ValueError, OSError, IOError, KeyError, TypeError) as error:
         code = str(error) if isinstance(error, ValueError) else "inspection_incomplete"
         if not matches(re.compile(r"^[a-z_]{1,80}$"), code):
             code = "inspection_incomplete"
-        raw = bounded_result(
-            dict(
-                schema_version=1,
-                status="INCOMPLETE",
-                error_code=code,
-                ready_for_apply=False,
-                execution_authorized=False,
-            )
+        result = dict(
+            schema_version=1,
+            status="INCOMPLETE",
+            error_code=code,
+            ready_for_apply=False,
+            execution_authorized=False,
         )
+        if (
+            inspector is not None
+            and code
+            in (
+                "path_metadata_drift",
+                "path_open_drift",
+                "file_content_metadata_drift",
+            )
+            and inspector.failure_context
+        ):
+            result["error_context"] = inspector.failure_context
+        raw = bounded_result(result)
     finally:
         if prior_handler is not None:
             signal.alarm(0)
