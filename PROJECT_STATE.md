@@ -1,3 +1,30 @@
+## Bounded snapshot enumeration correction, 2026-10-19
+
+Exact source50/head9a7060b completed Windows4591 PASS/455 platform skips/56
+warnings, Linux binding337 PASS/one Windows-only skip, isolated package lifecycle,
+static/security/contracts and locked audit. Stage enumeration finding4307248489
+is resolved after these exact-source receipts. New automated P2 finding4307297988
+identifies dependency-directory list materialization before the entry cap.
+Independent review identified the same helper path in source/state/copy scans.
+Retain every source50 result and failure; source51/checkpoint07 corrects these
+same bounded-enumeration paths using only the fresh worker helper's scoped OS
+facade. Preserve original digest/schema/read/depth/link checks and restore the
+helper state after success or failure. This is not a new baseline or transport.
+
+Source51 local focused302 PASS/58 Windows platform skips/no warnings and
+Ruff/mypy127/85-tool22-legacy contracts PASS. Security18 PASS on a new disposable
+path; the original16-pass/two-setup-error Windows temp-access receipt is retained.
+Secret preflight1284 and strict locked audit PASS/no known vulnerabilities.
+Exact-source isolated wheel/sdist/content/license and synthetic installed factory,
+reinstall/uninstall43 operator+20 migration preservation PASS. Independent final
+static review found no confirmed P1/P2; it is not formal GitHub APPROVED. New
+exact-head hosted POSIX/Windows and automated review remain required.
+Additive checkpoint07 verifies51/60 consumption and all prior protected pins.
+Observe stays unconditionally disabled. Actual runtime/init
+closure and immutable operational admission remain unfinished implementation;
+no VM contact/deployment/EDA/claim/reservation or PR164 merge/publication follows.
+Published2.1.0, all earlier policies, consumed counters and receipts are preserved.
+
 ## Observer bounded directory enumeration correction, 2026-10-18
 
 Source49/head8cea9e5 passes local269/49 Windows skips, static127, security18,

@@ -328,14 +328,14 @@ class BindingObservationWorker(object):
 
     def _snapshots(self):
         self.copying.MAX_ENTRIES, self.copying.MAX_BYTES = SNAPSHOT_ENTRIES, SNAPSHOT_BYTES
-        source = self.copying.snapshot(self.route["source_cell"])
+        source = self._bounded_copy_call("snapshot", self.route["source_cell"])
         remaining_entries = SNAPSHOT_ENTRIES - source["entries"]
         remaining_bytes = SNAPSHOT_BYTES - source["bytes"]
         if remaining_entries < 1 or remaining_bytes < 0:
             raise ValueError("binding_observation_combined_snapshot_bound")
         self.copying.MAX_ENTRIES, self.copying.MAX_BYTES = remaining_entries, remaining_bytes
         try:
-            state = self.copying.snapshot(self.route["source_state"])
+            state = self._bounded_copy_call("snapshot", self.route["source_state"])
         finally:
             self.copying.MAX_ENTRIES, self.copying.MAX_BYTES = SNAPSHOT_ENTRIES, SNAPSHOT_BYTES
         if source["tree_sha256"] != self.route["ade"]["source_tree_sha256"] or (
@@ -371,7 +371,7 @@ class BindingObservationWorker(object):
                         raise ValueError("binding_observation_combined_dependency_bound")
                     self.copying.MAX_ENTRIES = min(4096, remaining_entries)
                     self.copying.MAX_BYTES = remaining_bytes
-                    snapshot = self.copying.dependency_snapshot(library["path"])
+                    snapshot = self._bounded_copy_call("dependency_snapshot", library["path"])
                     if snapshot["tree_sha256"] != library["tree_sha256"]:
                         raise ValueError("binding_observation_registered_dependency_drift")
                     remaining_entries -= snapshot["entries"]
@@ -388,7 +388,7 @@ class BindingObservationWorker(object):
         # Ephemeral identity/ctime guards are deliberately not a new registered
         # content baseline. Recheck the whole union after every content read, so
         # a later library cannot change an earlier tree unnoticed on pass two.
-        records, entries = [], [0]
+        records, entries, library_entries = [], [0], [0]
 
         def record(location):
             self.copying.path(location)
@@ -398,21 +398,33 @@ class BindingObservationWorker(object):
             return info
 
         def tree(location, depth):
-            if depth > 16 or entries[0] >= DEPENDENCY_ENTRIES:
+            if depth > 16:
                 raise ValueError("binding_observation_dependency_namespace_bound")
-            entries[0] += 1
             info = record(location)
             if stat.S_ISDIR(info.st_mode):
-                names = sorted(os.listdir(location))
+                names = self._bounded_directory_names(
+                    location, min(DEPENDENCY_ENTRIES - entries[0], 4096 - library_entries[0]),
+                    "binding_observation_dependency_namespace_bound",
+                )
+                # Claim discovered children before visiting any subtree, so a
+                # nested directory cannot spend already-listed sibling entries.
+                entries[0] += len(names)
+                library_entries[0] += len(names)
                 records.append((location, names))
                 for name in names:
                     tree(os.path.join(location, name), depth + 1)
-                if sorted(os.listdir(location)) != names:
+                if self._bounded_directory_names(
+                    location, len(names), "binding_observation_dependency_namespace_drift",
+                ) != names:
                     raise ValueError("binding_observation_dependency_namespace_drift")
             elif not stat.S_ISREG(info.st_mode):
                 raise ValueError("binding_observation_dependency_namespace_type")
 
         for library in libraries:
+            if entries[0] >= DEPENDENCY_ENTRIES:
+                raise ValueError("binding_observation_dependency_namespace_bound")
+            entries[0] += 1
+            library_entries[0] = 1
             ancestor = os.path.dirname(library["path"])
             for unused in range(128):
                 info = record(ancestor)
@@ -426,6 +438,51 @@ class BindingObservationWorker(object):
                 raise ValueError("binding_observation_dependency_ancestor_bound")
             tree(library["path"], 0)
         return records
+
+    def _bounded_directory_names(self, location, maximum, rejection):
+        # Sort only an already bounded collection. The iterator itself never
+        # materializes os.listdir/os.walk, including on the Python2.6 VM.
+        names = []
+        entries = self._stage_directory_entries(location)
+        try:
+            for name in entries:
+                if len(names) >= maximum:
+                    raise ValueError(rejection)
+                names.append(name)
+        finally:
+            entries.close()
+        return sorted(names)
+
+    def _bounded_copy_call(self, operation, *arguments):
+        # Preserve the authenticated helper's exact metadata/digest format and
+        # read/byte/depth/link rules. Only this fresh memory module's listdir is
+        # replaced for this call; the process-wide os module is never mutated.
+        original_os = self.copying.os
+        bounded_os = types.ModuleType("binding_observation_dependency_os")
+        bounded_os.__dict__.update(original_os.__dict__)
+        if operation not in ("snapshot", "dependency_snapshot", "copy_owned"):
+            raise ValueError("binding_observation_copy_operation")
+        roots = arguments[:2] if operation == "copy_owned" else arguments[:1]
+        discovered, directories = dict((root, 1) for root in roots), {}
+
+        def bounded_listdir(path):
+            matches = [root for root in roots if path == root or path.startswith(root + os.sep)]
+            if len(matches) != 1:
+                raise ValueError("binding_observation_copy_enumeration_root")
+            root = matches[0]
+            maximum = directories.get(path, self.copying.MAX_ENTRIES - discovered[root])
+            names = self._bounded_directory_names(path, maximum, "native_copy_tree_bound")
+            if path not in directories:
+                discovered[root] += len(names)
+                directories[path] = len(names)
+            return names
+
+        bounded_os.listdir = bounded_listdir
+        self.copying.os = bounded_os
+        try:
+            return getattr(self.copying, operation)(*arguments)
+        finally:
+            self.copying.os = original_os
 
     def _stage(self, request, session):
         # Review-only owned-file piece. Not reachable from observe() or a CLI.
@@ -449,7 +506,7 @@ class BindingObservationWorker(object):
         self.copying.sync(stage)
         self._write(stage + "/request.json", canonical(request))
         os.mkdir(stage + "/library", 448)
-        copied = self.copying.copy_owned(self.route["source_cell"],
+        copied = self._bounded_copy_call("copy_owned", self.route["source_cell"],
                                         stage + "/library/" + request["cell"],
                                         before["source"]["tree_sha256"])
         self._write(stage + "/cds.lib", self._cds_lib(request, stage))
@@ -734,7 +791,7 @@ class BindingObservationWorker(object):
         ledger = self._preflight(session)
         original = self._snapshots()
         copied_path = stage + "/library/" + request["cell"]
-        owned_copy = self.copying.snapshot(copied_path)
+        owned_copy = self._bounded_copy_call("snapshot", copied_path)
         if owned_copy["content_sha256"] != original["source"]["content_sha256"]:
             raise ValueError("binding_observation_owned_copy_drift")
         cds_raw = self._read(stage + "/cds.lib")
@@ -788,7 +845,9 @@ class BindingObservationWorker(object):
                 raise ValueError("binding_observation_program_failed")
             if self._ocean_trust() != trust:
                 raise ValueError("binding_observation_ocean_post_drift")
-            if self._snapshots() != original or self.copying.snapshot(copied_path) != owned_copy:
+            if self._snapshots() != original or (
+                self._bounded_copy_call("snapshot", copied_path) != owned_copy
+            ):
                 raise ValueError("binding_observation_original_or_copy_post_drift")
             if self._ledger() != ledger or self._read(stage + "/cds.lib") != cds_raw:
                 raise ValueError("binding_observation_ledger_or_config_drift")
@@ -861,7 +920,8 @@ class BindingObservationWorker(object):
                  "protection_record": "PRIMARY"}
         observations = (
             ("originals_preserved", lambda: self._snapshots() == original),
-            ("owned_copy_preserved", lambda: self.copying.snapshot(copied_path) == owned_copy),
+            ("owned_copy_preserved", lambda:
+             self._bounded_copy_call("snapshot", copied_path) == owned_copy),
             ("ledger_preserved", lambda: self._ledger() == ledger),
             ("cds_lib_preserved", lambda: self._read(stage + "/cds.lib") == cds_raw),
         )

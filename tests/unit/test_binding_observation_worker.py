@@ -299,6 +299,347 @@ def test_dependency_namespace_and_entry_bounds_reject(selected, tmp_path, monkey
     assert worker.copying.MAX_ENTRIES == observer.SNAPSHOT_ENTRIES
 
 
+@pytest.mark.parametrize("operation", ["snapshot", "dependency_snapshot"])
+def test_bounded_helper_retains_exact_snapshot_format_and_digest(
+    selected, tmp_path, monkeypatch, operation,
+):
+    worker, _, _ = selected
+    library = tmp_path / "digest-library"
+    library.mkdir(mode=0o700)
+    (library / "z-last").write_bytes(b"last")
+    (library / "a-first").write_bytes(b"first")
+    (library / "middle").mkdir(mode=0o700)
+    (library / "middle" / "nested").write_bytes(b"nested")
+    expected = getattr(worker.copying, operation)(str(library))
+    original_os = worker.copying.os
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded helper listdir")
+
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    monkeypatch.setattr(observer.os, "walk", forbidden)
+    assert worker._bounded_copy_call(operation, str(library)) == expected
+    assert worker.copying.os is original_os
+    assert worker.copying.os is copying.os is os
+    assert os.listdir is forbidden
+
+
+def test_all_source_state_and_dependency_snapshots_use_bounded_enumeration(selected, monkeypatch):
+    worker, _, _ = selected
+    expected = worker._snapshots()
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded source/state/dependency enumeration")
+
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    monkeypatch.setattr(observer.os, "walk", forbidden)
+    assert worker._snapshots() == expected
+    assert worker.copying.os is copying.os is os
+
+
+@pytest.mark.parametrize("operation", ["snapshot", "dependency_snapshot", "copy_owned"])
+@pytest.mark.parametrize("failure", [ValueError, KeyboardInterrupt])
+def test_scoped_helper_os_is_restored_after_every_failure(
+    selected, monkeypatch, operation, failure,
+):
+    worker, _, _ = selected
+    original_os, original_listdir = worker.copying.os, os.listdir
+
+    def failed(*args):
+        assert worker.copying.os is not original_os
+        assert worker.copying.os.listdir is not original_listdir
+        assert os.listdir is original_listdir
+        raise failure("synthetic helper failure")
+
+    monkeypatch.setattr(worker.copying, operation, failed)
+    arguments = ("/synthetic-source", "/synthetic-target", "a" * 64) if (
+        operation == "copy_owned"
+    ) else ("/synthetic-source",)
+    with pytest.raises(failure, match="synthetic helper failure"):
+        worker._bounded_copy_call(operation, *arguments)
+    assert worker.copying.os is original_os
+    assert os.listdir is original_listdir
+
+
+@pytest.mark.parametrize("limit,expected_reads", [(9, 9), (observer.DEPENDENCY_ENTRIES, 4096)])
+def test_dependency_namespace_stops_infinite_names_at_global_or_library_limit(
+    selected, monkeypatch, limit, expected_reads,
+):
+    worker, _, _ = selected
+    consumed, closed = [], []
+
+    def infinite_entries(path):
+        try:
+            while True:
+                consumed.append(True)
+                assert len(consumed) <= expected_reads
+                yield "synthetic-child"
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(observer, "DEPENDENCY_ENTRIES", limit)
+    monkeypatch.setattr(worker, "_stage_directory_entries", infinite_entries)
+    with pytest.raises(ValueError, match="dependency_namespace_bound"):
+        worker._dependency_namespace(worker.route["libraries"])
+    assert len(consumed) == expected_reads
+    assert closed == [True]
+
+
+@pytest.mark.parametrize("operation,limit", [("snapshot", 64), ("dependency_snapshot", 4096)])
+def test_authenticated_helper_never_materializes_an_infinite_directory(
+    selected, monkeypatch, operation, limit,
+):
+    worker, _, _ = selected
+    consumed, closed = [], []
+    original_os = worker.copying.os
+
+    def infinite_entries(path):
+        try:
+            while True:
+                consumed.append(True)
+                assert len(consumed) <= limit
+                yield "synthetic-child"
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(worker.copying, "MAX_ENTRIES", limit)
+    monkeypatch.setattr(worker, "_stage_directory_entries", infinite_entries)
+    with pytest.raises(ValueError, match="native_copy_tree_bound"):
+        worker._bounded_copy_call(operation, worker.route["source_cell"])
+    assert len(consumed) == limit
+    assert closed == [True]
+    assert worker.copying.os is original_os
+
+
+@pytest.mark.parametrize("scan", ["namespace", "snapshot"])
+def test_sibling_directory_names_share_the_remaining_discovery_budget(
+    selected, tmp_path, monkeypatch, scan,
+):
+    worker, _, _ = selected
+    library = tmp_path / "sibling-library"
+    library.mkdir(mode=0o700)
+    for name in ("left", "right"):
+        (library / name).mkdir(mode=0o700)
+        for index in range(2):
+            (library / name / str(index)).write_bytes(b"")
+    original_entries = worker._stage_directory_entries
+    consumed, closed = {}, []
+
+    def counted_entries(path):
+        names = original_entries(path)
+        try:
+            for name in names:
+                consumed[path] = consumed.get(path, 0) + 1
+                yield name
+        finally:
+            names.close()
+            closed.append(path)
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", counted_entries)
+    if scan == "namespace":
+        monkeypatch.setattr(observer, "DEPENDENCY_ENTRIES", 6)
+    else:
+        monkeypatch.setattr(worker.copying, "MAX_ENTRIES", 6)
+
+    def action():
+        if scan == "namespace":
+            return worker._dependency_namespace([dict(path=str(library))])
+        return worker._bounded_copy_call("snapshot", str(library))
+
+    with pytest.raises(ValueError, match="bound"):
+        action()
+    # Root + two listed sibling directories + two left leaves already spend5.
+    # The right directory may retain only one name and rejects its next name.
+    assert consumed[str(library / "right")] == 2
+    assert closed[-1] == str(library / "right")
+    assert worker.copying.os is copying.os is os
+
+
+def test_content_pass_after_namespace_still_rejects_unbounded_late_growth(selected, monkeypatch):
+    worker, _, _ = selected
+    library = worker.route["libraries"][0]["path"]
+    original_entries = worker._stage_directory_entries
+    visits, consumed, closed = [], [], []
+
+    def late_growth(path):
+        if path == library:
+            visits.append(path)
+        if path == library and len(visits) == 3:
+            # The namespace's initial and membership reads already succeeded.
+            # A later huge directory must also stop inside the content helper.
+            try:
+                while True:
+                    consumed.append(True)
+                    assert len(consumed) <= 4096
+                    yield "synthetic-content-phase-growth"
+            finally:
+                closed.append(True)
+        else:
+            names = original_entries(path)
+            try:
+                yield from names
+            finally:
+                names.close()
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", late_growth)
+    with pytest.raises(ValueError, match="native_copy_tree_bound"):
+        worker._dependencies()
+    assert len(visits) == 3
+    assert len(consumed) == 4096
+    assert closed == [True]
+    assert worker.copying.os is copying.os is os
+    assert worker.copying.MAX_ENTRIES == observer.SNAPSHOT_ENTRIES
+
+
+def test_dependency_namespace_budget_is_shared_across_registered_library_roots(
+    selected, tmp_path, monkeypatch,
+):
+    worker, _, _ = selected
+    libraries = []
+    for label in ("first", "second"):
+        library = tmp_path / label
+        library.mkdir(mode=0o700)
+        for index in range(2):
+            (library / str(index)).write_bytes(b"")
+        libraries.append(dict(path=str(library)))
+    monkeypatch.setattr(observer, "DEPENDENCY_ENTRIES", 5)
+    with pytest.raises(ValueError, match="dependency_namespace_bound"):
+        worker._dependency_namespace(libraries)
+
+
+def test_helper_membership_recheck_has_its_own_bounded_prefix_and_restores_os(
+    selected, monkeypatch,
+):
+    worker, _, _ = selected
+    source = worker.route["source_cell"]
+    original_entries = worker._stage_directory_entries
+    visits, consumed, closed = [], [], []
+
+    def growing_entries(path):
+        visits.append(path)
+        if len(visits) == 1:
+            names = original_entries(path)
+            try:
+                yield from names
+            finally:
+                names.close()
+        else:
+            try:
+                while True:
+                    consumed.append(True)
+                    assert len(consumed) <= 2
+                    yield "synthetic-late-child"
+            finally:
+                closed.append(True)
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", growing_entries)
+    with pytest.raises(ValueError, match="native_copy_tree_bound"):
+        worker._bounded_copy_call("snapshot", source)
+    assert len(consumed) == 2  # one original leaf plus first excess
+    assert closed == [True]
+    assert worker.copying.os is copying.os is os
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual ordinary-user helper copy and rescan")
+@pytest.mark.parametrize("growth", ["source-rescan", "target-scan", "none"])
+def test_owned_copy_internal_rescans_are_bounded_and_restore_the_private_os(
+    selected, tmp_path, monkeypatch, growth,
+):
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    worker, _, _ = selected
+    source = worker.route["source_cell"]
+    target = str(tmp_path / "bounded-owned-copy")
+    expected = worker.copying.snapshot(source)
+    original_listdir = os.listdir
+    original_entries = worker._stage_directory_entries
+    visits, consumed, closed = {}, [], []
+
+    def growing_entries(path):
+        visits[path] = visits.get(path, 0) + 1
+        growing = (growth == "source-rescan" and path == source and visits[path] == 3) or (
+            growth == "target-scan" and path == target
+        )
+        if growing:
+            try:
+                while True:
+                    consumed.append(True)
+                    assert len(consumed) <= observer.SNAPSHOT_ENTRIES
+                    yield "synthetic-late-child"
+            finally:
+                closed.append(True)
+        else:
+            names = original_entries(path)
+            try:
+                yield from names
+            finally:
+                names.close()
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded copy_owned enumeration")
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", growing_entries)
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    if growth == "none":
+        result = worker._bounded_copy_call("copy_owned", source, target, expected["tree_sha256"])
+        # Inspect the tiny retained fixture with the untouched authenticated
+        # helper after the bounded call; compare the complete copy receipt.
+        monkeypatch.setattr(observer.os, "listdir", original_listdir)
+        copied = worker.copying.snapshot(target)
+        assert result == dict(
+            schema_version=1, source_tree_sha256=expected["tree_sha256"],
+            source_content_sha256=expected["content_sha256"],
+            copy_content_sha256=copied["content_sha256"], copy_tree_sha256=copied["tree_sha256"],
+            source_preserved=True, copy_owned=True,
+            entries=copied["entries"], bytes=copied["bytes"],
+        )
+    else:
+        with pytest.raises(ValueError, match="native_copy_tree_bound"):
+            worker._bounded_copy_call("copy_owned", source, target, expected["tree_sha256"])
+        assert len(consumed) == (2 if growth == "source-rescan" else observer.SNAPSHOT_ENTRIES)
+        assert closed == [True]
+    assert (Path(target) / "sch.oa").read_bytes() == b"synthetic OA placeholder"
+    assert worker.copying.os is copying.os is os
+
+
+@pytest.mark.skipif(
+    platform.system() != "Linux" or platform.machine() not in ("i686", "x86_64"),
+    reason="actual Linux dependency readdir64 prefix and cleanup",
+)
+def test_actual_linux_dependency_directory_rejects_first_excess_name_and_closes(
+    selected, tmp_path, monkeypatch,
+):
+    worker, _, _ = selected
+    library = tmp_path / "actual-dependency-limit"
+    library.mkdir(mode=0o700)
+    for index in range(4096):
+        (library / f"leaf-{index:04d}").write_bytes(b"")
+    original_entries = worker._stage_directory_entries
+    consumed, closed = [], []
+
+    def counted_entries(path):
+        names = original_entries(path)
+        try:
+            for name in names:
+                consumed.append(True)
+                assert len(consumed) <= 4096
+                yield name
+        finally:
+            names.close()
+            closed.append(True)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unbounded dependency materialization")
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", counted_entries)
+    monkeypatch.setattr(observer.os, "listdir", forbidden)
+    monkeypatch.setattr(observer.os, "walk", forbidden)
+    with pytest.raises(ValueError, match="dependency_namespace_bound"):
+        worker._dependency_namespace([dict(path=str(library))])
+    assert len(consumed) == 4096  # library root plus the 4,096th child is first excess
+    assert closed == [True]
+
+
 def test_library_map_is_reconstructed_from_registration_and_owned_stage(selected):
     worker, scan, _ = selected
     stage = "/synthetic-owned-stage/" + scan["observation_id"]
