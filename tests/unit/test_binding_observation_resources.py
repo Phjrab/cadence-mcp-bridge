@@ -9,11 +9,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from test_binding_observation_worker import root, selected
+from test_binding_observation_worker import controlled_inventory, root, selected
 
 from cadence_mcp_bridge import _binding_observation as observer
 
-__all__ = ["root", "selected"]
+__all__ = ["controlled_inventory", "root", "selected"]
 
 
 @pytest.mark.parametrize("stop", ["bound", "deadline", "cancel", "visibility"])
@@ -49,6 +49,162 @@ def test_streaming_process_inventory_stops_and_closes_before_materialization(
         worker._check_conflicting_processes()
     assert len(read) == {"bound": 4097, "deadline": 5, "cancel": 3, "visibility": 1}[stop]
     assert closed == [True]
+
+
+@pytest.mark.parametrize("cleanup", [False, True])
+@pytest.mark.parametrize("stop", [
+    "bound", "scan-deadline", "enumeration-error", "uid-error", "identity-error",
+    "close-error", "early-active", "empty",
+])
+def test_group_inventory_preserves_helper_semantics_bounds_and_restores_module_os(
+    selected, monkeypatch, cleanup, stop,
+):
+    worker, _, _ = selected
+    original_os, real_listdir = worker._process_module.os, observer.os.listdir
+    module_os = SimpleNamespace(**original_os.__dict__)
+    module_os.getuid = lambda: 12345
+    monkeypatch.setattr(worker._process_module, "os", module_os)
+    process = SimpleNamespace(pid=45678)
+    identity = ("S", process.pid, process.pid, "retained-start")
+    monkeypatch.setattr(worker.processes, "process_identity", lambda pid: identity)
+
+    def uid(pid):
+        if stop == "uid-error":
+            raise OSError(errno.EACCES, "synthetic uid inspection failure")
+        return (12345,) * 4
+
+    monkeypatch.setattr(worker.processes, "process_uid", uid)
+    if stop == "identity-error":
+        monkeypatch.setattr(worker.processes, "process_identity",
+                            lambda pid: ("S", process.pid + 1, process.pid, "wrong-start"))
+    now, consumed, closed = [0], [], []
+    monkeypatch.setattr(observer.os, "times", lambda: (0, 0, 0, 0, now[0]))
+    monkeypatch.setattr(observer, "OUTER_SECONDS", 3)
+    # Cleanup must still inspect a group after both observation stop conditions.
+    worker._deadline = -1 if cleanup else 100
+    worker._cancelled = lambda: cleanup
+
+    def names(path):
+        assert path == "/proc"
+        assert worker._process_module.os is not module_os
+        assert observer.os.listdir is real_listdir
+        try:
+            if stop == "empty":
+                return
+            while True:
+                consumed.append(True)
+                if stop == "scan-deadline":
+                    now[0] += 1
+                if stop == "enumeration-error":
+                    raise OSError(errno.EACCES, "synthetic inventory failure")
+                yield str(process.pid) if stop in ("early-active", "uid-error", "close-error") \
+                    else "not-a-pid"
+        finally:
+            closed.append(True)
+            if stop == "close-error":
+                raise OSError(errno.EIO, "synthetic inventory close failure")
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", names)
+    try:
+        if stop in ("early-active", "empty"):
+            assert worker._group_active(process, identity, cleanup=cleanup) is (
+                stop == "early-active")
+        else:
+            expected = OSError if stop in (
+                "enumeration-error", "uid-error", "close-error",
+            ) else ValueError
+            with pytest.raises(expected):
+                worker._group_active(process, identity, cleanup=cleanup)
+    finally:
+        assert worker._process_module.os is module_os
+        assert observer.os.listdir is real_listdir
+    assert len(consumed) == {
+        "bound": 4097, "scan-deadline": 3, "enumeration-error": 1, "uid-error": 1,
+        "close-error": 1, "identity-error": 0, "early-active": 1, "empty": 0,
+    }[stop]
+    assert closed == ([] if stop == "identity-error" else [True])
+
+
+@pytest.mark.parametrize("stop", ["cancel", "cancel-midscan", "outer-deadline", "empty-late"])
+def test_normal_group_inventory_checks_stop_conditions_before_and_after_helper(
+    selected, monkeypatch, stop,
+):
+    worker, _, _ = selected
+    original_os = worker._process_module.os
+    inspected, consumed, closed, now = [], [], [], [0]
+    monkeypatch.setattr(observer.os, "times", lambda: (0, 0, 0, 0, now[0]))
+    worker._deadline = 2
+    worker._cancelled = lambda: stop == "cancel" or (
+        stop == "cancel-midscan" and len(consumed) >= 3)
+    if stop == "outer-deadline":
+        now[0] = 2
+
+    def names(path):
+        try:
+            while stop == "cancel-midscan":
+                consumed.append(True)
+                yield "not-a-pid"
+        finally:
+            closed.append(True)
+
+    def helper(process, identity):
+        inspected.append(True)
+        assert list(worker._process_module.os.listdir("/proc")) == []
+        now[0] = 2
+        return False
+
+    monkeypatch.setattr(worker, "_stage_directory_entries", names)
+    monkeypatch.setattr(worker.processes, "group_active", helper)
+    with pytest.raises(ValueError, match="cancelled|process_inventory_deadline"):
+        worker._group_active(SimpleNamespace(pid=1), ("S", 1, 1, "start"))
+    assert inspected == ([True] if stop in ("empty-late", "cancel-midscan") else [])
+    assert closed == ([True] if stop in ("empty-late", "cancel-midscan") else [])
+    assert len(consumed) == (3 if stop == "cancel-midscan" else 0)
+    assert worker._process_module.os is original_os
+
+
+@pytest.mark.skipif(os.name != "posix", reason="actual ordinary-user owned child and cleanup")
+def test_owned_child_cleanup_uses_fresh_bounded_group_scans_after_cancel_and_deadline(
+    selected, controlled_inventory, monkeypatch,
+):
+    worker, scan, _ = selected
+    if os.getuid() == 0:
+        pytest.skip("ordinary-user POSIX requirement")
+    executable = Path(worker.profile["tools"]["ocean"]["path"])
+    executable.write_text(
+        f"#!{sys.executable}\nimport os,time\nos.close(1)\nos.close(2)\ntime.sleep(30)\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
+    monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    bound_group, calls = worker._group_active, []
+    original_module_os = worker._process_module.os
+
+    def checked_group(process, identity, cleanup=False):
+        calls.append(cleanup)
+        if not cleanup:
+            worker._deadline = -1
+            worker._cancelled = lambda: True
+        try:
+            return bound_group(process, identity, cleanup=cleanup)
+        finally:
+            assert worker._process_module.os is original_module_os
+
+    monkeypatch.setattr(worker, "_group_active", checked_group)
+    before = worker._ledger()
+    with worker.accounting.ReservationSession(worker.root) as session:
+        stage, _, _ = worker._stage(scan, session)
+        with pytest.raises(ValueError, match="binding_observation_cancelled"):
+            worker._program(stage, session, scan)
+        assert calls[0] is False and True in calls
+        assert worker._process_receipt["new_eda_starts"] == 1
+        assert worker._process_receipt["cleanup_complete"] is True
+        assert worker._process_receipt["returncode"] < 0
+        session.check()
+        with pytest.raises(ValueError, match="process_attempt_spent"):
+            worker._program(stage, session, scan)
+    assert worker._ledger() == before
 
 
 def info(value, **changes):

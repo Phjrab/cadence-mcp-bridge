@@ -1,3 +1,19 @@
+## Owned-group inventory correction overlay, 2026-10-20
+
+Continue same draftPR164 with additive source55/checkpoint11 for review4315484359.
+Current direct user approval permits at most3 fixed read-only VM checks of
+accounting/disk, protected source/library bounds and runtime/init trust metadata,
+each at most60 seconds. The duplicate affirmative answers share this one scope.
+No EDA, mutation, reservation, PR164 merge or publication is approved by it.
+Source54's hosted kernel-limit test passes after its test-only free-fragment
+correction; retain the initial failure. The pinned process helper also needs
+bounded inventory at observer polling/termination call sites, without changing
+its bytes, identity checks or shared os module. Every scan must close/restore on
+all exits; expired outer/cancelled execution still permits a bounded cleanup scan.
+Unverifiable termination retains the lifetime lock and spent status. Actual VM
+access/trust/storage setup, observation and3DC remain unestablished. No new VM,
+EDA, reservation, PR164 merge or publication authority; source history is55/60.
+
 ## Resource-enforced observer continuation, 2026-10-19
 
 PR164 source54/checkpoint10 retains source53 and all previous counters/failures.

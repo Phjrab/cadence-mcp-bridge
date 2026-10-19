@@ -299,7 +299,8 @@ class BindingObservationWorker(object):
         self.route, self.selection = routes[0], dict(selection)
         modules = authenticated_modules(assets, pins)
         self.copying, self.accounting = modules["copy.py"], modules["reservations.py"]
-        self.processes = modules["process.py"].EdaWorker(None, None, None, None, None)
+        self._process_module = modules["process.py"]
+        self.processes = self._process_module.EdaWorker(None, None, None, None, None)
         self.root = self.profile["paths"]["managed_root"]
         self._deadline = None
         self._cancelled = lambda: False
@@ -1322,6 +1323,61 @@ class BindingObservationWorker(object):
         finally:
             names.close()
 
+    def _group_active(self, process, identity, cleanup=False):
+        # Preserve the pinned helper's identity/UID/group semantics, but give only
+        # its fresh private module a bounded streaming listdir. Normal polling
+        # honors the observation deadline/cancellation; cleanup needs a fresh
+        # finite scan even after those expire, and must never infer an empty group
+        # from an incomplete inventory. A persistently unknown writer keeps the
+        # caller's lifetime lock held rather than turning a timeout into success.
+        deadline = os.times()[4] + OUTER_SECONDS
+        if not cleanup and self._deadline is not None:
+            deadline = min(deadline, self._deadline)
+
+        def check():
+            if not cleanup:
+                self._cancel_check()
+            if os.times()[4] >= deadline:
+                raise ValueError("binding_observation_process_inventory_deadline")
+
+        original_os = self._process_module.os
+        bounded_os = types.ModuleType("binding_observation_process_os")
+        bounded_os.__dict__.update(original_os.__dict__)
+        inventories = []
+
+        def enumerate_names(path):
+            names = self._stage_directory_entries(path)
+            try:
+                for count, name in enumerate(names):
+                    check()
+                    if count >= PROCESS_INVENTORY_ENTRIES:
+                        raise ValueError("binding_observation_process_inventory_bound")
+                    yield name
+                check()
+            finally:
+                names.close()
+
+        def bounded_listdir(path):
+            if path != "/proc":
+                raise ValueError("binding_observation_process_inventory_path")
+            names = enumerate_names(path)
+            inventories.append(names)
+            return names
+
+        bounded_os.listdir = bounded_listdir
+        self._process_module.os = bounded_os
+        try:
+            check()
+            active = self.processes.group_active(process, identity)
+            check()
+            return active
+        finally:
+            try:
+                for names in inventories:
+                    names.close()
+            finally:
+                self._process_module.os = original_os
+
     def _mount_type(self, location):
         # Kernel-owned mount metadata, bounded before materialization. An ordinary
         # user cannot substitute a FUSE filesystem that merely reports small limits.
@@ -1472,7 +1528,7 @@ class BindingObservationWorker(object):
             streams = [process.stdout, process.stderr]
             identity = self.processes.process_identity(process.pid)
             pending = list(streams)
-            while pending or self.processes.group_active(process, identity):
+            while pending or self._group_active(process, identity):
                 self._cancel_check()
                 session.check()
                 self._stage_size(stage)
@@ -1520,19 +1576,19 @@ class BindingObservationWorker(object):
                     try:
                         if identity is None:
                             identity = self.processes.process_identity(process.pid)
-                        if self.processes.group_active(process, identity):
+                        if self._group_active(process, identity, cleanup=True):
                             self.processes.signal_group(process, identity, signal.SIGTERM)
                             end = os.times()[4] + 2
                             while (
-                                self.processes.group_active(process, identity)
+                                self._group_active(process, identity, cleanup=True)
                                 and os.times()[4] < end
                             ):
                                 time.sleep(0.02)
-                            if self.processes.group_active(process, identity):
+                            if self._group_active(process, identity, cleanup=True):
                                 self.processes.signal_group(process, identity, signal.SIGKILL)
                             # Keep the leader unreaped and the lifetime lock held
                             # until its entire owned group has stopped writing.
-                            while self.processes.group_active(process, identity):
+                            while self._group_active(process, identity, cleanup=True):
                                 time.sleep(0.02)
                     except Exception:
                         # Successful Popen plus setsid pins this direct child's
@@ -1551,7 +1607,7 @@ class BindingObservationWorker(object):
                             try:
                                 if identity is None:
                                     identity = self.processes.process_identity(process.pid)
-                                if not self.processes.group_active(process, identity):
+                                if not self._group_active(process, identity, cleanup=True):
                                     break
                             except Exception:
                                 pass

@@ -126,6 +126,18 @@ runner. It is neither current-VM provisioning nor Cadence evidence.
 The external process inventory streams at most4096 entries, checking cancellation
 and the outer deadline between entries and closing the directory on every exit.
 
+Owned-group polling and termination must also use bounded streaming inventories
+through the observer's private authenticated process-helper instance. The pinned
+helper and process identity/signaling rules stay unchanged. Normal scans honor
+cancellation and the outer deadline; cleanup uses a fresh finite scan deadline
+after those expire. An incomplete inventory cannot establish an empty group or
+successful cleanup. The lifetime lock stays held until termination is verified;
+this safety hold may exceed the desired operation timeout.
+
+The filesystem-type check does not prove durable backing or reboot recovery.
+Provisioning must separately establish a persistent backing location, preserve
+existing stage evidence and define safe remount/recovery without replacing it.
+
 ## One attempt and terminal evidence
 
 The retained account/campaign claim is spent before SSH. A fixed remote claim

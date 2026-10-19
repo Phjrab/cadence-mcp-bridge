@@ -1,3 +1,21 @@
+## Complete bounded group polling and cleanup, 2026-10-20
+
+Address automatic P2 4315484359 on the same draftPR164 through source55 and a new
+checkpoint11. Preserve source54's actual hosted kernel-limit success, initial
+test expectation failure, old checkpoints and all runtime consumption. Reuse the
+authenticated process helper's identity and signal behavior with a private scoped
+bounded inventory, never modify its pins or process-wide os. Cover early returns,
+infinite inventories, per-scan timeout/cancellation, cleanup after outer expiry,
+restoration and real owned child termination. Unknown/incomplete scans cannot
+release a live or unverified writer's resource lock. Refresh exact code/package/
+hosted/review gates; do not rerun unchanged stages without a concrete risk.
+The user has approved a total of at most3 fixed read-only current-VM checks,
+each at most60 seconds, covering retained accounting/disk, protected source/
+library bounds and runtime/init trust metadata. Duplicate answers do not add
+another allowance. No EDA, mutation, claim/reservation, merge or publication
+follows. Runtime/init evidence and fixed durable-storage provisioning remain
+operational prerequisites, not completed implementation.
+
 ## Close resource review before actual observer, 2026-10-19
 
 Correct source53 automatic findings4315056554/4315128486 through additive

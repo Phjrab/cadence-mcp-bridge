@@ -1,3 +1,32 @@
+## Bounded owned-group inspection follow-up, 2026-10-20
+
+Source54 final8a0eb14 passed hosted Linux647 binding checks and the separate real
+disposable kernel ENOSPC/reclaimed-space test. Preserve its initial free-fragment
+expectation failure and all earlier receipts. Exact-head automated review found
+distinct P2 4315484359: the unchanged pinned process helper still materializes
+/proc during group polling and cleanup. Correct this with additive source55/
+checkpoint11. Keep pinned helper bytes and identity/signaling semantics; bound
+each group inventory through a scoped facade on its fresh private module. Close
+on early-active/error/deadline outcomes and restore every temporary setting.
+
+Normal polling retains cancellation/outer deadline; cleanup needs its own bounded
+scan after those expire. Incomplete inspection is never an empty group. Keep the
+lifetime lock while termination remains unverified, even if safe cleanup outlasts
+the desired host timeout. Refresh affected/static/security/package/exact hosted
+checks and review for the corrected source. Source55/60 preserves prior spending;
+remaining5 software versions confer no actual execution authority. The user has
+now approved at most3 fixed read-only current-VM checks, each at most60 seconds,
+for retained accounting/disk, protected source/library bounds and runtime/init
+trust metadata. Duplicate answers do not multiply this allowance. No EDA,
+mutation, claim/reservation, PR164 merge or publication follows. Actual runtime/
+init evidence and durable bounded stage provisioning remain gaps.
+Local changed-path regression427 PASS/106 platform skips; security18 PASS,
+secret scan1294 files PASS, Ruff/mypy128/contracts PASS. Preserve the first
+security fixture's Windows temporary-directory access failure; the identical
+tests pass in a fresh short path. Independent read-only diff review found no
+actionable defect; this is not formal GitHub approval. Exact hosted/package/
+automatic review remain required for source55.
+
 ## Kernel resource-bound correction, 2026-10-19
 
 Continue PR164/source53 at7014b3d without merge/publication. Exact Linux629 binding
