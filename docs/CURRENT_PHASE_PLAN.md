@@ -1,3 +1,17 @@
+## Close resource review before actual observer, 2026-10-19
+
+Correct source53 automatic findings4315056554/4315128486 through additive
+source54/checkpoint10. Bound process enumeration before allocation and require
+an already provisioned persistent kernel-limited stage filesystem. Do not count
+post-write scans as a hard storage quota. Verify positive/negative guards and
+an explicitly enabled disposable hosted-CI 8MiB/inode-limited filesystem,
+including large/open-unlinked writes. Refresh final full/static/security/install/
+CI/review. Preserve source53 and every failed receipt/counter. No automatic mount,
+format, resize or VM operation follows. Current-VM provisioning mechanism remains
+unselected; determine current facts only after the pending read-only VM access
+decision. Runtime/init trust and actual binding/three-DC qualification remain
+open; no PR164 merge or publication authority is generated.
+
 ## Connect finite observation before candidate experiment, 2026-10-19
 
 Implement additive source53/checkpoint09 on existing draftPR164; retain source52,

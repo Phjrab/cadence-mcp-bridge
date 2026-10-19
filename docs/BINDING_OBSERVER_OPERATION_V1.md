@@ -104,6 +104,28 @@ each have only `category` and `evidence_sha256`; their categories are
 `cadence_launchers_runtime_and_contexts`, and `registered_library_initializers`.
 These references require actual reviewed evidence, not invented hashes.
 
+## Kernel stage capacity prerequisite
+
+Before operational staging, the exact managed_root/binding-observations directory
+must already be a separate persistent ext2/ext3/ext4 filesystem with total data
+capacity at most8MiB and total inodes at most256. The guard checks the held/named
+mount identity, kernel mount type, capacity and inode ceiling before the remote
+claim, before launch and at subsequent admission guards. Kernel accounting covers
+aggregate writes and open-unlinked files; a tree scan alone cannot enforce those
+limits. An ordinary directory, volatile tmpfs or user FUSE mount is rejected.
+Existing stage/source/dependency scans continue to detect conservation drift.
+
+This increment performs no mount, filesystem formatting, provisioning or resizing.
+The current VM's compatible storage/provisioning mechanism is not yet established;
+its facts and a narrowly fixed administrator helper must be resolved before an
+actual observation can be described as ready. Do not overlay or delete existing
+stages or treat source hashes/approval as this missing kernel prerequisite.
+The opt-in disposable CI filesystem test concerns only synthetic files on a hosted
+runner. It is neither current-VM provisioning nor Cadence evidence.
+
+The external process inventory streams at most4096 entries, checking cancellation
+and the outer deadline between entries and closing the directory on every exit.
+
 ## One attempt and terminal evidence
 
 The retained account/campaign claim is spent before SSH. A fixed remote claim

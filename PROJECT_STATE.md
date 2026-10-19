@@ -1,3 +1,27 @@
+## Kernel resource-bound correction, 2026-10-19
+
+Continue PR164/source53 at7014b3d without merge/publication. Exact Linux629 binding
+PASS/one Windows-only skip establishes software/process behavior, not Cadence.
+Automated P2 findings4315056554/4315128486 require bounded /proc enumeration and
+kernel storage enforcement. Add source54/checkpoint10, preserving source53/60
+and all earlier failures. Stream at most4096 process entries with cancellation/
+deadline/handle cleanup. Require an existing separate persistent ext2/3/4 mount
+at managed_root/binding-observations with data capacity<=8MiB and<=256 inodes;
+recheck identity/capacity before launch and at admission guards. Filesystem limits
+cover aggregate and open-unlinked writes. Tree scans remain conservation checks.
+No ordinary directory, FUSE or volatile tmpfs can satisfy this gate. No automatic
+mount/format/provision/resize is implemented or performed. Current-VM provision
+mechanism is not yet selected; inspect existing configuration under fresh access
+authority before selecting a bounded administrator helper. This is a concrete
+remaining operational setup gap, not an approval-only ready claim.
+
+Final affected/software/kernel-CI/package/review refresh is required. Disposable
+hosted-CI mount tests are not standard-VM evidence. Current VM/SSH/deployment/EDA/
+simulation/extraction/claim/reservation remain0. Runtime/init evidence, current
+library bounds/ledger/disk and finite actual authority remain required. User
+selected baseline plus two voltage vectors in the source53 entry; do not re-ask.
+Source54/60 retains six software versions, without resetting consumption.
+
 ## Finite observer execution integration, 2026-10-19
 
 Continue draftPR164 from0ba16a9/maina713eb6; published2.1.0/36f7583 unchanged.

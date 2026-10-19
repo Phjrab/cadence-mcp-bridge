@@ -21,6 +21,8 @@ path: exact installed bootstrap, existing account claim/resource lock, owned cop
 one fixed OCEAN process and retained terminal/frame evidence. It remains opt-in
 and requires separately approved finite authority and reviewed standard-VM
 runtime/init trust evidence. Declared member hashes do not prove dynamic closure;
+an already provisioned persistent8MiB/256-inode filesystem is also required to
+enforce stage capacity, including open-unlinked files. Current-VM setup is pending;
 software/synthetic tests do not establish actual Cadence observation or a fresh
 three-candidate experiment. See the
 [operation and evidence boundary](docs/BINDING_OBSERVER_OPERATION_V1.md).

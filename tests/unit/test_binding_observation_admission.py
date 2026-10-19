@@ -691,3 +691,25 @@ def test_durable_start_marker_delay_never_starts_after_authority_or_deadline(
     assert repeated["failure_code"] == "binding_observation_remote_attempt_spent"
     assert repeated["new_eda_starts"] == 0 and launched == []
     assert marker.read_bytes() == retained_marker and ledger.read_bytes() == retained_ledger
+
+
+@_ORDINARY_LINUX
+def test_missing_kernel_storage_rejects_before_remote_claim_stage_or_process(
+    selected, controlled_inventory, monkeypatch,
+):
+    worker, request, docs, _, _, steps, launched = operational_case(selected, monkeypatch)
+    ledger = Path(worker.root) / worker.accounting.LEDGER
+    retained = ledger.read_bytes()
+
+    def missing():
+        raise ValueError("binding_observation_bounded_filesystem_required")
+
+    monkeypatch.setattr(worker, "_bounded_storage", missing)
+    result = worker.observe_authorized(request, *encoded(*docs))
+    assert result["failure_code"] == "binding_observation_bounded_filesystem_required"
+    assert result["status"] == "REJECTED" and result["new_eda_starts"] == 0
+    assert result["counter_before"] == result["counter_after"] == docs[0]["expected_counter"]
+    assert steps == [] and launched == []
+    assert not (Path(worker.root) / "binding-observation-01.private.json").exists()
+    assert not (Path(worker.root) / "binding-observations").exists()
+    assert ledger.read_bytes() == retained

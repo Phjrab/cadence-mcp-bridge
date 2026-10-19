@@ -1,3 +1,16 @@
+## Resource-enforced observer continuation, 2026-10-19
+
+PR164 source54/checkpoint10 retains source53 and all previous counters/failures.
+Process inspection must stream within4096 entries/deadline/cancellation. Actual
+observation also requires a separate persistent kernel-bounded8MiB/256-inode
+stage filesystem; scans alone cannot enforce writes or open-unlinked capacity.
+Current-VM provisioning is unestablished and no automatic mount/format/resize is
+implemented. The fixed administrator provisioning mechanism must be selected
+after current facts are known. Hosted disposable filesystem tests are synthetic
+CI infrastructure evidence, not current-VM or Cadence evidence. Runtime/init
+trust, current library/ledger/disk facts and finite actual authority remain gates.
+No VM/SSH/EDA/claim/reservation or PR164 merge/publication follows from this entry.
+
 ## Current experimental observer continuation, 2026-10-19
 
 Stable2.1.0/36f7583 is already published. Current development2.2.0.dev0 maina713eb6

@@ -37,6 +37,8 @@ FRAME_BYTES = 65536
 STAGE_BYTES = 8388608
 PROCESS_SECONDS = 45
 OUTER_SECONDS = 60
+PROCESS_INVENTORY_ENTRIES = 4096
+STAGE_INODES = 256
 HELPER_PINS = {
     "copy.py": "97e3805a6c407617bc588c20907d8804bd0a251bc315ca7f47a16918c44f94e7",
     "reservations.py": "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372",
@@ -487,6 +489,7 @@ class BindingObservationWorker(object):
                     raise ValueError("binding_observation_live_accounting_mismatch")
                 result["counter_before"] = counter
                 result["counter_after"] = counter
+                storage = self._bounded_storage()
                 self._declared_code_members(manifest_raw, admission["declared_members_sha256"])
                 self._snapshots()
                 result["execution_trust"] = "OPERATOR_ATTESTED_STANDARD_VM"
@@ -494,6 +497,8 @@ class BindingObservationWorker(object):
                 def guard():
                     self._cancel_check()
                     self._admission(request, admission_raw, manifest_raw, closure_raw)
+                    if self._bounded_storage() != storage:
+                        raise ValueError("binding_observation_storage_identity_drift")
                     self._declared_code_members(manifest_raw, admission["declared_members_sha256"])
                     session.check()
                     if session.observe(binding)[0] != counter:
@@ -515,8 +520,11 @@ class BindingObservationWorker(object):
                 # Recheck pure admission immediately before launch as well as
                 # at the expensive integrity boundaries. Durable marker fsync
                 # can outlast either authority window or the process deadline.
-                self._launch_guard = lambda: self._admission(
-                    request, admission_raw, manifest_raw, closure_raw)
+                def launch_guard():
+                    self._admission(request, admission_raw, manifest_raw, closure_raw)
+                    if self._bounded_storage() != storage:
+                        raise ValueError("binding_observation_storage_identity_drift")
+                self._launch_guard = launch_guard
                 stage, before, copied = self._stage(request, session)
                 guard()
                 value = self._program(stage, session, request)
@@ -1291,19 +1299,95 @@ class BindingObservationWorker(object):
         # Kept separate so owned-process component tests can supply a controlled
         # external inventory without replacing /proc used by group identity and
         # termination. Unknown same-UID executables must still fail closed.
-        for name in os.listdir("/proc"):
-            if not name.isdigit() or int(name) == os.getpid():
-                continue
-            try:
-                info = os.stat("/proc/" + name)
-                if info.st_uid != os.getuid():
+        names = self._stage_directory_entries("/proc")
+        try:
+            for count, name in enumerate(names):
+                self._cancel_check()
+                if self._deadline is not None and os.times()[4] >= self._deadline:
+                    raise ValueError("binding_observation_outer_deadline")
+                if count >= PROCESS_INVENTORY_ENTRIES:
+                    raise ValueError("binding_observation_process_inventory_bound")
+                if not name.isdigit() or int(name) == os.getpid():
                     continue
-                target = os.path.basename(os.readlink("/proc/" + name + "/exe"))
-                if target.lower() in ("ocean", "virtuoso", "spectre", "icfb", "icms"):
-                    raise ValueError("binding_observation_active_eda_process")
-            except OSError as error:
-                if error.errno not in (2, 3):
-                    raise
+                try:
+                    info = os.stat("/proc/" + name)
+                    if info.st_uid != os.getuid():
+                        continue
+                    target = os.path.basename(os.readlink("/proc/" + name + "/exe"))
+                    if target.lower() in ("ocean", "virtuoso", "spectre", "icfb", "icms"):
+                        raise ValueError("binding_observation_active_eda_process")
+                except OSError as error:
+                    if error.errno not in (2, 3):
+                        raise
+        finally:
+            names.close()
+
+    def _mount_type(self, location):
+        # Kernel-owned mount metadata, bounded before materialization. An ordinary
+        # user cannot substitute a FUSE filesystem that merely reports small limits.
+        fd = os.open("/proc/self/mountinfo", os.O_RDONLY | os.O_NOFOLLOW)
+        stream = None
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, os.getuid()) or (
+                info.st_mode & 146
+            ):
+                raise ValueError("binding_observation_storage_mount_metadata")
+            stream = os.fdopen(fd, "rb")
+            raw = stream.read(65537)
+            if len(raw) > 65536 or not raw.endswith(b"\n"):
+                raise ValueError("binding_observation_storage_mount_bound")
+        finally:
+            if stream is None:
+                os.close(fd)
+            else:
+                stream.close()
+        found = []
+        for line in raw.decode("utf-8").splitlines():
+            fields = line.split()
+            if len(fields) < 10 or "-" not in fields:
+                raise ValueError("binding_observation_storage_mount_metadata")
+            named = re.sub(r"\\([0-7]{3})", lambda item: chr(int(item.group(1), 8)), fields[4])
+            if named == location:
+                separator = fields.index("-")
+                if separator < 6 or separator + 3 >= len(fields):
+                    raise ValueError("binding_observation_storage_mount_metadata")
+                found.append(fields[separator + 1])
+        if len(found) != 1 or found[0] not in ("ext2", "ext3", "ext4"):
+            raise ValueError("binding_observation_persistent_bounded_filesystem_required")
+        return found[0]
+
+    def _bounded_storage(self):
+        # A directory scan cannot cap aggregate writes or open-unlinked files.
+        # Require an already provisioned, persistent, separately mounted small
+        # filesystem. Its kernel block/inode ceilings include every writer and
+        # unlinked-open inode. This read-only guard never mounts/formats/resizes.
+        location = self.root + "/binding-observations"
+        if not os.path.lexists(location):
+            raise ValueError("binding_observation_bounded_filesystem_required")
+        self.copying.owned_parent(location)
+        before = os.lstat(location)
+        fd = os.open(location, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            opened = os.fstat(fd)
+            def identity(item):
+                return item.st_dev, item.st_ino, item.st_uid, item.st_gid, item.st_mode
+            if not stat.S_ISDIR(before.st_mode) or stat.S_IMODE(before.st_mode) != 448 or (
+                before.st_dev == os.lstat(self.root).st_dev
+            ) or identity(before) != identity(opened):
+                raise ValueError("binding_observation_bounded_filesystem_required")
+            kind = self._mount_type(location)
+            fs = os.fstatvfs(fd)
+            capacity = fs.f_blocks * fs.f_frsize
+            if not 0 < capacity <= STAGE_BYTES or not 0 < fs.f_files <= STAGE_INODES:
+                raise ValueError("binding_observation_bounded_filesystem_required")
+            if identity(os.fstat(fd)) != identity(before) or (
+                identity(os.lstat(location)) != identity(before)
+            ):
+                raise ValueError("binding_observation_storage_identity_drift")
+            return identity(before), kind, capacity, fs.f_files
+        finally:
+            os.close(fd)
 
     def _environment(self, stage):
         # This is a fixed review-only launch recipe, not attestation of dynamic

@@ -63,12 +63,15 @@ LIMITS = {
     "frame_bytes_including_framing": 65536,
     "bytes_per_output_stream": 65536,
     "stage_logical_and_allocated_bytes": 8388608,
+    "stage_kernel_inode_ceiling": 256,
+    "process_inventory_entries": 4096,
     "new_simulations": 0,
     "new_extractions": 0,
     "new_result_reservations": 0,
 }
 BLOCKERS = (
     "RUNTIME_AND_LIBRARY_INITIALIZATION_TRUST_NOT_ESTABLISHED",
+    "PERSISTENT_KERNEL_BOUNDED_STAGE_NOT_ESTABLISHED",
     "SEPARATE_FINITE_BINDING_OBSERVATION_AUTHORITY_REQUIRED",
 )
 

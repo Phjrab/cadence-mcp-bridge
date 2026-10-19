@@ -91,6 +91,9 @@ def controlled_inventory(selected, monkeypatch):
     # child's /proc identity, group ownership and termination remain real.
     worker, _, _ = selected
     monkeypatch.setattr(worker, "_check_conflicting_processes", lambda: None)
+    # Ordinary-file fixtures have no mounted quota. This is an explicit synthetic
+    # storage witness, never evidence of kernel enforcement or VM provisioning.
+    monkeypatch.setattr(worker, "_bounded_storage", lambda: ("SYNTHETIC_STORAGE_ONLY",))
 
 
 def declared_manifest(worker, members, metadata):
@@ -2061,7 +2064,8 @@ def test_conflicting_process_inventory_is_fail_closed(selected, monkeypatch, cas
     with monkeypatch.context() as patch:
         patch.setattr(observer.os, "getuid", lambda: uid, raising=False)
         patch.setattr(observer.os, "getpid", lambda: 98764)
-        patch.setattr(observer.os, "listdir", lambda path: ["self", "98764", "98765"])
+        patch.setattr(worker, "_stage_directory_entries",
+                      lambda path: (name for name in ["self", "98764", "98765"]))
         patch.setattr(observer.os, "stat", lambda path: SimpleNamespace(
             st_uid=uid + (case == "other-uid")))
 
