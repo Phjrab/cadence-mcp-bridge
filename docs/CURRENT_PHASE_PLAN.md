@@ -1,3 +1,45 @@
+## Fixed prerequisite reads and command-free host checks, 2026-10-20
+
+Source55 heada35fdcb completed local full4848 PASS/530 platform skips and exact
+hosted Windows4865 PASS/513 skips, Linux668 binding PASS/two platform or opt-in
+skips plus disposable kernel capacity1 PASS. Exact artifacts/install/static/
+security and automated review passed. Preserve their earlier invocation failures.
+
+Source56/checkpoint12 removes Python2.6 platform.uname's hidden uname subprocess
+from observer preflight, declared-member and directory checks. Read host identity
+through os.uname/sys.version_info, retaining exact profile matching and pinned
+helper bytes. Add installed private, explicitly invoked read-only storage facts
+and authenticated memory bootstrap; no automatic import/startup or public tool.
+Do not infer mount persistence, utility/runtime trust or apply readiness from its
+metadata. Verify changed regressions, actual hosted Linux guards, static/security,
+installed resources, exact-head CI and review before any actual invocation.
+
+Source56 changed-path checks now pass609 with121 explicit platform/opt-in skips
+using unchanged guards and a fresh short Windows temporary root. Security18,
+1298-file secret scan, strict locked audit, Ruff/mypy130 and85/22 contracts pass.
+Independent observer and storage integration reviews found no actionable defect;
+they are not formal GitHub approval. Preserve the first long-path output-pin
+failure and CP949 audit-import failure. Exact frozen source56 hosted full suite,
+Linux regressions, package/install and automated review remain pending receipts.
+The three addressed source55 review threads are resolved against run39280318434;
+actual current-VM trust/storage acceptance is still blocked.
+
+All three authorized current-VM reads are spent. They observed128 attempts and
+15,721,299,968 reserved bytes, retained source/ADE/five-library/seven-model
+fingerprints, and569 installation targets requiring0 mode/ACL changes. No EDA,
+reservation or metadata mutation occurred. The fixed installation recipe excludes
+registered initialization roots. Retained initializer/context code in two of
+those conserved library trees still has shared-write metadata: conservation is
+not execution trust. Exact initializer/ancestor metadata remediation and behavior
+review, complete reviewed standard-VM trust and bounded persistent stage setup
+remain prerequisites. A storage facts-only helper does not implement provisioning.
+
+Keep source consumption56/60 additive, existing resource usage and all failures.
+No fresh VM access, admin deployment, OCEAN,3DC, PR164 merge or publication follows.
+The user's three voltage vectors remain selected; reuse PR163 after actual
+binding evidence and a separate finite trial grant. Do not request them again.
+Earlier entries below remain historical, source-specific evidence.
+
 ## Complete bounded group polling and cleanup, 2026-10-20
 
 Address automatic P2 4315484359 on the same draftPR164 through source55 and a new

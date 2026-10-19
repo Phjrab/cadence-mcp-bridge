@@ -94,7 +94,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_candidate_contracts.py tests/unit/test_candidate_reports.py tests/unit/test_candidate_batches.py tests/unit/test_candidate_cli.py -q --basetemp "$HOME/explicit-candidate-tests"
 
       - name: Local binding preparation, bounded frames and owned-process guards
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_bootstrap.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py tests/unit/test_binding_observation_admission.py tests/unit/test_binding_observation_transport.py tests/unit/test_binding_observer_run.py tests/unit/test_binding_observation_resources.py -q --basetemp "$HOME/binding-observer-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_bootstrap.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py tests/unit/test_binding_observation_admission.py tests/unit/test_binding_observation_transport.py tests/unit/test_binding_observer_run.py tests/unit/test_binding_observation_resources.py tests/unit/test_binding_storage_inspection.py -q --basetemp "$HOME/binding-observer-tests"
 
       - name: Disposable persistent kernel stage limit including unlinked files
         env:

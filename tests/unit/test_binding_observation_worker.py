@@ -374,13 +374,71 @@ def test_declared_member_aggregate_bound_is_checked_before_content(declared_case
 
 def test_declared_valid_schema_reaches_platform_gate_without_io(declared_case, monkeypatch):
     worker, manifest = declared_case
-    monkeypatch.setattr(observer.platform, "system", lambda: "UnqualifiedPlatform")
+    monkeypatch.setattr(observer.os, "uname", lambda: (
+        "UnqualifiedPlatform", "host", "release", "version", "i686",
+    ), raising=False)
     monkeypatch.setattr(observer.os, "open", lambda *a, **k: pytest.fail("filesystem opened"))
     monkeypatch.setattr(worker, "_ocean_trust", lambda: pytest.fail("OCEAN observed"))
     with pytest.raises(
         ValueError, match="^binding_observation_declared_normal_linux_user_required$",
     ):
         check_declared(worker, manifest)
+
+
+def test_kernel_host_avoids_legacy_platform_queries_and_command_execution(monkeypatch):
+    def forbidden(*args, **kwargs):
+        pytest.fail("host identification invoked a legacy query or external command")
+
+    for name in ("uname", "node", "system", "machine", "python_version"):
+        monkeypatch.setattr(platform, name, forbidden)
+    for name in ("system", "popen"):
+        monkeypatch.setattr(os, name, forbidden)
+    monkeypatch.setattr(observer.subprocess, "Popen", forbidden)
+    calls = []
+
+    def uname():
+        calls.append(True)
+        return ("Linux", "synthetic-guest", "release", "version", "i686")
+
+    monkeypatch.setattr(observer, "os", SimpleNamespace(uname=uname))
+    monkeypatch.setattr(observer, "sys", SimpleNamespace(version_info=(2, 6, 6, "final", 0)))
+    assert observer.kernel_host() == {
+        "hostname": "synthetic-guest", "os": "Linux", "architecture": "i686",
+        "python_version": "2.6.6",
+    }
+    assert calls == [True]
+
+
+@pytest.mark.parametrize("mismatch", [None, "hostname", "os", "architecture", "python_version"])
+def test_actual_preflight_and_declared_checks_never_query_platform_or_launch_commands(
+    declared_real_case, monkeypatch, mismatch,
+):
+    worker, _, manifest, ocean, _, _ = declared_real_case
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("read-only admission check attempted a legacy query or command")
+
+    for name in ("uname", "node", "system", "machine", "python_version"):
+        monkeypatch.setattr(platform, name, forbidden)
+    for name in ("system", "popen"):
+        monkeypatch.setattr(os, name, forbidden)
+    monkeypatch.setattr(observer.subprocess, "Popen", forbidden)
+    before = worker._ledger()
+    if mismatch is not None:
+        worker.profile["host"][mismatch] = "mismatched-observed-host"
+    with worker.accounting.ReservationSession(worker.root) as session:
+        if mismatch is not None:
+            with pytest.raises(ValueError, match="^binding_observation_host_binding$"):
+                worker._preflight(session)
+        else:
+            assert worker._preflight(session) == before
+            assert check_declared(worker, manifest)["status"] == "EXACT_MEMBER_INTEGRITY_VERIFIED"
+            names = worker._stage_directory_entries(str(ocean.parent))
+            try:
+                assert sorted(names) == ["ocean", "runtime-library"]
+            finally:
+                names.close()
+    assert worker._ledger() == before
 
 
 def test_declared_real_success_stays_unqualified_and_read_only(declared_real_case, monkeypatch):
@@ -1677,12 +1735,11 @@ def test_linux_directory_stream_cleans_up_opened_handles_on_every_exit(
         return info
 
     monkeypatch.setattr(ctypes, "CDLL", lambda *args, **kwargs: libc)
-    monkeypatch.setattr(observer.platform, "system", lambda: "Linux")
-    monkeypatch.setattr(observer.platform, "machine", lambda: "i686")
     # A local os facade exercises the fixed Linux branch on Windows without
     # changing the process-wide platform used by pathlib or the test runner.
     monkeypatch.setattr(observer, "os", SimpleNamespace(
         name="posix", O_RDONLY=os.O_RDONLY, O_DIRECTORY=0, O_NOFOLLOW=0,
+        uname=lambda: ("Linux", "host", "release", "version", "i686"),
         lstat=os.lstat, open=opened_fd, close=lambda fd: descriptors_closed.append(fd), fstat=fstat,
     ))
     names = worker._stage_directory_entries(str(stage))

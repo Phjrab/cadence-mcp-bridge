@@ -10,12 +10,12 @@ attestation. Declared-file integrity alone is neither complete closure nor appro
 import hashlib
 import json
 import os
-import platform
 import re
 import select
 import signal
 import stat
 import subprocess
+import sys
 import time
 import types
 
@@ -57,6 +57,14 @@ def canonical(value):
 
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
+
+
+def kernel_host():
+    # Python2.6 platform.uname() eagerly runs `uname -p` through PATH. Keep
+    # identity checks inside the current process, before any permitted EDA start.
+    identity = os.uname()
+    return {"hostname": identity[1], "os": identity[0], "architecture": identity[4],
+            "python_version": "%d.%d.%d" % sys.version_info[:3]}
 
 
 def token(value, pattern):
@@ -873,7 +881,8 @@ class BindingObservationWorker(object):
             finally:
                 names.close()
             return
-        if platform.system() != "Linux" or platform.machine() not in ("i686", "x86_64"):
+        host = kernel_host()
+        if host["os"] != "Linux" or host["architecture"] not in ("i686", "x86_64"):
             raise ValueError("binding_observation_directory_platform")
         import ctypes
 
@@ -1103,7 +1112,7 @@ class BindingObservationWorker(object):
         if set(directories) != ancestors or set(members) & ancestors or not runtime:
             raise ValueError("binding_observation_declared_ancestor_union")
         # All manifest/schema/baseline checks above are filesystem-free.
-        if (os.name != "posix" or platform.system() != "Linux" or uid == 0 or
+        if (os.name != "posix" or kernel_host()["os"] != "Linux" or uid == 0 or
                 os.geteuid() != uid):
             raise ValueError("binding_observation_declared_normal_linux_user_required")
         deadline = os.times()[4] + OUTER_SECONDS
@@ -1275,9 +1284,8 @@ class BindingObservationWorker(object):
             raise ValueError("binding_observation_existing_resource_lock_required")
         import pwd
 
-        host = {"hostname": platform.node(), "user": pwd.getpwuid(os.getuid()).pw_name,
-                "os": platform.system(), "architecture": platform.machine(),
-                "python_version": platform.python_version()}
+        host = kernel_host()
+        host["user"] = pwd.getpwuid(os.getuid()).pw_name
         if host != self.profile["host"]:
             raise ValueError("binding_observation_host_binding")
         session.check()

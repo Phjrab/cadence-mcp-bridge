@@ -140,6 +140,39 @@ existing stage evidence and define safe remount/recovery without replacing it.
 
 ## One attempt and terminal evidence
 
+### Read-only storage prerequisite resource
+
+The private installed `_binding_storage_inspection.py` and pinned
+`_binding_storage_bootstrap.py` provide a fixed facts-only prerequisite read.
+They have no public MCP endpoint, automatic import action, deployment, mount,
+format, permission repair or execution approval. A separately approved operator
+invocation supplies the registered profile and retained domain/identity pins;
+the memory bootstrap authenticates the exact installed source before evaluation.
+Normal imports do not read stdin, change paths or contact a host.
+
+The read covers only the existing observation stage, fixed backing location,
+fixed system utility metadata/digests, selected kernel mount facts and bounded
+loop associations. All paths include no-follow held-parent checks, including
+metadata-only device/link leaves. Device nodes and existing image contents are
+never opened. Bounds are128 path identities,64KiB request,64MiB aggregate reads,
+16MiB per hashed file,1MiB output and60seconds. Exhausting the aggregate allowance
+can conservatively produce incomplete evidence, even at an exact EOF boundary.
+Missing or partial objects are retained as observations; no apply readiness,
+durability, utility version, ACL or runtime-dependency trust is inferred.
+
+Host checks in both this resource and the observer use `os.uname()` and
+`sys.version_info`. Python2.6 `platform.uname()` can eagerly invoke `uname -p`
+through PATH, so it must not be used in this fixed command-free preflight.
+Synthetic modern-Python regression is distinct from actual guest qualification.
+
+The three current-VM reads approved2026-10-20 are spent. They established retained
+accounting, registered fingerprints and the fixed installation inventory only.
+They did not inspect this storage prerequisite or establish complete runtime
+trust. Retained initializer/context metadata in two registered libraries also
+contains shared-write code. Its conserved tree fingerprint is not a positive
+trust attestation. Exact metadata remediation and initializer/runtime behavior
+review remain separate prerequisites; no vendor/PDK content modification follows.
+
 The retained account/campaign claim is spent before SSH. A fixed remote claim
 under the existing managed root is spent under the existing lifetime resource
 lock before staging. Changing observation ID, output directory or host package
