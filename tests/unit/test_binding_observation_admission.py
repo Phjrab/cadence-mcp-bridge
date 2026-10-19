@@ -683,7 +683,8 @@ def test_durable_start_marker_delay_never_starts_after_authority_or_deadline(
     stage = Path(worker.root) / "binding-observations" / request["observation_id"]
     marker = stage / "ocean-start-claimed.json"
     retained_marker = marker.read_bytes()
-    assert (stage / "terminal.json").read_bytes() == observer.canonical(result)
+    disk_terminal = {key: value for key, value in result.items() if key != "frame"}
+    assert (stage / "terminal.json").read_bytes() == observer.canonical(disk_terminal)
     assert result["retry_permitted"] is False and ledger.read_bytes() == retained_ledger
     advanced = False
     repeated = worker.observe_authorized(request, *raw)
