@@ -24,6 +24,14 @@ Linux regressions, package/install and automated review remain pending receipts.
 The three addressed source55 review threads are resolved against run39280318434;
 actual current-VM trust/storage acceptance is still blocked.
 
+The first source56 hosted Linux invocation passed727 binding cases but failed
+the new real-host success test on a hosted same-UID daemon's unreadable /proc
+executable. Preserve run39332040498/job118332346693. The test now controls only
+the unrelated external conflict scan, as existing owned-file fixtures do;
+dedicated conflict tests and the product fail-closed check are unchanged.
+This test-only correction does not consume another product source version or
+change wheel/sdist build inputs. Refresh exact-head hosted evidence after commit.
+
 All three authorized current-VM reads are spent. They observed128 attempts and
 15,721,299,968 reserved bytes, retained source/ADE/five-library/seven-model
 fingerprints, and569 installation targets requiring0 mode/ACL changes. No EDA,

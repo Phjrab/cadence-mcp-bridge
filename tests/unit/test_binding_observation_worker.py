@@ -414,6 +414,10 @@ def test_actual_preflight_and_declared_checks_never_query_platform_or_launch_com
     declared_real_case, monkeypatch, mismatch,
 ):
     worker, _, manifest, ocean, _, _ = declared_real_case
+    # Host/declared/directory checks use real owned files here. External same-UID
+    # processes belong to the independent conflict-inventory tests below; hosted
+    # runner daemons may intentionally deny inspection of their executable.
+    monkeypatch.setattr(worker, "_check_conflicting_processes", lambda: None)
 
     def forbidden(*args, **kwargs):
         pytest.fail("read-only admission check attempted a legacy query or command")
