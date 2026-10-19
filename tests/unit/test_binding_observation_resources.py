@@ -189,6 +189,7 @@ def test_actual_kernel_capacity_includes_large_and_unlinked_open_files(selected)
         subprocess.run(["sudo", "-n", "/bin/chmod", "700", str(arena)], check=True, timeout=10)
         witness = worker._bounded_storage()
         assert witness[2] <= observer.STAGE_BYTES and witness[3] <= observer.STAGE_INODES
+        initial_free = os.statvfs(arena).f_bfree
         # Keep the file open after unlink: namespace scans cannot count it, but
         # the kernel must charge it and reject bytes beyond the admitted volume.
         selected_file = arena / "unlinked-open"
@@ -197,15 +198,22 @@ def test_actual_kernel_capacity_includes_large_and_unlinked_open_files(selected)
         written = 0
         try:
             with pytest.raises(OSError) as full:
-                while True:
-                    written += os.write(fd, b"x" * 65536)
+                # Bound even a broken fixture: do not fill the hosted disk
+                # if the expected filesystem limit has failed to apply.
+                while written <= observer.STAGE_BYTES:
+                    added = os.write(fd, b"x" * 65536)
+                    assert added > 0
+                    written += added
             assert full.value.errno == errno.ENOSPC
             assert 0 < written <= observer.STAGE_BYTES
-            assert os.statvfs(arena).f_bfree == 0
+            # A 64KiB write can fail while smaller fragments remain free.
+            # Require charged blocks and kernel rejection, not zero free.
+            pressure_free = os.statvfs(arena).f_bfree
+            assert pressure_free < initial_free
             assert worker._bounded_storage() == witness
         finally:
             os.close(fd)
-        assert os.statvfs(arena).f_bfree > 0
+        assert os.statvfs(arena).f_bfree > pressure_free
         assert image.stat().st_size == observer.STAGE_BYTES
     finally:
         if mounted:
