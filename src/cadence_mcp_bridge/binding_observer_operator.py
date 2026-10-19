@@ -1,8 +1,7 @@
-"""Local preparation for a fixed OA binding observer; no remote execution path.
+"""Explicit operator preparation and finite owned-copy OA observation.
 
-Prepared plans are private descriptions, never grants or source attestations.
-The internal worker remains operationally blocked until its execution trust
-boundary and a separate finite observation authority have been established.
+Import, schema and prepare never dispatch. Run requires independently pinned
+human authority and reviewed standard-VM runtime/init trust evidence.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.native_runtime import NativeRegistration, projection
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected
-from cadence_mcp_bridge.physical_metadata import _intent_metadata
+from cadence_mcp_bridge.physical_metadata import _intent_metadata, _payload
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
 
 ASSETS = (
@@ -41,6 +40,7 @@ ASSETS = (
     "binding_observation_bootstrap.py",
     "binding_observation_claim.py",
     "binding_observer_operator.py",
+    "binding_observation_transport.py",
     "_native_copy.py",
     "_shared_reservations.py",
     "_native_eda_worker.py",
@@ -70,7 +70,6 @@ LIMITS = {
 BLOCKERS = (
     "RUNTIME_AND_LIBRARY_INITIALIZATION_TRUST_NOT_ESTABLISHED",
     "SEPARATE_FINITE_BINDING_OBSERVATION_AUTHORITY_REQUIRED",
-    "NO_OPERATIONAL_TRANSPORT_OR_ACTIVATION_ENTRYPOINT",
 )
 
 
@@ -83,6 +82,58 @@ def asset_pins() -> dict[str, str]:
     return {
         name: _sha(files("cadence_mcp_bridge").joinpath(name).read_bytes().replace(b"\r\n", b"\n"))
         for name in ASSETS
+    }
+
+
+def _execution_documents(
+    context: ExecutionContext, compiled: dict[str, Any], request: BindingScanRequest,
+    pins: dict[str, str], design_id: str, analysis_id: str,
+) -> tuple[bytes, bytes, bytes, bytes]:
+    # Keep original profile/registration file hashes in the plan. The guest
+    # receives a canonical semantic projection; pretty operator JSON is valid
+    # and never rewritten merely to meet the wire format.
+    profile = _canonical(context.contracts.environment.model_dump(mode="json"))
+    execution = {**compiled, "environment_sha256": _sha(profile)}
+    registration = _canonical(execution)
+    scan = _canonical(request.model_dump(mode="json"))
+    selection = _canonical({
+        "schema_version": 1,
+        "design_id": design_id, "analysis_id": analysis_id,
+        "profile_sha256": _sha(profile), "registration_sha256": _sha(registration),
+        "request_sha256": _sha(scan), "collector_sha256": _sha(render_collector(request)),
+        "helper_sha256": pins["_binding_observation.py"],
+    })
+    return profile, registration, selection, scan
+
+
+def _plan_value(
+    context: ExecutionContext, raw: bytes, compiled: dict[str, Any], route: Any,
+    design_id: str, analysis_id: str, request: BindingScanRequest, pins: dict[str, str],
+) -> dict[str, Any]:
+    documents = _execution_documents(context, compiled, request, pins, design_id, analysis_id)
+    return {
+        "schema_version": 1,
+        "status": "LOCAL_PLAN_ONLY_OPERATIONALLY_BLOCKED",
+        "context_sha256": context.context_sha256,
+        "environment_sha256": context.binding.environment_sha256,
+        "design_sha256": context.binding.design_sha256,
+        "pdk_sha256": context.binding.pdk_sha256,
+        "resource_domain_sha256": context.resource_domain_sha256,
+        "registration_input_sha256": _sha(raw),
+        "compiled_registration_sha256": _sha(_canonical(compiled)),
+        "execution_profile_sha256": _sha(documents[0]),
+        "execution_registration_sha256": _sha(documents[1]),
+        "design_id": design_id, "analysis_id": analysis_id,
+        "source_cell": route.source_cell, "source_state": route.source_state,
+        "retained_source_tree_sha256": route.ade.source_tree_sha256,
+        "retained_ade_state_tree_sha256": route.ade.ade_state_tree_sha256,
+        "request": request.model_dump(mode="json"),
+        "request_sha256": _sha(documents[3]), "collector_sha256": _sha(render_collector(request)),
+        "package_asset_lf_sha256": pins, "limits": dict(LIMITS), "blockers": list(BLOCKERS),
+        "license_impact": "OCEAN_START_MAY_USE_EXISTING_LICENSE_SESSION",
+        "observation_scope": "PROPOSED_READ_ONLY_OWNED_COPY_NOT_YET_OBSERVED",
+        "execution_authorized": False, "qualification_established": False,
+        "remote_contact": False, "claim_spent": False,
     }
 
 
@@ -231,35 +282,7 @@ def prepare(
     )
     script = render_collector(request)
     pins = asset_pins()
-    plan = {
-        "schema_version": 1,
-        "status": "LOCAL_PLAN_ONLY_OPERATIONALLY_BLOCKED",
-        "context_sha256": context.context_sha256,
-        "environment_sha256": context.binding.environment_sha256,
-        "design_sha256": context.binding.design_sha256,
-        "pdk_sha256": context.binding.pdk_sha256,
-        "resource_domain_sha256": context.resource_domain_sha256,
-        "registration_input_sha256": _sha(raw),
-        "compiled_registration_sha256": _sha(_canonical(compiled)),
-        "design_id": design_id,
-        "analysis_id": analysis_id,
-        "source_cell": route.source_cell,
-        "source_state": route.source_state,
-        "retained_source_tree_sha256": route.ade.source_tree_sha256,
-        "retained_ade_state_tree_sha256": route.ade.ade_state_tree_sha256,
-        "request": request.model_dump(mode="json"),
-        "request_sha256": _sha(_canonical(request.model_dump(mode="json"))),
-        "collector_sha256": _sha(script),
-        "package_asset_lf_sha256": pins,
-        "limits": dict(LIMITS),
-        "blockers": list(BLOCKERS),
-        "license_impact": "OCEAN_START_MAY_USE_EXISTING_LICENSE_SESSION",
-        "observation_scope": "PROPOSED_READ_ONLY_OWNED_COPY_NOT_YET_OBSERVED",
-        "execution_authorized": False,
-        "qualification_established": False,
-        "remote_contact": False,
-        "claim_spent": False,
-    }
+    plan = _plan_value(context, raw, compiled, route, design_id, analysis_id, request, pins)
     output = _local_path(output)
     if not output.parent.is_dir() or any(
         path == output or path.is_relative_to(output)
@@ -310,9 +333,173 @@ def prepare(
     }
 
 
+def run(
+    context: ExecutionContext, registration_path: Path, prepared: Path, expected_plan: str,
+    admission_path: Path, expected_admission: str, manifest_path: Path,
+    attestation_path: Path, output: Path,
+) -> dict[str, Any]:
+    """One explicit operator action, never approval generation or automatic retry.
+
+    The expected admission digest must come from the actual finite human approval.
+    An agent-created plan/attestation cannot stand in for that approval or review.
+    """
+    from cadence_mcp_bridge import binding_observation_bootstrap as factory
+    from cadence_mcp_bridge import binding_observation_claim as claims
+    from cadence_mcp_bridge import binding_observation_transport as transport
+
+    inputs = {
+        "plan": _local_path(prepared) / "binding-plan.private.json",
+        "request": _local_path(prepared) / "binding-request.private.json",
+        "collector": _local_path(prepared) / "collector.ocn",
+        "registration": _local_path(registration_path),
+        "admission": _local_path(admission_path),
+        "manifest": _local_path(manifest_path),
+        "closure": _local_path(attestation_path),
+    }
+    original = {
+        key: _payload(path) if key == "collector" else read_candidate_document(path)
+        for key, path in inputs.items()
+    }
+    plan = factory._document(original["plan"], 65_536)
+    admission = factory._document(original["admission"], 16_384)
+    if _sha(original["plan"]) != expected_plan or _sha(original["admission"]) != (
+        expected_admission
+    ):
+        raise OperationRejected("binding_observation_external_approval_digest")
+    registration = NativeRegistration.model_validate_json(original["registration"])
+    compiled = projection(context, registration)
+    request = BindingScanRequest.model_validate_json(original["request"])
+    routes = [route for route in registration.routes if (
+        route.ade.design_id, route.ade.analysis_id
+    ) == (plan["design_id"], plan["analysis_id"])]
+    if len(routes) != 1:
+        raise OperationRejected("binding_observation_registered_route_required")
+    pins = asset_pins()
+    expected = _plan_value(
+        context, original["registration"], compiled, routes[0], plan["design_id"],
+        plan["analysis_id"], request, pins,
+    )
+    if original["plan"] != _canonical(expected) or original["collector"] != (
+        render_collector(request)
+    ) or original["request"] != _canonical(request.model_dump(mode="json")):
+        raise OperationRejected("binding_observation_prepared_inputs_changed")
+    documents = _execution_documents(
+        context, compiled, request, pins, plan["design_id"], plan["analysis_id"],
+    )
+    worker = factory.construct_worker(*documents)
+    worker._admission(
+        request.model_dump(mode="json"), original["admission"], original["manifest"],
+        original["closure"],
+    )
+    if any(admission[key] != value for key, value in {
+        "prepared_plan_sha256": expected_plan,
+        "package_sha256": _sha(_canonical(pins)),
+        "resource_domain_sha256": context.resource_domain_sha256,
+        "identity_manifest_sha256": registration.identity_manifest_sha256,
+    }.items()):
+        raise OperationRejected("binding_observation_admission_identity")
+    payload = transport.build_payload(
+        *documents, original["admission"], original["manifest"], original["closure"],
+    )
+    output = _local_path(output)
+    reserved = _reserved(context, registration_path) | set(inputs.values())
+    if not output.parent.is_dir() or any(
+        path == output or path.is_relative_to(output) for path in reserved
+    ):
+        raise OperationRejected("binding_observation_exclusive_output_required")
+    parents = {path: _directory_identity(path) for path in output.parents}
+    output.mkdir(mode=0o700, exist_ok=False)
+    with _held_output(output, parents) as (directory_fd, guard):
+        def publish(name: str, data: bytes) -> None:
+            guard()
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(output / name, flags, 0o600) if directory_fd is None else os.open(
+                name, flags, 0o600, dir_fd=directory_fd,
+            )
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            guard()
+
+        if any((_payload(path) if key == "collector" else read_candidate_document(path)) != (
+            original[key]) for key, path in inputs.items()) or (
+            asset_pins() != pins
+        ):
+            raise OperationRejected("binding_observation_predispatch_drift")
+        # Preserve the exact authority and input identities before the durable
+        # account claim. A new output directory never creates another allowance.
+        publish("admission.private.json", original["admission"])
+        publish("request.private.json", documents[3])
+        publish("payload.private.json", payload)
+        claims.claim(context.contracts.environment, admission["predecessor"], {
+            "approval_receipt_sha256": admission["approval_receipt_sha256"],
+            "plan_sha256": expected_plan, "request_sha256": plan["request_sha256"],
+            "helper_sha256": pins["_binding_observation.py"],
+            "package_sha256": admission["package_sha256"],
+        })
+        publish("started.private.json", _canonical({
+            "status": "ATTEMPT_SPENT_NO_RETRY", "admission_sha256": expected_admission,
+            "payload_sha256": _sha(payload),
+        }))
+        try:
+            code, stdout, stderr = transport.dispatch(
+                context.contracts.environment, payload, _sha(payload),
+                pins["_binding_observation.py"],
+                {name: pin for name, (_, pin) in factory._HELPERS.items()},
+            )
+            publish("stdout.private.json", stdout)
+            publish("stderr.private.log", stderr)
+            if code or stderr:
+                raise OperationRejected("binding_observation_remote_rejected")
+            result = transport.validate_terminal(stdout, payload)
+            publish("terminal.private.json", _canonical(result))
+            return result
+        except (OSError, ValueError, TypeError, KeyError, RecursionError):
+            publish("failed.private.json", _canonical({
+                "status": "FAILED_OR_UNKNOWN_NO_RETRY", "admission_sha256": expected_admission,
+                "observation_id": request.observation_id, "retry_permitted": False,
+            }))
+            raise OperationRejected("binding_observation_failed_or_unknown_no_retry") from None
+
+
+def read_result(output: Path, expected_admission: str) -> dict[str, Any]:
+    """Inspect retained local evidence without a context, claim, SSH or EDA start."""
+    from cadence_mcp_bridge.binding_observation_transport import validate_terminal
+
+    output = _local_path(output)
+    admission = read_candidate_document(output / "admission.private.json")
+    if _sha(admission) != expected_admission:
+        raise OperationRejected("binding_observation_external_approval_digest")
+    terminal = read_candidate_document(output / "terminal.private.json")
+    invocation = output / "payload.private.json"
+    _intent_metadata(invocation, False)
+    before = invocation.lstat()
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    with os.fdopen(os.open(invocation, flags), "rb") as stream:
+        opened = os.fstat(stream.fileno())
+        payload = stream.read(2_097_153)
+    after = invocation.lstat()
+    keys = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink",
+            "st_size", "st_mtime_ns", "st_ctime_ns")
+    # Windows lstat exposes creation time while CRT fstat may expose change time.
+    # Keep the full named-file before/after guard on every platform.
+    if len(payload) > 2_097_152 or any(
+        getattr(before, key) != getattr(after, key)
+        or (getattr(before, key) != getattr(opened, key)
+            and (key != "st_ctime_ns" or os.name != "nt"))
+        for key in keys
+    ):
+        raise OperationRejected("binding_observation_retained_invocation_drift")
+    value = validate_terminal(terminal, payload)
+    if value.get("admission_sha256") != expected_admission:
+        raise OperationRejected("binding_observation_retained_identity")
+    return value
+
+
 def add_binding_observer_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     parser = subparsers.add_parser(
-        "operator-binding-observation", help="Local-only experimental OA binding preparation."
+        "operator-binding-observation", help="Explicit finite experimental OA binding observation."
     )
     actions = parser.add_subparsers(dest="binding_observation_action", required=True)
     actions.add_parser("schema")
@@ -321,6 +508,15 @@ def add_binding_observer_parser(subparsers: argparse._SubParsersAction[Any]) -> 
         command.add_argument("--" + name, type=Path, required=True)
     for name in ("context", "design-id", "analysis-id"):
         command.add_argument("--" + name, required=True)
+    command = actions.add_parser("run", help="One externally approved observer; never retry.")
+    for name in ("settings", "registration", "prepared", "admission", "manifest",
+                 "attestation", "output"):
+        command.add_argument("--" + name, type=Path, required=True)
+    for name in ("context", "expected-plan", "expected-admission"):
+        command.add_argument("--" + name, required=True)
+    command = actions.add_parser("result", help="Read retained local terminal evidence only.")
+    command.add_argument("--output", type=Path, required=True)
+    command.add_argument("--expected-admission", required=True)
 
 
 def binding_observer_cli(arguments: argparse.Namespace) -> int:
@@ -334,6 +530,8 @@ def binding_observer_cli(arguments: argparse.Namespace) -> int:
                 "remote_contact": False,
                 "execution_authorized": False,
             }
+        elif arguments.binding_observation_action == "result":
+            result = read_result(arguments.output, arguments.expected_admission)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             selected = [c for c in contexts if c.binding.context_id == arguments.context]
@@ -345,15 +543,24 @@ def binding_observer_cli(arguments: argparse.Namespace) -> int:
             output = _local_path(arguments.output)
             if any(path == output or path.is_relative_to(output) for path in reserved):
                 raise OperationRejected("binding_observation_exclusive_output_required")
-            result = prepare(
-                selected[0], arguments.registration, arguments.design_id,
-                arguments.analysis_id, arguments.output,
-            )
-    except (OSError, ValueError, BridgeError, RecursionError):
+            if arguments.binding_observation_action == "prepare":
+                result = prepare(
+                    selected[0], arguments.registration, arguments.design_id,
+                    arguments.analysis_id, arguments.output,
+                )
+            else:
+                result = run(
+                    selected[0], arguments.registration, arguments.prepared,
+                    arguments.expected_plan, arguments.admission, arguments.expected_admission,
+                    arguments.manifest, arguments.attestation, arguments.output,
+                )
+    except (OSError, ValueError, BridgeError, RecursionError, KeyError, TypeError):
         print(json.dumps({
-            "status": "blocked", "reason": "binding_observation_local_preparation_rejected",
-            "remote_contact": False, "execution_authorized": False,
+            "status": "blocked", "reason": "binding_observation_operation_rejected",
+            "remote_contact": "UNKNOWN" if arguments.binding_observation_action == "run" else False,
+            "execution_authorized": False,
         }))
         return 1
     print(json.dumps(result))
-    return 0
+    return int(arguments.binding_observation_action == "run" and (
+        result.get("status") != "PROCESS_COMPLETED"))

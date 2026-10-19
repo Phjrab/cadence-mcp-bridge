@@ -1,3 +1,24 @@
+## Connect finite observation before candidate experiment, 2026-10-19
+
+Implement additive source53/checkpoint09 on existing draftPR164; retain source52,
+all earlier failures/counters and published2.1.0. Connect finite operator admission,
+external reviewed standard-VM runtime/init trust, exact installed bootstrap,
+existing claim/lock/accounting, owned-copy fixed process and terminal receipts.
+Diagnostic observe() and schema alone still confer no authority. Local result
+inspection cannot dispatch. Do not turn declared-file integrity into complete
+dynamic dependency proof, human approval or actual qualification.
+
+Verify changed sections first, then final full suite/static/security/contracts,
+isolated artifacts/install and exact-head hosted Linux/Windows/review. Preserve
+environment-specific failures and correct product failures without loosening
+guards. All checks remain software/synthetic until authorized actual VM evidence.
+No actual VM contact/deploy/OCEAN/candidate experiment is authorized by this plan.
+Find active input/authority records; ask only the missing candidate choice and
+later one concrete bounded execution decision when ready. Existing expired/spent
+grants and source60 capacity cannot authorize new EDA. Reuse PR163 for3DC only
+after current physical bindings, conditions, live budget and finite authority.
+No PR164 merge/publication follows. See BINDING_OBSERVER_OPERATION_V1.md.
+
 ## Declared execution-code member integrity, 2026-10-19
 
 Continue existing draftPR164 with additive source52/checkpoint08. Exact source51

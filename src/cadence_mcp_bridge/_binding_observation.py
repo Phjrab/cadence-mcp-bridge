@@ -1,9 +1,8 @@
-"""Review-only fixed OA binding observation pieces, Python2.6 stdlib only.
+"""Fixed owned-copy OA observer, Python2.6 stdlib only.
 
-There is deliberately no CLI, remote dispatcher or activation switch. observe()
-remains fail-closed because OCEAN transitive dependencies and library init side
-effects have not been independently qualified. Private owned-file/process pieces
-are testable without giving caller JSON a script, path, command or trust flag.
+The diagnostic observe() never grants execution. The separate operator entry
+requires a finite externally pinned admission and reviewed standard-VM execution
+attestation. Declared-file integrity alone is neither complete closure nor approval.
 """
 
 # mypy: ignore-errors
@@ -24,6 +23,10 @@ try:
     STRINGS = (basestring,)  # noqa: F821
 except NameError:
     STRINGS = (str,)
+try:
+    INTEGERS = (int, long)  # noqa: F821
+except NameError:
+    INTEGERS = (int,)
 
 SNAPSHOT_ENTRIES = 64
 SNAPSHOT_BYTES = 1048576
@@ -297,6 +300,12 @@ class BindingObservationWorker(object):
         self.processes = modules["process.py"].EdaWorker(None, None, None, None, None)
         self.root = self.profile["paths"]["managed_root"]
         self._deadline = None
+        self._cancelled = lambda: False
+        self._execution_guard = None
+        self._launch_guard = None
+        self._protection_receipt = None
+        self._process_receipt = {"start_attempted": False, "new_eda_starts": 0,
+                                 "returncode": None, "cleanup_complete": True}
 
     def _bound(self, request):
         validate_request(request)
@@ -325,6 +334,238 @@ class BindingObservationWorker(object):
             "remote_execution_enabled": False, "new_eda_starts": 0,
             "new_simulations": 0, "new_extractions": 0, "new_reservations": 0,
         }
+
+    def _closed_document(self, raw, limit):
+        if type(raw) is not bytes or not 1 <= len(raw) <= limit:
+            raise ValueError("binding_observation_document_bound")
+        try:
+            value = json.loads(raw.decode("ascii"))
+            if type(value) is not dict or canonical(value) != raw:
+                raise ValueError("binding_observation_canonical_document_required")
+        except (UnicodeError, ValueError, RuntimeError, OverflowError):
+            raise ValueError("binding_observation_invalid_document")
+        return value
+
+    def _admission(self, request, admission_raw, manifest_raw, closure_raw):
+        # Expected hashes originate in the external operator invocation, not in
+        # the documents themselves. The fixed host bootstrap pins the entire
+        # envelope. This validates its finite scope, not whether a human spoke.
+        self._bound(request)
+        admission = self._closed_document(admission_raw, 16384)
+        closure = self._closed_document(closure_raw, 32768)
+        subject = dict((key, self.selection[key]) for key in (
+            "profile_sha256", "registration_sha256", "request_sha256",
+            "collector_sha256", "helper_sha256"))
+        fields = set(subject) | set((
+            "schema_version", "kind", "authority_reference", "approval_receipt_sha256",
+            "prepared_plan_sha256", "package_sha256", "resource_domain_sha256",
+            "identity_manifest_sha256", "expected_counter", "declared_members_sha256",
+            "execution_attestation_sha256", "predecessor", "valid_from_unix",
+            "valid_until_unix", "limits",
+        ))
+        limits = {"remote_attempts": 1, "ocean_starts": 1, "outer_seconds": OUTER_SECONDS,
+                  "ocean_seconds": PROCESS_SECONDS, "stage_bytes": STAGE_BYTES,
+                  "new_simulations": 0, "new_extractions": 0, "new_reserved_bytes": 0}
+        if set(admission) != fields or type(admission["schema_version"]) is not int or (
+            admission["schema_version"] != 1 or admission["kind"] != "FINITE_BINDING_OBSERVATION"
+            or canonical(admission["limits"]) != canonical(limits)
+            or any(admission[key] != value for key, value in subject.items())
+        ):
+            raise ValueError("binding_observation_admission_scope")
+        for key in fields:
+            if key.endswith("_sha256"):
+                token(admission[key], r"^[0-9a-f]{64}$")
+        token(admission["authority_reference"], r"^[A-Za-z0-9][A-Za-z0-9_:. /#-]{0,255}$")
+        predecessor = admission["predecessor"]
+        if type(predecessor) is not dict or set(predecessor) != set((
+            "predecessor_collector_sha256", "predecessor_plan_sha256",
+            "predecessor_host_request_sha256", "predecessor_remote_request_sha256",
+        )):
+            raise ValueError("binding_observation_predecessor_shape")
+        for value in predecessor.values():
+            token(value, r"^[0-9a-f]{64}$")
+        counter = admission["expected_counter"]
+        if type(counter) is not dict or set(counter) != set((
+            "campaign_id", "count", "result_reserved_bytes",
+        )) or not isinstance(counter["campaign_id"], STRINGS) or not counter["campaign_id"] or (
+            len(counter["campaign_id"]) > 128
+            or any(type(counter[key]) not in INTEGERS or counter[key] < 0
+                   for key in ("count", "result_reserved_bytes"))
+        ):
+            raise ValueError("binding_observation_expected_counter")
+        now = time.time()
+        for document in (admission, closure):
+            if any(type(document.get(key)) is not int for key in (
+                "valid_from_unix", "valid_until_unix",
+            )) or not (0 < document["valid_from_unix"] <= now < document["valid_until_unix"]
+                        < 4102444800) or (
+                document["valid_until_unix"] - document["valid_from_unix"] > 3600
+            ):
+                raise ValueError("binding_observation_authority_not_current")
+        if len(manifest_raw) > 262144 or digest(manifest_raw) != (
+            admission["declared_members_sha256"]
+        ) or digest(closure_raw) != admission["execution_attestation_sha256"]:
+            raise ValueError("binding_observation_execution_evidence_binding")
+        if set(closure) != set((
+            "schema_version", "kind", "subject", "declared_members_sha256", "launch_recipe",
+            "review_reference", "trust_categories", "runtime_roots", "libraries",
+            "permitted_effects", "unresolved_dependencies", "valid_from_unix", "valid_until_unix",
+        )) or type(closure["schema_version"]) is not int or closure["schema_version"] != 1 or (
+            closure["kind"] != "STANDARD_VM_BINDING_OBSERVER_EXECUTION_ATTESTATION"
+            or closure["subject"] != subject
+            or closure["declared_members_sha256"] != admission["declared_members_sha256"]
+            or closure["launch_recipe"] != "OWNED_COPY_NOGRAPH_NOCDSINIT_V1"
+            or closure["permitted_effects"] != "PRIVATE_STAGE_ONLY"
+            or closure["unresolved_dependencies"] != []
+            or closure["runtime_roots"] != sorted(self.profile["paths"]["protected_roots"])
+            or closure["libraries"] != sorted(self.route["libraries"], key=lambda x: x["name"])
+        ):
+            raise ValueError("binding_observation_execution_attestation_scope")
+        token(closure["review_reference"], r"^[A-Za-z0-9][A-Za-z0-9_:. /#-]{0,255}$")
+        categories = closure["trust_categories"]
+        required = set(("system_interpreter_and_startup", "os_loader_and_libraries",
+                        "cadence_launchers_runtime_and_contexts",
+                        "registered_library_initializers"))
+        if type(categories) is not list or len(categories) != 4 or any(
+            type(item) is not dict or set(item) != set(("category", "evidence_sha256"))
+            for item in categories
+        ) or set(item["category"] for item in categories) != required:
+            raise ValueError("binding_observation_execution_trust_categories")
+        for item in categories:
+            token(item["evidence_sha256"], r"^[0-9a-f]{64}$")
+        return admission
+
+    def _cancel_check(self):
+        if self._cancelled():
+            raise ValueError("binding_observation_cancelled")
+
+    def observe_authorized(self, request, admission_raw, manifest_raw, closure_raw):
+        """One finite operator operation; never called by import/doctor/MCP.
+
+        Installation/init behavior is externally reviewed operator trust, not a
+        dynamic dependency proof or electrical qualification. Failure evidence,
+        both spent claims and the existing ledger always remain in place.
+        """
+        admission = self._admission(request, admission_raw, manifest_raw, closure_raw)
+        self._deadline = os.times()[4] + OUTER_SECONDS
+        self._launch_guard = None
+        self._protection_receipt = None
+        self._process_receipt = {"start_attempted": False, "new_eda_starts": 0,
+                                 "returncode": None, "cleanup_complete": True}
+        result = {
+            "schema_version": 1, "kind": "BINDING_OBSERVATION_TERMINAL", "status": "REJECTED",
+            "observation_id": request["observation_id"],
+            "request_sha256": self.selection["request_sha256"],
+            "collector_sha256": self.selection["collector_sha256"],
+            "worker_sha256": self.selection["helper_sha256"],
+            "admission_sha256": digest(admission_raw),
+            "declared_members_sha256": admission["declared_members_sha256"],
+            "execution_attestation_sha256": admission["execution_attestation_sha256"],
+            "execution_trust": "NOT_ESTABLISHED", "qualification_established": False,
+            "start_attempted": False, "new_eda_starts": 0, "returncode": None,
+            "frame": None, "frame_sha256": None, "counter_before": None, "counter_after": None,
+            "originals_preserved": False, "owned_copy_preserved": False,
+            "ledger_preserved": False, "cds_lib_preserved": False, "cleanup_complete": True,
+            "failure_code": None, "retry_permitted": False, "new_simulations": 0,
+            "new_extractions": 0, "new_reserved_bytes": 0,
+        }
+        stage = None
+        binding = {"root_sha256": digest(self.root.encode("utf-8")),
+                   "resource_domain_sha256": admission["resource_domain_sha256"],
+                   "ledger_ref": self.accounting.LEDGER,
+                   "identity_manifest_sha256": admission["identity_manifest_sha256"]}
+        # Do not create a replacement ledger/lock. The existing identity audit
+        # checks every retained reservation and enforces the active resource policy.
+        with self.accounting.ReservationSession(self.root) as session:
+            try:
+                self._preflight(session)
+                counter, records = session.observe(binding)
+                if counter != admission["expected_counter"] or (
+                    self.registration["identity_manifest_sha256"] != (
+                        binding["identity_manifest_sha256"])
+                ):
+                    raise ValueError("binding_observation_live_accounting_mismatch")
+                result["counter_before"] = counter
+                result["counter_after"] = counter
+                self._declared_code_members(manifest_raw, admission["declared_members_sha256"])
+                self._snapshots()
+                result["execution_trust"] = "OPERATOR_ATTESTED_STANDARD_VM"
+
+                def guard():
+                    self._cancel_check()
+                    self._admission(request, admission_raw, manifest_raw, closure_raw)
+                    self._declared_code_members(manifest_raw, admission["declared_members_sha256"])
+                    session.check()
+                    if session.observe(binding)[0] != counter:
+                        raise ValueError("binding_observation_live_accounting_drift")
+
+                guard()
+                # A fixed remote campaign claim also prevents another host or
+                # fresh observation ID from retrying this single allowance.
+                claim = self.root + "/binding-observation-01.private.json"
+                if os.path.lexists(claim):
+                    raise ValueError("binding_observation_remote_attempt_spent")
+                self._write(claim, canonical({
+                    "schema_version": 1, "status": "ATTEMPT_SPENT_NO_RETRY",
+                    "observation_id": request["observation_id"],
+                    "admission_sha256": digest(admission_raw),
+                    "request_sha256": self.selection["request_sha256"],
+                }))
+                self._execution_guard = guard
+                # Recheck pure admission immediately before launch as well as
+                # at the expensive integrity boundaries. Durable marker fsync
+                # can outlast either authority window or the process deadline.
+                self._launch_guard = lambda: self._admission(
+                    request, admission_raw, manifest_raw, closure_raw)
+                stage, before, copied = self._stage(request, session)
+                guard()
+                value = self._program(stage, session, request)
+                guard()
+                result.update(status="PROCESS_COMPLETED", frame=value["frame"].decode("ascii"),
+                              frame_sha256=digest(value["frame"]))
+            except BaseException as error:
+                message = str(error)
+                code = message if re.match(r"^binding_observation_[a-z0-9_]+$", message) else (
+                    "binding_observation_internal_failure")
+                result["failure_code"] = code
+                if self._process_receipt["start_attempted"]:
+                    result["status"] = "TIMED_OUT" if code.endswith("timeout") else "FAILED"
+                if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                    result["status"] = "UNKNOWN"
+            finally:
+                self._execution_guard = None
+                self._launch_guard = None
+                result.update(self._process_receipt)
+                try:
+                    result["counter_after"] = session.observe(binding)[0]
+                except Exception:
+                    result["counter_after"] = None
+                # Only parent-owned checks can establish conservation. The child
+                # may create a colliding evidence leaf; retain that leaf, but
+                # never promote its contents into the terminal receipt.
+                if self._protection_receipt is not None:
+                    for name in ("originals_preserved", "owned_copy_preserved",
+                                 "ledger_preserved", "cds_lib_preserved"):
+                        result[name] = self._protection_receipt.get(name) is True
+                if result["status"] == "PROCESS_COMPLETED" and (
+                    not all(result[key] for key in ("originals_preserved", "owned_copy_preserved",
+                                                   "ledger_preserved", "cds_lib_preserved",
+                                                   "cleanup_complete"))
+                    or result["counter_before"] != result["counter_after"]
+                ):
+                    result.update(status="FAILED", frame=None, frame_sha256=None,
+                                  failure_code="binding_observation_terminal_conservation_failed")
+                if stage is not None:
+                    # Keep the full frame in its original fixed leaf. A maximal
+                    # escaped frame does not fit the 64KiB evidence-record bound.
+                    disk_result = dict(result)
+                    disk_result.pop("frame")
+                    try:
+                        self._write_evidence(stage, "terminal.json", canonical(disk_result))
+                    except Exception:
+                        result.update(status="UNKNOWN", frame=None, frame_sha256=None,
+                                      failure_code="binding_observation_terminal_publication_failed")
+        return result
 
     def _snapshots(self):
         self.copying.MAX_ENTRIES, self.copying.MAX_BYTES = SNAPSHOT_ENTRIES, SNAPSHOT_BYTES
@@ -485,9 +726,10 @@ class BindingObservationWorker(object):
             self.copying.os = original_os
 
     def _stage(self, request, session):
-        # Review-only owned-file piece. Not reachable from observe() or a CLI.
+        # The operational caller has already established finite admission/trust.
         self._bound(request)
-        self._deadline = os.times()[4] + OUTER_SECONDS
+        if self._deadline is None:
+            self._deadline = os.times()[4] + OUTER_SECONDS
         self._preflight(session)
         before = self._snapshots()
         parent = self.root + "/binding-observations"
@@ -1017,6 +1259,7 @@ class BindingObservationWorker(object):
         return self.copying.identity(info), digest(raw)
 
     def _preflight(self, session):
+        self._cancel_check()
         if os.name != "posix" or os.getuid() == 0 or os.geteuid() != os.getuid():
             raise ValueError("binding_observation_normal_posix_user_required")
         if type(session) is not self.accounting.ReservationSession or session.root != self.root:
@@ -1086,8 +1329,7 @@ class BindingObservationWorker(object):
         return environment
 
     def _program(self, stage, session, request):
-        # Review-only process piece. observe() never calls this while closure and
-        # library-init side effects remain unqualified. argv is compiled here.
+        # argv is compiled here; no operator-supplied script/command is accepted.
         if os.name != "posix" or os.getuid() == 0 or os.geteuid() != os.getuid():
             raise ValueError("binding_observation_normal_posix_user_required")
         self._bound(request)
@@ -1112,6 +1354,8 @@ class BindingObservationWorker(object):
             raise ValueError("binding_observation_registered_library_mapping_drift")
         trust = self._ocean_trust()
         environment = self._environment(stage)
+        if self._execution_guard is not None:
+            self._execution_guard()
         deadline = min(os.times()[4] + PROCESS_SECONDS,
                        self._deadline - 3 if self._deadline is not None else os.times()[4] + 45)
         self._write(marker, canonical({"schema_version": 1,
@@ -1122,19 +1366,30 @@ class BindingObservationWorker(object):
         process, identity, null = None, None, None
         streams, data = [], [b"", b""]
         body_failed = False
+        self._process_receipt = {"start_attempted": False, "new_eda_starts": 0,
+                                 "returncode": None, "cleanup_complete": True}
         try:
             session.check()
+            self._cancel_check()
             null = open(os.devnull, "rb")
+            if self._launch_guard is not None:
+                self._launch_guard()
+            if os.times()[4] >= deadline:
+                raise ValueError("binding_observation_process_timeout")
+            self._process_receipt["start_attempted"] = True
+            self._process_receipt["cleanup_complete"] = False
             process = subprocess.Popen(
                 [trust["named"], "-nograph", "-nocdsinit", "-log", stage + "/ocean.log",
                  "-cdslib", stage + "/cds.lib", "-restore", stage + "/observer.ocn"],
                 cwd=stage, stdin=null, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 close_fds=True, shell=False, preexec_fn=os.setsid, env=environment,
             )
-            identity = self.processes.process_identity(process.pid)
+            self._process_receipt["new_eda_starts"] = 1
             streams = [process.stdout, process.stderr]
+            identity = self.processes.process_identity(process.pid)
             pending = list(streams)
             while pending or self.processes.group_active(process, identity):
+                self._cancel_check()
                 session.check()
                 self._stage_size(stage)
                 if os.times()[4] >= deadline:
@@ -1153,6 +1408,7 @@ class BindingObservationWorker(object):
                 if not pending:
                     time.sleep(0.02)
             code = process.wait()
+            self._process_receipt["returncode"] = code
             process = None
             if code != 0:
                 raise ValueError("binding_observation_program_failed")
@@ -1164,6 +1420,8 @@ class BindingObservationWorker(object):
                 raise ValueError("binding_observation_original_or_copy_post_drift")
             if self._ledger() != ledger or self._read(stage + "/cds.lib") != cds_raw:
                 raise ValueError("binding_observation_ledger_or_config_drift")
+            if self._execution_guard is not None:
+                self._execution_guard()
             frame = self._read(stage + "/binding-frame.txt")
             self._stage_size(stage)
             return {"returncode": code, "frame": frame, "ocean": trust,
@@ -1175,23 +1433,47 @@ class BindingObservationWorker(object):
             cleanup_failed = False
             try:
                 if process is not None:
-                    if identity is None:
-                        identity = self.processes.process_identity(process.pid)
-                    if self.processes.group_active(process, identity):
-                        self.processes.signal_group(process, identity, signal.SIGTERM)
-                        end = os.times()[4] + 2
-                        while (
-                            self.processes.group_active(process, identity) and os.times()[4] < end
-                        ):
-                            time.sleep(0.02)
+                    try:
+                        if identity is None:
+                            identity = self.processes.process_identity(process.pid)
                         if self.processes.group_active(process, identity):
-                            self.processes.signal_group(process, identity, signal.SIGKILL)
-                        # Match the existing worker: keep lifetime lock held until
-                        # our group stops. Kernel-uninterruptible tasks can exceed
-                        # the desired outer deadline; never unlock a live writer.
-                        while self.processes.group_active(process, identity):
+                            self.processes.signal_group(process, identity, signal.SIGTERM)
+                            end = os.times()[4] + 2
+                            while (
+                                self.processes.group_active(process, identity)
+                                and os.times()[4] < end
+                            ):
+                                time.sleep(0.02)
+                            if self.processes.group_active(process, identity):
+                                self.processes.signal_group(process, identity, signal.SIGKILL)
+                            # Keep the leader unreaped and the lifetime lock held
+                            # until its entire owned group has stopped writing.
+                            while self.processes.group_active(process, identity):
+                                time.sleep(0.02)
+                    except Exception:
+                        # Successful Popen plus setsid pins this direct child's
+                        # PID/PGID while it remains unreaped, even if /proc reads
+                        # fail. Kill only that kernel-confirmed group, then keep
+                        # the lifetime lock until the normal identity/group check
+                        # can verify termination. Persistent inspection failure
+                        # may exceed the host deadline; it must not unlock a live
+                        # or unverified writer. Never poll()/wait() in this loop.
+                        while True:
+                            try:
+                                if os.getpgid(process.pid) == process.pid:
+                                    os.killpg(process.pid, signal.SIGKILL)
+                            except OSError:
+                                pass
+                            try:
+                                if identity is None:
+                                    identity = self.processes.process_identity(process.pid)
+                                if not self.processes.group_active(process, identity):
+                                    break
+                            except Exception:
+                                pass
                             time.sleep(0.02)
-                    process.wait()
+                    self._process_receipt["returncode"] = process.wait()
+                self._process_receipt["cleanup_complete"] = True
             except BaseException:
                 cleanup_failed = True
                 raise
@@ -1243,6 +1525,9 @@ class BindingObservationWorker(object):
                 guard[name] = check()
             except Exception:
                 guard[name] = False
+        # Independent of publication: a child-created primary or fallback must
+        # not replace these parent observations in the terminal response.
+        self._protection_receipt = guard
         try:
             self._write_evidence(stage, "protection-check.json", canonical(guard))
         except Exception:

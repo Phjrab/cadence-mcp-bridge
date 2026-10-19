@@ -16,6 +16,15 @@ candidate experiment or W/L support is established. See
 [candidate workflow and remaining evidence](docs/EXPLICIT_CANDIDATES_01.md).
 This development work does not modify the published2.1.0 artifacts.
 
+Draft PR164 now connects a separate finite operator source-binding observation
+path: exact installed bootstrap, existing account claim/resource lock, owned copy,
+one fixed OCEAN process and retained terminal/frame evidence. It remains opt-in
+and requires separately approved finite authority and reviewed standard-VM
+runtime/init trust evidence. Declared member hashes do not prove dynamic closure;
+software/synthetic tests do not establish actual Cadence observation or a fresh
+three-candidate experiment. See the
+[operation and evidence boundary](docs/BINDING_OBSERVER_OPERATION_V1.md).
+
 # Cadence MCP Bridge
 
 Register your own circuits and run bounded DC/AC/TRAN analyses and 1D Sweeps in

@@ -1,3 +1,17 @@
+## Current experimental observer continuation, 2026-10-19
+
+Stable2.1.0/36f7583 is already published. Current development2.2.0.dev0 maina713eb6
+includes PR163; draftPR164 continues0ba16a9 with additive source53/checkpoint09.
+Its explicit operator run connects fixed bootstrap/admission, existing claims/
+resource lock/accounting, owned stage and terminal evidence. Execution trust is
+separately reviewed standard-VM operator evidence, not declared hashes proving a
+complete runtime closure. Current actual observation/candidate acceptance is not
+established. No VM access/deploy/EDA/claim/reservation occurs in software checks.
+Preserve current ledgers, policies, failures and historical authorization; do not
+reset source52/60 or treat metadata-only allowances as OCEAN authority. PR164 merge
+and any new exact candidate publication remain separate decisions. See
+../BINDING_OBSERVER_OPERATION_V1.md; dated older checkpoints below retain history.
+
 ## Actual Codex restart recovery completed, 2026-10-13
 
 Actual corrected5e/97fa Codex restart status/result/identical-ID submission PASS;

@@ -1,3 +1,35 @@
+## Finite observer execution integration, 2026-10-19
+
+Continue draftPR164 from0ba16a9/maina713eb6; published2.1.0/36f7583 unchanged.
+Source53/checkpoint09 connects the explicit operator run path: exact canonical
+prepared inputs and installed code, externally pinned finite admission, reviewed
+standard-VM trust attestation, retained account claim, authenticated fixed SSH
+bootstrap, existing resource lock/identity/counter audit, owned stage, fixed OCEAN
+process, terminal conservation/frame receipts and local-only retained result read.
+No runtime trust is inferred from the source52 declared-members manifest. The
+broader installation/init boundary is explicitly external reviewed operator trust,
+not a dynamically proved closure or empirical qualification.
+
+Current local full regression4811 PASS/525 platform skips/56 warnings predates
+the final launch-freshness fix; final affected162 PASS/28 platform skips,
+Ruff/mypy128/contracts85/22 PASS. Security18/secret1291/strict locked audit PASS;
+the first isolated package lifecycle preserved43 operator/20 migration files
+before the final fix. Refresh exact-commit hosted full/Linux/package/review before
+promotion; source52 receipts remain proof only for0ba16a9. New tests cover finite
+authority, fixed code, owned synthetic process/cleanup, parent-owned protection
+receipts, post-marker expiry/deadline, lost reply and spent repeat. Ordinary Linux
+evidence is separate from portable Windows tests. Preserve all earlier failures.
+
+Current-turn actual VM/SSH/deployment/EDA/simulation/extraction/real claim/result
+reservation0. Source consumption53/60 is additive, not a new operational allowance.
+Actual standard-VM runtime/init evidence, current fifth-library bounds, current
+ledger/disk and finite observation/trial authority remain required. The user has
+selected baseline Vp/Vm0.5/0.5V and candidates0.49999975/0.50000025V and
+0.50000025/0.49999975V, with fixed320/702mV bias. This is input selection, not
+VM execution approval. Reuse PR163; do not reimplement it or fabricate values.
+PR164 remains draft; no merge/publication approval is inferred. See
+docs/BINDING_OBSERVER_OPERATION_V1.md. Older checkpoints below remain history.
+
 ## Declared execution-code member integrity increment, 2026-10-19
 
 Exact source51/head6e15e23 completed hosted Windows4609 PASS/459 platform skips/
