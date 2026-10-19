@@ -2,6 +2,26 @@
 
 ## Bounded helper snapshot correction, 2026-10-19
 
+### Exact-CI follow-up and installed preparation
+
+The source51/head94914d5 automated review completed without findings. Its hosted
+Linux run39191936685 retained357 binding passes, two sparse-child fixture failures
+and one Windows-only skip. Concurrent fixture file creation correctly triggered
+the directory-drift guard before the intended finalizer capacity path. A test-only
+ready pipe now completes all child stage writes before the worker begins polling;
+the child remains unreaped and all real process/group/exit, exact failure,
+capacity, conservation and spent-marker checks remain. Product bytes and the
+51/60 checkpoint are unchanged. Refreshed exact-head hosted/review gates remain.
+
+A supplementary isolated exact-wheel CLI check now successfully prepares a
+fictional two-variable registered circuit using byte-equal public/installed starter
+JSON. It verifies the exact three outputs and hashes, rejects a same-output retry
+and preserves existing inputs/journal. The small installed checker retains its
+own NOT_TESTED_BY_THIS_CHECKER field; the separate supplementary receipt closes
+that synthetic preparation gap only. It is not actual OA/Cadence/app evidence.
+No runtime/init trust, operational admission, transport or observe activation is
+established. Earlier source-specific statements below remain historical.
+
 Source50/head9a7060b passed exact Windows4591 tests/455 platform skips/56 warnings,
 Linux337 binding tests/one Windows-only skip and isolated package lifecycle with
 43 operator/20 migration files preserved. Stage enumeration4307248489 is resolved.

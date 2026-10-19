@@ -1,3 +1,29 @@
+## Source51 sparse-fixture sequencing and installed preparation, 2026-10-19
+
+Exact94914d5 automated review completed without findings. Hosted Linux run
+39191936685 retained357 binding PASS/two sparse-child timing failures/one
+Windows-only skip: a child was still creating its frame/sparse leaf when the
+directory-stability guard correctly rejected drift. The capacity regression now
+uses an explicit ready pipe after all child stage writes/close, before returning
+the unreaped real process to the worker. Exact failure expectations, real process
+identity/group/exit, capacity checks, four conservation checks and spent marker
+remain. Local follow-up302 PASS/58 Windows platform skips; one pytest-cache
+access warning and the preceding sandbox temp-directory setup failure are retained.
+Ruff and source boundary PASS. Product bytes and source51/checkpoint07 are
+unchanged; refreshed exact hosted CI/review remain required. Preserve the original
+failed run.
+
+Supplementary exact-wheel installed CLI preparation now PASSes for one fictional
+two-variable registered circuit: exactly three outputs, matching request/plan/
+script digests, same-output retry rejection and unchanged inputs/journal. Public
+fixture JSON bytes equal the installed starter; no developer checkpoint is used.
+The primary small checker still reports successful preparation NOT_TESTED_BY_THIS_CHECKER.
+This supplementary result closes only the synthetic installed-preparation gap.
+Runtime/init execution trust and immutable operational admission remain unfinished;
+observe stays disabled. Actual VM/SSH/deployment/EDA/claim/reservation remain0.
+Published2.1.0, all earlier evidence and source51/60 accounting are preserved.
+PR164 remains draft without merge/publication authority.
+
 ## Bounded snapshot enumeration correction, 2026-10-19
 
 Exact source50/head9a7060b completed Windows4591 PASS/455 platform skips/56

@@ -1,3 +1,20 @@
+## Source51 exact-CI fixture follow-up, 2026-10-19
+
+Preserve94914d5's completed no-findings automatic review and Linux run39191936685:
+357 binding PASS/two sparse-child timing failures/one platform skip. Stabilize
+the capacity fixture with an explicit child completion pipe, not a relaxed drift
+guard or broad expected error. Keep real process/group/exit, exact body/finalizer
+failure, all conservation checks and spent-marker protection. Product bytes and
+checkpoint07 stay unchanged, so source consumption remains51/60. Refresh hosted
+Linux/Windows and exact-head review after the test-only follow-up.
+
+The supplementary installed CLI preparation is now PASS for a fictional two-
+variable circuit with public starter fixtures, three exact outputs, retry rejection
+and preserved existing inputs/journal. This is synthetic installed evidence, not
+OA/Cadence/app qualification. Runtime/init trust and immutable operational admission
+still need implementation. Continue local software work with observe disabled;
+no VM contact/EDA/real claim/reservation/PR164 merge/publication follows.
+
 ## Bounded helper snapshot enumeration, 2026-10-19
 
 Continue existing draftPR164 with additive source51/checkpoint07 for automated

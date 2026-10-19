@@ -1413,23 +1413,57 @@ def test_partial_primary_is_preserved_and_fallback_rechecks_remaining_capacity(
 @pytest.mark.skipif(os.name != "posix", reason="actual sparse child stage and allocated blocks")
 @pytest.mark.parametrize("exit_code", [0, 3])
 def test_sparse_child_near_logical_bound_prevents_unbudgeted_final_evidence(
-    selected, controlled_inventory, monkeypatch, exit_code,
+    selected, controlled_inventory, monkeypatch, request, exit_code,
 ):
     worker, scan, _ = selected
     if os.getuid() == 0:
         pytest.skip("ordinary-user POSIX requirement")
+    ready_read, ready_write = os.pipe()
+    ready_reader = os.fdopen(ready_read, "rb", buffering=0)
+    request.addfinalizer(ready_reader.close)
+    ready_writer = os.fdopen(ready_write, "wb", buffering=0)
+    request.addfinalizer(ready_writer.close)
     executable = Path(worker.profile["tools"]["ocean"]["path"])
     executable.write_text(
         f"#!{sys.executable}\nimport os\n"
-        "open('binding-frame.txt','wb').write(b'synthetic frame')\n"
+        "with open('binding-frame.txt','wb') as frame:\n frame.write(b'synthetic frame')\n"
         "os.write(1,b'captured stdout')\nos.write(2,b'captured stderr')\n"
         "size=sum(os.lstat(os.path.join(p,n)).st_size for p,ds,ns in os.walk('.') for n in ns)\n"
-        f"open('retained-sparse','wb').truncate({observer.STAGE_BYTES}-size-1)\n"
+        "with open('retained-sparse','wb') as sparse:\n"
+        f" sparse.truncate({observer.STAGE_BYTES}-size-1)\n"
+        f"os.write({ready_write},b'R')\nos.close({ready_write})\n"
         f"raise SystemExit({exit_code})\n", encoding="utf-8",
     )
     executable.chmod(0o700)
     worker.profile["tools"]["ocean"]["sha256"] = observer.digest(executable.read_bytes())
     monkeypatch.setattr(observer, "PROCESS_SECONDS", 5)
+    real_popen = observer.subprocess.Popen
+
+    def coordinated_launch(*args, **kwargs):
+        # This fixture targets final evidence capacity after stable child output.
+        # Wait for explicit completion of every stage write before the worker's
+        # first directory scan; otherwise a legitimate transient drift guard can
+        # fire while the child creates its frame/sparse file. Do not reap the
+        # leader: real /proc identity, group, exit status and all scans still run.
+        kwargs["pass_fds"] = (ready_writer.fileno(),)
+        process = real_popen(*args, **kwargs)
+        try:
+            assert observer.select.select([ready_reader], [], [], 5)[0], "child readiness timeout"
+            assert ready_reader.read(1) == b"R"
+        except BaseException:
+            try:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+            finally:
+                try:
+                    process.stdout.close()
+                finally:
+                    process.stderr.close()
+            raise
+        return process
+
+    monkeypatch.setattr(observer.subprocess, "Popen", coordinated_launch)
     with worker.accounting.ReservationSession(worker.root) as session:
         stage, _, _ = worker._stage(scan, session)
         writes, checked = [], []
