@@ -1,3 +1,29 @@
+## Declared execution-code member integrity, 2026-10-19
+
+Continue existing draftPR164 with additive source52/checkpoint08. Exact source51
+follow-up completed both hosted jobs (Windows4609 PASS/Linux359 binding PASS),
+installed/software/security checks and clear automated review; retain all older
+failures. Implement and verify the private declared-only guard before operational
+trust/admission work. Never use its manifest digest as human approval or dynamic
+closure proof. No transport, activation switch or public tool is added.
+
+Bind canonical finite manifest to current profile/registration/worker/request.
+Validate every member/metadata/complete ancestor union before content access;
+then inspect all exact metadata, bounded content, existing named OCEAN pre/post
+and final complete metadata union. Cover restored mtime/ctime, inode replacement,
+ancestor drift, links/special files and FD/stream failure cleanup on real ordinary
+Linux files. Windows input validation is distinct evidence. Preserve fixed helper
+pins and all old checkpoints. Local focused359 PASS/81 Windows skips,
+Ruff/mypy127/contracts85/22/security18/secret1285/strict locked audit PASS.
+Independent final static review found no confirmed P1/P2, not formal APPROVED.
+Retain first four Windows output-pin access failures and unchanged-source success
+in a fresh short ordinary-user test path. Refresh exact package/CI/automated review.
+
+Runtime/init dependency completeness and immutable operational bootstrap/admission
+remain unfinished, observe stays disabled. This continuation does not contact VM,
+claim authority, reserve results, run EDA, mergePR164 or publish. Source52/60
+preserves all consumption; remaining8 software versions are not execution grants.
+
 ## Source51 exact-CI fixture follow-up, 2026-10-19
 
 Preserve94914d5's completed no-findings automatic review and Linux run39191936685:

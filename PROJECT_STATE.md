@@ -1,3 +1,31 @@
+## Declared execution-code member integrity increment, 2026-10-19
+
+Exact source51/head6e15e23 completed hosted Windows4609 PASS/459 platform skips/
+56 warnings and Linux359 binding PASS/one Windows-only skip, package/security and
+automatic review without findings. All five inline threads are resolved; none of
+these receipts constitutes formal GitHub APPROVED or runtime qualification.
+
+Source52/checkpoint08 adds a private bounded declared-code-member integrity check.
+Canonical input and separately pinned digest bind profile/registration/worker/
+request; every declared file and exact ancestor union must match fixed content
+and metadata, including inode/nlink/ctime. No-follow held descriptors, complete
+initial metadata verification and a final union after all content/OCEAN reads
+reject late changes. Fresh-helper fdopen fault cleanup preserves global OS state.
+This verifies DECLARED_MEMBERS_ONLY, not dynamic loader/init closure or authority.
+Observe remains unconditionally disabled; operational admission is still missing.
+
+Portable malformed-input tests57 PASS; six-file focused359 PASS/81 Windows
+platform skips. Ruff/mypy127/contracts85/22, security18/secret1285 and strict
+locked audit PASS/no known vulnerabilities. Independent final static review found
+no confirmed P1/P2; not formal APPROVED. The first focused run retained355 PASS/
+four Windows output-pin access failures; unchanged software passes in a short
+fresh ordinary-user test path. Actual ordinary-Linux file/FD tests are separate
+pending hosted evidence. Updated package/exact hosted and automated review gates
+must be recorded for source52. Source use52/60 is
+additive; earlier checkpoints/failed receipts and published2.1.0 remain unchanged.
+Current continuation VM/SSH/deployment/EDA/simulation/extraction/real claim/
+reservation0. PR164 stays draft without merge/publication authorization.
+
 ## Source51 sparse-fixture sequencing and installed preparation, 2026-10-19
 
 Exact94914d5 automated review completed without findings. Hosted Linux run

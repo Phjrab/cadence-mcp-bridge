@@ -697,6 +697,319 @@ class BindingObservationWorker(object):
         return {"named": named, "resolved": resolved, "sha256": binding["sha256"],
                 "records": records, "closure_trust": "NOT_ESTABLISHED"}
 
+    def _declared_code_members(self, manifest_raw, expected_sha256):
+        # A pinned finite list is not a complete dynamic loader/init closure or
+        # execution authority. This private check is not called by observe().
+        token(expected_sha256, r"^[0-9a-f]{64}$")
+        if type(manifest_raw) is not bytes or not 1 <= len(manifest_raw) <= 262144:
+            raise ValueError("binding_observation_declared_manifest_bound")
+        if digest(manifest_raw) != expected_sha256:
+            raise ValueError("binding_observation_declared_manifest_digest")
+
+        def invalid_constant(value):
+            raise ValueError("binding_observation_declared_manifest_constant")
+
+        try:
+            text = manifest_raw.decode("ascii")
+            depth, quoted, escaped = 0, False, False
+            for character in text:
+                if quoted:
+                    if escaped:
+                        escaped = False
+                    elif character == "\\":
+                        escaped = True
+                    elif character == '"':
+                        quoted = False
+                elif character == '"':
+                    quoted = True
+                elif character in ("{", "["):
+                    depth += 1
+                    if depth > 8:
+                        raise ValueError("binding_observation_declared_manifest_depth")
+                elif character in ("}", "]"):
+                    depth -= 1
+                    if depth < 0:
+                        raise ValueError("binding_observation_declared_manifest_depth")
+            manifest = json.loads(text, parse_constant=invalid_constant)
+            # Python2.6 has no object_pairs_hook. Equality with the canonical
+            # encoding also rejects every duplicate key before filesystem work.
+            if canonical(manifest) != manifest_raw:
+                raise ValueError("binding_observation_declared_manifest_canonical")
+        except (ValueError, TypeError, RuntimeError, OverflowError, UnicodeError):
+            raise ValueError("binding_observation_declared_manifest_json")
+        keys = ("schema_version", "scope", "profile_sha256", "registration_sha256",
+                "worker_sha256", "request_sha256", "members", "directories")
+        if not isinstance(manifest, dict) or set(manifest) != set(keys) or (
+            type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1
+            or manifest["scope"] != "DECLARED_MEMBERS_ONLY"
+        ):
+            raise ValueError("binding_observation_declared_manifest_shape")
+        for key in keys[2:6]:
+            token(manifest[key], r"^[0-9a-f]{64}$")
+        if (manifest["profile_sha256"] != self.selection["profile_sha256"] or
+                manifest["profile_sha256"] != digest(canonical(self.profile)) or
+                manifest["registration_sha256"] != self.selection["registration_sha256"] or
+                manifest["registration_sha256"] != digest(canonical(self.registration)) or
+                manifest["worker_sha256"] != self.selection["helper_sha256"] or
+                manifest["request_sha256"] != self.selection["request_sha256"]):
+            raise ValueError("binding_observation_declared_manifest_binding")
+        routes = [route for route in self.registration["routes"] if (
+            route["design_id"], route["analysis_id"]
+        ) == (self.selection["design_id"], self.selection["analysis_id"])]
+        if len(routes) != 1 or self.route != routes[0]:
+            raise ValueError("binding_observation_declared_route_binding")
+        if (not isinstance(manifest["members"], list) or
+                not 1 <= len(manifest["members"]) <= 128 or
+                not isinstance(manifest["directories"], list) or
+                not 1 <= len(manifest["directories"]) <= 1024):
+            raise ValueError("binding_observation_declared_member_bound")
+
+        def valid_path(value):
+            if value != "/":
+                token(value, r"^/[A-Za-z0-9_#./-]{1,511}$")
+                parts = value.split("/")[1:]
+                if len(parts) > 64 or any(part in ("", ".", "..") for part in parts):
+                    raise ValueError("binding_observation_declared_path")
+            elif not isinstance(value, STRINGS):
+                raise ValueError("binding_observation_declared_path")
+            return value
+
+        try:
+            integers = (int, long)  # noqa: F821
+        except NameError:
+            integers = (int,)
+        uid = os.getuid() if os.name == "posix" else None
+        fields = ("device", "inode", "mode", "uid", "gid", "nlink", "size", "mtime", "ctime")
+
+        def valid_metadata(value, directory):
+            if not isinstance(value, dict) or set(value) != set(fields):
+                raise ValueError("binding_observation_declared_metadata_shape")
+            for key in fields[:7]:
+                if type(value[key]) not in integers or not 0 <= value[key] <= 9223372036854775807:
+                    raise ValueError("binding_observation_declared_metadata_integer")
+            for key in fields[7:]:
+                number = value[key]
+                if not isinstance(number, STRINGS) or not 1 <= len(number) <= 32:
+                    raise ValueError("binding_observation_declared_metadata_time")
+                try:
+                    parsed = float(number)
+                except (ValueError, OverflowError):
+                    raise ValueError("binding_observation_declared_metadata_time")
+                if parsed != parsed or abs(parsed) == float("inf") or "%.17g" % parsed != number:
+                    raise ValueError("binding_observation_declared_metadata_time")
+            mode = value["mode"]
+            if value["uid"] not in (0, uid) or mode & 18 or (
+                not stat.S_ISDIR(mode) if directory else
+                not stat.S_ISREG(mode) or value["nlink"] != 1 or value["size"] > 16777216
+            ):
+                raise ValueError("binding_observation_declared_metadata_trust")
+            return value
+
+        def inside(path, root):
+            return root == "/" or path == root or path.startswith(root + "/")
+
+        runtime_roots = [valid_path(root) for root in self.profile["paths"]["protected_roots"]]
+        init_roots = [valid_path(library["path"]) for library in routes[0]["libraries"]]
+        members, directories, ancestors, total, runtime = {}, {}, set(), 0, []
+        previous = None
+        for member in manifest["members"]:
+            if not isinstance(member, dict) or set(member) != set(
+                ("role", "path", "sha256", "metadata")
+            ):
+                raise ValueError("binding_observation_declared_member_shape")
+            path = valid_path(member["path"])
+            token(member["sha256"], r"^[0-9a-f]{64}$")
+            if previous is not None and path <= previous:
+                raise ValueError("binding_observation_declared_member_order")
+            previous = path
+            roots = runtime_roots if member["role"] == "runtime" else init_roots
+            if member["role"] not in ("runtime", "library_init") or not any(
+                inside(path, root) for root in roots
+            ):
+                raise ValueError("binding_observation_declared_member_scope")
+            valid_metadata(member["metadata"], False)
+            total += member["metadata"]["size"]
+            if total > 67108864:
+                raise ValueError("binding_observation_declared_content_bound")
+            members[path] = member
+            if member["role"] == "runtime":
+                runtime.append(member)
+            current = os.path.dirname(path)
+            while True:
+                ancestors.add(current)
+                if current == "/":
+                    break
+                current = os.path.dirname(current)
+        previous = None
+        for directory in manifest["directories"]:
+            if not isinstance(directory, dict) or set(directory) != set(("path", "metadata")):
+                raise ValueError("binding_observation_declared_directory_shape")
+            path = valid_path(directory["path"])
+            if previous is not None and path <= previous:
+                raise ValueError("binding_observation_declared_directory_order")
+            previous = path
+            directories[path] = valid_metadata(directory["metadata"], True)
+        if set(directories) != ancestors or set(members) & ancestors or not runtime:
+            raise ValueError("binding_observation_declared_ancestor_union")
+        # All manifest/schema/baseline checks above are filesystem-free.
+        if (os.name != "posix" or platform.system() != "Linux" or uid == 0 or
+                os.geteuid() != uid):
+            raise ValueError("binding_observation_declared_normal_linux_user_required")
+        deadline = os.times()[4] + OUTER_SECONDS
+        if self._deadline is not None:
+            deadline = min(deadline, self._deadline)
+
+        def check_deadline():
+            if os.times()[4] >= deadline:
+                raise ValueError("binding_observation_declared_deadline")
+
+        def metadata(info):
+            return dict(zip(fields, (
+                info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+                info.st_nlink, info.st_size, "%.17g" % info.st_mtime, "%.17g" % info.st_ctime,
+            )))
+
+        def check_info(info, expected):
+            check_deadline()
+            if metadata(info) != expected:
+                raise ValueError("binding_observation_declared_metadata_drift")
+
+        def open_checked(path, directory):
+            # /proc magic links address retained parents; every untrusted path
+            # component is still opened separately with O_NOFOLLOW. At most a
+            # parent and its child remain held after each component check.
+            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+            current, child = None, None
+            try:
+                check_deadline()
+                current = os.open("/", flags | os.O_DIRECTORY)
+                check_info(os.fstat(current), directories["/"])
+                check_info(os.lstat("/"), directories["/"])
+                if path == "/":
+                    result, current = (current, None, None), None
+                    return result
+                named, parts = "", path.split("/")[1:]
+                for index, part in enumerate(parts):
+                    check_deadline()
+                    named += "/" + part
+                    last = index == len(parts) - 1
+                    is_directory = not last or directory
+                    expected = directories[named] if is_directory else members[named]["metadata"]
+                    selected = "/proc/self/fd/%d/%s" % (current, part)
+                    child = os.open(selected, flags | (os.O_DIRECTORY if is_directory else 0))
+                    check_info(os.fstat(child), expected)
+                    check_info(os.lstat(named), expected)
+                    if last:
+                        result, child, current = (child, current, selected), None, None
+                        return result
+                    os.close(current)
+                    current, child = child, None
+            finally:
+                try:
+                    if child is not None:
+                        os.close(child)
+                finally:
+                    if current is not None:
+                        os.close(current)
+
+        def close_checked(opened):
+            try:
+                os.close(opened[0])
+            finally:
+                if opened[1] is not None:
+                    os.close(opened[1])
+
+        def guarded_read(operation, *arguments):
+            # The authenticated helper transfers its opened descriptor to a
+            # stream only when fdopen returns. Close an otherwise orphaned raw
+            # descriptor on that failure; successful streams keep sole ownership
+            # and the unchanged helper closes them. The process-wide os module
+            # is never changed, and every exception restores this fresh module.
+            original_os = self.copying.os
+            safe_os = types.ModuleType("binding_observation_declared_read_os")
+            safe_os.__dict__.update(original_os.__dict__)
+
+            def fdopen(fd, mode):
+                try:
+                    return original_os.fdopen(fd, mode)
+                except BaseException:
+                    try:
+                        original_os.close(fd)
+                    except OSError as error:
+                        if error.errno != 9:  # fdopen may already have closed it.
+                            raise
+                    raise
+
+            safe_os.fdopen = fdopen
+            self.copying.os = safe_os
+            try:
+                return operation(*arguments)
+            finally:
+                self.copying.os = original_os
+
+        def check_union():
+            for path in sorted(directories):
+                opened = open_checked(path, True)
+                try:
+                    check_info(os.fstat(opened[0]), directories[path])
+                    check_info(os.lstat(path), directories[path])
+                finally:
+                    close_checked(opened)
+            for path in sorted(members):
+                opened = open_checked(path, False)
+                try:
+                    check_info(os.fstat(opened[0]), members[path]["metadata"])
+                    check_info(os.lstat(path), members[path]["metadata"])
+                finally:
+                    close_checked(opened)
+
+        check_deadline()
+        binding = self.profile["tools"]["ocean"]
+        resolved = os.path.realpath(binding["path"])
+        if not any(member["path"] == resolved and member["sha256"] == binding["sha256"]
+                   for member in runtime):
+            raise ValueError("binding_observation_declared_ocean_member")
+        check_union()
+        check_deadline()
+        ocean = guarded_read(self._ocean_trust)
+        check_deadline()
+        if not any(member["path"] == ocean["resolved"] and member["sha256"] == ocean["sha256"]
+                   for member in runtime):
+            raise ValueError("binding_observation_declared_ocean_member")
+        for path in sorted(members):
+            member = members[path]
+            opened = open_checked(path, False)
+            try:
+                info = os.fstat(opened[0])
+                check_info(info, member["metadata"])
+                raw = guarded_read(
+                    self.copying.read_leaf, opened[2], info, member["metadata"]["size"],
+                )
+                check_deadline()
+                check_info(os.fstat(opened[0]), member["metadata"])
+                check_info(os.lstat(path), member["metadata"])
+                check_info(os.fstat(opened[1]), directories[os.path.dirname(path)])
+                check_info(os.lstat(os.path.dirname(path)), directories[os.path.dirname(path)])
+                if len(raw) != member["metadata"]["size"] or digest(raw) != member["sha256"]:
+                    raise ValueError("binding_observation_declared_content_drift")
+            finally:
+                close_checked(opened)
+        # Existing named entry validation performs at most two additional16MiB
+        # reads in total. Finish both before the last metadata-only union check.
+        if guarded_read(self._ocean_trust) != ocean:
+            raise ValueError("binding_observation_declared_ocean_drift")
+        check_deadline()
+        check_union()
+        return {
+            "schema_version": 1, "scope": "DECLARED_MEMBERS_ONLY",
+            "status": "EXACT_MEMBER_INTEGRITY_VERIFIED", "manifest_sha256": expected_sha256,
+            "member_count": len(members), "directory_count": len(directories),
+            "content_bytes": total,
+            "qualified": False, "closure_trust": "NOT_ESTABLISHED", "execution_authorized": False,
+            "new_eda_starts": 0, "new_simulations": 0, "new_extractions": 0,
+            "new_reservations": 0, "new_claims": 0,
+        }
+
     def _ledger(self):
         selected = self.root + "/" + self.accounting.LEDGER
         info = self.accounting.safe(selected)

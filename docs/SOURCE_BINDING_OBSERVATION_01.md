@@ -1,5 +1,65 @@
 # Source binding preparation — unqualified development components
 
+## Declared execution-code member integrity, 2026-10-19
+
+The source51/head6e15e23 correction completed exact hosted Windows4609 PASS,
+Linux359 binding PASS, package/security and automated review without findings.
+All five inline review threads are resolved. This source52 increment has separate
+validation gates; older results and failures remain source-specific history.
+
+The private `_declared_code_members(raw, expected_sha256)` verifies only a finite,
+explicitly declared member set. Its canonical ASCII JSON schema1 is capped at
+262144 bytes/depth8, with exact keys: scope DECLARED_MEMBERS_ONLY; profile,
+registration, worker and request SHA-256 bindings; members; directories. The
+expected manifest digest comes from a separately trusted caller. A self-generated
+digest, plan or baseline is never human approval or external provenance. Current
+decoded profile/registration digests and selected route are checked again.
+
+Members have exact role/path/sha256/metadata fields, at most128 entries. Runtime
+members belong to profile protected roots; library_init members belong to exact
+registered library roots. Paths are sorted unique canonical absolute ASCII paths
+within the existing RemotePath alphabet, at most512 characters/64 components.
+The resolved profiled OCEAN target and its hash must be declared as runtime.
+Directories have exact path/metadata fields, at most1024 entries, and equal the
+complete ancestor union including `/`. File/directory aliases, links, special
+files, shared-write code, foreign owners and regular hardlinks reject.
+
+Metadata uses the physical collector's exact device/inode/full-mode/uid/gid/
+nlink/size plus canonical finite `%.17g` mtime/ctime strings. Each file is at most
+16MiB; declared aggregate is at most64MiB, validated before any content read.
+The method requires an ordinary Linux user with matching real/effective UID.
+It performs no baseline registration, ACL subprocess, permission change or write.
+
+After complete structural validation, metadata-only OCEAN link resolution checks
+required membership. Every file/ancestor is verified before content is read.
+Component-by-component O_NOFOLLOW opens reuse the reviewed `/proc/self/fd`
+held-parent pattern without Python3 dir_fd APIs. Leaf and immediate parent stay
+held during each bounded helper read; held/named metadata are rechecked. A scoped
+facade on the fresh private helper closes raw FDs if fdopen fails and restores
+the original helper OS on all exits. Global OS and fixed helper bytes/pins remain
+unchanged. Descriptor cleanup and the existing outer60-second bound apply.
+
+The existing named OCEAN trust checks run before and after member contents; their
+two separate reads each retain the16MiB limit in addition to the64MiB member cap.
+After all content reads, the entire file/ancestor union is reopened and compared
+again. No content read follows that final union. These last-observation checks
+detect drift; they do not atomically exclude another filesystem writer.
+
+The count/hash-only receipt says EXACT_MEMBER_INTEGRITY_VERIFIED and explicitly
+keeps qualified=false, closure_trust=NOT_ESTABLISHED and execution_authorized=false;
+EDA/simulation/extraction/reservation/claim counters are0. No paths or content
+are returned. Declared membership does not prove loader/SKILL/context/CDF/init
+dependency completeness, benign effects or actual startup compatibility.
+`observe()` stays unconditionally CAPABILITY_NOT_QUALIFIED, with no operational
+transport/activation/public MCP addition. Runtime/init closure and immutable
+operational admission remain implementation gaps; do not request a premature
+observation approval as though implementation were complete.
+
+Additive checkpoint08 charges52/60 source changes without modifying checkpoint07
+or earlier policy/ledger/evidence. This software continuation makes0 VM contacts,
+deployments, actual claims, EDA starts, simulations, extractions or reservations.
+PR164 remains draft, without merge/publication authority. Published2.1.0 is intact.
+
 ## Bounded helper snapshot correction, 2026-10-19
 
 ### Exact-CI follow-up and installed preparation

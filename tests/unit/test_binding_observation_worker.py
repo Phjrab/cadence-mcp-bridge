@@ -2,8 +2,10 @@
 
 import copy
 import errno
+import json
 import os
 import platform
+import stat
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +16,7 @@ from test_shared_reservations import root
 
 from cadence_mcp_bridge import _binding_observation as observer
 from cadence_mcp_bridge import _native_copy as copying
+from cadence_mcp_bridge import _physical_metadata as physical
 
 __all__ = ["root"]
 
@@ -88,6 +91,467 @@ def controlled_inventory(selected, monkeypatch):
     # child's /proc identity, group ownership and termination remain real.
     worker, _, _ = selected
     monkeypatch.setattr(worker, "_check_conflicting_processes", lambda: None)
+
+
+def declared_manifest(worker, members, metadata):
+    """Explicit synthetic baseline; never an operational approval or discovery."""
+    directories = set()
+    for member in members:
+        current = member["path"].rsplit("/", 1)[0] or "/"
+        while True:
+            directories.add(current)
+            if current == "/":
+                break
+            current = current.rsplit("/", 1)[0] or "/"
+    return dict(
+        schema_version=1, scope="DECLARED_MEMBERS_ONLY",
+        profile_sha256=worker.selection["profile_sha256"],
+        registration_sha256=worker.selection["registration_sha256"],
+        worker_sha256=worker.selection["helper_sha256"],
+        request_sha256=worker.selection["request_sha256"],
+        members=sorted(members, key=lambda value: value["path"]),
+        directories=[dict(path=path, metadata=metadata(path)) for path in sorted(directories)],
+    )
+
+
+def rebind_declared_documents(worker):
+    worker.selection["profile_sha256"] = observer.digest(observer.canonical(worker.profile))
+    worker.registration["environment_sha256"] = worker.selection["profile_sha256"]
+    worker.selection["registration_sha256"] = observer.digest(
+        observer.canonical(worker.registration),
+    )
+
+
+@pytest.fixture
+def declared_case(selected):
+    worker, _, _ = selected
+    worker.profile["paths"]["protected_roots"] = ["/synthetic-runtime"]
+    worker.profile["tools"]["ocean"] = dict(
+        path="/synthetic-runtime/ocean", sha256="a" * 64,
+    )
+    worker.route["libraries"] = [dict(
+        name="Synthetic", path="/synthetic-library", tree_sha256="b" * 64,
+    )]
+    rebind_declared_documents(worker)
+    info = dict(device=1, inode=2, mode=stat.S_IFREG | 0o500, uid=0, gid=0,
+                nlink=1, size=8, mtime="100", ctime="100")
+    members = [
+        dict(role="runtime", path="/synthetic-runtime/ocean", sha256="a" * 64,
+             metadata=dict(info)),
+        dict(role="library_init", path="/synthetic-library/libInit.il", sha256="b" * 64,
+             metadata=dict(info)),
+    ]
+    manifest = declared_manifest(worker, members, lambda _: {
+        **info, "mode": stat.S_IFDIR | 0o700, "nlink": 2,
+    })
+    return worker, manifest
+
+
+@pytest.fixture
+def declared_real_case(selected, tmp_path):
+    if os.name != "posix" or sys.platform != "linux" or os.getuid() == 0:
+        pytest.skip("ordinary Linux no-follow file inspection")
+    worker, request, _ = selected
+    runtime = tmp_path / "runtime"
+    runtime.mkdir(mode=0o700)
+    ocean = runtime / "ocean"
+    ocean.write_bytes(b"synthetic executable placeholder; never executed\n")
+    ocean.chmod(0o700)
+    dependency = runtime / "runtime-library"
+    dependency.write_bytes(b"synthetic runtime library\n")
+    dependency.chmod(0o600)
+    library = Path(worker.route["libraries"][0]["path"])
+    init = library / "libInit.il"
+    init.write_bytes(b"synthetic init placeholder; never evaluated\n")
+    init.chmod(0o600)
+    worker.profile["tools"]["ocean"] = dict(
+        path=str(ocean), sha256=observer.digest(ocean.read_bytes()),
+    )
+    rebind_declared_documents(worker)
+    members = [dict(
+        role=role, path=str(path), sha256=observer.digest(path.read_bytes()),
+        metadata=physical.metadata(path.lstat()),
+    ) for role, path in (("runtime", ocean), ("runtime", dependency), ("library_init", init))]
+    manifest = declared_manifest(worker, members, lambda path: physical.metadata(os.lstat(path)))
+    return worker, request, manifest, ocean, dependency, init
+
+
+def check_declared(worker, manifest):
+    raw = observer.canonical(manifest)
+    return worker._declared_code_members(raw, observer.digest(raw))
+
+
+@pytest.mark.parametrize("change", [
+    "version-bool", "scope", "extra", "profile", "registration", "worker", "request",
+    "empty-members", "too-many-members", "too-many-directories", "member-extra", "role",
+    "file-bool", "file-negative", "file-overflow", "file-hardlink", "file-special",
+    "file-size", "file-mode", "time-nan", "time-noncanonical", "time-number", "digest",
+    "path-relative", "path-dot", "path-parent", "path-empty", "path-newline",
+    "path-unicode", "path-overlong", "path-depth", "path-role-root", "init-role-root",
+    "members-unsorted", "member-duplicate", "directory-duplicate", "directory-unsorted",
+    "directory-missing", "directory-extra", "directory-file-alias", "directory-type",
+    "directory-mode", "metadata-extra", "directory-metadata-extra", "missing-ocean",
+    "decoded-profile-drift", "decoded-registration-drift",
+])
+def test_declared_members_reject_invalid_complete_manifest_before_fs(
+    declared_case, monkeypatch, change,
+):
+    worker, manifest = declared_case
+    runtime = next(item for item in manifest["members"] if item["role"] == "runtime")
+    init = next(item for item in manifest["members"] if item["role"] == "library_init")
+    if change == "version-bool":
+        manifest["schema_version"] = True
+    elif change == "scope":
+        manifest["scope"] = "COMPLETE_CLOSURE"
+    elif change == "extra":
+        manifest["approved"] = True
+    elif change in ("profile", "registration", "worker", "request"):
+        manifest[change + "_sha256"] = "f" * 64
+    elif change == "empty-members":
+        manifest["members"] = []
+    elif change == "too-many-members":
+        manifest["members"] *= 65
+    elif change == "too-many-directories":
+        manifest["directories"] *= 342
+    elif change == "member-extra":
+        runtime["command"] = "untrusted"
+    elif change == "role":
+        runtime["role"] = "loader-complete"
+    elif change == "file-bool":
+        runtime["metadata"]["size"] = False
+    elif change == "file-negative":
+        runtime["metadata"]["uid"] = -1
+    elif change == "file-overflow":
+        runtime["metadata"]["inode"] = 2**63
+    elif change == "file-hardlink":
+        runtime["metadata"]["nlink"] = 2
+    elif change == "file-special":
+        runtime["metadata"]["mode"] = stat.S_IFIFO | 0o600
+    elif change == "file-size":
+        runtime["metadata"]["size"] = 16 * 1024**2 + 1
+    elif change == "file-mode":
+        runtime["metadata"]["mode"] |= 0o020
+    elif change.startswith("time-"):
+        runtime["metadata"]["ctime"] = {
+            "time-nan": "nan", "time-noncanonical": "100.0", "time-number": 100,
+        }[change]
+    elif change == "digest":
+        runtime["sha256"] = "A" * 64
+    elif change.startswith("path-"):
+        runtime["path"] = {
+            "path-relative": "synthetic-runtime/ocean", "path-dot": "/synthetic-runtime/./ocean",
+            "path-parent": "/synthetic-runtime/../ocean", "path-empty": "/synthetic-runtime//ocean",
+            "path-newline": "/synthetic-runtime/ocean\n", "path-unicode": "/synthetic-runtime/회로",
+            "path-overlong": "/" + "x" * 512, "path-depth": "/" + "/".join(["x"] * 65),
+            "path-role-root": "/unregistered/ocean",
+        }[change]
+    elif change == "init-role-root":
+        init["path"] = "/unregistered/libInit.il"
+    elif change == "members-unsorted":
+        manifest["members"].reverse()
+    elif change == "member-duplicate":
+        manifest["members"].append(copy.deepcopy(runtime))
+    elif change == "directory-duplicate":
+        manifest["directories"].append(copy.deepcopy(manifest["directories"][-1]))
+    elif change == "directory-unsorted":
+        manifest["directories"].reverse()
+    elif change == "directory-missing":
+        manifest["directories"].pop(0)
+    elif change == "directory-extra":
+        manifest["directories"].append(dict(
+            path="/zzz", metadata=copy.deepcopy(manifest["directories"][0]["metadata"]),
+        ))
+    elif change == "directory-file-alias":
+        manifest["directories"].append(dict(
+            path=runtime["path"], metadata=copy.deepcopy(manifest["directories"][0]["metadata"]),
+        ))
+    elif change == "directory-type":
+        manifest["directories"][0]["metadata"]["mode"] = stat.S_IFREG | 0o700
+    elif change == "directory-mode":
+        manifest["directories"][0]["metadata"]["mode"] |= 0o002
+    elif change == "metadata-extra":
+        runtime["metadata"]["approved"] = True
+    elif change == "directory-metadata-extra":
+        manifest["directories"][0]["metadata"]["approved"] = True
+    elif change == "missing-ocean":
+        manifest["members"] = [init]
+    elif change == "decoded-profile-drift":
+        worker.profile["tools"]["ocean"]["sha256"] = "f" * 64
+    elif change == "decoded-registration-drift":
+        worker.route["libraries"][0]["path"] = "/changed"
+    else:
+        pytest.fail(change)
+    monkeypatch.setattr(observer.os, "open", lambda *a, **k: pytest.fail("filesystem opened"))
+    monkeypatch.setattr(observer.os, "lstat", lambda *a, **k: pytest.fail("filesystem observed"))
+    monkeypatch.setattr(worker, "_ocean_trust", lambda: pytest.fail("OCEAN read before validation"))
+    reason = {
+        "version-bool": "declared_manifest_shape", "scope": "declared_manifest_shape",
+        "extra": "declared_manifest_shape", "profile": "declared_manifest_binding",
+        "registration": "declared_manifest_binding", "worker": "declared_manifest_binding",
+        "request": "declared_manifest_binding", "empty-members": "declared_member_bound",
+        "too-many-members": "declared_member_bound",
+        "too-many-directories": "declared_member_bound",
+        "member-extra": "declared_member_shape", "role": "declared_member_scope",
+        "file-bool": "declared_metadata_integer", "file-negative": "declared_metadata_integer",
+        "file-overflow": "declared_metadata_integer", "file-hardlink": "declared_metadata_trust",
+        "file-special": "declared_metadata_trust", "file-size": "declared_metadata_trust",
+        "file-mode": "declared_metadata_trust", "time-nan": "declared_metadata_time",
+        "time-noncanonical": "declared_metadata_time", "time-number": "declared_metadata_time",
+        "digest": "token", "path-relative": "token", "path-dot": "declared_path",
+        "path-parent": "declared_path", "path-empty": "declared_path", "path-newline": "token",
+        "path-unicode": "token", "path-overlong": "token", "path-depth": "declared_path",
+        "path-role-root": "declared_member_scope", "init-role-root": "declared_member_scope",
+        "members-unsorted": "declared_member_order", "member-duplicate": "declared_member_order",
+        "directory-duplicate": "declared_directory_order",
+        "directory-unsorted": "declared_directory_order",
+        "directory-missing": "declared_ancestor_union",
+        "directory-extra": "declared_ancestor_union",
+        "directory-file-alias": "declared_ancestor_union",
+        "directory-type": "declared_metadata_trust", "directory-mode": "declared_metadata_trust",
+        "metadata-extra": "declared_metadata_shape",
+        "directory-metadata-extra": "declared_metadata_shape",
+        "missing-ocean": "declared_ancestor_union",
+        "decoded-profile-drift": "declared_manifest_binding",
+        "decoded-registration-drift": "declared_manifest_binding",
+    }[change]
+    with pytest.raises(ValueError, match="^binding_observation_" + reason + "$"):
+        check_declared(worker, manifest)
+
+
+@pytest.mark.parametrize("raw_kind", [
+    "hash", "noncanonical", "duplicate", "nonfinite", "nonascii", "deep", "large", "type",
+])
+def test_declared_document_rejects_before_filesystem(declared_case, monkeypatch, raw_kind):
+    worker, manifest = declared_case
+    raw = observer.canonical(manifest)
+    expected = observer.digest(raw)
+    if raw_kind == "hash":
+        expected = "f" * 64
+    elif raw_kind == "noncanonical":
+        raw += b"\n"
+    elif raw_kind == "duplicate":
+        raw = b'{"schema_version":1,"schema_version":1}'
+    elif raw_kind == "nonfinite":
+        raw = b'{"schema_version":NaN}'
+    elif raw_kind == "nonascii":
+        raw = b'{"x":"\xff"}'
+    elif raw_kind == "deep":
+        raw = b"[" * 2000 + b"0" + b"]" * 2000
+    elif raw_kind == "large":
+        raw = b" " * 262145
+    else:
+        raw = json.loads(raw)
+    if raw_kind != "hash" and isinstance(raw, bytes):
+        expected = observer.digest(raw)
+    monkeypatch.setattr(observer.os, "open", lambda *a, **k: pytest.fail("filesystem opened"))
+    monkeypatch.setattr(observer.os, "lstat", lambda *a, **k: pytest.fail("filesystem observed"))
+    monkeypatch.setattr(worker, "_ocean_trust", lambda: pytest.fail("OCEAN observed"))
+    reason = {
+        "hash": "digest", "noncanonical": "json", "duplicate": "json", "nonfinite": "json",
+        "nonascii": "json", "deep": "json", "large": "bound", "type": "bound",
+    }[raw_kind]
+    with pytest.raises(ValueError, match="^binding_observation_declared_manifest_" + reason + "$"):
+        worker._declared_code_members(raw, expected)
+
+
+def test_declared_member_aggregate_bound_is_checked_before_content(declared_case, monkeypatch):
+    worker, manifest = declared_case
+    runtime = next(item for item in manifest["members"] if item["role"] == "runtime")
+    for index in range(5):
+        item = copy.deepcopy(runtime)
+        item["path"] = f"/synthetic-runtime/library-{index}"
+        item["metadata"]["size"] = 16 * 1024**2
+        manifest["members"].append(item)
+    manifest["members"].sort(key=lambda item: item["path"])
+    monkeypatch.setattr(observer.os, "open", lambda *a, **k: pytest.fail("filesystem opened"))
+    monkeypatch.setattr(worker, "_ocean_trust", lambda: pytest.fail("OCEAN observed"))
+    with pytest.raises(ValueError, match="^binding_observation_declared_content_bound$"):
+        check_declared(worker, manifest)
+
+
+def test_declared_valid_schema_reaches_platform_gate_without_io(declared_case, monkeypatch):
+    worker, manifest = declared_case
+    monkeypatch.setattr(observer.platform, "system", lambda: "UnqualifiedPlatform")
+    monkeypatch.setattr(observer.os, "open", lambda *a, **k: pytest.fail("filesystem opened"))
+    monkeypatch.setattr(worker, "_ocean_trust", lambda: pytest.fail("OCEAN observed"))
+    with pytest.raises(
+        ValueError, match="^binding_observation_declared_normal_linux_user_required$",
+    ):
+        check_declared(worker, manifest)
+
+
+def test_declared_real_success_stays_unqualified_and_read_only(declared_real_case, monkeypatch):
+    worker, request, manifest, ocean, dependency, init = declared_real_case
+    before = {path: (path.read_bytes(), physical.metadata(path.lstat()))
+              for path in (ocean, dependency, init)}
+    ledger_before = worker._ledger()
+    descriptors = set(os.listdir("/proc/self/fd"))
+    monkeypatch.setattr(
+        observer.subprocess, "Popen", lambda *a, **k: pytest.fail("process started"),
+    )
+    result = check_declared(worker, manifest)
+    assert result["scope"] == "DECLARED_MEMBERS_ONLY"
+    assert result["status"] == "EXACT_MEMBER_INTEGRITY_VERIFIED"
+    assert result["member_count"] == 3
+    assert result["directory_count"] == len(manifest["directories"])
+    assert result["content_bytes"] == sum(m["metadata"]["size"] for m in manifest["members"])
+    assert all(result[key] == 0 for key in (
+        "new_eda_starts", "new_simulations", "new_extractions", "new_reservations", "new_claims",
+    ))
+    assert result["qualified"] is False and result["closure_trust"] == "NOT_ESTABLISHED"
+    assert result["execution_authorized"] is False
+    assert before == {path: (path.read_bytes(), physical.metadata(path.lstat()))
+                      for path in (ocean, dependency, init)}
+    assert descriptors == set(os.listdir("/proc/self/fd"))
+    assert ledger_before == worker._ledger()
+    assert worker.observe(request)["status"] == "CAPABILITY_NOT_QUALIFIED"
+
+
+@pytest.mark.parametrize("change", [
+    "content", "restored-mtime", "inode", "mode", "owner-baseline", "ancestor-mode",
+    "symlink", "ancestor-symlink", "hardlink", "fifo", "digest",
+])
+def test_declared_real_file_and_ancestor_drift_reject(
+    declared_real_case, tmp_path, monkeypatch, change,
+):
+    worker, _, manifest, _, dependency, init = declared_real_case
+    if change == "content":
+        dependency.write_bytes(b"changed")
+    elif change == "restored-mtime":
+        before = dependency.stat()
+        dependency.write_bytes(b"x" * before.st_size)
+        os.utime(dependency, ns=(before.st_atime_ns, before.st_mtime_ns))
+    elif change == "inode":
+        before = dependency.stat()
+        replacement = tmp_path / "replacement"
+        replacement.write_bytes(dependency.read_bytes())
+        replacement.chmod(stat.S_IMODE(before.st_mode))
+        os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+        replacement.replace(dependency)
+    elif change == "mode":
+        dependency.chmod(0o620)
+    elif change == "owner-baseline":
+        manifest["members"][0]["metadata"]["uid"] = 2**31 - 1
+    elif change == "ancestor-mode":
+        dependency.parent.chmod(0o720)
+    elif change == "symlink":
+        dependency.unlink()
+        dependency.symlink_to(init)
+    elif change == "ancestor-symlink":
+        previous = tmp_path / "runtime-held"
+        dependency.parent.rename(previous)
+        dependency.parent.symlink_to(previous, target_is_directory=True)
+    elif change == "hardlink":
+        os.link(dependency, tmp_path / "duplicate")
+    elif change == "fifo":
+        dependency.unlink()
+        os.mkfifo(dependency, 0o600)
+    else:
+        next(m for m in manifest["members"] if m["path"] == str(dependency))["sha256"] = "f" * 64
+    if change != "digest":
+        monkeypatch.setattr(
+            worker.copying, "read_leaf", lambda *a, **k: pytest.fail("content before metadata"),
+        )
+    descriptors = set(os.listdir("/proc/self/fd"))
+    with pytest.raises((ValueError, OSError)):
+        check_declared(worker, manifest)
+    assert descriptors == set(os.listdir("/proc/self/fd"))
+
+
+@pytest.mark.parametrize("drift", ["bytes-restored-mtime", "ancestor-mode", "inode"])
+def test_declared_final_union_rechecks_earlier_members_after_last_content(
+    declared_real_case, monkeypatch, tmp_path, drift,
+):
+    worker, _, manifest, ocean, _, _ = declared_real_case
+    first = Path(manifest["members"][0]["path"])
+    read = worker.copying.read_leaf
+    calls = []
+    ocean_reads = [0]
+
+    def late_drift(path, expected, limit, *args, **kwargs):
+        raw = read(path, expected, limit, *args, **kwargs)
+        calls.append(path)
+        if path == str(ocean):
+            ocean_reads[0] += 1
+            if ocean_reads[0] == 2:
+                before = first.stat()
+                if drift == "bytes-restored-mtime":
+                    first.write_bytes(b"x" * before.st_size)
+                    os.utime(first, ns=(before.st_atime_ns, before.st_mtime_ns))
+                elif drift == "ancestor-mode":
+                    first.parent.chmod(0o720)
+                else:
+                    replacement = tmp_path / "late-replacement"
+                    replacement.write_bytes(first.read_bytes())
+                    replacement.chmod(stat.S_IMODE(before.st_mode))
+                    os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+                    replacement.replace(first)
+        return raw
+
+    monkeypatch.setattr(worker.copying, "read_leaf", late_drift)
+    with pytest.raises(ValueError, match="binding_observation_"):
+        check_declared(worker, manifest)
+    assert ocean_reads[0] == 2 and calls[-1] == str(ocean)
+
+
+def test_declared_deadline_closes_descriptors_before_return(declared_real_case):
+    worker, _, manifest, _, _, _ = declared_real_case
+    worker._deadline = os.times()[4] - 1
+    descriptors = set(os.listdir("/proc/self/fd"))
+    with pytest.raises(ValueError, match="deadline"):
+        check_declared(worker, manifest)
+    assert descriptors == set(os.listdir("/proc/self/fd"))
+
+
+def test_declared_missing_resolved_ocean_rejects_before_content(declared_real_case, monkeypatch):
+    worker, _, manifest, ocean, _, _ = declared_real_case
+    manifest["members"] = [member for member in manifest["members"]
+                           if member["path"] != str(ocean)]
+    # The second runtime file retains exactly the same ancestor union, so this
+    # tests required-OCEAN membership rather than a structural union rejection.
+    monkeypatch.setattr(
+        worker.copying, "read_leaf", lambda *a, **k: pytest.fail("content before membership"),
+    )
+    with pytest.raises(ValueError, match="^binding_observation_declared_ocean_member$"):
+        check_declared(worker, manifest)
+
+
+@pytest.mark.parametrize("fault_call", [1, 3, 5])
+@pytest.mark.parametrize("fault", ["fdopen", "read"])
+def test_declared_stream_fault_closes_all_fds_and_restores_scoped_os(
+    declared_real_case, monkeypatch, fault_call, fault,
+):
+    worker, _, manifest, _, _, _ = declared_real_case
+    original_os = worker.copying.os
+    facade = SimpleNamespace(**vars(original_os))
+    calls = [0]
+
+    class ReadFault:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def read(self, *args):
+            raise OSError(errno.EIO, "synthetic read fault")
+
+        def close(self):
+            self.stream.close()
+
+    def faulty_fdopen(*args, **kwargs):
+        calls[0] += 1
+        if calls[0] == fault_call:
+            if fault == "fdopen":
+                raise OSError(errno.ENOMEM, "synthetic fdopen fault")
+            return ReadFault(original_os.fdopen(*args, **kwargs))
+        return original_os.fdopen(*args, **kwargs)
+
+    facade.fdopen = faulty_fdopen
+    monkeypatch.setattr(worker.copying, "os", facade)
+    descriptors = set(os.listdir("/proc/self/fd"))
+    with pytest.raises(OSError, match="synthetic " + fault + " fault"):
+        check_declared(worker, manifest)
+    assert calls[0] == fault_call
+    assert descriptors == set(os.listdir("/proc/self/fd"))
+    assert worker.copying.os is facade and observer.os is original_os
 
 
 def test_observe_is_unconditionally_blocked_and_never_writes_or_starts(selected, monkeypatch):
