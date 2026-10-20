@@ -1,3 +1,17 @@
+# Actual source58 storage prerequisite, 2026-10-20
+
+One separately authorized installed source58 read returned
+`OBSERVATIONS_ONLY`, preserving its exclusive spent marker and private
+response. It observed the stage and fixed backing absent under root ext4,
+eight loop device nodes without established availability, and no
+`/dev/loop-control`. It did not establish loop feasibility, persistent
+backing, runtime trust, execution authority or apply readiness. No reported
+system command, EDA start, simulation, reservation or intentional remote
+write occurred. This result requires a fixed, separately authorized and
+reviewed provisioning path plus independent initializer/runtime trust before
+an actual observation. Do not resend the source58 one-shot read. The earlier
+source56/source57 descriptions below remain historical.
+
 # Current storage prerequisite status, 2026-10-20The source56 and source57 fixed storage reads were each approved separately,
 used once and retained as failed evidence. Source57 identified final timestamp
 drift on `/proc/filesystems`; it returned no mount, loop or backing facts.

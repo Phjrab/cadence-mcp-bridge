@@ -1,3 +1,16 @@
+## Source58 actual storage read, 2026-10-20
+
+One separately approved source58 fixed read returned `OBSERVATIONS_ONLY` and
+its spent marker and private result are preserved. The managed observation
+stage and fixed persistent backing do not exist; the path is under root ext4.
+Eight loop device nodes do not prove an available loop association and
+`/dev/loop-control` is absent. No administrator change, OCEAN, simulation or
+reservation was authorized or reported. Runtime/initializer trust and a
+bounded persistent stage remain prerequisites to actual source-binding
+observation. The prior ledger observation is 128 attempts/15,721,299,968
+bytes. PR164 remains draft; no candidate DC run or release follows. The prior
+source58 preparation entry below remains historical.
+
 ## Source58 fixed proc-file timestamp correction, 2026-10-20The separately approved source57 storage read was consumed once and returned
 `INCOMPLETE/path_metadata_drift`, with final `mtime`/`ctime` drift on the path
 hash of `/proc/filesystems`. Its private result and spent marker are preserved;

@@ -1,3 +1,17 @@
+## Source58 storage prerequisite observation, 2026-10-20
+
+The separately approved source58 read ran once against `a79afe9e` and returned
+`OBSERVATIONS_ONLY`, with its exclusive spent marker and private result retained.
+The fixed stage, backing parent/image and loop-control node are absent. Eight
+loop device nodes were seen, but association/availability and loop feasibility
+were not established. The stage is under the existing root ext4 mount, not a
+dedicated at-most-8MiB/256-inode persistent filesystem. This read did not
+assess initializer/runtime trust or authorize provisioning, OCEAN, simulation,
+PR164 merge or release. It made no reported remote write, EDA start or result
+reservation. The last separately observed ledger stays 128 attempts and
+15,721,299,968 bytes. Do not resend source58 or reuse its one-read approval.
+See the private source58 result record; earlier entries below remain historical.
+
 ## Source58 fixed proc-file timestamp correction, 2026-10-20
 
 One new separately approved source57 storage read was consumed and returned

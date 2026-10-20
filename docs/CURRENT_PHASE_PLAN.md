@@ -1,3 +1,17 @@
+## Source58 actual storage facts, 2026-10-20
+
+The approved source58 one-shot read returned `OBSERVATIONS_ONLY` and retained
+its spent marker and private result. It observed no dedicated bounded stage,
+backing parent/image or loop-control node. Existing loop device nodes did not
+establish usable associations; feasibility, persistence and apply readiness
+remain false or unassessed. No reported command, EDA start, simulation,
+reservation or intentional remote write occurred. The latest separate ledger
+observation remains 128 attempts/15,721,299,968 bytes. Do not resend this read.
+Implement and independently qualify a fixed recoverable stage provisioner and
+separate initializer/runtime trust before any source-binding observation.
+Further VM operation still requires its own applicable authority. PR164 stays
+draft and unmerged; the selected three-candidate DC run remains unexecuted.
+
 ## Source58 fixed proc-file timestamp correction, 2026-10-20A second separately approved fixed storage read ran once against exact source57
 `8c22214f037d5bb919616d2d28aac073ba44620e`. It returned
 `INCOMPLETE/path_metadata_drift` at the final guard. Its bounded error context
