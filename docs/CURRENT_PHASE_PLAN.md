@@ -1,3 +1,33 @@
+## Source58 fixed proc-file timestamp correction, 2026-10-20A second separately approved fixed storage read ran once against exact source57
+`8c22214f037d5bb919616d2d28aac073ba44620e`. It returned
+`INCOMPLETE/path_metadata_drift` at the final guard. Its bounded error context
+identified only `mtime` and `ctime` drift on the hashed path that matches
+`/proc/filesystems`. The spent marker and response are retained; no retry or
+storage facts were obtained. The previous source56 read remains independently
+spent. Neither read refreshed the last separately observed ledger of 128 attempts
+and 15,721,299,968 reserved bytes.
+
+Source58/checkpoint14 permits timestamp variation only for the fixed
+`/proc/filesystems` and current-process `mountinfo` fact files after held-fd
+procfs, regular-file, owner and non-shared-write proof. Device/inode/type,
+permissions, link count, size and fixed read bounds remain exact; the complete
+raw metadata stays in private evidence with an explicit comparison scope. Other
+files retain exact metadata checks. Focused storage tests 148 PASS/seven Linux
+skips, full local unit tests 4,997 PASS/542 platform or opt-in skips, Ruff and
+strict mypy130 PASS. The earlier Windows temp-root and long-path fixture failures
+remain recorded; a fresh short-root full run passed without changing guards.
+These are software results. The 1,300-file secret preflight, security18 and
+UTF-8 locked dependency audit pass with no known vulnerabilities; the initial
+CP949 audit startup failure is preserved. The isolated installed wheel matches
+all 136 package members and the fixed inspector/bootstrap pins; installed
+binding-observer synthetic checks pass. Wheel/sdist distribution audit finds
+no protected patterns or unexpected files. Exact hosted CI/review and any
+further current-VM read require their own gates. Persistent stage provisioning, initializer/runtime trust,
+actual source-binding observation and the selected three-DC comparison remain
+unfinished. PR164 remains draft; no merge or release follows from this repair.
+
+Earlier entries below retain their source-specific historical scope.
+
 ## Source57 bounded kernel-directory observation correction, 2026-10-20
 
 The exact source56 head56cc916 completed hosted Windows4916 PASS/522 skips,

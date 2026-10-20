@@ -1,3 +1,22 @@
+## Source58 fixed proc-file timestamp correction, 2026-10-20The separately approved source57 storage read was consumed once and returned
+`INCOMPLETE/path_metadata_drift`, with final `mtime`/`ctime` drift on the path
+hash of `/proc/filesystems`. Its private result and spent marker are preserved;
+there was no remote write, EDA start, simulation or reservation. No mount/loop
+facts or current storage acceptance were returned. The last separate ledger
+observation remains 128 attempts and 15,721,299,968 reserved bytes.
+
+Source58/checkpoint14 narrows a software correction to two fixed proc fact files
+after held-fd identity proof. Timestamp variation alone is permitted; static
+files, inode/owner/mode/link/size, bounds and failed-read evidence remain protected.
+Focused148/seven skips and full local4,997/542 skips, Ruff and strict mypy130
+pass on the source58 worktree. Local tests do not qualify the actual VM.
+Security18, 1,300-file secret preflight, UTF-8 locked audit, exact wheel/sdist
+contents and isolated installed fixed-resource/synthetic observer checks pass.
+The prior CP949 audit startup failure is retained. Initializer/runtime trust, bounded
+persistent storage, source-binding observation and the user's three selected DC
+candidates remain open. PR164 stays draft and unpublished. Older entries below
+remain historical.
+
 ## Source57 bounded kernel-directory observation correction, 2026-10-20
 
 The exact source56 head56cc916 completed hosted Windows4916 PASS/522 skips,

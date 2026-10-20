@@ -1,3 +1,15 @@
+## Source58 fixed proc-file timestamp correction, 2026-10-20
+
+One new separately approved source57 storage read was consumed and returned
+`INCOMPLETE/path_metadata_drift` at final validation. The bounded path hash
+matches `/proc/filesystems`; only `mtime` and `ctime` differed. Preserve its
+exclusive spent marker, private output and the earlier spent source56 read.
+Source58/checkpoint14 changes only the two closed proc fact-file timestamp
+comparisons after held-fd identity proof. No storage facts, runtime attestation,
+fresh ledger or execution authority were obtained. Do not retry either read.
+Any new VM contact still needs its own applicable authority. Continue software
+qualification without claiming actual observation or three-DC comparison.
+
 ## Source57 bounded kernel-directory observation correction, 2026-10-20
 
 The exact source56 head56cc916 completed hosted Windows4916 PASS/522 skips,

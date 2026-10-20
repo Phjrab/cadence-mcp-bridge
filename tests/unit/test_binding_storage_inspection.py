@@ -857,6 +857,71 @@ def test_kernel_directory_pin_is_not_a_regular_file_metadata_exception(
     assert not inspector.metadata_equal("/proc", expected, dict(expected, size=100))
 
 
+@pytest.mark.parametrize("selected", ["/proc/filesystems", "/proc/321/mountinfo"])
+def test_only_verified_fixed_proc_files_allow_time_drift(
+    inspection_request, monkeypatch, selected
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    expected = probe.metadata(synthetic_stat(stat.S_IFREG | 0o444))
+    expected["rdev"] = 0
+    later = dict(expected, mtime="later", ctime="later")
+    assert not inspector.metadata_equal(selected, expected, later)
+    inspector.kernel_files[selected] = 0x9FA0
+    assert inspector.metadata_equal(selected, expected, later)
+    for field in ("device", "inode", "mode", "uid", "gid", "nlink", "size", "rdev"):
+        assert not inspector.metadata_equal(
+            selected, expected, dict(expected, **{field: expected[field] + 1})
+        )
+
+
+@pytest.mark.parametrize(
+    "selected",
+    ["/proc/other/mountinfo", "/proc/322/mountinfo", "/proc/filesystems/extra",
+     "/sys/block", "/usr/bin/python", "/home/operator/file"],
+)
+def test_proc_file_time_exception_does_not_expand_to_other_paths(
+    inspection_request, monkeypatch, selected
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    inspector = probe.Inspector(inspection_request)
+    inspector.kernel_files[selected] = 0x9FA0
+    expected = probe.metadata(synthetic_stat(stat.S_IFREG | 0o444))
+    assert not inspector.metadata_equal(selected, expected, dict(expected, mtime="later"))
+
+
+@pytest.mark.parametrize("selected", ["/proc/filesystems", "/proc/321/mountinfo"])
+@pytest.mark.parametrize("change", ["valid", "fs-type", "owner", "group-write", "type"])
+def test_fixed_proc_file_pin_requires_held_identity(
+    inspection_request, monkeypatch, selected, change
+):
+    facade = os_facade(monkeypatch)
+    monkeypatch.setattr(facade, "getpid", lambda: 321)
+    monkeypatch.setattr(facade, "getuid", lambda: 500, raising=False)
+    inspector = probe.Inspector(inspection_request)
+    mode = stat.S_IFREG | 0o444
+    if change == "group-write":
+        mode |= stat.S_IWGRP
+    elif change == "type":
+        mode = stat.S_IFDIR | 0o555
+    owner = 123 if change == "owner" else 0
+    monkeypatch.setattr(
+        facade, "fstat", lambda fd: types.SimpleNamespace(st_mode=mode, st_uid=owner)
+    )
+    monkeypatch.setattr(
+        probe, "kernel_filesystem_type", lambda fd: 0xEF53 if change == "fs-type" else 0x9FA0
+    )
+    if change == "valid":
+        inspector.pin_kernel_file(selected, 97)
+        assert inspector.kernel_files == {selected: 0x9FA0}
+    else:
+        with pytest.raises(ValueError, match="^kernel_file_identity$"):
+            inspector.pin_kernel_file(selected, 97)
+        assert inspector.kernel_files == {}
+
+
 @pytest.mark.parametrize("selected", ["/proc", "/proc/321", "/sys/block"])
 @pytest.mark.parametrize("change", ["valid", "fs-type", "owner", "group-write", "type"])
 def test_pin_requires_closed_kernel_path_exact_filesystem_and_safe_opened_directory(
@@ -1021,6 +1086,24 @@ def test_actual_local_proc_guard_survives_owned_child_churn_without_relaxing_sta
     finally:
         os.close(fd)
     assert inspector.hashed == 0 and inspector.records == []
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="actual procfs and held file descriptor")
+def test_actual_proc_filesystems_guard_rechecks_identity_with_variable_timestamps(
+    inspection_request,
+):
+    inspector = probe.Inspector(inspection_request)
+    fd = inspector.opened("/proc/filesystems")
+    try:
+        assert inspector.kernel_files["/proc/filesystems"] == 0x9FA0
+        original = dict(inspector.seen["/proc/filesystems"])
+        inspector.seen["/proc/filesystems"] = dict(original, mtime="older", ctime="older")
+        inspector.guard()
+        inspector.seen["/proc/filesystems"] = dict(original, inode=original["inode"] + 1)
+        with pytest.raises(ValueError, match="^path_metadata_drift$"):
+            inspector.guard()
+    finally:
+        os.close(fd)
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="local Linux retained static metadata")

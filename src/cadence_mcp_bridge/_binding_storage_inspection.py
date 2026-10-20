@@ -181,6 +181,14 @@ def kernel_directory_type(selected):
     return None
 
 
+def kernel_file_type(selected):
+    # Only the two fixed proc fact sources have read-time timestamps. Never
+    # extend this to a system binary, operator file, or another process.
+    if selected == "/proc/filesystems" or selected == "/proc/%d/mountinfo" % os.getpid():
+        return 0x9FA0
+    return None
+
+
 def kernel_filesystem_type(fd):
     # Linux statfs starts with a native signed long on both supported ABIs.
     # Reserve more than either ABI's complete structure; only f_type is read.
@@ -202,7 +210,7 @@ class Inspector(object):
         if "_FIXED_BOOTSTRAP_DEADLINE" in globals():
             self.deadline = min(self.deadline, globals()["_FIXED_BOOTSTRAP_DEADLINE"])
         self.seen, self.paths, self.hashed, self.errors, self.records = {}, set(), 0, [], []
-        self.kernel_directories, self.failure_context = {}, None
+        self.kernel_directories, self.kernel_files, self.failure_context = {}, {}, None
         self.phase = "initial"
 
     def pin_kernel_directory(self, selected, fd):
@@ -220,6 +228,21 @@ class Inspector(object):
             raise ValueError("kernel_directory_identity")
         self.kernel_directories[selected] = expected
 
+    def pin_kernel_file(self, selected, fd):
+        expected = kernel_file_type(selected)
+        if expected is None:
+            return
+        info = os.fstat(fd)
+        owners = (0, os.getuid()) if selected.endswith("/mountinfo") else (0,)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid not in owners
+            or info.st_mode & 18
+            or kernel_filesystem_type(fd) != expected
+        ):
+            raise ValueError("kernel_file_identity")
+        self.kernel_files[selected] = expected
+
     def metadata_equal(self, selected, expected, actual):
         ignored = ()
         kind = kernel_directory_type(selected)
@@ -232,6 +255,15 @@ class Inspector(object):
             # proc process counts and sysfs membership/timestamps are observations,
             # not stable namespace identity. Keep all raw fields in the receipt.
             ignored = ("nlink", "size", "mtime", "ctime")
+        elif (
+            kernel_file_type(selected) == 0x9FA0
+            and self.kernel_files.get(selected) == 0x9FA0
+            and stat.S_ISREG(expected["mode"])
+            and stat.S_ISREG(actual["mode"])
+        ):
+            # Proc timestamps describe when the kernel synthesized the view.
+            # Identity, permissions, link count, size and held bytes stay bound.
+            ignored = ("mtime", "ctime")
         changed = sorted(
             key for key in expected if expected[key] != actual[key] and key not in ignored
         )
@@ -354,6 +386,8 @@ class Inspector(object):
                 held.append(child)
                 if is_directory:
                     self.pin_kernel_directory(named, child)
+                else:
+                    self.pin_kernel_file(named, child)
                 if not self.metadata_equal(named, metadata(expected), metadata(os.fstat(child))):
                     raise ValueError("path_open_drift")
                 self.remember(named, expected)
@@ -769,6 +803,8 @@ class Inspector(object):
                     shared_write=bool(info["mode"] & 18),
                     comparison_scope="KERNEL_DIRECTORY_IDENTITY"
                     if name in self.kernel_directories
+                    else "KERNEL_FILE_IDENTITY_AND_SIZE"
+                    if name in self.kernel_files
                     else "EXACT_METADATA",
                 )
                 for name, info in sorted(self.seen.items())
