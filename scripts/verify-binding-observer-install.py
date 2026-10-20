@@ -25,6 +25,9 @@ from cadence_mcp_bridge import (
     _binding_observation as worker,
 )
 from cadence_mcp_bridge import (
+    _binding_storage_admin as storage_admin,
+)
+from cadence_mcp_bridge import (
     binding_observation as contract,
 )
 from cadence_mcp_bridge import (
@@ -32,6 +35,7 @@ from cadence_mcp_bridge import (
 )
 from cadence_mcp_bridge import (
     binding_observation_claim,
+    binding_storage_admin,
     physical_metadata,
 )
 from cadence_mcp_bridge import (
@@ -55,6 +59,7 @@ def _verify_origins() -> None:
     for module in (
         cadence_mcp_bridge, worker, contract, bootstrap, operator, binding_observation_claim,
         physical_metadata,
+        storage_admin, binding_storage_admin,
     ):
         filename = module.__file__
         if filename is None:
@@ -352,6 +357,18 @@ def _pins() -> None:
         _require(worker.HELPER_PINS[remote] == pins[source], "installed helper pin mismatch")
 
 
+def _inert_storage_admin() -> None:
+    _require(storage_admin.CONFIG_JSON is None, "package contains a VM admin configuration")
+    _require(binding_storage_admin.admin is storage_admin, "installed admin resource identity")
+    with patch.object(sys, "argv", ["storage-admin.py", "plan"]):
+        try:
+            storage_admin.main()
+        except ValueError as error:
+            _require(str(error) == "exported_fixed_configuration_required", "unexpected admin gate")
+        else:
+            raise ValueError("unconfigured administrator resource started")
+
+
 def verify(workspace: Path) -> dict[str, object]:
     _verify_origins()
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -372,6 +389,7 @@ def verify(workspace: Path) -> dict[str, object]:
         _blocked_worker(request, rendered)
         _authenticated_factory(request)
         _pins()
+        _inert_storage_admin()
     _require(not list(workspace.iterdir()), "synthetic checker wrote unexpected state")
     return {
         "status": "PASS",
@@ -388,6 +406,7 @@ def verify(workspace: Path) -> dict[str, object]:
         "cached_worker_and_helper_poisoning": "IGNORED_BY_FRESH_AUTHENTICATED_MODULES",
         "wrong_selected_worker_digest": "REJECTED_BEFORE_CODE_LOAD",
         "normalized_installed_helper_pins": True,
+        "storage_admin_unconfigured_and_inert": True,
         "new_simulations": 0,
         "new_extractions": 0,
         "new_reservations": 0,

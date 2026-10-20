@@ -1,3 +1,58 @@
+# Source59 experimental storage administrator helper, 2026-10-20
+
+The local-only module `cadence_mcp_bridge.binding_storage_admin` exports a
+fixed standalone administrator resource. This is software under qualification,
+not evidence of current-VM provisioning or an execution-ready observation.
+Package import, MCP startup, doctor and normal simulation never apply it.
+It adds no public MCP tool, arbitrary shell, sudo transport or caller-selected
+remote installation path. Source59/checkpoint15 preserves source58 and the
+existing ledger, journals, reservations, failures and all previous checkpoints.
+
+An export requires the operator profile, retained successful storage facts and
+a separate runtime review bound to those exact facts/profile/domain/identity.
+The review must cover interpreter/startup, OS loader/libraries, formatter runtime
+and loop/mount kernel behavior. These record bindings do not prove review truth
+or dependency completeness. Never invent positive category evidence to export.
+
+After actual independent runtime review and applicable human authorization:
+
+1. Export into a new private local directory with `python -m
+   cadence_mcp_bridge.binding_storage_admin --profile PROFILE --facts FACTS
+   --external-review REVIEW --output NEW_DIRECTORY`. Preserve all exported hashes.
+2. Through the VM's existing administrator access, inspect the exact helper and
+   run `/usr/bin/python -E -s -B storage-admin.py plan`. This is itself a gated
+   VM operation, not implicit permission to contact or deploy to the VM.
+3. Review its exact plan and separately authorized changes before invoking
+   `apply PLAN_SHA256` with the canonical plan bytes on stdin. Preserve the plan,
+   original metadata and terminal output privately. No privilege is added to MCP.
+4. Perform ordinary-user storage and retained-accounting checks before any
+   observation. No administrator receipt grants OCEAN or simulation authority.
+
+The fixed helper reuses the existing lifetime lock and identity/counter. It
+creates only the private domain image/intent/receipt below the fixed backing
+directory and the fixed observation mountpoint. It allocates 8MiB before one
+format, selects an existing free loop0..15 without module loading or loop-control,
+and mounts with nodev/nosuid/noexec. Kernel capacity and inode bounds are checked.
+No file deletion, forced unmount, fsck/repair, fstab change or budget reset exists.
+Free-device availability, ext4's ext2 compatibility and formatter options on the
+actual standard VM remain unverified; a hosted Linux test cannot establish them.
+
+Intent is durable before image creation. Failed/unknown apply cannot reformat
+on retry. `detach-plan` and `remount-plan` inspect retained intent/image/receipt
+and produce separately reviewable recovery plans. `recover PLAN_SHA256` consumes
+its exact plan before mutation; completed history distinguishes a later intended
+transition from a blind retry. Normal busy unmount/device-clear fails closed.
+Loop association is rechecked immediately before clear and afterwards. Unclean
+images block remount and require separate review; contents and failures remain.
+Power loss or partial format may require manual diagnosis outside this helper.
+
+Software regression covers synthetic one-shot failures, clean-image admission,
+foreign/busy loop rejection and installed inertness. The opt-in CI test uses an
+owned disposable Linux image to exercise apply/detach/remount and retained data;
+it never contacts the configured Cadence VM. Actual runtime/init review,
+provisioning/postcheck, source-binding observation and selected three-DC execution
+remain distinct gates. PR164 stays draft and unmerged; no release follows.
+
 # Actual source58 storage prerequisite, 2026-10-20
 
 One separately authorized installed source58 read returned
@@ -12,7 +67,9 @@ reviewed provisioning path plus independent initializer/runtime trust before
 an actual observation. Do not resend the source58 one-shot read. The earlier
 source56/source57 descriptions below remain historical.
 
-# Current storage prerequisite status, 2026-10-20The source56 and source57 fixed storage reads were each approved separately,
+# Current storage prerequisite status, 2026-10-20
+
+The source56 and source57 fixed storage reads were each approved separately,
 used once and retained as failed evidence. Source57 identified final timestamp
 drift on `/proc/filesystems`; it returned no mount, loop or backing facts.
 Source58/checkpoint14 is a software correction for the two closed proc fact

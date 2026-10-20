@@ -1,3 +1,18 @@
+## Source59 fixed storage implementation in qualification, 2026-10-20
+
+The experimental local exporter and fixed administrator helper now implement
+one-shot bounded-image setup and preserved-image detach/remount recovery. They
+reuse the existing lock/identity/counter, reject unclean images and changed loop
+associations, and add no startup action or public administrative MCP capability.
+This pending source59/checkpoint15 consumes one additive source version (59/60);
+no current-VM contact, deployment, trust attestation, EDA, reservation or simulation
+has occurred. Final software/installed/hosted/review gates remain source-specific.
+Actual initializer/runtime qualification and ordinary-user storage postcheck are
+still prerequisites, followed by separately authorized observation and the
+selected three-DC comparison. PR164 remains draft; no merge or publication.
+See docs/BINDING_OBSERVER_OPERATION_V1.md for the fixed helper's limits/recovery.
+Earlier source58 actual observations and all failed/spent reads remain preserved.
+
 ## Source58 storage prerequisite observation, 2026-10-20
 
 The separately approved source58 read ran once against `a79afe9e` and returned
