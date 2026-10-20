@@ -838,6 +838,9 @@ def test_proven_kernel_directory_retains_every_namespace_and_permission_guard(
     inspector = probe.Inspector(inspection_request)
     inspector.kernel_directories["/proc"] = 0x9FA0
     expected = probe.metadata(synthetic_stat(stat.S_IFDIR | 0o555))
+    # A tuple-created stat_result leaves Linux's optional st_rdev as None.
+    # The fixture represents an ordinary directory, whose real rdev is zero.
+    expected["rdev"] = 0
     actual = dict(expected, **{field: expected[field] + 1})
     assert not inspector.metadata_equal("/proc", expected, actual)
     assert inspector.failure_context["changed_fields"] == [field]

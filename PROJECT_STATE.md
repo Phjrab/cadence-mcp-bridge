@@ -35,6 +35,17 @@ comparison remain unfinished. This is not an approval-only ready state. PR164
 stays draft, unmerged and unpublished; no new remote action follows from this fix.
 Earlier entries below retain their original source/time scope.
 
+The first source57 exact hosted Windows job passed; Linux passed809 binding
+cases/two skips and failed one new synthetic fixture before its assertion:
+tuple-created stat_result has st_rdev=None on Linux. Preserve run39336639563/
+job118347667714. Set only that fixture's ordinary-directory rdev explicitly to0;
+the six namespace/permission negative cases pass locally. Product/bootstrap and
+all distribution inputs remain identical; source use remains57/60. Refresh final
+exact-head CI/review after this test-only correction. Isolated package lifecycle
+and installed storage130 PASS/six skips completed with operator43/migration20
+files preserved across reinstall/uninstall. Preserve the initial wrapper cwd and
+supplement collection failures separately; they are not product acceptance passes.
+
 ## Fixed prerequisite reads and command-free host checks, 2026-10-20
 
 Source55 heada35fdcb completed local full4848 PASS/530 platform skips and exact
