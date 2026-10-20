@@ -1,3 +1,15 @@
+# Source60 protected accounting conservation, 2026-10-20
+
+The helper retains the original file identity and security metadata as well as
+content for the counter, identity manifest and any legacy seal. Complete held
+and named checks follow all content reads; an absent seal must stay absent.
+Read-induced atime alone is not protected metadata. This corrects source59's
+review4325616566; preserve its earlier software receipts as source-specific.
+Source60/checkpoint16 reaches the approved60/60 source ceiling. No additional
+product revision, actual VM action, observation, simulation, merge or release
+is authorized by this document. Final software/installed/hosted/review gates
+remain separate from actual standard-VM runtime/init and storage qualification.
+
 # Source59 experimental storage administrator helper, 2026-10-20
 
 The local-only module `cadence_mcp_bridge.binding_storage_admin` exports a

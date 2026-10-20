@@ -418,6 +418,94 @@ def test_mount_inventory_reads_to_eof_and_rejects_unexpected_mounts(
             admin.mounted(0)
 
 
+@pytest.fixture
+def accounting_files(resource, subject, tmp_path):
+    # Isolate file identity/content checks from the separately tested ancestor
+    # traversal. These are owned portable files, not any operator journal.
+    if sys.platform != "linux":
+        pytest.skip("actual POSIX protected-file identity and security metadata")
+    admin = resource.StorageAdmin(exporter.prepare_configuration(*subject))
+    admin.root = str(tmp_path)
+    admin.uid = tmp_path.stat().st_uid
+    admin.check = lambda: None
+    admin.named = lambda path: path
+    def leaf(path, flags=os.O_RDONLY, mode=0o600):
+        fd = os.open(path, flags, mode)
+        admin.fds.append(fd)
+        return fd
+
+    admin.leaf = leaf
+    suffixes = ("counter.json", "manifest.json", "legacy-seal.json")
+    for suffix in suffixes:
+        target = tmp_path / suffix
+        target.write_bytes(b'{"retained":true}')
+        target.chmod(0o600)
+        admin.remember_protected(suffix, 1024)
+    try:
+        yield admin, tmp_path
+    finally:
+        admin.close()
+        for suffix in suffixes:
+            (tmp_path / suffix).chmod(0o600)
+
+
+@pytest.mark.parametrize("suffix", ["counter.json", "manifest.json", "legacy-seal.json"])
+@pytest.mark.parametrize("change", ["none", "identical-replacement", "mode", "hardlink"])
+def test_protected_files_retain_original_namespace_and_security_metadata(
+    accounting_files, suffix, change,
+):
+    admin, root = accounting_files
+    original = root / suffix
+    if change == "identical-replacement":
+        replacement = root / "same-bytes-new-inode"
+        replacement.write_bytes(original.read_bytes())
+        replacement.chmod(0o600)
+        replacement.replace(original)
+    elif change == "mode":
+        original.chmod(0o400)
+    elif change == "hardlink":
+        os.link(original, root / "second-link")
+    if change == "none":
+        admin.guard()
+    else:
+        with pytest.raises(ValueError, match="accounting_drift|regular_file_trust_required"):
+            admin.guard()
+    assert original.read_bytes() == b'{"retained":true}'
+
+
+def test_later_protected_read_cannot_replace_an_earlier_held_file(
+    accounting_files, monkeypatch, resource,
+):
+    admin, root = accounting_files
+    ordinary_raw = admin.raw
+    replaced = False
+
+    def raw(path, owner, bound, keep=False, nlink=1):
+        nonlocal replaced
+        result = ordinary_raw(path, owner, bound, keep, nlink)
+        if path.endswith("manifest.json") and not replaced:
+            replacement = root / "replacement"
+            replacement.write_bytes((root / "counter.json").read_bytes())
+            replacement.chmod(0o600)
+            replacement.replace(root / "counter.json")
+            replaced = True
+        return result
+
+    monkeypatch.setattr(admin, "raw", raw)
+    with pytest.raises(ValueError, match="existing_accounting_drift"):
+        admin.guard()
+    assert replaced and not admin.fds
+
+
+def test_absent_protected_entry_cannot_appear_during_admin_operation(accounting_files):
+    admin, root = accounting_files
+    admin.absent_protected = ["absent-seal.json"]
+    admin.guard()
+    (root / "absent-seal.json").write_bytes(b"new entry")
+    with pytest.raises(ValueError, match="existing_accounting_namespace_drift"):
+        admin.guard()
+
+
 def test_import_is_inert_and_resource_has_no_delete_transport_or_module_loading():
     tree = ast.parse(SOURCE.read_bytes())
     forbidden = {"unlink", "remove", "rmdir", "system", "execvp", "execve"}

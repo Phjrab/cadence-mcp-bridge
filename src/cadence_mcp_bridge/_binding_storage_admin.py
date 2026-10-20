@@ -67,6 +67,11 @@ def identity(info):
     return [info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid, info.st_rdev]
 
 
+def protected_metadata(info):
+    # Read-induced atime changes do not alter accounting identity/security.
+    return identity(info) + [info.st_nlink, info.st_size, info.st_mtime, info.st_ctime]
+
+
 def fdname(fd):
     return "/proc/self/fd/%d" % fd
 
@@ -128,6 +133,8 @@ class StorageAdmin(object):
         self.deadline = os.times()[4] + 60
         self.cancelled = False
         self.lock = None
+        self.protected = {}
+        self.absent_protected = []
 
     def close(self):
         for fd in reversed(self.fds):
@@ -242,6 +249,18 @@ class StorageAdmin(object):
             raise ValueError("receipt_publication_drift")
         self.check()
 
+    def remember_protected(self, suffix, bound):
+        path = self.root + "/" + suffix
+        raw, fd = self.raw(path, self.uid, bound, True)
+        try:
+            record = dict(sha256=digest(raw), metadata=protected_metadata(os.fstat(fd)))
+            if protected_metadata(os.lstat(self.named(path))) != record["metadata"]:
+                raise ValueError("existing_accounting_drift")
+            self.protected[suffix] = record
+            return raw
+        finally:
+            self.release(fd)
+
     def enter(self):
         import fcntl
         import pwd
@@ -264,11 +283,9 @@ class StorageAdmin(object):
         self.lock_identity = identity(os.fstat(self.lock))
         self.lock_raw = raw
         self.lockpath = lockpath
-        self.protected = {}
         for suffix, bound in (("sim-mcp-v2-jobs/counter.json", 8192),
                               ("reservation-identity/manifest.json", 65536)):
-            raw, unused = self.raw(self.root + "/" + suffix, self.uid, bound)
-            self.protected[suffix] = digest(raw)
+            self.remember_protected(suffix, bound)
         anchor = json.loads(self.raw(self.root + "/reservation-identity/manifest.json",
                                      self.uid, 65536)[0])
         if anchor.get("resource_domain_sha256") != self.domain or (
@@ -277,7 +294,7 @@ class StorageAdmin(object):
             raise ValueError("existing_identity_binding")
         sealpath = self.root + "/reservation-identity/legacy-seal.json"
         if os.path.lexists(sealpath):
-            sealraw, unused = self.raw(sealpath, self.uid, 65536)
+            sealraw = self.remember_protected("reservation-identity/legacy-seal.json", 65536)
             seal = json.loads(sealraw.decode("ascii"))
             if set(seal) != set((
                 "schema_version", "prior_anchor_sha256", "anchor", "plan_sha256"
@@ -287,8 +304,9 @@ class StorageAdmin(object):
                 or dict(seal["anchor"], legacy_operation_ids=[]) != anchor
             ):
                 raise ValueError("existing_legacy_seal_binding")
-            self.protected["reservation-identity/legacy-seal.json"] = digest(sealraw)
             anchor = seal["anchor"]
+        else:
+            self.absent_protected.append("reservation-identity/legacy-seal.json")
         if digest(canonical(anchor)) != self.config["identity_manifest_sha256"]:
             raise ValueError("existing_identity_requires_separate_seal_review")
         self.guard()
@@ -305,9 +323,29 @@ class StorageAdmin(object):
             os.lseek(self.lock, 0, os.SEEK_SET)
             if os.read(self.lock, 4097) != self.lock_raw:
                 raise ValueError("existing_lock_content_drift")
+        held = []
+        try:
             for suffix, expected in self.protected.items():
-                if digest(self.raw(self.root + "/" + suffix, self.uid, 65536)[0]) != expected:
+                path = self.root + "/" + suffix
+                raw, fd = self.raw(path, self.uid, 65536, True)
+                held.append((suffix, fd))
+                if dict(sha256=digest(raw), metadata=protected_metadata(os.fstat(fd))) != expected:
                     raise ValueError("existing_accounting_drift")
+            # Recheck the complete union after all content reads; a later read
+            # must not invalidate an earlier protected-file observation.
+            for suffix, fd in held:
+                expected = self.protected[suffix]["metadata"]
+                if protected_metadata(os.fstat(fd)) != expected or (
+                    protected_metadata(os.lstat(self.named(self.root + "/" + suffix))) != expected
+                ):
+                    raise ValueError("existing_accounting_drift")
+            for suffix in self.absent_protected:
+                if os.path.lexists(self.named(self.root + "/" + suffix)):
+                    raise ValueError("existing_accounting_namespace_drift")
+            self.check()
+        finally:
+            for _suffix, fd in held:
+                self.release(fd)
 
     def disk(self):
         fd = self.directory("/var/lib", 0)

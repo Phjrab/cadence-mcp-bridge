@@ -1,3 +1,20 @@
+## Source60 protected accounting identity correction, 2026-10-20
+
+Exact source59 review4325616566 identified digest-only accounting conservation.
+Source60/checkpoint16 retains original inode/device/type/owner/group/mode/link/
+size/mtime/ctime together with content hashes, rechecks all held/named protected
+files after every content read, and conserves legacy-seal absence. Read-induced
+atime is excluded. Owned Linux cases cover identical-byte replacement, chmod,
+hardlink and later-read drift. Windows does not prove POSIX security metadata;
+its initial fixture failures remain retained and these cases run on Linux.
+Source use reaches60/60 without reset/refund. Further product changes need new
+capacity; documents and prior histories do not grant it. Actual runtime/init
+trust, stage provisioning/postcheck, observation and three-DC comparison remain
+unfinished. No VM/admin/EDA/reservation action or PR164 merge/release occurred.
+Source59 hosted Linux passed including disposable apply/detach/remount; those
+receipts do not qualify source60 or the actual VM. Final exact checks remain gates.
+Earlier source-specific records below remain historical.
+
 ## Source59 fixed storage implementation in qualification, 2026-10-20
 
 The experimental local exporter and fixed administrator helper now implement
