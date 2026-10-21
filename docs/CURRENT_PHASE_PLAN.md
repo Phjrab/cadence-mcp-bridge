@@ -1,3 +1,16 @@
+## Pending source62 local registration proposal, 2026-10-21
+
+Continue the same draftPR164; source61 consumption and the source64 ceiling stay
+additive. Pending source62 exports only a prospective registration from the
+original native registration/bundle, exact observed plan and ordinary postcheck.
+It calculates allowed mode-only tree pins for every route and installs nothing;
+retained stdout establishes no root provenance, runtime trust or execution grant.
+Source61 changed-path local checks and hosted Linux CI passed; its Windows export
+fixture owner failure is retained and the fixture now follows the ordinary account.
+Final source62 tests/installed/CI/review are pending. No current-VM/admin/EDA action
+or actual DC job follows. See docs/BINDING_INITIALIZER_METADATA_V1.md; history below
+retains its original source scope.
+
 ## Initializer-only source64 authority, 2026-10-21
 
 The direct user reply raises only the source ceiling from60 to64, preserving all

@@ -390,6 +390,25 @@ def _inert_initializer_export(request: contract.BindingScanRequest) -> None:
     _require("loaded" not in namespace, "initializer export ran helper code")
 
 
+def _inert_initializer_delta() -> None:
+    # Validate installed delta arithmetic on literal synthetic rows under the
+    # same no-write/process/transport guards; no successful rebind is implied.
+    rows = [["directory", "", 0o775, 500, 500, "1.000000000"],
+            ["file", "libInit.il", 0o664, 500, 500, "1.000000000", 0, "a" * 64, 1]]
+    content = [["directory", ""], ["file", "libInit.il", 0, "a" * 64]]
+    snapshot = dict(schema_version=2, tree_sha256=hashlib.sha256(_canonical(rows)).hexdigest(),
+                    content_sha256=hashlib.sha256(_canonical(content)).hexdigest(),
+                    entries=2, bytes=0, metadata=rows)
+    _require(binding_initializer._snapshot_projection(snapshot) == rows,
+             "installed initializer snapshot projection")
+    try:
+        binding_initializer._snapshot_projection({**snapshot, "tree_sha256": "0" * 64})
+    except ValueError:
+        pass
+    else:
+        raise ValueError("installed initializer accepted altered original snapshot")
+
+
 def verify(workspace: Path) -> dict[str, object]:
     _verify_origins()
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -412,6 +431,7 @@ def verify(workspace: Path) -> dict[str, object]:
         _pins()
         _inert_storage_admin()
         _inert_initializer_export(request)
+        _inert_initializer_delta()
     _require(not list(workspace.iterdir()), "synthetic checker wrote unexpected state")
     return {
         "status": "PASS",
@@ -430,6 +450,8 @@ def verify(workspace: Path) -> dict[str, object]:
         "normalized_installed_helper_pins": True,
         "storage_admin_unconfigured_and_inert": True,
         "initializer_export_fixed_installed_sources_and_inert": True,
+        "initializer_delta_installed_synthetic_snapshot_and_bad_pin": True,
+        "initializer_successful_prospective_export": "NOT_TESTED_BY_THIS_CHECKER",
         "new_simulations": 0,
         "new_extractions": 0,
         "new_reservations": 0,

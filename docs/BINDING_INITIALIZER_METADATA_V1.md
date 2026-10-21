@@ -5,6 +5,12 @@ It is an explicit local export, never an MCP capability, startup action, doctor
 repair or automatic deployment. It adds no VM access or administrator authority.
 The current source64 approval covers implementation and verification only.
 
+Source61 changed-path local checks and hosted Linux CI passed. Its Windows export
+fixture failed because its synthetic owner default differed from the ordinary
+account; the fixture now uses that account, and the failure remains retained.
+Final source62 tests, installed checks, CI and review are pending. None of these
+software checks establish current-VM or Python2.6 acceptance.
+
 ## Exact scope and conservation
 
 The recipe derives its library union from the authenticated native registration.
@@ -79,6 +85,50 @@ is16MiB; snapshots are read twice to detect intervening changes. Getfacl/setfacl
 are the existing fixed ACL operations; EDA starts and simulator reservations are0.
 The operating interpreter, startup, loader and ACL utilities remain external
 standard-VM trust prerequisites, not proved by these explicit asset hashes.
+
+## Prospective registration after a metadata change
+
+Pending source62 adds an explicitly invoked local proposal step. It requires the
+original `NativeRegistration`, its authenticated native bundle and existing
+runtime context, the exact canonical observed plan, and the ordinary-user
+postcheck. Each evidence file has an independently supplied SHA-256. The plan
+input is the canonical inner `plan` object from the inventory response, without
+a trailing newline. The postcheck pin covers its exact retained stdout bytes,
+including any terminal newline; its request uses `operator_authority=null`.
+
+```text
+python -m cadence_mcp_bridge.binding_initializer --prospective --bundle <original-private-native-bundle> --manifest-sha256 <exact-original-manifest> --runtime-settings <existing-private-runtime-settings> --context-id <registered-context> --native-registration <original-native-registration> --native-registration-sha256 <exact-original-file-sha256> --plan <canonical-observed-plan> --plan-sha256 <exact-plan-sha256> --postcheck <ordinary-user-postcheck-stdout> --postcheck-sha256 <exact-postcheck-file-sha256> --output <new-private-directory>
+```
+
+The original registration must project exactly to the bundle's registration in
+that context. Retained whole-library metadata and content hashes must match the
+original registered pins. The proposal computes expected replacement tree pins
+directly by removing only the selected group/other write mode bits; all other
+metadata rows and all content hashes stay unchanged. The postcheck must report
+those exact transitions. Every occurrence of each library in every route receives
+its calculated pin, while identity, environment, validation requests, source/ADE,
+models and readers remain bound to the originals. ACL restrictions are checked
+against the original plan; an ACL is not itself encoded by a tree hash.
+
+The exclusive private output contains:
+
+- `native-registration.prospective.json`: the proposed operator registration.
+- `projected-registration.prospective.json`: its expected native projection.
+- `rebind-report.private.json`: links to the original inputs and calculated pins.
+
+Optional `--administrator-result <retained-admin-stdout>` and
+`--administrator-result-sha256 <exact-file-sha256>` must be supplied together.
+They correlate retained output only. Neither administrator stdout nor ordinary
+postcheck bytes authenticate a root receipt, prove complete initializer/runtime
+trust, or supply human approval. The report keeps receipt provenance and runtime
+trust unassessed, installation/qualification false, and execution unauthorized.
+
+This command does not update the original registration, install a bundle, change
+an active provider, contact the VM, or touch a ledger. Building and applying an
+updated bundle through the existing setup/update path is a later, separately
+authorized operation after current-VM evidence and external review are available.
+Keep all original registrations, plans, receipts and consumed counters; a new
+proposal is not a new execution allowance or accounting baseline.
 
 ## Accounting, interruption and evidence
 

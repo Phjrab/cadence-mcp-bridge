@@ -13,11 +13,20 @@ from importlib.resources import files
 
 import pytest
 from test_binding_observation_bootstrap import descriptions, operator, operator_base, registered
+from test_physical_metadata import current_account_owner
 
 from cadence_mcp_bridge import binding_initializer as exporter
 from cadence_mcp_bridge.environments import EnvironmentProfile
 
 __all__ = ["descriptions", "operator", "operator_base", "registered"]
+
+
+@pytest.fixture(autouse=True)
+def ordinary_account_output_owner():
+    # Hosted elevated Windows otherwise assigns disposable output to the
+    # Administrators group. Keep the product's token-owner/DACL checks intact.
+    with current_account_owner():
+        yield
 
 
 def forbidden(*args, **kwargs):

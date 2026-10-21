@@ -107,7 +107,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_storage_admin.py -k actual_disposable_admin -q --basetemp "$HOME/binding-storage-admin-tests"
 
       - name: Initializer exact metadata transitions and immutable library baseline
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py tests/unit/test_binding_initializer_entry.py -q --basetemp "$HOME/binding-initializer-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py tests/unit/test_binding_initializer_entry.py tests/unit/test_binding_initializer_rebind.py -q --basetemp "$HOME/binding-initializer-tests"
 
       - name: Disposable initializer partial resume, repeat and exact rollback
         env:
