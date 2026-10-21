@@ -475,14 +475,17 @@ def prospective(
         output.is_relative_to(_local_path(context.resource_state_root))
     ):
         raise ValueError("initializer_rebind_output_protected")
-    # Validate pinned inputs once more before publication; a changed evidence
-    # file never silently becomes the replacement baseline.
-    for path, pin in ((native_registration_path, native_registration_sha256),
-                      (plan_path, plan_sha256), (postcheck_path, postcheck_sha256)):
-        _pinned_document(path, pin)
-    if administrator_result_path is not None and administrator_result_sha256 is not None:
-        _pinned_document(administrator_result_path, administrator_result_sha256)
-    _load_bundle(bundle, manifest_sha256)
+    def revalidate_inputs() -> None:
+        # Reuse the original independently supplied pins, never derive a new
+        # baseline from a replacement evidence file or bundle member.
+        for path, pin in ((native_registration_path, native_registration_sha256),
+                          (plan_path, plan_sha256), (postcheck_path, postcheck_sha256)):
+            _pinned_document(path, pin)
+        if administrator_result_path is not None and administrator_result_sha256 is not None:
+            _pinned_document(administrator_result_path, administrator_result_sha256)
+        _load_bundle(bundle, manifest_sha256)
+
+    revalidate_inputs()
     parents = {path: _directory_identity(path) for path in output.parents}
     output.mkdir(mode=0o700, parents=False, exist_ok=False)
     with _held_output(output, parents) as (directory_fd, guard):
@@ -499,6 +502,11 @@ def prospective(
                 stream.flush()
                 os.fsync(stream.fileno())
                 guard()
+        # Output pinning alone does not conserve the retained source names.
+        # A writer can change them while publication is in progress. Reject at
+        # completion too, retaining partial output as failed evidence.
+        revalidate_inputs()
+        guard()
     return report
 
 

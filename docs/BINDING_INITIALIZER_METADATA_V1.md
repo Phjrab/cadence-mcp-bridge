@@ -130,6 +130,12 @@ authorized operation after current-VM evidence and external review are available
 Keep all original registrations, plans, receipts and consumed counters; a new
 proposal is not a new execution allowance or accounting baseline.
 
+The command checks every original evidence pin and authenticated bundle again
+after publishing the output files, before terminal success. Concurrent input drift
+rejects without rewriting or removing partial output. Files from an interrupted or
+failed command are retained evidence, not a successful registration proposal; only
+a successful terminal result can qualify that local proposal for external review.
+
 ## Accounting, interruption and evidence
 
 Mutation reuses the existing resource lock and unchanged content/identity guards

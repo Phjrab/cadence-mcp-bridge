@@ -352,6 +352,38 @@ def test_bundle_is_reauthenticated_after_all_evidence_checks(evidence, monkeypat
     assert calls and not evidence["output"].exists()
 
 
+@pytest.mark.parametrize("key", ["native_registration_path", "plan_path", "postcheck_path",
+                                 "administrator_result_path", "bundle-member"])
+def test_publication_drift_rejects_success_and_retains_partial_output(evidence, monkeypatch, key):
+    """Evidence changed by publication I/O cannot support original_preserved success."""
+    original = retained(evidence)
+    target = evidence["bundle"] / "worker.py" if key == "bundle-member" else evidence[key]
+    actual_fsync = exporter.os.fsync
+    changes = []
+
+    def drift_during_first_publication(fd):
+        actual_fsync(fd)
+        if not changes:
+            changes.append(target)
+            target.write_bytes(original[target] + b"\n")
+
+    monkeypatch.setattr(exporter.os, "fsync", drift_during_first_publication)
+    with pytest.raises(ValueError):
+        invoke(evidence, administrator=True)
+    assert changes == [target]
+    assert evidence["output"].is_dir()
+    # Publication is incomplete evidence, never erased or returned as success.
+    assert {path.name for path in evidence["output"].iterdir()} == {
+        "native-registration.prospective.json", "projected-registration.prospective.json",
+        "rebind-report.private.json",
+    }
+    current = retained(evidence)
+    assert current[target] == original[target] + b"\n"
+    assert {path: raw for path, raw in current.items() if path != target} == {
+        path: raw for path, raw in original.items() if path != target
+    }
+
+
 @pytest.mark.parametrize("destination", ["native", "plan", "postcheck", "bundle", "state"])
 def test_protected_inputs_and_retained_state_are_never_output(evidence, destination):
     original = retained(evidence)

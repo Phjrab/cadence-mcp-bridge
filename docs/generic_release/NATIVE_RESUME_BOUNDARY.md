@@ -1,3 +1,16 @@
+## Source63 terminal evidence conservation, 2026-10-21
+
+Source63/checkpoint03 corrects review4337806078: every original evidence pin and
+native bundle is revalidated after prospective output publication, before terminal
+success. Drift rejects and retains partial output; no replacement becomes a new
+baseline. All60 rebind regressions pass locally, including five publication-time
+mutations. Exact-head hosted, installed and review receipts remain separate gates
+recorded on draftPR164; they are not current-VM/Python2.6/Cadence qualification.
+Source use is63/64 without reset/refund. Current runtime/init trust, bounded stage,
+finite binding observation and the selected three fresh DC runs remain unfinished.
+No new VM/admin/EDA/reservation action, PR164 merge or publication is authorized
+by these records. Earlier entries below keep their historical source scope.
+
 ## Pending source62 local registration proposal, 2026-10-21
 
 Continue the same draftPR164; source61 consumption and the source64 ceiling stay
