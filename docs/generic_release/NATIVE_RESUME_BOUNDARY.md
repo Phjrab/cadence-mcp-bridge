@@ -1,3 +1,21 @@
+## Initializer-only source64 authority, 2026-10-21
+
+The direct user reply raises only the source ceiling from60 to64, preserving all
+60 consumed versions. At most four additions cover initializer trust inspection,
+exact permission remediation, allowed metadata-delta verification and review
+corrections. V5/V7 record this authority without rewriting prior policies or
+checkpoints. New VM access, deployment/admin application, OCEAN, simulations,
+PR164 merge and publication remain separately gated. Existing ledger, failures,
+spent read claims and selected three DC input vectors remain unchanged.
+
+Source61 is being qualified on the same feature branch. Its fixed local exporter
+and initializer recipe reuse the existing accounting/receipt engine and compare
+whole registered libraries against immutable originals, permitting only selected
+mode/ACL changes. No registration is silently refreshed, and metadata comparison
+does not establish behavior/runtime trust. Current-VM qualification, bounded-stage
+provisioning, source-binding observation and the actual three DC jobs are still
+unfinished. Earlier dated statements below retain their historical scope.
+
 ## Owned-group inventory correction overlay, 2026-10-20
 
 Continue same draftPR164 with additive source55/checkpoint11 for review4315484359.

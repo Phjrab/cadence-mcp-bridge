@@ -8,6 +8,7 @@ Successful operator preparation and actual runtime trust remain outside this che
 from __future__ import annotations
 
 import argparse
+import base64
 import builtins
 import contextlib
 import hashlib
@@ -28,15 +29,16 @@ from cadence_mcp_bridge import (
     _binding_storage_admin as storage_admin,
 )
 from cadence_mcp_bridge import (
+    binding_initializer,
+    binding_observation_claim,
+    binding_storage_admin,
+    physical_metadata,
+)
+from cadence_mcp_bridge import (
     binding_observation as contract,
 )
 from cadence_mcp_bridge import (
     binding_observation_bootstrap as bootstrap,
-)
-from cadence_mcp_bridge import (
-    binding_observation_claim,
-    binding_storage_admin,
-    physical_metadata,
 )
 from cadence_mcp_bridge import (
     binding_observer_operator as operator,
@@ -59,7 +61,7 @@ def _verify_origins() -> None:
     for module in (
         cadence_mcp_bridge, worker, contract, bootstrap, operator, binding_observation_claim,
         physical_metadata,
-        storage_admin, binding_storage_admin,
+        storage_admin, binding_storage_admin, binding_initializer,
     ):
         filename = module.__file__
         if filename is None:
@@ -369,6 +371,25 @@ def _inert_storage_admin() -> None:
             raise ValueError("unconfigured administrator resource started")
 
 
+def _inert_initializer_export(request: contract.BindingScanRequest) -> None:
+    profile_raw, registration_raw, _, _ = _factory_inputs(request)
+    raw = binding_initializer.helper_bytes(
+        EnvironmentProfile.model_validate_json(profile_raw), json.loads(registration_raw),
+    )
+    namespace = {"__name__": "installed_inert_initializer"}
+    exec(compile(raw, "installed_inert_initializer.py", "exec"), namespace)
+    _require(set(namespace["SOURCES"]) == set(binding_initializer.RESOURCES),
+             "initializer source inventory")
+    for name, resource in binding_initializer.RESOURCES.items():
+        expected = files("cadence_mcp_bridge").joinpath(resource).read_bytes().replace(
+            b"\r\n", b"\n")
+        _require(base64.b64decode(namespace["SOURCES"][name]) == expected,
+                 "initializer installed bytes")
+        _require(namespace["PINS"][name] == hashlib.sha256(expected).hexdigest(),
+                 "initializer installed source pin")
+    _require("loaded" not in namespace, "initializer export ran helper code")
+
+
 def verify(workspace: Path) -> dict[str, object]:
     _verify_origins()
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -390,6 +411,7 @@ def verify(workspace: Path) -> dict[str, object]:
         _authenticated_factory(request)
         _pins()
         _inert_storage_admin()
+        _inert_initializer_export(request)
     _require(not list(workspace.iterdir()), "synthetic checker wrote unexpected state")
     return {
         "status": "PASS",
@@ -407,6 +429,7 @@ def verify(workspace: Path) -> dict[str, object]:
         "wrong_selected_worker_digest": "REJECTED_BEFORE_CODE_LOAD",
         "normalized_installed_helper_pins": True,
         "storage_admin_unconfigured_and_inert": True,
+        "initializer_export_fixed_installed_sources_and_inert": True,
         "new_simulations": 0,
         "new_extractions": 0,
         "new_reservations": 0,
