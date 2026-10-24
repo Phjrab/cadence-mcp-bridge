@@ -1,3 +1,550 @@
+## Source64 initializer TTY transport in local qualification, 2026-10-23
+
+2026-10-24: the source64 checkpoint04 is additive64/64. Final qualification uses
+the two security lock updates filelock4.2.1 and opentelemetry-api1.45.1 after four
+new advisories; earlier audit and partial sandbox/old-lock runs remain retained.
+No new current-VM contact, administrator application, simulation or reservation
+has followed. The old source63 evidence and installation are preserved separately.
+
+The feature branch continues draftPR164 from source63 `0c681fbe`; main remains
+`a713eb6b` and published2.1.0 remains `36f75834`. Source64 uses the last approved
+initializer-only product version for fixed staging/TTY framing while retaining
+the original initializer helper, plan, accounting, receipts and protected data.
+Pending source consumption is64/64; no prior policy/checkpoint is overwritten.
+
+Private actual evidence distinguishes admin01's SSH TCP timeout from admin02's
+`sudo: sorry, you must have a tty to run sudo`. Both finite calls are spent.
+No successful administrator terminal or ordinary postcheck exists; no retry,
+rollback, EDA start or result reservation followed. The last separately observed
+ledger128/15,721,299,968bytes is historical, not refreshed by either failed call.
+
+The new fixed factory has no automatic transport, administrator/MCP action,
+approval writer or policy change. New staging/root files and TTY execution need
+a separately approved exact finite plan after software qualification. Actual
+runtime/init trust, metadata repair/postcheck, bounded stage, one source-binding
+observation and the selected DC3-point extraction/comparison remain unfinished.
+Local/installed/synthetic or hosted Linux results cannot qualify actual Cadence.
+No PR164 merge, tag, Release or republishing2.1.0 is authorized. Earlier entries
+remain historical evidence with their original source/time scope.
+
+## Source63 terminal evidence conservation, 2026-10-21
+
+Source63/checkpoint03 corrects review4337806078: every original evidence pin and
+native bundle is revalidated after prospective output publication, before terminal
+success. Drift rejects and retains partial output; no replacement becomes a new
+baseline. All60 rebind regressions pass locally, including five publication-time
+mutations. Exact-head hosted, installed and review receipts remain separate gates
+recorded on draftPR164; they are not current-VM/Python2.6/Cadence qualification.
+Source use is63/64 without reset/refund. Current runtime/init trust, bounded stage,
+finite binding observation and the selected three fresh DC runs remain unfinished.
+No new VM/admin/EDA/reservation action, PR164 merge or publication is authorized
+by these records. Earlier entries below keep their historical source scope.
+
+## Pending source62 local registration proposal, 2026-10-21
+
+Continue the same draftPR164; source61 consumption and the source64 ceiling stay
+additive. Pending source62 exports only a prospective registration from the
+original native registration/bundle, exact observed plan and ordinary postcheck.
+It calculates allowed mode-only tree pins for every route and installs nothing;
+retained stdout establishes no root provenance, runtime trust or execution grant.
+Source61 changed-path local checks and hosted Linux CI passed; its Windows export
+fixture owner failure is retained and the fixture now follows the ordinary account.
+Final source62 tests/installed/CI/review are pending. No current-VM/admin/EDA action
+or actual DC job follows. See docs/BINDING_INITIALIZER_METADATA_V1.md; history below
+retains its original source scope.
+
+## Initializer-only source64 authority, 2026-10-21
+
+The direct user reply raises only the source ceiling from60 to64, preserving all
+60 consumed versions. At most four additions cover initializer trust inspection,
+exact permission remediation, allowed metadata-delta verification and review
+corrections. V5/V7 record this authority without rewriting prior policies or
+checkpoints. New VM access, deployment/admin application, OCEAN, simulations,
+PR164 merge and publication remain separately gated. Existing ledger, failures,
+spent read claims and selected three DC input vectors remain unchanged.
+
+Source61 is being qualified on the same feature branch. Its fixed local exporter
+and initializer recipe reuse the existing accounting/receipt engine and compare
+whole registered libraries against immutable originals, permitting only selected
+mode/ACL changes. No registration is silently refreshed, and metadata comparison
+does not establish behavior/runtime trust. Current-VM qualification, bounded-stage
+provisioning, source-binding observation and the actual three DC jobs are still
+unfinished. Earlier dated statements below retain their historical scope.
+
+## Source60 protected accounting identity correction, 2026-10-20
+
+Exact source59 review4325616566 identified digest-only accounting conservation.
+Source60/checkpoint16 retains original inode/device/type/owner/group/mode/link/
+size/mtime/ctime together with content hashes, rechecks all held/named protected
+files after every content read, and conserves legacy-seal absence. Read-induced
+atime is excluded. Owned Linux cases cover identical-byte replacement, chmod,
+hardlink and later-read drift. Windows does not prove POSIX security metadata;
+its initial fixture failures remain retained and these cases run on Linux.
+Source use reaches60/60 without reset/refund. Further product changes need new
+capacity; documents and prior histories do not grant it. Actual runtime/init
+trust, stage provisioning/postcheck, observation and three-DC comparison remain
+unfinished. No VM/admin/EDA/reservation action or PR164 merge/release occurred.
+Source59 hosted Linux passed including disposable apply/detach/remount; those
+receipts do not qualify source60 or the actual VM. Final exact checks remain gates.
+Earlier source-specific records below remain historical.
+
+## Source59 fixed storage implementation in qualification, 2026-10-20
+
+The experimental local exporter and fixed administrator helper now implement
+one-shot bounded-image setup and preserved-image detach/remount recovery. They
+reuse the existing lock/identity/counter, reject unclean images and changed loop
+associations, and add no startup action or public administrative MCP capability.
+This pending source59/checkpoint15 consumes one additive source version (59/60);
+no current-VM contact, deployment, trust attestation, EDA, reservation or simulation
+has occurred. Final software/installed/hosted/review gates remain source-specific.
+Actual initializer/runtime qualification and ordinary-user storage postcheck are
+still prerequisites, followed by separately authorized observation and the
+selected three-DC comparison. PR164 remains draft; no merge or publication.
+See docs/BINDING_OBSERVER_OPERATION_V1.md for the fixed helper's limits/recovery.
+Earlier source58 actual observations and all failed/spent reads remain preserved.
+
+## Source58 actual storage read, 2026-10-20
+
+One separately approved source58 fixed read returned `OBSERVATIONS_ONLY` and
+its spent marker and private result are preserved. The managed observation
+stage and fixed persistent backing do not exist; the path is under root ext4.
+Eight loop device nodes do not prove an available loop association and
+`/dev/loop-control` is absent. No administrator change, OCEAN, simulation or
+reservation was authorized or reported. Runtime/initializer trust and a
+bounded persistent stage remain prerequisites to actual source-binding
+observation. The prior ledger observation is 128 attempts/15,721,299,968
+bytes. PR164 remains draft; no candidate DC run or release follows. The prior
+source58 preparation entry below remains historical.
+
+## Source58 fixed proc-file timestamp correction, 2026-10-20The separately approved source57 storage read was consumed once and returned
+`INCOMPLETE/path_metadata_drift`, with final `mtime`/`ctime` drift on the path
+hash of `/proc/filesystems`. Its private result and spent marker are preserved;
+there was no remote write, EDA start, simulation or reservation. No mount/loop
+facts or current storage acceptance were returned. The last separate ledger
+observation remains 128 attempts and 15,721,299,968 reserved bytes.
+
+Source58/checkpoint14 narrows a software correction to two fixed proc fact files
+after held-fd identity proof. Timestamp variation alone is permitted; static
+files, inode/owner/mode/link/size, bounds and failed-read evidence remain protected.
+Focused148/seven skips and full local4,997/542 skips, Ruff and strict mypy130
+pass on the source58 worktree. Local tests do not qualify the actual VM.
+Security18, 1,300-file secret preflight, UTF-8 locked audit, exact wheel/sdist
+contents and isolated installed fixed-resource/synthetic observer checks pass.
+The prior CP949 audit startup failure is retained. Initializer/runtime trust, bounded
+persistent storage, source-binding observation and the user's three selected DC
+candidates remain open. PR164 stays draft and unpublished. Older entries below
+remain historical.
+
+## Source57 bounded kernel-directory observation correction, 2026-10-20
+
+The exact source56 head56cc916 completed hosted Windows4916 PASS/522 skips,
+Linux binding728 PASS/two skips and separate disposable kernel capacity1 PASS;
+package/security/static/compatibility and automated review6278506435 passed.
+All eight prior review threads are resolved. These are software receipts only.
+
+One separately human-approved installed storage facts read was then performed
+exactly once. It returned INCOMPLETE/path_metadata_drift, not storage acceptance.
+The approval is spent; all failed evidence and its exclusive marker are retained.
+No failed-path/phase or mount/loop facts were returned, so its actual cause is
+unknown. Local synthetic /proc nlink drift reproduces the same rejection; this
+does not identify the actual VM path. Do not resend the source56 plan.
+
+Source57/checkpoint13 permits only nlink/size/mtime/ctime volatility for a closed
+set of proc/sysfs fact-source directories after held-fd filesystem magic, owner,
+mode and directory proof. Device/inode/type/owner/group/mode/rdev and every static
+path/file remain exact. Retain raw observation metadata and label its comparison
+scope; metadata-drift failures include bounded phase/path-hash/field provenance.
+No workspace, installation, backing, arbitrary PID or regular-file exception is
+introduced. Local storage regression130 PASS/six explicit Linux skips and an
+independent review without confirmed P1/P2 are not actual VM/Python2.6 proof.
+Affected Windows regression689 PASS/123 explicit platform or opt-in skips;
+Ruff/mypy130,85/22 contracts, security18,1299-file secret scan and strict locked
+dependency audit pass. Isolated installed/exact-head hosted/review remain gates.
+Preserve the first local Windows temp-path setup failure and successful fresh-path
+rerun without weakening guards.
+
+Source use57/60 is additive; no counters, reservations, policies or old checkpoints
+are reset. Existing latest separate ledger observation128/15,721,299,968 bytes is
+not refreshed by this failed facts read. Fresh VM access remains separately gated.
+Initializer remediation/behavior review, full reviewed runtime trust, persistent
+bounded stage provisioning, actual binding observation and selected three-DC
+comparison remain unfinished. This is not an approval-only ready state. PR164
+stays draft, unmerged and unpublished; no new remote action follows from this fix.
+Earlier entries below retain their original source/time scope.
+
+The first source57 exact hosted Windows job passed; Linux passed809 binding
+cases/two skips and failed one new synthetic fixture before its assertion:
+tuple-created stat_result has st_rdev=None on Linux. Preserve run39336639563/
+job118347667714. Set only that fixture's ordinary-directory rdev explicitly to0;
+the six namespace/permission negative cases pass locally. Product/bootstrap and
+all distribution inputs remain identical; source use remains57/60. Refresh final
+exact-head CI/review after this test-only correction. Isolated package lifecycle
+and installed storage130 PASS/six skips completed with operator43/migration20
+files preserved across reinstall/uninstall. Preserve the initial wrapper cwd and
+supplement collection failures separately; they are not product acceptance passes.
+
+## Fixed prerequisite reads and command-free host checks, 2026-10-20
+
+Source55 heada35fdcb completed local full4848 PASS/530 platform skips and exact
+hosted Windows4865 PASS/513 skips, Linux668 binding PASS/two platform or opt-in
+skips plus disposable kernel capacity1 PASS. Exact artifacts/install/static/
+security and automated review passed. Preserve their earlier invocation failures.
+
+Source56/checkpoint12 removes Python2.6 platform.uname's hidden uname subprocess
+from observer preflight, declared-member and directory checks. Read host identity
+through os.uname/sys.version_info, retaining exact profile matching and pinned
+helper bytes. Add installed private, explicitly invoked read-only storage facts
+and authenticated memory bootstrap; no automatic import/startup or public tool.
+Do not infer mount persistence, utility/runtime trust or apply readiness from its
+metadata. Verify changed regressions, actual hosted Linux guards, static/security,
+installed resources, exact-head CI and review before any actual invocation.
+
+Source56 changed-path checks now pass609 with121 explicit platform/opt-in skips
+using unchanged guards and a fresh short Windows temporary root. Security18,
+1298-file secret scan, strict locked audit, Ruff/mypy130 and85/22 contracts pass.
+Independent observer and storage integration reviews found no actionable defect;
+they are not formal GitHub approval. Preserve the first long-path output-pin
+failure and CP949 audit-import failure. Exact frozen source56 hosted full suite,
+Linux regressions, package/install and automated review remain pending receipts.
+The three addressed source55 review threads are resolved against run39280318434;
+actual current-VM trust/storage acceptance is still blocked.
+
+The first source56 hosted Linux invocation passed727 binding cases but failed
+the new real-host success test on a hosted same-UID daemon's unreadable /proc
+executable. Preserve run39332040498/job118332346693. The test now controls only
+the unrelated external conflict scan, as existing owned-file fixtures do;
+dedicated conflict tests and the product fail-closed check are unchanged.
+This test-only correction does not consume another product source version or
+change wheel/sdist build inputs. Refresh exact-head hosted evidence after commit.
+
+All three authorized current-VM reads are spent. They observed128 attempts and
+15,721,299,968 reserved bytes, retained source/ADE/five-library/seven-model
+fingerprints, and569 installation targets requiring0 mode/ACL changes. No EDA,
+reservation or metadata mutation occurred. The fixed installation recipe excludes
+registered initialization roots. Retained initializer/context code in two of
+those conserved library trees still has shared-write metadata: conservation is
+not execution trust. Exact initializer/ancestor metadata remediation and behavior
+review, complete reviewed standard-VM trust and bounded persistent stage setup
+remain prerequisites. A storage facts-only helper does not implement provisioning.
+
+Keep source consumption56/60 additive, existing resource usage and all failures.
+No fresh VM access, admin deployment, OCEAN,3DC, PR164 merge or publication follows.
+The user's three voltage vectors remain selected; reuse PR163 after actual
+binding evidence and a separate finite trial grant. Do not request them again.
+Earlier entries below remain historical, source-specific evidence.
+
+## Bounded owned-group inspection follow-up, 2026-10-20
+
+Source54 final8a0eb14 passed hosted Linux647 binding checks and the separate real
+disposable kernel ENOSPC/reclaimed-space test. Preserve its initial free-fragment
+expectation failure and all earlier receipts. Exact-head automated review found
+distinct P2 4315484359: the unchanged pinned process helper still materializes
+/proc during group polling and cleanup. Correct this with additive source55/
+checkpoint11. Keep pinned helper bytes and identity/signaling semantics; bound
+each group inventory through a scoped facade on its fresh private module. Close
+on early-active/error/deadline outcomes and restore every temporary setting.
+
+Normal polling retains cancellation/outer deadline; cleanup needs its own bounded
+scan after those expire. Incomplete inspection is never an empty group. Keep the
+lifetime lock while termination remains unverified, even if safe cleanup outlasts
+the desired host timeout. Refresh affected/static/security/package/exact hosted
+checks and review for the corrected source. Source55/60 preserves prior spending;
+remaining5 software versions confer no actual execution authority. The user has
+now approved at most3 fixed read-only current-VM checks, each at most60 seconds,
+for retained accounting/disk, protected source/library bounds and runtime/init
+trust metadata. Duplicate answers do not multiply this allowance. No EDA,
+mutation, claim/reservation, PR164 merge or publication follows. Actual runtime/
+init evidence and durable bounded stage provisioning remain gaps.
+Local changed-path regression427 PASS/106 platform skips; security18 PASS,
+secret scan1294 files PASS, Ruff/mypy128/contracts PASS. Preserve the first
+security fixture's Windows temporary-directory access failure; the identical
+tests pass in a fresh short path. Independent read-only diff review found no
+actionable defect; this is not formal GitHub approval. Exact hosted/package/
+automatic review remain required for source55.
+
+## Kernel resource-bound correction, 2026-10-19
+
+Continue PR164/source53 at7014b3d without merge/publication. Exact Linux629 binding
+PASS/one Windows-only skip establishes software/process behavior, not Cadence.
+Automated P2 findings4315056554/4315128486 require bounded /proc enumeration and
+kernel storage enforcement. Add source54/checkpoint10, preserving source53/60
+and all earlier failures. Stream at most4096 process entries with cancellation/
+deadline/handle cleanup. Require an existing separate persistent ext2/3/4 mount
+at managed_root/binding-observations with data capacity<=8MiB and<=256 inodes;
+recheck identity/capacity before launch and at admission guards. Filesystem limits
+cover aggregate and open-unlinked writes. Tree scans remain conservation checks.
+No ordinary directory, FUSE or volatile tmpfs can satisfy this gate. No automatic
+mount/format/provision/resize is implemented or performed. Current-VM provision
+mechanism is not yet selected; inspect existing configuration under fresh access
+authority before selecting a bounded administrator helper. This is a concrete
+remaining operational setup gap, not an approval-only ready claim.
+
+Final affected/software/kernel-CI/package/review refresh is required. Disposable
+hosted-CI mount tests are not standard-VM evidence. Current VM/SSH/deployment/EDA/
+simulation/extraction/claim/reservation remain0. Runtime/init evidence, current
+library bounds/ledger/disk and finite actual authority remain required. User
+selected baseline plus two voltage vectors in the source53 entry; do not re-ask.
+Source54/60 retains six software versions, without resetting consumption.
+
+## Finite observer execution integration, 2026-10-19
+
+Continue draftPR164 from0ba16a9/maina713eb6; published2.1.0/36f7583 unchanged.
+Source53/checkpoint09 connects the explicit operator run path: exact canonical
+prepared inputs and installed code, externally pinned finite admission, reviewed
+standard-VM trust attestation, retained account claim, authenticated fixed SSH
+bootstrap, existing resource lock/identity/counter audit, owned stage, fixed OCEAN
+process, terminal conservation/frame receipts and local-only retained result read.
+No runtime trust is inferred from the source52 declared-members manifest. The
+broader installation/init boundary is explicitly external reviewed operator trust,
+not a dynamically proved closure or empirical qualification.
+
+Current local full regression4811 PASS/525 platform skips/56 warnings predates
+the final launch-freshness fix; final affected162 PASS/28 platform skips,
+Ruff/mypy128/contracts85/22 PASS. Security18/secret1291/strict locked audit PASS;
+the first isolated package lifecycle preserved43 operator/20 migration files
+before the final fix. Refresh exact-commit hosted full/Linux/package/review before
+promotion; source52 receipts remain proof only for0ba16a9. New tests cover finite
+authority, fixed code, owned synthetic process/cleanup, parent-owned protection
+receipts, post-marker expiry/deadline, lost reply and spent repeat. Ordinary Linux
+evidence is separate from portable Windows tests. Preserve all earlier failures.
+
+Current-turn actual VM/SSH/deployment/EDA/simulation/extraction/real claim/result
+reservation0. Source consumption53/60 is additive, not a new operational allowance.
+Actual standard-VM runtime/init evidence, current fifth-library bounds, current
+ledger/disk and finite observation/trial authority remain required. The user has
+selected baseline Vp/Vm0.5/0.5V and candidates0.49999975/0.50000025V and
+0.50000025/0.49999975V, with fixed320/702mV bias. This is input selection, not
+VM execution approval. Reuse PR163; do not reimplement it or fabricate values.
+PR164 remains draft; no merge/publication approval is inferred. See
+docs/BINDING_OBSERVER_OPERATION_V1.md. Older checkpoints below remain history.
+
+## Declared execution-code member integrity increment, 2026-10-19
+
+Exact source51/head6e15e23 completed hosted Windows4609 PASS/459 platform skips/
+56 warnings and Linux359 binding PASS/one Windows-only skip, package/security and
+automatic review without findings. All five inline threads are resolved; none of
+these receipts constitutes formal GitHub APPROVED or runtime qualification.
+
+Source52/checkpoint08 adds a private bounded declared-code-member integrity check.
+Canonical input and separately pinned digest bind profile/registration/worker/
+request; every declared file and exact ancestor union must match fixed content
+and metadata, including inode/nlink/ctime. No-follow held descriptors, complete
+initial metadata verification and a final union after all content/OCEAN reads
+reject late changes. Fresh-helper fdopen fault cleanup preserves global OS state.
+This verifies DECLARED_MEMBERS_ONLY, not dynamic loader/init closure or authority.
+Observe remains unconditionally disabled; operational admission is still missing.
+
+Portable malformed-input tests57 PASS; six-file focused359 PASS/81 Windows
+platform skips. Ruff/mypy127/contracts85/22, security18/secret1285 and strict
+locked audit PASS/no known vulnerabilities. Independent final static review found
+no confirmed P1/P2; not formal APPROVED. The first focused run retained355 PASS/
+four Windows output-pin access failures; unchanged software passes in a short
+fresh ordinary-user test path. Actual ordinary-Linux file/FD tests are separate
+pending hosted evidence. Updated package/exact hosted and automated review gates
+must be recorded for source52. Source use52/60 is
+additive; earlier checkpoints/failed receipts and published2.1.0 remain unchanged.
+Current continuation VM/SSH/deployment/EDA/simulation/extraction/real claim/
+reservation0. PR164 stays draft without merge/publication authorization.
+
+## Source51 sparse-fixture sequencing and installed preparation, 2026-10-19
+
+Exact94914d5 automated review completed without findings. Hosted Linux run
+39191936685 retained357 binding PASS/two sparse-child timing failures/one
+Windows-only skip: a child was still creating its frame/sparse leaf when the
+directory-stability guard correctly rejected drift. The capacity regression now
+uses an explicit ready pipe after all child stage writes/close, before returning
+the unreaped real process to the worker. Exact failure expectations, real process
+identity/group/exit, capacity checks, four conservation checks and spent marker
+remain. Local follow-up302 PASS/58 Windows platform skips; one pytest-cache
+access warning and the preceding sandbox temp-directory setup failure are retained.
+Ruff and source boundary PASS. Product bytes and source51/checkpoint07 are
+unchanged; refreshed exact hosted CI/review remain required. Preserve the original
+failed run.
+
+Supplementary exact-wheel installed CLI preparation now PASSes for one fictional
+two-variable registered circuit: exactly three outputs, matching request/plan/
+script digests, same-output retry rejection and unchanged inputs/journal. Public
+fixture JSON bytes equal the installed starter; no developer checkpoint is used.
+The primary small checker still reports successful preparation NOT_TESTED_BY_THIS_CHECKER.
+This supplementary result closes only the synthetic installed-preparation gap.
+Runtime/init execution trust and immutable operational admission remain unfinished;
+observe stays disabled. Actual VM/SSH/deployment/EDA/claim/reservation remain0.
+Published2.1.0, all earlier evidence and source51/60 accounting are preserved.
+PR164 remains draft without merge/publication authority.
+
+## Bounded snapshot enumeration correction, 2026-10-19
+
+Exact source50/head9a7060b completed Windows4591 PASS/455 platform skips/56
+warnings, Linux binding337 PASS/one Windows-only skip, isolated package lifecycle,
+static/security/contracts and locked audit. Stage enumeration finding4307248489
+is resolved after these exact-source receipts. New automated P2 finding4307297988
+identifies dependency-directory list materialization before the entry cap.
+Independent review identified the same helper path in source/state/copy scans.
+Retain every source50 result and failure; source51/checkpoint07 corrects these
+same bounded-enumeration paths using only the fresh worker helper's scoped OS
+facade. Preserve original digest/schema/read/depth/link checks and restore the
+helper state after success or failure. This is not a new baseline or transport.
+
+Source51 local focused302 PASS/58 Windows platform skips/no warnings and
+Ruff/mypy127/85-tool22-legacy contracts PASS. Security18 PASS on a new disposable
+path; the original16-pass/two-setup-error Windows temp-access receipt is retained.
+Secret preflight1284 and strict locked audit PASS/no known vulnerabilities.
+Exact-source isolated wheel/sdist/content/license and synthetic installed factory,
+reinstall/uninstall43 operator+20 migration preservation PASS. Independent final
+static review found no confirmed P1/P2; it is not formal GitHub APPROVED. New
+exact-head hosted POSIX/Windows and automated review remain required.
+Additive checkpoint07 verifies51/60 consumption and all prior protected pins.
+Observe stays unconditionally disabled. Actual runtime/init
+closure and immutable operational admission remain unfinished implementation;
+no VM contact/deployment/EDA/claim/reservation or PR164 merge/publication follows.
+Published2.1.0, all earlier policies, consumed counters and receipts are preserved.
+
+## Observer bounded directory enumeration correction, 2026-10-18
+
+Source49/head8cea9e5 passes local269/49 Windows skips, static127, security18,
+staged secret1282, locked audit and isolated package/state preservation. Its
+exact hosted Windows4576 PASS/450 skips and Linux binding317 PASS/one Windows
+skip are preserved. Automated review
+4307248489 found os.walk materializes an entire directory before the entry cap
+on Python2.6, leaving memory/time unbounded despite later accounting checks.
+
+Continue on the same draft with additive source50/checkpoint06. Reuse the fixed
+Linux dirent64 enumeration already reviewed in storage/migration components,
+plus Windows host scandir for synthetic checks; do not add a new platform layer.
+Stop at the first over-budget entry, close all iterators/descriptors on rejection,
+retain conservative whole-stage accounting and reject unreadable directories.
+Local source50 focused284 PASS/54 Windows platform skips/no warnings; Ruff/mypy127
+and85-tool/22-legacy contracts PASS. Independent final static review found no
+further P1/P2; it is not formal GitHub APPROVED. New exact-source package/security/
+hosted/automatic-review receipts remain required. Additive checkpoint06 records
+50/60 source changes and verifies every retained product pin/history boundary.
+Observe stays disabled. This is software-only correction with0 VM/EDA/claim/
+reservation activity; source49 and all earlier receipts/checkpoints stay intact.
+Refresh exact-source tests/package/security/hosted/review. No PR164 merge or
+publication authority; runtime/init closure trust and operational admission remain
+unfinished implementation, not an approval-only gate.
+
+## Observer pre-publication capacity correction, 2026-10-18
+
+Source48/heada753cc3 passed the exact hosted Linux job117686214865, including
+301 binding component tests/one Windows-only skip. Its automated review found
+P2 finding4307185677: checking capacity only after publishing stdout/stderr
+could itself exceed the8MiB stage bound. Retain this finding and every prior
+source-specific result. An additive source49 correction checks capacity
+before each primary/fallback/guard publication, including possible partial-file
+growth, and skips unbudgeted writes. Close and all four conservation observations
+still run; existing artifacts and the original body failure are preserved.
+Independent review also found the stage walker silently skipped unreadable
+subdirectories. The same correction rejects traversal errors before any
+evidence publication, with an ordinary-user POSIX denial regression for CI.
+
+Local focused269 PASS/49 Windows platform skips; one pytest-cache permission
+warning does not change test results. Ruff/mypy127 and85-tool/22-legacy contract
+checks PASS. Independent final static review found no further P1/P2; this is
+agent review, not formal GitHub APPROVED. Exact hosted/package/security and
+automated review still need refreshed receipts. Additive checkpoint05 retains
+49/60 source changes and every prior immutable policy/checkpoint.
+
+This remains draftPR164 software work with observe unconditionally disabled.
+Actual runtime/library-init trust and immutable operational bootstrap/admission
+are unfinished; neither approval nor global budget capacity fills those gaps.
+No current VM contact, deployment, EDA start, simulation, extraction, real claim,
+reservation, merge or publication is performed. New exact-source validation is
+required; earlier checkpoints/policies/journals/failed evidence remain unchanged.
+
+## Observer finalizer corrective increment, 2026-10-18
+
+Prior source47/headb9a3b5e passed hosted Windows4548/426 platform skips,
+Ruff/mypy127, security/dependency audit and exact installed synthetic package
+checks. Hosted Linux binding264 PASS/one FAIL/one Windows skip exposed only a
+fixture error expectation: native_copy_destination_trust correctly rejected
+a0750 private runtime directory. Local full4530 PASS/one FAIL/443 skips retained
+a collection-time expiry parameter that expired during its30-minute run; the
+product correctly rejected it. Resolve that test input at test execution without
+weakening expiry or accounting checks.
+
+Automated review found a real finalizer P2: child-created ocean.stdout/stderr
+could collide with exclusive evidence writes and skip protection observations.
+Fix and test close/publication collisions, preservation of existing evidence,
+all conservation observations and original child failures on the same draft.
+Source48 is additive to immutable47; no real VM/EDA/claim/reservation follows.
+Refresh exact final-source package, focused/static/security/hosted and review
+receipts before reporting the correction verified. Runtime/library-init closure
+and operational admission remain unfinished; observe stays disabled. No merge
+or publication authority forPR164; published2.1.0 remains unchanged.
+
+## Local observer bootstrap and preservation increment, 2026-10-18
+
+Continue draft PR164 on the existing feature, separate from published2.1.0 and
+normally merged PR163. Corrective head9b3f61a completed exact hosted Windows4462
+PASS/417 platform skips and Linux binding170 PASS/one Windows skip, isolated
+package/state preservation, security and fresh automated review. Its earlier
+failed receipts remain unchanged. Those results do not cover this new increment.
+
+The next local-only source47 adds canonical closed fixed-resource construction,
+actual retained worker-byte binding and fresh memory modules; explicit private
+library-map/log argv; private HOME/TMP and limited inherited environment; and
+whole registered-library preservation with bounded content/namespace/identity/
+ctime checks. Installed synthetic construction replaces the former NOT_TESTED
+construction result. Successful installed operator preparation remains NOT_TESTED.
+Observe is still unconditionally disabled; no remote/activation/MCP tool is added.
+
+Historical library hashes/sizes support bounded conservation tests, not runtime
+trust: recorded library initialization files were shared-writable and the vendor
+inventory explicitly did not attest dynamic startup/loader dependencies. Exact
+current closure evidence and reviewed operational bootstrap/admission remain
+unimplemented/unqualified. Do not offer an executable observation as consent-only.
+This continuation makes0 VM contacts, deployments, EDA starts, simulations,
+extractions, real account claims and reservations. Source47/60 is additive;
+original journals, claims, failed evidence and published assets stay preserved.
+PR164 remains draft, without merge/publication authority. See
+[component boundary](docs/SOURCE_BINDING_OBSERVATION_01.md).
+
+## Binding preparation correction checkpoint, 2026-10-18
+
+Draft PR164's P2 directory-durability review is corrected: verified POSIX parent
+sync precedes export, output and parent sync run on success/interruption, and
+descriptor cleanup remains guaranteed on sync failure. Hosted prior head7eadec2
+failed Linux on a protected unrelated same-UID process and Windows on elevated
+runner default ownership. Component tests now isolate only external inventory;
+real owned-group identity/termination and fail-closed EACCES remain tested.
+Windows disposable output ownership uses the existing ordinary-account fixture;
+actual shared-write DACL rejection stays covered. Product guards are unchanged.
+
+Additive checkpoint02 charges46/60, preserving checkpoint01 and all consumption.
+Ruff/mypy126/85-tool22-legacy contract audit and focused180 tests pass (16 Windows
+platform skips). Updated package/hosted checks and fresh review remain pending;
+the first package retry failed on an overlong disposable Windows path and is
+retained, with the identical source retried in a short D: directory.
+Observe stays unconditionally disabled. Runtime/environment/library trust and
+authenticated operational bootstrap are still implementation gaps, not pending
+execution approval. No VM contact, deployment, EDA start or reservation occurred.
+
+## Source binding preparation after normal PR163 integration, 2026-10-18
+
+PR163 was normally merged after the user's exact-head approval of91c4919, final
+Windows4307/POSIX CI, installed package/security/compatibility checks and fresh
+automated review without findings. Current main is
+`a713eb6b1db2a90652501bb71a3dacbe75c65460`; its tree equals that tested feature head.
+The source-bearing merge is44/60. Published2.1.0/36f7583 and its nine assets remain
+unchanged. No actual candidate batch/native/client upgrade is implied.
+
+The separate `feat/candidate-binding-observer` implements local private plan
+preparation, a fixed bounded OA collector/strict frame parser, retained-campaign
+one-shot claims and review-only owned-copy/process pieces. Actual observe is
+unconditionally CAPABILITY_NOT_QUALIFIED: runtime/library initialization trust and
+a concrete operational bootstrap are unfinished. There is no remote/activation
+CLI or new MCP tool. The new additive checkpoint charges45/60 without resetting
+consumption. Existing source policies and physical collection claims are retained.
+
+Finish source-specific synthetic/POSIX/install/security/CI and independent review
+on this draft. Before real observation, complete the trust boundary and present
+one finite OCEAN observation scope; old non-EDA claims/spent experiments are not
+authority. Original OA/ADE/PDK/results/journals and resource counters are preserved;
+this continuation has zero VM contacts/deployments/EDA starts/new reservations.
+See [current scope](docs/SOURCE_BINDING_OBSERVATION_01.md). Earlier records below
+remain historical and are superseded only where this checkpoint says so.
+
 ## Candidate recovery identity correction, 2026-10-18
 
 Draft PR163's automated P2 review identified an early remote-lookup return that

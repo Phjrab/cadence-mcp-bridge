@@ -93,6 +93,27 @@ jobs:
       - name: Explicit candidates, retained captures and durable child identity
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_candidate_contracts.py tests/unit/test_candidate_reports.py tests/unit/test_candidate_batches.py tests/unit/test_candidate_cli.py -q --basetemp "$HOME/explicit-candidate-tests"
 
+      - name: Local binding preparation, bounded frames and owned-process guards
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_bootstrap.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py tests/unit/test_binding_observation_admission.py tests/unit/test_binding_observation_transport.py tests/unit/test_binding_observer_run.py tests/unit/test_binding_observation_resources.py tests/unit/test_binding_storage_inspection.py tests/unit/test_binding_storage_admin.py -q --basetemp "$HOME/binding-observer-tests"
+
+      - name: Disposable persistent kernel stage limit including unlinked files
+        env:
+          CADENCE_TEST_BOUNDED_FS: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation_resources.py -k actual_kernel_capacity -q --basetemp "$HOME/binding-kernel-storage-tests"
+
+      - name: Disposable fixed administrator apply and preserved-image recovery
+        env:
+          CADENCE_TEST_STORAGE_ADMIN: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_storage_admin.py -k actual_disposable_admin -q --basetemp "$HOME/binding-storage-admin-tests"
+
+      - name: Initializer exact metadata transitions and immutable library baseline
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py tests/unit/test_binding_initializer_entry.py tests/unit/test_binding_initializer_rebind.py tests/unit/test_binding_initializer_tty.py -q --basetemp "$HOME/binding-initializer-tests"
+
+      - name: Disposable initializer partial resume, repeat and exact rollback
+        env:
+          CADENCE_TEST_INITIALIZER_ADMIN: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py -k actual_disposable_initializer_admin -q --basetemp "$HOME/binding-initializer-admin-tests"
+
       - name: Generic complete AC projection and sampled crossing contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"
 
@@ -106,7 +127,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"
 
       - name: Local design revision, inverter plan and physical evidence contracts
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py tests/unit/test_physical_metadata.py tests/unit/test_physical_metadata_framing.py tests/unit/test_physical_metadata_boundary.py tests/unit/test_physical_metadata_boundary_v2.py tests/unit/test_physical_metadata_boundary_v3.py tests/unit/test_physical_metadata_boundary_v4.py tests/unit/test_physical_metadata_boundary_v5.py tests/unit/test_physical_metadata_boundary_v6.py tests/unit/test_physical_metadata_followup.py tests/unit/test_physical_ancestor_repair.py -q --basetemp "$HOME/m2-foundation-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py tests/unit/test_physical_metadata.py tests/unit/test_physical_metadata_framing.py tests/unit/test_physical_metadata_boundary.py tests/unit/test_physical_metadata_boundary_v2.py tests/unit/test_physical_metadata_boundary_v3.py tests/unit/test_physical_metadata_boundary_v4.py tests/unit/test_physical_metadata_boundary_v5.py tests/unit/test_physical_metadata_boundary_v6.py tests/unit/test_physical_metadata_boundary_v7.py tests/unit/test_physical_metadata_followup.py tests/unit/test_physical_ancestor_repair.py -q --basetemp "$HOME/m2-foundation-tests"
 
       - name: Bounded CDF data, owned generator and retained source allowance
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_m2_cdf.py tests/unit/test_m2_inverter.py tests/unit/test_m2_native_corrections.py -q --basetemp "$HOME/m2-cdf-tests"

@@ -751,9 +751,14 @@ def test_timeout_during_streaming_consumes_without_retry(
     monkeypatch.setenv("WP14_RENEWAL_SCENARIO", "hang")
     monkeypatch.setenv("WP14_RENEWAL_CALL_FILE", str(call_file))
     monkeypatch.setattr(runtime.module, "_ssh_prefix", lambda: [sys.executable, str(FAKE_SSH)])
-    monkeypatch.setattr(runtime.module, "MAX_WALL_SECONDS", 0.25)
+    # Include interpreter startup on Windows; 250ms can kill the stand-in
+    # before it records a call and never exercise the intended streaming case.
+    # The real transport deadline remains unchanged.
+    monkeypatch.setattr(runtime.module, "MAX_WALL_SECONDS", 3)
     assert _run_error(runtime) == "TRANSPORT_TIMEOUT"
     assert runtime.renewal_claim.exists()
+    assert len(call_file.read_text(encoding="utf-8").splitlines()) == 1
+    assert _run_error(runtime) == "ATTEMPT_CONSUMED"
     assert len(call_file.read_text(encoding="utf-8").splitlines()) == 1
     _assert_preserved(runtime)
 
