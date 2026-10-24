@@ -1,5 +1,73 @@
 # Experimental fixed initializer metadata repair
 
+## Source64 fixed TTY transport qualification
+
+This extension is local software work on the same draft PR. It addresses an
+actual administrator entry failure: an approved non-TTY invocation reached sudo
+but was rejected because the standard VM requires a TTY. An earlier independent
+attempt had timed out during SSH connection. Both finite attempts and their raw
+evidence are retained and spent; neither has a successful administrator terminal
+or ordinary postcheck. They do not prove the current remote metadata unchanged.
+
+The fixed `tty_material` factory freezes the existing installed initializer helper,
+exact observed plan and actual operator-authority reference. It supplies only
+the registered initializer staging/application entries and strict terminal parser.
+It has no network, approval writer or arbitrary command/source/path argument.
+Importing the package, starting MCP, doctor and helper export never run it.
+New executable staging/bootstrap bytes belong to the source64 product checkpoint.
+
+The explicit caller must authorize the complete finite operation before dispatch:
+
+1. Persist an exclusive spent claim before the first SSH call. Ordinary-account,
+   non-TTY staging creates only its derived private directory and one bounded
+   frame file. The frame contains the fixed helper and canonical apply request.
+2. A second SSH call uses a TTY and existing noninteractive sudo policy. It sends
+   no PTY input. The fixed isolated Python bootstrap authenticates the staged
+   frame, retains a root-only copy, runs only the existing initializer helper,
+   and preserves separate bounded raw stdout/stderr files. It changes no sudoers
+   rule and captures no password.
+3. Only a complete successful administrator terminal, matching the original
+   expected metadata delta, permits one ordinary-account postcheck. A staged
+   frame or returned JSON alone is not success or independent root provenance.
+
+The frame ceiling is3MiB, including helper at most256KiB and request at most
+2,883,584bytes. Raw administrator stdout is capped at8MiB and stderr at1MiB;
+the exact encoded terminal must also fit the16MiB local stdout ceiling. These
+are enforced write bounds, not estimates based solely on local collection.
+Strict parsing permits the defined PTY newline transformation only; it does not
+select a convenient JSON line from mixed output. Existing disk-floor checks,
+exclusive creation, no-follow traversal, ownership and held/named identity checks
+remain necessary. Root output capture concerns the directly created helper
+process; killing that process or local SSH does not guarantee termination of all
+remote descendants.
+
+Disk admission includes the exact canonical observed-before receipt length in
+both affected filesystem checks, block-rounded file sizes and minimum overhead
+of32KiB for ordinary staging and64KiB each for root staging and managed receipts.
+Allocation may exceed content lengths. These temporary retained files do not
+consume or refund simulator result reservations. Final fsync is followed by
+held/named content and metadata verification before a success envelope is emitted.
+
+Partial files and failed/unknown outcomes remain evidence. There is no automatic
+retry, overwrite, cleanup, rollback, successor plan or fresh accounting namespace.
+New ordinary staging and root copy/output files are additional remote writes and
+must be included in a separately approved exact plan. A previous stdin/non-TTY
+plan cannot authorize them. Preparation must not manufacture that approval or
+convert the explicit standard-VM trust assumption into empirical OS/Cadence proof.
+
+Source64 is the last approved initializer-only product version. Software,
+installed synthetic checks and hosted Linux tests remain distinct from current
+VM/Python2.6 execution. Actual repair/postcheck, complete reviewed runtime/init
+qualification, observer storage, OCEAN binding observation and DC3-point comparison
+are still separate unfinished gates. No merge or release authority is added.
+
+The2026-10-24 locked audit identified four advisories in two dependencies. The
+lock now selects filelock4.2.1 and opentelemetry-api1.45.1, preserving all other
+locked package versions. This includes a major filelock transition in development
+audit tooling and an MCP runtime dependency update; final regression, isolated
+installation and dependency audit must use this updated lock. Earlier certifi-only
+and installed-source63 evidence below remains historical, not the current audit.
+
 This operator-only path supports the registered professor-provided standard VM.
 It is an explicit local export, never an MCP capability, startup action, doctor
 repair or automatic deployment. It adds no VM access or administrator authority.

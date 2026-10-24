@@ -1,3 +1,32 @@
+## Source64 initializer TTY transport in local qualification, 2026-10-23
+
+2026-10-24: the source64 checkpoint04 is additive64/64. Final qualification uses
+the two security lock updates filelock4.2.1 and opentelemetry-api1.45.1 after four
+new advisories; earlier audit and partial sandbox/old-lock runs remain retained.
+No new current-VM contact, administrator application, simulation or reservation
+has followed. The old source63 evidence and installation are preserved separately.
+
+The feature branch continues draftPR164 from source63 `0c681fbe`; main remains
+`a713eb6b` and published2.1.0 remains `36f75834`. Source64 uses the last approved
+initializer-only product version for fixed staging/TTY framing while retaining
+the original initializer helper, plan, accounting, receipts and protected data.
+Pending source consumption is64/64; no prior policy/checkpoint is overwritten.
+
+Private actual evidence distinguishes admin01's SSH TCP timeout from admin02's
+`sudo: sorry, you must have a tty to run sudo`. Both finite calls are spent.
+No successful administrator terminal or ordinary postcheck exists; no retry,
+rollback, EDA start or result reservation followed. The last separately observed
+ledger128/15,721,299,968bytes is historical, not refreshed by either failed call.
+
+The new fixed factory has no automatic transport, administrator/MCP action,
+approval writer or policy change. New staging/root files and TTY execution need
+a separately approved exact finite plan after software qualification. Actual
+runtime/init trust, metadata repair/postcheck, bounded stage, one source-binding
+observation and the selected DC3-point extraction/comparison remain unfinished.
+Local/installed/synthetic or hosted Linux results cannot qualify actual Cadence.
+No PR164 merge, tag, Release or republishing2.1.0 is authorized. Earlier entries
+remain historical evidence with their original source/time scope.
+
 ## Source63 terminal evidence conservation, 2026-10-21
 
 Source63/checkpoint03 corrects review4337806078: every original evidence pin and

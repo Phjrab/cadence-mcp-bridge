@@ -1,3 +1,35 @@
+## Source64 fixed initializer TTY transport, 2026-10-23
+
+2026-10-24 final qualification must include the security lock updates to
+filelock4.2.1 and opentelemetry-api1.45.1. Preserve the four-advisory failure and
+partial sandbox/old-lock test logs. Checkpoint04 records64/64 without reset.
+Authenticate historical source63 material and the separate source64 factory
+installation independently; a mocked sequence is not a successful real local
+prepare, actual VM entry, or Cadence qualification.
+
+Finish the final initializer-only source version on the existing PR164 branch.
+Add fixed ordinary-user staging and a TTY-compatible administrator bootstrap to
+`binding_initializer.py`, reusing the original helper/plan/accounting and exact
+delta validation. Count these remote executable bytes as source64; preserve all
+earlier checkpoints, spent reads, failed applications and ledger consumption.
+
+Admin01 ended in SSH TCP timeout. The separately authorized successor admin02
+reached sudo and failed requiretty. Both are spent with no follow-up postcheck,
+retry or rollback. Neither proves metadata unchanged. Retain their private raw
+output and outcomes. Do not disable requiretty or alter authentication policy.
+
+Validate changed paths, independent review, full/static/security/contracts,
+isolated package/install and exact-head CI before presenting a new finite plan.
+Preparation performs no VM contact or generated human/runtime approval. Any new
+ordinary frame staging, root copy/output files and TTY application must appear
+in that plan and its actual separate user authority; plan06 cannot authorize it.
+
+Metadata repair/postcheck, runtime/init qualification, persistent observer-stage
+setup, finite OCEAN source-binding observation and the selected three DC runs
+remain real-execution gates. They are not complete merely because code passes.
+Source use64/64 is additive; PR164 merge and public release remain unauthorized.
+Earlier entries retain their original historical scope.
+
 ## Source63 terminal evidence conservation, 2026-10-21
 
 Source63/checkpoint03 corrects review4337806078: every original evidence pin and

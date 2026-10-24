@@ -1,3 +1,29 @@
+## Source64 initializer TTY transport in local qualification, 2026-10-23
+
+2026-10-24 validation overlay: preserve the sandbox-denied/partial test logs and
+new four-advisory audit failure. Update only filelock to4.2.1 and
+opentelemetry-api to1.45.1 in the lock; final full/installed/CI/audit receipts must
+cover that lock. Source checkpoint04 retains64/64 and grants no new remote action.
+
+Source64 uses the final initializer-only product version for a fixed TTY-aware
+operator factory in `binding_initializer.py`. Preserve the original helper,
+observed plan, accounting/receipt engine and all prior source checkpoints. The
+new staging/bootstrap bytes count as product code; private orchestration is no
+exception to source accounting. This pending change consumes64/64 without reset.
+
+The separately approved plan05 call timed out before SSH connection; plan06
+reached sudo but was rejected by its requiretty policy. Both are spent failures,
+with postcheck0/retry0/rollback0 and no established administrator terminal. Do not
+reuse either approval or infer unchanged current metadata from their failures.
+Use no sudoers exception, policy disablement or password capture. New ordinary
+staging/root copy/TTY application needs its own finite exact-plan authority.
+
+Software qualification remains separate from current-VM/Python2.6/Cadence proof.
+Runtime/init trust, actual metadata repair/postcheck, bounded observer stage,
+source-binding observation and the selected three DC jobs remain unfinished.
+No new VM contact, PR164 merge or publication is authorized by this checkpoint.
+Earlier entries retain their original historical scope.
+
 ## Source63 terminal evidence conservation, 2026-10-21
 
 Source63/checkpoint03 corrects review4337806078: every original evidence pin and

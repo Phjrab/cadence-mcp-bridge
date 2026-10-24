@@ -46,6 +46,514 @@ def _sha(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+TTY_LIMITS = {
+    "source_bytes": 262_144, "request_bytes": 2_883_584, "frame_bytes": 3_145_728,
+    "stdout_bytes": 8_388_608, "stderr_bytes": 1_048_576, "wire_stdout_bytes": 16_777_216,
+}
+
+# Fixed Python2.6 operator transport. This source is versioned product code, not
+# a caller-supplied program. Neither material generation nor parsing runs it.
+_TTY_ENTRY = r'''import sys
+if __name__ == "__main__":
+    if (not sys.flags.ignore_environment or not sys.flags.no_user_site
+            or not sys.dont_write_bytecode or len(sys.argv) != 1):
+        sys.exit("isolated_initializer_tty_entry_required")
+    entry = sys.path[0] if sys.path else None
+    sys.path[:] = [p for p in sys.path if p and p != entry]
+import os
+if __name__ == "__main__":
+    cwd = os.path.realpath(os.getcwd())
+    sys.path[:] = [p for p in sys.path if os.path.isabs(p) and os.path.realpath(p) != cwd]
+import stat, pwd, json, hashlib, base64, signal, select
+CONFIG = __TTY_CONFIG__
+PHASE = __TTY_PHASE__
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=True, allow_nan=False).encode("ascii")
+
+def digest(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+def require(value):
+    if not value:
+        raise ValueError("fixed_initializer_tty_rejected")
+
+def identity(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+            info.st_nlink, info.st_size, info.st_mtime, info.st_ctime)
+
+def same_name(path, fd):
+    require(identity(os.lstat(path)) == identity(os.fstat(fd)))
+
+def directory_identity(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid)
+
+def chain(path, allowed):
+    require(path.startswith("/") and os.path.normpath(path) == path)
+    result, current = [], "/"
+    try:
+        for name in [""] + path.split("/")[1:]:
+            if name:
+                current = os.path.join(current, name)
+            fd = os.open(current, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            info = os.fstat(fd)
+            result.append((current, fd, directory_identity(info)))
+            same_name(current, fd)
+            require(stat.S_ISDIR(info.st_mode) and info.st_uid in allowed
+                    and not (info.st_mode & 0o7022))
+        return result
+    except BaseException:
+        for unused, fd, unused_identity in result:
+            os.close(fd)
+        raise
+
+def guard(directories):
+    for path, fd, expected in directories:
+        # Directory membership changes from our exclusive children are expected;
+        # identity, ownership and permission safety must remain unchanged.
+        held, named = os.fstat(fd), os.lstat(path)
+        require(directory_identity(held) == expected == directory_identity(named))
+        require(not (held.st_mode & 0o7022))
+
+def sync(directories, descriptors):
+    failed = False
+    for fd in descriptors + [row[1] for row in directories]:
+        try:
+            os.fsync(fd)
+        except OSError:
+            failed = True
+    require(not failed)
+
+def file_open(path, uid, gid, mode, create=False):
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL if create else os.O_RDONLY
+    fd = os.open(path, flags | os.O_NOFOLLOW | os.O_NONBLOCK, mode)
+    try:
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                and info.st_uid == uid and info.st_gid == gid
+                and stat.S_IMODE(info.st_mode) == mode)
+        same_name(path, fd)
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+def read_file(path, fd, limit):
+    same_name(path, fd)
+    before = identity(os.fstat(fd))
+    os.lseek(fd, 0, 0)
+    chunks, size = [], 0
+    while size <= limit:
+        raw = os.read(fd, min(65536, limit + 1 - size))
+        if not raw:
+            break
+        chunks.append(raw)
+        size += len(raw)
+    require(size <= limit and identity(os.fstat(fd)) == before)
+    same_name(path, fd)
+    return b"".join(chunks)
+
+def write_file(fd, raw):
+    offset = 0
+    while offset < len(raw):
+        amount = os.write(fd, raw[offset:])
+        require(amount > 0)
+        offset += amount
+
+def frame(raw):
+    require(len(raw) == CONFIG["frame_bytes"] and digest(raw) == CONFIG["frame_sha256"])
+    source, request = raw[:CONFIG["helper_bytes"]], raw[CONFIG["helper_bytes"]:]
+    require(len(source) == CONFIG["helper_bytes"]
+            and digest(source) == CONFIG["helper_sha256"]
+            and len(request) == CONFIG["request_bytes"]
+            and digest(request) == CONFIG["request_sha256"])
+    return source, request
+
+def floor(path, sizes, overhead):
+    info = os.statvfs(path)
+    require(info.f_frsize > 0)
+    extra = sum(((size + info.f_frsize - 1) // info.f_frsize) * info.f_frsize
+                for size in sizes) + max(overhead, info.f_frsize * (8 if len(sizes) == 1 else 16))
+    free, total = info.f_bavail * info.f_frsize, info.f_blocks * info.f_frsize
+    require(total > 0 and free - extra >= CONFIG["disk_floor_bytes"]
+            and (free - extra) * 100 >= total * CONFIG["disk_floor_percent"])
+
+def runtime(root):
+    require(os.name == "posix" and os.uname()[0] == "Linux"
+            and os.uname()[1] == CONFIG["hostname"] and os.uname()[4] == CONFIG["architecture"])
+    account = pwd.getpwnam(CONFIG["user"])
+    require(account.pw_uid != 0 and os.getuid() == os.geteuid()
+            and os.getuid() == (0 if root else account.pw_uid)
+            and os.getgid() == (0 if root else account.pw_gid))
+    return account
+
+def stage():
+    account = runtime(False)
+    incoming = getattr(sys.stdin, "buffer", sys.stdin)
+    raw = incoming.read(CONFIG["frame_bytes"] + 1)
+    frame(raw)
+    directories = chain(CONFIG["managed_root"], (0, account.pw_uid))
+    descriptors = []
+    result = None
+    try:
+        floor(CONFIG["managed_root"], [len(raw)], CONFIG["user_stage_min_overhead_bytes"])
+        guard(directories)
+        os.mkdir(CONFIG["stage_path"], 0o700)
+        directories += chain(CONFIG["stage_path"], (0, account.pw_uid))
+        leaf = os.fstat(directories[-1][1])
+        require(leaf.st_uid == account.pw_uid and leaf.st_gid == account.pw_gid
+                and stat.S_IMODE(leaf.st_mode) == 0o700)
+        path = CONFIG["stage_path"] + "/frame.bin"
+        fd = file_open(path, account.pw_uid, account.pw_gid, 0o600, True)
+        descriptors.append(fd)
+        write_file(fd, raw)
+        os.fsync(fd)
+        require(read_file(path, fd, CONFIG["frame_bytes"]) == raw)
+        guard(directories)
+        result = dict(schema_version=1, kind="FIXED_INITIALIZER_TTY_STAGE", status="STAGED",
+                      frame_sha256=CONFIG["frame_sha256"], plan_sha256=CONFIG["plan_sha256"])
+        frame_identity = identity(os.fstat(fd))
+    finally:
+        try:
+            sync(directories, descriptors)
+            if result is not None:
+                require(identity(os.fstat(fd)) == frame_identity)
+                require(read_file(path, fd, CONFIG["frame_bytes"]) == raw)
+                same_name(path, fd)
+                require(identity(os.fstat(fd)) == frame_identity)
+                guard(directories)
+        finally:
+            for fd in descriptors:
+                os.close(fd)
+            for unused, fd, unused_identity in directories:
+                os.close(fd)
+    sys.stdout.write(canonical(result).decode("ascii") + chr(10))
+
+def child(source, request):
+    if sys.version_info[0] == 2:
+        import StringIO
+        sys.stdin = StringIO.StringIO(request)
+    else:
+        import io
+        sys.stdin = io.StringIO(request.decode("ascii"))
+    sys.argv[:] = ["fixed-initializer-memory-only", "apply", CONFIG["plan_sha256"]]
+    namespace = {"__name__": "__main__", "__file__": "/__cadence_initializer_memory_only__.py"}
+    sys.path.insert(0, "/__cadence_initializer_memory_only__")
+    eval(compile(source, namespace["__file__"], "exec"), namespace)
+
+def capture(source, request, out_fd, err_fd, inherited):
+    out_read, out_write = os.pipe()
+    err_read, err_write = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        try:
+            os.close(out_read)
+            os.close(err_read)
+            os.dup2(out_write, 1)
+            os.dup2(err_write, 2)
+            os.close(out_write)
+            os.close(err_write)
+            # Root frame/output/directory descriptors must not reach the helper
+            # or its fixed ACL subprocesses. Only captured fd1/fd2 remain.
+            for fd in set(inherited):
+                if fd > 2:
+                    os.close(fd)
+            try:
+                child(source, request)
+                code = 0
+            except BaseException:
+                import traceback
+                traceback.print_exc()
+                code = 1
+            sys.stdout.flush()
+            sys.stderr.flush()
+        finally:
+            os._exit(code if "code" in locals() else 1)
+    os.close(out_write)
+    os.close(err_write)
+    streams = {out_read: [out_fd, 0, CONFIG["stdout_bytes"]],
+               err_read: [err_fd, 0, CONFIG["stderr_bytes"]]}
+    deadline, failed, stopped, reaped = os.times()[4] + 65, False, False, False
+    try:
+        while streams:
+            require(os.times()[4] < deadline)
+            ready = select.select(list(streams), [], [], min(1, deadline - os.times()[4]))[0]
+            for fd in ready:
+                raw = os.read(fd, 65536)
+                if not raw:
+                    os.close(fd)
+                    del streams[fd]
+                    continue
+                target = streams[fd]
+                remaining = target[2] - target[1]
+                write_file(target[0], raw[:remaining])
+                target[1] += min(len(raw), remaining)
+                if len(raw) > remaining:
+                    failed = True
+                    if not stopped:
+                        os.kill(pid, signal.SIGKILL)
+                        stopped = True
+        while True:
+            waited, status = os.waitpid(pid, os.WNOHANG)
+            if waited == pid:
+                reaped = True
+                break
+            require(os.times()[4] < deadline)
+            select.select([], [], [], min(0.1, deadline - os.times()[4]))
+        return not failed and os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0
+    except BaseException:
+        if not stopped and not reaped:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        if not reaped:
+            os.waitpid(pid, 0)
+        raise
+    finally:
+        for fd in streams:
+            os.close(fd)
+
+def output(raw):
+    return dict(bytes=len(raw), sha256=digest(raw), base64=base64.b64encode(raw).decode("ascii"))
+
+def apply():
+    account = runtime(True)
+    require(os.isatty(0))
+    os.umask(0o077)
+    directories, descriptors = [], []
+    stdout, stderr, started, retained, success = b"", b"", False, False, False
+    union, identities = None, None
+    try:
+        directories += chain(CONFIG["stage_path"], (0, account.pw_uid))
+        leaf = os.fstat(directories[-1][1])
+        require(leaf.st_uid == account.pw_uid and leaf.st_gid == account.pw_gid
+                and stat.S_IMODE(leaf.st_mode) == 0o700)
+        user_path = CONFIG["stage_path"] + "/frame.bin"
+        user_fd = file_open(user_path, account.pw_uid, account.pw_gid, 0o600)
+        descriptors.append(user_fd)
+        raw = read_file(user_path, user_fd, CONFIG["frame_bytes"])
+        frame(raw)
+        directories += chain("/root", (0,))
+        receipt_size = CONFIG["observed_plan_receipt_bytes"]
+        floor(CONFIG["managed_root"], [receipt_size], CONFIG["managed_receipt_min_overhead_bytes"])
+        floor("/root", [len(raw), CONFIG["stdout_bytes"], CONFIG["stderr_bytes"], receipt_size],
+              CONFIG["root_stage_min_overhead_bytes"])
+        guard(directories)
+        os.mkdir(CONFIG["root_path"], 0o700)
+        directories += chain(CONFIG["root_path"], (0,))
+        leaf = os.fstat(directories[-1][1])
+        require(leaf.st_uid == 0 and leaf.st_gid == 0 and stat.S_IMODE(leaf.st_mode) == 0o700)
+        paths = [CONFIG["root_path"] + suffix for suffix in ("/frame.bin", "/stdout", "/stderr")]
+        root_fd = file_open(paths[0], 0, 0, 0o400, True)
+        descriptors.append(root_fd)
+        out_fd = file_open(paths[1], 0, 0, 0o600, True)
+        descriptors.append(out_fd)
+        err_fd = file_open(paths[2], 0, 0, 0o600, True)
+        descriptors.append(err_fd)
+        write_file(root_fd, raw)
+        os.fsync(root_fd)
+        source, request = frame(read_file(paths[0], root_fd, CONFIG["frame_bytes"]))
+        require(read_file(user_path, user_fd, CONFIG["frame_bytes"]) == raw)
+        guard(directories)
+        sync(directories, descriptors)
+        retained, started = True, True
+        try:
+            success = capture(source, request, out_fd, err_fd,
+                              descriptors + [row[1] for row in directories])
+        finally:
+            os.fsync(out_fd)
+            os.fsync(err_fd)
+            stdout = read_file(paths[1], out_fd, CONFIG["stdout_bytes"])
+            stderr = read_file(paths[2], err_fd, CONFIG["stderr_bytes"])
+        union = [(paths[0], root_fd, raw), (user_path, user_fd, raw),
+                 (paths[1], out_fd, stdout), (paths[2], err_fd, stderr)]
+        identities = [identity(os.fstat(fd)) for unused, fd, unused_raw in union]
+        for path, fd, expected in union:
+            require(read_file(path, fd, len(expected)) == expected)
+        for (path, fd, unused_raw), expected in zip(union, identities):
+            same_name(path, fd)
+            require(identity(os.fstat(fd)) == expected)
+        guard(directories)
+    except BaseException:
+        success = False
+    finally:
+        try:
+            sync(directories, descriptors)
+            if success:
+                for (path, fd, expected), original in zip(union, identities):
+                    require(identity(os.fstat(fd)) == original)
+                    require(read_file(path, fd, len(expected)) == expected)
+                for (path, fd, unused_raw), original in zip(union, identities):
+                    same_name(path, fd)
+                    require(identity(os.fstat(fd)) == original)
+                guard(directories)
+        except BaseException:
+            success = False
+        for fd in descriptors:
+            os.close(fd)
+        for unused, fd, unused_identity in directories:
+            os.close(fd)
+    result = dict(schema_version=1, kind="FIXED_INITIALIZER_TTY_TERMINAL",
+                  status="HELPER_SUCCEEDED" if success else "FAILED_OR_UNKNOWN",
+                  returncode=0 if success else 1, helper_started=started, files_retained=retained,
+                  frame_sha256=CONFIG["frame_sha256"], helper_sha256=CONFIG["helper_sha256"],
+                  plan_sha256=CONFIG["plan_sha256"], stdout=output(stdout), stderr=output(stderr))
+    raw = canonical(result)
+    require(len(raw) + 1 <= CONFIG["wire_stdout_bytes"])
+    sys.stdout.write(raw.decode("ascii") + chr(10))
+
+if __name__ == "__main__":
+    if PHASE == "stage":
+        os.umask(0o077)
+        stage()
+    else:
+        require(PHASE == "apply")
+        apply()
+'''
+
+
+def tty_material(
+    profile: EnvironmentProfile, registration: dict[str, Any], plan: dict[str, Any],
+    expected_plan_sha256: str, authority_reference: str,
+) -> dict[str, Any]:
+    """Build fixed unauthorised TTY programs locally; never dispatch or claim."""
+    value = profile.model_dump(mode="json")
+    if re.fullmatch(r"[0-9a-f]{64}", expected_plan_sha256) is None or (
+        _sha(_canonical(plan)) != expected_plan_sha256
+    ) or not isinstance(authority_reference, str) or not 1 <= len(authority_reference) <= 512:
+        raise ValueError("initializer_tty_exact_plan_and_actual_authority_required")
+    transitions = _expected_transitions(plan, value, registration)
+    helper = helper_bytes(profile, registration)
+    request = _canonical(dict(plan=plan, expected_plan_sha256=expected_plan_sha256,
+                              operator_authority=authority_reference))
+    frame = helper + request
+    if not 0 < len(helper) <= TTY_LIMITS["source_bytes"] or (
+        not 0 < len(request) <= TTY_LIMITS["request_bytes"]
+        or len(frame) > TTY_LIMITS["frame_bytes"]
+    ):
+        raise ValueError("initializer_tty_frame_bound")
+    receipt = _canonical(dict(schema_version=1, receipt_kind="observed-before-explicit-apply",
+        uid=0, plan_sha256=expected_plan_sha256, plan=plan, approval_evidence=False)) + b"\n"
+    if len(receipt) > repair.LIMIT:
+        raise ValueError("initializer_tty_observed_receipt_bound")
+    limits = dict(TTY_LIMITS, observed_plan_receipt_bytes=len(receipt),
+        user_stage_min_overhead_bytes=32_768, root_stage_min_overhead_bytes=65_536,
+        managed_receipt_min_overhead_bytes=65_536)
+    suffix = _sha(_canonical([expected_plan_sha256, _sha(frame)]))
+    stage_path = profile.paths.managed_root + "/initializer-tty-" + suffix
+    root_path = "/root/cadence-mcp-initializer-tty-" + suffix
+    config = dict(hostname=profile.host.hostname, architecture=profile.host.architecture,
+        user=profile.host.user, managed_root=profile.paths.managed_root,
+        stage_path=stage_path, root_path=root_path, plan_sha256=expected_plan_sha256,
+        frame_sha256=_sha(frame), helper_sha256=_sha(helper), request_sha256=_sha(request),
+        frame_bytes=len(frame), helper_bytes=len(helper), request_bytes=len(request),
+        stdout_bytes=TTY_LIMITS["stdout_bytes"], stderr_bytes=TTY_LIMITS["stderr_bytes"],
+        wire_stdout_bytes=TTY_LIMITS["wire_stdout_bytes"],
+        observed_plan_receipt_bytes=limits["observed_plan_receipt_bytes"],
+        user_stage_min_overhead_bytes=limits["user_stage_min_overhead_bytes"],
+        root_stage_min_overhead_bytes=limits["root_stage_min_overhead_bytes"],
+        managed_receipt_min_overhead_bytes=limits["managed_receipt_min_overhead_bytes"],
+        disk_floor_bytes=profile.limits.disk_floor_bytes,
+        disk_floor_percent=profile.limits.disk_floor_percent)
+    config_literal = "json.loads(" + repr(_canonical(config).decode("ascii")) + ")"
+    programs = {phase + "_entry": _TTY_ENTRY.replace("__TTY_CONFIG__", config_literal).replace(
+        "__TTY_PHASE__", repr(phase)) for phase in ("stage", "apply")}
+    for source in programs.values():
+        compile(source, "fixed-initializer-tty", "exec")
+    postcheck_request = _canonical(dict(plan=plan, expected_plan_sha256=expected_plan_sha256,
+                                        operator_authority=None))
+    programs["postcheck_entry"] = _tty_postcheck_entry(helper, postcheck_request,
+                                                       expected_plan_sha256)
+    return dict(frame=frame, postcheck_frame=helper + postcheck_request,
+        postcheck_request=postcheck_request, stage_path=stage_path, root_path=root_path,
+        pins=dict(plan_sha256=expected_plan_sha256, helper_sha256=_sha(helper),
+                  request_sha256=_sha(request), frame_sha256=_sha(frame),
+                  **{key + "_sha256": _sha(source.encode("ascii"))
+                     for key, source in programs.items()}),
+        limits=limits, transitions=transitions, **programs)
+
+
+def _tty_postcheck_entry(helper: bytes, request: bytes, expected: str) -> str:
+    """Fixed ordinary-user memory framing; only factory-derived inputs reach here."""
+    return '''import sys
+if (not sys.flags.ignore_environment or not sys.flags.no_user_site
+        or not sys.dont_write_bytecode or len(sys.argv) != 1):
+    sys.exit("fixed_isolated_python_entry_required")
+entry = sys.path[0] if sys.path else None
+sys.path[:] = [p for p in sys.path if p and p != entry]
+import os
+cwd = os.path.realpath(os.getcwd())
+sys.path[:] = [p for p in sys.path if os.path.isabs(p) and os.path.realpath(p) != cwd]
+import hashlib
+incoming = getattr(sys.stdin, "buffer", sys.stdin)
+source = incoming.read(__SOURCE_LENGTH__)
+request = incoming.read(__REQUEST_LENGTH__ + 1)
+if (len(source) != __SOURCE_LENGTH__ or len(request) != __REQUEST_LENGTH__
+        or hashlib.sha256(source).hexdigest() != __SOURCE_SHA__
+        or hashlib.sha256(request).hexdigest() != __REQUEST_SHA__):
+    sys.exit("fixed_initializer_memory_frame_pin")
+if sys.version_info[0] == 2:
+    import StringIO
+    sys.stdin = StringIO.StringIO(request)
+else:
+    import io
+    sys.stdin = io.StringIO(request.decode("ascii"))
+sys.argv[:] = ["fixed-initializer-memory-only", "postcheck", __PLAN_SHA__]
+sys.path.insert(0, "/__cadence_initializer_memory_only__")
+namespace = {"__name__": "__main__", "__file__": "/__cadence_initializer_memory_only__.py"}
+eval(compile(source, namespace["__file__"], "exec"), namespace)
+'''.replace("__SOURCE_LENGTH__", str(len(helper))).replace(
+        "__REQUEST_LENGTH__", str(len(request))).replace(
+        "__SOURCE_SHA__", repr(_sha(helper))).replace(
+        "__REQUEST_SHA__", repr(_sha(request))).replace("__PLAN_SHA__", repr(expected))
+
+
+def parse_tty_terminal(raw: bytes, material: dict[str, Any]) -> tuple[int, bytes, bytes]:
+    """Parse one exact envelope, allowing only the PTY's final LF-to-CRLF change."""
+    if len(raw) > TTY_LIMITS["wire_stdout_bytes"] or not raw.endswith(b"\n"):
+        raise ValueError("initializer_tty_terminal_bound_or_framing")
+    body = raw[:-2] if raw.endswith(b"\r\n") else raw[:-1]
+    if b"\n" in body or b"\r" in body:
+        raise ValueError("initializer_tty_terminal_noise")
+    _closed_document(body, max_bytes=TTY_LIMITS["wire_stdout_bytes"])
+    result = json.loads(body)
+    if not isinstance(result, dict) or _canonical(result) != body or set(result) != {
+        "schema_version", "kind", "status", "returncode", "helper_started", "files_retained",
+        "frame_sha256", "helper_sha256", "plan_sha256", "stdout", "stderr",
+    } or type(result["schema_version"]) is not int or result["schema_version"] != 1 or (
+        result["kind"] != "FIXED_INITIALIZER_TTY_TERMINAL"
+        or type(result["returncode"]) is not int or result["returncode"] not in (0, 1)
+        or type(result["helper_started"]) is not bool or type(result["files_retained"]) is not bool
+        or result["status"] != ("HELPER_SUCCEEDED" if result["returncode"] == 0
+                                 else "FAILED_OR_UNKNOWN")
+        or any(result[key] != material["pins"][key]
+               for key in ("frame_sha256", "helper_sha256", "plan_sha256"))
+        or (result["returncode"] == 0 and not (
+            result["helper_started"] and result["files_retained"]))
+    ):
+        raise ValueError("initializer_tty_terminal_binding")
+    streams = []
+    for name in ("stdout", "stderr"):
+        row = result[name]
+        if not isinstance(row, dict) or set(row) != {"bytes", "sha256", "base64"} or (
+            type(row["bytes"]) is not int or not 0 <= row["bytes"] <= TTY_LIMITS[name + "_bytes"]
+            or not isinstance(row["base64"], str) or not isinstance(row["sha256"], str)
+        ):
+            raise ValueError("initializer_tty_terminal_stream_bound")
+        try:
+            decoded = base64.b64decode(row["base64"], validate=True)
+        except (ValueError, TypeError) as error:
+            raise ValueError("initializer_tty_terminal_stream_encoding") from error
+        if len(decoded) != row["bytes"] or _sha(decoded) != row["sha256"] or (
+            base64.b64encode(decoded).decode("ascii") != row["base64"]
+        ):
+            raise ValueError("initializer_tty_terminal_stream_pin")
+        streams.append(decoded)
+    return result["returncode"], streams[0], streams[1]
+
+
 # Python 2.6 entry: fixed package bytes and frozen configuration only. Input
 # contains an exact observed plan, never a source/module/command/target selector.
 ENTRY = '''import sys

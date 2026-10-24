@@ -409,6 +409,38 @@ def _inert_initializer_delta() -> None:
         raise ValueError("installed initializer accepted altered original snapshot")
 
 
+def _inert_initializer_tty() -> None:
+    # Literal parser-only synthetic envelope: no stage, privileged process,
+    # successful metadata repair or real root provenance is established here.
+    pins = {name: str(index) * 64 for index, name in enumerate((
+        "frame_sha256", "helper_sha256", "plan_sha256",
+    ), 1)}
+    streams = {"stdout": b'{"synthetic":true}\n', "stderr": b""}
+    envelope = {
+        "schema_version": 1, "kind": "FIXED_INITIALIZER_TTY_TERMINAL",
+        "status": "HELPER_SUCCEEDED", "returncode": 0,
+        "helper_started": True, "files_retained": True, **pins,
+        **{name: {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+                  "base64": base64.b64encode(raw).decode("ascii")}
+           for name, raw in streams.items()},
+    }
+    canonical = _canonical(envelope)
+    _require(binding_initializer.parse_tty_terminal(canonical + b"\r\n", {"pins": pins})
+             == (0, streams["stdout"], streams["stderr"]), "installed TTY parser CRLF")
+    for bad in (b"noise\r\n" + canonical + b"\r\n", canonical + b"\r\n\r\n",
+                canonical, canonical.replace(b'"returncode":0', b'"returncode":true')):
+        try:
+            binding_initializer.parse_tty_terminal(bad, {"pins": pins})
+        except ValueError:
+            pass
+        else:
+            raise ValueError("installed TTY parser accepted noise or invalid terminal")
+    _require(binding_initializer.TTY_LIMITS["stdout_bytes"] == 8_388_608,
+             "installed TTY stdout bound")
+    _require(binding_initializer.TTY_LIMITS["stderr_bytes"] == 1_048_576,
+             "installed TTY stderr bound")
+
+
 def verify(workspace: Path) -> dict[str, object]:
     _verify_origins()
     workspace.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -432,6 +464,7 @@ def verify(workspace: Path) -> dict[str, object]:
         _inert_storage_admin()
         _inert_initializer_export(request)
         _inert_initializer_delta()
+        _inert_initializer_tty()
     _require(not list(workspace.iterdir()), "synthetic checker wrote unexpected state")
     return {
         "status": "PASS",
@@ -451,6 +484,8 @@ def verify(workspace: Path) -> dict[str, object]:
         "storage_admin_unconfigured_and_inert": True,
         "initializer_export_fixed_installed_sources_and_inert": True,
         "initializer_delta_installed_synthetic_snapshot_and_bad_pin": True,
+        "initializer_tty_installed_parser_crlf_and_noise_rejection": True,
+        "initializer_tty_current_vm_or_administrator_execution": "NOT_TESTED_BY_THIS_CHECKER",
         "initializer_successful_prospective_export": "NOT_TESTED_BY_THIS_CHECKER",
         "new_simulations": 0,
         "new_extractions": 0,
