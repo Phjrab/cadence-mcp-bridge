@@ -34,6 +34,7 @@ jobs:
           CADENCE_CI_EVENT_SHA: ${{ github.sha }}
         run: |
           git fetch --no-tags origin "$CADENCE_CI_EVENT_SHA"
+          git merge-base --is-ancestor "${CADENCE_CI_EVENT_SHA}^1" HEAD
           test "$(git rev-parse "${CADENCE_CI_EVENT_SHA}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')"
       - name: Install fixed uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
@@ -82,6 +83,7 @@ jobs:
           CADENCE_CI_EVENT_SHA: ${{ github.sha }}
         run: |
           git fetch --no-tags origin "$CADENCE_CI_EVENT_SHA"
+          git merge-base --is-ancestor "${CADENCE_CI_EVENT_SHA}^1" HEAD
           test "$(git rev-parse "${CADENCE_CI_EVENT_SHA}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')"
       - name: Install fixed uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
