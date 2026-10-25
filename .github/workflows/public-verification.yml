@@ -19,12 +19,23 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - name: Checkout reviewed event commit
+      - name: Checkout exact candidate commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
           submodules: false
           set-safe-directory: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify pull-request event tree equals candidate tree
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          CADENCE_CI_EVENT_SHA: ${{ github.sha }}
+        run: |
+          git fetch --no-tags origin "$CADENCE_CI_EVENT_SHA"
+          git merge-base --is-ancestor "${CADENCE_CI_EVENT_SHA}^1" HEAD
+          test "$(git rev-parse "${CADENCE_CI_EVENT_SHA}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')"
       - name: Install fixed uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
@@ -37,6 +48,8 @@ jobs:
         run: .venv/Scripts/python.exe -m ruff check src scripts tests
       - name: Type check
         run: .venv/Scripts/python.exe -m mypy src
+      - name: Retained source64 and initializer-only source66 boundary
+        run: .venv/Scripts/python.exe -I -X utf8 scripts/verify-physical-metadata-boundary-v8.py --checkpoint PHYSICAL_METADATA_SOURCE_V8_BINDING_INITIALIZER_01.json
       - name: Synthetic unit tests
         run: |
           $grelUnitTemp = Join-Path $env:RUNNER_TEMP ("grel-unit-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
@@ -55,12 +68,23 @@ jobs:
       PYTHONUTF8: "1"
       UV_NO_PROGRESS: "1"
     steps:
-      - name: Checkout reviewed event commit
+      - name: Checkout exact candidate commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
           submodules: false
           set-safe-directory: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify pull-request event tree equals candidate tree
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          CADENCE_CI_EVENT_SHA: ${{ github.sha }}
+        run: |
+          git fetch --no-tags origin "$CADENCE_CI_EVENT_SHA"
+          git merge-base --is-ancestor "${CADENCE_CI_EVENT_SHA}^1" HEAD
+          test "$(git rev-parse "${CADENCE_CI_EVENT_SHA}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')"
       - name: Install fixed uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
@@ -78,6 +102,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y acl
+      - name: Retained source64 and initializer-only source66 boundary
+        run: .venv/bin/python -I -X utf8 scripts/verify-physical-metadata-boundary-v8.py --checkpoint PHYSICAL_METADATA_SOURCE_V8_BINDING_INITIALIZER_01.json
       - name: Actual files, process death and independent POSIX flock
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_shared_reservations.py tests/unit/test_installation_repair.py tests/unit/test_model_repair_integration.py -q --basetemp "$HOME/grel-reservation-tests"
 
@@ -93,6 +119,27 @@ jobs:
       - name: Explicit candidates, retained captures and durable child identity
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_candidate_contracts.py tests/unit/test_candidate_reports.py tests/unit/test_candidate_batches.py tests/unit/test_candidate_cli.py -q --basetemp "$HOME/explicit-candidate-tests"
 
+      - name: Local binding preparation, bounded frames and owned-process guards
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation.py tests/unit/test_binding_observation_worker.py tests/unit/test_binding_observation_bootstrap.py tests/unit/test_binding_observation_claim.py tests/unit/test_binding_observer_operator.py tests/unit/test_binding_observer_install_check.py tests/unit/test_binding_observation_admission.py tests/unit/test_binding_observation_transport.py tests/unit/test_binding_observer_run.py tests/unit/test_binding_observation_resources.py tests/unit/test_binding_storage_inspection.py tests/unit/test_binding_storage_admin.py -q --basetemp "$HOME/binding-observer-tests"
+
+      - name: Disposable persistent kernel stage limit including unlinked files
+        env:
+          CADENCE_TEST_BOUNDED_FS: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_observation_resources.py -k actual_kernel_capacity -q --basetemp "$HOME/binding-kernel-storage-tests"
+
+      - name: Disposable fixed administrator apply and preserved-image recovery
+        env:
+          CADENCE_TEST_STORAGE_ADMIN: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_storage_admin.py -k actual_disposable_admin -q --basetemp "$HOME/binding-storage-admin-tests"
+
+      - name: Initializer exact metadata transitions and immutable library baseline
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py tests/unit/test_binding_initializer_entry.py tests/unit/test_binding_initializer_rebind.py tests/unit/test_binding_initializer_tty.py tests/unit/test_binding_initializer_deadlines.py -q --basetemp "$HOME/binding-initializer-tests"
+
+      - name: Disposable initializer partial resume, repeat and exact rollback
+        env:
+          CADENCE_TEST_INITIALIZER_ADMIN: "1"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_binding_initializer.py tests/unit/test_binding_initializer_export.py -k actual_disposable_initializer_admin -q --basetemp "$HOME/binding-initializer-admin-tests"
+
       - name: Generic complete AC projection and sampled crossing contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_generic_analog.py tests/unit/test_generic_offset.py tests/unit/test_generic_slew.py tests/unit/test_generic_loop.py tests/unit/test_generic_measurements.py -q --basetemp "$HOME/post07-analog-tests"
 
@@ -106,7 +153,7 @@ jobs:
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_domain_provisioning.py tests/unit/test_fresh_domain.py tests/unit/test_retained_result_limit.py -q --basetemp "$HOME/grel-domain-tests"
 
       - name: Local design revision, inverter plan and physical evidence contracts
-        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py tests/unit/test_physical_metadata.py tests/unit/test_physical_metadata_framing.py tests/unit/test_physical_metadata_boundary.py tests/unit/test_physical_metadata_boundary_v2.py tests/unit/test_physical_metadata_boundary_v3.py tests/unit/test_physical_metadata_boundary_v4.py tests/unit/test_physical_metadata_boundary_v5.py tests/unit/test_physical_metadata_boundary_v6.py tests/unit/test_physical_metadata_followup.py tests/unit/test_physical_ancestor_repair.py -q --basetemp "$HOME/m2-foundation-tests"
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_design_revisions.py tests/unit/test_schematic_plan.py tests/unit/test_physical_capabilities.py tests/unit/test_physical_metadata.py tests/unit/test_physical_metadata_framing.py tests/unit/test_physical_metadata_boundary.py tests/unit/test_physical_metadata_boundary_v2.py tests/unit/test_physical_metadata_boundary_v3.py tests/unit/test_physical_metadata_boundary_v4.py tests/unit/test_physical_metadata_boundary_v5.py tests/unit/test_physical_metadata_boundary_v6.py tests/unit/test_physical_metadata_boundary_v7.py tests/unit/test_physical_metadata_boundary_v8.py tests/unit/test_physical_metadata_followup.py tests/unit/test_physical_ancestor_repair.py -q --basetemp "$HOME/m2-foundation-tests"
 
       - name: Bounded CDF data, owned generator and retained source allowance
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_m2_cdf.py tests/unit/test_m2_inverter.py tests/unit/test_m2_native_corrections.py -q --basetemp "$HOME/m2-cdf-tests"

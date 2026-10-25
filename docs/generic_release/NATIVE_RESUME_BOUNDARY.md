@@ -1,3 +1,90 @@
+## Source63 terminal evidence conservation, 2026-10-21
+
+Source63/checkpoint03 corrects review4337806078: every original evidence pin and
+native bundle is revalidated after prospective output publication, before terminal
+success. Drift rejects and retains partial output; no replacement becomes a new
+baseline. All60 rebind regressions pass locally, including five publication-time
+mutations. Exact-head hosted, installed and review receipts remain separate gates
+recorded on draftPR164; they are not current-VM/Python2.6/Cadence qualification.
+Source use is63/64 without reset/refund. Current runtime/init trust, bounded stage,
+finite binding observation and the selected three fresh DC runs remain unfinished.
+No new VM/admin/EDA/reservation action, PR164 merge or publication is authorized
+by these records. Earlier entries below keep their historical source scope.
+
+## Pending source62 local registration proposal, 2026-10-21
+
+Continue the same draftPR164; source61 consumption and the source64 ceiling stay
+additive. Pending source62 exports only a prospective registration from the
+original native registration/bundle, exact observed plan and ordinary postcheck.
+It calculates allowed mode-only tree pins for every route and installs nothing;
+retained stdout establishes no root provenance, runtime trust or execution grant.
+Source61 changed-path local checks and hosted Linux CI passed; its Windows export
+fixture owner failure is retained and the fixture now follows the ordinary account.
+Final source62 tests/installed/CI/review are pending. No current-VM/admin/EDA action
+or actual DC job follows. See docs/BINDING_INITIALIZER_METADATA_V1.md; history below
+retains its original source scope.
+
+## Initializer-only source64 authority, 2026-10-21
+
+The direct user reply raises only the source ceiling from60 to64, preserving all
+60 consumed versions. At most four additions cover initializer trust inspection,
+exact permission remediation, allowed metadata-delta verification and review
+corrections. V5/V7 record this authority without rewriting prior policies or
+checkpoints. New VM access, deployment/admin application, OCEAN, simulations,
+PR164 merge and publication remain separately gated. Existing ledger, failures,
+spent read claims and selected three DC input vectors remain unchanged.
+
+Source61 is being qualified on the same feature branch. Its fixed local exporter
+and initializer recipe reuse the existing accounting/receipt engine and compare
+whole registered libraries against immutable originals, permitting only selected
+mode/ACL changes. No registration is silently refreshed, and metadata comparison
+does not establish behavior/runtime trust. Current-VM qualification, bounded-stage
+provisioning, source-binding observation and the actual three DC jobs are still
+unfinished. Earlier dated statements below retain their historical scope.
+
+## Owned-group inventory correction overlay, 2026-10-20
+
+Continue same draftPR164 with additive source55/checkpoint11 for review4315484359.
+Current direct user approval permits at most3 fixed read-only VM checks of
+accounting/disk, protected source/library bounds and runtime/init trust metadata,
+each at most60 seconds. The duplicate affirmative answers share this one scope.
+No EDA, mutation, reservation, PR164 merge or publication is approved by it.
+Source54's hosted kernel-limit test passes after its test-only free-fragment
+correction; retain the initial failure. The pinned process helper also needs
+bounded inventory at observer polling/termination call sites, without changing
+its bytes, identity checks or shared os module. Every scan must close/restore on
+all exits; expired outer/cancelled execution still permits a bounded cleanup scan.
+Unverifiable termination retains the lifetime lock and spent status. Actual VM
+access/trust/storage setup, observation and3DC remain unestablished. No new VM,
+EDA, reservation, PR164 merge or publication authority; source history is55/60.
+
+## Resource-enforced observer continuation, 2026-10-19
+
+PR164 source54/checkpoint10 retains source53 and all previous counters/failures.
+Process inspection must stream within4096 entries/deadline/cancellation. Actual
+observation also requires a separate persistent kernel-bounded8MiB/256-inode
+stage filesystem; scans alone cannot enforce writes or open-unlinked capacity.
+Current-VM provisioning is unestablished and no automatic mount/format/resize is
+implemented. The fixed administrator provisioning mechanism must be selected
+after current facts are known. Hosted disposable filesystem tests are synthetic
+CI infrastructure evidence, not current-VM or Cadence evidence. Runtime/init
+trust, current library/ledger/disk facts and finite actual authority remain gates.
+No VM/SSH/EDA/claim/reservation or PR164 merge/publication follows from this entry.
+
+## Current experimental observer continuation, 2026-10-19
+
+Stable2.1.0/36f7583 is already published. Current development2.2.0.dev0 maina713eb6
+includes PR163; draftPR164 continues0ba16a9 with additive source53/checkpoint09.
+Its explicit operator run connects fixed bootstrap/admission, existing claims/
+resource lock/accounting, owned stage and terminal evidence. Execution trust is
+separately reviewed standard-VM operator evidence, not declared hashes proving a
+complete runtime closure. Current actual observation/candidate acceptance is not
+established. No VM access/deploy/EDA/claim/reservation occurs in software checks.
+Preserve current ledgers, policies, failures and historical authorization; do not
+reset source52/60 or treat metadata-only allowances as OCEAN authority. PR164 merge
+and any new exact candidate publication remain separate decisions. See
+../BINDING_OBSERVER_OPERATION_V1.md; dated older checkpoints below retain history.
+
 ## Actual Codex restart recovery completed, 2026-10-13
 
 Actual corrected5e/97fa Codex restart status/result/identical-ID submission PASS;

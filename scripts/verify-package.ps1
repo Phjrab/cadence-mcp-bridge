@@ -112,6 +112,10 @@ try {
         --workspace (Join-Path $resolvedTemporaryRoot "candidates-acceptance")
     if ($LASTEXITCODE -ne 0) { throw "Installed synthetic candidate workflow acceptance failed." }
 
+    & $python -I -X utf8 (Join-Path $projectRoot "scripts\verify-binding-observer-install.py") `
+        --workspace (Join-Path $resolvedTemporaryRoot "binding-observer-acceptance")
+    if ($LASTEXITCODE -ne 0) { throw "Installed local binding-observer acceptance failed." }
+
     # Same-version artifact reinstall is preservation evidence, not N-to-N+1 qualification.
     & $uv pip install --no-deps --reinstall-package cadence-mcp-bridge --link-mode copy `
         --python $python $wheel[0].FullName
