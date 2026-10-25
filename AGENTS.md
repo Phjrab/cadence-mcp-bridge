@@ -1,3 +1,19 @@
+## Source66 initializer timer-only capacity, 2026-10-25
+
+The direct user reply permits at most two further initializer timer/progress
+source versions, preserving all64 consumed versions and their immutable history.
+The additive V6 limit and V8 guard anchor source64 at21f56d4b70. Source65 is pending
+qualification; source66 is reserved for necessary scoped review corrections.
+This extends local implementation/testing capacity only. It grants no new VM
+access, staging, administrator apply, observation, simulation, merge or release.
+Do not reuse a spent plan, manufacture admission, reset counters or weaken guards.
+
+Initializer-only fixed time budgets and bounded failure diagnostics must preserve
+whole-library checks, accounting identity and terminal success semantics. A longer
+maximum wait is not a measured completion prediction or execution authorization.
+No private VM outcome or proprietary detail may be published as routine PR prose.
+Earlier records below preserve their historical source/time scope.
+
 ## Source64 initializer TTY transport in local qualification, 2026-10-23
 
 2026-10-24 validation overlay: preserve the sandbox-denied/partial test logs and

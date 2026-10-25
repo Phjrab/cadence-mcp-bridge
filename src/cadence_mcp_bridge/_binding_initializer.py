@@ -16,9 +16,92 @@ LIBRARIES = 8
 ENTRIES = 8192
 BYTES = 67108864
 TARGETS = 128
+INSPECTION_SECONDS = 60
+MUTATION_SECONDS = 3600
+DIAGNOSTIC_BYTES = 2048
 
 
-def build_accounting(profile, registration, storage):
+class Progress(object):  # noqa: UP004 -- Python2.6 new-style class
+    """Bounded failure context, never an approval or a successful receipt."""
+    PHASES = ("initializing", "plan_inventory", "request_validation", "accounting_entry",
+              "initial_guard", "receipt_authentication", "pre_mutation_guard",
+              "target_mutation", "completion_verification", "final_verification", "postcheck")
+
+    def __init__(self, operation):
+        if operation not in ("plan", "postcheck", "apply", "rollback"):
+            raise ValueError("initializer_progress_operation")
+        self.operation = operation
+        self.budget_seconds = (MUTATION_SECONDS if operation in ("apply", "rollback")
+                               else INSPECTION_SECONDS)
+        self.started = os.times()[4]
+        self.deadline = self.started + self.budget_seconds
+        self.cancelled = False
+        self.last_phase = "initializing"
+        self.union_passes_started = self.union_passes_completed = self.library_ordinal = 0
+        self.maximum_union_passes = 16 + 8 * TARGETS
+        self.mutation_may_have_started = False
+
+    def check(self):
+        if self.cancelled or os.times()[4] >= self.deadline:
+            raise ValueError("initializer_deadline_or_cancellation_retain_partial_evidence")
+
+    def phase(self, name):
+        if name not in self.PHASES:
+            raise ValueError("initializer_progress_phase")
+        self.last_phase = name
+        self.check()
+
+    def bind_targets(self, count):
+        if type(count) is not int or not 1 <= count <= TARGETS:
+            raise ValueError("initializer_progress_target_bound")
+        bound = 16 + 8 * count
+        if self.union_passes_started > bound:
+            raise ValueError("initializer_progress_scan_bound")
+        self.maximum_union_passes = bound
+        self.check()
+
+    def start_pass(self):
+        self.check()
+        if self.union_passes_started != self.union_passes_completed or (
+            self.union_passes_started >= self.maximum_union_passes
+        ):
+            raise ValueError("initializer_progress_scan_bound")
+        self.union_passes_started += 1
+        self.library_ordinal = 0
+
+    def library(self, ordinal):
+        if type(ordinal) is not int or not 1 <= ordinal <= LIBRARIES:
+            raise ValueError("initializer_progress_library_bound")
+        self.library_ordinal = ordinal
+        self.check()
+
+    def complete_pass(self):
+        self.check()
+        if self.union_passes_started != self.union_passes_completed + 1:
+            raise ValueError("initializer_progress_scan_bound")
+        self.union_passes_completed += 1
+        self.library_ordinal = 0
+
+    def enter_mutation(self):
+        self.phase("target_mutation")
+        # Conservative latch: an exception after this point cannot prove zero changes.
+        self.mutation_may_have_started = True
+
+    def report(self):
+        # os.times elapsed time is used on the supported legacy Linux VM. A
+        # diagnostic is bounded context, not proof of termination or file state.
+        elapsed = max(0, min(2147483647, int((os.times()[4] - self.started) * 1000)))
+        return dict(schema_version=1, kind="INITIALIZER_FAILURE_PROGRESS",
+                    operation=self.operation, phase=self.last_phase,
+                    union_passes_started=self.union_passes_started,
+                    union_passes_completed=self.union_passes_completed,
+                    maximum_union_passes=self.maximum_union_passes,
+                    library_ordinal=self.library_ordinal, elapsed_ms=elapsed,
+                    budget_seconds=self.budget_seconds,
+                    mutation_may_have_started=self.mutation_may_have_started)
+
+
+def build_accounting(profile, registration, storage, progress=None):
     """Reuse existing exact accounting guards without formatter/trust assertions."""
     class InitializerAccounting(storage.StorageAdmin):
         def __init__(self):
@@ -34,9 +117,15 @@ def build_accounting(profile, registration, storage):
                 architecture=self.config["architecture"],
             )))
             self.directories, self.fds = {}, []
-            self.deadline = os.times()[4] + 60
+            self.deadline = (progress.deadline if progress is not None
+                             else os.times()[4] + INSPECTION_SECONDS)
             self.cancelled, self.lock = False, None
             self.protected, self.absent_protected = {}, []
+
+        def check(self):
+            if progress is not None:
+                progress.check()
+            storage.StorageAdmin.check(self)
 
     return InitializerAccounting()
 
@@ -148,7 +237,7 @@ def _namespace(snapshots):
     return sorted(result)
 
 
-def _observe(libraries, copying, core):
+def _observe(libraries, copying, core, progress=None):
     before_limits = copying.MAX_ENTRIES, copying.MAX_BYTES
     original_os = copying.os
     bounded_os = types.ModuleType("initializer_copy_os")
@@ -165,7 +254,11 @@ def _observe(libraries, copying, core):
     copying.os = bounded_os
     snapshots, remaining_entries, remaining_bytes = [], ENTRIES, BYTES
     try:
-        for library in libraries:
+        if progress is not None:
+            progress.start_pass()
+        for ordinal, library in enumerate(libraries, 1):
+            if progress is not None:
+                progress.library(ordinal)
             if remaining_entries < 1 or remaining_bytes < 0:
                 raise ValueError("initializer_combined_bound")
             copying.MAX_ENTRIES, copying.MAX_BYTES = min(4096, remaining_entries), remaining_bytes
@@ -173,13 +266,21 @@ def _observe(libraries, copying, core):
             remaining_entries -= observed["entries"]
             remaining_bytes -= observed["bytes"]
             snapshots.append([copy.deepcopy(library), observed])
+        if progress is not None:
+            progress.complete_pass()
         namespace = _namespace(snapshots)
         # A later library/read must not invalidate any earlier member. The
         # existing helper additionally checks held regular descriptors.
-        for library, first in snapshots:
+        if progress is not None:
+            progress.start_pass()
+        for ordinal, (library, first) in enumerate(snapshots, 1):
+            if progress is not None:
+                progress.library(ordinal)
             copying.MAX_ENTRIES, copying.MAX_BYTES = first["entries"], first["bytes"]
             if copying.dependency_snapshot(library["path"]) != first:
                 raise ValueError("initializer_tree_scan_drift")
+        if progress is not None:
+            progress.complete_pass()
         if _namespace(snapshots) != namespace:
             raise ValueError("initializer_namespace_scan_drift")
         return snapshots, namespace
@@ -209,11 +310,11 @@ def _selected(profile, snapshots, core):
     return sorted(set(roots)), sorted(set(paths))
 
 
-def inventory(profile, registration, copying, core, enforce_registered=True):
+def inventory(profile, registration, copying, core, enforce_registered=True, progress=None):
     libraries = _libraries(profile, registration, core)
     core.verify_unlisted_ancestors([row["path"] for row in
         _installation_libraries(profile, libraries, core)])
-    snapshots, namespace = _observe(libraries, copying, core)
+    snapshots, namespace = _observe(libraries, copying, core, progress)
     ancestors = _ancestors(profile, libraries, core)
     if enforce_registered and any(
         snap["tree_sha256"] != library["tree_sha256"] for library, snap in snapshots
@@ -237,13 +338,16 @@ def inventory(profile, registration, copying, core, enforce_registered=True):
     return core.bounded_inventory(result)
 
 
-def verify_delta(original, copying, core, rollback=False, partial=False, final_guard=None):
+def verify_delta(original, copying, core, rollback=False, partial=False, final_guard=None,
+                 progress=None):
     if original.get("recipe_id") != RECIPE or original.get("schema_version") != 2:
         raise ValueError("initializer_fixed_recipe_required")
+    if progress is not None:
+        progress.bind_targets(len(original["records"]))
     libraries = _libraries(original["profile"], original["registration"], core)
     core.verify_unlisted_ancestors([row["path"] for row in
         _installation_libraries(original["profile"], libraries, core)])
-    observed, namespace = _observe(libraries, copying, core)
+    observed, namespace = _observe(libraries, copying, core, progress)
     roots, paths = _selected(original["profile"], observed, core)
     if roots != original["scope"]["installation_roots"] or paths != original["scope"]["paths"]:
         raise ValueError("initializer_fixed_scope_drift")
@@ -346,7 +450,7 @@ def verify_delta(original, copying, core, rollback=False, partial=False, final_g
         receipt_provenance_assessed=False)
 
 
-def mutate(request, copying, core, rollback=False, accounting=None):
+def mutate(request, copying, core, rollback=False, accounting=None, progress=None):
     if accounting is None or accounting.lock is None:
         raise ValueError("initializer_entered_accounting_guard_required")
     if os.getuid() != 0 or os.geteuid() != 0:
@@ -371,10 +475,14 @@ def mutate(request, copying, core, rollback=False, accounting=None):
             raise ValueError("initializer_accounting_host_binding")
 
     def guard():
+        if progress is not None:
+            progress.check()
         accounting.guard()
-        verify_delta(original, copying, core, rollback, True)
+        verify_delta(original, copying, core, rollback, True, progress=progress)
         accounting.guard()
 
+    if progress is not None:
+        progress.phase("initial_guard")
     guard()
     # Use only a fresh authenticated private core module. Neither the global
     # product module nor its fixed installation recipe is widened.
@@ -382,21 +490,32 @@ def mutate(request, copying, core, rollback=False, accounting=None):
     events = []
     try:
         core.completion_inventory = lambda plan: inventory(
-            plan["profile"], plan["registration"], copying, core, False)["plan"]
+            plan["profile"], plan["registration"], copying, core, False,
+            progress=progress)["plan"]
         core.emit = lambda event: events.append(event)
+        if progress is not None:
+            progress.phase("receipt_authentication")
         core.authenticate_applied_plan(request, rollback)
+        if progress is not None:
+            progress.phase("pre_mutation_guard")
         guard()
+        if progress is not None:
+            progress.enter_mutation()
         core._mutate_locked(request, rollback, True, guard)
         # Recheck selected final ACLs as well as every tree metadata row. The
         # generic completion already conserves each selected content/owner.
+        if progress is not None:
+            progress.phase("completion_verification")
         core.verify_completed_targets(original, rollback, True)
         guard()
         core.verify_applied_receipt(request)
         accounting.guard()
         # Finish with a strict projection. A later receipt/completion read must
         # not restore a selected before-state and still yield apply success.
+        if progress is not None:
+            progress.phase("final_verification")
         delta = verify_delta(original, copying, core, rollback,
-                             final_guard=accounting.guard)
+                             final_guard=accounting.guard, progress=progress)
         delta["changed"] = sum(1 for event in events if event.get("event") == "changed")
         delta["metadata_changes_explicit"] = True
         delta["observed_plan_sha256"] = core.digest(original)

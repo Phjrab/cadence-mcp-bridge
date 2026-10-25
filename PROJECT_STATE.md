@@ -1,3 +1,19 @@
+## Source65 initializer timing work, 2026-10-25
+
+The user's local timer/progress approval raises the source ceiling64 to66 while
+retaining64 consumed versions. Source65 connects one initializer helper deadline
+to its accounting guard, a finite enclosing TTY budget and phase-specific local
+transport limits. Failure-only diagnostics preserve empty successful stderr and
+the original terminal/result contracts. All content/metadata/ACL/accounting guards
+and historical policies/checkpoints remain intact. Final validation is pending.
+
+This code work is not a current-VM repair, runtime/init qualification, source-binding
+observation or any of the three selected DC jobs. Those actual gates remain
+unfinished. No new VM action, retry, administrator application, merge or public
+release is authorized. Source66 remains available only for scoped correction;
+consumption is additive. See BINDING_INITIALIZER_METADATA_V1.md and V6/V8 policy.
+Earlier entries retain their original source and time scope.
+
 ## Source64 initializer TTY transport in local qualification, 2026-10-23
 
 2026-10-24: the source64 checkpoint04 is additive64/64. Final qualification uses

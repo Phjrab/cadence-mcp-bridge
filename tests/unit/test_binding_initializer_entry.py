@@ -6,12 +6,14 @@ import copy
 import hashlib
 import io
 import json
+import os
 import sys
 import types
 from types import SimpleNamespace
 
 import pytest
 
+from cadence_mcp_bridge import _binding_initializer as recipe
 from cadence_mcp_bridge import binding_initializer as exporter
 
 LIMIT = 16_777_216
@@ -26,14 +28,18 @@ import json
 LIMIT = 16777216
 TEXT = (str,)
 def canonical(value):
+    if isinstance(value, dict) and value.get("kind", "").startswith("IN_MEMORY_"):
+        _serialize_result()
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii")
 def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 '''
-RECIPE = b'''def inventory(profile, registration, copying, core):
+RECIPE = b'''def inventory(profile, registration, copying, core, progress=None):
+    _progress.append(progress)
     _events.append(("inventory", profile, registration, copying.ROLE))
     return dict(kind="IN_MEMORY_INVENTORY", execution_authorized=False)
-def verify_delta(plan, copying, core):
+def verify_delta(plan, copying, core, progress=None):
+    _progress.append(progress)
     _events.append(("postcheck", plan, copying.ROLE))
     return dict(kind="IN_MEMORY_POSTCHECK", execution_authorized=False)
 class Accounting(object):
@@ -41,10 +47,12 @@ class Accounting(object):
         _events.append(("accounting_enter",))
     def close(self):
         _events.append(("accounting_close",))
-def build_accounting(profile, registration, storage):
+def build_accounting(profile, registration, storage, progress=None):
+    _progress.append(progress)
     _events.append(("build_accounting", profile, registration, storage.ROLE))
     return Accounting()
-def mutate(request, copying, core, rollback=False, accounting=None):
+def mutate(request, copying, core, rollback=False, accounting=None, progress=None):
+    _progress.append(progress)
     _events.append(("receipt_and_mutation_dispatch", rollback, request["operator_authority"]))
     if _mutation_failure is not None:
         raise _mutation_failure
@@ -75,6 +83,7 @@ class BoundedInput(io.StringIO):
 def entry(monkeypatch):
     """Run actual ENTRY guards, replacing every executable helper with pure stubs."""
     events = []
+    progresses = []
     resources = {"core": CORE, "copying": b'ROLE = "copying"\n',
                  "storage": b'ROLE = "storage"\n', "recipe": RECIPE}
     config = {"profile": copy.deepcopy(PROFILE), "registration": copy.deepcopy(REGISTRATION)}
@@ -86,7 +95,11 @@ def entry(monkeypatch):
         name: hashlib.sha256(raw).hexdigest() for name, raw in resources.items()}))
     namespace = {"__name__": "in_memory_initializer_entry"}
     exec(compile(source, "in_memory_initializer_entry.py", "exec"), namespace)
-    state = SimpleNamespace(uid=500, euid=500, operator_uid=500, failure=None)
+    state = SimpleNamespace(uid=500, euid=500, operator_uid=500, failure=None, now=100.0,
+                            serialization_seconds=0)
+    recipe_os = SimpleNamespace(**{name: getattr(os, name) for name in dir(os)})
+    recipe_os.times = lambda: (0, 0, 0, 0, state.now)
+    monkeypatch.setattr(recipe, "os", recipe_os)
     account_module = types.ModuleType("pwd")
     account_module.getpwnam = lambda name: SimpleNamespace(pw_uid=state.operator_uid)
     monkeypatch.setitem(sys.modules, "pwd", account_module)
@@ -98,13 +111,21 @@ def entry(monkeypatch):
     def module(name):
         result = types.ModuleType(name)
         result._events = events
+        result._progress = progresses
         result._mutation_failure = state.failure
+        result._serialize_result = lambda: setattr(
+            state, "now", state.now + state.serialization_seconds)
+        result.Progress = recipe.Progress
+        result.INSPECTION_SECONDS = recipe.INSPECTION_SECONDS
+        result.MUTATION_SECONDS = recipe.MUTATION_SECONDS
+        result.DIAGNOSTIC_BYTES = recipe.DIAGNOSTIC_BYTES
         return result
 
     namespace.update(
         os=SimpleNamespace(name="posix", uname=lambda: (
             "Linux", PROFILE["host"]["hostname"], "unused", "unused", "i686"),
-            getuid=lambda: state.uid, geteuid=lambda: state.euid),
+            getuid=lambda: state.uid, geteuid=lambda: state.euid,
+            times=lambda: (0, 0, 0, 0, state.now)),
         signal=SimpleNamespace(SIGALRM=14,
             signal=lambda *args: events.append(("signal_handler",)),
             alarm=lambda seconds: events.append(("alarm", seconds))),
@@ -122,13 +143,14 @@ def entry(monkeypatch):
         if operation != "plan":
             args.append(expected if argv_digest is None else argv_digest)
         output = io.StringIO()
-        namespace["sys"] = SimpleNamespace(argv=args, stdin=stream, stdout=output)
-        state.stdin, state.stdout = stream, output
+        error = io.StringIO()
+        namespace["sys"] = SimpleNamespace(argv=args, stdin=stream, stdout=output, stderr=error)
+        state.stdin, state.stdout, state.stderr = stream, output, error
         namespace["main"]()
         return json.loads(output.getvalue())
 
     return SimpleNamespace(run=run, namespace=namespace, events=events, state=state,
-                           config=config)
+                           config=config, progresses=progresses)
 
 
 def names(entry):
@@ -173,7 +195,8 @@ def test_guard_is_closed_when_in_memory_mutation_raises(entry):
     entry.state.failure = RuntimeError("synthetic interruption")
     with pytest.raises(RuntimeError, match="synthetic interruption"):
         entry.run("apply", authority="synthetic authorization")
-    assert entry.events[-1] == ("accounting_close",)
+    assert "accounting_close" in names(entry)
+    assert entry.events[-1] == ("alarm", 0)
 
 
 @pytest.mark.parametrize("name", ["core", "copying", "storage", "recipe"])
@@ -245,3 +268,46 @@ def test_unregistered_mixed_identity_and_root_operator_reject_before_helper_comp
     with pytest.raises(ValueError, match="registered_operator_or_administrator_required"):
         entry.run("plan")
     assert "compile" not in names(entry)
+
+
+@pytest.mark.parametrize("operation,budget", [
+    ("plan", 60), ("postcheck", 60), ("apply", 3600), ("rollback", 3600),
+])
+def test_entry_uses_operation_budget_and_success_preserves_empty_stderr(entry, operation, budget):
+    if operation in ("apply", "rollback"):
+        entry.state.uid = entry.state.euid = 0
+    entry.run(operation, authority=("SYNTHETIC" if operation in ("apply", "rollback") else None))
+    assert ("alarm", budget) in entry.events
+    assert entry.events[-1] == ("alarm", 0)
+    assert entry.state.stderr.getvalue() == ""
+    assert all(progress is entry.progresses[0] for progress in entry.progresses)
+    assert entry.progresses[0].budget_seconds == budget
+
+
+def test_entry_failure_has_one_bounded_diagnostic_and_rethrows_original_exception(entry):
+    entry.state.uid = entry.state.euid = 0
+    message = "/private/cadence/library/executable secret exception detail"
+    entry.state.failure = RuntimeError(message)
+    with pytest.raises(RuntimeError, match="secret exception detail"):
+        entry.run("apply", authority="SYNTHETIC")
+    raw = entry.state.stderr.getvalue().encode("ascii")
+    assert len(raw) <= 2048 and raw.count(b"INITIALIZER_FAILURE_PROGRESS ") == 1
+    assert b"/private" not in raw and b"secret" not in raw
+    report = json.loads(raw.removeprefix(b"INITIALIZER_FAILURE_PROGRESS "))
+    assert report["operation"] == "apply"
+    assert report["budget_seconds"] == 3600
+    assert entry.state.stdout.getvalue() == ""
+    assert entry.events[-1] == ("alarm", 0)
+    assert names(entry).count("receipt_and_mutation_dispatch") == 1
+    assert names(entry).count("accounting_close") == 1
+
+
+def test_slow_result_serialization_cannot_publish_helper_success(entry):
+    entry.state.uid = entry.state.euid = 0
+    entry.state.serialization_seconds = 3600
+    with pytest.raises(ValueError, match="deadline"):
+        entry.run("apply", authority="SYNTHETIC")
+    assert entry.state.stdout.getvalue() == ""
+    assert json.loads(entry.state.stderr.getvalue().removeprefix(
+        "INITIALIZER_FAILURE_PROGRESS "))["elapsed_ms"] == 3_600_000
+    assert names(entry).count("accounting_close") == 1

@@ -215,7 +215,7 @@ def test_parent_capture_caps_direct_fd_streams_and_kills_only_owned_pid(material
     namespace["signal"] = SimpleNamespace(SIGKILL=9)
     namespace["select"] = SimpleNamespace(select=lambda readers, *_: (readers, [], []))
     namespace["write_file"] = lambda fd, raw: written.__setitem__(fd, written[fd] + raw)
-    assert namespace["capture"](b"", b"", 20, 21, [20, 21]) is False
+    assert namespace["capture"](b"", b"", 20, 21, [20, 21], 65) is False
     assert written == {20: b"abc", 21: b"xy"}
     assert len(killed) == 1 and killed[0][0] == 123
 
@@ -232,12 +232,13 @@ def test_capture_child_closes_all_inherited_spool_and_directory_fds(material, mo
         raise ChildExit
 
     namespace["os"] = SimpleNamespace(pipe=lambda: next(pipes), fork=lambda: 0,
-        close=closed.append, dup2=lambda *_: None, _exit=exit_child)
+        close=closed.append, dup2=lambda *_: None, _exit=exit_child,
+        times=lambda: (0, 0, 0, 0, 0))
     namespace["sys"] = SimpleNamespace(stdout=SimpleNamespace(flush=lambda: None),
                                        stderr=SimpleNamespace(flush=lambda: None))
     namespace["child"] = lambda *_: None
     with pytest.raises(ChildExit):
-        namespace["capture"](b"", b"", 20, 21, [20, 21, 22, 23, 22])
+        namespace["capture"](b"", b"", 20, 21, [20, 21, 22, 23, 22], 65)
     assert all(fd in closed for fd in (20, 21, 22, 23))
     assert 1 not in closed and 2 not in closed
 
@@ -262,11 +263,61 @@ def test_owned_linux_actual_fork_captures_direct_fd_writes(
     out_path, err_path = tmp_path / "stdout", tmp_path / "stderr"
     with out_path.open("xb", buffering=0) as out, err_path.open("xb", buffering=0) as err:
         success = namespace["capture"](b"", b"", out.fileno(), err.fileno(),
-                                       [out.fileno(), err.fileno()])
+                                       [out.fileno(), err.fileno()], os.times()[4] + 65)
         assert success is not overflow
     assert out_path.read_bytes() == out_raw[:16]
     # A stopped overflowing helper may have exited before its second write.
     assert err_path.read_bytes() in (b"", err_raw) if overflow else err_path.read_bytes() == err_raw
+
+
+@pytest.mark.skipif(os.name != "posix", reason="Owned Linux bounded fork cancellation")
+def test_owned_linux_capture_uses_elapsed_bootstrap_deadline_and_retains_partial_output(
+    material, monkeypatch, tmp_path,
+):
+    namespace = remote(material, monkeypatch)
+    kills = []
+    proxy = SimpleNamespace(**{name: getattr(os, name) for name in dir(os)})
+
+    def kill(pid, sig):
+        kills.append((pid, sig))
+        os.kill(pid, sig)
+
+    proxy.kill = kill
+    namespace["os"] = proxy
+
+    def synthetic_child(*_):
+        os.write(1, b"retained owned child output\n")
+        # The parent has milliseconds remaining and must terminate this owned
+        # child, rather than replacing that elapsed budget with a fresh65s.
+        namespace["select"].select([], [], [], 5)
+
+    namespace["child"] = synthetic_child
+    namespace["sys"] = SimpleNamespace(stdout=SimpleNamespace(flush=lambda: None),
+                                       stderr=SimpleNamespace(flush=lambda: None))
+    before = os.times()[4]
+    out_path, err_path = tmp_path / "stdout", tmp_path / "stderr"
+    with (
+        out_path.open("xb", buffering=0) as out,
+        err_path.open("xb", buffering=0) as err,
+        pytest.raises(ValueError, match="tty_rejected"),
+    ):
+        namespace["capture"](b"", b"", out.fileno(), err.fileno(),
+            [out.fileno(), err.fileno()], before + 0.1)
+    assert os.times()[4] - before < 2
+    assert len(kills) == 1 and kills[0][0] != os.getpid()
+    assert out_path.read_bytes() in (b"", b"retained owned child output\n")
+    assert err_path.read_bytes() == b""
+
+
+def test_factory_exposes_coherent_bounded_helper_and_transport_budgets(material):
+    limits = material[0]["limits"]
+    assert {key: limits[key] for key in (
+        "helper_mutation_seconds", "helper_inspection_seconds", "apply_bootstrap_seconds",
+        "apply_ssh_seconds", "stage_ssh_seconds", "postcheck_ssh_seconds", "cleanup_seconds",
+        "diagnostic_bytes",
+    )} == dict(helper_mutation_seconds=3600, helper_inspection_seconds=60,
+        apply_bootstrap_seconds=3660, apply_ssh_seconds=3720, stage_ssh_seconds=120,
+        postcheck_ssh_seconds=120, cleanup_seconds=5, diagnostic_bytes=2048)
 
 
 @pytest.mark.skipif(os.name != "posix", reason="Owned Linux no-follow/file metadata seam")
@@ -376,11 +427,11 @@ def test_stage_late_same_content_metadata_drift_cannot_publish_success(material,
         namespace["stage"]()
 
 
-@pytest.mark.parametrize("drift", ["none", "bytes", "metadata"])
+@pytest.mark.parametrize("drift", ["none", "bytes", "metadata", "deadline", "close_deadline"])
 def test_apply_final_sync_revalidates_entire_terminal_union(material, monkeypatch, drift):
     namespace = remote(material, monkeypatch)
     raw = material[0]["frame"]
-    state = {"syncs": 0, "metadata": 0, "buffers": {11: raw}}
+    state = {"syncs": 0, "metadata": 0, "buffers": {11: raw}, "now": 100}
     output = io.StringIO()
     floors = []
     files = iter((11, 12, 13, 14))
@@ -390,7 +441,9 @@ def test_apply_final_sync_revalidates_entire_terminal_union(material, monkeypatc
         return SimpleNamespace(st_uid=owner, st_gid=owner, st_mode=stat.S_IFDIR | 0o700,
                                marker=(fd, state["metadata"] if fd == 13 else 0))
 
-    def capture(*_):
+    def capture(*args):
+        assert args[-1] == 100 + namespace["CONFIG"]["apply_bootstrap_seconds"]
+        assert state["now"] == 200
         state["buffers"].update({13: b"retained stdout\n", 14: b"retained stderr\n"})
         return True
 
@@ -401,11 +454,20 @@ def test_apply_final_sync_revalidates_entire_terminal_union(material, monkeypatc
                 state["buffers"][13] = b"late output replacement\n"
             elif drift == "metadata":
                 state["metadata"] = 1
+            elif drift == "deadline":
+                state["now"] = 100 + namespace["CONFIG"]["apply_bootstrap_seconds"]
 
-    namespace["runtime"] = lambda _: SimpleNamespace(pw_uid=500, pw_gid=500)
+    def runtime(_):
+        state["now"] = 200
+        return SimpleNamespace(pw_uid=500, pw_gid=500)
+
+    namespace["runtime"] = runtime
     namespace["sys"] = SimpleNamespace(stdout=output)
     namespace["os"] = SimpleNamespace(isatty=lambda _: True, umask=lambda _: None,
-        mkdir=lambda *_: None, fstat=info, fsync=lambda _: None, close=lambda _: None)
+        mkdir=lambda *_: None, fstat=info, fsync=lambda _: None,
+        close=lambda _: state.update(now=100 + namespace["CONFIG"]["apply_bootstrap_seconds"])
+        if drift == "close_deadline" else None,
+        times=lambda: (0, 0, 0, 0, state["now"]))
     namespace["chain"] = lambda path, _: [(path, 100 if path == material[0]["stage_path"]
                                           else 101, ())]
     namespace["floor"] = lambda *args: floors.append(args)

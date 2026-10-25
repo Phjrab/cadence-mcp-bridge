@@ -1,5 +1,48 @@
 # Experimental fixed initializer metadata repair
 
+## Initializer-only time budgets and failure diagnostics
+
+The source65 extension gives apply/rollback a fixed3,600-second helper budget.
+Planning and ordinary postcheck retain60seconds. The helper creates one absolute
+elapsed-time deadline before request parsing; initializer accounting uses that
+same deadline, including cancellation, rather than starting another budget.
+The general storage administrator code and existing integrity checks are unchanged.
+
+Root TTY preparation/capture shares a3,660-second deadline beginning before root
+runtime validation and spool preparation. Local apply waits at most3,720seconds;
+ordinary staging/postcheck use120seconds each, with the existing5-second local
+cleanup limit. These exported phase limits must be bound into the fixed caller's
+reviewed transport and exact admission. Changing only an SSH timeout does not
+change helper/accounting bounds. A local timeout or direct-child kill does not
+guarantee termination of all remote descendants.
+
+These are chosen maximum operational waits, not measured predictions of success.
+Export, import, MCP startup and doctor perform no remote action. New helper bytes,
+hashes, time limits and staging paths require a new exact finite execution plan;
+an old helper or spent plan's approval cannot authorize that new plan.
+
+On failure only, the helper writes one prefixed canonical JSON diagnostic of at
+most2,048bytes to captured stderr, followed by its original error. It records a
+fixed phase name, operation, started/completed whole-union scan counts, library
+ordinal, elapsed milliseconds, budget and a conservative mutation-entry flag.
+It includes no path, circuit content or exception text. The flag latches before
+entering the target mutation routine; true does not establish which target changed.
+Diagnostics are neither successful receipts nor approval, rollback or retry gates.
+Successful stderr remains empty and the existing result/terminal schema is unchanged.
+
+All whole-library scans and content/metadata/ACL/accounting/receipt guards remain.
+The conservative union-pass ceiling is16+8times the selected target count, bounded
+by128targets; a20-target plan has at most176passes. This finite work bound does not
+establish a completion time. Interrupted scans are distinguished from completed
+ones, with failed and partial evidence preserved. No result reservations are made
+by initializer diagnostics or metadata repair.
+
+The direct user source66 approval records capacity for two local initializer
+timer/progress versions after64 consumed. V6/V8 preserves prior policy and source
+history; it grants no new VM access, administrator application, EDA, simulation,
+merge or publication. Software/hosted/installed checks do not qualify the actual
+standard VM or complete source-binding observation and three-candidate comparison.
+
 ## Source64 fixed TTY transport qualification
 
 This extension is local software work on the same draft PR. It addresses an

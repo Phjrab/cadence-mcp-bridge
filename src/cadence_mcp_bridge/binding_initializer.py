@@ -49,6 +49,13 @@ def _sha(raw: bytes) -> str:
 TTY_LIMITS = {
     "source_bytes": 262_144, "request_bytes": 2_883_584, "frame_bytes": 3_145_728,
     "stdout_bytes": 8_388_608, "stderr_bytes": 1_048_576, "wire_stdout_bytes": 16_777_216,
+    "helper_mutation_seconds": recipe.MUTATION_SECONDS,
+    "helper_inspection_seconds": recipe.INSPECTION_SECONDS,
+    "apply_bootstrap_seconds": recipe.MUTATION_SECONDS + 60,
+    "apply_ssh_seconds": recipe.MUTATION_SECONDS + 120,
+    "stage_ssh_seconds": recipe.INSPECTION_SECONDS + 60,
+    "postcheck_ssh_seconds": recipe.INSPECTION_SECONDS + 60,
+    "cleanup_seconds": 5, "diagnostic_bytes": recipe.DIAGNOSTIC_BYTES,
 }
 
 # Fixed Python2.6 operator transport. This source is versioned product code, not
@@ -242,7 +249,9 @@ def child(source, request):
     sys.path.insert(0, "/__cadence_initializer_memory_only__")
     eval(compile(source, namespace["__file__"], "exec"), namespace)
 
-def capture(source, request, out_fd, err_fd, inherited):
+def capture(source, request, out_fd, err_fd, inherited, deadline):
+    # The bootstrap's one absolute deadline includes root setup and capture.
+    require(os.times()[4] < deadline)
     out_read, out_write = os.pipe()
     err_read, err_write = os.pipe()
     pid = os.fork()
@@ -274,7 +283,7 @@ def capture(source, request, out_fd, err_fd, inherited):
     os.close(err_write)
     streams = {out_read: [out_fd, 0, CONFIG["stdout_bytes"]],
                err_read: [err_fd, 0, CONFIG["stderr_bytes"]]}
-    deadline, failed, stopped, reaped = os.times()[4] + 65, False, False, False
+    failed, stopped, reaped = False, False, False
     try:
         while streams:
             require(os.times()[4] < deadline)
@@ -319,7 +328,9 @@ def output(raw):
     return dict(bytes=len(raw), sha256=digest(raw), base64=base64.b64encode(raw).decode("ascii"))
 
 def apply():
+    deadline = os.times()[4] + CONFIG["apply_bootstrap_seconds"]
     account = runtime(True)
+    require(os.times()[4] < deadline)
     require(os.isatty(0))
     os.umask(0o077)
     directories, descriptors = [], []
@@ -341,6 +352,7 @@ def apply():
         floor("/root", [len(raw), CONFIG["stdout_bytes"], CONFIG["stderr_bytes"], receipt_size],
               CONFIG["root_stage_min_overhead_bytes"])
         guard(directories)
+        require(os.times()[4] < deadline)
         os.mkdir(CONFIG["root_path"], 0o700)
         directories += chain(CONFIG["root_path"], (0,))
         leaf = os.fstat(directories[-1][1])
@@ -361,7 +373,7 @@ def apply():
         retained, started = True, True
         try:
             success = capture(source, request, out_fd, err_fd,
-                              descriptors + [row[1] for row in directories])
+                              descriptors + [row[1] for row in directories], deadline)
         finally:
             os.fsync(out_fd)
             os.fsync(err_fd)
@@ -389,12 +401,14 @@ def apply():
                     same_name(path, fd)
                     require(identity(os.fstat(fd)) == original)
                 guard(directories)
+                require(os.times()[4] < deadline)
         except BaseException:
             success = False
         for fd in descriptors:
             os.close(fd)
         for unused, fd, unused_identity in directories:
             os.close(fd)
+    success = success and os.times()[4] < deadline
     result = dict(schema_version=1, kind="FIXED_INITIALIZER_TTY_TERMINAL",
                   status="HELPER_SUCCEEDED" if success else "FAILED_OR_UNKNOWN",
                   returncode=0 if success else 1, helper_started=started, files_retained=retained,
@@ -451,6 +465,7 @@ def tty_material(
         frame_bytes=len(frame), helper_bytes=len(helper), request_bytes=len(request),
         stdout_bytes=TTY_LIMITS["stdout_bytes"], stderr_bytes=TTY_LIMITS["stderr_bytes"],
         wire_stdout_bytes=TTY_LIMITS["wire_stdout_bytes"],
+        apply_bootstrap_seconds=TTY_LIMITS["apply_bootstrap_seconds"],
         observed_plan_receipt_bytes=limits["observed_plan_receipt_bytes"],
         user_stage_min_overhead_bytes=limits["user_stage_min_overhead_bytes"],
         root_stage_min_overhead_bytes=limits["root_stage_min_overhead_bytes"],
@@ -614,43 +629,66 @@ def main():
     def timeout(signum, frame):
         raise ValueError("initializer_deadline_retain_partial_evidence")
     signal.signal(signal.SIGALRM, timeout)
-    signal.alarm(60)
-    if operation == "plan":
-        result = recipe.inventory(CONFIG["profile"], CONFIG["registration"], copying, core)
-    else:
-        raw = sys.stdin.read(core.LIMIT + 1).encode("ascii")
-        if len(raw) > core.LIMIT:
-            raise ValueError("initializer_request_bound")
-        request = json.loads(raw.decode("ascii"))
-        if (not isinstance(request, dict) or set(request) != set((
-                "plan", "expected_plan_sha256", "operator_authority"))
-                or core.canonical(request) != raw
-                or request["expected_plan_sha256"] != sys.argv[2]
-                or core.digest(request["plan"]) != sys.argv[2]
-                or request["plan"].get("profile") != CONFIG["profile"]
-                or request["plan"].get("registration") != CONFIG["registration"]):
-            raise ValueError("initializer_configuration_and_plan_binding")
-        if operation == "postcheck":
-            if request["operator_authority"] is not None or os.getuid() != account.pw_uid:
-                raise ValueError("ordinary_user_postcheck_only")
-            result = recipe.verify_delta(request["plan"], copying, core)
+    progress = recipe.Progress(operation)
+    signal.alarm(progress.budget_seconds)
+    try:
+        if operation == "plan":
+            progress.phase("plan_inventory")
+            result = recipe.inventory(CONFIG["profile"], CONFIG["registration"], copying, core,
+                                      progress=progress)
         else:
-            if (not isinstance(request["operator_authority"], core.TEXT)
-                    or not 1 <= len(request["operator_authority"]) <= 512):
-                raise ValueError("explicit_operator_authority_required")
-            accounting = recipe.build_accounting(
-                CONFIG["profile"], CONFIG["registration"], loaded["storage"])
-            try:
-                accounting.enter()
-                result = recipe.mutate(request, copying, core,
-                                       rollback=(operation == "rollback"), accounting=accounting)
-            finally:
-                accounting.close()
-    signal.alarm(0)
-    raw = core.canonical(result)
-    if len(raw) + 1 > core.LIMIT:
-        raise ValueError("initializer_response_bound")
-    sys.stdout.write(raw.decode("ascii") + chr(10))
+            progress.phase("request_validation")
+            raw = sys.stdin.read(core.LIMIT + 1).encode("ascii")
+            if len(raw) > core.LIMIT:
+                raise ValueError("initializer_request_bound")
+            request = json.loads(raw.decode("ascii"))
+            if (not isinstance(request, dict) or set(request) != set((
+                    "plan", "expected_plan_sha256", "operator_authority"))
+                    or core.canonical(request) != raw
+                    or request["expected_plan_sha256"] != sys.argv[2]
+                    or core.digest(request["plan"]) != sys.argv[2]
+                    or request["plan"].get("profile") != CONFIG["profile"]
+                    or request["plan"].get("registration") != CONFIG["registration"]):
+                raise ValueError("initializer_configuration_and_plan_binding")
+            if operation == "postcheck":
+                if request["operator_authority"] is not None or os.getuid() != account.pw_uid:
+                    raise ValueError("ordinary_user_postcheck_only")
+                progress.phase("postcheck")
+                result = recipe.verify_delta(request["plan"], copying, core, progress=progress)
+            else:
+                if (not isinstance(request["operator_authority"], core.TEXT)
+                        or not 1 <= len(request["operator_authority"]) <= 512):
+                    raise ValueError("explicit_operator_authority_required")
+                progress.phase("accounting_entry")
+                accounting = recipe.build_accounting(
+                    CONFIG["profile"], CONFIG["registration"], loaded["storage"], progress=progress)
+                try:
+                    accounting.enter()
+                    progress.check()
+                    result = recipe.mutate(request, copying, core,
+                        rollback=(operation == "rollback"), accounting=accounting,
+                        progress=progress)
+                finally:
+                    accounting.close()
+        progress.check()
+        raw = core.canonical(result)
+        if len(raw) + 1 > core.LIMIT:
+            raise ValueError("initializer_response_bound")
+        progress.check()
+        sys.stdout.write(raw.decode("ascii") + chr(10))
+        progress.check()
+        signal.alarm(0)
+    except BaseException:
+        signal.alarm(0)
+        try:
+            diagnostic = (b"INITIALIZER_FAILURE_PROGRESS " + core.canonical(progress.report())
+                          + chr(10).encode("ascii"))
+            if len(diagnostic) <= recipe.DIAGNOSTIC_BYTES:
+                sys.stderr.write(diagnostic.decode("ascii"))
+                sys.stderr.flush()
+        except BaseException:
+            pass  # Diagnostic failure cannot replace the original failed operation.
+        raise
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,23 @@
+## Source65 initializer deadlines and failure context, 2026-10-25
+
+Proceed with the directly approved initializer-only source65 implementation and
+verification, preserving all64 consumed versions under the new66 ceiling. Reserve
+the second additional version for necessary review corrections. Retain source64,
+all earlier policies/checkpoints, journals, reservations and spent attempts.
+
+Use one absolute helper/accounting deadline, a fixed enclosing TTY deadline and
+phase-specific transport limits. Keep every original integrity/race/receipt guard;
+record bounded phase/pass/timing context only on failure. Success remains the exact
+existing result and empty stderr. Validate deadline boundaries, conservative
+mutation classification and cancellation, then final software/install/CI/review.
+
+The finite time limits are operational maxima, not demonstrated runtime estimates.
+No new VM contact or apply follows from this local approval. A changed helper
+requires its own exact finite plan, new applicable authority and retained failed
+predecessors. Actual repair/postcheck, runtime/init qualification, bounded storage,
+OCEAN observation and selected DC3 comparison remain unfinished. No PR merge or
+publication authority is added. Earlier records below remain historical.
+
 ## Source64 fixed initializer TTY transport, 2026-10-23
 
 2026-10-24 final qualification must include the security lock updates to

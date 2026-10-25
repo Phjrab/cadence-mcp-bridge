@@ -439,6 +439,29 @@ def _inert_initializer_tty() -> None:
              "installed TTY stdout bound")
     _require(binding_initializer.TTY_LIMITS["stderr_bytes"] == 1_048_576,
              "installed TTY stderr bound")
+    limits = binding_initializer.TTY_LIMITS
+    _require(limits["helper_mutation_seconds"] == 3600
+             < limits["apply_bootstrap_seconds"] == 3660
+             < limits["apply_ssh_seconds"] == 3720, "installed nested initializer budgets")
+    _require(limits["helper_inspection_seconds"] == 60
+             and limits["stage_ssh_seconds"] == limits["postcheck_ssh_seconds"] == 120
+             and limits["cleanup_seconds"] == 5, "installed short inspection budgets")
+    progress = binding_initializer.recipe.Progress("apply")
+    progress.bind_targets(20)
+    _require(progress.deadline == progress.started + 3600,
+             "installed single absolute initializer deadline")
+    report = progress.report()
+    _require(report["maximum_union_passes"] == 176
+             and not report["mutation_may_have_started"]
+             and len(b"INITIALIZER_FAILURE_PROGRESS " + _canonical(report) + b"\n")
+             <= limits["diagnostic_bytes"] == 2048, "installed bounded failure context")
+    progress.cancelled = True
+    try:
+        progress.check()
+    except ValueError:
+        pass
+    else:
+        raise ValueError("installed initializer ignored cancellation")
 
 
 def verify(workspace: Path) -> dict[str, object]:
@@ -485,6 +508,7 @@ def verify(workspace: Path) -> dict[str, object]:
         "initializer_export_fixed_installed_sources_and_inert": True,
         "initializer_delta_installed_synthetic_snapshot_and_bad_pin": True,
         "initializer_tty_installed_parser_crlf_and_noise_rejection": True,
+        "initializer_deadlines_and_failure_context_synthetic": True,
         "initializer_tty_current_vm_or_administrator_execution": "NOT_TESTED_BY_THIS_CHECKER",
         "initializer_successful_prospective_export": "NOT_TESTED_BY_THIS_CHECKER",
         "new_simulations": 0,
