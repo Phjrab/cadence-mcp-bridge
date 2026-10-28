@@ -45,7 +45,7 @@ async def protocol(launcher: Path, env: dict[str, str]) -> dict[str, object]:
         StdioServerParameters(command=str(launcher), args=["serve-operator"], env=env)
     ) as client:
         listed = await client.list_tools()
-        names = [tool.name for tool in listed]
+        names = [tool.name for tool in listed.tools]
         assert "cadence_runtime_info_v2" in names
         result = await client.call_tool("cadence_runtime_info_v2", {})
         assert not result.is_error
@@ -106,7 +106,16 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
     doctor = json.loads(run([str(launcher), "doctor"], env, clean_cwd, code=None).stdout)
     assert doctor["remote_contact"] is False and not doctor["ssh_available"]
     bare = run([str(launcher)], env, clean_cwd, code=None)
-    assert b"SETUP_REQUIRED" in bare.stdout + bare.stderr
+    # Bare launch is a stdio server: EOF exits silently, not a diagnostic stream.
+    assert bare.returncode == 0 and not bare.stdout
+    unset = json.loads(
+        run(
+            [str(launcher), "config-check"],
+            {**env, "CADENCE_MCP_RUNTIME_MODE": "operator"},
+            clean_cwd,
+        ).stdout
+    )
+    assert unset["status"] == "SETUP_REQUIRED" and unset["remote_contact"] is False
     backend = [
         str(python),
         "-I",

@@ -267,6 +267,28 @@ def test_import_reuses_runtime_paths_and_never_creates_journals(layout, tmp_path
     assert report["status"] == "LOCAL_CONTEXT_VALID"
     assert not report["journal_created"] and report["execution_status"] == "NOT_ASSESSED"
     assert before == {str(p): p.read_bytes() for p in starter.iterdir() if p.is_file()}
+    launcher = tmp_path / "installed" / "CadenceMCPBridge.exe"
+    launcher.parent.mkdir()
+    launcher.write_bytes(b"synthetic launcher; never executed")
+    (launcher.parent / "INSTALLATION.json").write_text(
+        '{"version":"2.2.0a1","kind":"per-user"}', encoding="utf-8"
+    )
+    state = tmp_path / "user-data"
+    plan = backend.dispatch(
+        {
+            "action": "preview",
+            "settings": str(starter / "runtime.json"),
+            "context": "my-context",
+            "name": "cadence-test",
+        },
+        root=state,
+        launcher=launcher,
+    )
+    applied = backend.dispatch(
+        {"action": "apply", "consent": True, "after": plan["after"]}, root=state, launcher=launcher
+    )
+    assert applied["status"] == "CLIENT_CONFIGURED"
+    assert not applied["actual_app_verified"]
 
 
 def test_no_unmanaged_removal(layout, tmp_path):

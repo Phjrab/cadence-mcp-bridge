@@ -242,7 +242,11 @@ def client_entry(root: Path, settings: Path, context: str, launcher: Path) -> di
     with tempfile.TemporaryDirectory(prefix="client-preview-", dir=root) as folder:
         output = Path(folder) / "fragment.toml"
         export_context_client_config(settings, context, output, format="codex")
-        entry = dict(parse(output.read_bytes())["mcp_servers"]["cadence-mcp-bridge"])
+        # A preview must survive JSON persistence/restart without TOML trivia
+        # changing its after hash. Retain semantic settings as plain JSON types.
+        entry = json.loads(
+            json.dumps(parse(output.read_bytes())["mcp_servers"]["cadence-mcp-bridge"])
+        )
     entry["command"] = str(launcher)
     entry["args"] = ["serve-operator"]
     return entry
@@ -349,12 +353,25 @@ def main() -> int:
         result = dispatch(json.loads(raw))
     except (OSError, ValueError, KeyError, TypeError) as error:
         # No raw exception text, SSH output, config contents or credential data.
+        reason = str(error) if isinstance(error, SetupRejected) else "setup_input_or_file_invalid"
+        guidance = {
+            "preview_changed": "설정 미리보기를 새로 만들고 표시된 변경을 다시 확인하세요.",
+            "configuration_changed_preview_again": "다른 앱이 설정을 변경했습니다. 덮어쓰지 "
+            "않았습니다. 미리보기를 다시 실행하세요.",
+            "name_conflict_choose_update_another_name_or_cancel": "같은 MCP 이름이 있습니다. "
+            "업데이트를 선택하거나 다른 이름을 입력하세요.",
+            "installed_location_required_not_build_folder": "설치 EXE로 설치한 도우미를 여세요. "
+            "빌드/임시 경로를 Codex에 등록하지 않습니다.",
+            "setup_input_or_file_invalid": "선택한 파일이 존재하고 본인 runtime인지 확인하세요. "
+            "context ID는 먼저 빈 칸으로 확인해 목록에서 선택할 수 있습니다.",
+            "openssh_client_missing": "Windows 선택적 기능에서 OpenSSH Client를 설치한 뒤 "
+            "연결 확인을 실행하세요. 프로그램 설치는 완료됐습니다.",
+        }.get(reason, "입력과 파일 권한을 확인하세요. 기존 설정·journal은 보존했습니다.")
         result = {
             **NO_EXECUTION,
             "status": "BLOCKED",
-            "reason": (
-                str(error) if isinstance(error, SetupRejected) else "setup_input_or_file_invalid"
-            ),
+            "reason": reason,
+            "guidance": guidance,
         }
     print(json.dumps(result, ensure_ascii=True))
     return 1 if result.get("status") == "BLOCKED" else 0
