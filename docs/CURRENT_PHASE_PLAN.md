@@ -1,3 +1,24 @@
+## Windows host installer preview — 2026-10-28
+
+The direct user request authorizes local README/installer/GUI/test/document/PR work
+independently of unfinished PR164. This branch freezes main a713eb6b1db2a90652501bb71a3dacbe75c65460
+and uses 2.2.0a1 for an unpublished installer preview. It includes existing main's
+experimental opt-in V/A candidates, not PR164 or a newly qualified native route.
+The 2.1.0 release remains immutable. README publication cleanup is separate PR165.
+
+The scoped initializer accounting remains65/66 on PR164, with its prior64 retained.
+This explicitly requested host feature is not a reset of that history or use of
+initializer-only capacity. No source/VM budget policy or consumed journal changes
+here. Plan08 remains unauthorized and no VM/admin/EDA/reservation operation follows.
+The host feature receives its own exact commit/build manifest and validation record.
+
+Per-user EXE, embedded CPython3.13.12, pinned Inno6.7.3, native Windows GUI and
+comment-preserving Codex configuration are under local validation. Source bytes,
+resources, dist-info and protocol handles remain available. The GUI never creates
+execution authority or a fresh remote resource domain. Existing settings are
+referenced; missing preflight/registration/authority stays explicitly unassessed.
+Full/installed/hosted/UI receipts remain gates until reported. No merge/publication
+approval is inferred. Historical checkpoints below keep their original scope.
 ## Final candidate software correction gates, 2026-10-18
 
 PR163's recovery lookup P2 is corrected with shared local identity checks before

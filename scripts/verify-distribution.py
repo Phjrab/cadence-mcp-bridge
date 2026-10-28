@@ -86,6 +86,12 @@ def inspect_artifact(artifact: Path, project: Path) -> dict[str, object]:
             for name in starter_files
         }
     )
+    # The host-only GUI backend is a separate fixed package subtree, not an
+    # arbitrary recursive expansion of the historical distribution allowlist.
+    for name in ("__init__.py", "backend.py", "configuration.py", "verify.py", "uninstall.py"):
+        source["cadence_mcp_bridge/windows_host/" + name] = (
+            project / "src/cadence_mcp_bridge/windows_host" / name
+        ).read_bytes()
     required = {name: (project / name).read_bytes() for name in LICENSE_FILES}
     if hashlib.sha256(required["LICENSE"]).hexdigest() != APACHE_SHA256:
         raise ValueError("Canonical Apache license bytes differ")
