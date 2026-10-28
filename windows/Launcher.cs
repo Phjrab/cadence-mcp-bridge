@@ -42,6 +42,11 @@ internal static class Launcher
         foreach (string arg in args) { command.Append(' '); command.Append(Quote(arg)); }
         var start = new ProcessStartInfo(python, command.ToString());
         start.UseShellExecute = false;
+        // The app/SDK may omit OpenSSH from PATH. Select the OS optional feature
+        // for this child only; never change the user's or machine's PATH.
+        string sshDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "OpenSSH");
+        if (File.Exists(Path.Combine(sshDirectory, "ssh.exe")))
+            start.EnvironmentVariables["PATH"] = sshDirectory + ";" + (start.EnvironmentVariables["PATH"] ?? "");
         // Inherited protocol handles: no GUI, shell, progress or stdout relay.
         start.WorkingDirectory = root;
         try { using (var child = Process.Start(start)) { child.WaitForExit(); return child.ExitCode; } }

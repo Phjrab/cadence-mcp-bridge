@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 from unittest.mock import Mock
@@ -296,3 +297,96 @@ def test_no_unmanaged_removal(layout, tmp_path):
         backend.dispatch(
             {"action": "remove", "consent": True, "receipt": "elsewhere"}, root=tmp_path / "data"
         )
+
+
+def test_configuration_lock_excludes_live_writer_and_recovers_after_crash(layout):
+    config, history = layout
+    child_code = (
+        "import os,sys; from pathlib import Path; "
+        "from cadence_mcp_bridge.windows_host.configuration import configuration_lock; "
+        "lock=configuration_lock(Path(sys.argv[1])); lock.__enter__(); "
+        "print('locked',flush=True); sys.stdin.readline(); os._exit(0)"
+    )
+    with subprocess.Popen(
+        [sys.executable, "-c", child_code, str(config)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    ) as child:
+        assert child.stdout is not None and child.stdin is not None
+        assert child.stdout.readline().strip() == "locked"
+        plan = cfg.preview(config, "cadence", entry())
+        try:
+            with pytest.raises(cfg.SetupRejected, match="configuration_busy"):
+                cfg.apply(plan, history)
+            assert not config.exists()
+        finally:
+            child.stdin.write("exit\n")
+            child.stdin.flush()
+            child.wait(timeout=10)
+    assert config.with_name(config.name + ".cadence-setup.lock").exists()
+    assert cfg.apply(plan, history)["status"] == "CLIENT_CONFIGURED"
+
+
+def test_runtime_creation_computes_pins_and_preserves_existing_inputs(
+    layout, tmp_path, monkeypatch
+):
+    starter = tmp_path / "새 운영자"
+    onboarding.export_starter(starter)
+    runner = starter / "reviewed-runner.py"
+    runner.write_bytes(b"# synthetic never executed\n")
+    before = {p.name: p.read_bytes() for p in starter.iterdir() if p.is_file()}
+    request = {
+        "action": "create-runtime",
+        "consent": True,
+        "profile": str(starter / "environment.json"),
+        "design_registry": str(starter / "designs.json"),
+        "pdk_registry": str(starter / "pdks.json"),
+        "runner_file": str(runner),
+        "context": "new-context",
+        "resource_state_root": str(starter),
+        "journal": str(starter / "retained-analysis.sqlite3"),
+        "sweep_journal": str(starter / "retained-sweep.sqlite3"),
+        "authority_ref": "existing-authority",
+        "ledger_ref": "existing-ledger",
+        "output": str(starter / "new-runtime.json"),
+    }
+    monkeypatch.setattr(backend, "run_fixed", Mock(side_effect=AssertionError("no remote")))
+    report = backend.dispatch(request, root=tmp_path / "state")
+    assert report["status"] == "LOCAL_RUNTIME_EXPORTED"
+    assert not report["remote_contact"] and not report["journal_created"]
+    document = json.loads(Path(request["output"]).read_bytes())
+    assert document["contexts"][0]["runner_sha256"] == cfg.digest(runner.read_bytes())
+    assert document["contexts"][0]["ledger_ref"] == "existing-ledger"
+    for name, raw in before.items():
+        assert (starter / name).read_bytes() == raw
+    assert not Path(request["journal"]).exists() and not Path(request["sweep_journal"]).exists()
+    with pytest.raises(FileExistsError):
+        backend.dispatch(request, root=tmp_path / "state")
+    with pytest.raises(cfg.SetupRejected, match="consent"):
+        backend.dispatch({**request, "consent": False}, root=tmp_path / "state")
+
+
+@pytest.mark.parametrize(
+    "stderr,reason",
+    [
+        (b"Host key verification failed", "host_key_unverified_or_mismatch"),
+        (b"Permission denied (publickey)", "key_or_agent_authentication_failed"),
+        (b"Connection timed out", "connection_failed"),
+        (b"Could not resolve hostname", "connection_failed"),
+    ],
+)
+def test_connection_errors_are_bounded_no_retry(layout, monkeypatch, stderr, reason):
+    transport = Mock(return_value=(255, b"", stderr))
+    monkeypatch.setattr(
+        backend, "ssh_executable", lambda: Path("C:/Windows/System32/OpenSSH/ssh.exe")
+    )
+    monkeypatch.setattr(backend, "run_fixed", transport)
+    result = backend.connect(
+        {"consent": True, "alias": "mine", "host": "vm.invalid", "user": "student"}
+    )
+    assert result["reason"] == reason and result["new_simulations"] == 0
+    assert transport.call_count == 1
+    argv = transport.call_args.args[0]
+    assert "StrictHostKeyChecking=yes" in argv and "BatchMode=yes" in argv
+    assert argv[-1] == "/usr/bin/printf CADENCE_BRIDGE_CONNECTION_OK"

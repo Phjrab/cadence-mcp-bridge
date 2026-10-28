@@ -104,7 +104,9 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
         == b"HOST_PAYLOAD_VERIFIED"
     )
     doctor = json.loads(run([str(launcher), "doctor"], env, clean_cwd, code=None).stdout)
-    assert doctor["remote_contact"] is False and not doctor["ssh_available"]
+    assert doctor["remote_contact"] is False
+    os_ssh = Path(os.environ["SYSTEMROOT"]) / "System32/OpenSSH/ssh.exe"
+    assert doctor["ssh_available"] == os_ssh.is_file()
     bare = run([str(launcher)], env, clean_cwd, code=None)
     # Bare launch is a stdio server: EOF exits silently, not a diagnostic stream.
     assert bare.returncode == 0 and not bare.stdout
@@ -206,7 +208,11 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
         "cadence-setup-test"
     ]
     assert selected["command"] == str(launcher)
-    protocol_result = asyncio.run(protocol(launcher, {**env, **selected["env"]}))
+    # A configured backend requires the Windows optional feature. Without it the
+    # installer/GUI still work; use unconfigured local protocol, never a fake SSH.
+    protocol_env = {**env, **selected["env"]} if os_ssh.is_file() else env
+    protocol_result = asyncio.run(protocol(launcher, protocol_env))
+    protocol_result["configured_context"] = os_ssh.is_file()
     # Protocol startup may create local fixture journals; all must survive updates.
     retained = {
         str(path.relative_to(user)): hashlib.sha256(path.read_bytes()).hexdigest()

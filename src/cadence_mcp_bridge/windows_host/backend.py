@@ -16,7 +16,7 @@ from typing import Any
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.onboarding import export_context_client_config, export_starter
-from cadence_mcp_bridge.operator_setup import _check, setup_guide
+from cadence_mcp_bridge.operator_setup import _check, _export_runtime, setup_guide
 from cadence_mcp_bridge.operator_transport import run_fixed
 from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
@@ -24,6 +24,7 @@ from cadence_mcp_bridge.windows_host.configuration import (
     SetupRejected,
     apply,
     codex_config,
+    digest,
     ordinary,
     parse,
     preview,
@@ -231,6 +232,45 @@ def runtime_import(root: Path, settings: Path, context: str) -> dict[str, Any]:
     }
 
 
+def runtime_create(root: Path, request: dict[str, Any]) -> dict[str, Any]:
+    """Use the existing exporter; compute pins, never invent observed inputs/grants."""
+    if request.get("consent") is not True:
+        raise SetupRejected("explicit_local_export_consent_required")
+    fields = (
+        "profile",
+        "design_registry",
+        "pdk_registry",
+        "resource_state_root",
+        "journal",
+        "sweep_journal",
+        "output",
+    )
+    values: dict[str, Any] = {key: Path(request[key]) for key in fields}
+    for key in ("context", "authority_ref", "ledger_ref"):
+        values[key] = request[key]
+    runner = snapshot(Path(request["runner_file"]))
+    if not runner:
+        raise SetupRejected("reviewed_runner_file_required")
+    values["runner_sha256"] = digest(runner)
+    for key in ("native_provider_binding", "operator_grant", "native_specifications"):
+        selected = request.get(key)
+        values[key] = None if not selected else ordinary(Path(selected))
+        pin_name = "native_provider_sha256" if key == "native_provider_binding" else key + "_sha256"
+        raw = None if not selected else snapshot(values[key])
+        if selected and raw is None:
+            raise SetupRejected("selected_binding_missing")
+        values[pin_name] = None if raw is None else digest(raw)
+    report = _export_runtime(argparse.Namespace(**values))
+    runtime_import(root, values["output"], values["context"])
+    return {
+        **NO_EXECUTION,
+        **report,
+        "journal_created": False,
+        "next": "로컬 runtime 파일을 만들었습니다. 기존 장부 참조를 유지하고 "
+        "VM preflight·회로 등록·실행 승인을 별도로 확인하세요.",
+    }
+
+
 def client_entry(root: Path, settings: Path, context: str, launcher: Path) -> dict[str, Any]:
     ordinary(launcher)
     if not launcher.is_file() or launcher.name != "CadenceMCPBridge.exe":
@@ -297,6 +337,8 @@ def dispatch(
         return {**NO_EXECUTION, **result, "examples_only": True, "production_ready": False}
     if action == "runtime":
         return runtime_import(root, Path(request["settings"]), request.get("context", ""))
+    if action == "create-runtime":
+        return runtime_create(root, request)
     if action == "preview":
         entry = client_entry(root, Path(request["settings"]), request["context"], launcher)
         plan = preview(
@@ -366,6 +408,8 @@ def main() -> int:
             "context ID는 먼저 빈 칸으로 확인해 목록에서 선택할 수 있습니다.",
             "openssh_client_missing": "Windows 선택적 기능에서 OpenSSH Client를 설치한 뒤 "
             "연결 확인을 실행하세요. 프로그램 설치는 완료됐습니다.",
+            "configuration_busy": "다른 설정 저장 작업이 진행 중입니다. 완료 후 다시 확인하세요. "
+            "중단된 프로세스의 잠금은 Windows가 자동 해제합니다.",
         }.get(reason, "입력과 파일 권한을 확인하세요. 기존 설정·journal은 보존했습니다.")
         result = {
             **NO_EXECUTION,

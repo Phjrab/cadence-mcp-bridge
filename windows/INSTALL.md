@@ -24,6 +24,14 @@ registry/journal/grant/resource-state path. New users can export the existing
 operator starter and follow its reviewed registration and authority workflow;
 fictional examples never become production evidence. Native provisioning,
 registration and execution still require actual observed inputs and consent.
+The runtime form selects those registered profile/design/PDK files, the reviewed
+runner and retained journal/resource/authority references. It computes file pins
+through the existing exporter and refuses an existing output. Optional native
+binding/grant/specification files are hashed and validated; the form does not
+create a journal, remote domain or execution grant. No JSON or hash editing is
+needed to import or assemble a runtime from already registered inputs. Initial
+environment observation and native registration remain the existing operator
+workflow; this preview does not automate those stages or qualify example data.
 
 Codex configuration uses CODEX_HOME or ~/.codex/config.toml. Preview the one MCP
 entry before applying; same-name update requires an explicit selection. Other
@@ -34,6 +42,11 @@ is not a universal cross-process compare-and-swap; avoid simultaneous edits.
 Project overrides are reported for the selected project, conservatively including
 ancestors. Managed policy/CLI overrides and actual app connection need separate
 verification. Reconnect Codex normally when needed; never force-close the app.
+The configuration writer uses an OS-held lock, released on process death. The
+small persistent lock file is intentional and should not be deleted during use.
+Unicode GUI requests are sent as explicit UTF-8. The installed launcher selects
+the system OpenSSH optional feature for its child process when available, even
+if an app omitted it from PATH; system/user PATH and Python remain unchanged.
 
 Programs use version-specific directories under LocalAppData/Programs. User data
 stays separate. Updates install a new version alongside the old, then explicitly

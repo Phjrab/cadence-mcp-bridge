@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -11,6 +12,8 @@ import stat
 import tempfile
 import tomllib
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -135,6 +138,36 @@ def preview(
     }
 
 
+@contextmanager
+def configuration_lock(path: Path) -> Iterator[None]:
+    """Process-lifetime OS lock; a crash releases it without deleting its inode."""
+    lock = ordinary(path.with_name(path.name + ".cadence-setup.lock"))
+    fd = os.open(lock, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        held, named = os.fstat(fd), lock.lstat()
+        if (
+            not stat.S_ISREG(held.st_mode)
+            or held.st_nlink != 1
+            or (held.st_dev, held.st_ino) != (named.st_dev, named.st_ino)
+        ):
+            raise SetupRejected("configuration_lock_invalid")
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl = importlib.import_module("fcntl")
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            raise SetupRejected("configuration_busy") from None
+        yield
+    finally:
+        # Closing releases the OS lock, including on process termination. Keep the
+        # named inode so another writer cannot lock a replacement during handoff.
+        os.close(fd)
+
+
 def _replace_checked(
     path: Path,
     before: bytes | None,
@@ -146,8 +179,17 @@ def _replace_checked(
     ordinary(path)
     if not path.parent.is_dir() or not history.is_dir():
         raise SetupRejected("private_parent_required")
-    lock = path.with_name(path.name + ".cadence-setup.lock")
-    fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    with configuration_lock(path):
+        return _replace_locked(path, before, after, history, record)
+
+
+def _replace_locked(
+    path: Path,
+    before: bytes | None,
+    after: bytes,
+    history: Path,
+    record: dict[str, Any] | None,
+) -> Path:
     temp: Path | None = None
     try:
         if snapshot(path) != before:
@@ -180,8 +222,6 @@ def _replace_checked(
             raise SetupRejected("configuration_changed_after_apply")
         return backup
     finally:
-        os.close(fd)
-        lock.unlink()
         if temp is not None:
             temp.unlink(missing_ok=True)
 

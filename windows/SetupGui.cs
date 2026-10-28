@@ -116,7 +116,51 @@ internal sealed class SetupWindow : Form
                 await Run(Req("starter", "output", destination));
             }
         });
+        Button(page, "검증할 입력 파일로 새 runtime 구성", async () => { await CreateRuntime(); });
         Note(page, "남은 준비: 실제 환경 검사 → 필요한 관리자 계획 검토 → 기존 장부 연결 / 이력 없는 설치 증명 → 회로 등록\n→ native runtime 확인 → 정확한 실행 승인. 예제 해시·한도·회로를 실제 검증으로 표시하지 않습니다.");
+    }
+    async Task CreateRuntime()
+    {
+        using (var dialog = new Form { Text = "새 runtime 구성 — 기존 장부·승인 참조 보존", Width = 850, Height = 720,
+            Font = Font, StartPosition = FormStartPosition.CenterParent, MinimizeBox = false, MaximizeBox = false }) {
+            var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoScroll = true, Padding = new Padding(15) };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 205));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+            var fields = new Dictionary<string, TextBox>();
+            string[,] names = {
+                { "profile", "환경 profile 파일" }, { "design_registry", "본인 회로 registry 파일" },
+                { "pdk_registry", "본인 PDK registry 파일" }, { "runner_file", "검토한 runner 원본 파일" },
+                { "context", "새 context ID" }, { "resource_state_root", "기존 자원 상태 폴더" },
+                { "journal", "분석 journal 경로" }, { "sweep_journal", "Sweep journal 경로" },
+                { "authority_ref", "승인 참조 (기존 값)" }, { "ledger_ref", "원격 장부 참조 (기존 값)" },
+                { "native_provider_binding", "native binding (선택)" }, { "operator_grant", "기존 grant (선택)" },
+                { "native_specifications", "specifications (선택)" }, { "output", "새 runtime 저장 경로" }
+            };
+            for (int i = 0; i < names.GetLength(0); i++) {
+                string key = names[i,0]; var text = new TextBox { Dock = DockStyle.Fill };
+                fields[key] = text; grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 37));
+                grid.Controls.Add(new Label { Text = names[i,1], Dock = DockStyle.Fill }, 0, i);
+                grid.Controls.Add(text, 1, i);
+                if (key != "context" && key != "authority_ref" && key != "ledger_ref") {
+                    var browse = new Button { Text = "선택", Dock = DockStyle.Fill };
+                    browse.Click += (s,e) => {
+                        if (key == "resource_state_root") { using (var picker = new FolderBrowserDialog()) { if (picker.ShowDialog(dialog) == DialogResult.OK) text.Text = picker.SelectedPath; } }
+                        else if (key == "output" || key == "journal" || key == "sweep_journal") { using (var picker = new SaveFileDialog()) { picker.OverwritePrompt = false; if (picker.ShowDialog(dialog) == DialogResult.OK) text.Text = picker.FileName; } }
+                        else { using (var picker = new OpenFileDialog()) { if (picker.ShowDialog(dialog) == DialogResult.OK) text.Text = picker.FileName; } }
+                    }; grid.Controls.Add(browse,2,i);
+                }
+            }
+            var note = new Label { Text = "해시는 선택한 파일에서 계산합니다. 실제 관측되지 않은 예제는 실행 적격성을 얻지 않습니다.\n기존 출력은 덮어쓰지 않으며 journal·장부·grant를 생성/초기화하지 않습니다.", Dock = DockStyle.Bottom, Height = 58 };
+            var ok = new Button { Text = "이 입력으로 로컬 runtime 생성", Dock = DockStyle.Bottom, Height = 42, DialogResult = DialogResult.OK };
+            dialog.Controls.Add(grid); dialog.Controls.Add(note); dialog.Controls.Add(ok);
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            var request = Req("create-runtime", "consent", true);
+            foreach (var item in fields) request[item.Key] = item.Value.Text.Trim();
+            if (await Run(request)) {
+                settings.Text = fields["output"].Text.Trim(); context.Text = fields["context"].Text.Trim();
+            }
+        }
     }
     void BuildCodex()
     {
@@ -166,7 +210,7 @@ internal sealed class SetupWindow : Form
             var receipts = value as ArrayList; if (receipts != null && receipts.Count > 0) receipt = Convert.ToString(receipts[0]);
         }
     }
-    async Task Run(Dictionary<string, object> request, bool initial = false)
+    async Task<bool> Run(Dictionary<string, object> request, bool initial = false)
     {
         if (Get(request, "action") == "preview") pendingHash = null;
         busy = true; tabs.Enabled = false; output.Text = "확인 중…";
@@ -192,7 +236,8 @@ internal sealed class SetupWindow : Form
             lines.AppendLine("이 안내는 시뮬레이션을 자동 제출하지 않습니다.");
             output.Text = lines.ToString();
             if (initial && result.ContainsKey("saved_setup")) Restore((IDictionary<string, object>)result["saved_setup"]);
-        } catch { output.Text = "설정 확인 중 오류가 발생했습니다. 원본 설정과 장부를 보존했습니다.\n전용 런타임·파일 접근 권한을 확인하고 상태 검사를 다시 실행하세요."; }
+            return status != "BLOCKED" && status != "CONNECTION_FAILED_OR_UNKNOWN";
+        } catch { output.Text = "설정 확인 중 오류가 발생했습니다. 원본 설정과 장부를 보존했습니다.\n전용 런타임·파일 접근 권한을 확인하고 상태 검사를 다시 실행하세요."; return false; }
         finally { busy = false; tabs.Enabled = true; }
     }
     static string CallBackend(string request)
@@ -204,7 +249,9 @@ internal sealed class SetupWindow : Form
         start.RedirectStandardInput = true; start.RedirectStandardOutput = true; start.RedirectStandardError = true;
         start.StandardOutputEncoding = Encoding.UTF8; start.StandardErrorEncoding = Encoding.UTF8;
         using (var child = Process.Start(start)) {
-            child.StandardInput.Write(request); child.StandardInput.Close();
+            byte[] bytes = Encoding.UTF8.GetBytes(request);
+            child.StandardInput.BaseStream.Write(bytes, 0, bytes.Length);
+            child.StandardInput.BaseStream.Flush(); child.StandardInput.Close();
             var stdout = child.StandardOutput.ReadToEndAsync(); var stderr = child.StandardError.ReadToEndAsync();
             child.WaitForExit(); Task.WaitAll(stdout, stderr);
             if (stdout.Result.Length > 2097152) throw new InvalidDataException();
