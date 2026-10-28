@@ -1,3 +1,10 @@
+## README CI security prerequisite — 2026-10-28
+
+Close this PR's inherited audit failure with the four fixed locked dependencies
+already tested in the separate installer branch, then run this exact PR's full
+CI. Keep the README/main/installer/PR164 boundaries and frozen releases intact.
+No installation feature, VM action or publication is included in this change.
+
 ## README / Windows host setup track — 2026-10-28
 
 The direct user request authorizes independent local README, Windows installer,

@@ -1,3 +1,12 @@
+## README CI security prerequisite — 2026-10-28
+
+The README PR's inherited dependency audit found seven advisories in four locked
+packages. Only certifi2026.10.23, msgpack1.2.4, filelock4.2.4 and
+opentelemetry-api1.45.1 are refreshed, matching the separately verified host
+installer lock. This prerequisite does not include the installer feature or
+PR164, and it does not alter any published2.1.0 asset. Full exact-head CI remains
+the check for this updated PR; no merge, release or VM action is inferred.
+
 ## README / Windows host setup track — 2026-10-28
 
 The direct user request authorizes independent local README, Windows installer,
