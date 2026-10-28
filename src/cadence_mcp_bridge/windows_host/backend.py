@@ -244,7 +244,7 @@ def client_entry(root: Path, settings: Path, context: str, launcher: Path) -> di
         export_context_client_config(settings, context, output, format="codex")
         # A preview must survive JSON persistence/restart without TOML trivia
         # changing its after hash. Retain semantic settings as plain JSON types.
-        entry = json.loads(
+        entry: dict[str, Any] = json.loads(
             json.dumps(parse(output.read_bytes())["mcp_servers"]["cadence-mcp-bridge"])
         )
     entry["command"] = str(launcher)
