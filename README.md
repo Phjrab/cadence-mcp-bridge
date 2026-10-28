@@ -1,65 +1,43 @@
-## Published2.1.0 and separate candidate development, 2026-10-18
-
-**[2.1.0 is published](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.1.0)**
-at `36f75834b8556c9dd88761120a4442a25379d7ae`. Its approved nine attachments were
-downloaded and checked against the frozen SHA256SUMS. See its
-[release notes](docs/releases/2.1.0/RELEASE_NOTES.md) and
-[qualification limits](docs/releases/2.1.0/QUALIFICATION.md); those files preserve
-their prepublication assessment. No fresh2.1.0 native activation or app upgrade
-is implied by publication.
-
-This separate checkout is **unreleased2.2.0.dev0**. Its explicit experimental
-operator candidate workflow plans complete registered V/A vectors, coordinates
-one child per advance and compares retained scalar reports/CSV. Source/installed
-software checks are separate from actual circuit qualification. No new native
-candidate experiment or W/L support is established. See
-[candidate workflow and remaining evidence](docs/EXPLICIT_CANDIDATES_01.md).
-This development work does not modify the published2.1.0 artifacts.
-
 # Cadence MCP Bridge
 
-Register your own circuits and run bounded DC/AC/TRAN analyses and 1D Sweeps in
-the professor-provided CentOS/Cadence/PDK VM running in your personal VMware.
-Operator settings select a common execution template; another supported circuit
-requires no bridge-core patch or circuit-specific Python extractor.
+교수님 제공 **CentOS·Cadence·PDK 표준 VM**을 개인 VMware에서 사용하는 운영자가
+자기 회로를 등록하고, MCP 클라이언트에서 허용된 DC·AC·TRAN, 제한된 1D Sweep과
+결과 조회를 수행하는 브리지입니다. 등록된 회로는 공통 템플릿을 사용합니다.
 
-**[Earlier2.0.0 qualification](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.0.0).**
-Two distinct new inverter/comparator test circuits completed DC/AC/TRAN,
-automatic extraction and a bounded AC Sweep on the standard VM. Exact installed
-2.0.0 also submitted a new job through the actual Codex app. Result retrieval,
-same-ID retry and actual app restart preserved its result without duplicate
-execution or reservation. The release includes the exact candidate's installation,
-artifact and acceptance reports. Earlier source checkpoints remain in the
-[acceptance record](docs/generic_release/GENERIC_ACCEPTANCE_CURRENT.json).
+## 현재 공개 안정판
 
-## Supported environment
+**[v2.1.0 다운로드 — GitHub Releases](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.1.0)**
 
-Development-only physical metadata inspection is an explicit operator API with a
-separate bounded staging/query approval. It launches no EDA or license utilities
-and cannot qualify layout/DRC/LVS/PEX from file presence. See the
-[fixed collector runbook](docs/M2_PHYSICAL_READINESS_01.md). It is not included in
-the already published2.0.0 artifacts. The earlier pre-claim replay defect is fixed.
-Source checks do not authorize another VM operation or qualify a physical backend.
-Use only the explicitly authorized finite operator workflow in
-[metadata recovery](docs/PHYSICAL_METADATA_RECOVERY_OPERATOR_V1.md); source/grant
-changes never restore spent collections.
+공개 commit: `36f75834b8556c9dd88761120a4442a25379d7ae`.
+Release의 wheel, `locked-runtime-2.1.0.txt`, `SHA256SUMS`, 설치 안내를 함께 받으세요.
 
-Actual host evidence is Windows/Python3.12.10. The reference VM observation is
-CentOS6.5/i686/Python2.6.6, Virtuoso IC6.1.5.500.15 and Spectre12.1.0.347.isr3.
-Ordinary OCEAN execution is observed; a separate OCEAN version is not established.
-Preflight checks your actual installation rather than assuming these values.
-Each operator supplies their own verified SSH alias/host key, ordinary guest
-account, workspace, library/cell/view/ADE state, registries, journals, result paths
-and approved resource limits. Other physical PCs, host OS combinations, Cadence
-versions and PDKs are deferred. Package support accepts Python3.12–3.13; actual3.13
-qualification is not claimed. No VM, Cadence executable, PDK, license or proprietary
-circuit is bundled. Your existing software entitlement remains required.
+| 구분 | 현재 상태 |
+| --- | --- |
+| 공개 안정판 | **2.1.0**, 공개된 9개 파일 |
+| main | **2.2.0.dev0** 미출시 개발 코드. PR #163 후보 묶음 포함 |
+| [PR #164](https://github.com/Phjrab/cadence-mcp-bridge/pull/164) | 미병합 source-binding 관찰 작업. 실제 후보 실행 미완료 |
+| Windows 간편 설치 EXE | 별도 개발 중. 아직 공개 다운로드 없음 |
 
-## Install from release files
+[2.1.0 설치](docs/releases/2.1.0/INSTALL.md)·[검증 범위](docs/releases/2.1.0/QUALIFICATION.md)의
+“candidate” 표현은 후보 평가 당시 기록입니다. 현재 공개 여부는 위 Release가 기준이며
+기존 v2.0.0/v2.1.0 배포 파일과 당시 문서를 변경하지 않습니다.
 
-Use the wheel, locked runtime file and SHA256SUMS from the same published release.
-Compare every file's hash before installation. The following commands install
-the stable2.1.0 release; the development checkout is a separate unreleased build.
+## 지원 환경과 준비물
+
+- Windows 호스트의 MCP 클라이언트, 교수님 제공 VM과 기존 PDK, 해당 제품 이용 권한.
+- 켜진 VM, 일반 게스트 계정, 자신의 SSH 주소/별칭·인증·호스트 키.
+- 자신의 작업 경로, library/cell/view·저장된 ADE 상태, registry·journal·결과 위치.
+- 자신의 자원 한도와 승인된 실험 범위. 개발자의 계정·과거 UUID·장부를 복사하지 않습니다.
+
+기존 현장 관측은 Windows/Python 3.12.10, CentOS 6.5/i686/Python 2.6.6,
+Virtuoso IC6.1.5.500.15, Spectre 12.1.0.347.isr3입니다. 각 설치의 실제 preflight를
+대신하지 않습니다. Windows x64 호스트와 i686 게스트는 다른 아키텍처입니다.
+다른 PC·Cadence 버전·PDK·클라우드는 검증 범위 밖입니다. VM·Cadence·PDK·라이선스는 배포하지 않습니다.
+
+## 설치
+
+간편 설치기는 **미공개**입니다. 현재 안정판은 Python 3.12와 Windows OpenSSH Client를
+준비하고 다음 수동 경로로 설치합니다. 전체 해시 검사는 [설치 안내](docs/releases/2.1.0/INSTALL.md)를 따르세요.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 .\cadence_mcp_bridge-2.1.0-py3-none-any.whl
@@ -71,204 +49,85 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m cadence_mcp_bridge operator-starter --output .\my-operator-setup
 ```
 
-The exclusive starter export includes the complete setup guide and fictional
-environment/design/PDK templates. It needs no developer checkout, private journal
-or past job. Keep setup and journals outside the package. Import, doctor and MCP
-startup do not initialize accounting, repair permissions or run EDA.
+파일 해시는 Release의 `SHA256SUMS`와 대조합니다. checksum 일치는 내용 무결성 검사이며
+그 자체가 배포자 서명은 아닙니다. 미공개 EXE를 안정판 파일로 안내하지 않습니다.
 
-## 2.1.0 candidate: guided local setup
+## 최초 VM·Codex 연결
 
-`operator-setup` reduces manual context and client configuration. This command
-is included in the2.1.0 candidate and absent from the published2.0.0 wheel.
-Start with `operator-setup guide --mode fresh` for a genuinely new installation,
-or `--mode existing` when preserving an existing resource domain. The guide is
-local and does not inspect or initialize the VM.
+내보낸 `my-operator-setup/README.md`와 [설정 도우미](docs/POST_01_OPERATOR_SETUP.md)를 따릅니다.
 
-Use `check` for your environment/design/PDK contracts, `export-runtime` to write
-one new settings file, then `check --settings RUNTIME --context ID`. After the
-existing explicit VM setup, registration and authority steps, `export-client`
-derives its paths from that selected context. Exports never overwrite an existing
-file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
-for required inputs, retained-state handling and error recovery.
+1. 기존 설치는 `operator-setup guide --mode existing`, 실제 이력이 없는 설치는
+   `--mode fresh` 안내를 선택합니다. 새 호스트라고 새 VM 장부를 만들지 않습니다.
+2. 본인의 환경·회로·PDK 계약을 `operator-setup check`로 확인하고 `export-runtime`으로
+   설정합니다. 예제의 가상 값은 production 값이 아니며 개발자 private journal은 필요하지 않습니다.
+3. 읽기 전용 환경 검사, 필요한 관리자 보정, 장부 연결, 회로 등록, native 묶음·승인·preflight를
+   순서대로 수행합니다. 원격 변경은 정확한 별도 동의가 필요합니다.
+4. `operator-setup export-client`로 선택한 context의 Codex 설정을 내보내고 기존 설정을
+   보존하며 연결합니다. 새 운영자는 `serve-operator`를 사용합니다.
+5. 회로·분석·입력·예산을 확인한 뒤 첫 작업을 별도로 제출합니다.
 
-## Experimental operator design and physical metadata
+설치, 로컬 설정, MCP 등록, VM 연결, preflight, 회로 등록, 실행 승인은 각각 다른 상태입니다.
+import·doctor·서버 시작은 VM 설치나 시뮬레이션을 하지 않습니다. 설정이 없으면
+`SETUP_REQUIRED`이며 개발자의 VM에 자동 접속하지 않습니다.
 
-The candidate's `operator-design` CLI stores immutable local revisions and
-validates a bounded CMOS inverter plan. Its public CLI is local-only and has no
-remote execution backend. It is absent from published2.0.0. Start in a new
-operator-owned directory:
+## 주요 기능과 검증 범위
 
-```powershell
-python -m cadence_mcp_bridge operator-design example --output inverter-example
-python -m cadence_mcp_bridge operator-design init --store revisions.sqlite3
-python -m cadence_mcp_bridge operator-design validate --plan inverter-example/plan.json --registry inverter-example/registry.json --binding inverter-example/binding.json
-python -m cadence_mcp_bridge operator-design record --store revisions.sqlite3 --plan inverter-example/plan.json --registry inverter-example/registry.json --binding inverter-example/binding.json
-python -m cadence_mcp_bridge operator-design show --store revisions.sqlite3 --workspace synthetic-work --design inverter --revision draft-one
-```
+| 기능 | 배포/코드 상태 | 실제 증거와 한계 |
+| --- | --- | --- |
+| 등록형 DC·AC·TRAN·1D Sweep·결과 조회 | 안정판 2.1.0 | 표준 VM의 서로 다른 두 신규 회로에서 2.0.0 출시 당시 실행·자동 추출 검증 |
+| 설정 도우미·기능 안내·결과 보고서 | 안정판 2.1.0 | 로컬/설치본 검증. 보고서 생성은 시뮬레이션을 재실행하지 않음 |
+| DC 추출 전용 복구 | 명시적 실험 기능 | 등록 inverter DC 한 경로 실제 검증. 원래 실패·PSF와 새 추출 이력 보존 |
+| 제한된 아날로그 측정 | 실험 기능 | 측정 정의·조건·샘플 한계 적용. 일반 PM/Offset/Slew 검증 아님 |
+| 로컬 설계 계획·좁은 회로 생성 | 실험적 operator 경로 | 관측 CDF inverter의 OA 생성·DC/TRAN 사례. 일반 편집/최적화 아님 |
+| 전압/전류 후보 2~16개 비교 | **main 미출시**, 실행 기본 비활성 | 소프트웨어·보관 결과 비교 검증. 새 native 후보 실행 qualification 미완료 |
+| W/L 혼합·일반 최적화·layout·DRC/LVS/PEX | 미완료/미지원 | 파일 존재나 synthetic 계산은 실제 지원 증거가 아님 |
+| 실제 앱 | 2.0.0 Codex 신규 작업·조회·재시작 증거 | 2.1.0 전체 앱 업그레이드 검증 아님. 추가 Claude 검증은 사용자 지시로 제외 |
 
-The exported device values and zero source hash are explicitly synthetic. They
-are not PDK/CDF guidance. Use a separate metadata store, never the existing
-analysis/sweep journal. Retry retains the same revision; a changed plan needs a
-new revision ID and exact parent binding. External result references remain
-unverified; plan validation cannot grant execution, ERC/LVS or physical signoff.
-`physical-assess --inventory FILE` assesses supplied typed metadata locally.
-See [M2 foundation](docs/M2_FOUNDATION_01.md) for API and preservation limits and
-[physical observations](docs/M2_PHYSICAL_OBSERVATIONS.md) for current unknowns.
+`cadence://feature-guidance` 또는 `operator-features`에서 현재 가능한 기능을 확인합니다.
+`REQUIRES_EXECUTION_CHECKS`는 실행 승인이 아닙니다. 결과는 값·단위·정의·조건·ID·출처를
+보존합니다. [기능 안내](docs/POST_02_FEATURE_GUIDANCE.md) · [보고서](docs/POST_03_RESULT_REPORTS.md)
 
-The experimental operator-only CDF API adds no MCP tool or remote execution CLI
-and never runs at import/server startup. A separately authorized, observed-CDF
-inverter case created owned OA and completed DC/TRAN plus automatic extraction.
-Independent effective-input checks verified that narrow source's device geometry;
-this does not provide general W/L editing or prove logic switching, settling,
-performance or signoff. Earlier failed observations/netlists remain preserved.
-See [the actual result and limits](docs/M2_OWNED_INVERTER_01.md).
+## 업데이트·제거·복구
 
-Physical metadata collection is also an explicit, finitely authorized operator
-API. Durable OS-account claims survive plans, package transitions and restarts;
-failed/unknown claims stay spent. File presence does not establish a usable API,
-license or layout/DRC/LVS/PEX backend. The candidate's framing correction has
-synthetic boundary tests and requires no new VM collection. See
-[metadata status](docs/M2_PHYSICAL_METADATA_01_STATUS.md).
+프로그램과 사용자 설정·registry·journal·승인·결과를 분리합니다. 호스트 패키지와 VM
+native runtime 변경은 별도 작업입니다. 호스트 업데이트만으로 원격 배포·실행 권한이 생기지 않습니다.
+활성 작업을 강제 종료하거나 사용량을 초기화하지 마세요.
 
-## 2.1.0 candidate: available features
+응답 유실·재시작 뒤에는 **같은 UUID와 plan**을 조회합니다. 실패·불명 상태를 새 ID로
+재실행하지 않습니다. 제거해도 원격 회로·장부·결과와 외부 설정은 보존합니다.
+검증된 조합의 [업데이트·복구 안내](docs/releases/2.1.0/INSTALL.md)를 따르세요.
 
-Read `cadence://feature-guidance` in a resource-capable MCP client, or run
-`operator-features --settings RUNTIME --context ID` for explicit local inspection.
-The report distinguishes the loaded operator/legacy mode, circuit descriptions,
-synthetic fixtures, reference adapters, missing bindings and submit authority scope.
-`REQUIRES_EXECUTION_CHECKS` still requires the normal job-specific checks; it is
-not live qualification or permission to execute. Expired submit authority does
-not imply that admitted results are unavailable. Private paths and remaining
-budget are not exposed. This additive candidate feature is absent from the
-published2.0.0 wheel. See [states and verification scope](docs/POST_02_FEATURE_GUIDANCE.md).
+## 자주 발생하는 문제
 
-## 2.1.0 candidate: existing-result reports
-
-Use `operator-results jobs` to browse retained native jobs, then `capture` with
-the exact successful job ID and plan hash to export a verified existing result.
-Offline `find`, `show` and `compare` preserve quantities, units, definitions and
-provenance and reject incompatible conditions. Dates refer to report capture;
-simulation dates are unknown. Reporting dispatches no simulation or extraction
-and reserves no capacity. Native clients also receive additive catalog/report
-resources. This candidate feature is absent from the published2.0.0 wheel. See
-[commands and evidence scope](docs/POST_03_RESULT_REPORTS.md).
-
-`operator-results compare` checks repetitions with matching complete conditions;
-it does not compare changed W/L or mixed-input candidates. Experimental
-`operator-analog` readers preserve sampled definitions and null/unqualified
-outcomes. `operator-recovery` is explicit extraction-only recovery, actually
-qualified only on one registered inverter DC route. Neither is automatically
-activated by import, doctor, reporting or ordinary same-ID retry. See the
-[qualification table](docs/releases/2.1.0/QUALIFICATION.md) before use.
-
-## Set up your VM and register a circuit
-
-Follow the exported `my-operator-setup/README.md` in order. Every installed command
-has `--help` and closed JSON schemas; the complete arguments and binding rules
-are included in that guide.
-
-1. Register your environment, design and existing PDK; validate their hashes and
-   runtime context. Set job/result roots to `<managed_root>/native-mcp-v1-jobs`.
-   Never import another operator's credentials, UUIDs, policy, grant or journal.
-2. Run read-only environment/trust checks. If correction is necessary, export
-   the fixed repair helper and exact plan. Your VM owner approves the targets,
-   preserves rollback information and applies only necessary metadata changes
-   through normal administrator access. Recheck as the ordinary account.
-3. Choose genuine zero-history domain initialization or retained existing-domain
-   registration. Keep the actual counter, shared lock, identity, history and
-   results. A different host journal cannot reset remote consumption.
-4. Register your source schematic and saved ADE L state through `native-registration
-   observe` and `assemble`, with protected source/model baselines and registered
-   result signals. The collector is read-only; execution uses owned work copies.
-5. Export/stage the immutable native bundle, confirm a bounded operator grant,
-   activate and preflight normally. Bind exact hashes to your context. A valid
-   configuration or plan does not authorize execution.
-
-The common parser supports DC operating point, typed AC frequency grids and typed
-TRAN stop/max-step settings. Unsupported statements, hidden analyses, expressions
-and unregistered includes reject. Register actual signals and scientific meanings;
-the bridge does not infer arbitrary measurements.
-
-## Run, query and repeat
-
-Export `client-config` for your context, add its explicit `serve-operator` fragment
-to your client and reconnect. Actual Codex qualification belongs to published
-2.0.0 and its recorded configuration; an actual2.1.0 client update is not tested.
-SDK compatibility is separate from actual application qualification.
-
-Use `operation plan`, then `operation submit` with that plan hash and one chosen
-UUID. MCP equivalents are `cadence_plan_operation`, `cadence_submit_operation`,
-`cadence_operation_status` and `cadence_operation_result`. They accept registered
-logical inputs, never caller paths, shell commands, SKILL, OCEAN or netlists.
-Results contain bounded DC voltages/signed power, registered AC transfer samples
-or TRAN summaries with verified provenance. `native-sweep` coordinates registered
-bounded1D points under the same ledger. Specifications use explicit targets,
-units and conditions: missing targets give NOT_EVALUATED and mismatched conditions
-cannot become PASS. There is no unlimited search or automatic optimization.
-
-After response loss/restart, query and retry the **same UUID and plan**. Existing
-IDs look up retained work rather than dispatch again. Preserve failed/unknown
-records; do not mint another ID, delete journals or reset accounting to conceal
-uncertainty. Failures stay charged.
-
-## Update, rollback and legacy clients
-
-2.0.0 changes the documented bare launch from the historical reference backend
-to operator setup. Missing settings give SETUP_REQUIRED without contacting the
-developer VM. This configuration migration requires a major version even though
-the original22 MCP declarations remain pinned. Users deliberately retaining
-legacy behavior explicitly select `serve`:
-
-```toml
-args = ["-m", "cadence_mcp_bridge", "serve"]
-```
-
-New operators use `serve-operator` with their own context. Legacy fixed-circuit
-tools keep their historical policy and evidence; they are not a fallback for your
-registered circuit. Keep old wheels/dependencies/client settings/native bundles,
-grants and external journals. Host package and native runtime transitions are
-separate integrity-checked operations. Old1.0 cannot launch `serve-operator`;
-restore explicit old settings without deleting new state. Uninstall preserves
-external journals and every remote source/result/ledger/history. See
-[installation and recovery](docs/generic_release/INSTALL_DRAFT_2_0_0.md).
-
-For the2.1.0 candidate, use the separate
-[upgrade and rollback guide](docs/releases/2.1.0/INSTALL.md). A host package
-transition does not activate or roll back the native runtime. Existing journals,
-grants, shared accounting, account-scoped metadata claims and unrelated client
-settings must be retained. Installing a version grants no new execution scope.
-
-## Troubleshooting and limits
-
-| Observation | Action |
+| 상태 | 다음 조치 |
 | --- | --- |
-| SETUP_REQUIRED | Export the starter and configure your own context. |
-| executable_permissions | Preserve the read-only plan; have your VM owner apply exact authorized repair, then recheck normally. |
-| authority_inactive | Check loaded grant, expiry and confirmation; preserve spent scope. |
-| Busy/lock/recovery rejection | Identify the live owner; preserve evidence and unrelated jobs. |
-| Budget/disk rejection | Read consumption and bounded work requirements; keep failures charged and disk checks enabled. |
-| Input/extraction failure | Preserve the UUID and artifacts; inspect registration and effective-input/reader bindings. |
+| `SETUP_REQUIRED` | 본인 runtime과 context 등록 |
+| SSH 없음·인증 실패·호스트 키 불일치 | OpenSSH·인증 확인. 호스트 키 검사 유지 |
+| `executable_permissions` | VM 소유자가 정확한 보정/원복 계획 검토 후 적용·재검사 |
+| `authority_inactive` | 승인 범위·만료·소비량 확인. 소진 승인 재사용 금지 |
+| 예산·디스크 부족 | 실제 누적 장부/여유 확인. 실패 소비와 디스크 검사 유지 |
+| 입력·추출 실패 | 같은 ID와 증거 보존 후 등록·적용 입력·추출 경로 확인 |
+| Codex 연결 누락 | `CODEX_HOME`과 프로젝트 설정 우선순위 확인 후 필요한 재연결 |
 
-Fresh generic destructive storage and active simulator termination are unavailable;
-cancellation is pending-only. General phase margin/offset/slew, arbitrary PVT,
-other PDKs, cloud/multi-user EDA and Claude application qualification are not claimed.
-MCP/SSH/Cadence/extraction run without root. No public sudo/chmod/chown, generic
-shell, unrestricted OA/PSF interface or license bypass is exposed.
+## 미출시 개발과 로드맵
 
-## Development and distribution rights
+Windows x64 EXE·전용 런타임, 기존 설정 가져오기, 최초 안내 화면과 안전한 Codex 설정
+적용은 별도 개발합니다. 실제 공개 파일 확인 전 다운로드 버튼을 추가하지 않습니다.
+[게시 후 README 전환 조건](docs/WINDOWS_INSTALL_README_TRANSITION.md)
 
-Hosted Windows/Linux CI uses synthetic data and locked dependencies for
-lint/type/security/contract/package and installation checks. It has no Cadence/PDK
-or license access. Actual VM/app evidence is separate. See
-[contribution guidance](CONTRIBUTING.md) and [security](SECURITY.md).
+main의 [명시적 후보](docs/EXPLICIT_CANDIDATES_01.md)와 PR #164는 설치기와 독립 작업입니다.
+W/L·자동 최적화·물리 설계는 후속 범위입니다. [PROJECT_STATE](PROJECT_STATE.md)의
+과거 checkpoint를 현재 공개 사실로 해석하지 마세요.
 
-Apache-2.0 covers original bridge code within its licensing rights. Dependencies,
-Cadence/PDK and clients keep their own terms. Imported planning remains
-LEGAL_REVIEW_REQUIRED and is excluded from curated packages and inspected new
-Git archives; exclusion does not clear history, clones or external adaptations.
-See [third-party scope](THIRD_PARTY_NOTICES.md) and
-[archive boundary](docs/AGENT_PLAN_EXPORT_BOUNDARY_V1.md).
+## 기여·라이선스·고급 운영
 
-GitHub Releases hosts the published2.0.0 build. Any later release requires its
-own exact commit/files/hashes and final user approval before tag/Release/upload.
-PyPI/MCPB/marketplace posting is a separate decision.
+[기여](CONTRIBUTING.md) · [보안](SECURITY.md) ·
+[전체 최초 설정](src/cadence_mcp_bridge/operator_starter/README.md) ·
+[회로 생성 증거](docs/M2_OWNED_INVERTER_01.md) ·
+[물리 메타데이터 개발 기록](docs/M2_PHYSICAL_METADATA_01_STATUS.md)
+
+Windows/Linux CI는 Cadence 없는 합성/설치 검증입니다. Windows Server CI 성공은 모든
+Windows 10/11 PC나 실제 앱·VM의 성공을 뜻하지 않습니다. 원본 코드는 [Apache-2.0](LICENSE),
+외부 제품과 의존성은 각자의 조건을 따릅니다. [배포 권리](THIRD_PARTY_NOTICES.md)와
+[계획 자료 제외 정책](docs/AGENT_PLAN_EXPORT_BOUNDARY_V1.md)을 확인하세요.
+새 GitHub Release는 정확한 후보 승인 후 게시하며 PyPI·MCPB는 별도 결정입니다.
