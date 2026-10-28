@@ -1,0 +1,63 @@
+name: Windows installer preview
+on:
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/windows-installer.yml'
+permissions:
+  contents: read
+concurrency:
+  group: windows-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows-x64-installer:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: '1'
+      UV_NO_PROGRESS: '1'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          submodules: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: '0.12.6'
+          checksum: 'df7cb9f243eae1621400d4fcf5b1b3d90f20e264ece91b64deb3b0078abca6ef'
+          enable-cache: false
+      - name: Locked host verification environment
+        run: uv sync --locked --all-groups --python 3.12.10
+      - name: Host safety regressions and static checks
+        run: |
+          .venv/Scripts/python.exe -m pytest tests/unit/test_windows_host_setup.py -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe -m ruff check windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Pinned signed build compiler
+        run: ./windows/prepare-toolchain.ps1 -Cache "$env:RUNNER_TEMP/host-downloads" -Destination "$env:RUNNER_TEMP/inno-6.7.3"
+      - name: Build actual Windows installer
+        run: ./windows/build.ps1 -OutputDirectory "$env:RUNNER_TEMP/host-build" -DownloadCache "$env:RUNNER_TEMP/host-downloads" -InnoCompiler "$env:RUNNER_TEMP/inno-6.7.3/ISCC.exe"
+      - name: Unicode per-user install, protocol, corruption, reinstall and uninstall
+        run: .venv/Scripts/python.exe -X utf8 windows/verify_install.py --installer "$env:RUNNER_TEMP/host-build/CadenceMCPBridge-2.2.0a1-windows-x64-setup.exe" --workspace "$env:RUNNER_TEMP/host-acceptance"
+      - name: Preserve unpublished candidate and receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-x64-preview-${{ github.event.pull_request.head.sha }}
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/host-build/*.exe
+            ${{ runner.temp }}/host-build/SHA256SUMS
+            ${{ runner.temp }}/host-build/packages/*
+            ${{ runner.temp }}/host-build/payload/INSTALL-MANIFEST.json
+            ${{ runner.temp }}/host-build/payload/DEPENDENCY-LICENSES.json
+            ${{ runner.temp }}/host-acceptance/RESULT.json
+            ${{ runner.temp }}/host-acceptance/*.log
