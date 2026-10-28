@@ -1,5 +1,13 @@
 ## Windows host installer preview — 2026-10-28
 
+Current host continuation: actual Windows10 Home x64/19045 per-user install,
+isolated stdio list/read, config apply, locked-file rejection, reinstall and
+uninstall preservation pass. UTF8 GUI input and OS-released config locks address
+the automated review findings. Actual GUI Korean-path import passed via keyboard;
+pixel capture still times out, so visual acceptance is incomplete. Remaining
+exact-head CI/package/build evidence is tracked in windows/VALIDATION.md and the
+private host-installer report. No merge/publication/VM/accounting change occurred.
+
 The direct user request authorizes local README/installer/GUI/test/document/PR work
 independently of unfinished PR164. This branch freezes main a713eb6b1db2a90652501bb71a3dacbe75c65460
 and uses 2.2.0a1 for an unpublished installer preview. It includes existing main's

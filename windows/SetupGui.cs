@@ -41,6 +41,7 @@ internal sealed class SetupWindow : Form
         stage.ForeColor = Color.FromArgb(26, 77, 120);
         tabs.Dock = DockStyle.Fill; tabs.Padding = new Point(16, 7);
         output.Multiline = true; output.ReadOnly = true; output.ScrollBars = ScrollBars.Both;
+        output.AccessibleName = "검사 결과와 다음 조치";
         output.WordWrap = true; output.Dock = DockStyle.Bottom; output.Height = 220;
         output.BackColor = Color.White; output.Font = new Font("Malgun Gothic", 10);
         Controls.Add(tabs); Controls.Add(output); Controls.Add(stage); Controls.Add(title);
@@ -227,6 +228,10 @@ internal sealed class SetupWindow : Form
             if (status == "VM_CONNECTED") stage.Text = "SSH 연결 확인됨 · preflight / 회로 등록 / 실행 승인은 아직 미확인입니다";
             if (status == "HOST_INSTALLED") { lines.AppendLine("프로그램 설치 완료. VM·회로·실행 권한은 이 검사로 확인하지 않습니다."); }
             if (result.ContainsKey("contexts")) lines.AppendLine("context 목록: " + json.Serialize(result["contexts"]));
+            if (result.ContainsKey("notices")) {
+                var notices = result["notices"] as ArrayList;
+                if (notices != null) foreach (var note in notices) lines.AppendLine(Convert.ToString(note));
+            }
             if (result.ContainsKey("next")) lines.AppendLine(Get(result, "next"));
             if (result.ContainsKey("ssh_available")) lines.AppendLine((bool)result["ssh_available"] ? "OpenSSH Client 있음" : Get(result, "ssh_install_help"));
             if (result.ContainsKey("codex_config")) lines.AppendLine("사용자 설정: " + Get(result, "codex_config"));

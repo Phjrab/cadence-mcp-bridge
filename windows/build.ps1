@@ -62,9 +62,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Embedded runtime verification failed' }
     & $InnoCompiler ("/DPayload=" + $payload) ("/DOutput=" + $destination) ("/DAppVersion=" + $version) (Join-Path $PSScriptRoot 'installer.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Windows installer compile failed' }
-    $hashLines = Get-ChildItem -LiteralPath $destination -File | Where-Object Extension -eq '.exe' | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  ' + $_.Name }
-    $hashLines += Get-ChildItem -LiteralPath $packages -File | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  packages/' + $_.Name }
-    $hashLines += Get-ChildItem -LiteralPath $payload -File | Where-Object Name -in @('INSTALL-MANIFEST.json','DEPENDENCY-LICENSES.json') | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  payload/' + $_.Name }
+    $hashLines = @(Get-ChildItem -LiteralPath $destination -File | Where-Object Extension -eq '.exe' | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  ' + $_.Name })
+    $hashLines += @(Get-ChildItem -LiteralPath $packages -File | Where-Object Name -ne '.gitignore' | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  packages/' + $_.Name })
+    $hashLines += @(Get-ChildItem -LiteralPath $payload -File | Where-Object Name -in @('INSTALL-MANIFEST.json','DEPENDENCY-LICENSES.json') | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() + '  payload/' + $_.Name })
     [IO.File]::WriteAllLines((Join-Path $destination 'SHA256SUMS'), $hashLines, [Text.UTF8Encoding]::new($false))
+    foreach ($line in [IO.File]::ReadAllLines((Join-Path $destination 'SHA256SUMS'))) {
+        if ($line -notmatch '^([0-9a-f]{64})  (.+)$') { throw 'Malformed checksum line' }
+        if ((Get-FileHash -LiteralPath (Join-Path $destination $Matches[2])).Hash.ToLowerInvariant() -ne $Matches[1]) { throw 'Checksum inventory mismatch' }
+    }
     Write-Output "WINDOWS_INSTALLER_BUILT: $destination"
 } finally { Pop-Location }

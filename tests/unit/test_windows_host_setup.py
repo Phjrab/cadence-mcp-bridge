@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -297,6 +299,19 @@ def test_no_unmanaged_removal(layout, tmp_path):
         backend.dispatch(
             {"action": "remove", "consent": True, "receipt": "elsewhere"}, root=tmp_path / "data"
         )
+
+
+def test_unknown_context_returns_ui_guidance_instead_of_traceback(monkeypatch, capsys):
+    monkeypatch.setattr(backend.sys, "stdin", SimpleNamespace(buffer=io.BytesIO(b"{}")))
+    monkeypatch.setattr(
+        backend, "dispatch", Mock(side_effect=backend.RuntimeRejected("unknown_context_id"))
+    )
+    assert backend.main() == 1
+    output = capsys.readouterr()
+    report = json.loads(output.out)
+    assert report["reason"] == "unknown_context_id"
+    assert "context" in report["guidance"] and not report["remote_contact"]
+    assert not output.err
 
 
 def test_configuration_lock_excludes_live_writer_and_recovers_after_crash(layout):

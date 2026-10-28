@@ -15,10 +15,15 @@ from pathlib import Path
 from typing import Any
 
 from cadence_mcp_bridge import __version__
-from cadence_mcp_bridge.onboarding import export_context_client_config, export_starter
+from cadence_mcp_bridge.errors import ConfigurationError
+from cadence_mcp_bridge.onboarding import (
+    OnboardingRejected,
+    export_context_client_config,
+    export_starter,
+)
 from cadence_mcp_bridge.operator_setup import _check, _export_runtime, setup_guide
 from cadence_mcp_bridge.operator_transport import run_fixed
-from cadence_mcp_bridge.runtime_context import load_runtime
+from cadence_mcp_bridge.runtime_context import RuntimeRejected, load_runtime
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.windows_host.configuration import (
     SetupRejected,
@@ -393,9 +398,15 @@ def main() -> int:
         if len(raw) > 256 * 1024:
             raise SetupRejected("request_too_large")
         result = dispatch(json.loads(raw))
-    except (OSError, ValueError, KeyError, TypeError) as error:
+    except (OSError, ValueError, KeyError, TypeError, ConfigurationError) as error:
         # No raw exception text, SSH output, config contents or credential data.
-        reason = str(error) if isinstance(error, SetupRejected) else "setup_input_or_file_invalid"
+        reason = (
+            error.reason
+            if isinstance(error, (RuntimeRejected, OnboardingRejected))
+            else str(error)
+            if isinstance(error, SetupRejected)
+            else "setup_input_or_file_invalid"
+        )
         guidance = {
             "preview_changed": "설정 미리보기를 새로 만들고 표시된 변경을 다시 확인하세요.",
             "configuration_changed_preview_again": "다른 앱이 설정을 변경했습니다. 덮어쓰지 "
@@ -410,6 +421,8 @@ def main() -> int:
             "연결 확인을 실행하세요. 프로그램 설치는 완료됐습니다.",
             "configuration_busy": "다른 설정 저장 작업이 진행 중입니다. 완료 후 다시 확인하세요. "
             "중단된 프로세스의 잠금은 Windows가 자동 해제합니다.",
+            "unknown_context_id": "이 runtime에 없는 context ID입니다. context 칸을 비우고 "
+            "‘기존 설정 확인 / context 목록’을 눌러 표시된 ID를 선택하세요.",
         }.get(reason, "입력과 파일 권한을 확인하세요. 기존 설정·journal은 보존했습니다.")
         result = {
             **NO_EXECUTION,

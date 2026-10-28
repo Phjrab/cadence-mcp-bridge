@@ -1,5 +1,12 @@
 ## Windows host installer preview — 2026-10-28
 
+Host continuation closes the identified Unicode, crash-lock and packaging-fixture
+defects, then checks the exact final installer/CI. Actual per-user install,
+stdio/local configuration, in-use rejection and data preservation already passed
+on Windows10 Home x64/19045. Actual GUI text interaction is separate from missing
+pixel captures, which remain an acceptance gap. See windows/VALIDATION.md.
+Do not start PR164 operations, merge, or publish through this host-only track.
+
 The direct user request authorizes local README/installer/GUI/test/document/PR work
 independently of unfinished PR164. This branch freezes main a713eb6b1db2a90652501bb71a3dacbe75c65460
 and uses 2.2.0a1 for an unpublished installer preview. It includes existing main's

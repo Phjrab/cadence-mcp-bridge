@@ -27,6 +27,10 @@ def project(tmp_path: Path) -> Path:
     source.mkdir(parents=True)
     (source / "__init__.py").write_bytes(b"# Synthetic original source\n")
     (source / "py.typed").write_bytes(b"")
+    host = source / "windows_host"
+    host.mkdir()
+    for name in ("__init__.py", "backend.py", "configuration.py", "verify.py", "uninstall.py"):
+        (host / name).write_bytes(b"# Synthetic host module\n")
     starter = source / "operator_starter"
     starter.mkdir()
     for name in ("README.md", "environment.json", "designs.json", "pdks.json"):

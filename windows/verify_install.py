@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ctypes
 import hashlib
 import json
 import os
@@ -57,6 +58,18 @@ async def protocol(launcher: Path, env: dict[str, str]) -> dict[str, object]:
             "actual_app_verified": False,
             "remote_contact": False,
         }
+
+
+def user_snapshot(user: Path) -> dict[str, str]:
+    # USERPROFILE relocation also makes Windows create shell icon caches and
+    # installer-owned Start Menu shortcuts. Protect bridge/client/operator data,
+    # not those OS-generated files that legitimately change on reinstall.
+    roots = [user / name for name in ("CadenceMCPBridge", "codex-home", "registered-inputs")]
+    files = [p for p in user.iterdir() if p.is_file()]
+    for root in roots:
+        if root.exists():
+            files.extend(p for p in root.rglob("*") if p.is_file())
+    return {str(p.relative_to(user)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 
 
 def verify(installer: Path, root: Path) -> dict[str, object]:
@@ -214,17 +227,36 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
     protocol_result = asyncio.run(protocol(launcher, protocol_env))
     protocol_result["configured_context"] = os_ssh.is_file()
     # Protocol startup may create local fixture journals; all must survive updates.
-    retained = {
-        str(path.relative_to(user)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in user.rglob("*")
-        if path.is_file()
-    }
+    retained = user_snapshot(user)
+    (root / "protected-before.json").write_text(json.dumps(retained, indent=2), encoding="utf-8")
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+    ]
+    kernel.CreateFileW.restype = ctypes.c_void_p
+    kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+    handle = kernel.CreateFileW(
+        str(install / "runtime/python313.dll"), 0x80000000, 0, None, 3, 0, None
+    )
+    assert handle not in (None, ctypes.c_void_p(-1).value)
+    try:
+        held = run([*options, "/LOG=" + str(root / "in-use.log")], env, clean_cwd, code=None)
+        assert held.returncode not in (0, 3010)
+        assert retained == user_snapshot(user)
+    finally:
+        kernel.CloseHandle(handle)
     run([*options, "/LOG=" + str(root / "reinstall.log")], env, clean_cwd)
-    assert retained == {
-        str(path.relative_to(user)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in user.rglob("*")
-        if path.is_file()
-    }
+    after_reinstall = user_snapshot(user)
+    (root / "protected-after.json").write_text(
+        json.dumps(after_reinstall, indent=2), encoding="utf-8"
+    )
+    assert retained == after_reinstall
     # Corruption and extra import-hook rejection occur before Python can start.
     target = install / "runtime/Lib/site-packages/cadence_mcp_bridge/__init__.py"
     original = target.read_bytes()
@@ -242,11 +274,8 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
     # A later unrelated user edit must survive automatic exact-entry uninstall.
     with config.open("a", encoding="utf-8") as stream:
         stream.write('\n[mcp_servers.later]\ncommand="later.exe" # preserve me\n')
-    protected = {
-        str(path.relative_to(user)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in user.rglob("*")
-        if path.is_file() and path != config
-    }
+    protected = user_snapshot(user)
+    protected.pop(str(config.relative_to(user)))
     run(
         [
             str(install / "unins000.exe"),
@@ -274,6 +303,7 @@ def verify(installer: Path, root: Path) -> dict[str, object]:
         "actual_clean_os_image": False,
         "unicode_install": True,
         "reinstall_preserves_data": True,
+        "in_use_reinstall_rejected_without_termination": True,
         "uninstall_preserves_data": True,
         "pre_python_corruption_rejected": True,
         "protocol": protocol_result,
