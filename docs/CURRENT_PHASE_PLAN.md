@@ -1,3 +1,14 @@
+## README / Windows host setup track — 2026-10-28
+
+The direct user request authorizes independent local README, Windows installer,
+GUI, tests, documentation and feature PR work. This README-only branch starts at
+main a713eb6b1db2a90652501bb71a3dacbe75c65460. Remote v2.1.0 and its nine assets
+remain published at36f75834b8556c9dd88761120a4442a25379d7ae. PR164 remains draft
+at1a62c04948945904d5a6cb9eee6357f89906a7d5; both final hosted checks are SUCCESS.
+This branch changes no runtime, policy, journal, budget, VM or release artifact.
+The GUI/EXE is a separate feature branch, not yet a public download. Historical
+checkpoints below retain their original source/date and are not current release
+status. No new VM, PR164 merge or public posting authority is inferred.
 ## Final candidate software correction gates, 2026-10-18
 
 PR163's recovery lookup P2 is corrected with shared local identity checks before
