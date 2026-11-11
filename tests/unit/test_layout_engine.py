@@ -560,6 +560,30 @@ def test_orient_rejects_noninstance_or_missing(object_id: str) -> None:
         build_plan(snapshot, request)
 
 
+@pytest.mark.parametrize("pcell_submaster", [True, False])
+def test_orient_nonpcell_scope_matches_native(pcell_submaster: bool) -> None:
+    snapshot = _orient_snapshot()
+    snapshot = reseal(
+        snapshot,
+        instances=(snapshot.instances[0].model_copy(update={"pcell_submaster": pcell_submaster}),),
+    )
+    original = snapshot.model_dump_json()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),)}
+    )
+    if pcell_submaster:
+        with pytest.raises(
+            LayoutRejected, match="^layout_orientation_pcell_submaster_unsupported$"
+        ):
+            build_plan(snapshot, request)
+    else:
+        predicted, _ = predict_snapshot(snapshot, request)
+        assert predicted.instances[0].orientation == "R90"
+        assert predicted.instances[0].origin_dbu == snapshot.instances[0].origin_dbu
+        assert predicted.instances[0].bbox_dbu == box(*_ORIENT_BOXES["R90"])
+    assert snapshot.model_dump_json() == original
+
+
 def test_orient_rejects_unsupported_capability_orientation_and_duplicate_target() -> None:
     snapshot = _orient_snapshot()
     edit = OrientEdit(kind="orient", object_id="inst-one", orientation="MY")

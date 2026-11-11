@@ -314,6 +314,8 @@ def predict_snapshot(
                 raise LayoutRejected("unregistered_layout_object")
             if not isinstance(item, LayoutInstance):
                 raise LayoutRejected("layout_orientation_requires_instance")
+            if item.pcell_submaster:
+                raise LayoutRejected("layout_orientation_pcell_submaster_unsupported")
             if edit.orientation not in snapshot.technology.supported_orientations:
                 raise LayoutRejected("unsupported_orientation")
             if edit.orientation == item.orientation:
