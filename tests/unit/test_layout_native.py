@@ -184,3 +184,78 @@ def test_bundle_export_has_exact_asset_pins_and_observed_seed_only():
     raw["routes"][0]["path"] = "/registered/managed/Owned/../Seed/layout"
     with pytest.raises(ValueError, match="path_shape"):
         registration_from(raw)
+
+
+def probe_registration():
+    return {
+        "schema_version": 1,
+        "routes": [
+            {
+                "binding": fixture_snapshot().binding.model_dump(mode="json"),
+                "cellview": {"library": "Owned", "cell": "Seed", "view": "layout"},
+                "path": "/registered/managed/Owned/Seed/layout",
+                "owned": True,
+                "read_only": False,
+            }
+        ],
+        "libraries": [
+            {"name": name, "path": "/observed/" + name, "tree_sha256": "a" * 64}
+            for name in ("Design", "Analog", "Basic", "Tech", "SourceA", "SourceB")
+        ],
+        "owned_libraries": [
+            {"name": "Owned", "path": "/registered/managed/Owned", "tree_sha256": None}
+        ],
+        "protected_views": [{"path": "/observed/Design/Source/layout", "tree_sha256": "b" * 64}],
+        "seed": None,
+    }
+
+
+@pytest.mark.parametrize("selected", [None, ["Design", "Tech"]])
+def test_probe_scope_export_preserves_dependencies_and_binds_exact_bytes(selected):
+    document = probe_registration()
+    if selected is not None:
+        document["probe_libraries"] = selected
+    registration = native.LayoutRegistration.model_validate_json(json.dumps(document))
+    bundle = native.build_layout_bundle(
+        provider().context,
+        registration,
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    expected = json.dumps(
+        document, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode()
+    assert bundle.assets["registration.json"] == expected
+    exported = json.loads(expected)
+    assert len(exported["libraries"]) == 6
+    assert exported.get("probe_libraries") == selected
+    manifest = json.loads(bundle.assets["manifest.json"])
+    assert manifest["files"]["registration.json"] == {
+        "sha256": hashlib.sha256(expected).hexdigest(),
+        "bytes": len(expected),
+    }
+    assert hashlib.sha256(bundle.assets["manifest.json"]).hexdigest() == bundle.manifest_sha256
+    assert bundle.provider.layout_manifest_sha256 == bundle.manifest_sha256
+    default = registration.model_copy(update={"probe_libraries": None})
+    default_bundle = native.build_layout_bundle(
+        provider().context,
+        default,
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    if selected is None:
+        assert default_bundle == bundle
+    else:
+        assert default_bundle.manifest_sha256 != bundle.manifest_sha256
+
+
+@pytest.mark.parametrize(
+    "selected", [[], ["Unknown"], ["Owned"], ["Tech", "Tech"], ["Tech"] * 9, "Tech"]
+)
+def test_invalid_operator_probe_scope_rejected_locally(selected):
+    document = probe_registration()
+    document["probe_libraries"] = selected
+    with pytest.raises(ValueError):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))

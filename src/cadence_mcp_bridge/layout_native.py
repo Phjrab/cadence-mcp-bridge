@@ -110,6 +110,9 @@ class LayoutRegistration(VariableModel):
     ]
     protected_views: Annotated[tuple[LayoutProtectedView, ...], Field(min_length=1, max_length=32)]
     seed: LayoutSeed | None = None
+    probe_libraries: (
+        Annotated[tuple[BindingName, ...], Field(min_length=1, max_length=8)] | None
+    ) = None
 
     @model_validator(mode="after")
     def closed_routes(self) -> Self:
@@ -118,6 +121,11 @@ class LayoutRegistration(VariableModel):
             raise ValueError("layout_library_identity_collision")
         if any(lib.tree_sha256 is None for lib in self.libraries):
             raise ValueError("layout_protected_library_hash_required")
+        if self.probe_libraries is not None and (
+            len(set(self.probe_libraries)) != len(self.probe_libraries)
+            or not set(self.probe_libraries) <= {lib.name for lib in self.libraries}
+        ):
+            raise ValueError("layout_probe_library_scope")
         # Pure syntax checks only: never touch a remote path on this Windows host.
         paths = [item.path for item in self.libraries + self.owned_libraries]
         paths += [item.path for item in self.protected_views]
@@ -201,7 +209,11 @@ def build_layout_bundle(
             value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False
         ).encode("ascii")
 
-    assets["registration.json"] = canonical(registration.model_dump(mode="json"))
+    registration_document = registration.model_dump(mode="json")
+    if registration.probe_libraries is None:
+        # Old workers require exactly the original keys, including seed=null.
+        registration_document.pop("probe_libraries")
+    assets["registration.json"] = canonical(registration_document)
     manifest: dict[str, Any] = {
         "schema_version": 1,
         "resource_domain_sha256": context.resource_domain_sha256,

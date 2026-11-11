@@ -1,6 +1,7 @@
 """Disposable shared-lock/journal and synthetic native frame tests; no VM calls."""
 
 import copy
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -15,6 +16,83 @@ from cadence_mcp_bridge.layout_engine import build_plan
 from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutSnapshot
 
 root = root_fixture
+
+
+@pytest.mark.parametrize(
+    "selected", [[], None, ["Unknown"], ["Tech", "Tech"], ["Tech"] * 9, "Tech", [[]]]
+)
+def test_invalid_probe_scope_rejected_before_runtime_or_program(selected):
+    registration = {
+        "schema_version": 1,
+        "routes": [],
+        "libraries": [{"name": "Tech"}],
+        "owned_libraries": [],
+        "protected_views": [],
+        "seed": None,
+        "probe_libraries": selected,
+    }
+    # No native module or profile can be touched before rejecting this input.
+    with pytest.raises(ValueError, match="probe_library_scope"):
+        worker.FixedLayoutRuntime(None, None, registration, None, None, None, None, None)
+    runtime = object.__new__(worker.FixedLayoutRuntime)
+    runtime.registration = registration
+    with pytest.raises(ValueError, match="probe_library_scope"):
+        runtime.operator_probe(None)
+
+
+@pytest.mark.parametrize("selected", [None, ["Design", "Tech"]])
+def test_probe_selects_two_but_check_protects_all_six(selected):
+    names = ["Design", "Analog", "Basic", "Tech", "SourceA", "SourceB"]
+    runtime = object.__new__(worker.FixedLayoutRuntime)
+    runtime.registration = {"libraries": [{"name": name} for name in names], "routes": []}
+    if selected is not None:
+        runtime.registration["probe_libraries"] = selected
+    guarded, programs, protections = [], [], []
+    runtime.root = "/synthetic"
+
+    class Session:
+        root = runtime.root
+
+        def check(self):
+            pass
+
+    runtime.accounting = SimpleNamespace(
+        ReservationSession=Session,
+        state=lambda *a: ({"result_reserved_bytes": 0}, []),
+        identity_manifest=lambda *a: {},
+        effective_policy=lambda *a: {"result_ceiling_bytes": 33554432},
+    )
+    runtime.read_check = lambda request: {
+        "valid_until_unix": float("inf"),
+        "actions": ["probe"],
+        "max_job_bytes": 1048576,
+    }
+    runtime.profile = {"limits": {"disk_floor_bytes": 0, "disk_floor_percent": 0}}
+    runtime.native_assets = {"profile.json": b"profile", "probe.py": b"probe"}
+    runtime.manifest = {"resource_domain_sha256": "a" * 64, "identity_manifest_sha256": "b" * 64}
+    runtime.modules = {
+        "probe": SimpleNamespace(
+            observe=lambda *a: {"free_bytes": 33554432, "total_bytes": 33554432}
+        )
+    }
+    runtime.gate = SimpleNamespace(library_binding=guarded.append, occupancy=lambda: (0, 0))
+    runtime.protected_snapshot = lambda: protections.append("checked")
+    runtime.layout_retained_bytes = lambda: 0
+    runtime.rendering = SimpleNamespace(probe_script=lambda libs, routes: libs)
+    runtime._job = lambda: "synthetic-job"
+
+    def program(session, script, route, job):
+        programs.append(script)
+        return b"MCP_LAYOUT_PROBE|1\nEND_LAYOUT_PROBE\n"
+
+    runtime._program = program
+    session = Session()
+    runtime.check(session, {"action": "probe"})
+    runtime.operator_probe(session)
+    runtime.check(session, {"action": "probe"})
+    assert programs == [selected if selected is not None else names]
+    assert guarded == [{"libraries": runtime.registration["libraries"]}] * 2
+    assert len(guarded[0]["libraries"]) == 6 and protections == ["checked", "checked"]
 
 
 class Runtime:
