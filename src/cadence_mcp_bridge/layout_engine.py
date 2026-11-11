@@ -13,13 +13,18 @@ from cadence_mcp_bridge.layout_models import (
     ZERO_DIGEST,
     AddPinEdit,
     AddRectEdit,
+    ConnectTerminalEdit,
     LayoutApplyRequest,
     LayoutBBox,
     LayoutChange,
+    LayoutConnectTerminalNativeEdit,
     LayoutCorrespondence,
     LayoutCorrespondenceCheck,
     LayoutDiff,
     LayoutInstance,
+    LayoutInstanceTerminal,
+    LayoutInstanceTerminalChange,
+    LayoutInstanceTerminalQualification,
     LayoutMasterMapping,
     LayoutNativeCommand,
     LayoutNativeEdit,
@@ -227,6 +232,23 @@ def compute_diff(
             else getattr(before, k) != getattr(after, k)
         )
     )
+    terminal_changes = None
+    if before.instance_terminals is not None or after.instance_terminals is not None:
+        old_terminals = {row.key: row for row in before.instance_terminals or ()}
+        new_terminals = {row.key: row for row in after.instance_terminals or ()}
+        old_scope = {key: row.master_id for key, row in old_terminals.items()}
+        new_scope = {key: row.master_id for key, row in new_terminals.items()}
+        if (
+            before.instance_terminals is None
+            or after.instance_terminals is None
+            or old_scope != new_scope
+        ):
+            metadata += ("instance_terminal_scope",)
+        terminal_changes = tuple(
+            LayoutInstanceTerminalChange(before=old_terminals[key], after=new_terminals[key])
+            for key in sorted(old_scope.keys() & new_scope.keys())
+            if old_scope[key] == new_scope[key] and old_terminals[key] != new_terminals[key]
+        )
     unexpected: tuple[str, ...] = ()
     matches = None
     if expected is not None:
@@ -240,8 +262,12 @@ def compute_diff(
                 != (object_digest(wanted[key]) if key in wanted else None)
             )
         )
-        matches = after.semantic_sha256 == expected.semantic_sha256 and not unexpected
-    return LayoutDiff(
+        matches = (
+            after.semantic_sha256 == expected.semantic_sha256
+            and not unexpected
+            and "instance_terminal_scope" not in metadata
+        )
+    diff = LayoutDiff(
         before_sha256=before.semantic_sha256,
         after_sha256=after.semantic_sha256,
         changes=tuple(changes),
@@ -249,6 +275,9 @@ def compute_diff(
         metadata_changes=metadata,
         matches_plan=matches,
     )
+    if terminal_changes is not None:
+        return diff.model_copy(update={"instance_terminal_changes": terminal_changes})
+    return diff
 
 
 def _translated(point: LayoutPoint, dx: int, dy: int) -> LayoutPoint:
@@ -287,11 +316,97 @@ def _union_bbox(objects: dict[str, LayoutObject]) -> LayoutBBox | None:
     )
 
 
+def qualified_instance_terminal_edits(
+    request: LayoutPlanRequest,
+    qualification: LayoutInstanceTerminalQualification | None,
+) -> tuple[ConnectTerminalEdit, ...]:
+    edits = tuple(edit for edit in request.edits if isinstance(edit, ConnectTerminalEdit))
+    if not edits:
+        if qualification is not None and qualification.binding == request.binding:
+            raise LayoutRejected("layout_instance_terminal_qualification_mapping_mismatch")
+        return ()
+    if qualification is None:
+        raise LayoutRejected("layout_instance_terminal_qualification_required")
+    qualification = LayoutInstanceTerminalQualification.model_validate_json(
+        qualification.model_dump_json()
+    )
+    if qualification.binding != request.binding:
+        raise LayoutRejected("layout_instance_terminal_qualification_binding_mismatch")
+    if len(edits) != len(request.edits):
+        raise LayoutRejected("layout_instance_terminal_mixed_batch_unsupported")
+    if len({edit.key for edit in edits}) != len(edits):
+        raise LayoutRejected("duplicate_layout_instance_terminal_edit")
+    if set(edits) != set(qualification.edits):
+        raise LayoutRejected("layout_instance_terminal_qualification_mapping_mismatch")
+    return edits
+
+
+def _predict_instance_terminals(
+    snapshot: LayoutSnapshot, edits: tuple[ConnectTerminalEdit, ...]
+) -> tuple[LayoutSnapshot, tuple[LayoutNativeCommand, ...]]:
+    if snapshot.instance_terminals is None:
+        raise LayoutRejected("layout_instance_terminal_baseline_unobserved")
+    observed = {row.key: row for row in snapshot.instance_terminals}
+    if observed.keys() != {edit.key for edit in edits}:
+        raise LayoutRejected("layout_instance_terminal_scope_mismatch")
+    instances = {item.object_id: item for item in snapshot.instances}
+    pins = {pin.object_id: pin for pin in snapshot.pins}
+    predicted = []
+    commands: list[LayoutNativeCommand] = []
+    for edit in edits:
+        instance = instances.get(edit.object_id)
+        before = observed[edit.key]
+        if instance is None or instance.master_id != edit.expected_master_id:
+            raise LayoutRejected("layout_instance_terminal_master_mismatch")
+        if before.present:
+            raise LayoutRejected("layout_instance_terminal_already_exists")
+        pin = pins.get(edit.pin_object_id)
+        if (
+            pin is None
+            or pin.association != "native_verified"
+            or any(
+                other.terminal_id == pin.terminal_id and other.net_id != pin.net_id
+                for other in snapshot.pins
+            )
+        ):
+            raise LayoutRejected("layout_instance_terminal_pin_not_verified")
+        predicted.append(
+            LayoutInstanceTerminal(
+                object_id=edit.object_id,
+                master_id=edit.expected_master_id,
+                terminal=edit.terminal,
+                present=True,
+                net_id=pin.net_id,
+                pin_object_id=pin.object_id,
+            )
+        )
+        commands.append(
+            LayoutConnectTerminalNativeEdit(
+                **edit.model_dump(),
+                before_sha256=object_digest(instance),
+                net_id=pin.net_id,
+                terminal_id=pin.terminal_id,
+            )
+        )
+    return (
+        LayoutSnapshot.model_validate(
+            {
+                **snapshot.model_dump(),
+                "instance_terminals": tuple(predicted),
+                "provenance": "plan_prediction",
+                "semantic_sha256": ZERO_DIGEST,
+            }
+        ),
+        tuple(commands),
+    )
+
+
 def predict_snapshot(
     snapshot: LayoutSnapshot,
     request: LayoutPlanRequest,
     *,
     orientation_qualification: LayoutOrientationQualification | None = None,
+    instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None,
 ) -> tuple[LayoutSnapshot, tuple[LayoutNativeCommand, ...]]:
     snapshot = LayoutSnapshot.model_validate_json(snapshot.model_dump_json())
     request = LayoutPlanRequest.model_validate_json(request.model_dump_json())
@@ -301,6 +416,9 @@ def predict_snapshot(
         raise LayoutRejected("stale_layout_baseline")
     if not snapshot.owned or snapshot.read_only or snapshot.binding.parent_revision_id is None:
         raise LayoutRejected("owned_working_revision_required")
+    association_edits = qualified_instance_terminal_edits(request, instance_terminal_qualification)
+    if association_edits:
+        return _predict_instance_terminals(snapshot, association_edits)
     allowed_orientations: tuple[Orientation, ...] = snapshot.technology.supported_orientations
     if any(isinstance(edit, OrientEdit) for edit in request.edits):
         if orientation_qualification is not None:
@@ -325,6 +443,8 @@ def predict_snapshot(
     commands: list[LayoutNativeCommand] = []
     allowed = {(p.layer, p.purpose) for p in snapshot.technology.allowed_layer_purposes}
     for edit in request.edits:
+        if isinstance(edit, ConnectTerminalEdit):
+            raise LayoutRejected("layout_instance_terminal_qualification_required")
         if edit.object_id in selected:
             raise LayoutRejected("duplicate_edit_target")
         selected.add(edit.object_id)
@@ -437,13 +557,17 @@ def build_plan(
     request: LayoutPlanRequest,
     *,
     orientation_qualification: LayoutOrientationQualification | None = None,
+    instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None,
 ) -> LayoutPlan:
     predicted, commands = predict_snapshot(
-        snapshot, request, orientation_qualification=orientation_qualification
+        snapshot,
+        request,
+        orientation_qualification=orientation_qualification,
+        instance_terminal_qualification=instance_terminal_qualification,
     )
     diff = compute_diff(snapshot, predicted, expected=predicted)
     preview = LayoutPreview(
-        target_object_ids=tuple(e.object_id for e in request.edits),
+        target_object_ids=tuple(dict.fromkeys(e.object_id for e in request.edits)),
         created=sum(e.kind in ("add_rect", "add_pin") for e in request.edits),
         moved=sum(e.kind == "move" for e in request.edits),
         expected_bbox_dbu=_union_bbox(snapshot_objects(predicted)),
@@ -466,13 +590,17 @@ def validate_plan(
     request: LayoutApplyRequest,
     *,
     orientation_qualification: LayoutOrientationQualification | None = None,
+    instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None,
 ) -> LayoutPlan:
     """Provider calls this AFTER durable replay lookup, under its existing lock."""
     request = LayoutApplyRequest.model_validate_json(request.model_dump_json())
     if request.expected_plan_sha256 != request.plan.plan_sha256:
         raise LayoutRejected("layout_expected_plan_digest_mismatch")
     rebuilt = build_plan(
-        snapshot, request.plan.request, orientation_qualification=orientation_qualification
+        snapshot,
+        request.plan.request,
+        orientation_qualification=orientation_qualification,
+        instance_terminal_qualification=instance_terminal_qualification,
     )
     if rebuilt != request.plan:
         raise LayoutRejected("layout_plan_revalidation_mismatch")
