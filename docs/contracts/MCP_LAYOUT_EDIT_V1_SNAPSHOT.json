@@ -1,0 +1,6243 @@
+{
+  "schema_version": 1,
+  "source_main": "a713eb6b1db2a90652501bb71a3dacbe75c65460",
+  "tools": {
+    "cadence_layout_apply": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": null
+      },
+      "description": "Apply the exact hashed plan within configured owned-revision authority. Retains uncertain outcomes; identical operation retries never resend a write. Save/reopen verification is separate from DRC/LVS/PEX qualification.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "AddPinEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_pin",
+                "title": "Kind",
+                "type": "string"
+              },
+              "label": {
+                "default": null,
+                "title": "Label",
+                "type": "null"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "AddPinEdit",
+            "type": "object"
+          },
+          "AddRectEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_rect",
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um"
+            ],
+            "title": "AddRectEdit",
+            "type": "object"
+          },
+          "LayoutApplyRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/$defs/LayoutPlan"
+              }
+            },
+            "required": [
+              "plan",
+              "expected_plan_sha256"
+            ],
+            "title": "LayoutApplyRequest",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutNativeEdit": {
+            "additionalProperties": false,
+            "description": "Fixed worker command; geometry is complete, no arbitrary parameters/code.",
+            "properties": {
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "dx_dbu": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": -2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dx Dbu"
+              },
+              "dy_dbu": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": -2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dy Dbu"
+              },
+              "kind": {
+                "enum": [
+                  "move",
+                  "add_rect",
+                  "add_pin"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "pin": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutPin"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "shape": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutShape"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              }
+            },
+            "required": [
+              "kind",
+              "object_id"
+            ],
+            "title": "LayoutNativeEdit",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Baseline Sha256",
+                "type": "string"
+              },
+              "expected_semantic_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Semantic Sha256",
+                "type": "string"
+              },
+              "normalized_edits": {
+                "items": {
+                  "$ref": "#/$defs/LayoutNativeEdit"
+                },
+                "maxItems": 128,
+                "minItems": 1,
+                "title": "Normalized Edits",
+                "type": "array"
+              },
+              "plan_sha256": {
+                "default": "0000000000000000000000000000000000000000000000000000000000000000",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Sha256",
+                "type": "string"
+              },
+              "preview": {
+                "$ref": "#/$defs/LayoutPreview"
+              },
+              "request": {
+                "$ref": "#/$defs/LayoutPlanRequest"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "request",
+              "baseline_sha256",
+              "normalized_edits",
+              "expected_semantic_sha256",
+              "preview"
+            ],
+            "title": "LayoutPlan",
+            "type": "object"
+          },
+          "LayoutPlanRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "edits": {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "add_pin": "#/$defs/AddPinEdit",
+                      "add_rect": "#/$defs/AddRectEdit",
+                      "move": "#/$defs/MoveEdit"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/MoveEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddRectEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddPinEdit"
+                    }
+                  ]
+                },
+                "maxItems": 128,
+                "minItems": 1,
+                "title": "Edits",
+                "type": "array"
+              },
+              "expected_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Baseline Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "operation_id",
+              "expected_baseline_sha256",
+              "edits"
+            ],
+            "title": "LayoutPlanRequest",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutPreview": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "minimum": 0,
+                "title": "Created",
+                "type": "integer"
+              },
+              "deleted": {
+                "const": 0,
+                "default": 0,
+                "title": "Deleted",
+                "type": "integer"
+              },
+              "display_units": {
+                "const": "um",
+                "default": "um",
+                "title": "Display Units",
+                "type": "string"
+              },
+              "expected_bbox_dbu": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutBBox"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "moved": {
+                "minimum": 0,
+                "title": "Moved",
+                "type": "integer"
+              },
+              "predicted_diff": {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              "rounding": {
+                "const": "reject_off_grid",
+                "default": "reject_off_grid",
+                "title": "Rounding",
+                "type": "string"
+              },
+              "target_object_ids": {
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Target Object Ids",
+                "type": "array"
+              },
+              "units": {
+                "const": "DBU",
+                "default": "DBU",
+                "title": "Units",
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_object_ids",
+              "created",
+              "moved",
+              "expected_bbox_dbu",
+              "predicted_diff"
+            ],
+            "title": "LayoutPreview",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "MoveEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "dx_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dx Um",
+                "type": "string"
+              },
+              "dy_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dy Um",
+                "type": "string"
+              },
+              "kind": {
+                "const": "move",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "dx_um",
+              "dy_um"
+            ],
+            "title": "MoveEdit",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutApplyRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "applyArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_apply",
+      "outputSchema": {
+        "$defs": {
+          "LayerPurpose": {
+            "additionalProperties": false,
+            "properties": {
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer",
+              "purpose"
+            ],
+            "title": "LayerPurpose",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutCapabilities": {
+            "additionalProperties": false,
+            "properties": {
+              "add_pin": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Pin",
+                "type": "string"
+              },
+              "add_rect": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Rect",
+                "type": "string"
+              },
+              "auto_route": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Auto Route",
+                "type": "string"
+              },
+              "delete": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Delete",
+                "type": "string"
+              },
+              "edit_path": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Edit Path",
+                "type": "string"
+              },
+              "move": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Move",
+                "type": "string"
+              },
+              "pcell_parameters": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Pcell Parameters",
+                "type": "string"
+              },
+              "rotate": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Rotate",
+                "type": "string"
+              },
+              "via": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "title": "LayoutCapabilities",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutInstance": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "master_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Master Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "pcell_submaster": {
+                "default": false,
+                "title": "Pcell Submaster",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "object_id",
+              "master_id",
+              "origin_dbu",
+              "orientation",
+              "bbox_dbu"
+            ],
+            "title": "LayoutInstance",
+            "type": "object"
+          },
+          "LayoutPhysicalVerification": {
+            "additionalProperties": false,
+            "properties": {
+              "drc": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Drc",
+                "type": "string"
+              },
+              "lvs": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Lvs",
+                "type": "string"
+              },
+              "pex": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Pex",
+                "type": "string"
+              }
+            },
+            "title": "LayoutPhysicalVerification",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "LayoutSnapshot": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "capabilities": {
+                "$ref": "#/$defs/LayoutCapabilities",
+                "default": {
+                  "add_pin": "not_verified",
+                  "add_rect": "not_verified",
+                  "auto_route": "unsupported",
+                  "delete": "unsupported",
+                  "edit_path": "unsupported",
+                  "move": "not_verified",
+                  "pcell_parameters": "unsupported",
+                  "rotate": "unsupported",
+                  "via": "unsupported"
+                }
+              },
+              "instances": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutInstance"
+                },
+                "maxItems": 4096,
+                "title": "Instances",
+                "type": "array"
+              },
+              "owned": {
+                "default": false,
+                "title": "Owned",
+                "type": "boolean"
+              },
+              "pins": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPin"
+                },
+                "maxItems": 1024,
+                "title": "Pins",
+                "type": "array"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_readback",
+                  "plan_prediction"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "read_only": {
+                "default": true,
+                "title": "Read Only",
+                "type": "boolean"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "default": "0000000000000000000000000000000000000000000000000000000000000000",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              },
+              "shapes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutShape"
+                },
+                "maxItems": 4096,
+                "title": "Shapes",
+                "type": "array"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "technology": {
+                "$ref": "#/$defs/LayoutTechnology"
+              }
+            },
+            "required": [
+              "binding",
+              "source_baseline_sha256",
+              "technology",
+              "provenance"
+            ],
+            "title": "LayoutSnapshot",
+            "type": "object"
+          },
+          "LayoutTechnology": {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_layer_purposes": {
+                "items": {
+                  "$ref": "#/$defs/LayerPurpose"
+                },
+                "maxItems": 256,
+                "title": "Allowed Layer Purposes",
+                "type": "array"
+              },
+              "dbu_per_um": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000,
+                "title": "Dbu Per Um",
+                "type": "integer"
+              },
+              "manufacturing_grid_dbu": {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "title": "Manufacturing Grid Dbu",
+                "type": "integer"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_observed"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "supported_orientations": {
+                "default": [
+                  "R0"
+                ],
+                "items": {
+                  "enum": [
+                    "R0",
+                    "R90",
+                    "R180",
+                    "R270",
+                    "MX",
+                    "MY",
+                    "MXR90",
+                    "MYR90"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "title": "Supported Orientations",
+                "type": "array"
+              }
+            },
+            "required": [
+              "dbu_per_um",
+              "manufacturing_grid_dbu",
+              "allowed_layer_purposes",
+              "provenance"
+            ],
+            "title": "LayoutTechnology",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "executed": {
+            "default": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "new_revision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Operation Id"
+          },
+          "physical_verification": {
+            "$ref": "#/$defs/LayoutPhysicalVerification",
+            "default": {
+              "drc": "NOT_RUN",
+              "lvs": "NOT_RUN",
+              "pex": "NOT_RUN"
+            }
+          },
+          "reopened": {
+            "default": false,
+            "title": "Reopened",
+            "type": "boolean"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_unchanged": {
+            "default": false,
+            "title": "Source Unchanged",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "FORK_VERIFIED",
+              "EDIT_VERIFIED",
+              "SELECTED",
+              "DIFF",
+              "NOT_VERIFIED",
+              "REJECTED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "binding"
+        ],
+        "title": "LayoutResult",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_layout_diff": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Read retained layout changes and save/reopen/source-preservation evidence against an exact previous revision; no new apply or physical verification.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "LayoutDiffRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "before_revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Before Revision Id",
+                "type": "string"
+              },
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "expected_before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Before Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "before_revision_id",
+              "expected_before_sha256"
+            ],
+            "title": "LayoutDiffRequest",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutDiffRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "diffArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_diff",
+      "outputSchema": {
+        "$defs": {
+          "LayerPurpose": {
+            "additionalProperties": false,
+            "properties": {
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer",
+              "purpose"
+            ],
+            "title": "LayerPurpose",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutCapabilities": {
+            "additionalProperties": false,
+            "properties": {
+              "add_pin": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Pin",
+                "type": "string"
+              },
+              "add_rect": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Rect",
+                "type": "string"
+              },
+              "auto_route": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Auto Route",
+                "type": "string"
+              },
+              "delete": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Delete",
+                "type": "string"
+              },
+              "edit_path": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Edit Path",
+                "type": "string"
+              },
+              "move": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Move",
+                "type": "string"
+              },
+              "pcell_parameters": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Pcell Parameters",
+                "type": "string"
+              },
+              "rotate": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Rotate",
+                "type": "string"
+              },
+              "via": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "title": "LayoutCapabilities",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutInstance": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "master_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Master Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "pcell_submaster": {
+                "default": false,
+                "title": "Pcell Submaster",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "object_id",
+              "master_id",
+              "origin_dbu",
+              "orientation",
+              "bbox_dbu"
+            ],
+            "title": "LayoutInstance",
+            "type": "object"
+          },
+          "LayoutPhysicalVerification": {
+            "additionalProperties": false,
+            "properties": {
+              "drc": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Drc",
+                "type": "string"
+              },
+              "lvs": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Lvs",
+                "type": "string"
+              },
+              "pex": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Pex",
+                "type": "string"
+              }
+            },
+            "title": "LayoutPhysicalVerification",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "LayoutSnapshot": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "capabilities": {
+                "$ref": "#/$defs/LayoutCapabilities",
+                "default": {
+                  "add_pin": "not_verified",
+                  "add_rect": "not_verified",
+                  "auto_route": "unsupported",
+                  "delete": "unsupported",
+                  "edit_path": "unsupported",
+                  "move": "not_verified",
+                  "pcell_parameters": "unsupported",
+                  "rotate": "unsupported",
+                  "via": "unsupported"
+                }
+              },
+              "instances": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutInstance"
+                },
+                "maxItems": 4096,
+                "title": "Instances",
+                "type": "array"
+              },
+              "owned": {
+                "default": false,
+                "title": "Owned",
+                "type": "boolean"
+              },
+              "pins": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPin"
+                },
+                "maxItems": 1024,
+                "title": "Pins",
+                "type": "array"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_readback",
+                  "plan_prediction"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "read_only": {
+                "default": true,
+                "title": "Read Only",
+                "type": "boolean"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "default": "0000000000000000000000000000000000000000000000000000000000000000",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              },
+              "shapes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutShape"
+                },
+                "maxItems": 4096,
+                "title": "Shapes",
+                "type": "array"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "technology": {
+                "$ref": "#/$defs/LayoutTechnology"
+              }
+            },
+            "required": [
+              "binding",
+              "source_baseline_sha256",
+              "technology",
+              "provenance"
+            ],
+            "title": "LayoutSnapshot",
+            "type": "object"
+          },
+          "LayoutTechnology": {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_layer_purposes": {
+                "items": {
+                  "$ref": "#/$defs/LayerPurpose"
+                },
+                "maxItems": 256,
+                "title": "Allowed Layer Purposes",
+                "type": "array"
+              },
+              "dbu_per_um": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000,
+                "title": "Dbu Per Um",
+                "type": "integer"
+              },
+              "manufacturing_grid_dbu": {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "title": "Manufacturing Grid Dbu",
+                "type": "integer"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_observed"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "supported_orientations": {
+                "default": [
+                  "R0"
+                ],
+                "items": {
+                  "enum": [
+                    "R0",
+                    "R90",
+                    "R180",
+                    "R270",
+                    "MX",
+                    "MY",
+                    "MXR90",
+                    "MYR90"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "title": "Supported Orientations",
+                "type": "array"
+              }
+            },
+            "required": [
+              "dbu_per_um",
+              "manufacturing_grid_dbu",
+              "allowed_layer_purposes",
+              "provenance"
+            ],
+            "title": "LayoutTechnology",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "executed": {
+            "default": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "new_revision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Operation Id"
+          },
+          "physical_verification": {
+            "$ref": "#/$defs/LayoutPhysicalVerification",
+            "default": {
+              "drc": "NOT_RUN",
+              "lvs": "NOT_RUN",
+              "pex": "NOT_RUN"
+            }
+          },
+          "reopened": {
+            "default": false,
+            "title": "Reopened",
+            "type": "boolean"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_unchanged": {
+            "default": false,
+            "title": "Source Unchanged",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "FORK_VERIFIED",
+              "EDIT_VERIFIED",
+              "SELECTED",
+              "DIFF",
+              "NOT_VERIFIED",
+              "REJECTED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "binding"
+        ],
+        "title": "LayoutResult",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_layout_fork": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": null
+      },
+      "description": "Fork a registered source into an exclusive owned working revision. Original remains protected; operation identity prevents duplicate copies.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "LayoutForkRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "expected_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Baseline Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "operation_id",
+              "expected_baseline_sha256"
+            ],
+            "title": "LayoutForkRequest",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutForkRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "forkArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_fork",
+      "outputSchema": {
+        "$defs": {
+          "LayerPurpose": {
+            "additionalProperties": false,
+            "properties": {
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer",
+              "purpose"
+            ],
+            "title": "LayerPurpose",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutCapabilities": {
+            "additionalProperties": false,
+            "properties": {
+              "add_pin": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Pin",
+                "type": "string"
+              },
+              "add_rect": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Rect",
+                "type": "string"
+              },
+              "auto_route": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Auto Route",
+                "type": "string"
+              },
+              "delete": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Delete",
+                "type": "string"
+              },
+              "edit_path": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Edit Path",
+                "type": "string"
+              },
+              "move": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Move",
+                "type": "string"
+              },
+              "pcell_parameters": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Pcell Parameters",
+                "type": "string"
+              },
+              "rotate": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Rotate",
+                "type": "string"
+              },
+              "via": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "title": "LayoutCapabilities",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutInstance": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "master_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Master Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "pcell_submaster": {
+                "default": false,
+                "title": "Pcell Submaster",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "object_id",
+              "master_id",
+              "origin_dbu",
+              "orientation",
+              "bbox_dbu"
+            ],
+            "title": "LayoutInstance",
+            "type": "object"
+          },
+          "LayoutPhysicalVerification": {
+            "additionalProperties": false,
+            "properties": {
+              "drc": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Drc",
+                "type": "string"
+              },
+              "lvs": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Lvs",
+                "type": "string"
+              },
+              "pex": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Pex",
+                "type": "string"
+              }
+            },
+            "title": "LayoutPhysicalVerification",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "LayoutSnapshot": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "capabilities": {
+                "$ref": "#/$defs/LayoutCapabilities",
+                "default": {
+                  "add_pin": "not_verified",
+                  "add_rect": "not_verified",
+                  "auto_route": "unsupported",
+                  "delete": "unsupported",
+                  "edit_path": "unsupported",
+                  "move": "not_verified",
+                  "pcell_parameters": "unsupported",
+                  "rotate": "unsupported",
+                  "via": "unsupported"
+                }
+              },
+              "instances": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutInstance"
+                },
+                "maxItems": 4096,
+                "title": "Instances",
+                "type": "array"
+              },
+              "owned": {
+                "default": false,
+                "title": "Owned",
+                "type": "boolean"
+              },
+              "pins": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPin"
+                },
+                "maxItems": 1024,
+                "title": "Pins",
+                "type": "array"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_readback",
+                  "plan_prediction"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "read_only": {
+                "default": true,
+                "title": "Read Only",
+                "type": "boolean"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "default": "0000000000000000000000000000000000000000000000000000000000000000",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              },
+              "shapes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutShape"
+                },
+                "maxItems": 4096,
+                "title": "Shapes",
+                "type": "array"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "technology": {
+                "$ref": "#/$defs/LayoutTechnology"
+              }
+            },
+            "required": [
+              "binding",
+              "source_baseline_sha256",
+              "technology",
+              "provenance"
+            ],
+            "title": "LayoutSnapshot",
+            "type": "object"
+          },
+          "LayoutTechnology": {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_layer_purposes": {
+                "items": {
+                  "$ref": "#/$defs/LayerPurpose"
+                },
+                "maxItems": 256,
+                "title": "Allowed Layer Purposes",
+                "type": "array"
+              },
+              "dbu_per_um": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000,
+                "title": "Dbu Per Um",
+                "type": "integer"
+              },
+              "manufacturing_grid_dbu": {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "title": "Manufacturing Grid Dbu",
+                "type": "integer"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_observed"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "supported_orientations": {
+                "default": [
+                  "R0"
+                ],
+                "items": {
+                  "enum": [
+                    "R0",
+                    "R90",
+                    "R180",
+                    "R270",
+                    "MX",
+                    "MY",
+                    "MXR90",
+                    "MYR90"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "title": "Supported Orientations",
+                "type": "array"
+              }
+            },
+            "required": [
+              "dbu_per_um",
+              "manufacturing_grid_dbu",
+              "allowed_layer_purposes",
+              "provenance"
+            ],
+            "title": "LayoutTechnology",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "executed": {
+            "default": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "new_revision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Operation Id"
+          },
+          "physical_verification": {
+            "$ref": "#/$defs/LayoutPhysicalVerification",
+            "default": {
+              "drc": "NOT_RUN",
+              "lvs": "NOT_RUN",
+              "pex": "NOT_RUN"
+            }
+          },
+          "reopened": {
+            "default": false,
+            "title": "Reopened",
+            "type": "boolean"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_unchanged": {
+            "default": false,
+            "title": "Source Unchanged",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "FORK_VERIFIED",
+              "EDIT_VERIFIED",
+              "SELECTED",
+              "DIFF",
+              "NOT_VERIFIED",
+              "REJECTED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "binding"
+        ],
+        "title": "LayoutResult",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_layout_inspect": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Inspect one registered layout revision, objects and observed DBU/grid/LPP. Requires a configured development context; no caller paths or commands.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "LayoutInspectRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              }
+            },
+            "required": [
+              "binding"
+            ],
+            "title": "LayoutInspectRequest",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutInspectRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "inspectArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_inspect",
+      "outputSchema": {
+        "$defs": {
+          "LayerPurpose": {
+            "additionalProperties": false,
+            "properties": {
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer",
+              "purpose"
+            ],
+            "title": "LayerPurpose",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutCapabilities": {
+            "additionalProperties": false,
+            "properties": {
+              "add_pin": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Pin",
+                "type": "string"
+              },
+              "add_rect": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Rect",
+                "type": "string"
+              },
+              "auto_route": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Auto Route",
+                "type": "string"
+              },
+              "delete": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Delete",
+                "type": "string"
+              },
+              "edit_path": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Edit Path",
+                "type": "string"
+              },
+              "move": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Move",
+                "type": "string"
+              },
+              "pcell_parameters": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Pcell Parameters",
+                "type": "string"
+              },
+              "rotate": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Rotate",
+                "type": "string"
+              },
+              "via": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "title": "LayoutCapabilities",
+            "type": "object"
+          },
+          "LayoutInstance": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "master_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Master Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "pcell_submaster": {
+                "default": false,
+                "title": "Pcell Submaster",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "object_id",
+              "master_id",
+              "origin_dbu",
+              "orientation",
+              "bbox_dbu"
+            ],
+            "title": "LayoutInstance",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "LayoutTechnology": {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_layer_purposes": {
+                "items": {
+                  "$ref": "#/$defs/LayerPurpose"
+                },
+                "maxItems": 256,
+                "title": "Allowed Layer Purposes",
+                "type": "array"
+              },
+              "dbu_per_um": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000,
+                "title": "Dbu Per Um",
+                "type": "integer"
+              },
+              "manufacturing_grid_dbu": {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "title": "Manufacturing Grid Dbu",
+                "type": "integer"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_observed"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "supported_orientations": {
+                "default": [
+                  "R0"
+                ],
+                "items": {
+                  "enum": [
+                    "R0",
+                    "R90",
+                    "R180",
+                    "R270",
+                    "MX",
+                    "MY",
+                    "MXR90",
+                    "MYR90"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "title": "Supported Orientations",
+                "type": "array"
+              }
+            },
+            "required": [
+              "dbu_per_um",
+              "manufacturing_grid_dbu",
+              "allowed_layer_purposes",
+              "provenance"
+            ],
+            "title": "LayoutTechnology",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "capabilities": {
+            "$ref": "#/$defs/LayoutCapabilities",
+            "default": {
+              "add_pin": "not_verified",
+              "add_rect": "not_verified",
+              "auto_route": "unsupported",
+              "delete": "unsupported",
+              "edit_path": "unsupported",
+              "move": "not_verified",
+              "pcell_parameters": "unsupported",
+              "rotate": "unsupported",
+              "via": "unsupported"
+            }
+          },
+          "instances": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/LayoutInstance"
+            },
+            "maxItems": 4096,
+            "title": "Instances",
+            "type": "array"
+          },
+          "owned": {
+            "default": false,
+            "title": "Owned",
+            "type": "boolean"
+          },
+          "pins": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/LayoutPin"
+            },
+            "maxItems": 1024,
+            "title": "Pins",
+            "type": "array"
+          },
+          "provenance": {
+            "enum": [
+              "synthetic_fixture",
+              "native_readback",
+              "plan_prediction"
+            ],
+            "title": "Provenance",
+            "type": "string"
+          },
+          "read_only": {
+            "default": true,
+            "title": "Read Only",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "semantic_sha256": {
+            "default": "0000000000000000000000000000000000000000000000000000000000000000",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Semantic Sha256",
+            "type": "string"
+          },
+          "shapes": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/LayoutShape"
+            },
+            "maxItems": 4096,
+            "title": "Shapes",
+            "type": "array"
+          },
+          "source_baseline_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Baseline Sha256",
+            "type": "string"
+          },
+          "technology": {
+            "$ref": "#/$defs/LayoutTechnology"
+          }
+        },
+        "required": [
+          "binding",
+          "source_baseline_sha256",
+          "technology",
+          "provenance"
+        ],
+        "title": "LayoutSnapshot",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_layout_plan": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Validate typed move/add_rect/add_pin edits against an observed revision. Returns exact plan hash and predicted diff; planning performs no layout write.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "AddPinEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_pin",
+                "title": "Kind",
+                "type": "string"
+              },
+              "label": {
+                "default": null,
+                "title": "Label",
+                "type": "null"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "AddPinEdit",
+            "type": "object"
+          },
+          "AddRectEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_rect",
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um"
+            ],
+            "title": "AddRectEdit",
+            "type": "object"
+          },
+          "LayoutPlanRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "edits": {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "add_pin": "#/$defs/AddPinEdit",
+                      "add_rect": "#/$defs/AddRectEdit",
+                      "move": "#/$defs/MoveEdit"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/MoveEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddRectEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddPinEdit"
+                    }
+                  ]
+                },
+                "maxItems": 128,
+                "minItems": 1,
+                "title": "Edits",
+                "type": "array"
+              },
+              "expected_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Baseline Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "operation_id",
+              "expected_baseline_sha256",
+              "edits"
+            ],
+            "title": "LayoutPlanRequest",
+            "type": "object"
+          },
+          "MoveEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "dx_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dx Um",
+                "type": "string"
+              },
+              "dy_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dy Um",
+                "type": "string"
+              },
+              "kind": {
+                "const": "move",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "dx_um",
+              "dy_um"
+            ],
+            "title": "MoveEdit",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutPlanRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "planArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_plan",
+      "outputSchema": {
+        "$defs": {
+          "AddPinEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_pin",
+                "title": "Kind",
+                "type": "string"
+              },
+              "label": {
+                "default": null,
+                "title": "Label",
+                "type": "null"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "AddPinEdit",
+            "type": "object"
+          },
+          "AddRectEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_um": {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ],
+                "title": "Bbox Um",
+                "type": "array"
+              },
+              "kind": {
+                "const": "add_rect",
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_um"
+            ],
+            "title": "AddRectEdit",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutNativeEdit": {
+            "additionalProperties": false,
+            "description": "Fixed worker command; geometry is complete, no arbitrary parameters/code.",
+            "properties": {
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "dx_dbu": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": -2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dx Dbu"
+              },
+              "dy_dbu": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": -2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dy Dbu"
+              },
+              "kind": {
+                "enum": [
+                  "move",
+                  "add_rect",
+                  "add_pin"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "pin": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutPin"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "shape": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutShape"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              }
+            },
+            "required": [
+              "kind",
+              "object_id"
+            ],
+            "title": "LayoutNativeEdit",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPlanRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "edits": {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "add_pin": "#/$defs/AddPinEdit",
+                      "add_rect": "#/$defs/AddRectEdit",
+                      "move": "#/$defs/MoveEdit"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/MoveEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddRectEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/AddPinEdit"
+                    }
+                  ]
+                },
+                "maxItems": 128,
+                "minItems": 1,
+                "title": "Edits",
+                "type": "array"
+              },
+              "expected_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Baseline Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "operation_id",
+              "expected_baseline_sha256",
+              "edits"
+            ],
+            "title": "LayoutPlanRequest",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutPreview": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "minimum": 0,
+                "title": "Created",
+                "type": "integer"
+              },
+              "deleted": {
+                "const": 0,
+                "default": 0,
+                "title": "Deleted",
+                "type": "integer"
+              },
+              "display_units": {
+                "const": "um",
+                "default": "um",
+                "title": "Display Units",
+                "type": "string"
+              },
+              "expected_bbox_dbu": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutBBox"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "moved": {
+                "minimum": 0,
+                "title": "Moved",
+                "type": "integer"
+              },
+              "predicted_diff": {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              "rounding": {
+                "const": "reject_off_grid",
+                "default": "reject_off_grid",
+                "title": "Rounding",
+                "type": "string"
+              },
+              "target_object_ids": {
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Target Object Ids",
+                "type": "array"
+              },
+              "units": {
+                "const": "DBU",
+                "default": "DBU",
+                "title": "Units",
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_object_ids",
+              "created",
+              "moved",
+              "expected_bbox_dbu",
+              "predicted_diff"
+            ],
+            "title": "LayoutPreview",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "MoveEdit": {
+            "additionalProperties": false,
+            "properties": {
+              "dx_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dx Um",
+                "type": "string"
+              },
+              "dy_um": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Dy Um",
+                "type": "string"
+              },
+              "kind": {
+                "const": "move",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "dx_um",
+              "dy_um"
+            ],
+            "title": "MoveEdit",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "baseline_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Baseline Sha256",
+            "type": "string"
+          },
+          "expected_semantic_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Expected Semantic Sha256",
+            "type": "string"
+          },
+          "normalized_edits": {
+            "items": {
+              "$ref": "#/$defs/LayoutNativeEdit"
+            },
+            "maxItems": 128,
+            "minItems": 1,
+            "title": "Normalized Edits",
+            "type": "array"
+          },
+          "plan_sha256": {
+            "default": "0000000000000000000000000000000000000000000000000000000000000000",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "preview": {
+            "$ref": "#/$defs/LayoutPreview"
+          },
+          "request": {
+            "$ref": "#/$defs/LayoutPlanRequest"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request",
+          "baseline_sha256",
+          "normalized_edits",
+          "expected_semantic_sha256",
+          "preview"
+        ],
+        "title": "LayoutPlan",
+        "type": "object"
+      },
+      "title": null
+    },
+    "cadence_layout_select": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": null
+      },
+      "description": "Select a preserved layout revision by exact baseline hash. Preserves subsequent revisions and partial results; never overwrites the original.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "LayoutSelectRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "expected_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Baseline Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "binding",
+              "expected_baseline_sha256"
+            ],
+            "title": "LayoutSelectRequest",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/LayoutSelectRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "selectArguments",
+        "type": "object"
+      },
+      "name": "cadence_layout_select",
+      "outputSchema": {
+        "$defs": {
+          "LayerPurpose": {
+            "additionalProperties": false,
+            "properties": {
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer",
+              "purpose"
+            ],
+            "title": "LayerPurpose",
+            "type": "object"
+          },
+          "LayoutBBox": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_left": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "upper_right": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "lower_left",
+              "upper_right"
+            ],
+            "title": "LayoutBBox",
+            "type": "object"
+          },
+          "LayoutCapabilities": {
+            "additionalProperties": false,
+            "properties": {
+              "add_pin": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Pin",
+                "type": "string"
+              },
+              "add_rect": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Add Rect",
+                "type": "string"
+              },
+              "auto_route": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Auto Route",
+                "type": "string"
+              },
+              "delete": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Delete",
+                "type": "string"
+              },
+              "edit_path": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Edit Path",
+                "type": "string"
+              },
+              "move": {
+                "default": "not_verified",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
+                "title": "Move",
+                "type": "string"
+              },
+              "pcell_parameters": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Pcell Parameters",
+                "type": "string"
+              },
+              "rotate": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Rotate",
+                "type": "string"
+              },
+              "via": {
+                "const": "unsupported",
+                "default": "unsupported",
+                "title": "Via",
+                "type": "string"
+              }
+            },
+            "title": "LayoutCapabilities",
+            "type": "object"
+          },
+          "LayoutChange": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "After Sha256"
+              },
+              "before_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Before Sha256"
+              },
+              "fields": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Fields",
+                "type": "array"
+              },
+              "kind": {
+                "enum": [
+                  "created",
+                  "modified",
+                  "deleted"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind"
+            ],
+            "title": "LayoutChange",
+            "type": "object"
+          },
+          "LayoutDiff": {
+            "additionalProperties": false,
+            "properties": {
+              "after_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "After Sha256",
+                "type": "string"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "changes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutChange"
+                },
+                "maxItems": 9216,
+                "title": "Changes",
+                "type": "array"
+              },
+              "matches_plan": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Matches Plan"
+              },
+              "metadata_changes": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Metadata Changes",
+                "type": "array"
+              },
+              "unexpected_object_ids": {
+                "default": [],
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Unexpected Object Ids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "before_sha256",
+              "after_sha256"
+            ],
+            "title": "LayoutDiff",
+            "type": "object"
+          },
+          "LayoutInstance": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "master_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Master Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              },
+              "pcell_submaster": {
+                "default": false,
+                "title": "Pcell Submaster",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "object_id",
+              "master_id",
+              "origin_dbu",
+              "orientation",
+              "bbox_dbu"
+            ],
+            "title": "LayoutInstance",
+            "type": "object"
+          },
+          "LayoutPhysicalVerification": {
+            "additionalProperties": false,
+            "properties": {
+              "drc": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Drc",
+                "type": "string"
+              },
+              "lvs": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Lvs",
+                "type": "string"
+              },
+              "pex": {
+                "default": "NOT_RUN",
+                "enum": [
+                  "NOT_RUN",
+                  "UNAVAILABLE"
+                ],
+                "title": "Pex",
+                "type": "string"
+              }
+            },
+            "title": "LayoutPhysicalVerification",
+            "type": "object"
+          },
+          "LayoutPin": {
+            "additionalProperties": false,
+            "properties": {
+              "association": {
+                "default": "not_verified",
+                "enum": [
+                  "requested",
+                  "native_verified",
+                  "not_verified"
+                ],
+                "title": "Association",
+                "type": "string"
+              },
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Label"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "net_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Net Id",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "terminal_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Terminal Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "object_id",
+              "layer",
+              "purpose",
+              "bbox_dbu",
+              "net_id",
+              "terminal_id"
+            ],
+            "title": "LayoutPin",
+            "type": "object"
+          },
+          "LayoutPoint": {
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "X",
+                "type": "integer"
+              },
+              "y": {
+                "maximum": 2147483647,
+                "minimum": -2147483647,
+                "title": "Y",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "title": "LayoutPoint",
+            "type": "object"
+          },
+          "LayoutShape": {
+            "additionalProperties": false,
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "kind": {
+                "enum": [
+                  "rect",
+                  "path"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "layer": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Layer",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "points_dbu": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPoint"
+                },
+                "maxItems": 256,
+                "title": "Points Dbu",
+                "type": "array"
+              },
+              "purpose": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Purpose",
+                "type": "string"
+              },
+              "width_dbu": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Width Dbu"
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "layer",
+              "purpose",
+              "bbox_dbu"
+            ],
+            "title": "LayoutShape",
+            "type": "object"
+          },
+          "LayoutSnapshot": {
+            "additionalProperties": false,
+            "properties": {
+              "binding": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "capabilities": {
+                "$ref": "#/$defs/LayoutCapabilities",
+                "default": {
+                  "add_pin": "not_verified",
+                  "add_rect": "not_verified",
+                  "auto_route": "unsupported",
+                  "delete": "unsupported",
+                  "edit_path": "unsupported",
+                  "move": "not_verified",
+                  "pcell_parameters": "unsupported",
+                  "rotate": "unsupported",
+                  "via": "unsupported"
+                }
+              },
+              "instances": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutInstance"
+                },
+                "maxItems": 4096,
+                "title": "Instances",
+                "type": "array"
+              },
+              "owned": {
+                "default": false,
+                "title": "Owned",
+                "type": "boolean"
+              },
+              "pins": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutPin"
+                },
+                "maxItems": 1024,
+                "title": "Pins",
+                "type": "array"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_readback",
+                  "plan_prediction"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "read_only": {
+                "default": true,
+                "title": "Read Only",
+                "type": "boolean"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "semantic_sha256": {
+                "default": "0000000000000000000000000000000000000000000000000000000000000000",
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Semantic Sha256",
+                "type": "string"
+              },
+              "shapes": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/LayoutShape"
+                },
+                "maxItems": 4096,
+                "title": "Shapes",
+                "type": "array"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "technology": {
+                "$ref": "#/$defs/LayoutTechnology"
+              }
+            },
+            "required": [
+              "binding",
+              "source_baseline_sha256",
+              "technology",
+              "provenance"
+            ],
+            "title": "LayoutSnapshot",
+            "type": "object"
+          },
+          "LayoutTechnology": {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_layer_purposes": {
+                "items": {
+                  "$ref": "#/$defs/LayerPurpose"
+                },
+                "maxItems": 256,
+                "title": "Allowed Layer Purposes",
+                "type": "array"
+              },
+              "dbu_per_um": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000,
+                "title": "Dbu Per Um",
+                "type": "integer"
+              },
+              "manufacturing_grid_dbu": {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "title": "Manufacturing Grid Dbu",
+                "type": "integer"
+              },
+              "provenance": {
+                "enum": [
+                  "synthetic_fixture",
+                  "native_observed"
+                ],
+                "title": "Provenance",
+                "type": "string"
+              },
+              "supported_orientations": {
+                "default": [
+                  "R0"
+                ],
+                "items": {
+                  "enum": [
+                    "R0",
+                    "R90",
+                    "R180",
+                    "R270",
+                    "MX",
+                    "MY",
+                    "MXR90",
+                    "MYR90"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "title": "Supported Orientations",
+                "type": "array"
+              }
+            },
+            "required": [
+              "dbu_per_um",
+              "manufacturing_grid_dbu",
+              "allowed_layer_purposes",
+              "provenance"
+            ],
+            "title": "LayoutTechnology",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              },
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "executed": {
+            "default": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "new_revision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Operation Id"
+          },
+          "physical_verification": {
+            "$ref": "#/$defs/LayoutPhysicalVerification",
+            "default": {
+              "drc": "NOT_RUN",
+              "lvs": "NOT_RUN",
+              "pex": "NOT_RUN"
+            }
+          },
+          "reopened": {
+            "default": false,
+            "title": "Reopened",
+            "type": "boolean"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_unchanged": {
+            "default": false,
+            "title": "Source Unchanged",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "FORK_VERIFIED",
+              "EDIT_VERIFIED",
+              "SELECTED",
+              "DIFF",
+              "NOT_VERIFIED",
+              "REJECTED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "binding"
+        ],
+        "title": "LayoutResult",
+        "type": "object"
+      },
+      "title": null
+    }
+  }
+}

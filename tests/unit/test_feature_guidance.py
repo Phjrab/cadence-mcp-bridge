@@ -67,7 +67,7 @@ async def test_unset_resource_and_tools_preserve_contract():
         report = json.loads(result.contents[0].text)
         assert report["mode"] == "unconfigured" and report["circuits"] == []
         assert report["setup"]["reasons"] == ["setup_required"]
-        assert len((await client.list_tools()).tools) == 85
+        assert len((await client.list_tools()).tools) == 91
 
 
 def test_explicit_cli_settings_override_inherited_environment_and_preserve_every_file(
@@ -108,7 +108,7 @@ async def test_loaded_native_resource_is_read_only_and_cannot_attest_live_qualif
     before = snapshot(settings.parent)
     async with Client(server) as client:
         report = json.loads((await client.read_resource(GUIDANCE_URI)).contents[0].text)
-        assert len((await client.list_tools()).tools) == 96
+        assert len((await client.list_tools()).tools) == 102
     assert report["native_tools_registered"] is True
     assert {a["state"] for a in report["circuits"][0]["analyses"]} == {
         "REQUIRES_EXECUTION_CHECKS",
