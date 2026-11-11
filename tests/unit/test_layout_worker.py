@@ -149,6 +149,227 @@ def request_for(snapshot):
     )
 
 
+def connection_fixture():
+    route = {
+        "binding": dict(
+            fixture_snapshot().binding.model_dump(mode="json"),
+            revision_id="routed-child",
+            parent_revision_id="routed-parent",
+            parent_revision_sha256="a" * 64,
+        ),
+        "owned": True,
+        "read_only": False,
+    }
+    devices = (("inst-mn", "MN", "nmos1v", "vss"), ("inst-mp", "MP", "pmos1v", "vdd"))
+    frame = ["MCP_LAYOUT_FRAME|1", "TECH|2000|10", "LPP|Metal1|drawing"]
+    scope = []
+    for object_id, name, cell, rail in devices:
+        frame.append(f"I|{object_id}|{name}|gpdk090|{cell}|layout|R0|0|0|1|0|0|100|100")
+        master_id = "m-" + worker.digest(["gpdk090", cell, "layout"])[:24]
+        for terminal, net in (("B", rail), ("D", "vout"), ("G", "vin"), ("S", rail)):
+            scope.append(
+                dict(
+                    kind="connect_terminal",
+                    object_id=object_id,
+                    expected_master_id=master_id,
+                    terminal=terminal,
+                    pin_object_id=f"pin-{net}",
+                )
+            )
+    frame.extend(
+        f"P|pin-{net}|Metal1|drawing|{net}|{net}|0|0|50|50" for net in ("vdd", "vin", "vout", "vss")
+    )
+    frame.extend(("END_LAYOUT_FRAME", "MCP_LAYOUT_CONNECTIONS|1"))
+    frame.extend(f"C|{edit['object_id']}|{edit['terminal']}|0|-|0" for edit in scope)
+    frame.append("END_LAYOUT_CONNECTIONS")
+    raw = ("\n".join(frame) + "\n").encode("ascii")
+    before, _ = worker.parse_frame(raw, route, rendering, connections=scope)
+    objects = {inst["object_id"]: inst for inst in before["instances"]}
+    commands = [
+        dict(
+            edit,
+            before_sha256=worker.object_digest(objects[edit["object_id"]]),
+            net_id=edit["pin_object_id"][4:],
+            terminal_id=edit["pin_object_id"][4:],
+        )
+        for edit in scope
+    ]
+    return route, scope, raw, before, commands
+
+
+def test_connection_frame_exact_scope_and_bound_oa_anchor():
+    route, scope, raw, before, commands = connection_fixture()
+    legacy, _ = worker.parse_frame(raw.split(b"MCP_LAYOUT_CONNECTIONS|1")[0], route, rendering)
+    assert "instance_terminals" not in legacy
+    assert worker.snapshot_digest(legacy) != worker.snapshot_digest(before)
+    bound = raw.replace(b"C|inst-mn|D|0|-|0", b"C|inst-mn|D|1|vout|1")
+    observed, _ = worker.parse_frame(bound, route, rendering, connections=scope)
+    assert observed["instance_terminals"][1] == dict(
+        before["instance_terminals"][1], present=True, net_id="vout", pin_object_id="pin-vout"
+    )
+    mismatched = bound.replace(b"vout|1", b"vin|0")
+    observed, _ = worker.parse_frame(mismatched, route, rendering, connections=scope)
+    assert observed["instance_terminals"][1]["pin_object_id"] is None
+    after = worker.predict_connections(before, commands, scope, rendering)
+    assert all(row["present"] and row["pin_object_id"] for row in after["instance_terminals"])
+    assert after["instances"] == before["instances"] and after["pins"] == before["pins"]
+
+
+@pytest.mark.parametrize(
+    "fault", ["partial", "duplicate", "false-match", "wrong-net", "unqualified-source"]
+)
+def test_connection_frame_rejects_incomplete_or_inconsistent_observation(fault):
+    route, scope, raw, before, _ = connection_fixture()
+    row = b"C|inst-mn|D|0|-|0\n"
+    if fault == "unqualified-source":
+        source = raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS")
+        source = source.replace(row, b"C|inst-mn|D|1|-|0\n")
+        with pytest.raises(ValueError, match="instance_terminal_frame_state"):
+            worker.parse_connections(source, before, rendering, scope, source=True)
+        return
+    bad = {
+        "partial": b"",
+        "duplicate": b"C|inst-mn|B|0|-|0\n",
+        "false-match": b"C|inst-mn|D|0|-|1\n",
+        "wrong-net": b"C|inst-mn|D|1|vin|1\n",
+    }[fault]
+    with pytest.raises(ValueError, match="instance_terminal_frame"):
+        worker.parse_frame(raw.replace(row, bad), route, rendering, connections=scope)
+
+
+def connection_request(before, scope, commands):
+    after = worker.predict_connections(before, commands, scope, rendering)
+    plan = dict(
+        request=dict(
+            binding=before["binding"],
+            operation_id=str(uuid4()),
+            expected_baseline_sha256=before["semantic_sha256"],
+            edits=scope,
+        ),
+        normalized_edits=commands,
+        baseline_sha256=before["semantic_sha256"],
+        expected_semantic_sha256=worker.snapshot_digest(after),
+        plan_sha256="0" * 64,
+    )
+    plan["plan_sha256"] = worker.digest(plan)
+    return dict(plan=plan, expected_plan_sha256=plan["plan_sha256"]), after
+
+
+@pytest.mark.parametrize(
+    "fault", ["unobserved", "existing-unbound", "stale-instance", "wrong-pin", "duplicate"]
+)
+def test_connection_preflight_rejects_before_intent(root, fault):
+    _, scope, _, before, commands = connection_fixture()
+    request, _ = connection_request(before, scope, commands)
+    if fault == "unobserved":
+        before.pop("instance_terminals")
+    elif fault == "existing-unbound":
+        before["instance_terminals"][0]["present"] = True
+    elif fault == "stale-instance":
+        commands[0]["before_sha256"] = "f" * 64
+    elif fault == "wrong-pin":
+        commands[0]["net_id"] = "vout"
+    else:
+        commands[-1] = commands[0]
+    plan = request["plan"]
+    plan["plan_sha256"] = "0" * 64
+    plan["plan_sha256"] = request["expected_plan_sha256"] = worker.digest(plan)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (before, {}, {})
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    with pytest.raises(ValueError, match="instance_terminal"):
+        engine.execute("apply", request)
+    assert runtime.writes == 0
+    assert not (root / ledger.JOBS / plan["request"]["operation_id"]).exists()
+
+
+def test_connection_durable_replay_and_readback_loss(root):
+    _, scope, _, before, commands = connection_fixture()
+    request, after = connection_request(before, scope, commands)
+    worker.project_orientation(after, None)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (before, {}, {})
+    returned = copy.deepcopy(after)
+
+    def write(*args):
+        runtime.writes += 1
+        return dict(snapshot=returned, saved=True, reopened=True)
+
+    runtime.write = write
+    first = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert replay == dict(first, executed=False, replayed=True)
+    assert replay["snapshot"]["instance_terminals"] == after["instance_terminals"]
+    assert runtime.writes == 1
+    # A different disposable target simulates failure after a native save.
+    _, scope, _, before, commands = connection_fixture()
+    before["binding"]["revision_id"] = "routed-child-second"
+    worker.project_orientation(before, None)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    bad, returned = connection_request(before, scope, commands)
+    returned.pop("instance_terminals")
+    with pytest.raises(ValueError, match="readback_geometry_mismatch"):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", bad)
+    unknown = worker.LayoutWorker(runtime, ledger, operations).execute("apply", bad)
+    assert unknown["state"] == "OUTCOME_UNKNOWN" and not unknown["executed"] and unknown["replayed"]
+    assert runtime.writes == 2
+
+
+@pytest.mark.parametrize("source_proof", [True, False])
+def test_qualified_fork_preserves_legacy_source_and_requires_native_absence(root, source_proof):
+    route, scope, raw, child, _ = connection_fixture()
+    parent_route = dict(
+        route,
+        binding=dict(
+            route["binding"],
+            revision_id="routed-parent",
+            parent_revision_id=None,
+            parent_revision_sha256=None,
+        ),
+    )
+    parent, _ = worker.parse_frame(
+        raw.split(b"MCP_LAYOUT_CONNECTIONS|1")[0], parent_route, rendering
+    )
+    child["binding"]["parent_revision_sha256"] = parent["semantic_sha256"]
+    worker.project_orientation(child, None)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=child["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (parent, {}, {})
+
+    def write(*args):
+        runtime.writes += 1
+        result = dict(snapshot=child, saved=True, reopened=True)
+        if source_proof:
+            result["source_instance_terminals"] = worker.parse_connections(
+                raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS"),
+                parent,
+                rendering,
+                scope,
+                source=True,
+            )
+        return result
+
+    runtime.write = write
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    request = dict(
+        binding=child["binding"],
+        operation_id=str(uuid4()),
+        expected_baseline_sha256=parent["semantic_sha256"],
+    )
+    if source_proof:
+        result = engine.execute("fork", request)
+        assert result["before"] == parent and "instance_terminals" not in result["before"]
+        assert result["snapshot"] == child
+        assert all(not row["present"] for row in result["snapshot"]["instance_terminals"])
+    else:
+        with pytest.raises(ValueError, match="instance_terminal_fork_source_unverified"):
+            engine.execute("fork", request)
+        assert engine.execute("fork", request)["state"] == "OUTCOME_UNKNOWN"
+    assert runtime.writes == 1
+
+
 def orientation_request(snapshot=None, target="R90"):
     snapshot = snapshot or _orient_snapshot()
     request = fixture_request(snapshot).model_copy(

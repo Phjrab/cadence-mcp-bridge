@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 
+from cadence_mcp_bridge._layout_rendering import connection_scope
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
 from cadence_mcp_bridge.layout_engine import compute_diff, predict_snapshot, validate_plan
@@ -29,6 +30,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiffRequest,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutInstanceTerminalQualification,
     LayoutOrientationQualification,
     LayoutResult,
     LayoutSelectRequest,
@@ -59,12 +61,28 @@ SAFE_REASONS = {
 
 class _LayoutQualificationBinding(VariableModel):
     orientation_qualification: LayoutOrientationQualification | None = None
+    instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None
+
+    @model_validator(mode="after")
+    def supported_instance_terminal_scope(self) -> Self:
+        qualification = self.instance_terminal_qualification
+        if qualification is not None:
+            edits = [edit.model_dump(mode="json") for edit in qualification.edits]
+            connection_scope(edits)  # type: ignore[no-untyped-call]  # Shared Python 2.6 code.
+            if (
+                self.orientation_qualification is not None
+                and self.orientation_qualification.binding == qualification.binding
+            ):
+                raise ValueError("layout_instance_terminal_qualification_scope_overlap")
+        return self
 
     @model_serializer(mode="wrap")
     def omit_absent_qualification(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         document: dict[str, Any] = handler(self)
         if self.orientation_qualification is None:
             document.pop("orientation_qualification", None)
+        if self.instance_terminal_qualification is None:
+            document.pop("instance_terminal_qualification", None)
         return document
 
 
@@ -215,6 +233,17 @@ class LayoutRegistration(_LayoutQualificationBinding):
             ]
             if len(qualified) != 1 or not qualified[0].owned or qualified[0].read_only:
                 raise ValueError("layout_orientation_qualification_owned_route_required")
+        if self.instance_terminal_qualification is not None:
+            qualification = self.instance_terminal_qualification
+            target = [route for route in self.routes if route.binding == qualification.binding]
+            if (
+                len(target) != 1
+                or not target[0].owned
+                or target[0].read_only
+                or self.seed is not None
+                and self.seed.revision_id == qualification.binding.revision_id
+            ):
+                raise ValueError("layout_instance_terminal_qualification_owned_route_required")
         if self.seed is not None:
             routes = [r for r in self.routes if r.binding.revision_id == self.seed.revision_id]
             if len(routes) != 1 or not routes[0].owned:
@@ -302,6 +331,7 @@ def build_layout_bundle(
         layout_manifest_sha256=manifest_sha,
         worker_sha256=manifest["files"]["worker.py"]["sha256"],
         orientation_qualification=registration.orientation_qualification,
+        instance_terminal_qualification=registration.instance_terminal_qualification,
     )
     return LayoutBundle(assets, manifest_sha, provider)
 
@@ -415,10 +445,10 @@ class NativeLayoutProvider:
         snapshot = LayoutSnapshot.model_validate_json(json.dumps(data))
         if snapshot.binding != request.binding or snapshot.provenance != "native_readback":
             raise InvalidInputError("Layout native snapshot binding mismatch")
-        self._check_orientation_snapshot(snapshot)
+        self._check_snapshot_qualification(snapshot)
         return snapshot
 
-    def _check_orientation_snapshot(self, snapshot: LayoutSnapshot) -> None:
+    def _check_snapshot_qualification(self, snapshot: LayoutSnapshot) -> None:
         qualification = self.registration.orientation_qualification
         if qualification is None or snapshot.binding != qualification.binding:
             coherent = snapshot.capabilities.rotate == "unsupported"
@@ -432,6 +462,24 @@ class NativeLayoutProvider:
             )
         if not coherent:
             raise InvalidInputError("Layout native orientation qualification mismatch")
+        connection = self.registration.instance_terminal_qualification
+        rows = snapshot.instance_terminals
+        if connection is None or snapshot.binding != connection.binding:
+            if rows is not None:
+                raise InvalidInputError("Layout native instance terminal scope is unregistered")
+            return
+        observed = {row.key: row for row in rows or ()}
+        if (
+            not snapshot.owned
+            or snapshot.read_only
+            or observed.keys() != {edit.key for edit in connection.edits}
+            or any(
+                observed[edit.key].master_id != edit.expected_master_id
+                or observed[edit.key].pin_object_id not in (None, edit.pin_object_id)
+                for edit in connection.edits
+            )
+        ):
+            raise InvalidInputError("Layout native instance terminal qualification mismatch")
 
     @staticmethod
     def _result(data: dict[str, Any], binding: RevisionBinding, *, fork: bool) -> LayoutResult:
@@ -473,7 +521,17 @@ class NativeLayoutProvider:
         if result.operation_id != request.operation_id:
             raise InvalidInputError("Layout operation identity mismatch")
         if result.snapshot is not None:
-            self._check_orientation_snapshot(result.snapshot)
+            self._check_snapshot_qualification(result.snapshot)
+            rows = result.snapshot.instance_terminals
+            if rows is not None and (
+                any(row.present for row in rows)
+                or result.diff is None
+                or result.diff.before_sha256 != request.expected_baseline_sha256
+                or result.diff.changes
+                or result.diff.instance_terminal_changes != ()
+                or result.diff.metadata_changes != ("instance_terminal_scope",)
+            ):
+                raise InvalidInputError("Layout native instance terminal fork observation mismatch")
         return result
 
     async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
@@ -485,6 +543,18 @@ class NativeLayoutProvider:
             for e in request.plan.normalized_edits
         ):
             raise InvalidInputError("Native layout pin labels are not supported")
+        qualification = self.registration.instance_terminal_qualification
+        connection = (
+            qualification is not None and qualification.binding == request.plan.request.binding
+        )
+        requested_connections = any(
+            e.kind == "connect_terminal" for e in request.plan.request.edits
+        )
+        normalized_connections = any(
+            e.kind == "connect_terminal" for e in request.plan.normalized_edits
+        )
+        if connection != requested_connections or connection != normalized_connections:
+            raise InvalidInputError("Native layout instance terminal qualification required")
         payload = request.model_dump(mode="json")
         # Read-only lookup precedes current baseline checks, including after
         # restart/expiry. New writes still recheck baseline inside shared flock.
@@ -495,6 +565,7 @@ class NativeLayoutProvider:
                 current,
                 request,
                 orientation_qualification=self.registration.orientation_qualification,
+                instance_terminal_qualification=qualification,
             )
             data = await self._invoke("apply", payload)
         result = self._result(data, request.plan.request.binding, fork=False)
@@ -503,17 +574,21 @@ class NativeLayoutProvider:
         if result.status == "OUTCOME_UNKNOWN":
             return result
         before = LayoutSnapshot.model_validate_json(json.dumps(data["before"]))
-        self._check_orientation_snapshot(before)
+        self._check_snapshot_qualification(before)
         validate_plan(
-            before, request, orientation_qualification=self.registration.orientation_qualification
+            before,
+            request,
+            orientation_qualification=self.registration.orientation_qualification,
+            instance_terminal_qualification=qualification,
         )
         expected, _ = predict_snapshot(
             before,
             request.plan.request,
             orientation_qualification=self.registration.orientation_qualification,
+            instance_terminal_qualification=qualification,
         )
         assert result.snapshot is not None
-        self._check_orientation_snapshot(result.snapshot)
+        self._check_snapshot_qualification(result.snapshot)
         difference = compute_diff(before, result.snapshot, expected=expected)
         if (
             not difference.matches_plan
@@ -523,6 +598,13 @@ class NativeLayoutProvider:
             or not result.source_unchanged
             or result.snapshot.semantic_sha256 != request.plan.expected_semantic_sha256
             or any(p.association != "native_verified" for p in result.snapshot.pins)
+            or connection
+            and (
+                difference.instance_terminal_changes is None
+                or len(difference.instance_terminal_changes) != 8
+                or difference.instance_terminal_changes
+                != request.plan.preview.predicted_diff.instance_terminal_changes
+            )
         ):
             raise RemoteFailureError("Native layout readback does not match the exact plan")
         return LayoutResult.model_validate_json(
@@ -584,4 +666,5 @@ def create_layout_service(settings: BridgeConfig) -> LayoutService:
     return LayoutService(
         NativeLayoutProvider(context, registration),
         orientation_qualification=registration.orientation_qualification,
+        instance_terminal_qualification=registration.instance_terminal_qualification,
     )

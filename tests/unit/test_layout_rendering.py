@@ -6,7 +6,7 @@ from decimal import localcontext
 import pytest
 from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot
-from test_layout_worker import orientation_request
+from test_layout_worker import connection_fixture, orientation_request
 
 from cadence_mcp_bridge import _layout_rendering as rendering
 from cadence_mcp_bridge.layout_engine import build_plan
@@ -99,6 +99,57 @@ def test_terminal_preflight_precedes_any_database_mutation():
     assert script.index("terminal_already_exists") < script.index("dbMoveFig")
     with pytest.raises(ValueError, match="duplicate_terminal"):
         rendering.apply_script(target, {}, technology, edits + [edits[-1]])
+
+
+def test_qualified_connection_scripts_preflight_and_independently_read_back():
+    _, scope, _, before, commands = connection_fixture()
+    target = {"library": "Owned", "cell": "Child", "view": "layout"}
+    source = dict(target, cell="Parent")
+    read = rendering.inspect_script(target, connections=scope).decode("ascii")
+    fork = rendering.write_script(
+        source, target, {}, before["technology"], connections=scope
+    ).decode("ascii")
+    apply = rendering.apply_script(
+        target, {}, before["technology"], commands, connections=scope
+    ).decode("ascii")
+    assert "mcpLayoutCollectConnections(cv list(" in read
+    assert fork.index("mcpLayoutCollectConnections(src list(") < fork.index("dbCopyCellView")
+    assert fork.index("mcpLayoutCollectConnections(cv list(") > fork.rindex('"maskLayout" "r"')
+    assert 'when(source && it mcpLayoutFail("instance_terminal_fork_source_present"))' in fork
+    assert (
+        apply.index("connectionRows=mcpLayoutConnectionPreflight(cv connectionSpecs)")
+        < apply.index("mcpLayoutConnectTerminals(connectionRows)")
+        < apply.index("dbSave(cv)")
+    )
+    assert apply.rindex('"maskLayout" "r"') < apply.index(
+        "mcpLayoutCollectConnections(cv connectionSpecs nil)"
+    )
+    assert "dbCreateConn(nth(2 row) inst cadr(row))" in apply and "eq(it~>net nth(2 row))" in apply
+    assert all(
+        name not in apply
+        for name in ("dbCreateNet", "dbCreatePin", "dbCreateRect", "dbReplaceProp")
+    )
+    assert b"MCP_LAYOUT_CONNECTIONS" not in rendering.inspect_script(target)
+    wrapped = rendering.execution_script(apply.encode("ascii")).decode("ascii")
+    assert wrapped.index("procedure(mcpLayoutCollectConnections") < wrapped.index(
+        "procedure(mcpLayoutRun"
+    )
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "unauthorized-net", "injection"])
+def test_connection_renderer_rejects_unregistered_or_malformed_commands(fault):
+    _, scope, _, before, commands = connection_fixture()
+    if fault == "missing":
+        commands.pop()
+    elif fault == "duplicate":
+        commands[-1] = commands[0]
+    elif fault == "unauthorized-net":
+        commands[0]["pin_object_id"] = "pin-vout"
+    else:
+        commands[0]["net_id"] = 'vss") exit()'
+    target = {"library": "Owned", "cell": "Child", "view": "layout"}
+    with pytest.raises(ValueError):
+        rendering.apply_script(target, {}, before["technology"], commands, connections=scope)
 
 
 def test_registered_layer_policy_checks_technology_before_writes_and_on_reopen():

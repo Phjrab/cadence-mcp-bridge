@@ -125,7 +125,66 @@ def project_orientation(snapshot, qualification):
     snapshot["semantic_sha256"] = snapshot_digest(snapshot)
 
 
-def parse_frame(raw, route, rendering, qualification=None):
+def qualified_connections(qualification, binding):
+    if qualification is not None and qualification["binding"] == binding:
+        return qualification["edits"]
+    return None
+
+
+def parse_connections(raw, snapshot, rendering, edits, source=False):
+    start = b"MCP_LAYOUT_SOURCE_CONNECTIONS|1" if source else b"MCP_LAYOUT_CONNECTIONS|1"
+    end = b"END_LAYOUT_SOURCE_CONNECTIONS" if source else b"END_LAYOUT_CONNECTIONS"
+    lines = protocol_lines(raw, start, end, "layout_instance_terminal_frame_delimiters")
+    scope = rendering.connection_scope(edits)
+    if len(lines) != len(scope) + 2:
+        raise ValueError("layout_instance_terminal_frame_count")
+    instances = dict((obj["object_id"], obj) for obj in snapshot["instances"])
+    pins = dict((obj["object_id"], obj) for obj in snapshot["pins"])
+    if len(instances) != 2:
+        raise ValueError("layout_instance_terminal_frame_instances")
+    result = []
+    for index, edit in enumerate(scope, 1):
+        fields = lines[index].split("|")
+        object_id, terminal = edit["object_id"], edit["terminal"]
+        instance, pin = instances.get(object_id), pins.get(edit["pin_object_id"])
+        if (
+            len(fields) != 6
+            or fields[:3] != ["C", object_id, terminal]
+            or fields[3] not in ("0", "1")
+            or fields[5] not in ("0", "1")
+            or instance is None
+            or instance["master_id"] != edit["expected_master_id"]
+            or not instance["pcell_submaster"]
+            or pin is None
+            or pin["association"] != "native_verified"
+        ):
+            raise ValueError("layout_instance_terminal_frame_row")
+        present, name, match = fields[3] == "1", fields[4], fields[5] == "1"
+        if (source and present) or (not present and name != "-") or (match and name == "-"):
+            raise ValueError("layout_instance_terminal_frame_state")
+        net_id = None
+        if name != "-":
+            rendering.token(name)
+            try:
+                net_id = rendering.token(name, rendering.LOGICAL)
+            except ValueError:
+                net_id = "n-" + digest(name)[:24]
+        if match and net_id != pin["net_id"]:
+            raise ValueError("layout_instance_terminal_frame_net")
+        result.append(
+            dict(
+                object_id=object_id,
+                master_id=instance["master_id"],
+                terminal=terminal,
+                present=present,
+                net_id=net_id,
+                pin_object_id=pin["object_id"] if match else None,
+            )
+        )
+    return result
+
+
+def parse_frame(raw, route, rendering, qualification=None, connections=None):
     """Closed bounded frame; private selectors never leave the worker."""
     lines = protocol_lines(
         raw, b"MCP_LAYOUT_FRAME|1", b"END_LAYOUT_FRAME", "layout_frame_delimiters"
@@ -260,6 +319,8 @@ def parse_frame(raw, route, rendering, qualification=None):
     ]
     result["technology"]["supported_orientations"] = sorted(orientations)
     result["capabilities"].update(move="supported", add_rect="supported", add_pin="supported")
+    if connections is not None:
+        result["instance_terminals"] = parse_connections(raw, result, rendering, connections)
     project_orientation(result, qualification)
     return result, selectors
 
@@ -336,6 +397,54 @@ def predict(before, commands, rendering=None, orientation_pair=None):
         else:
             raise ValueError("layout_operation_not_supported")
     return expected
+
+
+def predict_connections(before, commands, edits, rendering):
+    scope = rendering.connection_scope(edits)
+    if (
+        rendering.connection_scope([rendering.connection_command(command) for command in commands])
+        != scope
+    ):
+        raise ValueError("layout_instance_terminal_commands")
+    observed = before.get("instance_terminals")
+    if observed is None or len(observed) != len(scope):
+        raise ValueError("layout_instance_terminal_baseline_unobserved")
+    instances = dict((obj["object_id"], obj) for obj in before["instances"])
+    pins = dict((obj["object_id"], obj) for obj in before["pins"])
+    keyed = dict(((cmd["object_id"], cmd["terminal"]), cmd) for cmd in commands)
+    after = []
+    for index, edit in enumerate(scope):
+        object_id, terminal = edit["object_id"], edit["terminal"]
+        master_id = edit["expected_master_id"]
+        row = dict(
+            object_id=object_id,
+            master_id=master_id,
+            terminal=terminal,
+            present=False,
+            net_id=None,
+            pin_object_id=None,
+        )
+        if observed[index] != row:
+            raise ValueError("layout_instance_terminal_baseline_not_absent")
+        command = keyed[(object_id, terminal)]
+        obj = instances.get(object_id)
+        if (
+            obj is None
+            or obj["master_id"] != master_id
+            or not obj["pcell_submaster"]
+            or object_digest(obj) != command["before_sha256"]
+        ):
+            raise ValueError("layout_instance_terminal_instance_identity")
+        pin = pins.get(edit["pin_object_id"])
+        if (
+            pin is None
+            or pin["association"] != "native_verified"
+            or pin["net_id"] != command["net_id"]
+            or pin["terminal_id"] != command["terminal_id"]
+        ):
+            raise ValueError("layout_instance_terminal_pin_net_identity")
+        after.append(dict(row, present=True, net_id=pin["net_id"], pin_object_id=pin["object_id"]))
+    return dict(before, instance_terminals=after)
 
 
 class LayoutWorker(object):
@@ -441,6 +550,23 @@ class LayoutWorker(object):
             if replay is not None:
                 self.runtime.read_check(identity)
                 return replay
+            binding = (
+                request["binding"] if action == "fork" else request["plan"]["request"]["binding"]
+            )
+            connections = qualified_connections(
+                getattr(self.runtime, "instance_terminal_qualification", None), binding
+            )
+            if action == "apply":
+                edits = request["plan"]["request"]["edits"]
+                commands = request["plan"]["normalized_edits"]
+                if connections is not None:
+                    scope = self.runtime.rendering.connection_scope
+                    if scope(edits) != scope(connections):
+                        raise ValueError("layout_instance_terminal_scope_mismatch")
+                elif any(
+                    edit["kind"] == "connect_terminal" for edit in list(edits) + list(commands)
+                ):
+                    raise ValueError("layout_instance_terminal_qualification_required")
             self.runtime.check(session, identity)
             before, selectors, route = self.runtime.inspect_for_write(action, request)
             baseline = (
@@ -471,12 +597,21 @@ class LayoutWorker(object):
                     or before["capabilities"]["rotate"] != "not_verified"
                 ):
                     raise ValueError("layout_orientation_qualification_required")
-                expected = predict(
-                    before,
-                    normalized_edits,
-                    getattr(self.runtime, "rendering", None),
-                    qualification["orientations"] if orient else None,
-                )
+                if connections is not None:
+                    if plan["request"]["expected_baseline_sha256"] != baseline:
+                        raise ValueError("layout_instance_terminal_request_baseline_mismatch")
+                    expected = predict_connections(
+                        before, normalized_edits, connections, self.runtime.rendering
+                    )
+                    if snapshot_digest(expected) != plan["expected_semantic_sha256"]:
+                        raise ValueError("layout_instance_terminal_prediction_mismatch")
+                else:
+                    expected = predict(
+                        before,
+                        normalized_edits,
+                        getattr(self.runtime, "rendering", None),
+                        qualification["orientations"] if orient else None,
+                    )
                 normalized = [
                     dict((k, c[k]) for k in ("kind", "object_id", "orientation"))
                     for c in plan["normalized_edits"]
@@ -515,6 +650,18 @@ class LayoutWorker(object):
                 after = observed["snapshot"]
                 if not observed["saved"] or not observed["reopened"]:
                     raise ValueError("layout_save_reopen_not_verified")
+                if action == "fork" and connections is not None:
+                    source_rows = observed.get("source_instance_terminals")
+                    if (
+                        source_rows is None
+                        or len(source_rows) != len(connections)
+                        or any(row["present"] for row in source_rows)
+                    ):
+                        raise ValueError("layout_instance_terminal_fork_source_unverified")
+                    expected["instance_terminals"] = source_rows
+                    project_orientation(
+                        expected, getattr(self.runtime, "orientation_qualification", None)
+                    )
                 if geometry(expected) != geometry(after):
                     raise ValueError("layout_readback_geometry_mismatch")
                 for pin in after["pins"]:
@@ -674,6 +821,34 @@ def orientation_qualification(registration, rendering):
     return value
 
 
+def instance_terminal_qualification(registration, rendering):
+    if "instance_terminal_qualification" not in registration:
+        return None
+    value = registration["instance_terminal_qualification"]
+    if not isinstance(value, dict) or set(value) != set(("binding", "edits")):
+        raise ValueError("layout_instance_terminal_qualification_shape")
+    binding = value["binding"]
+    names = ("workspace_id", "design_id", "revision_id", "parent_revision_id")
+    digests = ("source_baseline_sha256", "parent_revision_sha256")
+    if not isinstance(binding, dict) or set(binding) != set(names + digests):
+        raise ValueError("layout_instance_terminal_qualification_binding")
+    for key in names:
+        rendering.token(binding[key], rendering.LOGICAL)
+    for key in digests:
+        rendering.token(binding[key], r"^[0-9a-f]{64}$")
+    matches = [route for route in registration["routes"] if route["binding"] == binding]
+    if (
+        len(matches) != 1
+        or matches[0]["owned"] is not True
+        or matches[0]["read_only"] is not False
+        or binding["revision_id"] == binding["parent_revision_id"]
+        or (registration.get("seed") or {}).get("revision_id") == binding["revision_id"]
+        or (registration.get("orientation_qualification") or {}).get("binding") == binding
+    ):
+        raise ValueError("layout_instance_terminal_qualification_owned_route_required")
+    return dict(binding=binding, edits=rendering.connection_scope(value["edits"]))
+
+
 class FixedLayoutRuntime(object):
     """New layout operations retain the original runtime/activation/trust gates.
 
@@ -687,11 +862,16 @@ class FixedLayoutRuntime(object):
         keys = set(
             ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
         )
-        optional = set(("probe_libraries", "orientation_qualification"))
+        optional = set(
+            ("probe_libraries", "orientation_qualification", "instance_terminal_qualification")
+        )
         if not keys <= set(registration) or not set(registration) <= keys | optional:
             raise ValueError("layout_registration_shape")
         probe_libraries(registration)
         self.orientation_qualification = orientation_qualification(registration, rendering)
+        self.instance_terminal_qualification = instance_terminal_qualification(
+            registration, rendering
+        )
         self.here, self.manifest, self.registration = here, manifest, registration
         self.native, self.native_assets, self.profile = native, native_assets, profile
         self.modules, self.rendering = modules, rendering
@@ -921,6 +1101,12 @@ class FixedLayoutRuntime(object):
         self.operations.directory(job + "/work", self.accounting)
         return job
 
+    def connection_arguments(self, route):
+        connections = qualified_connections(
+            getattr(self, "instance_terminal_qualification", None), route["binding"]
+        )
+        return {} if connections is None else {"connections": connections}
+
     def _program(self, session, script, route, job):
         work = job + "/work"
         script = self.rendering.execution_script(script)
@@ -958,7 +1144,11 @@ class FixedLayoutRuntime(object):
         if route is None:
             return raw
         snapshot, selectors = parse_frame(
-            raw, route, self.rendering, self.orientation_qualification
+            raw,
+            route,
+            self.rendering,
+            self.orientation_qualification,
+            **self.connection_arguments(route),
         )
         return raw, snapshot, selectors
 
@@ -967,7 +1157,9 @@ class FixedLayoutRuntime(object):
         before = self.copying.snapshot(route["path"])
         raw, snapshot, selectors = self._program(
             session,
-            self.rendering.inspect_script(route["cellview"], route.get("layer_policy")),
+            self.rendering.inspect_script(
+                route["cellview"], route.get("layer_policy"), **self.connection_arguments(route)
+            ),
             route,
             self._job(),
         )
@@ -1018,6 +1210,7 @@ class FixedLayoutRuntime(object):
         if len(parents) != 1:
             raise ValueError("layout_registered_parent_required")
         parent_state = self.copying.snapshot(parents[0]["path"])
+        connection_args = self.connection_arguments(route)
         if action == "fork":
             script = self.rendering.write_script(
                 parents[0]["cellview"],
@@ -1025,6 +1218,7 @@ class FixedLayoutRuntime(object):
                 selectors,
                 before["technology"],
                 policy=route.get("layer_policy"),
+                **connection_args,
             )
         else:
             script = self.rendering.apply_script(
@@ -1033,16 +1227,22 @@ class FixedLayoutRuntime(object):
                 before["technology"],
                 request["plan"]["normalized_edits"],
                 policy=route.get("layer_policy"),
+                **connection_args,
             )
         raw, snapshot, unused = self._program(session, script, route, job)
         if self.copying.snapshot(parents[0]["path"]) != parent_state:
             raise ValueError("layout_protected_source_changed")
         marker = b"MCP_LAYOUT_SAVED_REOPENED|1"
-        return {
+        result = {
             "snapshot": snapshot,
             "saved": marker in raw.splitlines(),
             "reopened": marker in raw.splitlines(),
         }
+        if action == "fork" and connection_args:
+            result["source_instance_terminals"] = parse_connections(
+                raw, before, self.rendering, connection_args["connections"], source=True
+            )
+        return result
 
     def operator_probe(self, session):
         libraries = probe_libraries(self.registration)
