@@ -29,9 +29,13 @@ are never remote execution inputs. Environment settings may supply the existing
 Fork to a new owned revision before planning edits. Plan accepts bounded `move`,
 `add_rect`, and `add_pin` operations, with decimal text in micrometres. Observed
 DBU/grid/layer-purpose determine validity; unsupported or off-grid edits reject.
+Pin creation supports no optional text label yet: omit `label` or set it to `null`.
 Apply takes `{"plan": <the complete returned plan>, "expected_plan_sha256": <its hash>}`.
 Retain the same operation ID and exact content for retries. An uncertain write
 requires read-back/reconciliation through the provider; changing the ID is not recovery.
+Repeat the same `apply` request to retrieve its retained receipt. `replayed: true`
+means `executed: false`; `OUTCOME_UNKNOWN` remains unresolved and never triggers
+an automatic new write. Use inspect/diff for read-back and preserve the original request.
 An apply seals that working revision after its first edit. Fork another revision
 from the preserved result for the next edit; a different operation ID cannot re-edit a sealed target.
 Diff retrieves changes/evidence. Select chooses a preserved revision without deleting history.
