@@ -131,7 +131,7 @@ def qualified_connections(qualification, binding):
     return None
 
 
-def parse_connections(raw, snapshot, rendering, edits, source=False):
+def parse_connections(raw, snapshot, rendering, edits, source=False, require_present=False):
     start = b"MCP_LAYOUT_SOURCE_CONNECTIONS|1" if source else b"MCP_LAYOUT_CONNECTIONS|1"
     end = b"END_LAYOUT_SOURCE_CONNECTIONS" if source else b"END_LAYOUT_CONNECTIONS"
     lines = protocol_lines(raw, start, end, "layout_instance_terminal_frame_delimiters")
@@ -160,7 +160,12 @@ def parse_connections(raw, snapshot, rendering, edits, source=False):
         ):
             raise ValueError("layout_instance_terminal_frame_row")
         present, name, match = fields[3] == "1", fields[4], fields[5] == "1"
-        if (source and present) or (not present and name != "-") or (match and name == "-"):
+        if (
+            (source and not require_present and present)
+            or (require_present and not (present and match))
+            or (not present and name != "-")
+            or (match and name == "-")
+        ):
             raise ValueError("layout_instance_terminal_frame_state")
         net_id = None
         if name != "-":
@@ -184,7 +189,16 @@ def parse_connections(raw, snapshot, rendering, edits, source=False):
     return result
 
 
-def parse_frame(raw, route, rendering, qualification=None, connections=None):
+def parse_observations(raw, snapshot, rendering, observations, source=False):
+    rows = parse_connections(
+        raw, snapshot, rendering, rendering.observation_edits(observations), source, True
+    )
+    if rows != observations:
+        raise ValueError("layout_instance_terminal_observation_changed")
+    return rows
+
+
+def parse_frame(raw, route, rendering, qualification=None, connections=None, observations=None):
     """Closed bounded frame; private selectors never leave the worker."""
     lines = protocol_lines(
         raw, b"MCP_LAYOUT_FRAME|1", b"END_LAYOUT_FRAME", "layout_frame_delimiters"
@@ -319,8 +333,15 @@ def parse_frame(raw, route, rendering, qualification=None, connections=None):
     ]
     result["technology"]["supported_orientations"] = sorted(orientations)
     result["capabilities"].update(move="supported", add_rect="supported", add_pin="supported")
-    if connections is not None:
+    if observations is not None:
+        result["instance_terminals"] = parse_observations(raw, result, rendering, observations)
+    elif connections is not None:
         result["instance_terminals"] = parse_connections(raw, result, rendering, connections)
+    elif any(
+        line.startswith((b"MCP_LAYOUT_CONNECTIONS|", b"MCP_LAYOUT_SOURCE_CONNECTIONS|"))
+        for line in raw.splitlines()
+    ):
+        raise ValueError("layout_instance_terminal_unregistered_frame")
     project_orientation(result, qualification)
     return result, selectors
 
@@ -556,6 +577,8 @@ class LayoutWorker(object):
             connections = qualified_connections(
                 getattr(self.runtime, "instance_terminal_qualification", None), binding
             )
+            observation = getattr(self.runtime, "instance_terminal_observation_scope", None)
+            scoped = check_observation_write(observation, action, binding)
             if action == "apply":
                 edits = request["plan"]["request"]["edits"]
                 commands = request["plan"]["normalized_edits"]
@@ -576,6 +599,11 @@ class LayoutWorker(object):
             )
             if before["semantic_sha256"] != baseline:
                 raise ValueError("layout_stale_baseline")
+            if scoped and (
+                before.get("instance_terminals") != observation["rows"]
+                or (action == "fork" and baseline != binding["parent_revision_sha256"])
+            ):
+                raise ValueError("layout_instance_terminal_observation_baseline")
             if action == "apply":
                 if not before["owned"] or before["read_only"]:
                     raise ValueError("layout_owned_working_revision_required")
@@ -621,6 +649,11 @@ class LayoutWorker(object):
                     raise ValueError("layout_orientation_request_mismatch")
                 if requested and snapshot_digest(expected) != plan["expected_semantic_sha256"]:
                     raise ValueError("layout_orientation_prediction_mismatch")
+                if scoped and (
+                    plan["request"]["expected_baseline_sha256"] != baseline
+                    or snapshot_digest(expected) != plan["expected_semantic_sha256"]
+                ):
+                    raise ValueError("layout_instance_terminal_observation_prediction")
             else:
                 expected = copy.deepcopy(before)
                 expected.update(binding=request["binding"], owned=True, read_only=False)
@@ -662,6 +695,12 @@ class LayoutWorker(object):
                     project_orientation(
                         expected, getattr(self.runtime, "orientation_qualification", None)
                     )
+                if (
+                    scoped
+                    and observed.get("pre_mutation_instance_terminals")
+                    != before["instance_terminals"]
+                ):
+                    raise ValueError("layout_instance_terminal_pre_mutation_unverified")
                 if geometry(expected) != geometry(after):
                     raise ValueError("layout_readback_geometry_mismatch")
                 for pin in after["pins"]:
@@ -849,6 +888,78 @@ def instance_terminal_qualification(registration, rendering):
     return dict(binding=binding, edits=rendering.connection_scope(value["edits"]))
 
 
+def check_observation_write(scope, action, binding):
+    if scope is None:
+        return False
+    parent, child = scope["parent_binding"], scope["child_binding"]
+    if binding == parent:
+        raise ValueError("layout_instance_terminal_observation_parent_protected")
+    if action == "fork":
+        for source in (parent, child):
+            if (
+                source["workspace_id"] == binding["workspace_id"]
+                and source["design_id"] == binding["design_id"]
+                and source["revision_id"] == binding["parent_revision_id"]
+                and binding != child
+            ):
+                raise ValueError("layout_instance_terminal_observation_fork_edge")
+    return binding == child
+
+
+def instance_terminal_observation_scope(registration, rendering):
+    if "instance_terminal_observation_scope" not in registration:
+        return None
+    scope = registration["instance_terminal_observation_scope"]
+    if not isinstance(scope, dict) or set(scope) != set(
+        ("parent_binding", "child_binding", "rows")
+    ):
+        raise ValueError("layout_instance_terminal_observation_shape")
+    parent, child = scope["parent_binding"], scope["child_binding"]
+    common = ("workspace_id", "design_id", "source_baseline_sha256")
+    names = ("workspace_id", "design_id", "revision_id")
+    fields = set(common + names + ("parent_revision_id", "parent_revision_sha256"))
+    routes = []
+    for binding in (parent, child):
+        if not isinstance(binding, dict) or set(binding) != fields:
+            raise ValueError("layout_instance_terminal_observation_binding")
+        for key in names:
+            rendering.token(binding[key], rendering.LOGICAL)
+        rendering.token(binding["source_baseline_sha256"], r"^[0-9a-f]{64}$")
+        if binding["parent_revision_id"] is not None:
+            rendering.token(binding["parent_revision_id"], rendering.LOGICAL)
+            rendering.token(binding["parent_revision_sha256"], r"^[0-9a-f]{64}$")
+        elif binding["parent_revision_sha256"] is not None:
+            raise ValueError("layout_instance_terminal_observation_binding")
+        matches = [route for route in registration["routes"] if route["binding"] == binding]
+        if (
+            len(matches) != 1
+            or matches[0]["owned"] is not True
+            or matches[0]["read_only"] is not False
+            or binding["revision_id"] == binding["parent_revision_id"]
+            or (registration.get("seed") or {}).get("revision_id") == binding["revision_id"]
+        ):
+            raise ValueError("layout_instance_terminal_observation_owned_routes")
+        for field in ("orientation_qualification", "instance_terminal_qualification"):
+            if (registration.get(field) or {}).get("binding") == binding:
+                raise ValueError("layout_instance_terminal_observation_overlap")
+        routes.append(matches[0])
+    if child["parent_revision_id"] != parent["revision_id"] or any(
+        parent[key] != child[key] for key in common
+    ):
+        raise ValueError("layout_instance_terminal_observation_binding")
+    protected = set(entry["path"] for entry in registration["protected_views"])
+    target = routes[1]["path"]
+    if routes[0]["path"] not in protected or any(
+        target == path or target.startswith(path + "/") or path.startswith(target + "/")
+        for path in protected
+    ):
+        raise ValueError("layout_instance_terminal_observation_protection")
+    rendering.observation_edits(scope["rows"])
+    return dict(
+        scope, rows=sorted(scope["rows"], key=lambda row: (row["object_id"], row["terminal"]))
+    )
+
+
 class FixedLayoutRuntime(object):
     """New layout operations retain the original runtime/activation/trust gates.
 
@@ -863,13 +974,21 @@ class FixedLayoutRuntime(object):
             ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
         )
         optional = set(
-            ("probe_libraries", "orientation_qualification", "instance_terminal_qualification")
+            (
+                "probe_libraries",
+                "orientation_qualification",
+                "instance_terminal_qualification",
+                "instance_terminal_observation_scope",
+            )
         )
         if not keys <= set(registration) or not set(registration) <= keys | optional:
             raise ValueError("layout_registration_shape")
         probe_libraries(registration)
         self.orientation_qualification = orientation_qualification(registration, rendering)
         self.instance_terminal_qualification = instance_terminal_qualification(
+            registration, rendering
+        )
+        self.instance_terminal_observation_scope = instance_terminal_observation_scope(
             registration, rendering
         )
         self.here, self.manifest, self.registration = here, manifest, registration
@@ -1102,6 +1221,12 @@ class FixedLayoutRuntime(object):
         return job
 
     def connection_arguments(self, route):
+        scope = getattr(self, "instance_terminal_observation_scope", None)
+        if scope is not None and route["binding"] in (
+            scope["parent_binding"],
+            scope["child_binding"],
+        ):
+            return {"observations": scope["rows"]}
         connections = qualified_connections(
             getattr(self, "instance_terminal_qualification", None), route["binding"]
         )
@@ -1160,6 +1285,13 @@ class FixedLayoutRuntime(object):
         )
         if self.copying.snapshot(route["path"]) != before:
             raise ValueError("layout_read_only_view_changed")
+        scope = getattr(self, "instance_terminal_observation_scope", None)
+        if (
+            scope is not None
+            and route["binding"] == scope["parent_binding"]
+            and snapshot["semantic_sha256"] != scope["child_binding"]["parent_revision_sha256"]
+        ):
+            raise ValueError("layout_fork_parent_hash_mismatch")
         return snapshot, selectors, route
 
     def inspect_for_write(self, action, request):
@@ -1232,7 +1364,11 @@ class FixedLayoutRuntime(object):
             "saved": marker in raw.splitlines(),
             "reopened": marker in raw.splitlines(),
         }
-        if action == "fork" and connection_args:
+        if "observations" in connection_args:
+            result["pre_mutation_instance_terminals"] = parse_observations(
+                raw, before, self.rendering, connection_args["observations"], source=True
+            )
+        elif action == "fork" and "connections" in connection_args:
             result["source_instance_terminals"] = parse_connections(
                 raw, before, self.rendering, connection_args["connections"], source=True
             )

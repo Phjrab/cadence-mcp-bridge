@@ -20,7 +20,7 @@ from pydantic import (
     model_validator,
 )
 
-from cadence_mcp_bridge._layout_rendering import connection_scope
+from cadence_mcp_bridge._layout_rendering import connection_scope, observation_edits
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
 from cadence_mcp_bridge.layout_engine import compute_diff, predict_snapshot, validate_plan
@@ -30,6 +30,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiffRequest,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutInstanceTerminal,
     LayoutInstanceTerminalQualification,
     LayoutOrientationQualification,
     LayoutResult,
@@ -59,9 +60,34 @@ SAFE_REASONS = {
 }
 
 
+class LayoutInstanceTerminalObservationScope(VariableModel):
+    """Operator-only pins for one connected source and its geometry fork."""
+
+    parent_binding: RevisionBinding
+    child_binding: RevisionBinding
+    rows: Annotated[tuple[LayoutInstanceTerminal, ...], Field(min_length=8, max_length=8)]
+
+    @model_validator(mode="after")
+    def exact_scope(self) -> Self:
+        parent, child = self.parent_binding, self.child_binding
+        if (
+            child.parent_revision_id != parent.revision_id
+            or child.revision_id == parent.revision_id
+            or child.workspace_id != parent.workspace_id
+            or child.design_id != parent.design_id
+            or child.source_baseline_sha256 != parent.source_baseline_sha256
+        ):
+            raise ValueError("layout_instance_terminal_observation_binding")
+        rows = sorted(self.rows, key=lambda row: row.key)
+        observation_edits([row.model_dump(mode="json") for row in rows])  # type: ignore[no-untyped-call]
+        object.__setattr__(self, "rows", tuple(rows))
+        return self
+
+
 class _LayoutQualificationBinding(VariableModel):
     orientation_qualification: LayoutOrientationQualification | None = None
     instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None
+    instance_terminal_observation_scope: LayoutInstanceTerminalObservationScope | None = None
 
     @model_validator(mode="after")
     def supported_instance_terminal_scope(self) -> Self:
@@ -74,6 +100,12 @@ class _LayoutQualificationBinding(VariableModel):
                 and self.orientation_qualification.binding == qualification.binding
             ):
                 raise ValueError("layout_instance_terminal_qualification_scope_overlap")
+        scope = self.instance_terminal_observation_scope
+        if scope is not None and any(
+            pinned is not None and pinned.binding in (scope.parent_binding, scope.child_binding)
+            for pinned in (qualification, self.orientation_qualification)
+        ):
+            raise ValueError("layout_instance_terminal_observation_overlap")
         return self
 
     @model_serializer(mode="wrap")
@@ -83,6 +115,8 @@ class _LayoutQualificationBinding(VariableModel):
             document.pop("orientation_qualification", None)
         if self.instance_terminal_qualification is None:
             document.pop("instance_terminal_qualification", None)
+        if self.instance_terminal_observation_scope is None:
+            document.pop("instance_terminal_observation_scope", None)
         return document
 
 
@@ -244,6 +278,29 @@ class LayoutRegistration(_LayoutQualificationBinding):
                 and self.seed.revision_id == qualification.binding.revision_id
             ):
                 raise ValueError("layout_instance_terminal_qualification_owned_route_required")
+        scope = self.instance_terminal_observation_scope
+        if scope is not None:
+            scoped = {
+                route.binding.revision_id: route
+                for route in self.routes
+                if route.binding in (scope.parent_binding, scope.child_binding)
+            }
+            if len(scoped) != 2 or any(
+                not route.owned
+                or route.read_only
+                or (self.seed is not None and self.seed.revision_id == route.binding.revision_id)
+                for route in scoped.values()
+            ):
+                raise ValueError("layout_instance_terminal_observation_owned_routes")
+            protected = {entry.path for entry in self.protected_views}
+            target_path = scoped[scope.child_binding.revision_id].path
+            if scoped[scope.parent_binding.revision_id].path not in protected or any(
+                target_path == path
+                or target_path.startswith(path + "/")
+                or path.startswith(target_path + "/")
+                for path in protected
+            ):
+                raise ValueError("layout_instance_terminal_observation_protection")
         if self.seed is not None:
             routes = [r for r in self.routes if r.binding.revision_id == self.seed.revision_id]
             if len(routes) != 1 or not routes[0].owned:
@@ -332,6 +389,7 @@ def build_layout_bundle(
         worker_sha256=manifest["files"]["worker.py"]["sha256"],
         orientation_qualification=registration.orientation_qualification,
         instance_terminal_qualification=registration.instance_terminal_qualification,
+        instance_terminal_observation_scope=registration.instance_terminal_observation_scope,
     )
     return LayoutBundle(assets, manifest_sha, provider)
 
@@ -464,6 +522,19 @@ class NativeLayoutProvider:
             raise InvalidInputError("Layout native orientation qualification mismatch")
         connection = self.registration.instance_terminal_qualification
         rows = snapshot.instance_terminals
+        scope = self.registration.instance_terminal_observation_scope
+        if scope is not None and snapshot.binding in (scope.parent_binding, scope.child_binding):
+            if (
+                not snapshot.owned
+                or snapshot.read_only
+                or rows != scope.rows
+                or (
+                    snapshot.binding == scope.parent_binding
+                    and snapshot.semantic_sha256 != scope.child_binding.parent_revision_sha256
+                )
+            ):
+                raise InvalidInputError("Layout native instance terminal observation mismatch")
+            return
         if connection is None or snapshot.binding != connection.binding:
             if rows is not None:
                 raise InvalidInputError("Layout native instance terminal scope is unregistered")
@@ -523,7 +594,24 @@ class NativeLayoutProvider:
         if result.snapshot is not None:
             self._check_snapshot_qualification(result.snapshot)
             rows = result.snapshot.instance_terminals
-            if rows is not None and (
+            scope = self.registration.instance_terminal_observation_scope
+            if scope is not None and request.binding == scope.child_binding:
+                before = LayoutSnapshot.model_validate_json(json.dumps(data["before"]))
+                self._check_snapshot_qualification(before)
+                if (
+                    before.binding != scope.parent_binding
+                    or before.provenance != "native_readback"
+                    or before.semantic_sha256 != request.expected_baseline_sha256
+                    or result.diff is None
+                    or result.diff.changes
+                    or result.diff.instance_terminal_changes != ()
+                    or result.diff.metadata_changes
+                    or not (result.saved and result.reopened and result.source_unchanged)
+                ):
+                    raise InvalidInputError(
+                        "Layout native instance terminal fork observation mismatch"
+                    )
+            elif rows is not None and (
                 any(row.present for row in rows)
                 or result.diff is None
                 or result.diff.before_sha256 != request.expected_baseline_sha256
@@ -544,6 +632,9 @@ class NativeLayoutProvider:
         ):
             raise InvalidInputError("Native layout pin labels are not supported")
         qualification = self.registration.instance_terminal_qualification
+        scope = self.registration.instance_terminal_observation_scope
+        if scope is not None and request.plan.request.binding == scope.parent_binding:
+            raise InvalidInputError("Layout native observation parent is protected")
         connection = (
             qualification is not None and qualification.binding == request.plan.request.binding
         )
@@ -598,6 +689,11 @@ class NativeLayoutProvider:
             or not result.source_unchanged
             or result.snapshot.semantic_sha256 != request.plan.expected_semantic_sha256
             or any(p.association != "native_verified" for p in result.snapshot.pins)
+            or (
+                scope is not None
+                and result.snapshot.binding == scope.child_binding
+                and difference.instance_terminal_changes != ()
+            )
             or connection
             and (
                 difference.instance_terminal_changes is None
@@ -632,6 +728,9 @@ class NativeLayoutProvider:
             {"binding": parent_binding.model_dump(mode="json"), "registered_revision": True},
         )
         before = LayoutSnapshot.model_validate_json(json.dumps(old))
+        scope = self.registration.instance_terminal_observation_scope
+        if scope is not None:
+            self._check_snapshot_qualification(before)
         if before.semantic_sha256 != request.expected_before_sha256:
             raise InvalidInputError("Layout diff baseline mismatch")
         return LayoutResult(

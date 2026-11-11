@@ -6,7 +6,12 @@ from decimal import localcontext
 import pytest
 from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot
-from test_layout_worker import connection_fixture, orientation_request
+from test_layout_worker import (
+    connection_fixture,
+    observation_fixture,
+    observed_geometry_request,
+    orientation_request,
+)
 
 from cadence_mcp_bridge import _layout_rendering as rendering
 from cadence_mcp_bridge.layout_engine import build_plan
@@ -269,3 +274,32 @@ def test_orientation_renderer_rejects_malformed_command(fault):
         edits[0]["before_sha256"] = "f" * 63
     with pytest.raises(ValueError):
         rendering.edits_script(edits, snapshot.technology.model_dump(mode="json"))
+
+
+def test_observation_scripts_resolve_present_oa_before_and_after_geometry():
+    scope, parent, child, _, _, snapshot = observation_fixture()
+    request = observed_geometry_request(snapshot)
+    edits = [edit.model_dump(mode="json") for edit in request.plan.normalized_edits]
+    rows = scope["rows"]
+    read = rendering.inspect_script(child["cellview"], observations=rows).decode("ascii")
+    fork = rendering.write_script(
+        parent["cellview"], child["cellview"], {}, snapshot["technology"], observations=rows
+    ).decode("ascii")
+    apply = rendering.apply_script(
+        child["cellview"], {}, snapshot["technology"], edits, observations=rows
+    ).decode("ascii")
+    for script in (read, fork, apply):
+        assert "dbCreateConn" not in script
+        assert "instance_terminal_fork_source_present" not in script
+        assert "unless(it && eq(it~>net nth(2 row))" in script
+        assert '"pin-vout" "vout" nil' in script
+    assert fork.index("mcpLayoutCollectConnections(src list(") < fork.index("dbCopyCellView")
+    assert fork.rindex('"maskLayout" "r"') < fork.index("mcpLayoutCollectConnections(cv list(")
+    pre = apply.index("mcpLayoutCollectConnections(cv list(")
+    post = apply.rindex("mcpLayoutCollectConnections(cv list(")
+    assert pre < apply.index("dbCreateRect") < apply.index("dbSave(cv)")
+    assert apply.rindex('"maskLayout" "r"') < post < apply.index("MCP_LAYOUT_SAVED_REOPENED")
+    executable = rendering.execution_script(apply.encode("ascii")).decode("ascii")
+    definitions, body = executable.split("procedure(mcpLayoutRun()")
+    assert "procedure(mcpLayoutCollectConnections(" in definitions
+    assert "procedure(" not in body

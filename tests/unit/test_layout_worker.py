@@ -14,7 +14,12 @@ from cadence_mcp_bridge import _layout_worker as worker
 from cadence_mcp_bridge import _native_operations as operations
 from cadence_mcp_bridge import _shared_reservations as ledger
 from cadence_mcp_bridge.layout_engine import build_plan
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutSnapshot, OrientEdit
+from cadence_mcp_bridge.layout_models import (
+    AddRectEdit,
+    LayoutApplyRequest,
+    LayoutSnapshot,
+    OrientEdit,
+)
 
 root = root_fixture
 
@@ -893,3 +898,172 @@ def test_operator_seed_uses_durable_identity_and_preserves_failure(root, failure
     with pytest.raises(ValueError, match="seed_library_exists"):
         runtime.operator_seed(str(uuid4()))
     assert len(writes) == 1
+
+
+def observation_fixture():
+    child_route, _, raw, before, commands = connection_fixture()
+    rows = [
+        dict(row, present=True, net_id=cmd["net_id"], pin_object_id=cmd["pin_object_id"])
+        for row, cmd in zip(before["instance_terminals"], commands, strict=True)
+    ]
+    for row in rows:
+        prefix = f"C|{row['object_id']}|{row['terminal']}|"
+        raw = raw.replace(f"{prefix}0|-|0".encode(), f"{prefix}1|{row['net_id']}|1".encode())
+    parent_binding = dict(
+        child_route["binding"],
+        revision_id="routed-parent",
+        parent_revision_id="earlier-revision",
+        parent_revision_sha256="b" * 64,
+    )
+    parent_route = dict(
+        child_route,
+        binding=parent_binding,
+        cellview={"library": "Owned", "cell": "Parent", "view": "layout"},
+        path="/registered/managed/Owned/Parent/layout",
+    )
+    parent, _ = worker.parse_frame(raw, parent_route, rendering, observations=rows)
+    child_route["binding"]["parent_revision_sha256"] = parent["semantic_sha256"]
+    child_route.update(
+        cellview={"library": "Owned", "cell": "Child", "view": "layout"},
+        path="/registered/managed/Owned/Child/layout",
+    )
+    child, _ = worker.parse_frame(raw, child_route, rendering, observations=rows)
+    scope = dict(parent_binding=parent_binding, child_binding=child["binding"], rows=rows)
+    return scope, parent_route, child_route, raw, parent, child
+
+
+def observed_geometry_request(child):
+    snapshot = LayoutSnapshot.model_validate_json(worker.canonical(child))
+    request = fixture_request(snapshot).model_copy(
+        update={
+            "operation_id": str(uuid4()),
+            "edits": (
+                AddRectEdit(
+                    kind="add_rect",
+                    object_id="new-tap",
+                    layer="Metal1",
+                    purpose="drawing",
+                    bbox_um=("1", "1", "2", "2"),
+                ),
+            ),
+        }
+    )
+    plan = build_plan(snapshot, request)
+    return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+
+
+@pytest.mark.parametrize(
+    "wrong_row",
+    [b"", b"C|inst-mn|D|0|-|0\n", b"C|inst-mn|D|1|vout|0\n", b"C|inst-mn|D|1|vin|1\n"],
+)
+def test_observation_rejects_missing_or_changed_native_connection(wrong_row):
+    scope, parent_route, child_route, raw, parent, _ = observation_fixture()
+    source = raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS")
+    assert (
+        worker.parse_observations(source, parent, rendering, scope["rows"], source=True)
+        == (scope["rows"])
+    )
+    row = b"C|inst-mn|D|1|vout|1\n"
+    for route in (parent_route, child_route):
+        with pytest.raises(ValueError, match="layout_instance_terminal_"):
+            worker.parse_frame(
+                raw.replace(row, wrong_row), route, rendering, observations=scope["rows"]
+            )
+    with pytest.raises(ValueError, match="unregistered_frame"):
+        worker.parse_frame(raw, parent_route, rendering)
+
+
+def test_observation_wrong_edges_and_parent_write_precede_intent(root):
+    scope, _, _, _, parent, child = observation_fixture()
+    runtime = Runtime(root)
+    runtime.instance_terminal_observation_scope = scope
+    runtime.inspect_for_write = lambda *a: pytest.fail("invalid edge reached native inspect")
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    for source in (parent, child):
+        operation_id = str(uuid4())
+        target = dict(
+            source["binding"],
+            revision_id="unexpected-child",
+            parent_revision_id=source["binding"]["revision_id"],
+            parent_revision_sha256=source["semantic_sha256"],
+        )
+        with pytest.raises(ValueError, match="observation_fork_edge"):
+            engine.execute(
+                "fork",
+                dict(
+                    binding=target,
+                    operation_id=operation_id,
+                    expected_baseline_sha256=source["semantic_sha256"],
+                ),
+            )
+        assert not (root / ledger.JOBS / operation_id).exists()
+    request = observed_geometry_request(parent)
+    with pytest.raises(ValueError, match="observation_parent_protected"):
+        engine.execute("apply", request.model_dump(mode="json"))
+    assert not (root / ledger.JOBS / request.plan.request.operation_id).exists()
+    _, edits, _, absent, commands = connection_fixture()
+    write_request, _ = connection_request(absent, edits, commands)
+    raw_plan_request = write_request["plan"]["request"]
+    raw_plan_request["binding"] = child["binding"]
+    with pytest.raises(ValueError, match="instance_terminal_qualification_required"):
+        engine.execute("apply", write_request)
+    assert not (root / ledger.JOBS / raw_plan_request["operation_id"]).exists()
+    assert runtime.writes == 0
+    unrelated = dict(child["binding"], design_id="unrelated")
+    assert not worker.check_observation_write(scope, "fork", unrelated)
+
+
+@pytest.mark.parametrize("fault", [None, "pre_mutation_missing", "reopen_changed"])
+def test_observation_fork_geometry_and_durable_replay(root, fault):
+    scope, _, _, _, parent, child = observation_fixture()
+    runtime = Runtime(root)
+    runtime.instance_terminal_observation_scope = scope
+    runtime.inspect_for_write = lambda action, request: (
+        parent if action == "fork" else child,
+        {},
+        {},
+    )
+
+    def write(session, action, request, before, selectors, route, job):
+        runtime.writes += 1
+        if action == "fork":
+            return dict(
+                snapshot=child,
+                saved=True,
+                reopened=True,
+                pre_mutation_instance_terminals=copy.deepcopy(parent["instance_terminals"]),
+            )
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
+        worker.project_orientation(after, None)
+        observed = dict(snapshot=after, saved=True, reopened=True)
+        if fault != "pre_mutation_missing":
+            observed["pre_mutation_instance_terminals"] = copy.deepcopy(child["instance_terminals"])
+        if fault == "reopen_changed":
+            after["instance_terminals"][0].update(present=False, net_id=None, pin_object_id=None)
+        return observed
+
+    runtime.write = write
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    fork = engine.execute(
+        "fork",
+        dict(
+            binding=child["binding"],
+            operation_id=str(uuid4()),
+            expected_baseline_sha256=parent["semantic_sha256"],
+        ),
+    )
+    assert fork["before"] == parent and fork["snapshot"] == child
+    request = observed_geometry_request(child).model_dump(mode="json")
+    if fault:
+        with pytest.raises(ValueError, match="pre_mutation_unverified|readback_geometry_mismatch"):
+            engine.execute("apply", request)
+        replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+        assert replay["state"] == "OUTCOME_UNKNOWN" and replay["replayed"]
+        assert not replay["executed"]
+    else:
+        first = engine.execute("apply", request)
+        replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+        assert replay == dict(first, executed=False, replayed=True)
+        assert first["snapshot"]["instance_terminals"] == child["instance_terminals"]
+        assert first["snapshot"]["semantic_sha256"] == request["plan"]["expected_semantic_sha256"]
+    assert runtime.writes == 2

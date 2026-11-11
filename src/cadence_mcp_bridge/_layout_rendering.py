@@ -353,7 +353,7 @@ def connection_scope(edits):
     return sorted(edits, key=lambda edit: (edit["object_id"], edit["terminal"]))
 
 
-CONNECTION_PRELUDE = r"""
+CONNECTION_OBJECTS = r"""
 procedure(mcpLayoutConnectionObjects(cv spec)
   let((instances inst master terms term seen count top pin fig net anchorCount figureCount)
     unless(null(cv~>mosaics) && length(cv~>instances)==2 && length(cv~>terminals)<=1024
@@ -395,7 +395,9 @@ procedure(mcpLayoutConnectionObjects(cv spec)
             net=top~>net))))
     unless(anchorCount==1 mcpLayoutFail("instance_terminal_pin_identity"))
     list(inst term net car(setof(it inst~>instTerms eq(it~>term term))))))
+"""
 
+CONNECTION_WRITES = r"""
 procedure(mcpLayoutConnectionPreflight(cv specs)
   let((rows row)
     rows=nil
@@ -413,20 +415,57 @@ procedure(mcpLayoutConnectTerminals(rows)
       unless(it && eq(it~>term cadr(row)) && eq(it~>net nth(2 row)) &&
              memq(it inst~>instTerms)
         mcpLayoutFail("instance_terminal_create_failed")))))
+"""
 
+CONNECTION_COLLECTOR = r"""
 procedure(mcpLayoutCollectConnections(cv specs source)
   let((row it net)
     printf("%s\n" if(source then "MCP_LAYOUT_SOURCE_CONNECTIONS|1" else "MCP_LAYOUT_CONNECTIONS|1"))
     foreach(spec specs
       row=mcpLayoutConnectionObjects(cv spec)
       it=nth(3 row)
-      when(source && it mcpLayoutFail("instance_terminal_fork_source_present"))
+      CONNECTION_STATE_CHECK
       net=if(it then it~>net else nil)
       printf("C|%s|%s|%s|%s|%s\n" car(spec) nth(2 spec)
         if(it then "1" else "0") if(net then net~>name else "-")
         if(net && eq(net nth(2 row)) then "1" else "0")))
     printf("%s\n" if(source then "END_LAYOUT_SOURCE_CONNECTIONS" else "END_LAYOUT_CONNECTIONS"))))
 """
+
+
+CONNECTION_PRELUDE = (
+    CONNECTION_OBJECTS
+    + CONNECTION_WRITES
+    + CONNECTION_COLLECTOR.replace(
+        "CONNECTION_STATE_CHECK",
+        'when(source && it mcpLayoutFail("instance_terminal_fork_source_present"))',
+    )
+)
+OBSERVATION_PRELUDE = CONNECTION_OBJECTS + CONNECTION_COLLECTOR.replace(
+    "CONNECTION_STATE_CHECK",
+    'unless(it && eq(it~>net nth(2 row)) mcpLayoutFail("instance_terminal_observation_changed"))',
+)
+
+
+def observation_edits(rows):
+    fields = set(("object_id", "master_id", "terminal", "present", "net_id", "pin_object_id"))
+    if not isinstance(rows, (tuple, list)) or len(rows) != 8:
+        raise ValueError("layout_instance_terminal_observation_shape")
+    edits = []
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != fields or row["present"] is not True:
+            raise ValueError("layout_instance_terminal_observation_shape")
+        token(row["net_id"], LOGICAL)
+        edits.append(
+            dict(
+                kind="connect_terminal",
+                object_id=row["object_id"],
+                expected_master_id=row["master_id"],
+                terminal=row["terminal"],
+                pin_object_id=row["pin_object_id"],
+            )
+        )
+    return connection_scope(edits)
 
 
 def connection_command(command):
@@ -453,6 +492,18 @@ def connection_specs(edits, commands=None):
                 quote(command["net_id"], True),
                 quote(command["terminal_id"], True),
             )
+    return _connection_specs(scope, names)
+
+
+def observation_specs(rows):
+    scope = observation_edits(rows)
+    names = dict(
+        ((row["object_id"], row["terminal"]), (quote(row["net_id"], True), "nil")) for row in rows
+    )
+    return _connection_specs(scope, names)
+
+
+def _connection_specs(scope, names):
     rows = []
     for edit in scope:
         object_id, terminal = edit["object_id"], edit["terminal"]
@@ -474,15 +525,19 @@ def connection_specs(edits, commands=None):
     return "list(%s)" % " ".join(rows)
 
 
-def inspect_script(cellview, policy=None, connections=None):
-    if connections is not None:
+def inspect_script(cellview, policy=None, connections=None, observations=None):
+    if connections is not None or observations is not None:
+        if observations is not None:
+            specs, prelude = observation_specs(observations), OBSERVATION_PRELUDE
+        else:
+            specs, prelude = connection_specs(connections), CONNECTION_PRELUDE
         return "\n".join(
             [
-                PRELUDE + CONNECTION_PRELUDE,
+                PRELUDE + prelude,
                 'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % binding(cellview),
                 'unless(cv mcpLayoutFail("source_open_failed"))',
                 layer_policy_call(policy, collect=True),
-                "mcpLayoutCollectConnections(cv %s nil)" % connection_specs(connections),
+                "mcpLayoutCollectConnections(cv %s nil)" % specs,
                 'unless(dbClose(cv) mcpLayoutFail("close_failed"))',
                 "exit()\n",
             ]
@@ -620,17 +675,30 @@ def terminals_preflight(edits):
     return "\n".join(lines) + "\n"
 
 
-def write_script(source, target, selectors, technology, edits=None, policy=None, connections=None):
+def write_script(
+    source,
+    target,
+    selectors,
+    technology,
+    edits=None,
+    policy=None,
+    connections=None,
+    observations=None,
+):
     if source == target:
         raise ValueError("layout_distinct_cellview_required")
     if has_orientation(edits):
         raise ValueError("layout_orientation_requires_owned_apply")
     source_text, target_text = binding(source), binding(target)
-    specs = connection_specs(connections) if connections is not None else None
+    specs, prelude = None, PRELUDE
+    if observations is not None:
+        specs, prelude = observation_specs(observations), PRELUDE + OBSERVATION_PRELUDE
+    elif connections is not None:
+        specs, prelude = connection_specs(connections), PRELUDE + CONNECTION_PRELUDE
     if specs is not None and edits is not None:
         raise ValueError("layout_instance_terminal_fork_edits")
     lines = [
-        PRELUDE if specs is None else PRELUDE + CONNECTION_PRELUDE,
+        prelude,
         'when(ddGetObj(%s) mcpLayoutFail("destination_already_exists"))' % target_text,
         'src=dbOpenCellViewByType(%s "maskLayout" "r")' % source_text,
         'unless(src mcpLayoutFail("source_open_failed"))',
@@ -671,10 +739,14 @@ def write_script(source, target, selectors, technology, edits=None, policy=None,
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
-def apply_script(target, selectors, technology, edits, policy=None, connections=None):
+def apply_script(
+    target, selectors, technology, edits, policy=None, connections=None, observations=None
+):
     """One exact-baseline edit of a registered, freshly forked owned revision."""
     target_text = binding(target)
     if connections is not None:
+        if observations is not None:
+            raise ValueError("layout_instance_terminal_observation_overlap")
         specs = connection_specs(connections, edits)
         return "\n".join(
             [
@@ -696,17 +768,26 @@ def apply_script(target, selectors, technology, edits, policy=None, connections=
                 "exit()\n",
             ]
         ).encode("ascii")
+    observation_prelude, before_observation, after_observation = "", [], []
+    if observations is not None:
+        specs = observation_specs(observations)
+        observation_prelude = OBSERVATION_PRELUDE
+        before_observation = ["mcpLayoutCollectConnections(cv %s t)" % specs]
+        after_observation = ["mcpLayoutCollectConnections(cv %s nil)" % specs]
     orient = has_orientation(edits)
     verify = (
         ["mcpLayoutOrientVerify(cv orientChecks %d)" % technology["dbu_per_um"]] if orient else []
     )
     lines = (
         [
-            PRELUDE + (ORIENT_PRELUDE if orient else ""),
+            PRELUDE + (ORIENT_PRELUDE if orient else "") + observation_prelude,
             'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
             'unless(cv mcpLayoutFail("working_revision_open_failed"))',
             layer_policy_call(policy),
             terminals_preflight(edits),
+        ]
+        + before_observation
+        + [
             tags_script(selectors, technology["dbu_per_um"]),
             edits_script(edits, technology, policy),
         ]
@@ -718,8 +799,9 @@ def apply_script(target, selectors, technology, edits, policy=None, connections=
             'unless(cv mcpLayoutFail("reopen_failed"))',
         ]
         + verify
+        + [layer_policy_call(policy, collect=True)]
+        + after_observation
         + [
-            layer_policy_call(policy, collect=True),
             "dbClose(cv)",
             'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
             "exit()",
@@ -852,10 +934,9 @@ def execution_script(script):
     if not text.startswith(PRELUDE) or not text.rstrip().endswith("exit()"):
         raise ValueError("layout_fixed_program_shape")
     prelude = PRELUDE
-    for extension in (ORIENT_PRELUDE, CONNECTION_PRELUDE):
-        if text.startswith(PRELUDE + extension):
+    for extension in (ORIENT_PRELUDE, CONNECTION_PRELUDE, OBSERVATION_PRELUDE):
+        if text.startswith(prelude + extension):
             prelude += extension
-            break
     body = text[len(prelude) :].rstrip()[: -len("exit()")]
     return (
         prelude + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
