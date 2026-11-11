@@ -1,0 +1,27 @@
+{
+  "provenance": "synthetic_fixture",
+  "scenario_id": "layout-edit-p0",
+  "technology": {
+    "dbu_per_um": 1000,
+    "manufacturing_grid_dbu": 5,
+    "allowed_lpp": [["metal1", "drawing"], ["metal1", "pin"]]
+  },
+  "before": {
+    "instance_origin_dbu": [1000, 2000],
+    "shape_bbox_dbu": [[0, 0], [100, 100]]
+  },
+  "edits_um": {
+    "instance_delta": ["0.005", "-0.010"],
+    "shape_delta": ["0.010", "0.005"],
+    "rectangle_bbox": [["0.200", "0.300"], ["0.250", "0.350"]],
+    "pin_bbox": [["0.205", "0.305"], ["0.215", "0.315"]]
+  },
+  "expected": {
+    "instance_origin_dbu": [1005, 1990],
+    "shape_bbox_dbu": [[10, 5], [110, 105]],
+    "rectangle_bbox_dbu": [[200, 300], [250, 350]],
+    "pin_bbox_dbu": [[205, 305], [215, 315]],
+    "new_rectangles": 1,
+    "new_pins": 1
+  }
+}
