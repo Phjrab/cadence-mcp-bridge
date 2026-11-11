@@ -26,6 +26,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutSnapshot,
     LayoutTechnology,
     MoveEdit,
+    OrientEdit,
 )
 from cadence_mcp_bridge.schematic_plan import (
     DeviceRegistry,
@@ -35,6 +36,25 @@ from cadence_mcp_bridge.schematic_plan import (
 )
 
 OPERATION_ID = "37072af1-a8dc-4cb1-a6c1-d4c585baac29"
+
+
+@pytest.mark.parametrize("value", ["R45", "r90", 90, None, float("nan"), float("inf")])
+def test_orient_schema_rejects_unknown_or_nontext_orientation(value: Any) -> None:
+    with pytest.raises(ValidationError):
+        OrientEdit.model_validate({"kind": "orient", "object_id": "inst-one", "orientation": value})
+
+
+@pytest.mark.parametrize("extra", [{"pivot": [0, 0]}, {"angle": 90}, {"dx_um": "1"}])
+def test_orient_schema_rejects_free_pivot_angle_or_translation(extra: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError):
+        OrientEdit.model_validate(
+            {
+                "kind": "orient",
+                "object_id": "inst-one",
+                "orientation": "R90",
+                **extra,
+            }
+        )
 
 
 def box(x0: int = 0, y0: int = 0, x1: int = 100, y1: int = 200) -> LayoutBBox:

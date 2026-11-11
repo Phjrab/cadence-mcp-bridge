@@ -124,7 +124,7 @@ class LayoutCapabilities(VariableModel):
     move: Literal["supported", "not_verified", "unsupported"] = "not_verified"
     add_rect: Literal["supported", "not_verified", "unsupported"] = "not_verified"
     add_pin: Literal["supported", "not_verified", "unsupported"] = "not_verified"
-    rotate: Literal["unsupported"] = "unsupported"
+    rotate: Literal["supported", "not_verified", "unsupported"] = "unsupported"
     edit_path: Literal["unsupported"] = "unsupported"
     delete: Literal["unsupported"] = "unsupported"
     pcell_parameters: Literal["unsupported"] = "unsupported"
@@ -249,7 +249,17 @@ class AddPinEdit(VariableModel):
         return a, b, c, d
 
 
-LayoutEdit = Annotated[MoveEdit | AddRectEdit | AddPinEdit, Field(discriminator="kind")]
+class OrientEdit(VariableModel):
+    """Absolute instance orientation about its unchanged placement origin."""
+
+    kind: Literal["orient"]
+    object_id: LogicalId
+    orientation: Orientation
+
+
+LayoutEdit = Annotated[
+    MoveEdit | AddRectEdit | AddPinEdit | OrientEdit, Field(discriminator="kind")
+]
 
 
 class LayoutInspectRequest(VariableModel):
@@ -323,6 +333,22 @@ class LayoutNativeEdit(VariableModel):
         return self
 
 
+class LayoutOrientNativeEdit(VariableModel):
+    """Candidate fixed orientation command; native execution is not implemented."""
+
+    kind: Literal["orient"]
+    object_id: LogicalId
+    before_sha256: Digest
+    orientation: Orientation
+    origin_dbu: LayoutPoint
+    bbox_dbu: LayoutBBox
+
+
+LayoutNativeCommand = Annotated[
+    LayoutNativeEdit | LayoutOrientNativeEdit, Field(discriminator="kind")
+]
+
+
 class LayoutChange(VariableModel):
     object_id: LogicalId
     kind: Literal["created", "modified", "deleted"]
@@ -352,13 +378,21 @@ class LayoutPreview(VariableModel):
     predicted_diff: LayoutDiff
 
 
+class LayoutOrientationPreview(LayoutPreview):
+    """Only orientation plans gain this field; legacy preview bytes stay fixed."""
+
+    oriented: Annotated[int, Field(ge=1, le=128)]
+
+
 class LayoutPlan(VariableModel):
     schema_version: Literal[1] = 1
     request: LayoutPlanRequest
     baseline_sha256: Digest
-    normalized_edits: Annotated[tuple[LayoutNativeEdit, ...], Field(min_length=1, max_length=128)]
+    normalized_edits: Annotated[
+        tuple[LayoutNativeCommand, ...], Field(min_length=1, max_length=128)
+    ]
     expected_semantic_sha256: Digest
-    preview: LayoutPreview
+    preview: LayoutOrientationPreview | LayoutPreview
     plan_sha256: Digest = ZERO_DIGEST
 
     @model_validator(mode="after")
