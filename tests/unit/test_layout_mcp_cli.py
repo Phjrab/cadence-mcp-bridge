@@ -289,3 +289,23 @@ def test_lazy_fixed_native_factory_receives_explicit_settings_once(
     assert lazy.get() is service
     assert lazy.get() is service
     assert calls == [settings]
+
+
+async def test_pin_label_is_rejected_before_native_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unexpected(self: LazyLayoutService) -> LayoutService:
+        pytest.fail("unsupported pin label reached native factory")
+
+    monkeypatch.setattr(LazyLayoutService, "get", unexpected)
+    request = route_data()["plan"][0].model_dump(mode="json")
+    request["edits"] = [{
+        "kind": "add_pin", "object_id": "pin-one", "layer": "M1", "purpose": "drawing",
+        "bbox_um": ["0", "0", "0.01", "0.01"], "net_id": "net-one",
+        "terminal_id": "term-one", "label": "OUT",
+    }]
+    async with Client(server()) as client:
+        response = await client.call_tool("cadence_layout_plan", {"request": request})
+    assert response.is_error
+    message = cast(TextContent, response.content[0]).text
+    assert "request.edits.0.add_pin.label" in message
