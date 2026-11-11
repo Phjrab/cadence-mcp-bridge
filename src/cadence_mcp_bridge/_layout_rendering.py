@@ -93,7 +93,7 @@ procedure(mcpLayoutCollect(cv)
   let((tf dbu grid count)
     tf=techGetTechFile(cv)
     unless(tf mcpLayoutFail("technology_missing"))
-    dbu=cv~>DBUPerUU
+    dbu=round(cv~>DBUPerUU)
     grid=techGetMfgGridResolution(tf)
     unless(numberp(dbu) && dbu>0 && numberp(grid) && grid>0
       mcpLayoutFail("technology_units_missing"))
@@ -205,7 +205,7 @@ def edits_script(edits, technology):
                     "matches=append(setof(o cv~>instances equal(mcpLayoutId(o) %s)) "
                     "setof(o cv~>shapes equal(mcpLayoutId(o) %s)))" % (object_id, object_id),
                     'unless(length(matches)==1 mcpLayoutFail("move_identity_not_unique"))',
-                    'unless(dbMoveFig(car(matches) cv list(list(%s %s) "R0" 1)) '
+                    'unless(dbMoveFig(car(matches) nil list(list(%s %s) "R0" 1)) '
                     'mcpLayoutFail("move_failed"))' % (coordinate(dx, dbu), coordinate(dy, dbu)),
                 ]
             )
@@ -345,11 +345,11 @@ def probe_script(libraries, candidates):
                 "when(lib && isCallable('techGetDBUPerUU) && isCallable('techGetLayerFunctions)",
                 "  tf=techGetTechFile(lib)",
                 "  when(tf",
-                '    printf("TECHLIB|%s|%%d|%%.12g\\n" techGetDBUPerUU(tf) '
+                '    printf("TECHLIB|%s|%%d|%%.12g\\n" round(techGetDBUPerUU(tf "maskLayout")) '
                 "techGetMfgGridResolution(tf))" % token(library),
                 "    count=0",
                 "    foreach(layer techGetLayerFunctions(tf)",
-                '      when(count<32 && techGetLP(tf car(layer) "drawing")',
+                '      when(count<32 && techGetLP(tf list(car(layer) "drawing"))',
                 '        printf("LPP|%s|%%s|drawing\\n" car(layer))' % token(library),
                 "        count=count+1)",
                 "    )",
@@ -392,9 +392,9 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         'unless(techBindTechFile(lib %s) mcpLayoutFail("seed_technology_bind_failed"))'
         % quote(technology_library),
         "tf=techGetTechFile(lib)",
-        "unless(tf && techGetDBUPerUU(tf)==%d && "
+        'unless(tf && techGetDBUPerUU(tf "maskLayout")==%d && '
         "abs(techGetMfgGridResolution(tf)*%d-%d)<0.0000001 && "
-        'techGetLP(tf %s %s) mcpLayoutFail("seed_technology_observation_changed"))'
+        'techGetLP(tf list(%s %s)) mcpLayoutFail("seed_technology_observation_changed"))'
         % (dbu, dbu, grid, quote(lpp["layer"]), quote(lpp["purpose"])),
         'master=dbOpenCellViewByType(%s "maskLayout" "w")' % binding(master),
         'unless(master mcpLayoutFail("seed_master_create_failed"))',
@@ -421,3 +421,16 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         "exit()",
     ]
     return ("\n".join(lines) + "\n").encode("ascii")
+
+
+def execution_script(script):
+    """Use the installed qualified generator's errset/procedure/exit idiom."""
+    text = script.decode("ascii")
+    if not text.startswith(PRELUDE) or not text.rstrip().endswith("exit()"):
+        raise ValueError("layout_fixed_program_shape")
+    body = text[len(PRELUDE) :].rstrip()[: -len("exit()")]
+    return (
+        PRELUDE + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
+        "let((result) result=errset(mcpLayoutRun() t) "
+        'if(result then exit(0) else mcpLayoutFail("skill_evaluation_failed")))\n'
+    ).encode("ascii")
