@@ -21,6 +21,7 @@ from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BackendUnavailableError, ConfigurationError
 from cadence_mcp_bridge.layout_cli import dispatch_layout
 from cadence_mcp_bridge.layout_models import (
+    ConnectTerminalEdit,
     LayerPurpose,
     LayoutApplyRequest,
     LayoutBBox,
@@ -28,7 +29,11 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiffRequest,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutInstance,
+    LayoutInstanceTerminal,
+    LayoutInstanceTerminalQualification,
     LayoutNativeEdit,
+    LayoutPin,
     LayoutPlan,
     LayoutPlanRequest,
     LayoutPoint,
@@ -126,6 +131,19 @@ async def test_unconfigured_discovery_and_explicit_denial() -> None:
             assert tool.input_schema["additionalProperties"] is False
             assert tool.input_schema["required"] == ["request"]
             assert tool.output_schema and tool.annotations
+        plan_schema = tools["cadence_layout_plan"].input_schema["$defs"]
+        connect = plan_schema["ConnectTerminalEdit"]
+        assert connect["additionalProperties"] is False
+        assert set(connect["required"]) == {
+            "kind", "object_id", "expected_master_id", "terminal", "pin_object_id",
+        }
+        assert "instance_terminal_qualification" not in plan_schema["LayoutPlanRequest"][
+            "properties"
+        ]
+        inspect_schema = tools["cadence_layout_inspect"].output_schema
+        assert inspect_schema is not None and inspect_schema["additionalProperties"] is False
+        assert "instance_terminals" in inspect_schema["properties"]
+        assert "instance_terminals" not in inspect_schema["required"]
         for action, (request, _) in route_data().items():
             response = await client.call_tool(
                 "cadence_layout_" + action, {"request": request.model_dump(mode="json")},
@@ -279,6 +297,134 @@ async def test_unqualified_orientation_is_blocked_through_mcp_and_cli(
         await dispatch_layout(LazyLayoutService(None), "plan", request.model_dump_json().encode())
     assert rejected.value.to_envelope().details == {"reason": expected_reason}
     provider.inspect.assert_not_awaited()
+
+
+async def test_unqualified_connect_terminal_is_blocked_through_mcp_and_cli(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pydantic import ValidationError
+
+    from cadence_mcp_bridge.errors import InvalidInputError
+
+    provider = AsyncMock()
+    service = LayoutService(provider)
+    monkeypatch.setattr(LazyLayoutService, "get", lambda self: service)
+    request = LayoutPlanRequest(
+        binding=binding(), operation_id=str(uuid4()), expected_baseline_sha256="b" * 64,
+        edits=(ConnectTerminalEdit(
+            kind="connect_terminal", object_id="inst-one", expected_master_id="mos-one",
+            terminal="G", pin_object_id="pin-one",
+        ),),
+    )
+    payload = request.model_dump(mode="json")
+    caller_qualified = {**payload, "instance_terminal_qualification": {}}
+    expected_reason = "layout_instance_terminal_qualification_required"
+    async with Client(server()) as client:
+        response = await client.call_tool("cadence_layout_plan", {"request": payload})
+        assert response.is_error
+        data = cast(dict[str, Any], response.structured_content)
+        assert data["error"]["code"] == "invalid_input"
+        assert data["error"]["details"] == {"reason": expected_reason}
+        invalid = await client.call_tool("cadence_layout_plan", {"request": caller_qualified})
+        assert invalid.is_error
+        assert invalid.structured_content is None
+    layout = LazyLayoutService(None)
+    with pytest.raises(InvalidInputError) as rejected:
+        await dispatch_layout(layout, "plan", request.model_dump_json().encode())
+    assert rejected.value.to_envelope().details == {"reason": expected_reason}
+    with pytest.raises(ValidationError, match="instance_terminal_qualification"):
+        await dispatch_layout(layout, "plan", json.dumps(caller_qualified).encode())
+    provider.inspect.assert_not_awaited()
+    provider.apply.assert_not_awaited()
+
+
+@pytest.fixture
+def connection_data() -> tuple[LayoutSnapshot, LayoutInstanceTerminalQualification]:
+    _, legacy = route_data()["inspect"]
+    assert isinstance(legacy, LayoutSnapshot)
+    bbox = LayoutBBox(lower_left=LayoutPoint(x=0, y=0), upper_right=LayoutPoint(x=10, y=10))
+    instances = tuple(
+        LayoutInstance(
+            object_id=f"inst-{device}", master_id=f"mos-{device}", origin_dbu=bbox.lower_left,
+            orientation="R0", bbox_dbu=bbox,
+        )
+        for device in ("n", "p")
+    )
+    edits = tuple(
+        ConnectTerminalEdit(
+            kind="connect_terminal", object_id=instance.object_id,
+            expected_master_id=instance.master_id, terminal=terminal, pin_object_id=f"pin-{net}",
+        )
+        for instance, rail in zip(instances, ("vss", "vdd"), strict=True)
+        for terminal, net in (("D", "vout"), ("G", "vin"), ("S", rail), ("B", rail))
+    )
+    observed = LayoutSnapshot(
+        binding=legacy.binding, source_baseline_sha256=legacy.source_baseline_sha256,
+        technology=legacy.technology, provenance=legacy.provenance, owned=True, read_only=False,
+        instances=instances,
+        pins=tuple(LayoutPin(
+            object_id=f"pin-{net}", net_id=net, terminal_id=f"term-{net}", layer="M1",
+            purpose="drawing", bbox_dbu=bbox, association="native_verified",
+        ) for net in ("vout", "vin", "vss", "vdd")),
+        instance_terminals=tuple(LayoutInstanceTerminal(
+            object_id=edit.object_id, master_id=edit.expected_master_id,
+            terminal=edit.terminal, present=False,
+        ) for edit in edits),
+    )
+    return observed, LayoutInstanceTerminalQualification(binding=observed.binding, edits=edits)
+
+
+async def test_inspect_preserves_observed_and_legacy_instance_terminal_scope(
+    connection_data: tuple[LayoutSnapshot, LayoutInstanceTerminalQualification],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed, _ = connection_data
+    request, legacy = route_data()["inspect"]
+    service = AsyncMock(spec=LayoutService)
+    monkeypatch.setattr(LazyLayoutService, "get", lambda self: service)
+    async with Client(server()) as client:
+        for snapshot in (legacy, observed):
+            service.inspect.return_value = snapshot
+            response = await client.call_tool(
+                "cadence_layout_inspect", {"request": request.model_dump(mode="json")},
+            )
+            assert not response.is_error
+            cli = await dispatch_layout(
+                LazyLayoutService(None), "inspect", request.model_dump_json().encode(),
+            )
+            assert cli == snapshot
+            data = response.structured_content
+            assert data is not None and data == json.loads(cli.model_dump_json())
+            assert ("instance_terminals" in data) == (snapshot is observed)
+
+
+async def test_qualified_connection_plan_round_trips_through_mcp_and_cli(
+    connection_data: tuple[LayoutSnapshot, LayoutInstanceTerminalQualification],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed, qualification = connection_data
+    provider = AsyncMock()
+    provider.inspect.return_value = observed
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    monkeypatch.setattr(LazyLayoutService, "get", lambda self: service)
+    request = LayoutPlanRequest(
+        binding=observed.binding, operation_id=str(uuid4()),
+        expected_baseline_sha256=observed.semantic_sha256, edits=qualification.edits,
+    )
+    async with Client(server()) as client:
+        response = await client.call_tool(
+            "cadence_layout_plan", {"request": request.model_dump(mode="json")},
+        )
+    assert not response.is_error
+    cli = await dispatch_layout(LazyLayoutService(None), "plan", request.model_dump_json().encode())
+    assert isinstance(cli, LayoutPlan)
+    assert response.structured_content == json.loads(cli.model_dump_json())
+    assert len(cli.normalized_edits) == 8
+    changes = cli.preview.predicted_diff.instance_terminal_changes
+    assert changes is not None and len(changes) == 8
+    assert all(not change.before.present and change.after.present for change in changes)
+    assert provider.inspect.await_count == 2
+    provider.apply.assert_not_awaited()
 
 
 @pytest.mark.parametrize("reason", ["vm_disconnected", "license_unavailable", "layout_locked",
