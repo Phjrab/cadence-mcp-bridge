@@ -13,10 +13,10 @@ from cadence_mcp_bridge import layout_native as native
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
 from cadence_mcp_bridge.layout_engine import predict_snapshot
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest
+from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutOrientationQualification
 
 
-def provider():
+def provider(qualification=None):
     registration = native.LayoutProviderBinding(
         schema_version=1,
         resource_domain_sha256="a" * 64,
@@ -25,6 +25,7 @@ def provider():
         identity_manifest_sha256="d" * 64,
         layout_manifest_sha256="e" * 64,
         worker_sha256="f" * 64,
+        orientation_qualification=qualification,
     )
     context = SimpleNamespace(
         resource_domain_sha256="a" * 64,
@@ -64,7 +65,12 @@ async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch,
         "reopened": True,
         "source_unchanged": True,
     }
-    facade, calls = provider(), []
+    qualification = (
+        LayoutOrientationQualification(binding=before.binding, orientations=("R0", "R90"))
+        if orientation
+        else None
+    )
+    facade, calls = provider(qualification), []
 
     async def invoke(action, payload):
         calls.append(action)
@@ -211,6 +217,38 @@ def probe_registration():
         "protected_views": [{"path": "/observed/Design/Source/layout", "tree_sha256": "b" * 64}],
         "seed": None,
     }
+
+
+def test_orientation_qualification_export_pins_same_record_and_omits_absent():
+    document = probe_registration()
+    args = dict(
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    context = provider().context
+    absent = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert "orientation_qualification" not in json.loads(absent.assets["registration.json"])
+    assert "orientation_qualification" not in json.loads(absent.provider.model_dump_json())
+    qualification = {"binding": document["routes"][0]["binding"], "orientations": ["R0", "R90"]}
+    document["orientation_qualification"] = qualification
+    qualified = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert qualified.manifest_sha256 != absent.manifest_sha256
+    assert (
+        json.loads(qualified.assets["registration.json"])["orientation_qualification"]
+        == qualification
+    )
+    assert (
+        json.loads(qualified.provider.model_dump_json())["orientation_qualification"]
+        == qualification
+    )
+    qualification["binding"] = dict(qualification["binding"], parent_revision_sha256="e" * 64)
+    with pytest.raises(ValueError, match="orientation_qualification_owned_route_required"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
 
 
 @pytest.mark.parametrize("selected", [None, ["Design", "Tech"]])
