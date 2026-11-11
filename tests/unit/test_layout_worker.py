@@ -98,6 +98,7 @@ def test_probe_selects_two_but_check_protects_all_six(selected):
 
 class Runtime:
     rendering = rendering
+    orientation_qualification = None
 
     def __init__(self, root):
         self.root = str(root)
@@ -196,6 +197,13 @@ def seal_orientation_request(request):
     request["plan"]["plan_sha256"] = request["expected_plan_sha256"] = pin
 
 
+def qualify(runtime):
+    runtime.orientation_qualification = {
+        "binding": runtime.snapshot.binding.model_dump(mode="json"),
+        "orientations": ["R0", "R90"],
+    }
+
+
 @pytest.mark.parametrize(
     "fault",
     [
@@ -214,13 +222,17 @@ def seal_orientation_request(request):
         "capability",
         "request",
         "dropped",
+        "qualification",
+        "mirror-target",
+        "mirror-source",
         "prediction",
     ],
 )
 def test_orientation_invalid_raw_command_never_publishes_intent(root, fault):
     runtime = Runtime(root)
-    runtime.snapshot = _orient_snapshot()
-    request = orientation_request(runtime.snapshot)
+    runtime.snapshot = _orient_snapshot("MX" if fault == "mirror-source" else "R0")
+    qualify(runtime)
+    request = orientation_request(runtime.snapshot, "MX" if fault == "mirror-target" else "R90")
     command = request["plan"]["normalized_edits"][0]
     if fault == "hash":
         command["before_sha256"] = "f" * 64
@@ -267,6 +279,8 @@ def test_orientation_invalid_raw_command_never_publishes_intent(root, fault):
         ]
     elif fault == "prediction":
         request["plan"]["expected_semantic_sha256"] = "f" * 64
+    elif fault == "qualification":
+        runtime.orientation_qualification = None
     request["plan"]["baseline_sha256"] = runtime.snapshot.semantic_sha256
     seal_orientation_request(request)
     with pytest.raises(ValueError):
@@ -300,6 +314,7 @@ def test_orientation_transaction_preservation_and_durable_replay(root, fault):
 
     runtime = OrientRuntime(root)
     runtime.snapshot = _orient_snapshot()
+    qualify(runtime)
     runtime.failure = fault == "write"
     request = orientation_request(runtime.snapshot)
     counter = (root / ledger.LEDGER).read_bytes()
@@ -372,6 +387,50 @@ def test_auth_or_stale_baseline_does_not_publish_intent(root):
     with pytest.raises(ValueError, match="stale_baseline"):
         native.execute("apply", request)
     assert not list(root.rglob("layout-intent.json")) and runtime.writes == 0
+
+
+def test_orientation_qualification_projects_only_exact_child_and_keeps_observed_mirror():
+    child = _orient_snapshot().binding.model_dump(mode="json")
+    parent = dict(
+        child,
+        revision_id=child["parent_revision_id"],
+        parent_revision_id=None,
+        parent_revision_sha256=None,
+    )
+    child_route = dict(binding=child, owned=True, read_only=False)
+    parent_route = dict(binding=parent, owned=True, read_only=False)
+    qualification = {"binding": child, "orientations": ["R0", "R90"]}
+    registration = {
+        "routes": [parent_route, child_route],
+        "orientation_qualification": qualification,
+    }
+    assert worker.orientation_qualification(registration, rendering) == qualification
+    raw = (
+        b"MCP_LAYOUT_FRAME|1\nTECH|1000|5\n"
+        b"I|inst-one|I0|SeedLib|RectMaster|layout|R0|0|0|0|0|0|100|200\n"
+        b"I|inst-two|I1|SeedLib|RectMaster|layout|MX|0|0|0|0|-200|100|0\nEND_LAYOUT_FRAME\n"
+    )
+    baseline, _ = worker.parse_frame(raw, parent_route, rendering)
+    source, _ = worker.parse_frame(raw, parent_route, rendering, qualification)
+    assert source == baseline and source["capabilities"]["rotate"] == "unsupported"
+    before, _ = worker.parse_frame(raw, child_route, rendering, qualification)
+    after, _ = worker.parse_frame(
+        raw.replace(b"|R0|0|0|0|0|0|100|200", b"|R90|0|0|0|-200|0|0|100"),
+        child_route,
+        rendering,
+        qualification,
+    )
+    assert before["technology"]["supported_orientations"] == ["MX", "R0", "R90"]
+    assert before["technology"] == after["technology"]
+    assert before["capabilities"]["rotate"] == after["capabilities"]["rotate"] == "not_verified"
+    assert before["semantic_sha256"] != after["semantic_sha256"]
+    projected = copy.deepcopy(source)
+    projected["binding"] = child
+    worker.project_orientation(projected, qualification)
+    assert worker.geometry(projected) == worker.geometry(before)
+    child_route["read_only"] = True
+    with pytest.raises(ValueError, match="owned_route_required"):
+        worker.orientation_qualification(registration, rendering)
 
 
 def test_native_frame_model_hash_and_semantic_normalization():

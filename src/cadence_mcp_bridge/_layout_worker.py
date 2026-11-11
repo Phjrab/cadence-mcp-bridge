@@ -113,7 +113,19 @@ def protocol_lines(raw, start, end, reason, prefixes=None):
     return [line.decode("ascii") for line in selected]
 
 
-def parse_frame(raw, route, rendering):
+def project_orientation(snapshot, qualification):
+    if qualification is not None and snapshot["binding"] == qualification["binding"]:
+        if not snapshot["owned"] or snapshot["read_only"]:
+            raise ValueError("layout_orientation_qualification_owned_route_required")
+        technology = snapshot["technology"]
+        technology["supported_orientations"] = sorted(
+            set(technology["supported_orientations"]) | set(qualification["orientations"])
+        )
+        snapshot["capabilities"]["rotate"] = "not_verified"
+    snapshot["semantic_sha256"] = snapshot_digest(snapshot)
+
+
+def parse_frame(raw, route, rendering, qualification=None):
     """Closed bounded frame; private selectors never leave the worker."""
     lines = protocol_lines(
         raw, b"MCP_LAYOUT_FRAME|1", b"END_LAYOUT_FRAME", "layout_frame_delimiters"
@@ -237,11 +249,11 @@ def parse_frame(raw, route, rendering):
     ]
     result["technology"]["supported_orientations"] = sorted(orientations)
     result["capabilities"].update(move="supported", add_rect="supported", add_pin="supported")
-    result["semantic_sha256"] = snapshot_digest(result)
+    project_orientation(result, qualification)
     return result, selectors
 
 
-def predict(before, commands, rendering=None):
+def predict(before, commands, rendering=None, orientation_pair=None):
     expected = copy.deepcopy(before)
     objects = {}
     instances = set(obj["object_id"] for obj in before["instances"])
@@ -283,6 +295,11 @@ def predict(before, commands, rendering=None):
                 raise ValueError("layout_orientation_pcell_submaster_unsupported")
             if before["capabilities"].get("rotate", "unsupported") == "unsupported":
                 raise ValueError("layout_orientation_not_supported")
+            if orientation_pair is not None and (
+                obj["orientation"] not in orientation_pair
+                or command["orientation"] not in orientation_pair
+            ):
+                raise ValueError("layout_orientation_not_qualified")
             if object_digest(obj) != command["before_sha256"]:
                 raise ValueError("layout_orientation_selector_revision_mismatch")
             if command["origin_dbu"] != obj["origin_dbu"]:
@@ -428,10 +445,22 @@ class LayoutWorker(object):
                 sealed["plan_sha256"] = "0" * 64
                 if digest(sealed) != plan["plan_sha256"]:
                     raise ValueError("layout_plan_hash_mismatch")
-                expected = predict(
-                    before, plan["normalized_edits"], getattr(self.runtime, "rendering", None)
-                )
                 requested = [e for e in plan["request"]["edits"] if e["kind"] == "orient"]
+                qualification = getattr(self.runtime, "orientation_qualification", None)
+                normalized_edits = plan["normalized_edits"]
+                orient = requested or any(c["kind"] == "orient" for c in normalized_edits)
+                if orient and (
+                    qualification is None
+                    or qualification["binding"] != before["binding"]
+                    or before["capabilities"]["rotate"] != "not_verified"
+                ):
+                    raise ValueError("layout_orientation_qualification_required")
+                expected = predict(
+                    before,
+                    normalized_edits,
+                    getattr(self.runtime, "rendering", None),
+                    qualification["orientations"] if orient else None,
+                )
                 normalized = [
                     dict((k, c[k]) for k in ("kind", "object_id", "orientation"))
                     for c in plan["normalized_edits"]
@@ -444,6 +473,9 @@ class LayoutWorker(object):
             else:
                 expected = copy.deepcopy(before)
                 expected.update(binding=request["binding"], owned=True, read_only=False)
+                project_orientation(
+                    expected, getattr(self.runtime, "orientation_qualification", None)
+                )
             protected = self.runtime.protected_snapshot()
             job = self._path(operation_id)
             # Occupied target/ID or active OA lock is checked before this durable
@@ -599,6 +631,33 @@ def probe_libraries(registration):
     return selected
 
 
+def orientation_qualification(registration, rendering):
+    if "orientation_qualification" not in registration:
+        return None
+    value = registration["orientation_qualification"]
+    if (
+        not isinstance(value, dict)
+        or set(value) != set(("binding", "orientations"))
+        or (value["orientations"] != ["R0", "R90"])
+    ):
+        raise ValueError("layout_orientation_qualification_shape")
+    binding = value["binding"]
+    names = ("workspace_id", "design_id", "revision_id", "parent_revision_id")
+    digests = ("source_baseline_sha256", "parent_revision_sha256")
+    if not isinstance(binding, dict) or set(binding) != set(names + digests):
+        raise ValueError("layout_orientation_qualification_binding")
+    for key in names:
+        rendering.token(binding[key], rendering.LOGICAL)
+    for key in digests:
+        rendering.token(binding[key], r"^[0-9a-f]{64}$")
+    if binding["revision_id"] == binding["parent_revision_id"]:
+        raise ValueError("layout_orientation_qualification_binding")
+    matches = [r for r in registration["routes"] if r["binding"] == binding]
+    if len(matches) != 1 or matches[0]["owned"] is not True or matches[0]["read_only"] is not False:
+        raise ValueError("layout_orientation_qualification_owned_route_required")
+    return value
+
+
 class FixedLayoutRuntime(object):
     """New layout operations retain the original runtime/activation/trust gates.
 
@@ -612,9 +671,11 @@ class FixedLayoutRuntime(object):
         keys = set(
             ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
         )
-        if set(registration) not in (keys, keys | set(("probe_libraries",))):
+        optional = set(("probe_libraries", "orientation_qualification"))
+        if not keys <= set(registration) or not set(registration) <= keys | optional:
             raise ValueError("layout_registration_shape")
         probe_libraries(registration)
+        self.orientation_qualification = orientation_qualification(registration, rendering)
         self.here, self.manifest, self.registration = here, manifest, registration
         self.native, self.native_assets, self.profile = native, native_assets, profile
         self.modules, self.rendering = modules, rendering
@@ -873,7 +934,9 @@ class FixedLayoutRuntime(object):
             raise ValueError("layout_native_error_record")
         if route is None:
             return raw
-        snapshot, selectors = parse_frame(raw, route, self.rendering)
+        snapshot, selectors = parse_frame(
+            raw, route, self.rendering, self.orientation_qualification
+        )
         return raw, snapshot, selectors
 
     def inspect(self, session, request):

@@ -12,7 +12,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
@@ -23,6 +23,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiffRequest,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutOrientationQualification,
     LayoutResult,
     LayoutSelectRequest,
     LayoutSnapshot,
@@ -50,7 +51,18 @@ SAFE_REASONS = {
 }
 
 
-class LayoutProviderBinding(VariableModel):
+class _LayoutQualificationBinding(VariableModel):
+    orientation_qualification: LayoutOrientationQualification | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_qualification(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.orientation_qualification is None:
+            document.pop("orientation_qualification", None)
+        return document
+
+
+class LayoutProviderBinding(_LayoutQualificationBinding):
     schema_version: Literal[1]
     resource_domain_sha256: Digest
     environment_sha256: Digest
@@ -101,7 +113,7 @@ class LayoutSeed(VariableModel):
         return self
 
 
-class LayoutRegistration(VariableModel):
+class LayoutRegistration(_LayoutQualificationBinding):
     schema_version: Literal[1] = 1
     routes: Annotated[tuple[LayoutRegisteredView, ...], Field(min_length=1, max_length=32)]
     libraries: Annotated[tuple[LayoutRegisteredLibrary, ...], Field(min_length=1, max_length=32)]
@@ -159,6 +171,12 @@ class LayoutRegistration(VariableModel):
                 raise ValueError("layout_registered_ownership")
             if not route.owned and route.path not in {p.path for p in self.protected_views}:
                 raise ValueError("layout_original_protection_required")
+        if self.orientation_qualification is not None:
+            qualified = [
+                r for r in self.routes if r.binding == self.orientation_qualification.binding
+            ]
+            if len(qualified) != 1 or not qualified[0].owned or qualified[0].read_only:
+                raise ValueError("layout_orientation_qualification_owned_route_required")
         if self.seed is not None:
             routes = [r for r in self.routes if r.binding.revision_id == self.seed.revision_id]
             if len(routes) != 1 or not routes[0].owned:
@@ -240,6 +258,7 @@ def build_layout_bundle(
         identity_manifest_sha256=identity_manifest_sha256,
         layout_manifest_sha256=manifest_sha,
         worker_sha256=manifest["files"]["worker.py"]["sha256"],
+        orientation_qualification=registration.orientation_qualification,
     )
     return LayoutBundle(assets, manifest_sha, provider)
 
@@ -353,7 +372,23 @@ class NativeLayoutProvider:
         snapshot = LayoutSnapshot.model_validate_json(json.dumps(data))
         if snapshot.binding != request.binding or snapshot.provenance != "native_readback":
             raise InvalidInputError("Layout native snapshot binding mismatch")
+        self._check_orientation_snapshot(snapshot)
         return snapshot
+
+    def _check_orientation_snapshot(self, snapshot: LayoutSnapshot) -> None:
+        qualification = self.registration.orientation_qualification
+        if qualification is None or snapshot.binding != qualification.binding:
+            coherent = snapshot.capabilities.rotate == "unsupported"
+        else:
+            coherent = (
+                snapshot.owned
+                and not snapshot.read_only
+                and snapshot.capabilities.rotate == "not_verified"
+                and set(qualification.orientations)
+                <= set(snapshot.technology.supported_orientations)
+            )
+        if not coherent:
+            raise InvalidInputError("Layout native orientation qualification mismatch")
 
     @staticmethod
     def _result(data: dict[str, Any], binding: RevisionBinding, *, fork: bool) -> LayoutResult:
@@ -394,6 +429,8 @@ class NativeLayoutProvider:
         result = self._result(data, request.binding, fork=True)
         if result.operation_id != request.operation_id:
             raise InvalidInputError("Layout operation identity mismatch")
+        if result.snapshot is not None:
+            self._check_orientation_snapshot(result.snapshot)
         return result
 
     async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
@@ -411,7 +448,11 @@ class NativeLayoutProvider:
         data = await self._invoke("lookup", {"action": "apply", "payload": payload})
         if data is None:
             current = await self.inspect(LayoutInspectRequest(binding=request.plan.request.binding))
-            validate_plan(current, request)
+            validate_plan(
+                current,
+                request,
+                orientation_qualification=self.registration.orientation_qualification,
+            )
             data = await self._invoke("apply", payload)
         result = self._result(data, request.plan.request.binding, fork=False)
         if result.operation_id != request.plan.request.operation_id:
@@ -419,9 +460,17 @@ class NativeLayoutProvider:
         if result.status == "OUTCOME_UNKNOWN":
             return result
         before = LayoutSnapshot.model_validate_json(json.dumps(data["before"]))
-        validate_plan(before, request)
-        expected, _ = predict_snapshot(before, request.plan.request)
+        self._check_orientation_snapshot(before)
+        validate_plan(
+            before, request, orientation_qualification=self.registration.orientation_qualification
+        )
+        expected, _ = predict_snapshot(
+            before,
+            request.plan.request,
+            orientation_qualification=self.registration.orientation_qualification,
+        )
         assert result.snapshot is not None
+        self._check_orientation_snapshot(result.snapshot)
         difference = compute_diff(before, result.snapshot, expected=expected)
         if (
             not difference.matches_plan
@@ -489,4 +538,7 @@ def create_layout_service(settings: BridgeConfig) -> LayoutService:
             "LAYOUT_SETUP_REQUIRED: invalid pinned layout provider registration",
             details={"reason": "layout_setup_required"},
         ) from None
-    return LayoutService(NativeLayoutProvider(context, registration))
+    return LayoutService(
+        NativeLayoutProvider(context, registration),
+        orientation_qualification=registration.orientation_qualification,
+    )
