@@ -72,6 +72,9 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.layout_cli import add_layout_parser
 
     add_layout_parser(subparsers)
+    from cadence_mcp_bridge.cmos_delay_adapters import add_cmos_delay_parser
+
+    add_cmos_delay_parser(subparsers)
     from cadence_mcp_bridge.feature_guidance import add_features_parser
 
     add_features_parser(subparsers)
@@ -370,6 +373,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "cmos-delay":
+        from cadence_mcp_bridge.cmos_delay_adapters import cmos_delay_cli
+
+        return cmos_delay_cli(arguments)
     if arguments.command == "layout":
         from cadence_mcp_bridge.layout_cli import layout_cli
 

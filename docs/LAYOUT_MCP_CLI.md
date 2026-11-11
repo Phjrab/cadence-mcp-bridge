@@ -136,3 +136,22 @@ evaluation. Existing native target metrics are `dc_voltage`, `dc_supply_power`,
 table, propagation delay, noise margin, or automatic schematic-to-layout LVS PASS.
 No target means no selected electrical acceptance; an edited layout remains
 physically unqualified until the corresponding verification actually runs.
+
+### Registered CMOS delay result
+
+`cadence_cmos_delay_result` accepts one `request` with `operation_id`,
+`expected_plan_sha256`, `definition` (the explicit `DelayDefinition` windows,
+rails and sampling conditions), and `supply_signal` (a separate registered node).
+Inspect the exact query schema with `cadence-mcp-bridge cmos-delay schema`, then
+use the same JSON via `cadence-mcp-bridge cmos-delay result --request query.json
+--settings runtime.json --context registered-context`.
+
+The operator registration must contain an already succeeded TRAN with bounded
+Vin/Vout/supply samples. Both entry points use the production registered native
+result service; they accept no waveform, provider, script or remote path and start
+no simulation, extraction or reservation. Missing/changed identities or supply
+evidence reject. The separate source checks do not turn the local sampled delay
+estimate into native logic/physical qualification: `NOT_ATTESTED`,
+`vm_logic_physical_qualification=NOT_ASSESSED`; transient power is unsupported.
+The supply node is caller-designated and voltage-checked, not topology-attested.
+Actual VM use of this new adapter remains untested.
