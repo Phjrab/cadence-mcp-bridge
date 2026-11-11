@@ -411,6 +411,136 @@
             "title": "LayoutNativeEdit",
             "type": "object"
           },
+          "LayoutOrientNativeEdit": {
+            "additionalProperties": false,
+            "description": "Candidate fixed orientation command; native execution is not implemented.",
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "kind": {
+                "const": "orient",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "before_sha256",
+              "orientation",
+              "origin_dbu",
+              "bbox_dbu"
+            ],
+            "title": "LayoutOrientNativeEdit",
+            "type": "object"
+          },
+          "LayoutOrientationPreview": {
+            "additionalProperties": false,
+            "description": "Only orientation plans gain this field; legacy preview bytes stay fixed.",
+            "properties": {
+              "created": {
+                "minimum": 0,
+                "title": "Created",
+                "type": "integer"
+              },
+              "deleted": {
+                "const": 0,
+                "default": 0,
+                "title": "Deleted",
+                "type": "integer"
+              },
+              "display_units": {
+                "const": "um",
+                "default": "um",
+                "title": "Display Units",
+                "type": "string"
+              },
+              "expected_bbox_dbu": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutBBox"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "moved": {
+                "minimum": 0,
+                "title": "Moved",
+                "type": "integer"
+              },
+              "oriented": {
+                "maximum": 128,
+                "minimum": 1,
+                "title": "Oriented",
+                "type": "integer"
+              },
+              "predicted_diff": {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              "rounding": {
+                "const": "reject_off_grid",
+                "default": "reject_off_grid",
+                "title": "Rounding",
+                "type": "string"
+              },
+              "target_object_ids": {
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Target Object Ids",
+                "type": "array"
+              },
+              "units": {
+                "const": "DBU",
+                "default": "DBU",
+                "title": "Units",
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_object_ids",
+              "created",
+              "moved",
+              "expected_bbox_dbu",
+              "predicted_diff",
+              "oriented"
+            ],
+            "title": "LayoutOrientationPreview",
+            "type": "object"
+          },
           "LayoutPin": {
             "additionalProperties": false,
             "properties": {
@@ -498,7 +628,23 @@
               },
               "normalized_edits": {
                 "items": {
-                  "$ref": "#/$defs/LayoutNativeEdit"
+                  "discriminator": {
+                    "mapping": {
+                      "add_pin": "#/$defs/LayoutNativeEdit",
+                      "add_rect": "#/$defs/LayoutNativeEdit",
+                      "move": "#/$defs/LayoutNativeEdit",
+                      "orient": "#/$defs/LayoutOrientNativeEdit"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/LayoutNativeEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/LayoutOrientNativeEdit"
+                    }
+                  ]
                 },
                 "maxItems": 128,
                 "minItems": 1,
@@ -512,7 +658,15 @@
                 "type": "string"
               },
               "preview": {
-                "$ref": "#/$defs/LayoutPreview"
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutOrientationPreview"
+                  },
+                  {
+                    "$ref": "#/$defs/LayoutPreview"
+                  }
+                ],
+                "title": "Preview"
               },
               "request": {
                 "$ref": "#/$defs/LayoutPlanRequest"
@@ -546,7 +700,8 @@
                     "mapping": {
                       "add_pin": "#/$defs/AddPinEdit",
                       "add_rect": "#/$defs/AddRectEdit",
-                      "move": "#/$defs/MoveEdit"
+                      "move": "#/$defs/MoveEdit",
+                      "orient": "#/$defs/OrientEdit"
                     },
                     "propertyName": "kind"
                   },
@@ -559,6 +714,9 @@
                     },
                     {
                       "$ref": "#/$defs/AddPinEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/OrientEdit"
                     }
                   ]
                 },
@@ -782,6 +940,44 @@
             "title": "MoveEdit",
             "type": "object"
           },
+          "OrientEdit": {
+            "additionalProperties": false,
+            "description": "Absolute instance orientation about its unchanged placement origin.",
+            "properties": {
+              "kind": {
+                "const": "orient",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "orientation"
+            ],
+            "title": "OrientEdit",
+            "type": "object"
+          },
           "RevisionBinding": {
             "additionalProperties": false,
             "properties": {
@@ -959,8 +1155,12 @@
                 "type": "string"
               },
               "rotate": {
-                "const": "unsupported",
                 "default": "unsupported",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
                 "title": "Rotate",
                 "type": "string"
               },
@@ -1886,8 +2086,12 @@
                 "type": "string"
               },
               "rotate": {
-                "const": "unsupported",
                 "default": "unsupported",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
                 "title": "Rotate",
                 "type": "string"
               },
@@ -2812,8 +3016,12 @@
                 "type": "string"
               },
               "rotate": {
-                "const": "unsupported",
                 "default": "unsupported",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
                 "title": "Rotate",
                 "type": "string"
               },
@@ -3726,8 +3934,12 @@
                 "type": "string"
               },
               "rotate": {
-                "const": "unsupported",
                 "default": "unsupported",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
                 "title": "Rotate",
                 "type": "string"
               },
@@ -4185,7 +4397,7 @@
         "readOnlyHint": true,
         "title": null
       },
-      "description": "Validate typed move/add_rect/add_pin edits against an observed revision. Returns exact plan hash and predicted diff; planning performs no layout write.",
+      "description": "Validate typed move/add_rect/add_pin edits against an observed revision. Absolute orient edits require a qualified route. Returns exact plan hash and predicted diff; planning performs no layout write.",
       "execution": null,
       "icons": null,
       "inputSchema": {
@@ -4351,7 +4563,8 @@
                     "mapping": {
                       "add_pin": "#/$defs/AddPinEdit",
                       "add_rect": "#/$defs/AddRectEdit",
-                      "move": "#/$defs/MoveEdit"
+                      "move": "#/$defs/MoveEdit",
+                      "orient": "#/$defs/OrientEdit"
                     },
                     "propertyName": "kind"
                   },
@@ -4364,6 +4577,9 @@
                     },
                     {
                       "$ref": "#/$defs/AddPinEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/OrientEdit"
                     }
                   ]
                 },
@@ -4426,6 +4642,44 @@
               "dy_um"
             ],
             "title": "MoveEdit",
+            "type": "object"
+          },
+          "OrientEdit": {
+            "additionalProperties": false,
+            "description": "Absolute instance orientation about its unchanged placement origin.",
+            "properties": {
+              "kind": {
+                "const": "orient",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "orientation"
+            ],
+            "title": "OrientEdit",
             "type": "object"
           },
           "RevisionBinding": {
@@ -4883,6 +5137,136 @@
             "title": "LayoutNativeEdit",
             "type": "object"
           },
+          "LayoutOrientNativeEdit": {
+            "additionalProperties": false,
+            "description": "Candidate fixed orientation command; native execution is not implemented.",
+            "properties": {
+              "bbox_dbu": {
+                "$ref": "#/$defs/LayoutBBox"
+              },
+              "before_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Before Sha256",
+                "type": "string"
+              },
+              "kind": {
+                "const": "orient",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              },
+              "origin_dbu": {
+                "$ref": "#/$defs/LayoutPoint"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "before_sha256",
+              "orientation",
+              "origin_dbu",
+              "bbox_dbu"
+            ],
+            "title": "LayoutOrientNativeEdit",
+            "type": "object"
+          },
+          "LayoutOrientationPreview": {
+            "additionalProperties": false,
+            "description": "Only orientation plans gain this field; legacy preview bytes stay fixed.",
+            "properties": {
+              "created": {
+                "minimum": 0,
+                "title": "Created",
+                "type": "integer"
+              },
+              "deleted": {
+                "const": 0,
+                "default": 0,
+                "title": "Deleted",
+                "type": "integer"
+              },
+              "display_units": {
+                "const": "um",
+                "default": "um",
+                "title": "Display Units",
+                "type": "string"
+              },
+              "expected_bbox_dbu": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LayoutBBox"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "moved": {
+                "minimum": 0,
+                "title": "Moved",
+                "type": "integer"
+              },
+              "oriented": {
+                "maximum": 128,
+                "minimum": 1,
+                "title": "Oriented",
+                "type": "integer"
+              },
+              "predicted_diff": {
+                "$ref": "#/$defs/LayoutDiff"
+              },
+              "rounding": {
+                "const": "reject_off_grid",
+                "default": "reject_off_grid",
+                "title": "Rounding",
+                "type": "string"
+              },
+              "target_object_ids": {
+                "items": {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                  "type": "string"
+                },
+                "title": "Target Object Ids",
+                "type": "array"
+              },
+              "units": {
+                "const": "DBU",
+                "default": "DBU",
+                "title": "Units",
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_object_ids",
+              "created",
+              "moved",
+              "expected_bbox_dbu",
+              "predicted_diff",
+              "oriented"
+            ],
+            "title": "LayoutOrientationPreview",
+            "type": "object"
+          },
           "LayoutPin": {
             "additionalProperties": false,
             "properties": {
@@ -4967,7 +5351,8 @@
                     "mapping": {
                       "add_pin": "#/$defs/AddPinEdit",
                       "add_rect": "#/$defs/AddRectEdit",
-                      "move": "#/$defs/MoveEdit"
+                      "move": "#/$defs/MoveEdit",
+                      "orient": "#/$defs/OrientEdit"
                     },
                     "propertyName": "kind"
                   },
@@ -4980,6 +5365,9 @@
                     },
                     {
                       "$ref": "#/$defs/AddPinEdit"
+                    },
+                    {
+                      "$ref": "#/$defs/OrientEdit"
                     }
                   ]
                 },
@@ -5203,6 +5591,44 @@
             "title": "MoveEdit",
             "type": "object"
           },
+          "OrientEdit": {
+            "additionalProperties": false,
+            "description": "Absolute instance orientation about its unchanged placement origin.",
+            "properties": {
+              "kind": {
+                "const": "orient",
+                "title": "Kind",
+                "type": "string"
+              },
+              "object_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Object Id",
+                "type": "string"
+              },
+              "orientation": {
+                "enum": [
+                  "R0",
+                  "R90",
+                  "R180",
+                  "R270",
+                  "MX",
+                  "MY",
+                  "MXR90",
+                  "MYR90"
+                ],
+                "title": "Orientation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "object_id",
+              "orientation"
+            ],
+            "title": "OrientEdit",
+            "type": "object"
+          },
           "RevisionBinding": {
             "additionalProperties": false,
             "properties": {
@@ -5281,7 +5707,23 @@
           },
           "normalized_edits": {
             "items": {
-              "$ref": "#/$defs/LayoutNativeEdit"
+              "discriminator": {
+                "mapping": {
+                  "add_pin": "#/$defs/LayoutNativeEdit",
+                  "add_rect": "#/$defs/LayoutNativeEdit",
+                  "move": "#/$defs/LayoutNativeEdit",
+                  "orient": "#/$defs/LayoutOrientNativeEdit"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/LayoutNativeEdit"
+                },
+                {
+                  "$ref": "#/$defs/LayoutOrientNativeEdit"
+                }
+              ]
             },
             "maxItems": 128,
             "minItems": 1,
@@ -5295,7 +5737,15 @@
             "type": "string"
           },
           "preview": {
-            "$ref": "#/$defs/LayoutPreview"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LayoutOrientationPreview"
+              },
+              {
+                "$ref": "#/$defs/LayoutPreview"
+              }
+            ],
+            "title": "Preview"
           },
           "request": {
             "$ref": "#/$defs/LayoutPlanRequest"
@@ -5529,8 +5979,12 @@
                 "type": "string"
               },
               "rotate": {
-                "const": "unsupported",
                 "default": "unsupported",
+                "enum": [
+                  "supported",
+                  "not_verified",
+                  "unsupported"
+                ],
                 "title": "Rotate",
                 "type": "string"
               },
