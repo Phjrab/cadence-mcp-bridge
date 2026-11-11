@@ -277,7 +277,11 @@ def test_probe_banner_excluded_and_malformed_protocol_rejected(fault):
     runtime.rendering = rendering
     runtime._job = lambda: "synthetic-job"
     frame = b"MCP_LAYOUT_PROBE|1\nAPI|dbSave|t\nTECHLIB|Tech|1000|0.005\nEND_LAYOUT_PROBE\n"
-    raw = b"COPYRIGHT \xa9\n" + frame + b"noise \xff\n"
+    raw = (
+        b"COPYRIGHT \xa9\n"
+        + frame.replace(b"API|", b"loading chatter \xff\nAPI|")
+        + b"noise \xff\n"
+    )
     if fault == "encoding":
         raw = raw.replace(b"dbSave", b"db\xa9Save")
     elif fault == "duplicate":

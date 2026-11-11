@@ -95,7 +95,7 @@ def snapshot_digest(snapshot):
     return digest(value)
 
 
-def protocol_lines(raw, start, end, reason):
+def protocol_lines(raw, start, end, reason, prefixes=None):
     """Ignore banner bytes outside one frame; keep protocol ASCII strict."""
     if len(raw) > LIMIT:
         raise ValueError("layout_frame_size")
@@ -106,7 +106,11 @@ def protocol_lines(raw, start, end, reason):
     ends = [i for i, line in enumerate(lines) if line == end]
     if len(starts) != 1 or len(ends) != 1 or starts[0] >= ends[0]:
         raise ValueError(reason)
-    return [line.decode("ascii") for line in lines[starts[0] : ends[0] + 1]]
+    selected = lines[starts[0] : ends[0] + 1]
+    if prefixes is not None:
+        # Probe technology loading may interleave private diagnostic chatter.
+        selected = [line for line in selected if line in (start, end) or line.startswith(prefixes)]
+    return [line.decode("ascii") for line in selected]
 
 
 def parse_frame(raw, route, rendering):
@@ -911,7 +915,11 @@ class FixedLayoutRuntime(object):
             session, self.rendering.probe_script(libraries, candidates), None, self._job()
         )
         lines = protocol_lines(
-            raw, b"MCP_LAYOUT_PROBE|1", b"END_LAYOUT_PROBE", "layout_probe_incomplete"
+            raw,
+            b"MCP_LAYOUT_PROBE|1",
+            b"END_LAYOUT_PROBE",
+            "layout_probe_incomplete",
+            (b"API|", b"TECHLIB|", b"LPP|", b"VIEW|"),
         )
         return {"observation": "\n".join(lines) + "\n"}
 
