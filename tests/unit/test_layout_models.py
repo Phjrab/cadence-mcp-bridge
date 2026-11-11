@@ -112,7 +112,6 @@ def fixture_request(snapshot: LayoutSnapshot | None = None) -> LayoutPlanRequest
                 bbox_um=("0.5", "0.2", "0.6", "0.3"),
                 net_id="net-new",
                 terminal_id="terminal-new",
-                label="OUT",
             ),
         ),
     )
