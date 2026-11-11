@@ -1,3 +1,18 @@
+## Layout edit MVP in development, 2026-11-11
+
+Base main: a713eb6b1db2a90652501bb71a3dacbe75c65460. Existing PR164/165/166 and
+unrelated local changes are preserved. Dedicated role branches and private shared
+contract are established with explicit messaging ACKs; no automatic chat memory
+or unattended post-session operation is assumed.
+
+Typed DBU/grid/layer/revision-bound move/rectangle/pin planning, semantic diff and
+native-evidence validation are implemented with focused synthetic checks. Native
+worker and MCP/CLI adapters are being connected. Actual layout edit/save/reopen
+is NOT_RUN at this checkpoint; no electrical or manufacturing result is claimed.
+The first actual target must pass the existing trust/ownership/identity/resource
+guards. Retain all source history including the separate initializer-only allowance.
+No main merge, tag, release, installer publication or Spectre experiment performed.
+
 ## Candidate recovery identity correction, 2026-10-18
 
 Draft PR163's automated P2 review identified an early remote-lookup return that

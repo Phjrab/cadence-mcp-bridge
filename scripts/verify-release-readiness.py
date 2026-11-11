@@ -181,6 +181,18 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     offset_addition = read_json(project / "docs/contracts/MCP_OFFSET_STUDY_V1_SNAPSHOT.json")
     amplifier_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json")
     spec_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json")
+    layout_addition = read_json(project / "docs/contracts/MCP_LAYOUT_EDIT_V1_SNAPSHOT.json")
+    if (
+        type(layout_addition.get("schema_version")) is not int
+        or layout_addition.get("schema_version") != 1
+        or layout_addition.get("source_main") != "a713eb6b1db2a90652501bb71a3dacbe75c65460"
+        or set(layout_addition.get("tools", {})) != {
+            "cadence_layout_inspect", "cadence_layout_fork", "cadence_layout_plan",
+            "cadence_layout_apply", "cadence_layout_diff", "cadence_layout_select",
+        }
+        or any(not reviewed_schema(n, t) for n, t in layout_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed layout edit schema drift")
     if (
         type(spec_addition.get("schema_version")) is not int
         or spec_addition.get("schema_version") != 1
@@ -285,12 +297,19 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(offset_addition["tools"])
             | set(amplifier_addition["tools"])
             | set(spec_addition["tools"])
+            | set(layout_addition["tools"])
         )
         or any(not reviewed_schema(name, tool) for name, tool in addition["tools"].items())
     ):
         raise ValueError("unreviewed additive tool or runtime metadata schema drift")
     source = (project / "src/cadence_mcp_bridge/server.py").read_text(encoding="utf-8")
     current = declarations(source)
+    layout_declarations = declarations(
+        (project / "src/cadence_mcp_bridge/layout_server.py").read_text(encoding="utf-8")
+    )
+    if set(current) & set(layout_declarations):
+        raise ValueError("duplicate layout tool declaration")
+    current.update(layout_declarations)
     if set(current) != set(schemas) or any(current.get(n) != d for n, d in legacy["tools"].items()):
         raise ValueError("legacy tool declaration changed or was removed")
     expected_models = snapshot.get("legacy_model_canonical_lf_sha256")

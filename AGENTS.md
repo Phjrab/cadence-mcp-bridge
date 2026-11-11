@@ -1,3 +1,20 @@
+## Active layout MVP scope, 2026-11-11
+
+The current direct user instruction prioritizes actual owned layout editing:
+inspect, fork, move an instance, add primitive/pin, save/close/reopen, diff and
+same-ID replay through MCP/CLI. Preserve source/PDK, previous revisions, partial
+results, existing execution guards and all historical resource/source consumption.
+PR164 completion, three-candidate DC and installer publication are not automatic
+dependencies. Its initializer-only source allowance is not a layout allowance.
+
+C0 coordinates the existing four isolated role worktrees and integrates reviewed
+commits. C1 alone performs native VM operations; C2 owns models/engine/service;
+C3 owns adapters; C4 owns focused scenarios and the final fixed-SHA gate.
+Use changed-path checks during development and one consolidated final gate.
+Independent ready work continues when another role is blocked. No main merge or
+release authority is inferred. Private coordination/configuration stays outside
+the product checkout. Prior dated checkpoints below remain historical evidence.
+
 ## Native Sweep and specification checkpoint, 2026-10-09
 
 Two explicit native1D batches completed on the current standard VM: DC3 points

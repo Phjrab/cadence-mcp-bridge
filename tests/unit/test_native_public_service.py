@@ -102,7 +102,7 @@ async def test_operator_only_conditional_schema_and_no_server_start_side_effects
         factory=lambda _: object(),
     )
     assert old.native_operations is None
-    assert len(await create_server(cast(CadenceService, old)).list_tools()) == 85
+    assert len(await create_server(cast(CadenceService, old)).list_tools()) == 91
 
 
 @pytest.mark.asyncio
