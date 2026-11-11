@@ -736,7 +736,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 assert catalog["remote_contact"] is False
                 tools = (await client.list_tools()).tools
                 names = {tool.name for tool in tools}
-                assert len(names) == 102 and "cadence_submit_operation" in names
+                assert len(names) == 103 and "cadence_submit_operation" in names
                 planned = await client.call_tool(
                     "cadence_plan_operation",
                     {"request": input_plan.request.model_dump(mode="json")},

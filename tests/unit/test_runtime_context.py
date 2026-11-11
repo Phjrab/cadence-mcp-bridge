@@ -421,7 +421,7 @@ async def test_operator_stdio_without_state_or_reference_fallback(
         cwd=str(tmp_path),
     )
     async with Client(params) as client:
-        assert len((await client.list_tools()).tools) == 91
+        assert len((await client.list_tools()).tools) == 92
         designs = await client.call_tool("cadence_list_designs")
         assert not designs.is_error and designs.structured_content is not None
         assert len(designs.structured_content["designs"]) == int(configured)

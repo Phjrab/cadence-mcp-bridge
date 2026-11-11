@@ -54,7 +54,7 @@ def register_cmos_delay_tool(server: MCPServer, settings: BridgeConfig | None) -
     from cadence_mcp_bridge.server import _READ_ONLY, _stable_result
 
     @server.tool(
-        name=DELAY_TOOL, annotations=_READ_ONLY, structured_output=True,
+        name="cadence_cmos_delay_result", annotations=_READ_ONLY, structured_output=True,
         description="Evaluate sampled CMOS delays from an already succeeded registered TRAN "
         "operation and exact plan hash, including separate registered supply voltage. "
         "No caller waveforms, simulation, extraction or reservation. Local estimates remain "
