@@ -95,18 +95,26 @@ def snapshot_digest(snapshot):
     return digest(value)
 
 
-def parse_frame(raw, route, rendering):
-    """Closed bounded frame; private selectors never leave the worker."""
+def protocol_lines(raw, start, end, reason):
+    """Ignore banner bytes outside one frame; keep protocol ASCII strict."""
     if len(raw) > LIMIT:
         raise ValueError("layout_frame_size")
-    lines = raw.decode("ascii").splitlines()
-    if any(line.startswith("MCP_LAYOUT_ERROR|") for line in lines):
+    lines = raw.splitlines()
+    if any(line.startswith(b"MCP_LAYOUT_ERROR|") for line in lines):
         raise ValueError("layout_native_error_record")
-    starts = [i for i, line in enumerate(lines) if line == "MCP_LAYOUT_FRAME|1"]
-    ends = [i for i, line in enumerate(lines) if line == "END_LAYOUT_FRAME"]
+    starts = [i for i, line in enumerate(lines) if line == start]
+    ends = [i for i, line in enumerate(lines) if line == end]
     if len(starts) != 1 or len(ends) != 1 or starts[0] >= ends[0]:
-        raise ValueError("layout_frame_delimiters")
-    rows = [line.split("|") for line in lines[starts[0] + 1 : ends[0]]]
+        raise ValueError(reason)
+    return [line.decode("ascii") for line in lines[starts[0] : ends[0] + 1]]
+
+
+def parse_frame(raw, route, rendering):
+    """Closed bounded frame; private selectors never leave the worker."""
+    lines = protocol_lines(
+        raw, b"MCP_LAYOUT_FRAME|1", b"END_LAYOUT_FRAME", "layout_frame_delimiters"
+    )
+    rows = [line.split("|") for line in lines[1:-1]]
     if not rows or len(rows[0]) != 3 or rows[0][0] != "TECH":
         raise ValueError("layout_frame_technology")
     dbu, grid = [int(v) for v in rows[0][1:]]
@@ -902,11 +910,10 @@ class FixedLayoutRuntime(object):
         raw = self._program(
             session, self.rendering.probe_script(libraries, candidates), None, self._job()
         )
-        if raw.splitlines().count(b"MCP_LAYOUT_PROBE|1") != 1 or (
-            raw.splitlines().count(b"END_LAYOUT_PROBE") != 1
-        ):
-            raise ValueError("layout_probe_incomplete")
-        return {"observation": raw.decode("ascii")}
+        lines = protocol_lines(
+            raw, b"MCP_LAYOUT_PROBE|1", b"END_LAYOUT_PROBE", "layout_probe_incomplete"
+        )
+        return {"observation": "\n".join(lines) + "\n"}
 
     def operator_seed(self, operation_id):
         """Pinned operator-only new-library seed, with the existing durable jobs."""

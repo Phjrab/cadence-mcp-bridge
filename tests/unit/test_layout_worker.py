@@ -249,6 +249,51 @@ def test_explicit_native_error_precedes_frame_and_success_marker():
         worker.parse_frame(raw, route, rendering)
 
 
+def test_non_ascii_banner_is_excluded_but_frame_encoding_stays_strict():
+    route = {
+        "binding": fixture_snapshot().binding.model_dump(mode="json"),
+        "owned": True,
+        "read_only": False,
+    }
+    frame = b"MCP_LAYOUT_FRAME|1\nTECH|1000|5\nLPP|metal1|drawing\nEND_LAYOUT_FRAME\n"
+    clean, unused = worker.parse_frame(frame, route, rendering)
+    banner = b"COPYRIGHT \xa9\n"
+    actual, unused = worker.parse_frame(banner + frame + banner, route, rendering)
+    assert actual == clean
+    with pytest.raises(UnicodeDecodeError):
+        worker.parse_frame(frame.replace(b"metal1", b"metal\xa9"), route, rendering)
+    for raw in (
+        banner + b"MCP_LAYOUT_ERROR|failed\n" + frame,
+        frame + banner + b"MCP_LAYOUT_ERROR|failed\n",
+    ):
+        with pytest.raises(ValueError, match="native_error_record"):
+            worker.parse_frame(raw, route, rendering)
+
+
+@pytest.mark.parametrize("fault", [None, "encoding", "duplicate", "reversed", "error"])
+def test_probe_banner_excluded_and_malformed_protocol_rejected(fault):
+    runtime = object.__new__(worker.FixedLayoutRuntime)
+    runtime.registration = {"libraries": [{"name": "Tech"}], "routes": []}
+    runtime.rendering = rendering
+    runtime._job = lambda: "synthetic-job"
+    frame = b"MCP_LAYOUT_PROBE|1\nAPI|dbSave|t\nTECHLIB|Tech|1000|0.005\nEND_LAYOUT_PROBE\n"
+    raw = b"COPYRIGHT \xa9\n" + frame + b"noise \xff\n"
+    if fault == "encoding":
+        raw = raw.replace(b"dbSave", b"db\xa9Save")
+    elif fault == "duplicate":
+        raw += frame
+    elif fault == "reversed":
+        raw = b"END_LAYOUT_PROBE\nMCP_LAYOUT_PROBE|1\n"
+    elif fault == "error":
+        raw += b"MCP_LAYOUT_ERROR|failed\n"
+    runtime._program = lambda *args: raw
+    if fault:
+        with pytest.raises(ValueError):
+            runtime.operator_probe(None)
+    else:
+        assert runtime.operator_probe(None) == {"observation": frame.decode("ascii")}
+
+
 def test_none_is_a_persistent_id_distinct_from_absent_property():
     snapshot = fixture_snapshot()
     route = {"binding": snapshot.binding.model_dump(mode="json"), "owned": True, "read_only": False}
