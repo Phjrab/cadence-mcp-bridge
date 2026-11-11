@@ -47,6 +47,8 @@ DRC/LVS/PEX `NOT_RUN` or `UNAVAILABLE` is not physical or circuit qualification.
 Fixture tests establish adapter behavior only. Actual VM verification is performed
 by C1 and recorded separately in the integration acceptance evidence.
 
+## Qualified instance-terminal connections
+
 The existing `layout plan` command and `cadence_layout_plan` tool accept
 `connect_terminal` edits for an operator-qualified owned child. The edit fields
 are `kind`, `object_id` (existing instance), `expected_master_id`, `terminal`
@@ -55,11 +57,44 @@ whose net anchors the association). Submit the qualified eight-edit batch by
 itself. Qualification is configured by the operator; unqualified requests are
 rejected with `layout_instance_terminal_qualification_required`.
 
-`instance_terminals` in inspect records the observed scope. An omitted field
-or missing row leaves that terminal unobserved. Eight `present: false` rows
-record eight observed absences. The plan and apply diff can carry
-`instance_terminal_changes`. Check the saved and reopened result for the expected
-OA associations. Physical connectivity and DRC/LVS/PEX require separate evidence.
+The installed build `d4b0136ec9ff83bd32783d6f924aca16074290c1` verified this
+sequence for one operator-registered child. C1 supplies the exact registration
+and runs the native stages.
+
+1. Run `layout fork` with the registered child binding and preserved parent's
+   baseline hash. Keep the first `FORK_VERIFIED` result and its reopened child
+   `snapshot`. In `snapshot.instance_terminals`, require the eight qualified
+   rows with `present: false`. An omitted field or missing row leaves that
+   terminal unobserved. An existing instTerm, including an unbound one,
+   prevents the create-only edit.
+2. Use the reopened child's `semantic_sha256` as the plan request's
+   `expected_baseline_sha256`, with its exact binding, the eight registered
+   edits and a distinct apply operation ID. C1 compiled the plan locally from
+   that snapshot. Save the complete plan as `plan` and its `plan_sha256` as
+   `expected_plan_sha256` in the apply request file.
+3. On the registered `serve-operator` stdio session, call
+   `cadence_layout_apply` once with the apply file's JSON object as `request`.
+   Check the structured result for `EDIT_VERIFIED`, `executed=true`,
+   `replayed=false`, `saved=true`, `reopened=true` and `source_unchanged=true`.
+   The reopened snapshot has eight present rows, and
+   `diff.instance_terminal_changes` has eight absent-to-present changes to the
+   expected existing pin/net anchors. `diff.changes` is empty.
+4. After that verified result, use the same apply request file, plan hash and
+   operation ID for CLI replay. Run this CLI entry point through C1's
+   lookup-only host, which restricts the invocation to one receipt lookup.
+
+   ```powershell
+   cadence-mcp-bridge layout apply --settings $settings --context $context --request $applyRequest
+   ```
+
+   The replay returned the same receipt with `executed=false` and
+   `replayed=true`. The protected state and job count were identical before
+   and after replay. On a timeout or `OUTCOME_UNKNOWN`, retain the original
+   request and have C1 reconcile that operation ID.
+
+The verified result establishes eight OpenAccess associations on the saved
+and reopened child. Physical body contacts, extracted connectivity and
+post-layout behavior require separate evidence. DRC/LVS/PEX were `NOT_RUN`.
 
 CLI success prints one JSON document and exits 0. Invalid requests/configuration
 return the existing sanitized error envelope and exit 1. MCP stdout carries only
