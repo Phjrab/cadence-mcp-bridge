@@ -175,21 +175,24 @@ def plan_request(before: LayoutSnapshot) -> LayoutPlanRequest:
     )
 
 
-def packet(*, native_claim: bool = False) -> dict[str, Any]:
+def packet(*, native_claim: bool = False, owned_seed: bool = False) -> dict[str, Any]:
     from cadence_mcp_bridge.layout_engine import build_plan, compute_diff
 
     source, before, after = snapshots()
-    if native_claim:
+    if native_claim or owned_seed:
         # Fabricated labels exercise receipt validation; this is still synthetic
         # test data and proves no VM execution or native provenance.
         native_snapshots = []
         for snapshot in (source, before, after):
             data = snapshot.model_dump(mode="json")
             data.pop("semantic_sha256")
-            data["provenance"] = "native_readback"
-            data["technology"]["provenance"] = "native_observed"
-            for pin in data["pins"]:
-                pin["association"] = "native_verified"
+            if owned_seed and not native_snapshots:
+                data.update(owned=True, read_only=False)
+            if native_claim:
+                data["provenance"] = "native_readback"
+                data["technology"]["provenance"] = "native_observed"
+                for pin in data["pins"]:
+                    pin["association"] = "native_verified"
             if native_snapshots:
                 data["binding"]["parent_revision_sha256"] = native_snapshots[0].semantic_sha256
             native_snapshots.append(load_snapshot(data))
@@ -209,7 +212,7 @@ def packet(*, native_claim: bool = False) -> dict[str, Any]:
         "reopened": True,
         "source_unchanged": True,
     }
-    return {
+    receipt = {
         "build_sha": "b" * 40,
         "environment": "actual_vm" if native_claim else "synthetic_fixture",
         "source_before": source.model_dump(mode="json"),
@@ -224,6 +227,14 @@ def packet(*, native_claim: bool = False) -> dict[str, Any]:
         "source_tree_before_sha256": "c" * 64,
         "source_tree_after_sha256": "c" * 64,
     }
+    if owned_seed:
+        protected = {"original-cell": source.source_baseline_sha256, "pdk-library": "e" * 64}
+        receipt.update(
+            source_kind="owned_seed",
+            protected_trees_before_sha256=protected,
+            protected_trees_after_sha256=dict(protected),
+        )
+    return receipt
 
 
 def test_independent_coordinate_oracle_and_synthetic_receipt() -> None:
@@ -381,6 +392,83 @@ def test_declared_native_receipt_still_reports_only_supplied_consistency() -> No
     report = verifier.verify_receipt(packet(native_claim=True))
     assert report["evidence_scope"] == "supplied_receipt_consistency_only"
     assert report["app_status"] == "APP_NOT_TESTED"
+
+
+def test_owned_seed_receipt_keeps_honest_ownership_and_separate_tree_evidence() -> None:
+    # These native labels are fabricated validator inputs, not actual OA evidence.
+    receipt = packet(native_claim=True, owned_seed=True)
+    original = copy.deepcopy(receipt)
+    report = verifier.verify_receipt(receipt)
+    assert receipt == original
+    assert receipt["source_before"]["owned"] and not receipt["source_before"]["read_only"]
+    assert report["source_kind"] == "owned_seed"
+    assert report["evidence_scope"] == "supplied_receipt_consistency_only"
+    assert verifier.verify_receipt(packet())["source_kind"] == "registered_read_only"
+
+
+@pytest.mark.parametrize(
+    "corruption",
+    [
+        "implicit_kind",
+        "unknown_kind",
+        "readonly_parent",
+        "same_revision",
+        "other_workspace",
+        "other_design",
+        "parent_geometry",
+        "parent_drift",
+        "parent_tree",
+        "protected_missing",
+        "protected_empty",
+        "protected_drift",
+        "protected_anchor",
+        "protected_digest",
+    ],
+)
+def test_owned_seed_receipt_rejects_missing_lineage_or_conservation(corruption: str) -> None:
+    receipt = packet(native_claim=True, owned_seed=True)
+    if corruption == "implicit_kind":
+        receipt.pop("source_kind")
+    elif corruption == "unknown_kind":
+        receipt["source_kind"] = "legacy"
+    elif corruption in {
+        "readonly_parent",
+        "same_revision",
+        "other_workspace",
+        "other_design",
+        "parent_geometry",
+    }:
+        source = receipt["source_before"]
+        if corruption == "readonly_parent":
+            source.update(owned=False, read_only=True)
+        elif corruption == "same_revision":
+            source["binding"]["revision_id"] = receipt["before"]["binding"]["revision_id"]
+        elif corruption == "other_workspace":
+            source["binding"]["workspace_id"] = "other"
+        elif corruption == "other_design":
+            source["binding"]["design_id"] = "other"
+        else:
+            source["instances"][0]["origin_dbu"]["x"] += 5
+        source.pop("semantic_sha256")
+        receipt["source_before"] = load_snapshot(source).model_dump(mode="json")
+        receipt["source_after"] = copy.deepcopy(receipt["source_before"])
+    elif corruption == "parent_drift":
+        receipt["source_after"]["capabilities"]["move"] = "unsupported"
+    elif corruption == "parent_tree":
+        receipt["source_tree_after_sha256"] = "d" * 64
+    elif corruption == "protected_missing":
+        receipt.pop("protected_trees_before_sha256")
+    elif corruption == "protected_empty":
+        receipt["protected_trees_before_sha256"] = {}
+        receipt["protected_trees_after_sha256"] = {}
+    elif corruption == "protected_drift":
+        receipt["protected_trees_after_sha256"]["pdk-library"] = "d" * 64
+    else:
+        value = "d" * 64 if corruption == "protected_anchor" else "not-a-digest"
+        receipt["protected_trees_before_sha256"]["original-cell"] = value
+        receipt["protected_trees_after_sha256"]["original-cell"] = value
+    with pytest.raises(ValueError):
+        verifier.verify_receipt(receipt)
 
 
 @pytest.mark.parametrize("missing", ["tree", "pin_association", "actual_dispatch", "diff_changes"])

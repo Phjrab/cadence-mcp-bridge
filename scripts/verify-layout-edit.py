@@ -43,8 +43,39 @@ def verify_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("baseline_mismatch")
     validate_plan(before, request)
     expected, _ = predict_snapshot(before, plan.request)
-    if source_before.owned or not source_before.read_only:
-        raise ValueError("source_must_be_read_only")
+    source_kind = receipt.get("source_kind", "registered_read_only")
+    if source_kind == "registered_read_only":
+        if source_before.owned or not source_before.read_only:
+            raise ValueError("source_must_be_read_only")
+    elif source_kind == "owned_seed":
+        if environment != "actual_vm" or not source_before.owned or source_before.read_only:
+            raise ValueError("owned_seed_source_required")
+        parent, child = source_before.binding, before.binding
+        if (
+            child.revision_id == parent.revision_id
+            or child.workspace_id != parent.workspace_id
+            or child.design_id != parent.design_id
+            or child.parent_revision_id != parent.revision_id
+            or child.parent_revision_sha256 != source_before.semantic_sha256
+        ):
+            raise ValueError("owned_seed_parent_binding_required")
+        protected = receipt.get("protected_trees_before_sha256")
+        if (
+            not isinstance(protected, dict)
+            or not protected
+            or any(
+                not isinstance(key, str)
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", key) is None
+                or not isinstance(value, str)
+                or re.fullmatch(r"[0-9a-f]{64}", value) is None
+                for key, value in protected.items()
+            )
+            or source_before.source_baseline_sha256 not in protected.values()
+            or receipt.get("protected_trees_after_sha256") != protected
+        ):
+            raise ValueError("protected_original_trees_conservation_required")
+    else:
+        raise ValueError("explicit_source_kind_required")
     if source_before != source_after:
         raise ValueError("source_changed")
     if source_before.source_baseline_sha256 != before.source_baseline_sha256:
@@ -124,6 +155,7 @@ def verify_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
         "status": "RECEIPT_CONSISTENT",
         "build_sha": build,
         "environment": environment,
+        "source_kind": source_kind,
         "evidence_scope": "supplied_receipt_consistency_only",
         "source_unchanged": True,
         "readback_matches_plan": True,
