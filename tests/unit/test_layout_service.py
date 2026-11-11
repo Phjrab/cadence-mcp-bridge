@@ -14,6 +14,7 @@ from cadence_mcp_bridge.layout_engine import (
 from cadence_mcp_bridge.layout_models import (
     LayoutApplyRequest,
     LayoutDiffRequest,
+    LayoutEdit,
     LayoutForkRequest,
     LayoutInspectRequest,
     LayoutResult,
@@ -216,6 +217,41 @@ async def test_pin_label_rejects_before_any_provider_call() -> None:
     assert plan.normalized_edits[-1].pin is not None
     assert plan.normalized_edits[-1].pin.label is None
     assert provider.inspect_calls == 1 and provider.dispatches == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("conflict", ["existing", "same_batch"])
+async def test_pin_terminal_conflict_rejects_plan_before_write(conflict: str) -> None:
+    provider = SyntheticProvider()
+    service = LayoutService(provider)
+    request = fixture_request(provider.before)
+    pin = request.edits[-1]
+    edits: tuple[LayoutEdit, ...]
+    if conflict == "existing":
+        edits = (pin.model_copy(update={"terminal_id": "terminal-old", "net_id": "net-old"}),)
+    else:
+        edits = (pin, pin.model_copy(update={"object_id": "pin-second"}))
+    with pytest.raises(LayoutRejected, match="layout_pin_terminal_conflict"):
+        await service.plan(request.model_copy(update={"edits": edits}))
+    assert provider.dispatches == 0
+    assert provider.current == provider.before
+
+
+@pytest.mark.asyncio
+async def test_new_pin_terminal_can_reuse_existing_net() -> None:
+    provider = SyntheticProvider()
+    service = LayoutService(provider)
+    request = fixture_request(provider.before)
+    pin = request.edits[-1].model_copy(update={"net_id": "net-old"})
+    plan = await service.plan(request.model_copy(update={"edits": (pin,)}))
+    result = await service.apply(
+        LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    )
+    assert result.status == "EDIT_VERIFIED"
+    assert result.snapshot is not None
+    added = next(p for p in result.snapshot.pins if p.object_id == "pin-new")
+    assert added.net_id == "net-old" and added.terminal_id == "terminal-new"
+    assert provider.dispatches == 1
 
 
 @pytest.mark.asyncio
