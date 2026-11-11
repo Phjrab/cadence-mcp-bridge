@@ -5,11 +5,12 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -317,15 +318,17 @@ async def test_service_scenario_rejects_bad_plan_before_provider_write(invalid: 
         request["edits"][0]["dx_um"] = "0.001"
     else:
         request["edits"][0]["dx_um"] = "NaN"
+    reads_before = provider.inspect.await_count
     with pytest.raises(ValueError):
         await service.plan(load_request(request))
     provider.apply.assert_not_awaited()
+    if invalid in ("unit", "nonfinite"):
+        assert provider.inspect.await_count == reads_before
 
 
 async def test_service_does_not_promote_synthetic_save_reopen_to_native_success() -> None:
-    from cadence_mcp_bridge.layout_service import LayoutService
-
     from cadence_mcp_bridge.layout_models import LayoutResult
+    from cadence_mcp_bridge.layout_service import LayoutService
 
     receipt = packet()
     request = LayoutApplyRequest.model_validate_json(json.dumps(receipt["request"]))
@@ -340,9 +343,8 @@ async def test_service_does_not_promote_synthetic_save_reopen_to_native_success(
 
 
 async def test_partial_unknown_result_is_retained_without_service_retry() -> None:
-    from cadence_mcp_bridge.layout_service import LayoutService
-
     from cadence_mcp_bridge.layout_models import LayoutResult
+    from cadence_mcp_bridge.layout_service import LayoutService
 
     receipt = packet()
     request = LayoutApplyRequest.model_validate_json(json.dumps(receipt["request"]))
@@ -357,9 +359,8 @@ async def test_partial_unknown_result_is_retained_without_service_retry() -> Non
 
 
 async def test_service_selection_returns_preserved_parent_without_writer_call() -> None:
-    from cadence_mcp_bridge.layout_service import LayoutService
-
     from cadence_mcp_bridge.layout_models import LayoutResult, LayoutSelectRequest
+    from cadence_mcp_bridge.layout_service import LayoutService
 
     source, _, _ = snapshots()
     original = source.model_dump_json()
@@ -395,3 +396,96 @@ def test_declared_native_success_requires_conserved_source_and_pin_evidence(miss
         receipt["result"]["diff"]["changes"] = []
     with pytest.raises(ValueError):
         verifier.verify_receipt(receipt)
+
+
+def worker_fixture(tmp_path: Path, **options: Any) -> tuple[Any, Any, Any, Any, dict[str, Any]]:
+    worker = pytest.importorskip(
+        "cadence_mcp_bridge._layout_worker", reason="native worker dependency not imported yet"
+    )
+    fixture_spec = importlib.util.spec_from_file_location(
+        "layout_durability_fixture", ROOT / "tests/fixtures/layout/durability.py"
+    )
+    assert fixture_spec is not None and fixture_spec.loader is not None
+    harness = importlib.util.module_from_spec(fixture_spec)
+    fixture_spec.loader.exec_module(harness)
+    receipt = packet()
+    root = tmp_path / "synthetic-runtime"
+    accounting = harness.Accounting(
+        root, final_check_failure=options.get("final_check_failure", False)
+    )
+    runtime = harness.Runtime(
+        root, receipt["before"], receipt["result"]["snapshot"], failure=options.get("failure")
+    )
+    core = worker.LayoutWorker(runtime, accounting, harness._native_operations)
+    return worker, harness, accounting, core, receipt["request"]
+
+
+@pytest.mark.parametrize("failure", ["crash", "partial"])
+def test_worker_durable_intent_restart_never_redispatches_or_reopens_partial(
+    tmp_path: Path,
+    failure: str,
+) -> None:
+    worker, harness, accounting, core, request = worker_fixture(tmp_path, failure=failure)
+    with pytest.raises((harness.SimulatedCrash, ValueError)):
+        core.execute("apply", request)
+    original = harness.journal(accounting.root)
+    assert any(name.endswith("layout-intent.json") for name in original)
+    assert not any(name.endswith("layout-receipt.json") for name in original)
+    if failure == "partial":
+        assert any(name.endswith("layout-failure.json") for name in original)
+    restarted_runtime = harness.Runtime(accounting.root, core.runtime.before, core.runtime.after)
+    restarted = worker.LayoutWorker(restarted_runtime, accounting, harness._native_operations)
+    replay = restarted.execute("apply", request)
+    assert replay["state"] == "OUTCOME_UNKNOWN" and replay["replayed"]
+    assert not replay["executed"] and restarted_runtime.writes == 0
+    assert harness.journal(accounting.root) == original
+    from cadence_mcp_bridge.layout_engine import build_plan
+
+    before = load_snapshot(core.runtime.before)
+    second_plan = build_plan(
+        before, plan_request(before).model_copy(update={"operation_id": str(uuid4())})
+    )
+    second = LayoutApplyRequest(
+        plan=second_plan,
+        expected_plan_sha256=second_plan.plan_sha256,
+    ).model_dump(mode="json")
+    with pytest.raises(ValueError, match="already_sealed"):
+        restarted.execute("apply", second)
+    assert restarted_runtime.writes == 0
+    assert harness.journal(accounting.root) == original
+
+
+def test_worker_different_ids_contend_for_one_sealed_target(tmp_path: Path) -> None:
+    from cadence_mcp_bridge.layout_engine import build_plan
+
+    _, _, _, core, first = worker_fixture(tmp_path)
+    before = load_snapshot(core.runtime.before)
+    second_plan = build_plan(
+        before, plan_request(before).model_copy(update={"operation_id": str(uuid4())})
+    )
+    second = LayoutApplyRequest(
+        plan=second_plan,
+        expected_plan_sha256=second_plan.plan_sha256,
+    ).model_dump(mode="json")
+
+    def invoke(request: dict[str, Any]) -> str:
+        try:
+            return str(core.execute("apply", request)["state"])
+        except ValueError as error:
+            return str(error)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(invoke, (first, second)))
+    assert sorted(results) == ["SUCCEEDED", "layout_working_revision_already_sealed"]
+    assert core.runtime.writes == 1
+
+
+def test_worker_final_session_failure_cannot_replay_as_success(tmp_path: Path) -> None:
+    _, harness, accounting, core, request = worker_fixture(tmp_path, final_check_failure=True)
+    with pytest.raises(ValueError, match="synthetic_final_session_check_failed"):
+        core.execute("apply", request)
+    assert any(name.endswith("layout-failure.json") for name in harness.journal(accounting.root))
+    writes = core.runtime.writes
+    replay = core.execute("apply", request)
+    assert core.runtime.writes == writes
+    assert replay["state"] == "OUTCOME_UNKNOWN", "terminal failure must not replay as success"
