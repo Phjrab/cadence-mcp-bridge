@@ -17,9 +17,11 @@ from cadence_mcp_bridge.layout_models import (
     LayoutEdit,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutNativeEdit,
     LayoutResult,
     LayoutSelectRequest,
     LayoutSnapshot,
+    OrientEdit,
 )
 from cadence_mcp_bridge.layout_service import LayoutService
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -214,6 +216,7 @@ async def test_pin_label_rejects_before_any_provider_call() -> None:
         await service.plan(invalid)
     assert provider.inspect_calls == provider.dispatches == 0
     plan = await service.plan(request)
+    assert isinstance(plan.normalized_edits[-1], LayoutNativeEdit)
     assert plan.normalized_edits[-1].pin is not None
     assert plan.normalized_edits[-1].pin.label is None
     assert provider.inspect_calls == 1 and provider.dispatches == 0
@@ -279,3 +282,25 @@ async def test_untrustworthy_provider_result_is_rejected(
     )
     with pytest.raises(ValueError, match=reason):
         await service.apply(request)
+
+
+async def test_orient_service_plans_but_rejects_before_provider_dispatch() -> None:
+    class NoOrientProvider(SyntheticProvider):
+        async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
+            raise AssertionError("orientation must never reach an unimplemented native provider")
+
+    provider = NoOrientProvider()
+    provider.current = reseal(
+        provider.current,
+        capabilities=provider.current.capabilities.model_copy(update={"rotate": "not_verified"}),
+    )
+    service = LayoutService(provider)
+    request = fixture_request(provider.current).model_copy(
+        update={
+            "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),),
+        }
+    )
+    plan = await service.plan(request)
+    with pytest.raises(LayoutRejected, match="layout_orientation_native_not_implemented"):
+        await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))
+    assert provider.dispatches == 0 and provider.receipts == {}

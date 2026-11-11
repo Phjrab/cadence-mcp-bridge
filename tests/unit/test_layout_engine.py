@@ -1,6 +1,7 @@
 """Pure synthetic geometry cases; no native or PDK acceptance is implied."""
 
 from decimal import localcontext
+from hashlib import sha256
 from typing import Any
 
 import pytest
@@ -26,9 +27,15 @@ from cadence_mcp_bridge.layout_models import (
     ZERO_DIGEST,
     LayoutApplyRequest,
     LayoutCorrespondenceCheck,
+    LayoutNativeEdit,
+    LayoutOrientationPreview,
+    LayoutOrientNativeEdit,
     LayoutPlan,
     LayoutPoint,
+    LayoutSnapshot,
     MoveEdit,
+    Orientation,
+    OrientEdit,
 )
 
 
@@ -292,6 +299,9 @@ def test_move_rectangle_connected_pin_payload_preview_and_immutable_source() -> 
     plan = build_plan(snapshot, request)
     predicted, commands = predict_snapshot(snapshot, request)
     assert snapshot.model_dump_json() == before
+    assert isinstance(commands[0], LayoutNativeEdit)
+    assert isinstance(commands[1], LayoutNativeEdit)
+    assert isinstance(commands[2], LayoutNativeEdit)
     assert commands[0].dx_dbu == 5 and commands[0].dy_dbu == -10
     assert commands[1].shape is not None and commands[1].shape.bbox_dbu == box(500, 0, 600, 100)
     assert commands[2].pin is not None and commands[2].pin.net_id == "net-new"
@@ -459,3 +469,186 @@ def test_readback_evidence_flags_and_technology_inventory_order_are_not_geometry
     diff = compute_diff(before, after, expected=expected)
     assert diff.matches_plan is True and not diff.metadata_changes
     assert diff.changes == compute_diff(before, expected, expected=expected).changes
+
+
+# Independent asymmetric master-local box (5,10)..(35,65), placed at (100,-50).
+# These known coordinates do not use the production transform implementation.
+_ORIENT_BOXES: dict[Orientation, tuple[int, int, int, int]] = {
+    "R0": (105, -40, 135, 15),
+    "R90": (35, -45, 90, -15),
+    "R180": (65, -115, 95, -60),
+    "R270": (110, -85, 165, -55),
+    "MX": (105, -115, 135, -60),
+    "MY": (65, -40, 95, 15),
+    "MXR90": (110, -45, 165, -15),
+    "MYR90": (35, -85, 90, -55),
+}
+
+
+def _orient_snapshot(old: Orientation = "R0") -> LayoutSnapshot:
+    snapshot = fixture_snapshot()
+    instance = snapshot.instances[0].model_copy(
+        update={
+            "origin_dbu": LayoutPoint(x=100, y=-50),
+            "orientation": old,
+            "bbox_dbu": box(*_ORIENT_BOXES[old]),
+        }
+    )
+    return reseal(
+        snapshot,
+        instances=(instance,),
+        technology=snapshot.technology.model_copy(
+            update={"supported_orientations": tuple(_ORIENT_BOXES)}
+        ),
+        capabilities=snapshot.capabilities.model_copy(update={"rotate": "not_verified"}),
+    )
+
+
+@pytest.mark.parametrize("old", tuple(_ORIENT_BOXES))
+@pytest.mark.parametrize("target", tuple(_ORIENT_BOXES))
+def test_orient_absolute_known_asymmetric_pairs(old: Orientation, target: Orientation) -> None:
+    snapshot = _orient_snapshot(old)
+    original = snapshot.model_dump_json()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id="inst-one", orientation=target),)}
+    )
+    if target == old:
+        with pytest.raises(LayoutRejected, match="empty_layout_orientation"):
+            build_plan(snapshot, request)
+        return
+    predicted, commands = predict_snapshot(snapshot, request)
+    assert predicted.instances[0].bbox_dbu == box(*_ORIENT_BOXES[target])
+    assert predicted.instances[0].origin_dbu == snapshot.instances[0].origin_dbu
+    assert predicted.instances[0].orientation == target
+    assert predicted.instances[0].master_id == snapshot.instances[0].master_id
+    assert predicted.shapes == snapshot.shapes and predicted.pins == snapshot.pins
+    plan = build_plan(snapshot, request)
+    (command,) = commands
+    assert isinstance(command, LayoutOrientNativeEdit)
+    assert command.bbox_dbu == predicted.instances[0].bbox_dbu
+    assert command.origin_dbu == snapshot.instances[0].origin_dbu
+    assert command.before_sha256 == plan.preview.predicted_diff.changes[0].before_sha256
+    assert set(command.model_dump()) == {
+        "kind",
+        "object_id",
+        "before_sha256",
+        "orientation",
+        "origin_dbu",
+        "bbox_dbu",
+    }
+    assert isinstance(plan.preview, LayoutOrientationPreview)
+    assert plan.preview.oriented == 1 and plan.preview.created == plan.preview.moved == 0
+    assert plan.preview.predicted_diff.changes[0].fields == ("bbox_dbu", "orientation")
+    roundtrip = LayoutPlan.model_validate_json(plan.model_dump_json())
+    assert roundtrip == plan and isinstance(roundtrip.preview, LayoutOrientationPreview)
+    assert (
+        validate_plan(
+            snapshot, LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+        )
+        == plan
+    )
+    assert snapshot.model_dump_json() == original
+
+
+@pytest.mark.parametrize("object_id", ["rect-one", "pin-old", "missing"])
+def test_orient_rejects_noninstance_or_missing(object_id: str) -> None:
+    snapshot = _orient_snapshot()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id=object_id, orientation="R90"),)}
+    )
+    with pytest.raises(LayoutRejected, match="requires_instance|unregistered_layout_object"):
+        build_plan(snapshot, request)
+
+
+def test_orient_rejects_unsupported_capability_orientation_and_duplicate_target() -> None:
+    snapshot = _orient_snapshot()
+    edit = OrientEdit(kind="orient", object_id="inst-one", orientation="MY")
+    request = fixture_request(snapshot).model_copy(update={"edits": (edit,)})
+    with pytest.raises(LayoutRejected, match="layout_operation_unsupported"):
+        build_plan(reseal(snapshot, capabilities=fixture_snapshot().capabilities), request)
+    limited = reseal(
+        snapshot,
+        technology=snapshot.technology.model_copy(update={"supported_orientations": ("R0",)}),
+    )
+    with pytest.raises(LayoutRejected, match="unsupported_orientation"):
+        build_plan(
+            limited,
+            request.model_copy(update={"expected_baseline_sha256": limited.semantic_sha256}),
+        )
+    with pytest.raises(LayoutRejected, match="duplicate_edit_target"):
+        build_plan(snapshot, request.model_copy(update={"edits": (edit, request.edits[0])}))
+
+
+def test_orient_rejects_offgrid_nonfinite_and_output_overflow() -> None:
+    snapshot = _orient_snapshot()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R180"),)}
+    )
+    for coordinate in (101, float("nan"), float("inf")):
+        bad = snapshot.instances[0].model_copy(
+            update={"origin_dbu": LayoutPoint.model_construct(x=coordinate, y=-50)}
+        )
+        with pytest.raises(ValueError):
+            build_plan(snapshot.model_copy(update={"instances": (bad,)}), request)
+    extreme = snapshot.instances[0].model_copy(
+        update={"origin_dbu": LayoutPoint(x=2_147_483_645, y=-50)}
+    )
+    snapshot = reseal(snapshot, instances=(extreme,))
+    request = request.model_copy(update={"expected_baseline_sha256": snapshot.semantic_sha256})
+    with pytest.raises(LayoutRejected, match="orientation_out_of_bounds"):
+        build_plan(snapshot, request)
+
+
+def test_orient_mixed_preview_and_tampered_native_command() -> None:
+    snapshot = _orient_snapshot()
+    legacy = fixture_request(snapshot)
+    request = legacy.model_copy(
+        update={
+            "edits": (
+                OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),
+                *legacy.edits[1:],
+            )
+        }
+    )
+    plan = build_plan(snapshot, request)
+    assert isinstance(plan.preview, LayoutOrientationPreview)
+    assert plan.preview.oriented == 1 and plan.preview.created == 2 and plan.preview.moved == 0
+    assert all(isinstance(c, LayoutNativeEdit) for c in plan.normalized_edits[1:])
+    tampered = plan.model_copy(
+        update={
+            "normalized_edits": (
+                plan.normalized_edits[0].model_copy(update={"orientation": "MY"}),
+                *plan.normalized_edits[1:],
+            ),
+            "plan_sha256": ZERO_DIGEST,
+        }
+    )
+    tampered = LayoutPlan.model_validate_json(tampered.model_dump_json())
+    with pytest.raises(LayoutRejected, match="revalidation_mismatch"):
+        validate_plan(
+            snapshot, LayoutApplyRequest(plan=tampered, expected_plan_sha256=tampered.plan_sha256)
+        )
+
+
+def test_orient_preserves_exact_legacy_plan_and_normalized_bytes() -> None:
+    # Captured from unchanged867797f before this additive contract implementation.
+    snapshot = fixture_snapshot()
+    request = fixture_request(snapshot)
+    plan = build_plan(snapshot, request)
+    expected = {
+        "snapshot": "c53fa48ed69aad2b8845bc7eeedcbd6afcbcfaa62a6a9544fa8c2c45892f126a",
+        "request": "a86ff90e1e8abae85bd40c1f447fe2f075c54978163fe6177dccc5ba1c59f9e2",
+        "plan": "037f52479247e446cfcbc987c90a7568c4fd42e7cb9c6ddbee089a7ac2709333",
+        "preview": "447858bac7d1fbbf8d11364c757010dd0789345a686b9fc0f5351bd39b479bf0",
+    }
+    for name, value in {
+        "snapshot": snapshot,
+        "request": request,
+        "plan": plan,
+        "preview": plan.preview,
+    }.items():
+        assert sha256(value.model_dump_json().encode()).hexdigest() == expected[name]
+    assert sha256(
+        "".join(e.model_dump_json() for e in plan.normalized_edits).encode()
+    ).hexdigest() == ("92c5256f6ac446ab2980e938b25e6b04c247979ca7a4e5557c5d30a2d293840a")
+    assert plan.plan_sha256 == "865eeeb090317f1b7eb9c6ed9bf9bae715d939dc722381920768a09bd38c3bbe"

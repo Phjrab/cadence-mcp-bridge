@@ -21,8 +21,11 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiff,
     LayoutInstance,
     LayoutMasterMapping,
+    LayoutNativeCommand,
     LayoutNativeEdit,
     LayoutObject,
+    LayoutOrientationPreview,
+    LayoutOrientNativeEdit,
     LayoutPin,
     LayoutPlan,
     LayoutPlanRequest,
@@ -32,6 +35,12 @@ from cadence_mcp_bridge.layout_models import (
     LayoutSnapshot,
     LayoutTechnology,
     MoveEdit,
+    OrientEdit,
+)
+from cadence_mcp_bridge.layout_transforms import (
+    compose_orientation,
+    inverse_orientation,
+    transform_bbox,
 )
 from cadence_mcp_bridge.schematic_plan import (
     DeviceRegistry,
@@ -278,7 +287,7 @@ def _union_bbox(objects: dict[str, LayoutObject]) -> LayoutBBox | None:
 
 def predict_snapshot(
     snapshot: LayoutSnapshot, request: LayoutPlanRequest
-) -> tuple[LayoutSnapshot, tuple[LayoutNativeEdit, ...]]:
+) -> tuple[LayoutSnapshot, tuple[LayoutNativeCommand, ...]]:
     snapshot = LayoutSnapshot.model_validate_json(snapshot.model_dump_json())
     request = LayoutPlanRequest.model_validate_json(request.model_dump_json())
     if snapshot.binding != request.binding:
@@ -290,15 +299,46 @@ def predict_snapshot(
     objects = snapshot_objects(snapshot)
     selected: set[str] = set()
     terminals = {pin.terminal_id for pin in snapshot.pins}
-    commands: list[LayoutNativeEdit] = []
+    commands: list[LayoutNativeCommand] = []
     allowed = {(p.layer, p.purpose) for p in snapshot.technology.allowed_layer_purposes}
     for edit in request.edits:
         if edit.object_id in selected:
             raise LayoutRejected("duplicate_edit_target")
         selected.add(edit.object_id)
-        if getattr(snapshot.capabilities, edit.kind) == "unsupported":
+        capability = "rotate" if isinstance(edit, OrientEdit) else edit.kind
+        if getattr(snapshot.capabilities, capability) == "unsupported":
             raise LayoutRejected("layout_operation_unsupported")
-        if isinstance(edit, MoveEdit):
+        if isinstance(edit, OrientEdit):
+            item = objects.get(edit.object_id)
+            if item is None:
+                raise LayoutRejected("unregistered_layout_object")
+            if not isinstance(item, LayoutInstance):
+                raise LayoutRejected("layout_orientation_requires_instance")
+            if edit.orientation not in snapshot.technology.supported_orientations:
+                raise LayoutRejected("unsupported_orientation")
+            if edit.orientation == item.orientation:
+                raise LayoutRejected("empty_layout_orientation")
+            # One composite matrix avoids spurious out-of-range intermediates
+            # while undoing the old orientation then applying the new one.
+            relative = compose_orientation(inverse_orientation(item.orientation), edit.orientation)
+            try:
+                box = transform_bbox(item.bbox_dbu, relative, origin=item.origin_dbu)
+            except ValueError as error:
+                raise LayoutRejected("layout_orientation_out_of_bounds") from error
+            objects[edit.object_id] = item.model_copy(
+                update={"orientation": edit.orientation, "bbox_dbu": box}
+            )
+            commands.append(
+                LayoutOrientNativeEdit(
+                    kind="orient",
+                    object_id=edit.object_id,
+                    before_sha256=object_digest(item),
+                    orientation=edit.orientation,
+                    origin_dbu=item.origin_dbu,
+                    bbox_dbu=box,
+                )
+            )
+        elif isinstance(edit, MoveEdit):
             item = objects.get(edit.object_id)
             if item is None:
                 raise LayoutRejected("unregistered_layout_object")
@@ -367,18 +407,22 @@ def predict_snapshot(
 def build_plan(snapshot: LayoutSnapshot, request: LayoutPlanRequest) -> LayoutPlan:
     predicted, commands = predict_snapshot(snapshot, request)
     diff = compute_diff(snapshot, predicted, expected=predicted)
+    preview = LayoutPreview(
+        target_object_ids=tuple(e.object_id for e in request.edits),
+        created=sum(e.kind in ("add_rect", "add_pin") for e in request.edits),
+        moved=sum(e.kind == "move" for e in request.edits),
+        expected_bbox_dbu=_union_bbox(snapshot_objects(predicted)),
+        predicted_diff=diff,
+    )
+    oriented = sum(e.kind == "orient" for e in request.edits)
+    if oriented:
+        preview = LayoutOrientationPreview(**preview.model_dump(), oriented=oriented)
     return LayoutPlan(
         request=request,
         baseline_sha256=snapshot.semantic_sha256,
         normalized_edits=commands,
         expected_semantic_sha256=predicted.semantic_sha256,
-        preview=LayoutPreview(
-            target_object_ids=tuple(e.object_id for e in request.edits),
-            created=sum(e.kind != "move" for e in request.edits),
-            moved=sum(e.kind == "move" for e in request.edits),
-            expected_bbox_dbu=_union_bbox(snapshot_objects(predicted)),
-            predicted_diff=diff,
-        ),
+        preview=preview,
     )
 
 
