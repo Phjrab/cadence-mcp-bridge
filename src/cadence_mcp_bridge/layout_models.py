@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Self
 from pydantic import Field, field_validator, model_validator
 
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.schematic_plan import RevisionBinding
+from cadence_mcp_bridge.schematic_plan import PlanDryRun, RevisionBinding, TerminalConnection
 from cadence_mcp_bridge.variable_contracts import (
     BindingName,
     Digest,
@@ -433,3 +433,94 @@ class LayoutResult(VariableModel):
         if self.replayed and self.executed:
             raise ValueError("replay_cannot_execute_again")
         return self
+
+
+class LayoutDeviceMaster(VariableModel):
+    """Operator-registered logical symbol/device to layout-master relationship."""
+
+    device_id: LogicalId
+    layout_master_id: LogicalId
+
+
+class LayoutMasterMapping(VariableModel):
+    """Resolved independently of the candidate; this record grants no authority."""
+
+    registration_id: LogicalId
+    schematic_registry_sha256: Digest
+    devices: Annotated[tuple[LayoutDeviceMaster, ...], Field(min_length=2, max_length=2)]
+
+    @model_validator(mode="after")
+    def unique(self) -> Self:
+        if (
+            len({d.device_id for d in self.devices}) != 2
+            or len({d.layout_master_id for d in self.devices}) != 2
+        ):
+            raise ValueError("layout_duplicate_device_master_mapping")
+        return self
+
+    @property
+    def semantic_sha256(self) -> str:
+        return canonical_digest(
+            self.model_copy(
+                update={"devices": tuple(sorted(self.devices, key=lambda d: d.device_id))}
+            )
+        )
+
+
+class LayoutDeviceCorrespondence(VariableModel):
+    """Proposed logical terminal intent, not observed instance connectivity."""
+
+    schematic_instance_id: LogicalId
+    layout_object_id: LogicalId
+    connections: Annotated[tuple[TerminalConnection, ...], Field(min_length=4, max_length=4)]
+
+    @model_validator(mode="after")
+    def terminals(self) -> Self:
+        if {c.terminal_id for c in self.connections} != {"d", "g", "s", "b"}:
+            raise ValueError("layout_cmos_terminal_set_mismatch")
+        return self
+
+
+class LayoutCorrespondence(VariableModel):
+    """Explicit pair of independently registered schematic/layout revisions."""
+
+    schematic_binding: RevisionBinding
+    schematic_semantic_sha256: Digest
+    layout_binding: RevisionBinding
+    layout_semantic_sha256: Digest
+    master_mapping_sha256: Digest
+    devices: Annotated[tuple[LayoutDeviceCorrespondence, ...], Field(min_length=2, max_length=2)]
+
+    @model_validator(mode="after")
+    def unique(self) -> Self:
+        if (
+            len({d.schematic_instance_id for d in self.devices}) != 2
+            or len({d.layout_object_id for d in self.devices}) != 2
+        ):
+            raise ValueError("layout_duplicate_device_correspondence")
+        return self
+
+    @property
+    def semantic_sha256(self) -> str:
+        devices = tuple(
+            device.model_copy(
+                update={
+                    "connections": tuple(sorted(device.connections, key=lambda c: c.terminal_id))
+                }
+            )
+            for device in sorted(self.devices, key=lambda d: d.schematic_instance_id)
+        )
+        return canonical_digest(self.model_copy(update={"devices": devices}))
+
+
+class LayoutCorrespondenceCheck(VariableModel):
+    status: Literal["LOCAL_CORRESPONDENCE_CONSISTENT"] = "LOCAL_CORRESPONDENCE_CONSISTENT"
+    executed: Literal[False] = False
+    schematic_check: PlanDryRun
+    layout_binding: RevisionBinding
+    layout_semantic_sha256: Digest
+    master_mapping_sha256: Digest
+    correspondence_sha256: Digest
+    native_connectivity: Literal["NOT_VERIFIED"] = "NOT_VERIFIED"
+    pcell_parameters: Literal["NOT_VERIFIED"] = "NOT_VERIFIED"
+    physical_verification: LayoutPhysicalVerification = LayoutPhysicalVerification()

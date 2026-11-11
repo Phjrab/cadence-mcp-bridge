@@ -4,7 +4,13 @@ from decimal import localcontext
 from typing import Any
 
 import pytest
-from test_layout_models import box, fixture_request, fixture_snapshot, reseal
+from test_layout_models import (
+    box,
+    fixture_correspondence,
+    fixture_request,
+    fixture_snapshot,
+    reseal,
+)
 
 from cadence_mcp_bridge.layout_engine import (
     LayoutRejected,
@@ -13,15 +19,270 @@ from cadence_mcp_bridge.layout_engine import (
     dbu_to_um,
     predict_snapshot,
     um_to_dbu,
+    validate_correspondence,
     validate_plan,
 )
 from cadence_mcp_bridge.layout_models import (
     ZERO_DIGEST,
     LayoutApplyRequest,
+    LayoutCorrespondenceCheck,
     LayoutPlan,
     LayoutPoint,
     MoveEdit,
 )
+
+
+def test_correspondence_matches_independent_view_bindings_without_native_claim() -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    inputs = (registry, schematic, layout, mapping, correspondence)
+    before = tuple(value.model_dump_json() for value in inputs)
+    result = validate_correspondence(
+        schematic,
+        registry,
+        layout,
+        correspondence,
+        mapping,
+        expected_schematic_binding=schematic.binding,
+        expected_layout_binding=layout.binding,
+    )
+    assert result.status == "LOCAL_CORRESPONDENCE_CONSISTENT"
+    assert result.executed is False
+    assert result.native_connectivity == result.pcell_parameters == "NOT_VERIFIED"
+    assert result.schematic_check.status == "LOCAL_SYNTHETIC_PLAN_VALID"
+    assert result.physical_verification.model_dump() == dict(
+        drc="NOT_RUN", lvs="NOT_RUN", pex="NOT_RUN"
+    )
+    assert result.correspondence_sha256 == correspondence.semantic_sha256
+    assert schematic.binding.source_baseline_sha256 != layout.binding.source_baseline_sha256
+    assert tuple(value.model_dump_json() for value in inputs) == before
+    with pytest.raises(ValueError):
+        LayoutCorrespondenceCheck.model_validate_json(
+            result.model_copy(update={"native_connectivity": "PASS"}).model_dump_json()
+        )
+
+
+@pytest.mark.parametrize("terminal", ["d", "g", "s", "b"])
+def test_correspondence_wrong_terminal_net_rejects(terminal: str) -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    device = correspondence.devices[0]
+    bad = device.model_copy(
+        update={
+            "connections": tuple(
+                c.model_copy(update={"net_id": "unknown-net"}) if c.terminal_id == terminal else c
+                for c in device.connections
+            )
+        }
+    )
+    with pytest.raises(LayoutRejected, match="terminal_net_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            correspondence.model_copy(update={"devices": (bad, correspondence.devices[1])}),
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "schematic_semantic_sha256",
+        "layout_semantic_sha256",
+        "master_mapping_sha256",
+    ],
+)
+def test_correspondence_stale_digests_reject(field: str) -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    with pytest.raises(LayoutRejected, match="stale_baseline|master_registration_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            correspondence.model_copy(update={field: "f" * 64}),
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+
+
+@pytest.mark.parametrize("view", ["schematic", "layout"])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("revision_id", "stale-revision"),
+        ("source_baseline_sha256", "f" * 64),
+    ],
+)
+def test_correspondence_independent_expected_binding_rejects_stale(
+    view: str,
+    field: str,
+    value: str,
+) -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    expected_schematic = schematic.binding
+    expected_layout = layout.binding
+    if view == "schematic":
+        expected_schematic = expected_schematic.model_copy(update={field: value})
+    else:
+        expected_layout = expected_layout.model_copy(update={field: value})
+    with pytest.raises(ValueError, match="binding mismatch|revision_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            correspondence,
+            mapping,
+            expected_schematic_binding=expected_schematic,
+            expected_layout_binding=expected_layout,
+        )
+
+
+@pytest.mark.parametrize("field", ["schematic_binding", "layout_binding"])
+def test_correspondence_proposed_binding_must_match_resolved_view(field: str) -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    wrong = correspondence.model_copy(
+        update={field: getattr(correspondence, field).model_copy(update={"revision_id": "other"})}
+    )
+    with pytest.raises(LayoutRejected, match="revision_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            wrong,
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+
+
+def test_correspondence_swapped_masters_and_unregistered_devices_reject() -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    first, second = correspondence.devices
+    swapped = correspondence.model_copy(
+        update={
+            "devices": (
+                first.model_copy(update={"layout_object_id": second.layout_object_id}),
+                second.model_copy(update={"layout_object_id": first.layout_object_id}),
+            )
+        }
+    )
+    with pytest.raises(LayoutRejected, match="device_master_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            swapped,
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+    for field in ("schematic_instance_id", "layout_object_id"):
+        wrong = correspondence.model_copy(
+            update={
+                "devices": (
+                    first.model_copy(update={field: "unregistered"}),
+                    second,
+                )
+            }
+        )
+        with pytest.raises(LayoutRejected, match="device_set_mismatch"):
+            validate_correspondence(
+                schematic,
+                registry,
+                layout,
+                wrong,
+                mapping,
+                expected_schematic_binding=schematic.binding,
+                expected_layout_binding=layout.binding,
+            )
+
+
+@pytest.mark.parametrize("extra", [False, True])
+def test_correspondence_missing_or_extra_layout_instance_rejects_even_with_fresh_hash(
+    extra: bool,
+) -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    instances = (
+        (*layout.instances, layout.instances[0].model_copy(update={"object_id": "extra"}))
+        if extra
+        else layout.instances[:1]
+    )
+    layout = reseal(layout, instances=instances)
+    correspondence = correspondence.model_copy(
+        update={"layout_semantic_sha256": layout.semantic_sha256}
+    )
+    with pytest.raises(LayoutRejected, match="device_set_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            correspondence,
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+
+
+def test_correspondence_registry_and_independent_mapping_mismatch_reject() -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    wrong_registry = mapping.model_copy(update={"schematic_registry_sha256": "f" * 64})
+    wrong_device = mapping.model_copy(
+        update={
+            "devices": (
+                mapping.devices[0].model_copy(update={"device_id": "unregistered"}),
+                mapping.devices[1],
+            )
+        }
+    )
+    for bad, reason in (
+        (wrong_registry, "master_registration"),
+        (wrong_device, "device_registration"),
+    ):
+        proposed = correspondence.model_copy(update={"master_mapping_sha256": bad.semantic_sha256})
+        with pytest.raises(LayoutRejected, match=reason):
+            validate_correspondence(
+                schematic,
+                registry,
+                layout,
+                proposed,
+                bad,
+                expected_schematic_binding=schematic.binding,
+                expected_layout_binding=layout.binding,
+            )
+
+
+def test_correspondence_revalidates_unsafe_model_copy_and_cross_design_mapping() -> None:
+    registry, schematic, layout, mapping, correspondence = fixture_correspondence()
+    duplicate = correspondence.model_copy(update={"devices": (correspondence.devices[0],) * 2})
+    with pytest.raises(ValueError, match="duplicate_device_correspondence"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            duplicate,
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
+    layout = reseal(layout, binding=layout.binding.model_copy(update={"design_id": "other-design"}))
+    other = correspondence.model_copy(
+        update={
+            "layout_binding": layout.binding,
+            "layout_semantic_sha256": layout.semantic_sha256,
+        }
+    )
+    with pytest.raises(LayoutRejected, match="design_mismatch"):
+        validate_correspondence(
+            schematic,
+            registry,
+            layout,
+            other,
+            mapping,
+            expected_schematic_binding=schematic.binding,
+            expected_layout_binding=layout.binding,
+        )
 
 
 def test_move_rectangle_connected_pin_payload_preview_and_immutable_source() -> None:
