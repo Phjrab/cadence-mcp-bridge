@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 from cadence_mcp_bridge.layout_engine import compute_diff, predict_snapshot, validate_plan
-
 from cadence_mcp_bridge.layout_models import (
     LayoutApplyRequest,
     LayoutResult,
