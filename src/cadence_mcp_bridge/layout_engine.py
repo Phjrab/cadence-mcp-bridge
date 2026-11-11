@@ -16,8 +16,11 @@ from cadence_mcp_bridge.layout_models import (
     LayoutApplyRequest,
     LayoutBBox,
     LayoutChange,
+    LayoutCorrespondence,
+    LayoutCorrespondenceCheck,
     LayoutDiff,
     LayoutInstance,
+    LayoutMasterMapping,
     LayoutNativeEdit,
     LayoutObject,
     LayoutPin,
@@ -30,6 +33,12 @@ from cadence_mcp_bridge.layout_models import (
     LayoutTechnology,
     MoveEdit,
 )
+from cadence_mcp_bridge.schematic_plan import (
+    DeviceRegistry,
+    RevisionBinding,
+    SchematicPlan,
+    dry_run_plan,
+)
 from cadence_mcp_bridge.variable_contracts import canonical_digest, number_text
 
 
@@ -37,6 +46,82 @@ class LayoutRejected(ValueError):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(reason)
+
+
+def validate_correspondence(
+    schematic: SchematicPlan,
+    registry: DeviceRegistry,
+    layout: LayoutSnapshot,
+    correspondence: LayoutCorrespondence,
+    master_mapping: LayoutMasterMapping,
+    *,
+    expected_schematic_binding: RevisionBinding,
+    expected_layout_binding: RevisionBinding,
+    schematic_baseline: SchematicPlan | None = None,
+) -> LayoutCorrespondenceCheck:
+    """Check bounded logical intent against independently resolved registrations.
+
+    The caller resolves both expected bindings and master_mapping independently
+    of the proposed correspondence. No PCell arguments, instance-terminal readback
+    or physical continuity are inferred from matching IDs or net names.
+    """
+    schematic = SchematicPlan.model_validate_json(schematic.model_dump_json())
+    registry = DeviceRegistry.model_validate_json(registry.model_dump_json())
+    layout = LayoutSnapshot.model_validate_json(layout.model_dump_json())
+    correspondence = LayoutCorrespondence.model_validate_json(correspondence.model_dump_json())
+    master_mapping = LayoutMasterMapping.model_validate_json(master_mapping.model_dump_json())
+    expected_layout_binding = RevisionBinding.model_validate_json(
+        expected_layout_binding.model_dump_json()
+    )
+    schematic_check = dry_run_plan(
+        schematic, registry, expected_schematic_binding, schematic_baseline
+    )
+    if (
+        correspondence.schematic_binding != schematic.binding
+        or correspondence.layout_binding != layout.binding
+        or layout.binding != expected_layout_binding
+    ):
+        raise LayoutRejected("layout_correspondence_revision_mismatch")
+    if (schematic.binding.workspace_id, schematic.binding.design_id) != (
+        layout.binding.workspace_id,
+        layout.binding.design_id,
+    ):
+        raise LayoutRejected("layout_correspondence_design_mismatch")
+    if (
+        correspondence.schematic_semantic_sha256 != schematic.semantic_sha256
+        or correspondence.layout_semantic_sha256 != layout.semantic_sha256
+    ):
+        raise LayoutRejected("layout_correspondence_stale_baseline")
+    if (
+        master_mapping.schematic_registry_sha256 != registry.semantic_sha256
+        or correspondence.master_mapping_sha256 != master_mapping.semantic_sha256
+    ):
+        raise LayoutRejected("layout_correspondence_master_registration_mismatch")
+    schematic_devices = {d.instance_id: d for d in schematic.dut.instances}
+    layout_devices = {d.object_id: d for d in layout.instances}
+    masters = {d.device_id: d.layout_master_id for d in master_mapping.devices}
+    if set(masters) != {d.device_id for d in schematic_devices.values()}:
+        raise LayoutRejected("layout_correspondence_device_registration_mismatch")
+    if {d.schematic_instance_id for d in correspondence.devices} != set(schematic_devices) or {
+        d.layout_object_id for d in correspondence.devices
+    } != set(layout_devices):
+        raise LayoutRejected("layout_correspondence_device_set_mismatch")
+    for device in correspondence.devices:
+        source = schematic_devices[device.schematic_instance_id]
+        target = layout_devices[device.layout_object_id]
+        if target.master_id != masters[source.device_id]:
+            raise LayoutRejected("layout_correspondence_device_master_mismatch")
+        if {c.terminal_id: c.net_id for c in device.connections} != {
+            c.terminal_id: c.net_id for c in source.connections
+        }:
+            raise LayoutRejected("layout_correspondence_terminal_net_mismatch")
+    return LayoutCorrespondenceCheck(
+        schematic_check=schematic_check,
+        layout_binding=layout.binding,
+        layout_semantic_sha256=layout.semantic_sha256,
+        master_mapping_sha256=master_mapping.semantic_sha256,
+        correspondence_sha256=correspondence.semantic_sha256,
+    )
 
 
 def um_to_dbu(value: str, technology: LayoutTechnology) -> int:
