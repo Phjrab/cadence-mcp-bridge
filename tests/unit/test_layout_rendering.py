@@ -1,5 +1,6 @@
 """Closed generated SKILL checks. No actual VM/API qualification is implied."""
 
+import re
 from decimal import localcontext
 
 import pytest
@@ -32,6 +33,23 @@ def test_exact_dbu_to_skill_with_small_decimal_context():
 def test_name_injection_and_paths_reject(name):
     with pytest.raises(ValueError):
         rendering.inspect_script({"library": name, "cell": "Seed", "view": "layout"})
+
+
+@pytest.mark.parametrize(
+    "is_param_cell,super_master,expected_submaster",
+    [(False, None, False), (True, None, False), (False, "observed-supermaster", True)],
+    ids=["ordinary-master", "source-supermaster", "evaluated-submaster"],
+)
+def test_collector_projects_submaster_relationship(is_param_cell, super_master, expected_submaster):
+    # Check the emitted attribute against observed native master categories;
+    # this bounded projection is not a SKILL runtime or native qualification.
+    script = rendering.inspect_script(
+        {"library": "Observed", "cell": "Pair", "view": "layout"}
+    ).decode("ascii")
+    attributes = re.findall(r'if\(inst~>master~>([A-Za-z]+) then "1" else "0"\)', script)
+    assert len(attributes) == 1
+    observed_master = {"isParamCell": is_param_cell, "superMaster": super_master}
+    assert bool(observed_master[attributes[0]]) is expected_submaster
 
 
 def test_generated_operations_save_close_reopen_and_no_overwrite():
@@ -121,7 +139,7 @@ def test_runtime_program_catches_skill_errors_before_clean_exit():
     view = {"library": "Owned", "cell": "Seed", "view": "layout"}
     wrapped = rendering.execution_script(rendering.inspect_script(view)).decode()
     assert wrapped.index("procedure(mcpLayoutCollect") < wrapped.index("procedure(mcpLayoutRun")
-    assert 'errset(mcpLayoutRun() t)' in wrapped
+    assert "errset(mcpLayoutRun() t)" in wrapped
     assert 'then exit(0) else mcpLayoutFail("skill_evaluation_failed")' in wrapped
     assert wrapped.count("exit()") == 0
     assert wrapped.index("dbClose(cv)") < wrapped.index("errset(mcpLayoutRun() t)")

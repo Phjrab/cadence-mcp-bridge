@@ -110,7 +110,7 @@ procedure(mcpLayoutCollect(cv)
       printf("I|%s|%s|%s|%s|%s|%s|%d|%d|%s"
         mcpLayoutId(inst) inst~>name inst~>libName inst~>cellName
         inst~>viewName inst~>orient round(xCoord(inst~>xy)*dbu)
-        round(yCoord(inst~>xy)*dbu) if(inst~>master~>isParamCell then "1" else "0"))
+        round(yCoord(inst~>xy)*dbu) if(inst~>master~>superMaster then "1" else "0"))
       mcpLayoutBox(inst~>bBox dbu)
       printf("\n")
     )
