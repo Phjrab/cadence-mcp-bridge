@@ -767,6 +767,7 @@ class FixedLayoutRuntime(object):
 
     def _program(self, session, script, route, job):
         work = job + "/work"
+        script = self.rendering.execution_script(script)
         libraries = self.registration["libraries"] + self.registration["owned_libraries"]
         cds = "".join(
             "DEFINE %s %s\n" % (self.rendering.token(lib["name"]), self.copying.path(lib["path"]))

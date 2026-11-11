@@ -44,6 +44,7 @@ def test_generated_operations_save_close_reopen_and_no_overwrite():
     assert script.index("destination_already_exists") < script.index("dbCopyCellView")
     apply = rendering.apply_script(target, selectors, technology, edits).decode()
     assert "dbMoveFig" in apply and "dbCreateRect" in apply and "dbCreatePin" in apply
+    assert "dbMoveFig(car(matches) nil" in apply
     assert apply.index("dbSave(cv)") < apply.index("dbClose(cv)")
     assert apply.rindex('"maskLayout" "r"') > apply.index("dbSave(cv)")
     assert "MCP_LAYOUT_SAVED_REOPENED|1" in apply
@@ -97,6 +98,10 @@ def test_probe_and_seed_are_fixed_bounded_scripts_without_object_handle_output()
     assert seed.index("seed_library_already_exists") < seed.index("ddCreateLib")
     assert seed.index("seed_technology_observation_changed") < seed.index("dbCreateRect")
     assert "dbCreateInst" in seed and "MCP_LAYOUT_SAVED_REOPENED|1" in seed
+    assert 'techGetDBUPerUU(tf "maskLayout")' in probe
+    assert 'techGetLP(tf list(car(layer) "drawing"))' in probe
+    assert 'techGetDBUPerUU(tf "maskLayout")' in seed
+    assert 'techGetLP(tf list("metal1" "drawing"))' in seed
     assert seed.rindex('"maskLayout" "r"') > seed.index("dbSave(cv)")
     with pytest.raises(ValueError, match="scope_bound"):
         rendering.probe_script(["ObservedTech"] * 9, [])
@@ -110,3 +115,15 @@ def test_probe_and_seed_are_fixed_bounded_scripts_without_object_handle_output()
             technology,
             {"layer": "guessed", "purpose": "drawing"},
         )
+
+
+def test_runtime_program_catches_skill_errors_before_clean_exit():
+    view = {"library": "Owned", "cell": "Seed", "view": "layout"}
+    wrapped = rendering.execution_script(rendering.inspect_script(view)).decode()
+    assert wrapped.index("procedure(mcpLayoutCollect") < wrapped.index("procedure(mcpLayoutRun")
+    assert 'errset(mcpLayoutRun() t)' in wrapped
+    assert 'then exit(0) else mcpLayoutFail("skill_evaluation_failed")' in wrapped
+    assert wrapped.count("exit()") == 0
+    assert wrapped.index("dbClose(cv)") < wrapped.index("errset(mcpLayoutRun() t)")
+    with pytest.raises(ValueError, match="fixed_program_shape"):
+        rendering.execution_script(b"exit()\n")
