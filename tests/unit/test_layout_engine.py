@@ -8,6 +8,7 @@ import pytest
 from test_layout_models import (
     box,
     fixture_correspondence,
+    fixture_instance_terminals,
     fixture_request,
     fixture_snapshot,
     reseal,
@@ -677,6 +678,108 @@ def test_orient_preserves_exact_legacy_plan_and_normalized_bytes() -> None:
         "".join(e.model_dump_json() for e in plan.normalized_edits).encode()
     ).hexdigest() == ("92c5256f6ac446ab2980e938b25e6b04c247979ca7a4e5557c5d30a2d293840a")
     assert plan.plan_sha256 == "865eeeb090317f1b7eb9c6ed9bf9bae715d939dc722381920768a09bd38c3bbe"
+
+
+def test_instance_terminal_plan_binds_eight_creates_and_unchanged_geometry() -> None:
+    snapshot, request, qualification = fixture_instance_terminals()
+    predicted, commands = predict_snapshot(
+        snapshot, request, instance_terminal_qualification=qualification
+    )
+    plan = build_plan(snapshot, request, instance_terminal_qualification=qualification)
+    apply = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    assert LayoutApplyRequest.model_validate_json(apply.model_dump_json()) == apply
+    assert validate_plan(snapshot, apply, instance_terminal_qualification=qualification) == plan
+    assert predicted.instances == snapshot.instances and predicted.pins == snapshot.pins
+    assert predicted.shapes == snapshot.shapes and predicted.technology == snapshot.technology
+    assert plan.preview.target_object_ids == ("inst-one", "inst-two")
+    assert plan.expected_semantic_sha256 == predicted.semantic_sha256 != snapshot.semantic_sha256
+    assert len(commands) == 8 and plan.normalized_edits == commands
+    diff = plan.preview.predicted_diff
+    assert not diff.changes and not diff.metadata_changes and diff.matches_plan
+    assert diff.instance_terminal_changes is not None and len(diff.instance_terminal_changes) == 8
+    assert all(
+        not change.before.present and change.after.present
+        for change in diff.instance_terminal_changes
+    )
+    assert predicted.instance_terminals is not None
+    wrong = reseal(
+        predicted,
+        instance_terminals=(
+            predicted.instance_terminals[0].model_copy(update={"pin_object_id": None}),
+            *predicted.instance_terminals[1:],
+        ),
+    )
+    assert compute_diff(snapshot, wrong, expected=predicted).matches_plan is False
+
+
+@pytest.mark.parametrize(
+    "case,reason",
+    [
+        ("unobserved", "baseline_unobserved"),
+        ("empty", "scope_mismatch"),
+        ("unbound", "already_exists"),
+        ("same-net", "already_exists"),
+        ("duplicate", "duplicate_layout_instance_terminal_edit"),
+        ("case", "qualification_mapping_mismatch"),
+        ("anchor", "pin_not_verified"),
+        ("master", "master_mismatch"),
+        ("mixed", "mixed_batch_unsupported"),
+    ],
+)
+def test_instance_terminal_preflight_rejects_incomplete_or_unqualified_edits(
+    case: str, reason: str
+) -> None:
+    snapshot, request, qualification = fixture_instance_terminals()
+    rows = snapshot.instance_terminals
+    assert rows is not None
+    if case == "unobserved":
+        snapshot = reseal(snapshot, instance_terminals=None)
+    elif case == "empty":
+        snapshot = reseal(snapshot, instance_terminals=())
+    elif case == "unbound":
+        snapshot = reseal(
+            snapshot, instance_terminals=(rows[0].model_copy(update={"present": True}), *rows[1:])
+        )
+    elif case == "same-net":
+        occupied = rows[0].model_copy(
+            update={"present": True, "pin_object_id": "pin-vss", "net_id": "vss"}
+        )
+        snapshot = reseal(snapshot, instance_terminals=(occupied, *rows[1:]))
+    elif case == "duplicate":
+        request = request.model_copy(update={"edits": (*request.edits[:-1], request.edits[0])})
+    elif case == "case":
+        wrong = request.edits[0].model_copy(update={"terminal": "d"})
+        request = request.model_copy(update={"edits": (wrong, *request.edits[1:])})
+    elif case == "anchor":
+        pin = snapshot.pins[0].model_copy(update={"association": "not_verified"})
+        snapshot = reseal(snapshot, pins=(pin, *snapshot.pins[1:]))
+    elif case == "master":
+        instance = snapshot.instances[0].model_copy(update={"master_id": "other-master"})
+        updated_rows = tuple(
+            row.model_copy(update={"master_id": instance.master_id})
+            if row.object_id == instance.object_id
+            else row
+            for row in rows
+        )
+        snapshot = reseal(
+            snapshot, instances=(instance, snapshot.instances[1]), instance_terminals=updated_rows
+        )
+    else:
+        request = request.model_copy(update={"edits": (*request.edits, fixture_request().edits[0])})
+    request = request.model_copy(update={"expected_baseline_sha256": snapshot.semantic_sha256})
+    with pytest.raises(LayoutRejected, match=reason):
+        build_plan(snapshot, request, instance_terminal_qualification=qualification)
+
+
+def test_instance_terminal_fork_scope_is_an_observation_change_not_creation() -> None:
+    child, _, _ = fixture_instance_terminals()
+    legacy = reseal(child, instance_terminals=None)
+    diff = compute_diff(legacy, child)
+    assert (
+        diff.before_sha256 == legacy.semantic_sha256 and diff.after_sha256 == child.semantic_sha256
+    )
+    assert diff.metadata_changes == ("instance_terminal_scope",)
+    assert diff.instance_terminal_changes == () and not diff.changes
 
 
 def _qualification_fixture(old: Orientation = "R0") -> LayoutSnapshot:
