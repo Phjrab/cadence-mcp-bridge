@@ -204,6 +204,7 @@ def predict_snapshot(
         raise LayoutRejected("owned_working_revision_required")
     objects = snapshot_objects(snapshot)
     selected: set[str] = set()
+    terminals = {pin.terminal_id for pin in snapshot.pins}
     commands: list[LayoutNativeEdit] = []
     allowed = {(p.layer, p.purpose) for p in snapshot.technology.allowed_layer_purposes}
     for edit in request.edits:
@@ -249,6 +250,9 @@ def predict_snapshot(
                     LayoutNativeEdit(kind="add_rect", object_id=edit.object_id, shape=shape)
                 )
             else:
+                if edit.terminal_id in terminals:
+                    raise LayoutRejected("layout_pin_terminal_conflict")
+                terminals.add(edit.terminal_id)
                 pin = LayoutPin(
                     object_id=edit.object_id,
                     layer=edit.layer,
