@@ -4,7 +4,9 @@ import re
 from decimal import localcontext
 
 import pytest
+from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot
+from test_layout_worker import orientation_request
 
 from cadence_mcp_bridge import _layout_rendering as rendering
 from cadence_mcp_bridge.layout_engine import build_plan
@@ -145,3 +147,51 @@ def test_runtime_program_catches_skill_errors_before_clean_exit():
     assert wrapped.index("dbClose(cv)") < wrapped.index("errset(mcpLayoutRun() t)")
     with pytest.raises(ValueError, match="fixed_program_shape"):
         rendering.execution_script(b"exit()\n")
+
+
+@pytest.mark.parametrize("target", ["R90", "MX", "MYR90"])
+def test_orientation_absolute_assignment_and_save_reopen_preservation_guards(target):
+    snapshot = _orient_snapshot()
+    edits = orientation_request(snapshot, target)["plan"]["normalized_edits"]
+    technology = snapshot.technology.model_dump(mode="json")
+    cellview = {"library": "Owned", "cell": "Revision2", "view": "layout"}
+    script = rendering.execution_script(
+        rendering.apply_script(cellview, {}, technology, edits)
+    ).decode("ascii")
+    assert script.index("procedure(mcpLayoutOrientVerify") < script.index("procedure(mcpLayoutRun")
+    assert f'fig~>orient="{target}"' in script
+    assert script.index("mcpLayoutOrientState(fig)") < script.index("fig~>orient=")
+    before_save = script.index("mcpLayoutOrientVerify(cv orientChecks 1000)")
+    assert before_save < script.index("dbSave(cv)") < script.index("unless(dbClose(cv)")
+    after_reopen = script.rindex("mcpLayoutOrientVerify(cv orientChecks 1000)")
+    assert after_reopen > script.rindex('"maskLayout" "r"')
+    assert after_reopen < script.index('printf("MCP_LAYOUT_SAVED_REOPENED')
+    assert (
+        "orientation_origin_changed" in script
+        and "orientation_preservation_or_bbox_mismatch" in script
+    )
+    assert "inst~>master~>superMaster || inst~>master~>isParamCell" in script
+    assert "p~>name p~>valueType p~>value" in script
+    assert "orientation_property_type_unsupported" in script
+    assert "fig~>xy=" not in script and "fig~>master=" not in script
+    assert "dbMoveFig" not in script and "dbCreateParamInst" not in script
+    with pytest.raises(ValueError, match="orientation_requires_owned_apply"):
+        rendering.write_script(dict(cellview, cell="Revision1"), cellview, {}, technology, edits)
+
+
+@pytest.mark.parametrize("fault", ["extra", "orientation", "origin", "bbox", "hash"])
+def test_orientation_renderer_rejects_malformed_command(fault):
+    snapshot = _orient_snapshot()
+    edits = orientation_request(snapshot)["plan"]["normalized_edits"]
+    if fault == "extra":
+        edits[0]["pivot"] = {"x": 0, "y": 0}
+    elif fault == "orientation":
+        edits[0]["orientation"] = 'R90") exit()'
+    elif fault == "origin":
+        edits[0]["origin_dbu"]["x"] = True
+    elif fault == "bbox":
+        edits[0]["bbox_dbu"]["upper_right"]["x"] = 2147483648
+    else:
+        edits[0]["before_sha256"] = "f" * 63
+    with pytest.raises(ValueError):
+        rendering.edits_script(edits, snapshot.technology.model_dump(mode="json"))

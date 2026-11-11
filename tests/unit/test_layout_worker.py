@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from test_layout_engine import _ORIENT_BOXES, _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot, reseal
 from test_shared_reservations import root as root_fixture
 
@@ -13,7 +14,7 @@ from cadence_mcp_bridge import _layout_worker as worker
 from cadence_mcp_bridge import _native_operations as operations
 from cadence_mcp_bridge import _shared_reservations as ledger
 from cadence_mcp_bridge.layout_engine import build_plan
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutSnapshot
+from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutSnapshot, OrientEdit
 
 root = root_fixture
 
@@ -96,6 +97,8 @@ def test_probe_selects_two_but_check_protects_all_six(selected):
 
 
 class Runtime:
+    rendering = rendering
+
     def __init__(self, root):
         self.root = str(root)
         self.snapshot = fixture_snapshot()
@@ -125,7 +128,7 @@ class Runtime:
         self.writes += 1
         if self.failure:
             raise OSError("synthetic failure after durable intent")
-        after = worker.predict(before, request["plan"]["normalized_edits"])
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
         after.pop("semantic_sha256")
         after.update(provenance="native_readback")
         for pin in after["pins"]:
@@ -143,6 +146,178 @@ def request_for(snapshot):
     return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256).model_dump(
         mode="json"
     )
+
+
+def orientation_request(snapshot=None, target="R90"):
+    snapshot = snapshot or _orient_snapshot()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id="inst-one", orientation=target),)}
+    )
+    plan = build_plan(snapshot, request)
+    return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256).model_dump(
+        mode="json"
+    )
+
+
+@pytest.mark.parametrize("old", tuple(_ORIENT_BOXES))
+@pytest.mark.parametrize("target", tuple(_ORIENT_BOXES))
+def test_orientation_worker_exact_asymmetric_pairs(old, target):
+    snapshot = _orient_snapshot(old)
+    before = snapshot.model_dump(mode="json")
+    frozen = copy.deepcopy(before)
+    if old == target:
+        command = {
+            "kind": "orient",
+            "object_id": "inst-one",
+            "before_sha256": worker.object_digest(before["instances"][0]),
+            "orientation": target,
+            "origin_dbu": before["instances"][0]["origin_dbu"],
+            "bbox_dbu": before["instances"][0]["bbox_dbu"],
+        }
+        with pytest.raises(ValueError, match="no_change"):
+            worker.predict(before, [command], rendering)
+    else:
+        request = orientation_request(snapshot, target)
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
+        lowx, lowy, highx, highy = _ORIENT_BOXES[target]
+        assert after["instances"][0]["bbox_dbu"] == dict(
+            lower_left=dict(x=lowx, y=lowy), upper_right=dict(x=highx, y=highy)
+        )
+        assert after["instances"][0]["orientation"] == target
+        assert after["instances"][0]["origin_dbu"] == before["instances"][0]["origin_dbu"]
+        assert after["instances"][0]["master_id"] == before["instances"][0]["master_id"]
+        assert after["shapes"] == before["shapes"] and after["pins"] == before["pins"]
+    assert before == frozen
+
+
+def seal_orientation_request(request):
+    request["plan"]["plan_sha256"] = "0" * 64
+    pin = worker.digest(request["plan"])
+    request["plan"]["plan_sha256"] = request["expected_plan_sha256"] = pin
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "hash",
+        "origin",
+        "bbox",
+        "extra",
+        "offgrid",
+        "boolean",
+        "overflow",
+        "unknown",
+        "unregistered",
+        "noninstance",
+        "duplicate",
+        "pcell",
+        "capability",
+        "request",
+        "dropped",
+        "prediction",
+    ],
+)
+def test_orientation_invalid_raw_command_never_publishes_intent(root, fault):
+    runtime = Runtime(root)
+    runtime.snapshot = _orient_snapshot()
+    request = orientation_request(runtime.snapshot)
+    command = request["plan"]["normalized_edits"][0]
+    if fault == "hash":
+        command["before_sha256"] = "f" * 64
+    elif fault == "origin":
+        command["origin_dbu"]["x"] += 5
+    elif fault == "bbox":
+        command["bbox_dbu"]["lower_left"]["x"] += 5
+    elif fault == "extra":
+        command["angle"] = 90
+    elif fault == "offgrid":
+        command["origin_dbu"]["x"] += 1
+    elif fault == "boolean":
+        command["origin_dbu"]["x"] = True
+    elif fault == "overflow":
+        command["bbox_dbu"]["upper_right"]["x"] = 2147483648
+    elif fault == "unknown":
+        command["orientation"] = "R45"
+    elif fault == "unregistered":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            technology=runtime.snapshot.technology.model_copy(
+                update={"supported_orientations": ("R0",)}
+            ),
+        )
+    elif fault == "noninstance":
+        command["object_id"] = "rect-one"
+    elif fault == "duplicate":
+        request["plan"]["normalized_edits"].append(copy.deepcopy(command))
+    elif fault == "pcell":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            instances=(runtime.snapshot.instances[0].model_copy(update={"pcell_submaster": True}),),
+        )
+    elif fault == "capability":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            capabilities=runtime.snapshot.capabilities.model_copy(update={"rotate": "unsupported"}),
+        )
+    elif fault == "request":
+        request["plan"]["request"]["edits"][0]["orientation"] = "MX"
+    elif fault == "dropped":
+        request["plan"]["normalized_edits"] = request_for(runtime.snapshot)["plan"][
+            "normalized_edits"
+        ]
+    elif fault == "prediction":
+        request["plan"]["expected_semantic_sha256"] = "f" * 64
+    request["plan"]["baseline_sha256"] = runtime.snapshot.semantic_sha256
+    seal_orientation_request(request)
+    with pytest.raises(ValueError):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert runtime.writes == 0 and not list(root.rglob("layout-intent.json"))
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [None, "write", "master", "origin", "bbox", "orientation", "protected", "saved", "reopened"],
+)
+def test_orientation_transaction_preservation_and_durable_replay(root, fault):
+    class OrientRuntime(Runtime):
+        def write(self, *args):
+            observed = super().write(*args)
+            if fault in ("saved", "reopened"):
+                observed[fault] = False
+            elif fault == "protected":
+                self.protected = "changed"
+            elif fault in ("master", "origin", "bbox", "orientation"):
+                obj = observed["snapshot"]["instances"][0]
+                if fault == "master":
+                    obj["master_id"] = "changed-master"
+                elif fault == "origin":
+                    obj["origin_dbu"]["x"] += 5
+                elif fault == "bbox":
+                    obj["bbox_dbu"]["upper_right"]["x"] += 5
+                else:
+                    obj["orientation"] = "MX"
+            return observed
+
+    runtime = OrientRuntime(root)
+    runtime.snapshot = _orient_snapshot()
+    runtime.failure = fault == "write"
+    request = orientation_request(runtime.snapshot)
+    counter = (root / ledger.LEDGER).read_bytes()
+    native = worker.LayoutWorker(runtime, ledger, operations)
+    if fault:
+        with pytest.raises((ValueError, OSError)):
+            native.execute("apply", request)
+        assert list(root.rglob("layout-failure.json")) and not list(
+            root.rglob("layout-complete.json")
+        )
+    else:
+        assert native.execute("apply", request)["state"] == "SUCCEEDED"
+    # Fresh worker object, same durable ID: no extra write even after expiry.
+    runtime.denied = True
+    result = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert result["state"] == ("OUTCOME_UNKNOWN" if fault else "SUCCEEDED")
+    assert result["replayed"] and not result["executed"] and runtime.writes == 1
+    assert (root / ledger.LEDGER).read_bytes() == counter
 
 
 def test_real_shared_lock_receipt_replay_sealed_target_and_counter_unchanged(root):

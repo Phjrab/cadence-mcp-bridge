@@ -401,7 +401,8 @@ class NativeLayoutProvider:
         if request.expected_plan_sha256 != request.plan.plan_sha256:
             raise InvalidInputError("Layout plan hash mismatch")
         if any(
-            e.pin is not None and e.pin.label is not None for e in request.plan.normalized_edits
+            e.kind == "add_pin" and e.pin is not None and e.pin.label is not None
+            for e in request.plan.normalized_edits
         ):
             raise InvalidInputError("Native layout pin labels are not supported")
         payload = request.model_dump(mode="json")

@@ -13,6 +13,18 @@ from decimal import Decimal, localcontext
 NAME = r"^[A-Za-z][A-Za-z0-9_#-]{0,63}$"
 LOGICAL = r"^[a-z][a-z0-9-]{0,63}$"
 ORIENTATIONS = ("R0", "R90", "R180", "R270", "MX", "MY", "MXR90", "MYR90")
+# Mathematical candidate convention, matching layout_transforms. Native compound
+# mirror semantics remain unqualified; this table does not advertise capability.
+ORIENTATION_MATRICES = {
+    "R0": (1, 0, 0, 1),
+    "R90": (0, -1, 1, 0),
+    "R180": (-1, 0, 0, -1),
+    "R270": (0, 1, -1, 0),
+    "MX": (1, 0, 0, -1),
+    "MY": (-1, 0, 0, 1),
+    "MXR90": (0, 1, 1, 0),
+    "MYR90": (0, -1, -1, 0),
+}
 
 
 def token(value, pattern=NAME):
@@ -71,6 +83,77 @@ def binding(value):
     if set(value) != set(("library", "cell", "view")) or value["view"] != "layout":
         raise ValueError("layout_cellview_binding")
     return " ".join(quote(value[key]) for key in ("library", "cell", "view"))
+
+
+def grid_point(value, grid):
+    if not isinstance(value, dict) or set(value) != set(("x", "y")):
+        raise ValueError("layout_orientation_point")
+    for axis in ("x", "y"):
+        if integer(value[axis]) % grid:
+            raise ValueError("layout_orientation_off_grid")
+
+
+def grid_bbox(value, grid):
+    if not isinstance(value, dict) or set(value) != set(("lower_left", "upper_right")):
+        raise ValueError("layout_orientation_bbox")
+    low, high = value["lower_left"], value["upper_right"]
+    grid_point(low, grid)
+    grid_point(high, grid)
+    if low["x"] >= high["x"] or low["y"] >= high["y"]:
+        raise ValueError("layout_positive_area_required")
+
+
+def orientation_command(edit, technology):
+    if (
+        not isinstance(edit, dict)
+        or set(edit)
+        != set(("kind", "object_id", "before_sha256", "orientation", "origin_dbu", "bbox_dbu"))
+        or edit["kind"] != "orient"
+    ):
+        raise ValueError("layout_orientation_command_shape")
+    token(edit["object_id"], LOGICAL)
+    token(edit["before_sha256"], r"^[0-9a-f]{64}$")
+    target = token(edit["orientation"])
+    if target not in ORIENTATIONS or target not in technology["supported_orientations"]:
+        raise ValueError("layout_orientation_not_registered")
+    grid = integer(technology["manufacturing_grid_dbu"])
+    if grid <= 0:
+        raise ValueError("layout_edit_bounds")
+    grid_point(edit["origin_dbu"], grid)
+    grid_bbox(edit["bbox_dbu"], grid)
+
+
+def oriented_bbox(obj, target, technology):
+    """Independent Python-2.6 exact new * inverse(old) bbox prediction."""
+    old = obj["orientation"]
+    supported = technology["supported_orientations"]
+    if old not in ORIENTATIONS or old not in supported or target not in supported:
+        raise ValueError("layout_orientation_not_registered")
+    if target not in ORIENTATIONS or old == target:
+        raise ValueError("layout_orientation_no_change")
+    grid = integer(technology["manufacturing_grid_dbu"])
+    if grid <= 0:
+        raise ValueError("layout_edit_bounds")
+    origin, box = obj["origin_dbu"], obj["bbox_dbu"]
+    grid_point(origin, grid)
+    grid_bbox(box, grid)
+    a, b, c, d = ORIENTATION_MATRICES[target]
+    e, f, g, h = ORIENTATION_MATRICES[old]
+    # Orthogonal inverse is the transpose. Compose before applying, keeping
+    # unbounded integer intermediates; only final DBU coordinates are bounded.
+    matrix = (a * e + b * f, a * g + b * h, c * e + d * f, c * g + d * h)
+    a, b, c, d = matrix
+    points = []
+    for x in (box["lower_left"]["x"], box["upper_right"]["x"]):
+        for y in (box["lower_left"]["y"], box["upper_right"]["y"]):
+            dx, dy = x - origin["x"], y - origin["y"]
+            points.append({"x": origin["x"] + a * dx + b * dy, "y": origin["y"] + c * dx + d * dy})
+    result = {
+        "lower_left": dict((axis, min(p[axis] for p in points)) for axis in ("x", "y")),
+        "upper_right": dict((axis, max(p[axis] for p in points)) for axis in ("x", "y")),
+    }
+    grid_bbox(result, grid)
+    return result
 
 
 PRELUDE = r"""
@@ -146,6 +229,54 @@ procedure(mcpLayoutCollect(cv)
 )
 """
 
+# Kept out of legacy scripts. Absolute instance attribute assignment is a local
+# native candidate, not an installed/qualified Cadence API claim. No parameter
+# callbacks or master writes are permitted; unusual property types fail closed.
+ORIENT_PRELUDE = r"""
+procedure(mcpLayoutOrientState(inst)
+  let((props)
+    when(inst~>master~>superMaster || inst~>master~>isParamCell
+      mcpLayoutFail("orientation_pcell_unsupported"))
+    props=nil
+    foreach(p inst~>prop
+      when(length(props)>=256 mcpLayoutFail("orientation_property_bound"))
+      unless(member(p~>valueType list("string" "int" "float" "boolean"))
+        mcpLayoutFail("orientation_property_type_unsupported"))
+      props=cons(list(p~>name p~>valueType p~>value) props)
+    )
+    list(inst~>name inst~>libName inst~>cellName inst~>viewName
+      list(xCoord(inst~>xy) yCoord(inst~>xy))
+      sort(props lambda((a b) alphalessp(car(a) car(b)))))
+  )
+)
+procedure(mcpLayoutOrientBox(inst dbu)
+  let((b)
+    b=inst~>bBox
+    list(mcpLayoutOrientPoint(car(b) dbu) mcpLayoutOrientPoint(cadr(b) dbu))
+  )
+)
+procedure(mcpLayoutOrientPoint(p dbu)
+  list(round(xCoord(p)*dbu) round(yCoord(p)*dbu))
+)
+procedure(mcpLayoutOrientVerify(cv checks dbu)
+  let((matches inst)
+    foreach(check checks
+      matches=setof(o cv~>instances equal(mcpLayoutId(o) car(check)))
+      unless(length(matches)==1 mcpLayoutFail("orientation_identity_not_unique"))
+      inst=car(matches)
+      unless(equal(mcpLayoutOrientState(inst) cadr(check)) &&
+        equal(inst~>orient caddr(check)) &&
+        equal(mcpLayoutOrientBox(inst dbu) cadddr(check))
+        mcpLayoutFail("orientation_preservation_or_bbox_mismatch"))
+    )
+  )
+)
+"""
+
+
+def has_orientation(edits):
+    return edits is not None and any(e["kind"] == "orient" for e in edits)
+
 
 def inspect_script(cellview):
     return (
@@ -193,9 +324,30 @@ def edits_script(edits, technology):
     grid = integer(technology["manufacturing_grid_dbu"])
     if grid <= 0 or not isinstance(edits, (tuple, list)) or not 1 <= len(edits) <= 128:
         raise ValueError("layout_edit_bounds")
-    lines = []
+    lines = ["orientChecks=nil"] if has_orientation(edits) else []
     for edit in edits:
         object_id = quote(edit["object_id"], True)
+        if edit["kind"] == "orient":
+            orientation_command(edit, technology)
+            # Render only integers; check units before constructing the SKILL.
+            coordinate(0, dbu)
+            origin = edit["origin_dbu"]
+            low, high = edit["bbox_dbu"]["lower_left"], edit["bbox_dbu"]["upper_right"]
+            box = "list(list(%d %d) list(%d %d))" % (low["x"], low["y"], high["x"], high["y"])
+            lines.extend(
+                [
+                    "matches=setof(o cv~>instances equal(mcpLayoutId(o) %s))" % object_id,
+                    'unless(length(matches)==1 mcpLayoutFail("orientation_identity_not_unique"))',
+                    "fig=car(matches)",
+                    "unless(equal(mcpLayoutOrientPoint(fig~>xy %d) list(%d %d)) "
+                    'mcpLayoutFail("orientation_origin_changed"))'
+                    % (dbu, origin["x"], origin["y"]),
+                    "orientChecks=cons(list(%s mcpLayoutOrientState(fig) %s %s) orientChecks)"
+                    % (object_id, quote(edit["orientation"]), box),
+                    "fig~>orient=%s" % quote(edit["orientation"]),
+                ]
+            )
+            continue
         if edit["kind"] == "move":
             dx, dy = integer(edit["dx_dbu"]), integer(edit["dy_dbu"])
             if dx % grid or dy % grid:
@@ -261,6 +413,8 @@ def terminals_preflight(edits):
 def write_script(source, target, selectors, technology, edits=None):
     if source == target:
         raise ValueError("layout_distinct_cellview_required")
+    if has_orientation(edits):
+        raise ValueError("layout_orientation_requires_owned_apply")
     source_text, target_text = binding(source), binding(target)
     lines = [
         PRELUDE,
@@ -293,22 +447,34 @@ def write_script(source, target, selectors, technology, edits=None):
 def apply_script(target, selectors, technology, edits):
     """One exact-baseline edit of a registered, freshly forked owned revision."""
     target_text = binding(target)
-    lines = [
-        PRELUDE,
-        'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
-        'unless(cv mcpLayoutFail("working_revision_open_failed"))',
-        terminals_preflight(edits),
-        tags_script(selectors, technology["dbu_per_um"]),
-        edits_script(edits, technology),
-        'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
-        "dbClose(cv)",
-        'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
-        'unless(cv mcpLayoutFail("reopen_failed"))',
-        "mcpLayoutCollect(cv)",
-        "dbClose(cv)",
-        'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
-        "exit()",
-    ]
+    orient = has_orientation(edits)
+    verify = (
+        ["mcpLayoutOrientVerify(cv orientChecks %d)" % technology["dbu_per_um"]] if orient else []
+    )
+    lines = (
+        [
+            PRELUDE + (ORIENT_PRELUDE if orient else ""),
+            'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
+            'unless(cv mcpLayoutFail("working_revision_open_failed"))',
+            terminals_preflight(edits),
+            tags_script(selectors, technology["dbu_per_um"]),
+            edits_script(edits, technology),
+        ]
+        + verify
+        + [
+            'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
+            'unless(dbClose(cv) mcpLayoutFail("close_failed"))' if orient else "dbClose(cv)",
+            'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
+            'unless(cv mcpLayoutFail("reopen_failed"))',
+        ]
+        + verify
+        + [
+            "mcpLayoutCollect(cv)",
+            "dbClose(cv)",
+            'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
+            "exit()",
+        ]
+    )
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
@@ -428,9 +594,10 @@ def execution_script(script):
     text = script.decode("ascii")
     if not text.startswith(PRELUDE) or not text.rstrip().endswith("exit()"):
         raise ValueError("layout_fixed_program_shape")
-    body = text[len(PRELUDE) :].rstrip()[: -len("exit()")]
+    prelude = PRELUDE + ORIENT_PRELUDE if text.startswith(PRELUDE + ORIENT_PRELUDE) else PRELUDE
+    body = text[len(prelude) :].rstrip()[: -len("exit()")]
     return (
-        PRELUDE + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
+        prelude + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
         "let((result) result=errset(mcpLayoutRun() t) "
         'if(result then exit(0) else mcpLayoutFail("skill_evaluation_failed")))\n'
     ).encode("ascii")
