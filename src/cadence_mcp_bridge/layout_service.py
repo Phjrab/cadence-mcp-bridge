@@ -68,6 +68,12 @@ class LayoutService:
         request = LayoutApplyRequest.model_validate_json(request.model_dump_json())
         if request.expected_plan_sha256 != request.plan.plan_sha256:
             raise LayoutRejected("layout_expected_plan_digest_mismatch")
+        if any(edit.kind == "orient" for edit in request.plan.normalized_edits) or any(
+            edit.kind == "orient" for edit in request.plan.request.edits
+        ):
+            # Pure planning is available as a candidate. C1 must separately
+            # implement and qualify the native command before this gate opens.
+            raise LayoutRejected("layout_orientation_native_not_implemented")
         # Native provider checks durable operation identity BEFORE inspecting the
         # current baseline: successful replay must not fail as a stale new apply.
         result = self._result(await self.provider.apply(request), request.plan.request.binding)
