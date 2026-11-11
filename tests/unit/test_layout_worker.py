@@ -643,8 +643,13 @@ def test_operator_seed_uses_durable_identity_and_preserves_failure(root, failure
     runtime.read_check = lambda request: None
     runtime.protected_snapshot = lambda: "original"
     writes = []
+
     # Renderer path syntax is POSIX-only; this test isolates durable dispatch on Windows.
-    runtime.rendering = SimpleNamespace(seed_script=lambda *a: b"fixed seed")
+    def seed_script(*_, policy=None):
+        assert policy is None
+        return b"fixed seed"
+
+    runtime.rendering = SimpleNamespace(seed_script=seed_script)
 
     def program(session, script, selected, job):
         writes.append(job)
