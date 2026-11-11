@@ -177,3 +177,15 @@ def test_invalid_qualification_contract(field: str, value: Any) -> None:
     data["definition"][field] = value
     with pytest.raises(ValidationError):
         evaluate(data)
+
+
+def test_post_parse_list_growth_is_revalidated_at_evaluator_entry() -> None:
+    request = CmosDelayRequest.model_validate_json(json.dumps(payload()))
+    for wave in request.tran_waveforms.values():
+        last = wave[-1]
+        wave.extend(last.model_copy(update={"time_s": i / 4}) for i in range(len(wave), 257))
+    assert all(len(wave) == 257 for wave in request.tran_waveforms.values())
+    with pytest.raises(ValidationError) as caught:
+        evaluate_cmos_delay(request)
+    assert len(caught.value.errors()) == 2
+    assert all(error["type"] == "too_long" for error in caught.value.errors())

@@ -216,6 +216,9 @@ def evaluate_cmos_delay(request: CmosDelayRequest) -> CmosDelayResult:
     JSON callers can use CmosDelayRequest.model_validate_json with the existing
     tran_waveforms {node: [{time_s, value_v}, ...]} payload. No I/O or execution.
     """
+    # Frozen models still contain mutable lists/dicts; snapshot and revalidate
+    # through JSON mode before evaluating or hashing any caller-supplied model.
+    request = CmosDelayRequest.model_validate_json(request.model_dump_json())
     definition = request.definition
     waves = request.tran_waveforms
     reason: Reason | None = None
