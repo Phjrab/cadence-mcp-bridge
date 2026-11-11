@@ -3,20 +3,29 @@
 import hashlib
 import json
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_snapshot, reseal
-from test_layout_worker import orientation_request, request_for
+from test_layout_worker import connection_fixture, orientation_request, request_for
 
+from cadence_mcp_bridge import _layout_rendering as rendering
+from cadence_mcp_bridge import _layout_worker as worker
 from cadence_mcp_bridge import layout_native as native
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
-from cadence_mcp_bridge.layout_engine import predict_snapshot
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutOrientationQualification
+from cadence_mcp_bridge.layout_engine import build_plan, predict_snapshot
+from cadence_mcp_bridge.layout_models import (
+    LayoutApplyRequest,
+    LayoutInstanceTerminalQualification,
+    LayoutOrientationQualification,
+    LayoutPlanRequest,
+    LayoutSnapshot,
+)
 
 
-def provider(qualification=None):
+def provider(qualification=None, *, connections=None):
     registration = native.LayoutProviderBinding(
         schema_version=1,
         resource_domain_sha256="a" * 64,
@@ -26,6 +35,7 @@ def provider(qualification=None):
         layout_manifest_sha256="e" * 64,
         worker_sha256="f" * 64,
         orientation_qualification=qualification,
+        instance_terminal_qualification=connections,
     )
     context = SimpleNamespace(
         resource_domain_sha256="a" * 64,
@@ -102,6 +112,73 @@ async def test_unknown_receipt_never_inspects_or_reexecutes(monkeypatch):
 
     monkeypatch.setattr(facade, "_invoke", invoke)
     assert (await facade.apply(request)).status == "OUTCOME_UNKNOWN"
+
+
+@pytest.mark.asyncio
+async def test_qualified_factory_dispatch_and_complete_connection_receipt(monkeypatch):
+    _, scope, _, observed, _ = connection_fixture()
+    before = LayoutSnapshot.model_validate_json(json.dumps(observed))
+    qualification = LayoutInstanceTerminalQualification.model_validate_json(
+        json.dumps(dict(binding=observed["binding"], edits=scope))
+    )
+    plan_request = LayoutPlanRequest(
+        binding=before.binding,
+        operation_id=str(uuid4()),
+        expected_baseline_sha256=before.semantic_sha256,
+        edits=qualification.edits,
+    )
+    plan = build_plan(before, plan_request, instance_terminal_qualification=qualification)
+    request = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    native_after = worker.predict_connections(
+        observed,
+        [edit.model_dump(mode="json") for edit in plan.normalized_edits],
+        scope,
+        rendering,
+    )
+    worker.project_orientation(native_after, None)
+    assert native_after["semantic_sha256"] == plan.expected_semantic_sha256
+    after = LayoutSnapshot.model_validate_json(json.dumps(native_after))
+    receipt = dict(
+        operation_id=plan_request.operation_id,
+        state="SUCCEEDED",
+        before=observed,
+        snapshot=native_after,
+        executed=False,
+        replayed=True,
+        saved=True,
+        reopened=True,
+        source_unchanged=True,
+    )
+
+    registered = provider(connections=qualification)
+    assert "instance_terminal_qualification" not in provider().registration.model_dump(mode="json")
+    raw = registered.registration.model_dump_json().encode("ascii")
+    registered.context.binding.layout_provider_binding = "synthetic-provider.json"
+    registered.context.binding.layout_provider_sha256 = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(native, "select_context", lambda settings: registered.context)
+    monkeypatch.setattr(native, "bounded_document", lambda path: raw)
+    service = native.create_layout_service(BridgeConfig())
+    calls = []
+
+    async def invoke(action, payload):
+        calls.append(action)
+        assert action == "lookup"
+        return receipt
+
+    monkeypatch.setattr(service.provider, "_invoke", invoke)
+    result = await service.apply(request)
+    assert result.status == "EDIT_VERIFIED" and result.replayed and not result.executed
+    assert result.snapshot == after and result.diff is not None
+    assert (
+        result.diff.instance_terminal_changes
+        == plan.preview.predicted_diff.instance_terminal_changes
+    )
+    assert calls == ["lookup"]
+    assert after.instance_terminals is not None
+    incomplete = reseal(after, instance_terminals=after.instance_terminals[:-1])
+    receipt["snapshot"] = incomplete.model_dump(mode="json")
+    with pytest.raises(InvalidInputError, match="instance terminal qualification mismatch"):
+        await service.apply(request)
 
 
 @pytest.mark.asyncio
