@@ -233,7 +233,14 @@ class AddPinEdit(VariableModel):
     bbox_um: tuple[NumberText, NumberText, NumberText, NumberText]
     net_id: LogicalId
     terminal_id: LogicalId
-    label: BindingName | None = None
+    label: None = None
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def label_unsupported(cls, value: object) -> None:
+        if value is not None:
+            raise ValueError("layout_pin_label_not_supported")
+        return None
 
     @field_validator("bbox_um")
     @classmethod

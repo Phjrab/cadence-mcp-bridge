@@ -192,6 +192,33 @@ async def test_wrong_hash_rejects_before_provider_dispatch() -> None:
 
 
 @pytest.mark.asyncio
+async def test_pin_label_rejects_before_any_provider_call() -> None:
+    class InspectSpy(SyntheticProvider):
+        inspect_calls = 0
+
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            self.inspect_calls += 1
+            return await super().inspect(request)
+
+    provider = InspectSpy()
+    service = LayoutService(provider)
+    request = fixture_request(provider.before)
+    # An unsafe in-process model_copy must also be rejected at service entry.
+    pin = request.edits[-1].model_copy(update={"label": "OUT"})
+    invalid = request.model_copy(update={"edits": (*request.edits[:-1], pin)})
+    with (
+        pytest.warns(UserWarning, match="Pydantic serializer warnings"),
+        pytest.raises(ValueError, match="layout_pin_label_not_supported"),
+    ):
+        await service.plan(invalid)
+    assert provider.inspect_calls == provider.dispatches == 0
+    plan = await service.plan(request)
+    assert plan.normalized_edits[-1].pin is not None
+    assert plan.normalized_edits[-1].pin.label is None
+    assert provider.inspect_calls == 1 and provider.dispatches == 0
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "updates,reason",
     [
