@@ -529,6 +529,24 @@ def load_module(name, path, raw):
     return module
 
 
+def probe_libraries(registration):
+    """Select technology observations without narrowing dependency protection."""
+    registered = [lib["name"] for lib in registration["libraries"]]
+    if "probe_libraries" not in registration:
+        return registered
+    selected = registration["probe_libraries"]
+    if (
+        type(selected) is not list
+        or not 1 <= len(selected) <= 8
+        # JSON names are unicode in Python 2.6 and str in Python 3.
+        or any(not isinstance(name, type(b"".decode("ascii"))) for name in selected)
+        or len(set(selected)) != len(selected)
+        or not set(selected).issubset(set(registered))
+    ):
+        raise ValueError("layout_probe_library_scope")
+    return selected
+
+
 class FixedLayoutRuntime(object):
     """New layout operations retain the original runtime/activation/trust gates.
 
@@ -539,6 +557,12 @@ class FixedLayoutRuntime(object):
     def __init__(
         self, here, manifest, registration, native, native_assets, profile, modules, rendering
     ):
+        keys = set(
+            ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
+        )
+        if set(registration) not in (keys, keys | set(("probe_libraries",))):
+            raise ValueError("layout_registration_shape")
+        probe_libraries(registration)
         self.here, self.manifest, self.registration = here, manifest, registration
         self.native, self.native_assets, self.profile = native, native_assets, profile
         self.modules, self.rendering = modules, rendering
@@ -567,10 +591,6 @@ class FixedLayoutRuntime(object):
         )
         if not 1 <= len(registration["routes"]) <= 32 or not registration["protected_views"]:
             raise ValueError("layout_registration_inventory_required")
-        if set(registration) != set(
-            ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
-        ):
-            raise ValueError("layout_registration_shape")
         paths = [r["path"] for r in registration["routes"]]
         if len(set(paths)) != len(paths):
             raise ValueError("layout_revision_path_alias")
@@ -877,7 +897,7 @@ class FixedLayoutRuntime(object):
         }
 
     def operator_probe(self, session):
-        libraries = [lib["name"] for lib in self.registration["libraries"]]
+        libraries = probe_libraries(self.registration)
         candidates = [r["cellview"] for r in self.registration["routes"]]
         raw = self._program(
             session, self.rendering.probe_script(libraries, candidates), None, self._job()
