@@ -14,6 +14,7 @@ import pytest
 from mcp import Client
 from mcp.types import TextContent
 from pydantic import BaseModel
+from test_runtime_context import make_settings
 
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.config import BridgeConfig
@@ -309,3 +310,43 @@ async def test_pin_label_is_rejected_before_native_factory(
     assert response.is_error
     message = cast(TextContent, response.content[0]).text
     assert "request.edits.0.add_pin.label" in message
+
+
+def test_real_native_factory_setup_required_through_cli(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    settings = make_settings(tmp_path)
+    config = BridgeConfig(
+        runtime_mode="operator", runtime_settings_path=settings, runtime_context_id="context-1",
+    )
+    # Actual C1 factory and runtime loader; disposable local context has no layout provider.
+    with pytest.raises(ConfigurationError, match="LAYOUT_SETUP_REQUIRED"):
+        LazyLayoutService(config).get()
+    request = tmp_path / "inspect.json"
+    request.write_text(LayoutInspectRequest(binding=binding()).model_dump_json(), encoding="utf-8")
+    assert main([
+        "layout", "inspect", "--settings", str(settings), "--context", "context-1",
+        "--request", str(request),
+    ]) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["error"]["code"] == "invalid_configuration"
+    assert data["error"]["message"].startswith("LAYOUT_SETUP_REQUIRED:")
+
+
+async def test_real_native_factory_setup_required_through_mcp(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    configured = create_server(
+        cast(CadenceService, OperatorService(None)),
+        layout_settings=BridgeConfig(
+            runtime_mode="operator", runtime_settings_path=settings, runtime_context_id="context-1",
+        ),
+    )
+    async with Client(configured) as client:
+        assert {tool.name for tool in (await client.list_tools()).tools} >= LAYOUT_TOOLS
+        response = await client.call_tool("cadence_layout_inspect", {
+            "request": LayoutInspectRequest(binding=binding()).model_dump(mode="json"),
+        })
+    assert response.is_error
+    data = cast(dict[str, Any], response.structured_content)
+    assert data["error"]["code"] == "invalid_configuration"
+    assert data["error"]["message"].startswith("LAYOUT_SETUP_REQUIRED:")
