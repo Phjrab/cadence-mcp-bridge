@@ -39,6 +39,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutSnapshot,
     LayoutTechnology,
     MoveEdit,
+    OrientEdit,
 )
 from cadence_mcp_bridge.layout_server import LAYOUT_ACTIONS, LAYOUT_TOOLS, LazyLayoutService
 from cadence_mcp_bridge.layout_service import LayoutService
@@ -229,7 +230,9 @@ async def test_real_engine_plan_and_rejections_through_mcp(
         response = await client.call_tool("cadence_layout_plan", {"request": plan_request})
         assert not response.is_error
         plan = LayoutPlan.model_validate_json(json.dumps(response.structured_content))
-        assert plan.normalized_edits[0].dx_dbu == 5
+        move = plan.normalized_edits[0]
+        assert isinstance(move, LayoutNativeEdit)
+        assert move.dx_dbu == 5
         assert plan.preview.moved == 1
         for dx in ("0.001", "NaN"):
             reads_before = provider.inspect.await_count
@@ -255,6 +258,33 @@ async def test_real_engine_plan_and_rejections_through_mcp(
             "layout_expected_plan_digest_mismatch"
         )
     provider.apply.assert_not_awaited()
+
+
+async def test_unqualified_orientation_is_blocked_through_mcp_and_cli(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge.errors import InvalidInputError
+
+    provider = AsyncMock()
+    service = LayoutService(provider)
+    monkeypatch.setattr(LazyLayoutService, "get", lambda self: service)
+    request = LayoutPlanRequest(
+        binding=binding(), operation_id=str(uuid4()), expected_baseline_sha256="b" * 64,
+        edits=(OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),),
+    )
+    expected_reason = "layout_orientation_qualification_required"
+    async with Client(server()) as client:
+        response = await client.call_tool(
+            "cadence_layout_plan", {"request": request.model_dump(mode="json")},
+        )
+    assert response.is_error
+    data = cast(dict[str, Any], response.structured_content)
+    assert data["error"]["code"] == "invalid_input"
+    assert data["error"]["details"]["reason"] == expected_reason
+    with pytest.raises(InvalidInputError) as rejected:
+        await dispatch_layout(LazyLayoutService(None), "plan", request.model_dump_json().encode())
+    assert rejected.value.to_envelope().details == {"reason": expected_reason}
+    provider.inspect.assert_not_awaited()
 
 
 @pytest.mark.parametrize("reason", ["vm_disconnected", "license_unavailable", "layout_locked",
