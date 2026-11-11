@@ -5,8 +5,9 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_snapshot, reseal
-from test_layout_worker import request_for
+from test_layout_worker import orientation_request, request_for
 
 from cadence_mcp_bridge import layout_native as native
 from cadence_mcp_bridge.config import BridgeConfig
@@ -40,9 +41,11 @@ def test_unconfigured_factory_has_precise_setup_error_and_no_remote_contact():
 
 
 @pytest.mark.asyncio
-async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch):
-    before = fixture_snapshot()
-    request = LayoutApplyRequest.model_validate_json(json.dumps(request_for(before)))
+@pytest.mark.parametrize("orientation", [False, True])
+async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch, orientation):
+    before = _orient_snapshot() if orientation else fixture_snapshot()
+    payload = orientation_request(before) if orientation else request_for(before)
+    request = LayoutApplyRequest.model_validate_json(json.dumps(payload))
     expected, _ = predict_snapshot(before, request.plan.request)
     after = reseal(
         expected,

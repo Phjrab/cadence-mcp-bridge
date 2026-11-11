@@ -241,9 +241,18 @@ def parse_frame(raw, route, rendering):
     return result, selectors
 
 
-def predict(before, commands):
+def predict(before, commands, rendering=None):
     expected = copy.deepcopy(before)
     objects = {}
+    instances = set(obj["object_id"] for obj in before["instances"])
+    if not isinstance(commands, (tuple, list)) or not 1 <= len(commands) <= 128:
+        raise ValueError("layout_edit_bounds")
+    if any(not isinstance(command, dict) for command in commands):
+        raise ValueError("layout_command_shape")
+    if any(command.get("kind") == "orient" for command in commands):
+        keys = [command["object_id"] for command in commands]
+        if len(keys) != len(set(keys)):
+            raise ValueError("layout_duplicate_object_edit")
     for group in ("instances", "shapes", "pins"):
         for obj in expected[group]:
             if obj["object_id"] in objects:
@@ -263,6 +272,25 @@ def predict(before, commands):
                 obj["origin_dbu"] = shifted(obj["origin_dbu"], dx, dy)
             if obj.get("points_dbu"):
                 obj["points_dbu"] = [shifted(p, dx, dy) for p in obj["points_dbu"]]
+        elif command["kind"] == "orient":
+            if rendering is None:
+                raise ValueError("layout_orientation_renderer_required")
+            rendering.orientation_command(command, before["technology"])
+            if key not in instances:
+                raise ValueError("layout_orientation_instance_required")
+            obj = objects[key]
+            if obj["pcell_submaster"]:
+                raise ValueError("layout_orientation_pcell_submaster_unsupported")
+            if before["capabilities"].get("rotate", "unsupported") == "unsupported":
+                raise ValueError("layout_orientation_not_supported")
+            if object_digest(obj) != command["before_sha256"]:
+                raise ValueError("layout_orientation_selector_revision_mismatch")
+            if command["origin_dbu"] != obj["origin_dbu"]:
+                raise ValueError("layout_orientation_origin_changed")
+            box = rendering.oriented_bbox(obj, command["orientation"], before["technology"])
+            if box != command["bbox_dbu"]:
+                raise ValueError("layout_orientation_bbox_mismatch")
+            obj.update(orientation=command["orientation"], bbox_dbu=box)
         elif command["kind"] in ("add_rect", "add_pin"):
             if key in objects:
                 raise ValueError("layout_new_object_already_exists")
@@ -400,7 +428,19 @@ class LayoutWorker(object):
                 sealed["plan_sha256"] = "0" * 64
                 if digest(sealed) != plan["plan_sha256"]:
                     raise ValueError("layout_plan_hash_mismatch")
-                expected = predict(before, plan["normalized_edits"])
+                expected = predict(
+                    before, plan["normalized_edits"], getattr(self.runtime, "rendering", None)
+                )
+                requested = [e for e in plan["request"]["edits"] if e["kind"] == "orient"]
+                normalized = [
+                    dict((k, c[k]) for k in ("kind", "object_id", "orientation"))
+                    for c in plan["normalized_edits"]
+                    if c["kind"] == "orient"
+                ]
+                if requested != normalized:
+                    raise ValueError("layout_orientation_request_mismatch")
+                if requested and snapshot_digest(expected) != plan["expected_semantic_sha256"]:
+                    raise ValueError("layout_orientation_prediction_mismatch")
             else:
                 expected = copy.deepcopy(before)
                 expected.update(binding=request["binding"], owned=True, read_only=False)
