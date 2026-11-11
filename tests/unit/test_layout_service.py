@@ -3,10 +3,11 @@
 from typing import Any
 
 import pytest
-from test_layout_models import fixture_request, fixture_snapshot, reseal
+from test_layout_models import fixture_instance_terminals, fixture_request, fixture_snapshot, reseal
 
 from cadence_mcp_bridge.layout_engine import (
     LayoutRejected,
+    build_plan,
     compute_diff,
     predict_snapshot,
     validate_plan,
@@ -18,6 +19,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutEdit,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutInstanceTerminalQualification,
     LayoutNativeEdit,
     LayoutOrientationQualification,
     LayoutPlan,
@@ -41,6 +43,7 @@ class SyntheticProvider:
         self.pin_association = "native_verified"
         self.unknown = False
         self.orientation_qualification: LayoutOrientationQualification | None = None
+        self.instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None
 
     async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
         return self.current
@@ -63,7 +66,10 @@ class SyntheticProvider:
                 )
             return result.model_copy(update={"executed": False, "replayed": True})
         validate_plan(
-            self.current, request, orientation_qualification=self.orientation_qualification
+            self.current,
+            request,
+            orientation_qualification=self.orientation_qualification,
+            instance_terminal_qualification=self.instance_terminal_qualification,
         )
         if self.unknown:
             result = LayoutResult(
@@ -75,6 +81,7 @@ class SyntheticProvider:
             self.current,
             request.plan.request,
             orientation_qualification=self.orientation_qualification,
+            instance_terminal_qualification=self.instance_terminal_qualification,
         )
         self.current = reseal(
             expected,
@@ -109,6 +116,122 @@ class SyntheticProvider:
 
 
 @pytest.mark.asyncio
+async def test_instance_terminal_service_gate_and_qualified_replay() -> None:
+    class InspectSpy(SyntheticProvider):
+        inspections = 0
+
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            self.inspections += 1
+            return await super().inspect(request)
+
+    before, request, qualification = fixture_instance_terminals()
+    provider = InspectSpy()
+    provider.before = provider.current = before
+    provider.instance_terminal_qualification = qualification
+    unqualified = LayoutService(provider)
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_qualification_required"):
+        await unqualified.plan(request)
+    assert provider.inspections == 0
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    plan = await service.plan(request)
+    apply = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_native_not_implemented"):
+        await unqualified.apply(apply)
+    assert provider.dispatches == 0
+    result = await service.apply(apply)
+    assert result.saved and result.reopened and result.status == "EDIT_VERIFIED"
+    assert result.diff is not None and result.diff.instance_terminal_changes
+    replay = await LayoutService(provider, instance_terminal_qualification=qualification).apply(
+        apply
+    )
+    assert replay == result.model_copy(update={"executed": False, "replayed": True})
+    assert provider.dispatches == provider.inspections == 1
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_service_rejects_geometry_only_receipt() -> None:
+    class GeometryOnlyReceipt(SyntheticProvider):
+        async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
+            result = await super().apply(request)
+            assert result.diff is not None
+            return result.model_copy(
+                update={"diff": result.diff.model_copy(update={"instance_terminal_changes": None})}
+            )
+
+    before, request, qualification = fixture_instance_terminals()
+    provider = GeometryOnlyReceipt()
+    provider.before = provider.current = before
+    provider.instance_terminal_qualification = qualification
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    plan = await service.plan(request)
+    with pytest.raises(LayoutRejected, match="layout_readback_diff_mismatch"):
+        await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_qualified_route_rejects_geometry_only_request() -> None:
+    class UnexpectedProvider(SyntheticProvider):
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            raise AssertionError("qualification must reject before inspection")
+
+        async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
+            raise AssertionError("qualification must reject before apply dispatch")
+
+    before, _, qualification = fixture_instance_terminals()
+    service = LayoutService(UnexpectedProvider(), instance_terminal_qualification=qualification)
+    geometry = fixture_request(before)
+    with pytest.raises(
+        LayoutRejected, match="layout_instance_terminal_qualification_mapping_mismatch"
+    ):
+        await service.plan(geometry)
+    plan = build_plan(before, geometry)
+    with pytest.raises(
+        LayoutRejected, match="layout_instance_terminal_qualification_mapping_mismatch"
+    ):
+        await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))
+    other = reseal(before, binding=before.binding.model_copy(update={"revision_id": "other-child"}))
+    assert build_plan(other, fixture_request(other), instance_terminal_qualification=qualification)
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_fork_requires_the_verified_scope_transition() -> None:
+    before, _, qualification = fixture_instance_terminals()
+    child = reseal(
+        before,
+        provenance="native_readback",
+        technology=before.technology.model_copy(update={"provenance": "native_observed"}),
+    )
+    parent = reseal(child, instance_terminals=None)
+
+    class ForkProvider(SyntheticProvider):
+        observed = child
+
+        async def fork(self, request: LayoutForkRequest) -> LayoutResult:
+            return LayoutResult(
+                status="FORK_VERIFIED",
+                binding=request.binding,
+                operation_id=request.operation_id,
+                snapshot=self.observed,
+                diff=compute_diff(parent, self.observed),
+                saved=True,
+                reopened=True,
+                source_unchanged=True,
+            )
+
+    provider = ForkProvider()
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    request = LayoutForkRequest(
+        binding=before.binding,
+        operation_id=fixture_request().operation_id,
+        expected_baseline_sha256=parent.semantic_sha256,
+    )
+    assert (await service.fork(request)).snapshot == child
+    provider.observed = parent
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_fork_evidence_mismatch"):
+        await service.fork(request)
+
+
+@pytest.mark.asyncio
 async def test_service_plan_apply_replay_conflict_and_stale_never_duplicate() -> None:
     provider = SyntheticProvider()
     service = LayoutService(provider)
@@ -123,8 +246,6 @@ async def test_service_plan_apply_replay_conflict_and_stale_never_duplicate() ->
     replay = await LayoutService(provider).apply(apply)
     assert replay.replayed and not replay.executed and provider.dispatches == 1
     # Same operation ID with a different plan must reject even on a stale baseline.
-    from cadence_mcp_bridge.layout_engine import build_plan
-
     conflict_request = request.model_copy(update={"edits": (request.edits[0],)})
     other = build_plan(provider.before, conflict_request)
     with pytest.raises(LayoutRejected, match="content_conflict"):

@@ -10,15 +10,20 @@ from cadence_mcp_bridge.layout_models import (
     ZERO_DIGEST,
     AddPinEdit,
     AddRectEdit,
+    ConnectTerminalEdit,
     LayerPurpose,
     LayoutBBox,
     LayoutCapabilities,
     LayoutCorrespondence,
     LayoutDeviceCorrespondence,
     LayoutDeviceMaster,
+    LayoutDiff,
     LayoutInstance,
+    LayoutInstanceTerminal,
+    LayoutInstanceTerminalQualification,
     LayoutMasterMapping,
     LayoutPin,
+    LayoutPlan,
     LayoutPlanRequest,
     LayoutPoint,
     LayoutResult,
@@ -151,6 +156,117 @@ def reseal(snapshot: LayoutSnapshot, **updates: Any) -> LayoutSnapshot:
     return LayoutSnapshot.model_validate_json(
         snapshot.model_copy(update={**updates, "semantic_sha256": ZERO_DIGEST}).model_dump_json()
     )
+
+
+def fixture_instance_terminals() -> tuple[
+    LayoutSnapshot, LayoutPlanRequest, LayoutInstanceTerminalQualification
+]:
+    base = fixture_snapshot()
+    instances = (base.instances[0], base.instances[0].model_copy(update={"object_id": "inst-two"}))
+    pins = tuple(
+        base.pins[0].model_copy(
+            update={
+                "object_id": f"pin-{net}",
+                "net_id": net,
+                "terminal_id": net,
+                "association": "native_verified",
+            }
+        )
+        for net in ("vin", "vout", "vss", "vdd")
+    )
+    edits = tuple(
+        ConnectTerminalEdit(
+            kind="connect_terminal",
+            object_id=instance.object_id,
+            expected_master_id=instance.master_id,
+            terminal=terminal,
+            pin_object_id=f"pin-{net}",
+        )
+        for instance, rail in zip(instances, ("vss", "vdd"), strict=True)
+        for terminal, net in (("D", "vout"), ("G", "vin"), ("S", rail), ("B", rail))
+    )
+    snapshot = reseal(
+        base,
+        instances=instances,
+        pins=pins,
+        instance_terminals=tuple(
+            LayoutInstanceTerminal(
+                object_id=edit.object_id,
+                master_id=edit.expected_master_id,
+                terminal=edit.terminal,
+                present=False,
+            )
+            for edit in edits
+        ),
+    )
+    return (
+        snapshot,
+        LayoutPlanRequest(
+            binding=snapshot.binding,
+            operation_id=OPERATION_ID,
+            expected_baseline_sha256=snapshot.semantic_sha256,
+            edits=edits,
+        ),
+        LayoutInstanceTerminalQualification(binding=snapshot.binding, edits=edits),
+    )
+
+
+def test_instance_terminal_observation_omission_and_closed_schema() -> None:
+    snapshot, _, _ = fixture_instance_terminals()
+    legacy = reseal(snapshot, instance_terminals=None)
+    empty = reseal(snapshot, instance_terminals=())
+    assert len({snapshot.semantic_sha256, legacy.semantic_sha256, empty.semantic_sha256}) == 3
+    assert "instance_terminals" not in legacy.model_dump(mode="json")
+    assert empty.model_dump(mode="json")["instance_terminals"] == []
+    assert snapshot.instance_terminals is not None
+    assert reseal(snapshot, instance_terminals=snapshot.instance_terminals[::-1]) == snapshot
+    for cls, value, key in (
+        (LayoutSnapshot, legacy, "instance_terminals"),
+        (
+            LayoutDiff,
+            LayoutDiff(before_sha256=legacy.semantic_sha256, after_sha256=legacy.semantic_sha256),
+            "instance_terminal_changes",
+        ),
+    ):
+        assert key not in value.model_dump(mode="json")
+        with pytest.raises(ValidationError, match=f"null_layout_{key}"):
+            cls.model_validate_json(json.dumps({**value.model_dump(mode="json"), key: None}))
+        for mode in ("validation", "serialization"):
+            schema = cls.model_json_schema(mode=mode)
+            assert schema["additionalProperties"] is False
+            assert schema["properties"][key]["type"] == "array"
+            assert key not in schema["required"] and "default" not in schema["properties"][key]
+
+
+def test_instance_terminal_nested_schema_and_bounds() -> None:
+    snapshot, _, _ = fixture_instance_terminals()
+    raw = snapshot.model_dump(mode="json")
+    assert LayoutSnapshot.model_validate_json(json.dumps(raw)) == snapshot
+    with pytest.raises(ValidationError, match="tuple_type"):
+        LayoutSnapshot.model_validate({**snapshot.model_dump(), "instance_terminals": []})
+    row = raw["instance_terminals"][0]
+    for rows, reason in (
+        ([{**row, "arbitrary": True}], "extra_forbidden"),
+        ([{**row, "net_id": "unexpected"}], "invalid_layout_instance_terminal_state"),
+        ([row] * 129, "too_long"),
+    ):
+        with pytest.raises(ValidationError, match=reason):
+            LayoutSnapshot.model_validate_json(json.dumps({**raw, "instance_terminals": rows}))
+
+    for cls, names in (
+        (LayoutPlan, {"LayoutDiff": "instance_terminal_changes"}),
+        (
+            LayoutResult,
+            {"LayoutSnapshot": "instance_terminals", "LayoutDiff": "instance_terminal_changes"},
+        ),
+    ):
+        for mode in ("validation", "serialization"):
+            definitions = cls.model_json_schema(mode=mode)["$defs"]
+            for name, field in names.items():
+                assert definitions[name]["additionalProperties"] is False
+                array = definitions[name]["properties"][field]
+                assert array["type"] == "array" and array["maxItems"] == 128
+                assert array["items"]["$ref"]
 
 
 def fixture_correspondence() -> tuple[
