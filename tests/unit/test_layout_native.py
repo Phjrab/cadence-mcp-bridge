@@ -251,6 +251,41 @@ def test_orientation_qualification_export_pins_same_record_and_omits_absent():
         native.LayoutRegistration.model_validate_json(json.dumps(document))
 
 
+def test_registered_layer_policy_preserves_legacy_bytes_and_pins_explicit_empty():
+    document = probe_registration()
+    args = dict(
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    context = provider().context
+    legacy = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert (
+        legacy.assets["registration.json"]
+        == json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    )
+    policy = {"technology_library": "Tech", "layer_purposes": []}
+    document["routes"][0]["layer_policy"] = policy
+    bound = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert json.loads(bound.assets["registration.json"])["routes"][0]["layer_policy"] == policy
+    assert bound.manifest_sha256 != legacy.manifest_sha256
+    policy["technology_library"] = "Owned"
+    with pytest.raises(ValueError, match="layout_layer_policy_registered_technology_required"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+    policy.update(
+        technology_library="Tech", layer_purposes=[dict(layer="Metal1", purpose="drawing")] * 2
+    )
+    with pytest.raises(ValueError, match="layout_layer_policy_order"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+    document["routes"][0]["layer_policy"] = None
+    with pytest.raises(ValueError, match="layout_layer_policy_shape"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+
+
 @pytest.mark.parametrize("selected", [None, ["Design", "Tech"]])
 def test_probe_scope_export_preserves_dependencies_and_binds_exact_bytes(selected):
     document = probe_registration()

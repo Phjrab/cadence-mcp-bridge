@@ -465,6 +465,72 @@ def test_native_frame_model_hash_and_semantic_normalization():
         worker.parse_frame(raw.replace(b"S|-|rect", b"S|-|polygon"), route, rendering)
 
 
+def test_registered_layer_policy_pins_exact_frame_pairs_and_covers_top_level_figures():
+    route = {
+        "binding": fixture_snapshot().binding.model_dump(mode="json"),
+        "owned": True,
+        "read_only": False,
+        "layer_policy": {
+            "technology_library": "Tech",
+            "layer_purposes": [{"layer": "metal1", "purpose": "drawing"}],
+        },
+    }
+    begin = b"MCP_LAYOUT_FRAME|1\nTECH|1000|5\n"
+    end = b"END_LAYOUT_FRAME\n"
+    lpp = b"LPP|metal1|drawing\n"
+    shape = b"S|-|rect|metal1|drawing|300|0|400|100\n"
+    same_session, _ = worker.parse_frame(begin + lpp + shape + end, route, rendering)
+    fresh, _ = worker.parse_frame(begin + shape + lpp + end, route, rendering)
+    assert same_session == fresh
+    assert LayoutSnapshot.model_validate_json(
+        worker.canonical(fresh)
+    ).technology.allowed_layer_purposes
+    for rows in (shape, lpp + shape.replace(b"metal1", b"Poly"), lpp + b"LPP|Poly|drawing\n"):
+        with pytest.raises(ValueError, match="layout_layer_policy_frame_mismatch"):
+            worker.parse_frame(begin + rows + end, route, rendering)
+    with pytest.raises(ValueError, match="layout_layer_policy_duplicate_frame_pair"):
+        worker.parse_frame(begin + lpp + lpp + end, route, rendering)
+    route["layer_policy"]["layer_purposes"] = []
+    empty, _ = worker.parse_frame(begin + end, route, rendering)
+    assert empty["technology"]["allowed_layer_purposes"] == []
+    with pytest.raises(ValueError, match="layout_layer_policy_frame_mismatch"):
+        worker.parse_frame(begin + shape + end, route, rendering)
+    route["layer_policy"] = None
+    with pytest.raises(ValueError, match="layout_layer_policy_shape"):
+        worker.parse_frame(begin + end, route, rendering)
+
+
+def test_layout_layer_policy_mismatch_rejects_fork_before_source_inspect():
+    parent = {"binding": fixture_snapshot().binding.model_dump(mode="json")}
+    target = dict(
+        parent,
+        binding=dict(
+            parent["binding"],
+            revision_id="policy-child",
+            parent_revision_id=parent["binding"]["revision_id"],
+        ),
+        layer_policy={"technology_library": "Tech", "layer_purposes": []},
+    )
+    runtime = SimpleNamespace(
+        registration={"routes": [parent, target]}, route=lambda binding: target
+    )
+    with pytest.raises(ValueError, match="layout_fork_layer_policy_mismatch"):
+        worker.FixedLayoutRuntime.inspect_for_write(runtime, "fork", {"binding": target["binding"]})
+
+
+@pytest.mark.parametrize(("kind", "field"), [("add_rect", "shape"), ("add_pin", "pin")])
+def test_layout_layer_policy_rejects_unregistered_normalized_edit_before_intent(root, kind, field):
+    runtime = Runtime(root)
+    request = request_for(runtime.snapshot)
+    command = next(edit for edit in request["plan"]["normalized_edits"] if edit["kind"] == kind)
+    command[field]["layer"] = "Unregistered"
+    seal_orientation_request(request)
+    with pytest.raises(ValueError, match="layout_layer_purpose_not_registered"):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    operation = request["plan"]["request"]["operation_id"]
+    assert runtime.writes == 0 and not (root / ledger.JOBS / operation).exists()
+
+
 def test_safe_error_reasons_do_not_echo_arbitrary_exception():
     assert worker.safe_reason(ValueError("layout_stale_baseline")) == "layout_revision_conflict"
     assert worker.safe_reason(OSError(11, "private path")) == "layout_resource_lock_busy"

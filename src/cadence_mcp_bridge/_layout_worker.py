@@ -156,6 +156,8 @@ def parse_frame(raw, route, rendering, qualification=None):
         "capabilities": dict(CAPABILITIES),
     }
     selectors, lpps, orientations = {}, set(), set(("R0",))
+    policy = rendering.layer_policy(route["layer_policy"]) if "layer_policy" in route else None
+    declared = set()
 
     def box(values):
         if len(values) != 4:
@@ -168,7 +170,10 @@ def parse_frame(raw, route, rendering, qualification=None):
     for row in rows[1:]:
         kind = row[0]
         if kind == "LPP" and len(row) == 3:
-            lpps.add((rendering.token(row[1]), rendering.token(row[2])))
+            pair = (rendering.token(row[1]), rendering.token(row[2]))
+            if policy is not None and pair in declared:
+                raise ValueError("layout_layer_policy_duplicate_frame_pair")
+            declared.add(pair)
             continue
         if kind == "I" and len(row) == 14:
             for name in row[2:6]:
@@ -244,6 +249,12 @@ def parse_frame(raw, route, rendering, qualification=None):
         or len(result["pins"]) > 1024
     ):
         raise ValueError("layout_frame_object_bound")
+    if policy is not None:
+        if declared != set(policy[1]) or not lpps <= declared:
+            raise ValueError("layout_layer_policy_frame_mismatch")
+        lpps = declared
+    else:
+        lpps.update(declared)
     result["technology"]["allowed_layer_purposes"] = [
         {"layer": a, "purpose": b} for a, b in sorted(lpps)
     ]
@@ -261,6 +272,9 @@ def predict(before, commands, rendering=None, orientation_pair=None):
         raise ValueError("layout_edit_bounds")
     if any(not isinstance(command, dict) for command in commands):
         raise ValueError("layout_command_shape")
+    allowed = set(
+        (p["layer"], p["purpose"]) for p in before["technology"]["allowed_layer_purposes"]
+    )
     if any(command.get("kind") == "orient" for command in commands):
         keys = [command["object_id"] for command in commands]
         if len(keys) != len(set(keys)):
@@ -315,6 +329,8 @@ def predict(before, commands, rendering=None, orientation_pair=None):
             obj = copy.deepcopy(command[field])
             if obj["object_id"] != key:
                 raise ValueError("layout_command_object_identity")
+            if (obj["layer"], obj["purpose"]) not in allowed:
+                raise ValueError("layout_layer_purpose_not_registered")
             expected[group].append(obj)
             objects[key] = obj
         else:
@@ -707,6 +723,13 @@ class FixedLayoutRuntime(object):
         paths = [r["path"] for r in registration["routes"]]
         if len(set(paths)) != len(paths):
             raise ValueError("layout_revision_path_alias")
+        dependencies = set(lib["name"] for lib in registration["libraries"])
+        for route in registration["routes"]:
+            if (
+                "layer_policy" in route
+                and rendering.layer_policy(route["layer_policy"])[0] not in dependencies
+            ):
+                raise ValueError("layout_layer_policy_registered_technology_required")
         for owned in registration["owned_libraries"]:
             for lib in registration["libraries"]:
                 a, b = owned["path"], lib["path"]
@@ -943,7 +966,10 @@ class FixedLayoutRuntime(object):
         route = self.route(request["binding"], request.get("registered_revision", False))
         before = self.copying.snapshot(route["path"])
         raw, snapshot, selectors = self._program(
-            session, self.rendering.inspect_script(route["cellview"]), route, self._job()
+            session,
+            self.rendering.inspect_script(route["cellview"], route.get("layer_policy")),
+            route,
+            self._job(),
         )
         if self.copying.snapshot(route["path"]) != before:
             raise ValueError("layout_read_only_view_changed")
@@ -969,6 +995,8 @@ class FixedLayoutRuntime(object):
             if len(parents) != 1:
                 raise ValueError("layout_registered_parent_required")
             selected = parents[0]
+            if selected.get("layer_policy") != target.get("layer_policy"):
+                raise ValueError("layout_fork_layer_policy_mismatch")
         before, selectors, _ = self.inspect(self.session, {"binding": selected["binding"]})
         if (
             action == "fork"
@@ -992,7 +1020,11 @@ class FixedLayoutRuntime(object):
         parent_state = self.copying.snapshot(parents[0]["path"])
         if action == "fork":
             script = self.rendering.write_script(
-                parents[0]["cellview"], route["cellview"], selectors, before["technology"]
+                parents[0]["cellview"],
+                route["cellview"],
+                selectors,
+                before["technology"],
+                policy=route.get("layer_policy"),
             )
         else:
             script = self.rendering.apply_script(
@@ -1000,6 +1032,7 @@ class FixedLayoutRuntime(object):
                 selectors,
                 before["technology"],
                 request["plan"]["normalized_edits"],
+                policy=route.get("layer_policy"),
             )
         raw, snapshot, unused = self._program(session, script, route, job)
         if self.copying.snapshot(parents[0]["path"]) != parent_state:
@@ -1066,6 +1099,7 @@ class FixedLayoutRuntime(object):
                 route["cellview"]["cell"],
                 seed["technology"],
                 seed["layer_purpose"],
+                policy=route.get("layer_policy"),
             )
             protected = self.protected_snapshot()
             job = worker._path(operation_id)

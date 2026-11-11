@@ -101,6 +101,29 @@ def test_terminal_preflight_precedes_any_database_mutation():
         rendering.apply_script(target, {}, technology, edits + [edits[-1]])
 
 
+def test_registered_layer_policy_checks_technology_before_writes_and_on_reopen():
+    technology, edits = commands()
+    target = {"library": "Owned", "cell": "Revision2", "view": "layout"}
+    policy = {"technology_library": "Tech", "layer_purposes": technology["allowed_layer_purposes"]}
+    verify = 'mcpLayoutCheckLayerPolicy(cv "Tech" list('
+    collect = 'mcpLayoutCollectPolicy(cv "Tech" list('
+    inspect = rendering.inspect_script(target, policy).decode("ascii")
+    assert "eq(tf techGetTechFile(lib))" in inspect and "techGetLP(tf lpp)" in inspect
+    assert "if(library then" in inspect and "else\n      foreach(lp cv~>lpps" in inspect
+    assert collect in inspect and "mcpLayoutCollect(cv)\ndbClose(cv)" not in inspect
+    script = rendering.apply_script(target, {}, technology, edits, policy).decode("ascii")
+    assert script.index(verify) < script.index("dbMoveFig") < script.index("dbSave(cv)")
+    assert script.index(collect) > script.rindex('"maskLayout" "r"')
+    source = dict(target, cell="Revision1")
+    fork = rendering.write_script(source, target, {}, technology, policy=policy).decode("ascii")
+    assert fork.index('mcpLayoutCheckLayerPolicy(src "Tech"') < fork.index("dbCopyCellView")
+    assert fork.index(collect) > fork.rindex('"maskLayout" "r"')
+    empty = rendering.inspect_script(target, dict(policy, layer_purposes=[]))
+    assert b'mcpLayoutCollectPolicy(cv "Tech" nil)' in empty
+    with pytest.raises(ValueError, match="layout_layer_purpose_not_registered"):
+        rendering.apply_script(target, {}, technology, edits, dict(policy, layer_purposes=[]))
+
+
 def test_probe_and_seed_are_fixed_bounded_scripts_without_object_handle_output():
     technology, unused = commands()
     view = {"library": "ObservedTech", "cell": "Seed", "view": "layout"}
