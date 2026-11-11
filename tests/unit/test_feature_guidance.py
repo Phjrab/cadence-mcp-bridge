@@ -108,7 +108,7 @@ async def test_loaded_native_resource_is_read_only_and_cannot_attest_live_qualif
     before = snapshot(settings.parent)
     async with Client(server) as client:
         report = json.loads((await client.read_resource(GUIDANCE_URI)).contents[0].text)
-        assert len((await client.list_tools()).tools) == 96
+        assert len((await client.list_tools()).tools) == 102
     assert report["native_tools_registered"] is True
     assert {a["state"] for a in report["circuits"][0]["analyses"]} == {
         "REQUIRES_EXECUTION_CHECKS",
