@@ -47,6 +47,20 @@ DRC/LVS/PEX `NOT_RUN` or `UNAVAILABLE` is not physical or circuit qualification.
 Fixture tests establish adapter behavior only. Actual VM verification is performed
 by C1 and recorded separately in the integration acceptance evidence.
 
+The existing `layout plan` command and `cadence_layout_plan` tool accept
+`connect_terminal` edits for an operator-qualified owned child. The edit fields
+are `kind`, `object_id` (existing instance), `expected_master_id`, `terminal`
+(case-sensitive master terminal), and `pin_object_id` (existing top-level pin
+whose net anchors the association). Submit the qualified eight-edit batch by
+itself. Qualification is configured by the operator; unqualified requests are
+rejected with `layout_instance_terminal_qualification_required`.
+
+`instance_terminals` in inspect records the observed scope. An omitted field
+or missing row leaves that terminal unobserved. Eight `present: false` rows
+record eight observed absences. The plan and apply diff can carry
+`instance_terminal_changes`. Check the saved and reopened result for the expected
+OA associations. Physical connectivity and DRC/LVS/PEX require separate evidence.
+
 CLI success prints one JSON document and exits 0. Invalid requests/configuration
 return the existing sanitized error envelope and exit 1. MCP stdout carries only
 the protocol; server diagnostics use stderr. No arbitrary shell, SKILL, scripts,
