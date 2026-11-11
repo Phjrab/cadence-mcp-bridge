@@ -209,3 +209,27 @@ def test_fixture_cannot_claim_native_edit_verification() -> None:
         )
     with pytest.raises(ValidationError, match="replay_cannot_execute"):
         LayoutResult(status="NOT_VERIFIED", binding=snapshot.binding, executed=True, replayed=True)
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity", "1mm", "1e100"])
+def test_nonfinite_and_wrong_units_reject_at_typed_boundary(value: str) -> None:
+    with pytest.raises(ValidationError):
+        MoveEdit(kind="move", object_id="inst-one", dx_um=value, dy_um="0")
+    with pytest.raises(ValidationError):
+        AddRectEdit(
+            kind="add_rect",
+            object_id="new",
+            layer="metal1",
+            purpose="drawing",
+            bbox_um=("0", "0", value, "1"),
+        )
+    with pytest.raises(ValidationError):
+        AddPinEdit(
+            kind="add_pin",
+            object_id="new",
+            layer="metal1",
+            purpose="pin",
+            bbox_um=("0", "0", "1", value),
+            net_id="net",
+            terminal_id="term",
+        )

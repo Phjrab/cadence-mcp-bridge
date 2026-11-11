@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
@@ -19,6 +19,7 @@ from cadence_mcp_bridge.variable_contracts import (
     NumberText,
     VariableModel,
     canonical_digest,
+    number_text,
 )
 
 ZERO_DIGEST = "0" * 64
@@ -204,6 +205,11 @@ class MoveEdit(VariableModel):
     dx_um: NumberText
     dy_um: NumberText
 
+    @field_validator("dx_um", "dy_um", mode="before")
+    @classmethod
+    def finite_decimal(cls, value: str) -> str:
+        return number_text(value)
+
 
 class AddRectEdit(VariableModel):
     kind: Literal["add_rect"]
@@ -211,6 +217,12 @@ class AddRectEdit(VariableModel):
     layer: BindingName
     purpose: BindingName
     bbox_um: tuple[NumberText, NumberText, NumberText, NumberText]
+
+    @field_validator("bbox_um")
+    @classmethod
+    def finite_decimal_bbox(cls, value: tuple[str, str, str, str]) -> tuple[str, str, str, str]:
+        a, b, c, d = (number_text(v) for v in value)
+        return a, b, c, d
 
 
 class AddPinEdit(VariableModel):
@@ -222,6 +234,12 @@ class AddPinEdit(VariableModel):
     net_id: LogicalId
     terminal_id: LogicalId
     label: BindingName | None = None
+
+    @field_validator("bbox_um")
+    @classmethod
+    def finite_decimal_bbox(cls, value: tuple[str, str, str, str]) -> tuple[str, str, str, str]:
+        a, b, c, d = (number_text(v) for v in value)
+        return a, b, c, d
 
 
 LayoutEdit = Annotated[MoveEdit | AddRectEdit | AddPinEdit, Field(discriminator="kind")]
