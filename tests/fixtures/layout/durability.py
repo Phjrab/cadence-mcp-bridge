@@ -27,8 +27,8 @@ class Accounting:
         self.root = root
         self.lock = threading.RLock()
         self.final_check_failure = final_check_failure
-        root.mkdir()
-        (root / self.JOBS).mkdir()
+        root.mkdir(mode=0o700)
+        (root / self.JOBS).mkdir(mode=0o700)
 
     def ReservationSession(self, root: str) -> Any:  # noqa: N802
         owner = self
