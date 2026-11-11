@@ -64,6 +64,21 @@ class LayoutTechnology(VariableModel):
             raise ValueError("duplicate_technology_registration")
         return self
 
+    def semantic_model(self) -> Self:
+        return self.model_copy(
+            update={
+                "provenance": "synthetic_fixture",
+                "allowed_layer_purposes": tuple(
+                    sorted(self.allowed_layer_purposes, key=lambda p: (p.layer, p.purpose))
+                ),
+                "supported_orientations": tuple(sorted(self.supported_orientations)),
+            }
+        )
+
+    @property
+    def semantic_sha256(self) -> str:
+        return canonical_digest(self.semantic_model())
+
 
 class LayoutInstance(VariableModel):
     object_id: LogicalId
@@ -164,9 +179,13 @@ class LayoutSnapshot(VariableModel):
         # claims. Ordering/native database handles do not define semantic identity.
         normalized = self.model_copy(
             update={
+                "technology": self.technology.semantic_model(),
                 "instances": tuple(sorted(self.instances, key=lambda o: o.object_id)),
                 "shapes": tuple(sorted(self.shapes, key=lambda o: o.object_id)),
-                "pins": tuple(sorted(self.pins, key=lambda o: o.object_id)),
+                "pins": tuple(
+                    p.model_copy(update={"association": "not_verified"})
+                    for p in sorted(self.pins, key=lambda o: o.object_id)
+                ),
                 "provenance": "plan_prediction",
                 "semantic_sha256": ZERO_DIGEST,
                 "capabilities": LayoutCapabilities(),
@@ -378,6 +397,7 @@ class LayoutResult(VariableModel):
             or not self.source_unchanged
             or self.snapshot is None
             or self.snapshot.provenance != "native_readback"
+            or self.snapshot.technology.provenance != "native_observed"
             or self.snapshot.binding != (self.new_revision or self.binding)
         ):
             raise ValueError("native_reopen_evidence_required")
