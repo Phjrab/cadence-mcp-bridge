@@ -10,6 +10,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutDiffRequest,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutOrientationQualification,
     LayoutPlan,
     LayoutPlanRequest,
     LayoutResult,
@@ -37,8 +38,15 @@ class LayoutProvider(Protocol):
 
 
 class LayoutService:
-    def __init__(self, provider: LayoutProvider) -> None:
+    def __init__(
+        self,
+        provider: LayoutProvider,
+        *,
+        orientation_qualification: LayoutOrientationQualification | None = None,
+    ) -> None:
+        """The registered provider factory supplies any pinned qualification."""
         self.provider = provider
+        self._orientation_qualification = orientation_qualification
 
     async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
         request = LayoutInspectRequest.model_validate_json(request.model_dump_json())
@@ -50,8 +58,14 @@ class LayoutService:
 
     async def plan(self, request: LayoutPlanRequest) -> LayoutPlan:
         request = LayoutPlanRequest.model_validate_json(request.model_dump_json())
+        if self._orientation_qualification is None and any(
+            edit.kind == "orient" for edit in request.edits
+        ):
+            raise LayoutRejected("layout_orientation_qualification_required")
         snapshot = await self.inspect(LayoutInspectRequest(binding=request.binding))
-        return build_plan(snapshot, request)
+        return build_plan(
+            snapshot, request, orientation_qualification=self._orientation_qualification
+        )
 
     async def fork(self, request: LayoutForkRequest) -> LayoutResult:
         request = LayoutForkRequest.model_validate_json(request.model_dump_json())

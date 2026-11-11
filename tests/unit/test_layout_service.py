@@ -18,6 +18,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutForkRequest,
     LayoutInspectRequest,
     LayoutNativeEdit,
+    LayoutOrientationQualification,
     LayoutResult,
     LayoutSelectRequest,
     LayoutSnapshot,
@@ -286,6 +287,12 @@ async def test_untrustworthy_provider_result_is_rejected(
 
 async def test_orient_service_plans_but_rejects_before_provider_dispatch() -> None:
     class NoOrientProvider(SyntheticProvider):
+        inspect_calls = 0
+
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            self.inspect_calls += 1
+            return await super().inspect(request)
+
         async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
             raise AssertionError("orientation must never reach an unimplemented native provider")
 
@@ -294,12 +301,18 @@ async def test_orient_service_plans_but_rejects_before_provider_dispatch() -> No
         provider.current,
         capabilities=provider.current.capabilities.model_copy(update={"rotate": "not_verified"}),
     )
-    service = LayoutService(provider)
     request = fixture_request(provider.current).model_copy(
         update={
             "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),),
         }
     )
+    with pytest.raises(LayoutRejected, match="layout_orientation_qualification_required"):
+        await LayoutService(provider).plan(request)
+    assert provider.inspect_calls == 0
+    qualification = LayoutOrientationQualification(
+        binding=provider.current.binding, orientations=("R0", "R90")
+    )
+    service = LayoutService(provider, orientation_qualification=qualification)
     plan = await service.plan(request)
     with pytest.raises(LayoutRejected, match="layout_orientation_native_not_implemented"):
         await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))

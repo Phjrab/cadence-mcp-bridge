@@ -132,6 +132,19 @@ class LayoutCapabilities(VariableModel):
     auto_route: Literal["unsupported"] = "unsupported"
 
 
+class LayoutOrientationQualification(VariableModel):
+    """Operator-pinned input for the private R0/R90 qualification route."""
+
+    binding: RevisionBinding
+    orientations: tuple[Literal["R0"], Literal["R90"]]
+
+    @model_validator(mode="after")
+    def child_required(self) -> Self:
+        if self.binding.parent_revision_id is None:
+            raise ValueError("layout_orientation_qualification_child_required")
+        return self
+
+
 LayoutObject = LayoutInstance | LayoutShape | LayoutPin
 
 

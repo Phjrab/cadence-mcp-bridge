@@ -29,6 +29,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutCorrespondenceCheck,
     LayoutNativeEdit,
     LayoutOrientationPreview,
+    LayoutOrientationQualification,
     LayoutOrientNativeEdit,
     LayoutPlan,
     LayoutPoint,
@@ -676,3 +677,87 @@ def test_orient_preserves_exact_legacy_plan_and_normalized_bytes() -> None:
         "".join(e.model_dump_json() for e in plan.normalized_edits).encode()
     ).hexdigest() == ("92c5256f6ac446ab2980e938b25e6b04c247979ca7a4e5557c5d30a2d293840a")
     assert plan.plan_sha256 == "865eeeb090317f1b7eb9c6ed9bf9bae715d939dc722381920768a09bd38c3bbe"
+
+
+def _qualification_fixture(old: Orientation = "R0") -> LayoutSnapshot:
+    snapshot = _orient_snapshot(old)
+    return reseal(
+        snapshot,
+        provenance="native_readback",
+        technology=snapshot.technology.model_copy(
+            update={"provenance": "native_observed", "supported_orientations": ("R0", "R90", "MX")}
+        ),
+    )
+
+
+def test_orientation_qualification_binds_plan_and_stable_readback() -> None:
+    before = _qualification_fixture()
+    qualification = LayoutOrientationQualification(
+        binding=before.binding, orientations=("R0", "R90")
+    )
+    request = fixture_request(before).model_copy(
+        update={
+            "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),),
+        }
+    )
+    with pytest.raises(LayoutRejected, match="layout_orientation_qualification_required"):
+        build_plan(before, request)
+    plan = build_plan(before, request, orientation_qualification=qualification)
+    apply = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    assert validate_plan(before, apply, orientation_qualification=qualification) == plan
+    predicted, _ = predict_snapshot(before, request, orientation_qualification=qualification)
+    after = _qualification_fixture("R90")
+    assert after.technology.supported_orientations == before.technology.supported_orientations
+    assert after.capabilities.rotate == before.capabilities.rotate == "not_verified"
+    assert before.semantic_sha256 != after.semantic_sha256 == plan.expected_semantic_sha256
+    diff = compute_diff(before, after, expected=predicted)
+    assert diff.matches_plan is True and diff.metadata_changes == ()
+
+
+@pytest.mark.parametrize(
+    ("case", "reason"),
+    [
+        ("mirror_target", "unsupported_orientation"),
+        ("mirror_source", "unsupported_orientation"),
+        ("pcell", "layout_orientation_pcell_submaster_unsupported"),
+        ("other_revision", "layout_orientation_qualification_binding_mismatch"),
+        ("unprojected", "layout_orientation_qualification_snapshot_mismatch"),
+        ("unsupported", "layout_orientation_qualification_snapshot_mismatch"),
+    ],
+)
+def test_orientation_qualification_rejects_unqualified_plan(case: str, reason: str) -> None:
+    before = _qualification_fixture("MX" if case == "mirror_source" else "R0")
+    binding = before.binding
+    if case == "other_revision":
+        binding = binding.model_copy(update={"revision_id": "other-child"})
+    elif case == "pcell":
+        before = reseal(
+            before, instances=(before.instances[0].model_copy(update={"pcell_submaster": True}),)
+        )
+    elif case == "unprojected":
+        before = reseal(
+            before,
+            technology=before.technology.model_copy(update={"supported_orientations": ("R0",)}),
+        )
+    elif case == "unsupported":
+        before = reseal(before, capabilities=fixture_snapshot().capabilities)
+    qualification = LayoutOrientationQualification(binding=binding, orientations=("R0", "R90"))
+    target: Orientation = "MX" if case == "mirror_target" else "R90"
+    request = fixture_request(before).model_copy(
+        update={
+            "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation=target),),
+        }
+    )
+    with pytest.raises(LayoutRejected, match=f"^{reason}$"):
+        build_plan(before, request, orientation_qualification=qualification)
+
+
+def test_orientation_qualification_cannot_expand_registered_pair() -> None:
+    before = _qualification_fixture()
+    with pytest.raises(ValueError):
+        LayoutOrientationQualification.model_validate(
+            {
+                "binding": before.binding,
+                "orientations": ("R0", "R45"),
+            }
+        )
