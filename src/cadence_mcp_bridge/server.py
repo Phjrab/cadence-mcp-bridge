@@ -318,6 +318,7 @@ class DesignContractServer(MCPServer):
         tools = await super().list_tools()
         for tool in tools:
             if tool.name in LAYOUT_TOOLS or tool.name in {
+                "cadence_cmos_delay_result",
                 "cadence_amplifier_specification_catalog",
                 "cadence_evaluate_amplifier_specifications",
                 "cadence_prepare_amplifier_sweep",
@@ -428,6 +429,7 @@ class DesignContractServer(MCPServer):
         ):
             raise ToolError("Variable checking accepts only one request object")
         argument = {
+            "cadence_cmos_delay_result": "request",
             "cadence_evaluate_amplifier_specifications": "request",
             "cadence_prepare_amplifier_sweep": "request",
             "cadence_submit_amplifier_sweep": "submission",
@@ -1564,6 +1566,9 @@ def create_server(
     from cadence_mcp_bridge.layout_server import register_layout_tools
 
     register_layout_tools(server, layout_settings)
+    from cadence_mcp_bridge.cmos_delay_adapters import register_cmos_delay_tool
+
+    register_cmos_delay_tool(server, layout_settings)
     return server
 
 
