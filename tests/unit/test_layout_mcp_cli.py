@@ -16,7 +16,7 @@ from mcp.types import TextContent
 from pydantic import BaseModel
 from test_runtime_context import make_settings
 
-from cadence_mcp_bridge.__main__ import main
+from cadence_mcp_bridge.__main__ import build_parser, main
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BackendUnavailableError, ConfigurationError
 from cadence_mcp_bridge.layout_cli import dispatch_layout
@@ -42,6 +42,12 @@ from cadence_mcp_bridge.layout_models import (
 )
 from cadence_mcp_bridge.layout_server import LAYOUT_ACTIONS, LAYOUT_TOOLS, LazyLayoutService
 from cadence_mcp_bridge.layout_service import LayoutService
+from cadence_mcp_bridge.native_service import (
+    NativeOperationQuery,
+    NativeOperationRequest,
+    NativeOperationSubmission,
+)
+from cadence_mcp_bridge.native_specifications import NativeSpecificationQuery
 from cadence_mcp_bridge.runtime_context import OperatorService
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.server import create_server
@@ -350,3 +356,52 @@ async def test_real_native_factory_setup_required_through_mcp(tmp_path: Path) ->
     data = cast(dict[str, Any], response.structured_content)
     assert data["error"]["code"] == "invalid_configuration"
     assert data["error"]["message"].startswith("LAYOUT_SETUP_REQUIRED:")
+
+
+def test_cmos_sequence_typed_handoff_keeps_analysis_and_layout_hashes_separate() -> None:
+    """Fictional schema examples only; no CDF, PDK or electrical acceptance claim."""
+    target = binding()
+    operation_ids: list[str] = []
+    for analysis in ("cmos-dc", "cmos-tran"):
+        request = NativeOperationRequest.model_validate_json(json.dumps({
+            "schema_version": 1, "design_id": target.design_id, "analysis_id": analysis,
+            "values": [{"logical_id": "input-voltage", "value": "0", "unit": "V"}],
+            "result_reservation_bytes": 1,
+        }))
+        identity = str(uuid4())
+        operation_ids.append(identity)
+        submission = NativeOperationSubmission(
+            operation_id=identity, expected_plan_sha256="d" * 64, request=request,
+        )
+        query = NativeOperationQuery(
+            operation_id=submission.operation_id,
+            expected_plan_sha256=submission.expected_plan_sha256,
+        )
+        specification = NativeSpecificationQuery(
+            spec_id="fictional-target", expected_contract_sha256="e" * 64,
+            operation_id=query.operation_id, expected_plan_sha256=query.expected_plan_sha256,
+        )
+        layout = LayoutInspectRequest(binding=target)
+        assert submission.request.design_id == layout.binding.design_id
+        assert specification.expected_plan_sha256 == submission.expected_plan_sha256
+        assert layout.binding.source_baseline_sha256 != submission.expected_plan_sha256
+    assert len(set(operation_ids)) == 2
+
+
+def test_cmos_documented_cli_flags_parse_without_dispatch() -> None:
+    parser = build_parser()
+    runtime = ["--settings", "runtime.json", "--context", "fictional"]
+    grant = ["--grant", "grant.json", "--expected-grant-sha256", "a" * 64]
+    provider = ["--provider-binding", "provider.json", "--expected-provider-sha256", "b" * 64]
+    identity = ["--operation-id", str(uuid4()), "--expected-plan-sha256", "c" * 64]
+    commands = [
+        ["operation", "plan", *runtime, *grant, "--request", "request.json"],
+        ["operation", "submit", *runtime, *grant, *provider, *identity,
+         "--request", "request.json"],
+        ["operation", "reconcile", *runtime, *provider, *identity],
+        ["operation", "result", *runtime, *provider, *identity],
+        ["native-specification", "evaluate", *runtime, "--spec-id", "fictional-target",
+         "--expected-contract-sha256", "e" * 64, *identity],
+    ]
+    for command in commands:
+        assert parser.parse_args(command).context == "fictional"
