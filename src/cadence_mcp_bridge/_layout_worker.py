@@ -1143,13 +1143,8 @@ class FixedLayoutRuntime(object):
             raise ValueError("layout_native_error_record")
         if route is None:
             return raw
-        snapshot, selectors = parse_frame(
-            raw,
-            route,
-            self.rendering,
-            self.orientation_qualification,
-            **self.connection_arguments(route),
-        )
+        args = (raw, route, self.rendering, self.orientation_qualification)
+        snapshot, selectors = parse_frame(*args, **self.connection_arguments(route))
         return raw, snapshot, selectors
 
     def inspect(self, session, request):
@@ -1211,24 +1206,23 @@ class FixedLayoutRuntime(object):
             raise ValueError("layout_registered_parent_required")
         parent_state = self.copying.snapshot(parents[0]["path"])
         connection_args = self.connection_arguments(route)
+        options = dict(connection_args, policy=route.get("layer_policy"))
         if action == "fork":
-            script = self.rendering.write_script(
+            args = (
                 parents[0]["cellview"],
                 route["cellview"],
                 selectors,
                 before["technology"],
-                policy=route.get("layer_policy"),
-                **connection_args,
             )
+            script = self.rendering.write_script(*args, **options)
         else:
-            script = self.rendering.apply_script(
+            args = (
                 route["cellview"],
                 selectors,
                 before["technology"],
                 request["plan"]["normalized_edits"],
-                policy=route.get("layer_policy"),
-                **connection_args,
             )
+            script = self.rendering.apply_script(*args, **options)
         raw, snapshot, unused = self._program(session, script, route, job)
         if self.copying.snapshot(parents[0]["path"]) != parent_state:
             raise ValueError("layout_protected_source_changed")
