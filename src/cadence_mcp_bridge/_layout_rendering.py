@@ -85,6 +85,36 @@ def binding(value):
     return " ".join(quote(value[key]) for key in ("library", "cell", "view"))
 
 
+def layer_policy(value):
+    if not isinstance(value, dict) or set(value) != set(("technology_library", "layer_purposes")):
+        raise ValueError("layout_layer_policy_shape")
+    library = token(value["technology_library"])
+    pairs = value["layer_purposes"]
+    if not isinstance(pairs, (list, tuple)) or len(pairs) > 32:
+        raise ValueError("layout_layer_policy_bounds")
+    result = []
+    for pair in pairs:
+        if not isinstance(pair, dict) or set(pair) != set(("layer", "purpose")):
+            raise ValueError("layout_layer_policy_pair")
+        result.append((token(pair["layer"]), token(pair["purpose"])))
+    if result != sorted(set(result)):
+        raise ValueError("layout_layer_policy_order")
+    return library, result
+
+
+def layer_policy_call(policy, cellview="cv", collect=False):
+    if policy is None:
+        return "mcpLayoutCollect(%s)" % cellview if collect else ""
+    library, pairs = layer_policy(policy)
+    layers = (
+        "list(%s)" % " ".join("list(%s %s)" % (quote(a), quote(b)) for a, b in pairs)
+        if pairs
+        else "nil"
+    )
+    procedure = "mcpLayoutCollectPolicy" if collect else "mcpLayoutCheckLayerPolicy"
+    return "%s(%s %s %s)" % (procedure, cellview, quote(library), layers)
+
+
 def grid_point(value, grid):
     if not isinstance(value, dict) or set(value) != set(("x", "y")):
         raise ValueError("layout_orientation_point")
@@ -172,7 +202,17 @@ procedure(mcpLayoutBox(b dbu)
     round(yCoord(car(b))*dbu) round(xCoord(cadr(b))*dbu)
     round(yCoord(cadr(b))*dbu))
 )
-procedure(mcpLayoutCollect(cv)
+procedure(mcpLayoutCheckLayerPolicy(cv library lpps)
+  let((lib tf)
+    lib=ddGetObj(library)
+    tf=techGetTechFile(cv)
+    unless(lib && tf && eq(tf techGetTechFile(lib))
+      mcpLayoutFail("layer_policy_technology_mismatch"))
+    foreach(lpp lpps
+      unless(techGetLP(tf lpp) mcpLayoutFail("layer_policy_pair_missing")))
+  )
+)
+procedure(mcpLayoutCollectPolicy(cv library lpps)
   let((tf dbu grid count)
     tf=techGetTechFile(cv)
     unless(tf mcpLayoutFail("technology_missing"))
@@ -183,9 +223,11 @@ procedure(mcpLayoutCollect(cv)
     unless(abs(grid*dbu-round(grid*dbu))<0.0000001
       mcpLayoutFail("manufacturing_grid_not_integral_dbu"))
     printf("MCP_LAYOUT_FRAME|1\nTECH|%d|%d\n" dbu round(grid*dbu))
-    foreach(lp cv~>lpps
-      printf("LPP|%s|%s\n" lp~>layerName lp~>purpose)
-    )
+    if(library then
+      mcpLayoutCheckLayerPolicy(cv library lpps)
+      foreach(lpp lpps printf("LPP|%s|%s\n" car(lpp) cadr(lpp)))
+    else
+      foreach(lp cv~>lpps printf("LPP|%s|%s\n" lp~>layerName lp~>purpose)))
     count=0
     foreach(inst cv~>instances
       count=count+1
@@ -226,6 +268,9 @@ procedure(mcpLayoutCollect(cv)
     )
     printf("END_LAYOUT_FRAME\n")
   )
+)
+procedure(mcpLayoutCollect(cv)
+  mcpLayoutCollectPolicy(cv nil nil)
 )
 """
 
@@ -278,11 +323,11 @@ def has_orientation(edits):
     return edits is not None and any(e["kind"] == "orient" for e in edits)
 
 
-def inspect_script(cellview):
+def inspect_script(cellview, policy=None):
     return (
         PRELUDE + '\ncv=dbOpenCellViewByType(%s "maskLayout" "r")\n'
         'unless(cv mcpLayoutFail("source_open_failed"))\n'
-        "mcpLayoutCollect(cv)\ndbClose(cv)\nexit()\n" % binding(cellview)
+        "%s\ndbClose(cv)\nexit()\n" % (binding(cellview), layer_policy_call(policy, collect=True))
     ).encode("ascii")
 
 
@@ -318,9 +363,11 @@ def tags_script(selectors, dbu):
     return "\n".join(lines) + "\n"
 
 
-def edits_script(edits, technology):
+def edits_script(edits, technology, policy=None):
     dbu = technology["dbu_per_um"]
     allowed = set((p["layer"], p["purpose"]) for p in technology["allowed_layer_purposes"])
+    if policy is not None:
+        allowed.intersection_update(layer_policy(policy)[1])
     grid = integer(technology["manufacturing_grid_dbu"])
     if grid <= 0 or not isinstance(edits, (tuple, list)) or not 1 <= len(edits) <= 128:
         raise ValueError("layout_edit_bounds")
@@ -410,7 +457,7 @@ def terminals_preflight(edits):
     return "\n".join(lines) + "\n"
 
 
-def write_script(source, target, selectors, technology, edits=None):
+def write_script(source, target, selectors, technology, edits=None, policy=None):
     if source == target:
         raise ValueError("layout_distinct_cellview_required")
     if has_orientation(edits):
@@ -421,21 +468,23 @@ def write_script(source, target, selectors, technology, edits=None):
         'when(ddGetObj(%s) mcpLayoutFail("destination_already_exists"))' % target_text,
         'src=dbOpenCellViewByType(%s "maskLayout" "r")' % source_text,
         'unless(src mcpLayoutFail("source_open_failed"))',
+        layer_policy_call(policy, "src"),
         # Copy never overwrites. Source stays read-only for the whole session.
         "cv=dbCopyCellView(src %s nil nil nil)" % target_text,
         'unless(cv mcpLayoutFail("copy_failed"))',
         "dbClose(src)",
+        layer_policy_call(policy),
         tags_script(selectors, technology["dbu_per_um"]),
     ]
     if edits is not None:
-        lines.append(edits_script(edits, technology))
+        lines.append(edits_script(edits, technology, policy))
     lines.extend(
         [
             'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
             "dbClose(cv)",
             'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
             'unless(cv mcpLayoutFail("reopen_failed"))',
-            "mcpLayoutCollect(cv)",
+            layer_policy_call(policy, collect=True),
             "dbClose(cv)",
             'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
             "exit()",
@@ -444,7 +493,7 @@ def write_script(source, target, selectors, technology, edits=None):
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
-def apply_script(target, selectors, technology, edits):
+def apply_script(target, selectors, technology, edits, policy=None):
     """One exact-baseline edit of a registered, freshly forked owned revision."""
     target_text = binding(target)
     orient = has_orientation(edits)
@@ -456,9 +505,10 @@ def apply_script(target, selectors, technology, edits):
             PRELUDE + (ORIENT_PRELUDE if orient else ""),
             'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
             'unless(cv mcpLayoutFail("working_revision_open_failed"))',
+            layer_policy_call(policy),
             terminals_preflight(edits),
             tags_script(selectors, technology["dbu_per_um"]),
-            edits_script(edits, technology),
+            edits_script(edits, technology, policy),
         ]
         + verify
         + [
@@ -469,7 +519,7 @@ def apply_script(target, selectors, technology, edits):
         ]
         + verify
         + [
-            "mcpLayoutCollect(cv)",
+            layer_policy_call(policy, collect=True),
             "dbClose(cv)",
             'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
             "exit()",
@@ -532,7 +582,9 @@ def probe_script(libraries, candidates):
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
-def seed_script(library, library_path, technology_library, master_cell, seed_cell, technology, lpp):
+def seed_script(
+    library, library_path, technology_library, master_cell, seed_cell, technology, lpp, policy=None
+):
     """Create a NEW owned basic master+instance seed; no vendor PCell inference."""
     if not re.match(r"^/[A-Za-z0-9_./-]{1,511}$", library_path) or any(
         p in ("", ".", "..") for p in library_path[1:].split("/")
@@ -543,6 +595,10 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
     allowed = [(p["layer"], p["purpose"]) for p in technology["allowed_layer_purposes"]]
     if (lpp["layer"], lpp["purpose"]) not in allowed:
         raise ValueError("layout_seed_observed_lpp_required")
+    if policy is not None:
+        policy_library, pairs = layer_policy(policy)
+        if policy_library != technology_library or (lpp["layer"], lpp["purpose"]) not in pairs:
+            raise ValueError("layout_seed_layer_policy_mismatch")
     dbu, grid = technology["dbu_per_um"], integer(technology["manufacturing_grid_dbu"])
     if grid <= 0:
         raise ValueError("layout_seed_observed_grid_required")
@@ -562,6 +618,7 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         "abs(techGetMfgGridResolution(tf)*%d-%d)<0.0000001 && "
         'techGetLP(tf list(%s %s)) mcpLayoutFail("seed_technology_observation_changed"))'
         % (dbu, dbu, grid, quote(lpp["layer"]), quote(lpp["purpose"])),
+        layer_policy_call(policy, "lib"),
         'master=dbOpenCellViewByType(%s "maskLayout" "w")' % binding(master),
         'unless(master mcpLayoutFail("seed_master_create_failed"))',
         "fig=dbCreateRect(master list(%s %s) %s)"
@@ -581,7 +638,7 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % binding(seed),
         'unless(cv mcpLayoutFail("seed_reopen_failed"))',
         'unless(cv~>DBUPerUU==%d mcpLayoutFail("seed_dbu_mismatch"))' % dbu,
-        "mcpLayoutCollect(cv)",
+        layer_policy_call(policy, collect=True),
         "dbClose(cv)",
         'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
         "exit()",

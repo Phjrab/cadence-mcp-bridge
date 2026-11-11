@@ -12,7 +12,13 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
+from pydantic import (
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
@@ -78,12 +84,41 @@ class LayoutCellView(VariableModel):
     view: Literal["layout"] = "layout"
 
 
+class LayoutLayerPolicy(VariableModel):
+    """Operator-registered writable LPPs on one protected technology library."""
+
+    technology_library: BindingName
+    layer_purposes: Annotated[tuple[LayerPurpose, ...], Field(max_length=32)]
+
+    @model_validator(mode="after")
+    def canonical_order(self) -> Self:
+        pairs = [(item.layer, item.purpose) for item in self.layer_purposes]
+        if pairs != sorted(set(pairs)):
+            raise ValueError("layout_layer_policy_order")
+        return self
+
+
 class LayoutRegisteredView(VariableModel):
     binding: RevisionBinding
     cellview: LayoutCellView
     path: str
     owned: bool
     read_only: bool
+    layer_policy: LayoutLayerPolicy | None = None
+
+    @field_validator("layer_policy")
+    @classmethod
+    def reject_null_layer_policy(cls, value: LayoutLayerPolicy | None) -> LayoutLayerPolicy:
+        if value is None:
+            raise ValueError("layout_layer_policy_shape")
+        return value
+
+    @model_serializer(mode="wrap")
+    def omit_absent_layer_policy(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.layer_policy is None:
+            document.pop("layer_policy", None)
+        return document
 
 
 class LayoutRegisteredLibrary(VariableModel):
@@ -129,13 +164,14 @@ class LayoutRegistration(_LayoutQualificationBinding):
     @model_validator(mode="after")
     def closed_routes(self) -> Self:
         libraries = {lib.name: lib for lib in (*self.libraries, *self.owned_libraries)}
+        dependency_names = {lib.name for lib in self.libraries}
         if len(libraries) != len(self.libraries) + len(self.owned_libraries):
             raise ValueError("layout_library_identity_collision")
         if any(lib.tree_sha256 is None for lib in self.libraries):
             raise ValueError("layout_protected_library_hash_required")
         if self.probe_libraries is not None and (
             len(set(self.probe_libraries)) != len(self.probe_libraries)
-            or not set(self.probe_libraries) <= {lib.name for lib in self.libraries}
+            or not set(self.probe_libraries) <= dependency_names
         ):
             raise ValueError("layout_probe_library_scope")
         # Pure syntax checks only: never touch a remote path on this Windows host.
@@ -171,6 +207,8 @@ class LayoutRegistration(_LayoutQualificationBinding):
                 raise ValueError("layout_registered_ownership")
             if not route.owned and route.path not in {p.path for p in self.protected_views}:
                 raise ValueError("layout_original_protection_required")
+            if route.layer_policy and route.layer_policy.technology_library not in dependency_names:
+                raise ValueError("layout_layer_policy_registered_technology_required")
         if self.orientation_qualification is not None:
             qualified = [
                 r for r in self.routes if r.binding == self.orientation_qualification.binding
@@ -182,8 +220,13 @@ class LayoutRegistration(_LayoutQualificationBinding):
             if len(routes) != 1 or not routes[0].owned:
                 raise ValueError("layout_seed_owned_route_required")
             route = routes[0]
-            if self.seed.technology_library not in {lib.name for lib in self.libraries}:
+            if self.seed.technology_library not in dependency_names:
                 raise ValueError("layout_seed_registered_technology_required")
+            if route.layer_policy and (
+                route.layer_policy.technology_library != self.seed.technology_library
+                or self.seed.layer_purpose not in route.layer_policy.layer_purposes
+            ):
+                raise ValueError("layout_seed_layer_policy_mismatch")
             if route.cellview.cell == self.seed.master_cell:
                 raise ValueError("layout_seed_master_collision")
         return self
