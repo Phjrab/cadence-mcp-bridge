@@ -56,6 +56,8 @@ class ContextBinding(EnvironmentModel):
     operator_grant_sha256: Digest | None = None
     native_specifications: Path | None = None
     native_specifications_sha256: Digest | None = None
+    layout_provider_binding: Path | None = None
+    layout_provider_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def native_binding_complete(self) -> ContextBinding:
@@ -69,6 +71,8 @@ class ContextBinding(EnvironmentModel):
             raise ValueError("complete explicit native provider/grant bindings required")
         if (self.native_specifications is None) != (self.native_specifications_sha256 is None):
             raise ValueError("complete specification catalog binding required")
+        if (self.layout_provider_binding is None) != (self.layout_provider_sha256 is None):
+            raise ValueError("complete layout provider binding required")
         return self
 
 
@@ -206,12 +210,21 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
             native_paths = tuple(
                 p
                 for p in (binding.native_provider_binding, binding.operator_grant,
-                          binding.native_specifications)
+                          binding.native_specifications, binding.layout_provider_binding)
                 if p is not None
             )
             if any(not p.is_absolute() for p in native_paths):
                 raise RuntimeRejected("absolute_native_binding_paths_required")
             inputs.update(_local_path(p) for p in (*paths, *native_paths))
+            if binding.layout_provider_binding is not None:
+                layout_path = _local_path(binding.layout_provider_binding)
+                if not layout_path.is_file() or layout_path.stat().st_size > 262144:
+                    raise RuntimeRejected("layout_provider_document_required")
+                with layout_path.open("rb") as stream:
+                    layout_raw = stream.read(262145)
+                if hashlib.sha256(layout_raw).hexdigest() != binding.layout_provider_sha256:
+                    raise RuntimeRejected("stale_layout_provider_digest")
+                _closed_json(layout_raw)
             snapshot = load_contracts(*paths)
             if (snapshot.environment_sha256, snapshot.design_sha256, snapshot.pdk_sha256) != (
                 binding.environment_sha256,
