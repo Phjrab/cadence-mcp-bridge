@@ -25,6 +25,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutNativeEdit,
     LayoutObject,
     LayoutOrientationPreview,
+    LayoutOrientationQualification,
     LayoutOrientNativeEdit,
     LayoutPin,
     LayoutPlan,
@@ -35,6 +36,7 @@ from cadence_mcp_bridge.layout_models import (
     LayoutSnapshot,
     LayoutTechnology,
     MoveEdit,
+    Orientation,
     OrientEdit,
 )
 from cadence_mcp_bridge.layout_transforms import (
@@ -286,7 +288,10 @@ def _union_bbox(objects: dict[str, LayoutObject]) -> LayoutBBox | None:
 
 
 def predict_snapshot(
-    snapshot: LayoutSnapshot, request: LayoutPlanRequest
+    snapshot: LayoutSnapshot,
+    request: LayoutPlanRequest,
+    *,
+    orientation_qualification: LayoutOrientationQualification | None = None,
 ) -> tuple[LayoutSnapshot, tuple[LayoutNativeCommand, ...]]:
     snapshot = LayoutSnapshot.model_validate_json(snapshot.model_dump_json())
     request = LayoutPlanRequest.model_validate_json(request.model_dump_json())
@@ -296,6 +301,24 @@ def predict_snapshot(
         raise LayoutRejected("stale_layout_baseline")
     if not snapshot.owned or snapshot.read_only or snapshot.binding.parent_revision_id is None:
         raise LayoutRejected("owned_working_revision_required")
+    allowed_orientations: tuple[Orientation, ...] = snapshot.technology.supported_orientations
+    if any(isinstance(edit, OrientEdit) for edit in request.edits):
+        if orientation_qualification is not None:
+            qualification = LayoutOrientationQualification.model_validate(
+                orientation_qualification.model_dump(warnings=False)
+            )
+            if qualification.binding != snapshot.binding:
+                raise LayoutRejected("layout_orientation_qualification_binding_mismatch")
+            if snapshot.capabilities.rotate != "not_verified" or not all(
+                orientation in allowed_orientations for orientation in qualification.orientations
+            ):
+                raise LayoutRejected("layout_orientation_qualification_snapshot_mismatch")
+            allowed_orientations = qualification.orientations
+        elif (
+            snapshot.provenance != "synthetic_fixture"
+            or snapshot.technology.provenance != "synthetic_fixture"
+        ):
+            raise LayoutRejected("layout_orientation_qualification_required")
     objects = snapshot_objects(snapshot)
     selected: set[str] = set()
     terminals = {pin.terminal_id for pin in snapshot.pins}
@@ -316,7 +339,10 @@ def predict_snapshot(
                 raise LayoutRejected("layout_orientation_requires_instance")
             if item.pcell_submaster:
                 raise LayoutRejected("layout_orientation_pcell_submaster_unsupported")
-            if edit.orientation not in snapshot.technology.supported_orientations:
+            if (
+                item.orientation not in allowed_orientations
+                or edit.orientation not in allowed_orientations
+            ):
                 raise LayoutRejected("unsupported_orientation")
             if edit.orientation == item.orientation:
                 raise LayoutRejected("empty_layout_orientation")
@@ -406,8 +432,15 @@ def predict_snapshot(
     return predicted, tuple(commands)
 
 
-def build_plan(snapshot: LayoutSnapshot, request: LayoutPlanRequest) -> LayoutPlan:
-    predicted, commands = predict_snapshot(snapshot, request)
+def build_plan(
+    snapshot: LayoutSnapshot,
+    request: LayoutPlanRequest,
+    *,
+    orientation_qualification: LayoutOrientationQualification | None = None,
+) -> LayoutPlan:
+    predicted, commands = predict_snapshot(
+        snapshot, request, orientation_qualification=orientation_qualification
+    )
     diff = compute_diff(snapshot, predicted, expected=predicted)
     preview = LayoutPreview(
         target_object_ids=tuple(e.object_id for e in request.edits),
@@ -428,12 +461,19 @@ def build_plan(snapshot: LayoutSnapshot, request: LayoutPlanRequest) -> LayoutPl
     )
 
 
-def validate_plan(snapshot: LayoutSnapshot, request: LayoutApplyRequest) -> LayoutPlan:
+def validate_plan(
+    snapshot: LayoutSnapshot,
+    request: LayoutApplyRequest,
+    *,
+    orientation_qualification: LayoutOrientationQualification | None = None,
+) -> LayoutPlan:
     """Provider calls this AFTER durable replay lookup, under its existing lock."""
     request = LayoutApplyRequest.model_validate_json(request.model_dump_json())
     if request.expected_plan_sha256 != request.plan.plan_sha256:
         raise LayoutRejected("layout_expected_plan_digest_mismatch")
-    rebuilt = build_plan(snapshot, request.plan.request)
+    rebuilt = build_plan(
+        snapshot, request.plan.request, orientation_qualification=orientation_qualification
+    )
     if rebuilt != request.plan:
         raise LayoutRejected("layout_plan_revalidation_mismatch")
     return rebuilt
