@@ -204,27 +204,36 @@ def _metric_key(metric: ReportMetric) -> str:
     return json.dumps(metric.model_dump(mode="json", exclude={"value"}), sort_keys=True)
 
 
-def _differences(metric: ReportMetric, baseline: ReportMetric | None) -> CandidateMetric:
-    value = None if baseline is None else baseline.value
+def candidate_metric_delta(
+    value: float | None, baseline: float | None, *, baseline_present: bool,
+) -> tuple[float | None, float | None, DeltaReason]:
     absolute = relative = None
     reason: DeltaReason = "baseline_unavailable"
-    if baseline is not None:
-        if value is None or metric.value is None:
+    if baseline_present:
+        if value is None or baseline is None:
             reason = "measurement_unavailable"
         else:
-            absolute = metric.value - value
+            absolute = value - baseline
             if not math.isfinite(absolute):
                 absolute = None
                 reason = "nonfinite_difference"
-            elif value == 0:
+            elif baseline == 0:
                 reason = "zero_baseline"
             else:
-                relative = absolute / abs(value)
+                relative = absolute / abs(baseline)
                 if not math.isfinite(relative):
                     relative = None
                     reason = "nonfinite_difference"
                 else:
                     reason = "available"
+    return absolute, relative, reason
+
+
+def _differences(metric: ReportMetric, baseline: ReportMetric | None) -> CandidateMetric:
+    value = None if baseline is None else baseline.value
+    absolute, relative, reason = candidate_metric_delta(
+        metric.value, value, baseline_present=baseline is not None,
+    )
     return CandidateMetric(
         metric=metric,
         baseline_value=value,
@@ -353,8 +362,8 @@ def _safe_cell(value: Any) -> Any:
     return "'" + value if leading.startswith(("=", "+", "-", "@")) else value
 
 
-def render_candidate_csv(comparison: CandidateComparison) -> bytes:
-    """Return BOM CSV, neutralizing untrusted text; never open an output path."""
+def validate_candidate_comparison(comparison: CandidateComparison) -> CandidateComparison:
+    """Rebuild derived rows before using an imported comparison for a decision."""
     comparison = CandidateComparison.model_validate_json(comparison.model_dump_json())
     # Recompute from retained rows rather than trusting caller-edited derived deltas/status.
     rebuilt = compare_candidate_reports(
@@ -376,6 +385,12 @@ def render_candidate_csv(comparison: CandidateComparison) -> bytes:
     )
     if rebuilt != comparison:
         raise OperationRejected("candidate_comparison_content_mismatch")
+    return rebuilt
+
+
+def render_candidate_csv(comparison: CandidateComparison) -> bytes:
+    """Return BOM CSV, neutralizing untrusted text; never open an output path."""
+    comparison = validate_candidate_comparison(comparison)
     stream = io.StringIO(newline="")
     writer = csv.writer(stream)
     writer.writerow(
