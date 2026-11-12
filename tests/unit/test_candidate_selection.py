@@ -9,7 +9,7 @@ import json
 import pytest
 from pydantic import ValidationError
 from test_candidate_contracts import candidate_operator, operator, planned
-from test_candidate_execution import analysis_batch
+from test_candidate_execution import analysis_batch, cross_analysis_bundle
 from test_candidate_reports import succeeded
 
 from cadence_mcp_bridge.candidate_contracts import CandidateBatchPlan
@@ -282,9 +282,7 @@ def test_missing_baseline_cannot_rank_incomparable_transient_records(candidate_o
     assert result.rows[1].goals[0].reason == "common_conditions_unverified"
 
 
-def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(candidate_operator):
-    dc, ac, tran = (analysis_batch(candidate_operator, name) for name in ("dc", "ac", "tran"))
-    dc_rows = succeeded(dc)
+def _ac_observations(dc_rows, ac):
     ac_rows = []
     for index, (prior, candidate, child) in enumerate(
         zip(
@@ -329,8 +327,17 @@ def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(ca
                 ),
             )
         )
+    return tuple(ac_rows)
+
+
+def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(candidate_operator):
+    dc, ac, tran = (analysis_batch(candidate_operator, name) for name in ("dc", "ac", "tran"))
+    dc_rows = succeeded(dc)
     manifest = CandidateAnalysisManifest(batches=(dc, ac, tran))
-    observations = {dc.request.batch_id: dc_rows, ac.request.batch_id: tuple(ac_rows)}
+    observations = {
+        dc.request.batch_id: dc_rows,
+        ac.request.batch_id: _ac_observations(dc_rows, ac),
+    }
     request = CandidateSelectionRequest(
         measurements=(
             OUTPUT,
@@ -352,6 +359,9 @@ def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(ca
     result = select_candidate_analyses(manifest, manifest.manifest_sha256, observations, request)
     assert result.selected_candidate_id is None
     assert result.rows[1].goals[1].reason == "cross_analysis_conditions_unverified"
+    assert (
+        result.cross_analysis_blocking_reason == "candidate_cross_analysis_runtime_evidence_missing"
+    )
     candidate = result.candidates[1]
     assert candidate.revision.values == dc.plans[1].request.values == ac.plans[1].request.values
     assert [analysis.operation_id for analysis in candidate.analyses] == [
@@ -378,3 +388,47 @@ def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(ca
     gain_only = request.model_copy(update={"goals": (request.goals[1],)})
     ranked = select_candidate_analyses(manifest, manifest.manifest_sha256, observations, gain_only)
     assert ranked.selected_candidate_id == "baseline"
+
+
+@pytest.mark.parametrize("drift", [None, "corner"])
+def test_combined_goals_require_verified_cross_analysis_runtime(candidate_operator, drift):
+    manifest, runtime, registration = cross_analysis_bundle(candidate_operator, drift)
+    dc, ac = manifest.batches
+    dc_rows = succeeded(dc)
+    request = CandidateSelectionRequest(
+        measurements=(
+            OUTPUT,
+            CandidateMeasurement(metric_id="gain", kind="voltage_gain_db", frequency_hz=1000.0),
+        ),
+        goals=(
+            CandidateGoal(
+                metric_id="output",
+                unit="V",
+                required=CandidateLimit(
+                    comparison=">=",
+                    target="2",
+                ),
+            ),
+            CandidateGoal(metric_id="gain", unit="dB", objective="maximize"),
+        ),
+    )
+    result = select_candidate_analyses(
+        manifest,
+        manifest.manifest_sha256,
+        {dc.request.batch_id: dc_rows, ac.request.batch_id: _ac_observations(dc_rows, ac)},
+        request,
+        runtime_manifest=runtime,
+        runtime_registration=registration,
+    )
+    if drift is None:
+        assert result.selected_candidate_id == "voltage" and result.cross_analysis_proof_sha256
+        assert result.cross_analysis_proof_sha256[0] == dc.plans[0].runner_sha256
+        assert result.cross_analysis_blocking_reason is None
+    else:
+        assert result.selected_candidate_id is None and result.cross_analysis_proof_sha256 is None
+        assert (
+            result.cross_analysis_blocking_reason
+            == "candidate_cross_analysis_source_or_model_mismatch"
+        )
+        assert result.rows[1].metrics[1].value == 7.0
+        assert result.rows[1].goals[1].status == "CONDITION_MISMATCH"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import math
 from collections.abc import Mapping
@@ -15,6 +16,7 @@ from cadence_mcp_bridge.candidate_execution import (
     CandidateAnalysisManifest,
     CandidateRevisionResult,
     collect_candidate_analyses,
+    validate_cross_analysis_conditions,
 )
 from cadence_mcp_bridge.candidate_reports import (
     CSV_LIMIT,
@@ -197,6 +199,8 @@ class CandidateSelection(VariableModel):
     status: SelectionStatus
     selected_candidate_id: LogicalId | None
     rows: tuple[CandidateSelectionRow, ...]
+    cross_analysis_proof_sha256: tuple[Digest, Digest] | None = None
+    cross_analysis_blocking_reason: str | None = None
     scope: Literal["EXPLICIT_EVALUATED_CANDIDATES_ONLY"] = "EXPLICIT_EVALUATED_CANDIDATES_ONLY"
     layout_handoff: Literal["NONE_SELECTED", "EFFECTIVE_VALUES_AND_LAYOUT_BINDING_UNVERIFIED"]
 
@@ -390,6 +394,9 @@ def select_candidate_analyses(
     expected_manifest_sha256: str,
     observations: dict[str, tuple[CandidateObservation, ...]],
     request: CandidateSelectionRequest,
+    *,
+    runtime_manifest: bytes | None = None,
+    runtime_registration: bytes | None = None,
 ) -> CandidateSelection:
     """Evaluate multiple analyses from C7's bound plans and captures."""
     candidates = collect_candidate_analyses(manifest, expected_manifest_sha256, observations)
@@ -402,7 +409,29 @@ def select_candidate_analyses(
     }
     request = CandidateSelectionRequest.model_validate_json(request.model_dump_json())
     goal_ids = {goal.metric_id for goal in request.goals}
-    goal_analyses = {spec.analysis for spec in request.measurements if spec.metric_id in goal_ids}
+    goal_analyses = frozenset(
+        spec.analysis for spec in request.measurements if spec.metric_id in goal_ids
+    )
+    proof = None
+    blocking_reason = None
+    if len(goal_analyses) > 1:
+        if runtime_manifest is None or runtime_registration is None:
+            blocking_reason = "candidate_cross_analysis_runtime_evidence_missing"
+        else:
+            try:
+                validate_cross_analysis_conditions(
+                    manifest,
+                    runtime_manifest,
+                    runtime_registration,
+                    analyses=goal_analyses,
+                )
+            except OperationRejected as rejected:
+                blocking_reason = rejected.reason
+            else:
+                proof = (
+                    hashlib.sha256(runtime_manifest).hexdigest(),
+                    hashlib.sha256(runtime_registration).hexdigest(),
+                )
     measurements: dict[str, dict[str, tuple[float | None, str | None]]] = {}
     for candidate in candidates:
         analyses = {result.analysis: result for result in candidate.analyses}
@@ -422,7 +451,8 @@ def select_candidate_analyses(
         request,
         manifest_sha256=expected_manifest_sha256,
         candidates=candidates,
-        cross_analysis_blocked=len(goal_analyses) > 1,
+        cross_analysis_proof_sha256=proof,
+        cross_analysis_blocking_reason=blocking_reason,
     )
 
 
@@ -435,10 +465,11 @@ def _selection(
     comparison_sha256: str | None = None,
     manifest_sha256: str | None = None,
     candidates: tuple[CandidateRevisionResult, ...] = (),
-    cross_analysis_blocked: bool = False,
+    cross_analysis_proof_sha256: tuple[str, str] | None = None,
+    cross_analysis_blocking_reason: str | None = None,
 ) -> CandidateSelection:
     goal_values = measurements
-    if cross_analysis_blocked:
+    if cross_analysis_blocking_reason is not None:
         goal_values = {
             candidate: {
                 metric_id: (None, reason or "cross_analysis_conditions_unverified")
@@ -493,6 +524,8 @@ def _selection(
         status=status,
         selected_candidate_id=selected,
         rows=tuple(rows),
+        cross_analysis_proof_sha256=cross_analysis_proof_sha256,
+        cross_analysis_blocking_reason=cross_analysis_blocking_reason,
         layout_handoff=(
             "EFFECTIVE_VALUES_AND_LAYOUT_BINDING_UNVERIFIED" if selected else "NONE_SELECTED"
         ),
@@ -542,6 +575,9 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
             "decision_reason",
             "dominated_by",
             "layout_handoff",
+            "cross_analysis_runtime_manifest_sha256",
+            "cross_analysis_runtime_registration_sha256",
+            "cross_analysis_blocking_reason",
         )
     )
     comparison = selection.comparison
@@ -612,6 +648,8 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
                         row.reason,
                         ",".join(row.dominated_by),
                         selection.layout_handoff if row.status == "SELECTED" else "NONE_SELECTED",
+                        *(selection.cross_analysis_proof_sha256 or (None, None)),
+                        selection.cross_analysis_blocking_reason,
                     )
                 )
             )
