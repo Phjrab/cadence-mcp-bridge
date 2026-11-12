@@ -48,6 +48,93 @@ def test_schema_and_missing_opt_in_never_load_context(monkeypatch, capsys):
         )
 
 
+@pytest.fixture
+def change_readback_case(tmp_path, monkeypatch):
+    from test_parameter_changes import _bias, _row
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    plan = _bias()
+    plan_path = tmp_path / "change-plan.json"
+    plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
+    args = [
+        "operator-candidates",
+        "verify-change-readback",
+        "--plan",
+        str(plan_path),
+        "--expected-plan-sha256",
+        plan.plan_sha256,
+    ]
+    stages = {stage: _row(plan, stage) for stage in ("baseline", "reopened", "netlist")}
+    return plan, args, stages
+
+
+@pytest.mark.parametrize(
+    ("status", "reason"),
+    [
+        ("MATCHED", "local_projections_match"),
+        ("MISSING", "baseline_reopened_and_netlist_readbacks_required"),
+        ("STALE", "reopened_and_netlist_revisions_differ"),
+        ("CONFLICT", "netlist_fixed_conditions_changed"),
+    ],
+)
+def test_verify_change_readback_exports_typed_status(
+    change_readback_case, tmp_path, capsys, status, reason
+):
+    from cadence_mcp_bridge.parameter_changes import ChangeReadback
+
+    plan, args, stages = change_readback_case
+    if status == "MISSING":
+        del stages["netlist"]
+    elif status in ("STALE", "CONFLICT"):
+        field = "revision_sha256" if status == "STALE" else "fixed_conditions_sha256"
+        stages["netlist"] = stages["netlist"].model_copy(update={field: "8" * 64})
+    for stage, row in stages.items():
+        path = tmp_path / f"{stage}.json"
+        raw = row.model_dump_json().encode()
+        path.write_bytes(raw)
+        args.extend([f"--{stage}", str(path), hashlib.sha256(raw).hexdigest()])
+    target = tmp_path / "readback.json"
+
+    assert main([*args, "--output", str(target)]) == 0
+    summary = output(capsys)
+    raw = target.read_bytes()
+    saved = ChangeReadback.model_validate_json(raw)
+    assert (saved.plan_sha256, saved.status, saved.reason) == (plan.plan_sha256, status, reason)
+    assert (saved.baseline, saved.reopened, saved.netlist) == (
+        stages.get("baseline"),
+        stages.get("reopened"),
+        stages.get("netlist"),
+    )
+    assert saved.execution_authorized is summary["execution_authorized"] is False
+    assert saved.provenance == "LOCAL_EVIDENCE_COMPARISON"
+    assert summary["readback_status"] == status and summary["remote_contact"] is False
+    assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.parametrize("failure", ["plan_pin", "stage_pin", "malformed", "extra", "collision"])
+def test_verify_change_readback_rejects_invalid_inputs_without_overwrite(
+    change_readback_case, tmp_path, capsys, failure
+):
+    _, args, stages = change_readback_case
+    path = tmp_path / "baseline.json"
+    stage = stages["baseline"].model_dump(mode="json")
+    if failure == "extra":
+        stage["extra"] = True
+    raw = b"{" if failure == "malformed" else json.dumps(stage).encode()
+    path.write_bytes(raw)
+    target = path if failure == "collision" else tmp_path / "readback.json"
+    if failure == "plan_pin":
+        args[-1] = "0" * 64
+    pin = "0" * 64 if failure == "stage_pin" else hashlib.sha256(raw).hexdigest()
+
+    assert main([*args, "--baseline", str(path), pin, "--output", str(target)]) == 2
+    summary = output(capsys)
+    assert summary["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert summary["remote_contact"] is False
+    assert path.read_bytes() == raw
+    assert target.exists() == (failure == "collision")
+
+
 def test_local_plan_exports_full_vector_without_journal(
     candidate_operator, tmp_path, monkeypatch, capsys
 ):

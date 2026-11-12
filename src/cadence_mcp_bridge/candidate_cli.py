@@ -38,6 +38,7 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 DOCUMENT_LIMIT = 1048576
 AMPLIFIER_EVIDENCE = ("dc-result", "dc-intent", "ac-result", "ac-intent", "specification")
+CHANGE_READBACK_STAGES = ("baseline", "reopened", "netlist")
 OBSERVATIONS: TypeAdapter[tuple[CandidateObservation, ...]] = TypeAdapter(
     Annotated[tuple[CandidateObservation, ...], Field(max_length=16)]
 )
@@ -88,6 +89,14 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
         amplifier.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"), required=True)
     amplifier.add_argument("--request", type=Path, required=True)
     amplifier.add_argument("--output", type=Path, required=True)
+    readback = actions.add_parser(
+        "verify-change-readback", help="Compare local parameter change readback evidence."
+    )
+    readback.add_argument("--plan", type=Path, required=True)
+    readback.add_argument("--expected-plan-sha256", required=True)
+    for stage in CHANGE_READBACK_STAGES:
+        readback.add_argument(f"--{stage}", nargs=2, metavar=("FILE", "SHA256"))
+    readback.add_argument("--output", type=Path, required=True)
     compose = actions.add_parser("compose", help="Group existing local analysis plans.")
     compose.add_argument(
         "--batch",
@@ -334,6 +343,56 @@ def _amplifier_select(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _verify_change_readback(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.parameter_changes import (
+        ChangePlan,
+        ChangeReadback,
+        Readback,
+        verify_change_readback,
+    )
+
+    inputs = {
+        stage: (Path(pair[0]), pair[1])
+        for stage in CHANGE_READBACK_STAGES
+        if (pair := getattr(arguments, stage)) is not None
+    }
+    output = _output(
+        arguments.output,
+        {_local_path(arguments.plan)} | {_local_path(path) for path, _ in inputs.values()},
+    )
+    plan = ChangePlan.model_validate_json(read_candidate_document(arguments.plan))
+    if plan.plan_sha256 != arguments.expected_plan_sha256:
+        raise OperationRejected("change_plan_digest_mismatch")
+    stages = {
+        stage: Readback.model_validate_json(read_candidate_document(path, expected_sha256=digest))
+        for stage, (path, digest) in inputs.items()
+    }
+    result = verify_change_readback(
+        plan,
+        baseline=stages.get("baseline"),
+        reopened=stages.get("reopened"),
+        netlist=stages.get("netlist"),
+    )
+    file_sha256 = _export(output, result.model_dump_json().encode("utf-8"))
+    saved = ChangeReadback.model_validate_json(
+        read_candidate_document(output, expected_sha256=file_sha256)
+    )
+    if saved != result:
+        raise OperationRejected("change_readback_output_mismatch")
+    return {
+        "status": "CHANGE_READBACK_EXPORTED",
+        "readback_status": saved.status,
+        "reason": saved.reason,
+        "plan_sha256": saved.plan_sha256,
+        "file_sha256": file_sha256,
+        "provenance": saved.provenance,
+        "execution_authorized": saved.execution_authorized,
+        "new_simulations": 0,
+        "new_extractions": 0,
+        "new_reservations": 0,
+    }
+
+
 def candidates_cli(arguments: argparse.Namespace) -> int:
     remote_contact: bool | None = False
     action = arguments.candidates_action
@@ -424,6 +483,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result.update(new_simulations=0, new_extractions=0, new_reservations=0)
         elif action == "amplifier-select":
             result = _amplifier_select(arguments)
+        elif action == "verify-change-readback":
+            result = _verify_change_readback(arguments)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
@@ -565,7 +626,14 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                     "status": "CANDIDATE_WORKFLOW_REJECTED",
                     "remote_contact": remote_contact,
                     "guidance": "Check pinned local documents and use a new output file."
-                    if action in ("compose", "collect", "select", "amplifier-select")
+                    if action
+                    in (
+                        "compose",
+                        "collect",
+                        "select",
+                        "amplifier-select",
+                        "verify-change-readback",
+                    )
                     else (
                         "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
                         "Reconcile unknown or running work before advancing; W/L is unsupported."
