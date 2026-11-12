@@ -32,6 +32,7 @@ from cadence_mcp_bridge.candidate_selection import (
     _selection,
 )
 from cadence_mcp_bridge.operator_operations import OperationRejected
+from cadence_mcp_bridge.power_measurements import require_same_resource_policy
 from cadence_mcp_bridge.sweeps import PointState, child_id, operation_key, point_id, sweep_id
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
@@ -162,6 +163,16 @@ def select_retained_amplifier_candidates(
     request = AmplifierCandidateSelectionRequest.model_validate_json(request.model_dump_json())
     dc_evaluation = _checked_source(dc, expected_dc_sha256, "dc-supply-power-grid-v2")
     ac_evaluation = _checked_source(ac, expected_ac_sha256, "gain-10hz-grid-v1")
+    try:
+        require_same_resource_policy(
+            tuple(
+                metric.counter
+                for source in (dc_evaluation.source, ac_evaluation.source)
+                for metric in source.measurements
+            )
+        )
+    except ValueError:
+        raise OperationRejected("amplifier_candidate_resource_policy_mismatch") from None
     dc_points = {point.requested_value: point for point in dc_evaluation.source.engine.points}
     ac_points = {point.requested_value: point for point in ac_evaluation.source.engine.points}
     if set(request.candidate_values_v) - (dc_points.keys() | ac_points.keys()):

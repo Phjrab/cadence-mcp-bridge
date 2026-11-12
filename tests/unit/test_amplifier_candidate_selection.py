@@ -15,6 +15,7 @@ from cadence_mcp_bridge.amplifier_candidate_selection import (
 from cadence_mcp_bridge.candidate_selection import CandidateGoal, CandidateLimit
 from cadence_mcp_bridge.errors import InvalidInputError
 from cadence_mcp_bridge.operator_operations import OperationRejected
+from cadence_mcp_bridge.resource_policy import FreshResourceCounter, FreshResourcePolicy
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 
@@ -104,3 +105,32 @@ def test_retained_amplifier_rejects_wrong_digest_or_source_binding(sweeps, drift
         with pytest.raises(OperationRejected) as failure:
             evaluate(dc.model_copy(update={"engine": engine}), ac)
         assert failure.value.reason == reason
+
+
+def test_individually_valid_captures_cannot_mix_resource_domains(sweeps):
+    dc, ac = sweeps
+    domain = str(uuid4())
+    policy = FreshResourcePolicy(campaign_id=domain, attempt_ceiling=10, result_ceiling_bytes=5000)
+    measurements = tuple(
+        metric.model_copy(
+            update={
+                "counter": FreshResourceCounter(
+                    campaign_id=domain,
+                    policy=policy,
+                    count=index,
+                    result_reserved_bytes=1000 * index,
+                )
+            }
+        )
+        for index, metric in enumerate(ac.measurements, 1)
+    )
+    foreign = type(ac).model_validate_json(
+        ac.model_copy(
+            update={
+                "measurements": measurements,
+            }
+        ).model_dump_json()
+    )
+    with pytest.raises(OperationRejected) as failure:
+        evaluate(dc, foreign)
+    assert failure.value.reason == "amplifier_candidate_resource_policy_mismatch"
