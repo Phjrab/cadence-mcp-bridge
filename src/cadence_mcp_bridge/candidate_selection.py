@@ -509,13 +509,15 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
             "baseline_candidate_id",
             "candidate_id",
             "label",
-            "revision_sha256",
+            "source_revision_sha256",
+            "candidate_revision_sha256",
             "analysis",
             "operation_id",
             "plan_sha256",
             "analysis_status",
             "analysis_reason",
             "requested_values_json",
+            "effective_values_json",
             "effective_values_verification",
             "frame_sha256",
             "execution_input_sha256",
@@ -539,6 +541,7 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
             "decision",
             "decision_reason",
             "dominated_by",
+            "layout_handoff",
         )
     )
     comparison = selection.comparison
@@ -547,18 +550,23 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
     for row in selection.rows:
         candidate = linked.get(row.candidate_id)
         analyses = {} if candidate is None else {item.analysis: item for item in candidate.analyses}
+        single = singles.get(row.candidate_id)
+        source_revision = None if candidate is None else candidate.revision.source_revision_sha256
+        if comparison is not None:
+            source_revision = comparison.plan.request.fixed_evidence.source_revision_sha256
         goals = {item.goal.metric_id: item for item in row.goals}
         for metric in row.metrics:
             analysis = analyses.get(metric.measurement.analysis)
-            original = singles.get(row.candidate_id) if analysis is None else analysis.row
-            revision = None if candidate is None else candidate.revision_sha256
-            if comparison is not None:
-                revision = comparison.plan.request.fixed_evidence.source_revision_sha256
-                if metric.measurement.analysis != comparison.plan.plans[0].analysis:
-                    original = None
+            original = single if analysis is None else analysis.row
+            if (
+                comparison is not None
+                and metric.measurement.analysis != comparison.plan.plans[0].analysis
+            ):
+                original = None
             report = None if original is None else original.source_report
             goal = goals.get(metric.measurement.metric_id)
             provenance = original or analysis
+            requested = provenance or single or (candidate.analyses[0] if candidate else None)
             writer.writerow(
                 tuple(
                     _safe_cell(value)
@@ -567,17 +575,19 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
                         selection.baseline_candidate_id,
                         row.candidate_id,
                         candidate.label if candidate else singles[row.candidate_id].label,
-                        revision,
+                        source_revision,
+                        candidate.revision_sha256 if candidate else None,
                         metric.measurement.analysis,
                         provenance.operation_id if provenance else None,
                         provenance.plan_sha256 if provenance else None,
                         provenance.status if provenance else "NOT_SUPPLIED",
                         provenance.reason if provenance else "analysis_not_supplied",
                         "["
-                        + ",".join(v.model_dump_json() for v in provenance.requested_values)
+                        + ",".join(v.model_dump_json() for v in requested.requested_values)
                         + "]"
-                        if provenance
+                        if requested
                         else None,
+                        None,  # The retained scalar contract has no verified effective values.
                         original.effective_values_verification if original else None,
                         report.frame_sha256 if report else None,
                         report.execution_input_sha256 if report else None,
@@ -601,6 +611,7 @@ def render_candidate_selection_csv(selection: CandidateSelection) -> bytes:
                         row.status,
                         row.reason,
                         ",".join(row.dominated_by),
+                        selection.layout_handoff if row.status == "SELECTED" else "NONE_SELECTED",
                     )
                 )
             )

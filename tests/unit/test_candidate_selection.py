@@ -110,6 +110,13 @@ def test_required_limit_filters_before_explicit_power_objective(candidate_operat
     assert result.rows[1].metrics[1].value == 0.002
     assert result.layout_handoff == "EFFECTIVE_VALUES_AND_LAYOUT_BINDING_UNVERIFIED"
     assert all(row.effective_values is None for row in result.comparison.rows)
+    records = csv.DictReader(
+        io.StringIO(render_candidate_selection_csv(result).decode("utf-8-sig"))
+    )
+    selected = next(row for row in records if row["candidate_id"] == "voltage")
+    assert selected["source_revision_sha256"] == "4" * 64
+    assert selected["candidate_revision_sha256"] == selected["effective_values_json"] == ""
+    assert selected["layout_handoff"] == result.layout_handoff
 
 
 @pytest.mark.parametrize("equal", [False, True])
@@ -364,6 +371,8 @@ def test_linked_dc_ac_selection_preserves_each_operation_and_missing_analysis(ca
         row for row in records if row["candidate_id"] == "voltage" and row["metric_id"] == "gain"
     )
     assert item["operation_id"] == ac.request.candidates[1].operation_id
+    assert item["source_revision_sha256"] == candidate.revision.source_revision_sha256
+    assert item["candidate_revision_sha256"] == candidate.revision_sha256
     assert item["value"] == "7.0" and item["unit"] == "dB"
     assert item["goal_reason"] == "cross_analysis_conditions_unverified"
     gain_only = request.model_copy(update={"goals": (request.goals[1],)})
