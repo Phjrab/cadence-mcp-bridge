@@ -37,6 +37,7 @@ from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 DOCUMENT_LIMIT = 1048576
+AMPLIFIER_EVIDENCE = ("dc-result", "dc-intent", "ac-result", "ac-intent", "specification")
 OBSERVATIONS: TypeAdapter[tuple[CandidateObservation, ...]] = TypeAdapter(
     Annotated[tuple[CandidateObservation, ...], Field(max_length=16)]
 )
@@ -49,7 +50,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     )
     actions = parser.add_subparsers(dest="candidates_action", required=True)
     schema = actions.add_parser("schema")
-    schema.add_argument("--action", choices=("select",), dest="schema_action")
+    schema.add_argument("--action", choices=("select", "amplifier-select"), dest="schema_action")
     for name in ("plan", "submit", "advance", "status", "result", "capture"):
         action = actions.add_parser(name)
         action.add_argument("--settings", type=Path, required=True)
@@ -79,6 +80,14 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     selection.add_argument("--expected-comparison-sha256", required=True)
     selection.add_argument("--request", type=Path, required=True)
     selection.add_argument("--output", type=Path, required=True)
+    amplifier = actions.add_parser(
+        "amplifier-select",
+        help="Evaluate retained finite-grid amplifier results locally.",
+    )
+    for name in AMPLIFIER_EVIDENCE:
+        amplifier.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    amplifier.add_argument("--request", type=Path, required=True)
+    amplifier.add_argument("--output", type=Path, required=True)
     compose = actions.add_parser("compose", help="Group existing local analysis plans.")
     compose.add_argument(
         "--batch",
@@ -103,7 +112,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     collect.add_argument("--output", type=Path, required=True)
 
 
-def read_candidate_document(path: Path) -> bytes:
+def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -> bytes:
     """Bound a regular local content record, without claiming remote authenticity."""
     path = _local_path(path)
     before = path.stat()
@@ -140,6 +149,8 @@ def read_candidate_document(path: Path) -> bytes:
 
     if signature(before) != signature(opened) or signature(before) != signature(after):
         raise OperationRejected("candidate_document_changed")
+    if expected_sha256 is not None and hashlib.sha256(raw).hexdigest() != expected_sha256:
+        raise OperationRejected("candidate_document_digest_mismatch")
     _closed_document(raw, max_bytes=DOCUMENT_LIMIT)
     return raw
 
@@ -243,6 +254,86 @@ def _collect(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _amplifier_select(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.amplifier_candidate_selection import (
+        AmplifierCandidateSelectionRequest,
+        select_retained_amplifier_candidates,
+    )
+    from cadence_mcp_bridge.amplifier_specifications import (
+        AmplifierEvaluationQuery,
+        AmplifierSpecificationEvaluation,
+    )
+    from cadence_mcp_bridge.amplifier_sweeps import (
+        AmplifierPrepared,
+        AmplifierQuery,
+        AmplifierSubmission,
+        AmplifierSweepResult,
+        make_amplifier_plan,
+    )
+
+    inputs = {name: getattr(arguments, name.replace("-", "_")) for name in AMPLIFIER_EVIDENCE}
+    output = _output(
+        arguments.output,
+        {_local_path(Path(path)) for path, _ in inputs.values()} | {_local_path(arguments.request)},
+    )
+    documents = {
+        name: json.loads(read_candidate_document(Path(path), expected_sha256=digest))
+        for name, (path, digest) in inputs.items()
+    }
+    request = AmplifierCandidateSelectionRequest.model_validate_json(
+        read_candidate_document(arguments.request)
+    )
+    sources = {}
+    evaluations = {}
+    for mode in ("dc", "ac"):
+        capture = documents[f"{mode}-result"]
+        intent = documents[f"{mode}-intent"]
+        check = documents["specification"]["outputs"][mode]
+        source = AmplifierSweepResult.model_validate_json(json.dumps(capture["result"]))
+        query = AmplifierQuery.model_validate_json(json.dumps(capture["query"]))
+        submission = AmplifierSubmission.model_validate_json(json.dumps(intent["submission"]))
+        prepared = AmplifierPrepared.model_validate_json(json.dumps(intent["prepared"]))
+        spec_query = AmplifierEvaluationQuery.model_validate_json(json.dumps(check["request"]))
+        evaluation = AmplifierSpecificationEvaluation.model_validate_json(
+            json.dumps(check["evaluation"])
+        )
+        if (
+            query.sweep_id != source.engine.sweep_id
+            or submission.experiment_key != source.engine.experiment_key
+            or prepared.engine_plan != make_amplifier_plan(submission.request)
+            or submission.expected_plan_hash != prepared.engine_plan.plan_hash
+            or submission.expected_plan_hash != source.engine.plan_hash
+            or prepared.definition != source.definition
+            or prepared.definition_sha256 != source.definition_sha256
+            or spec_query.sweep_id != query.sweep_id
+            or spec_query.expected_sweep_result_sha256 != evaluation.source_result_sha256
+            or spec_query.expected_specification_registry_sha256
+            != evaluation.specification_registry_sha256
+            or evaluation.source != source
+        ):
+            raise OperationRejected("amplifier_candidate_retained_identity_mismatch")
+        sources[mode] = source
+        evaluations[mode] = evaluation
+    selection = select_retained_amplifier_candidates(
+        sources["dc"],
+        sources["ac"],
+        expected_dc_sha256=evaluations["dc"].source_result_sha256,
+        expected_ac_sha256=evaluations["ac"].source_result_sha256,
+        request=request,
+    )
+    if selection.dc != evaluations["dc"] or selection.ac != evaluations["ac"]:
+        raise OperationRejected("amplifier_candidate_retained_evaluation_mismatch")
+    return {
+        "status": "AMPLIFIER_CANDIDATE_SELECTION_EXPORTED",
+        "selection_status": selection.status,
+        "selected_candidate_id": selection.selected_candidate_id,
+        "file_sha256": _export(output, selection.model_dump_json().encode("utf-8")),
+        "new_simulations": selection.new_simulations,
+        "new_extractions": selection.new_extractions,
+        "new_reservations": selection.new_reservations,
+    }
+
+
 def candidates_cli(arguments: argparse.Namespace) -> int:
     remote_contact: bool | None = False
     action = arguments.candidates_action
@@ -259,6 +350,12 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 from cadence_mcp_bridge.candidate_selection import CandidateSelectionRequest
 
                 result = {"request_schema": CandidateSelectionRequest.model_json_schema()}
+            elif arguments.schema_action == "amplifier-select":
+                from cadence_mcp_bridge.amplifier_candidate_selection import (
+                    AmplifierCandidateSelectionRequest,
+                )
+
+                result = {"request_schema": AmplifierCandidateSelectionRequest.model_json_schema()}
         elif action in ("compare", "csv"):
             inputs = {
                 _local_path(getattr(arguments, name))
@@ -325,6 +422,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
         elif action in ("compose", "collect"):
             result = _compose(arguments) if action == "compose" else _collect(arguments)
             result.update(new_simulations=0, new_extractions=0, new_reservations=0)
+        elif action == "amplifier-select":
+            result = _amplifier_select(arguments)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
@@ -466,7 +565,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                     "status": "CANDIDATE_WORKFLOW_REJECTED",
                     "remote_contact": remote_contact,
                     "guidance": "Check pinned local documents and use a new output file."
-                    if action in ("compose", "collect", "select")
+                    if action in ("compose", "collect", "select", "amplifier-select")
                     else (
                         "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
                         "Reconcile unknown or running work before advancing; W/L is unsupported."

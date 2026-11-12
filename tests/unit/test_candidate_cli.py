@@ -286,6 +286,144 @@ def test_local_compose_and_collect_preserve_plan_and_capture_identity(
     assert receipt["remote_contact"] is False and receipt["new_simulations"] == 0
 
 
+def test_retained_amplifier_cli_preserves_original_point_and_intent_bindings(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from uuid import uuid4
+
+    from test_amplifier_specifications import source
+    from test_amplifier_sweeps import request as sweep_request
+
+    from cadence_mcp_bridge.amplifier_candidate_selection import (
+        AmplifierCandidateSelection,
+        AmplifierCandidateSelectionRequest,
+    )
+    from cadence_mcp_bridge.amplifier_specifications import (
+        AmplifierSpecificationRegistry,
+        evaluate_source,
+    )
+    from cadence_mcp_bridge.amplifier_sweeps import (
+        AmplifierPrepared,
+        AmplifierSubmission,
+        make_amplifier_plan,
+    )
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    assert main(["operator-candidates", "schema", "--action", "amplifier-select"]) == 0
+    assert (
+        output(capsys)["request_schema"] == AmplifierCandidateSelectionRequest.model_json_schema()
+    )
+
+    def save_document(name, document):
+        path = tmp_path / f"{name}.json"
+        raw = json.dumps(document).encode("utf-8")
+        path.write_bytes(raw)
+        return [str(path), hashlib.sha256(raw).hexdigest()]
+
+    captures, spec, original, intents = {}, {}, {}, {}
+    for mode in ("dc", "ac"):
+        folder = tmp_path / mode
+        folder.mkdir()
+        _, query, result = asyncio.run(source(folder, mode))
+        original[mode] = result
+        request = sweep_request(mode)
+        plan = make_amplifier_plan(request)
+        submission = AmplifierSubmission(
+            request=request,
+            expected_plan_hash=plan.plan_hash,
+            experiment_key=result.engine.experiment_key,
+        )
+        intents[mode] = {
+            "prepared": AmplifierPrepared(engine_plan=plan).model_dump(mode="json"),
+            "submission": submission.model_dump(mode="json"),
+        }
+        captures[f"{mode}-intent"] = save_document(f"{mode}-intent", intents[mode])
+        captures[f"{mode}-result"] = save_document(
+            f"{mode}-result",
+            {
+                "query": query.model_dump(mode="json"),
+                "result": result.model_dump(mode="json"),
+            },
+        )
+        evaluation = evaluate_source(
+            result, AmplifierSpecificationRegistry(), request.measurement_id
+        )
+        spec[mode] = {
+            "request": {
+                **query.model_dump(mode="json"),
+                "expected_sweep_result_sha256": evaluation.source_result_sha256,
+                "expected_specification_registry_sha256": evaluation.specification_registry_sha256,
+            },
+            "evaluation": evaluation.model_dump(mode="json"),
+        }
+    captures["specification"] = save_document("specification", {"outputs": spec})
+    request_path, _ = save_document(
+        "selection-request",
+        {
+            "candidate_values_v": ["0.320", "0.321"],
+            "baseline_vbiasn_v": "0.320",
+        },
+    )
+    target = tmp_path / "amplifier-selection.json"
+    args = [
+        "operator-candidates",
+        "amplifier-select",
+        "--request",
+        request_path,
+        "--output",
+        str(target),
+    ]
+    for name, pair in captures.items():
+        args.extend([f"--{name}", *pair])
+    dc_intent = args.index("--dc-intent") + 1
+    wrong_hash = args.copy()
+    wrong_hash[dc_intent + 1] = "0" * 64
+    assert main(wrong_hash) == 2
+    assert output(capsys)["remote_contact"] is False and not target.exists()
+    wrong_intent = args.copy()
+    wrong_intent[dc_intent : dc_intent + 2] = save_document(
+        "wrong-intent",
+        {
+            **intents["dc"],
+            "submission": {**intents["dc"]["submission"], "experiment_key": str(uuid4())},
+        },
+    )
+    assert main(wrong_intent) == 2
+    assert output(capsys)["remote_contact"] is False and not target.exists()
+    wrong_evaluation = args.copy()
+    spec_arg = args.index("--specification") + 1
+    wrong_evaluation[spec_arg : spec_arg + 2] = save_document(
+        "wrong-evaluation",
+        {
+            "outputs": {
+                **spec,
+                "dc": {
+                    **spec["dc"],
+                    "evaluation": {**spec["dc"]["evaluation"], "target_status": "not_selected"},
+                },
+            }
+        },
+    )
+    assert main(wrong_evaluation) == 2
+    assert output(capsys)["remote_contact"] is False and not target.exists()
+    assert main(args) == 0
+    receipt = output(capsys)
+    raw = target.read_bytes()
+    selection = AmplifierCandidateSelection.model_validate_json(raw)
+    assert selection.status == "GOALS_NOT_PROVIDED" and selection.selected_candidate_id is None
+    assert selection.dc.source == original["dc"] and selection.ac.source == original["ac"]
+    for index, row in enumerate(selection.rows, 1):
+        assert row.dc_point == original["dc"].engine.points[index]
+        assert row.ac_point == original["ac"].engine.points[index]
+    assert receipt["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert receipt["remote_contact"] is False and receipt["new_simulations"] == 0
+    assert main(args) == 2
+    output(capsys)
+    assert target.read_bytes() == raw
+
+
 def test_read_rejects_duplicate_keys_and_oversized_files(tmp_path):
     path = tmp_path / "input.json"
     path.write_bytes(b'{"x":1,"x":2}')
