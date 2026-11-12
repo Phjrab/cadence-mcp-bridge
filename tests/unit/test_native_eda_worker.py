@@ -4,10 +4,13 @@ import errno
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from test_native_gate import confirmed_domain, qualified, root
+from test_storage_worker import TestIO
 
 from cadence_mcp_bridge import _native_copy as copying
 from cadence_mcp_bridge import _native_eda_worker as eda
@@ -465,3 +468,115 @@ def test_spectre_relative_outputs_remain_inside_owned_job(qualified):
     assert (Path(journal.work) / "spectre.dc").read_text() == "synthetic"
     assert not (Path(journal.job) / "spectre.dc").exists()
     assert accounting.read(str(root / accounting.LEDGER))["count"] == 82
+
+
+@pytest.mark.parametrize("while_live", [True, False])
+def test_fixed_program_disappearing_entry_rescans_only_while_live(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, while_live: bool
+) -> None:
+    job = tmp_path / "job"
+    work = job / "work"
+    work.mkdir(parents=True)
+    transient = job / "cadence-temporary"
+    transient.write_bytes(b"temporary")
+    io = TestIO(tmp_path, monkeypatch)
+    open_entry = io.open
+    scan_root = Mock(wraps=io.root)
+    monkeypatch.setattr(io, "root", scan_root)
+
+    def open_after_listing(parent: int, name: str) -> int:
+        if name == transient.name:
+            transient.unlink()
+        return open_entry(parent, name)
+
+    monkeypatch.setattr(io, "open", open_after_listing)
+    monkeypatch.setattr(storage, "PosixIO", lambda: io)
+    gate = SimpleNamespace(
+        storage=storage, accounting=SimpleNamespace(sync_directory=lambda _: None)
+    )
+    worker = eda.EdaWorker(gate, operations, rendering, copying, installer)
+    child = SimpleNamespace(pid=56, wait=Mock(return_value=0))
+    start = Mock(return_value=child)
+    signal = Mock()
+    monkeypatch.setattr(eda.subprocess, "Popen", start)
+    monkeypatch.setattr(eda.os, "setsid", lambda: None, raising=False)
+    monkeypatch.setattr(eda.time, "sleep", lambda _: None)
+    monkeypatch.setattr(worker, "process_identity", lambda _: ("R", 56, 56, "start"))
+    active = iter((True, False) if while_live else (False,))
+    monkeypatch.setattr(worker, "group_active", lambda *_: next(active))
+    monkeypatch.setattr(worker, "signal_group", signal)
+    session = SimpleNamespace(check=Mock())
+    journal = SimpleNamespace(job=str(job), work=str(work))
+    if while_live:
+        worker.program(session, journal, ["fixed"], "synthetic", 2, 1048576)
+        assert scan_root.call_count == 3
+    else:
+        with pytest.raises(OSError) as failed:
+            worker.program(session, journal, ["fixed"], "synthetic", 2, 1048576)
+        assert failed.value.errno == errno.ENOENT
+        assert vars(failed.value)["native_program_failure"] == {
+            "stage": "FINAL_OCCUPANCY",
+            "errno": errno.ENOENT,
+            "path_category": "OWNED_JOB_TREE",
+            "child_exit": 0,
+            "cleanup": "REAPED",
+            "cleanup_errno": None,
+        }
+        assert scan_root.call_count == 1
+    start.assert_called_once()
+    child.wait.assert_called_once()
+    signal.assert_not_called()
+    assert not io.paths
+
+
+@pytest.mark.parametrize(
+    ("mode", "attempts", "error"),
+    [
+        ("exhausted", 3, storage.LiveEntryVanished),
+        ("deadline", 1, ValueError),
+        ("allocated", 2, ValueError),
+        ("missing_root", 1, OSError),
+        ("permission", 1, OSError),
+        ("symlink", 1, OSError),
+    ],
+)
+def test_live_occupancy_recheck_is_bounded_and_fails_closed(
+    monkeypatch: pytest.MonkeyPatch, mode: str, attempts: int, error: type[Exception]
+) -> None:
+    gate = SimpleNamespace(storage=storage)
+    worker = eda.EdaWorker(gate, operations, rendering, copying, installer)
+    elapsed = 0.0
+
+    def sleep(_: float) -> None:
+        nonlocal elapsed
+        if mode == "deadline":
+            elapsed = 1
+
+    monkeypatch.setattr(eda.time, "sleep", sleep)
+    monkeypatch.setattr(eda.os, "times", lambda: (0, 0, 0, 0, elapsed))
+    errors = {
+        "missing_root": errno.ENOENT,
+        "permission": errno.EACCES,
+        "symlink": errno.ELOOP,
+    }
+    calls = 0
+
+    def size(job: str, live: bool = False) -> tuple[int, int, str]:
+        nonlocal calls
+        assert job == "/owned/job" and live
+        calls += 1
+        if mode in errors:
+            raise OSError(errors[mode], "fixed fixture")
+        if mode == "allocated" and calls == 2:
+            return 1, 101, "stable"
+        raise storage.LiveEntryVanished(errno.ENOENT, "fixed fixture")
+
+    monkeypatch.setattr(worker, "size", size)
+    session = SimpleNamespace(check=Mock())
+    with pytest.raises(error) as failed:
+        worker.measure_live(session, "/owned/job", 1, 100)
+    assert calls == attempts
+    if mode in errors:
+        assert not isinstance(failed.value, storage.LiveEntryVanished)
+    if mode in ("deadline", "allocated"):
+        assert str(failed.value) == "native_worker_owned_process_limit"
