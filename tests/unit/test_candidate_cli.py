@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from dataclasses import replace
 
@@ -130,6 +131,159 @@ def test_compare_csv_cli_chain_retains_all_rows(candidate_operator, tmp_path, ca
     output(capsys)
     missing = CandidateComparison.model_validate_json((tmp_path / "not-run.json").read_bytes())
     assert all(row.status == "NOT_RUN" and not row.metrics for row in missing.rows)
+
+
+def test_local_selection_checks_comparison_pin_and_exports_typed_result(
+    candidate_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from cadence_mcp_bridge.candidate_selection import CandidateSelection, CandidateSelectionRequest
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    plan = planned(candidate_operator)
+    plan_file, observations = tmp_path / "plan.json", tmp_path / "observations.json"
+    comparison, request, target = (
+        tmp_path / "comparison.json",
+        tmp_path / "selection-request.json",
+        tmp_path / "selection.json",
+    )
+    plan_file.write_text(plan.model_dump_json(), encoding="utf-8")
+    observations.write_bytes(cli.OBSERVATIONS.dump_json(succeeded(plan)))
+    assert (
+        main(
+            [
+                "operator-candidates",
+                "compare",
+                "--plan",
+                str(plan_file),
+                "--expected-plan-sha256",
+                plan.plan_sha256,
+                "--observations",
+                str(observations),
+                "--output",
+                str(comparison),
+            ]
+        )
+        == 0
+    )
+    digest = output(capsys)["comparison_sha256"]
+    assert digest == canonical_digest(
+        CandidateComparison.model_validate_json(comparison.read_bytes())
+    )
+    assert main(["operator-candidates", "schema", "--action", "select"]) == 0
+    assert output(capsys)["request_schema"] == CandidateSelectionRequest.model_json_schema()
+    request.write_text(
+        json.dumps(
+            {
+                "measurements": [
+                    {"metric_id": "output-voltage", "kind": "node_voltage", "signal_id": "output"}
+                ],
+                "goals": [{"metric_id": "output-voltage", "unit": "V", "objective": "maximize"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = [
+        "operator-candidates",
+        "select",
+        "--comparison",
+        str(comparison),
+        "--request",
+        str(request),
+        "--output",
+        str(target),
+        "--expected-comparison-sha256",
+    ]
+    assert main([*args, "0" * 64]) == 2
+    assert output(capsys)["remote_contact"] is False and not target.exists()
+    assert main([*args, digest]) == 0
+    receipt = output(capsys)
+    raw = target.read_bytes()
+    selection = CandidateSelection.model_validate_json(raw)
+    assert selection.selected_candidate_id == receipt["selected_candidate_id"] == "mixed"
+    assert selection.comparison_sha256 == digest
+    assert selection.layout_handoff == "EFFECTIVE_VALUES_AND_LAYOUT_BINDING_UNVERIFIED"
+    assert receipt["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert receipt["remote_contact"] is False and receipt["new_reservations"] == 0
+    assert main([*args, digest]) == 2
+    output(capsys)
+    assert target.read_bytes() == raw
+
+
+def test_local_compose_and_collect_preserve_plan_and_capture_identity(
+    candidate_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from pydantic import TypeAdapter
+
+    from cadence_mcp_bridge.candidate_execution import (
+        CandidateAnalysisManifest,
+        CandidateRevisionResult,
+    )
+    from cadence_mcp_bridge.candidate_reports import CandidateObservation
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    plan = planned(candidate_operator)
+    plan_file, manifest_file = tmp_path / "plan.json", tmp_path / "manifest.json"
+    capture_file, target = tmp_path / "capture.json", tmp_path / "analysis-results.json"
+    plan_file.write_text(plan.model_dump_json(), encoding="utf-8")
+    first = succeeded(plan)[0]
+    capture_file.write_bytes(
+        cli.OBSERVATIONS.dump_json(
+            (
+                first,
+                CandidateObservation(candidate_id=plan.request.candidates[1].candidate_id),
+            )
+        )
+    )
+    compose = [
+        "operator-candidates",
+        "compose",
+        "--output",
+        str(manifest_file),
+        "--batch",
+        str(plan_file),
+    ]
+    assert main([*compose, "0" * 64]) == 2
+    assert output(capsys)["remote_contact"] is False and not manifest_file.exists()
+    assert main([*compose, plan.plan_sha256]) == 0
+    receipt = output(capsys)
+    manifest = CandidateAnalysisManifest.model_validate_json(manifest_file.read_bytes())
+    assert manifest.batches == (plan,) and receipt["manifest_sha256"] == manifest.manifest_sha256
+    assert receipt["planned_result_reservation_bytes"] == plan.result_reservation_bytes
+    batch_id = plan.request.batch_id
+    collect = [
+        "operator-candidates",
+        "collect",
+        "--manifest",
+        str(manifest_file),
+        "--expected-manifest-sha256",
+        manifest.manifest_sha256,
+        "--output",
+        str(target),
+        "--capture",
+        batch_id,
+        str(capture_file),
+    ]
+    assert main([*collect, "--capture", batch_id, str(capture_file)]) == 2
+    assert output(capsys)["remote_contact"] is False and not target.exists()
+    assert main(collect) == 0
+    receipt = output(capsys)
+    raw = target.read_bytes()
+    results = TypeAdapter(tuple[CandidateRevisionResult, ...]).validate_json(raw)
+    analyses = [result.analyses[0] for result in results]
+    assert [analysis.operation_id for analysis in analyses] == [
+        candidate.operation_id for candidate in plan.request.candidates
+    ]
+    assert [analysis.status for analysis in analyses] == ["SUCCEEDED", "NOT_RUN", "NOT_OBSERVED"]
+    assert analyses[0].row is not None and analyses[0].row.source_report == first.report
+    assert receipt["manifest_sha256"] == manifest.manifest_sha256
+    assert receipt["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert receipt["remote_contact"] is False and receipt["new_simulations"] == 0
 
 
 def test_read_rejects_duplicate_keys_and_oversized_files(tmp_path):

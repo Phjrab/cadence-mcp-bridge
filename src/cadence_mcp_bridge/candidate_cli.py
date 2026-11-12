@@ -34,6 +34,7 @@ from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant
 from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 DOCUMENT_LIMIT = 1048576
 OBSERVATIONS: TypeAdapter[tuple[CandidateObservation, ...]] = TypeAdapter(
@@ -47,7 +48,8 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
         help="Experimental registered V/A candidates and retained reports.",
     )
     actions = parser.add_subparsers(dest="candidates_action", required=True)
-    actions.add_parser("schema")
+    schema = actions.add_parser("schema")
+    schema.add_argument("--action", choices=("select",), dest="schema_action")
     for name in ("plan", "submit", "advance", "status", "result", "capture"):
         action = actions.add_parser(name)
         action.add_argument("--settings", type=Path, required=True)
@@ -72,6 +74,33 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     csv = actions.add_parser("csv", help="Export an existing comparison as BOM UTF-8 CSV.")
     csv.add_argument("--comparison", type=Path, required=True)
     csv.add_argument("--output", type=Path, required=True)
+    selection = actions.add_parser("select", help="Evaluate explicit goals on a local comparison.")
+    selection.add_argument("--comparison", type=Path, required=True)
+    selection.add_argument("--expected-comparison-sha256", required=True)
+    selection.add_argument("--request", type=Path, required=True)
+    selection.add_argument("--output", type=Path, required=True)
+    compose = actions.add_parser("compose", help="Group existing local analysis plans.")
+    compose.add_argument(
+        "--batch",
+        action="append",
+        nargs=2,
+        metavar=("PLAN", "EXPECTED_PLAN_SHA256"),
+        required=True,
+    )
+    compose.add_argument("--output", type=Path, required=True)
+    collect = actions.add_parser(
+        "collect", help="Associate local captures with an analysis manifest."
+    )
+    collect.add_argument("--manifest", type=Path, required=True)
+    collect.add_argument("--expected-manifest-sha256", required=True)
+    collect.add_argument(
+        "--capture",
+        action="append",
+        nargs=2,
+        metavar=("BATCH_ID", "OBSERVATIONS_FILE"),
+        default=[],
+    )
+    collect.add_argument("--output", type=Path, required=True)
 
 
 def read_candidate_document(path: Path) -> bytes:
@@ -161,6 +190,59 @@ def _load_plan(path: Path, expected: str) -> CandidateBatchPlan:
     return plan
 
 
+def _compose(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.candidate_execution import CandidateAnalysisManifest
+
+    if len(arguments.batch) > 3:
+        raise OperationRejected("candidate_analysis_batch_limit")
+    inputs = [(Path(path), expected) for path, expected in arguments.batch]
+    output = _output(arguments.output, {_local_path(path) for path, _ in inputs})
+    manifest = CandidateAnalysisManifest(
+        batches=tuple(_load_plan(path, expected) for path, expected in inputs),
+    )
+    return {
+        "status": "CANDIDATE_ANALYSIS_MANIFEST_EXPORTED",
+        "manifest_sha256": manifest.manifest_sha256,
+        "file_sha256": _export(output, manifest.model_dump_json().encode("utf-8")),
+        "expected_executions": manifest.expected_executions,
+        "planned_result_reservation_bytes": manifest.result_reservation_bytes,
+    }
+
+
+def _collect(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.candidate_execution import (
+        CandidateAnalysisManifest,
+        CandidateRevisionResult,
+        collect_candidate_analyses,
+    )
+
+    captures = {batch_id: Path(path) for batch_id, path in arguments.capture}
+    if len(captures) != len(arguments.capture) or len(captures) > 3:
+        raise OperationRejected("candidate_analysis_capture_ids_invalid")
+    output = _output(
+        arguments.output,
+        {_local_path(path) for path in (arguments.manifest, *captures.values())},
+    )
+    manifest = CandidateAnalysisManifest.model_validate_json(
+        read_candidate_document(arguments.manifest)
+    )
+    results = collect_candidate_analyses(
+        manifest,
+        arguments.expected_manifest_sha256,
+        {
+            key: OBSERVATIONS.validate_json(read_candidate_document(path))
+            for key, path in captures.items()
+        },
+    )
+    raw = TypeAdapter(tuple[CandidateRevisionResult, ...]).dump_json(results)
+    return {
+        "status": "CANDIDATE_ANALYSIS_RESULTS_EXPORTED",
+        "manifest_sha256": manifest.manifest_sha256,
+        "file_sha256": _export(output, raw),
+        "candidate_count": len(results),
+    }
+
+
 def candidates_cli(arguments: argparse.Namespace) -> int:
     remote_contact: bool | None = False
     action = arguments.candidates_action
@@ -173,6 +255,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 "wl": "UNSUPPORTED",
                 "waveforms": "UNSUPPORTED_RETAINED_SCALARS_ONLY",
             }
+            if arguments.schema_action == "select":
+                from cadence_mcp_bridge.candidate_selection import CandidateSelectionRequest
+
+                result = {"request_schema": CandidateSelectionRequest.model_json_schema()}
         elif action in ("compare", "csv"):
             inputs = {
                 _local_path(getattr(arguments, name))
@@ -204,6 +290,41 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 "new_extractions": 0,
                 "new_reservations": 0,
             }
+            if action == "compare":
+                result["comparison_sha256"] = canonical_digest(comparison)
+        elif action == "select":
+            from cadence_mcp_bridge.candidate_selection import (
+                CandidateSelectionRequest,
+                select_candidates,
+            )
+
+            output = _output(
+                arguments.output,
+                {_local_path(arguments.comparison), _local_path(arguments.request)},
+            )
+            comparison = CandidateComparison.model_validate_json(
+                read_candidate_document(arguments.comparison)
+            )
+            selection_request = CandidateSelectionRequest.model_validate_json(
+                read_candidate_document(arguments.request)
+            )
+            selection = select_candidates(
+                comparison,
+                arguments.expected_comparison_sha256,
+                selection_request,
+            )
+            result = {
+                "status": "CANDIDATE_SELECTION_EXPORTED",
+                "selection_status": selection.status,
+                "selected_candidate_id": selection.selected_candidate_id,
+                "file_sha256": _export(output, selection.model_dump_json().encode("utf-8")),
+                "new_simulations": 0,
+                "new_extractions": 0,
+                "new_reservations": 0,
+            }
+        elif action in ("compose", "collect"):
+            result = _compose(arguments) if action == "compose" else _collect(arguments)
+            result.update(new_simulations=0, new_extractions=0, new_reservations=0)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
@@ -344,7 +465,9 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 {
                     "status": "CANDIDATE_WORKFLOW_REJECTED",
                     "remote_contact": remote_contact,
-                    "guidance": (
+                    "guidance": "Check pinned local documents and use a new output file."
+                    if action in ("compose", "collect", "select")
+                    else (
                         "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
                         "Reconcile unknown or running work before advancing; W/L is unsupported."
                     ),
