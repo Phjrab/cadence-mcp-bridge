@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from uuid import uuid4
 
@@ -13,8 +14,13 @@ from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepar
 from cadence_mcp_bridge.candidate_execution import (
     CandidateAnalysisManifest,
     collect_candidate_analyses,
+    validate_cross_analysis_conditions,
 )
 from cadence_mcp_bridge.candidate_reports import CandidateObservation
+from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
+from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
+from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.operator_operations import OperationProgress, OperationRejected
 from cadence_mcp_bridge.result_reports import make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -219,3 +225,161 @@ def test_mismatched_conditions_keep_source_without_comparable_metrics(candidate_
     assert analysis.reason == "fixed_or_common_conditions_differ"
     assert analysis.row.metrics == ()
     assert analysis.row.source_report == changed.report
+
+
+def cross_analysis_bundle(candidate_operator, drift):
+    batches = []
+    routes = []
+    for analysis in ("dc", "ac"):
+
+        def conditions(document, analysis=analysis):
+            if analysis == "ac":
+                saved = document["fixed_evidence"]["conditions"]
+                saved["ade_state_tree_sha256"] = "1" * 64
+                if drift == "static":
+                    saved["static_statements_sha256"] = "2" * 64
+
+        batch = analysis_batch(candidate_operator, analysis, conditions)
+        evidence = batch.request.fixed_evidence
+        request = batch.plans[0].request
+        saved = evidence.conditions
+        path = "/synthetic/model.scs"
+        ade = AdeExecutionRegistration.model_validate_json(
+            _canonical(
+                dict(
+                    schema_version=1,
+                    design_id=request.design_id,
+                    analysis_id=request.analysis_id,
+                    design_profile_sha256=evidence.design_profile_sha256,
+                    variable_set_sha256=None,
+                    source_tree_sha256=saved.source_tree_sha256,
+                    ade_state_tree_sha256=saved.ade_state_tree_sha256,
+                    static_statements_sha256=saved.static_statements_sha256,
+                    model_includes=[
+                        dict(
+                            path=path,
+                            section="FF" if analysis == "ac" and drift == "corner" else "NN",
+                            file_sha256=saved.model_file_sha256[0],
+                        )
+                    ],
+                    inputs=saved.analysis_inputs.model_dump(mode="json"),
+                )
+            )
+        )
+        reader = GenericReaderRegistration.model_validate_json(
+            _canonical(
+                dict(
+                    schema_version=1,
+                    design_id=request.design_id,
+                    analysis_id=request.analysis_id,
+                    measurement_id=evidence.measurement_id,
+                    ade_registration_sha256=canonical_digest(ade),
+                    measurement_contract_sha256="e" * 64,
+                    nodes=[
+                        dict(logical_id="input", selector="/vin"),
+                        dict(logical_id="output", selector="/vout"),
+                    ],
+                    sources=[],
+                    transfer=None
+                    if saved.transfer is None
+                    else saved.transfer.model_dump(mode="json"),
+                    maximum_samples=8,
+                )
+            )
+        )
+        batches.append(
+            batch.model_copy(
+                update={
+                    "request": batch.request.model_copy(
+                        update={
+                            "fixed_evidence": evidence.model_copy(
+                                update={
+                                    "reader_registration_sha256": (
+                                        "0" * 64
+                                        if analysis == "ac" and drift == "reader"
+                                        else canonical_digest(reader)
+                                    ),
+                                }
+                            ),
+                        }
+                    )
+                }
+            )
+        )
+        routes.append(
+            dict(
+                design_id=request.design_id,
+                analysis_id=request.analysis_id,
+                source_cell="/synthetic/cell",
+                model_files=[
+                    dict(path=path, file_sha256=saved.model_file_sha256[0]),
+                    dict(
+                        path="/synthetic/sub.scs",
+                        file_sha256=("1" if analysis == "ac" and drift == "dependency" else "0")
+                        * 64,
+                    ),
+                ],
+                ade=ade.model_dump(mode="json"),
+                reader=reader.model_dump(mode="json"),
+            )
+        )
+
+    first = batches[0].plans[0]
+    registration = _canonical(
+        dict(
+            schema_version=1,
+            environment_sha256=first.environment_sha256,
+            design_sha256=first.design_sha256,
+            pdk_sha256=first.pdk_sha256,
+            routes=routes,
+        )
+    )
+    registration_sha = hashlib.sha256(registration).hexdigest()
+    runtime = _canonical(
+        dict(
+            schema_version=3,
+            kind=KIND,
+            profile_sha256=first.environment_sha256,
+            registration_sha256=registration_sha,
+            files={"registration.json": dict(sha256=registration_sha, bytes=len(registration))},
+        )
+    )
+    runner_sha = hashlib.sha256(runtime).hexdigest()
+    manifest = CandidateAnalysisManifest(
+        batches=tuple(
+            batch.model_copy(
+                update={
+                    "plans": tuple(
+                        plan.model_copy(update={"runner_sha256": runner_sha})
+                        for plan in batch.plans
+                    )
+                }
+            )
+            for batch in batches
+        )
+    )
+    return manifest, runtime, registration + (b" " if drift == "registration" else b"")
+
+
+@pytest.mark.parametrize(
+    ("drift", "reason"),
+    [
+        (None, None),
+        ("static", "candidate_cross_analysis_static_conditions_mismatch"),
+        ("corner", "candidate_cross_analysis_source_or_model_mismatch"),
+        ("dependency", "candidate_cross_analysis_source_or_model_mismatch"),
+        ("reader", "candidate_cross_analysis_route_binding_invalid"),
+        ("registration", "candidate_cross_analysis_runtime_binding_invalid"),
+    ],
+)
+def test_cross_analysis_requires_shared_verified_runtime_conditions(
+    candidate_operator, drift, reason
+):
+    assets = cross_analysis_bundle(candidate_operator, drift)
+    analyses = frozenset({"dc", "ac"})
+    if reason is None:
+        validate_cross_analysis_conditions(*assets, analyses=analyses)
+    else:
+        with pytest.raises(OperationRejected) as rejected:
+            validate_cross_analysis_conditions(*assets, analyses=analyses)
+        assert rejected.value.reason == reason

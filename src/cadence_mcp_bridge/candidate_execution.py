@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
@@ -17,7 +19,11 @@ from cadence_mcp_bridge.candidate_reports import (
     CandidateStatus,
     compare_candidate_reports,
 )
+from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
+from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
 from cadence_mcp_bridge.native_diagnostics import OperationId
+from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationRejected
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
@@ -89,6 +95,103 @@ def _candidate_values(
         (candidate.candidate_id, child.request.values)
         for candidate, child in zip(batch.request.candidates, batch.plans, strict=True)
     )
+
+
+def validate_cross_analysis_conditions(
+    manifest: CandidateAnalysisManifest,
+    runtime_manifest: bytes,
+    runtime_registration: bytes,
+    *,
+    analyses: frozenset[str],
+) -> None:
+    """Check shared circuit conditions against the existing hash-bound runtime assets."""
+    manifest = CandidateAnalysisManifest.model_validate_json(manifest.model_dump_json())
+    batches = {batch.plans[0].analysis: batch for batch in manifest.batches}
+    if len(analyses) < 2 or analyses - batches.keys():
+        raise OperationRejected("candidate_cross_analysis_inventory_invalid")
+    first = manifest.batches[0].plans[0]
+    try:
+        _closed_document(runtime_manifest)
+        _closed_document(runtime_registration)
+        registration_sha = hashlib.sha256(runtime_registration).hexdigest()
+        bundle = json.loads(runtime_manifest)
+        registration = json.loads(runtime_registration)
+        if (
+            hashlib.sha256(runtime_manifest).hexdigest() != first.runner_sha256
+            or bundle["schema_version"] != 3
+            or bundle["kind"] != KIND
+            or bundle["profile_sha256"] != first.environment_sha256
+            or bundle["registration_sha256"] != registration_sha
+            or bundle["files"]["registration.json"]
+            != {
+                "sha256": registration_sha,
+                "bytes": len(runtime_registration),
+            }
+            or type(registration["schema_version"]) is not int
+            or registration["schema_version"] != 1
+            or (
+                registration["environment_sha256"],
+                registration["design_sha256"],
+                registration["pdk_sha256"],
+            )
+            != (
+                first.environment_sha256,
+                first.design_sha256,
+                first.pdk_sha256,
+            )
+        ):
+            raise ValueError("runtime identity")
+        routes = {(r["design_id"], r["analysis_id"]): r for r in registration["routes"]}
+        if len(routes) != len(registration["routes"]):
+            raise ValueError("duplicate runtime route")
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_cross_analysis_runtime_binding_invalid") from None
+
+    static_conditions = set()
+    source_models = set()
+    for analysis, batch in batches.items():
+        if analysis not in analyses:
+            continue
+        child = batch.plans[0]
+        request = child.request
+        fixed = batch.request.fixed_evidence
+        conditions = fixed.conditions
+        try:
+            route = routes[request.design_id, request.analysis_id]
+            ade = AdeExecutionRegistration.model_validate_json(_canonical(route["ade"]))
+            reader = GenericReaderRegistration.model_validate_json(_canonical(route["reader"]))
+            if (
+                (ade.design_id, ade.analysis_id, ade.design_profile_sha256)
+                != (request.design_id, request.analysis_id, fixed.design_profile_sha256)
+                or (reader.design_id, reader.analysis_id, reader.measurement_id)
+                != (request.design_id, request.analysis_id, fixed.measurement_id)
+                or reader.ade_registration_sha256 != canonical_digest(ade)
+                or canonical_digest(reader) != fixed.reader_registration_sha256
+                or ade.inputs != conditions.analysis_inputs
+                or ade.source_tree_sha256 != conditions.source_tree_sha256
+                or ade.ade_state_tree_sha256 != conditions.ade_state_tree_sha256
+                or ade.static_statements_sha256 != conditions.static_statements_sha256
+                or tuple(model.file_sha256 for model in ade.model_includes)
+                != conditions.model_file_sha256
+                or reader.transfer != conditions.transfer
+            ):
+                raise ValueError("route conditions")
+            static_conditions.add(ade.static_statements_sha256)
+            source_models.add(
+                _canonical(
+                    [
+                        route["source_cell"],
+                        [model.model_dump(mode="json") for model in ade.model_includes],
+                        route["model_files"],
+                    ]
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            raise OperationRejected("candidate_cross_analysis_route_binding_invalid") from None
+    if len(static_conditions) != 1:
+        raise OperationRejected("candidate_cross_analysis_static_conditions_mismatch")
+    if len(source_models) != 1:
+        raise OperationRejected("candidate_cross_analysis_source_or_model_mismatch")
 
 
 class CandidateRevision(VariableModel):
