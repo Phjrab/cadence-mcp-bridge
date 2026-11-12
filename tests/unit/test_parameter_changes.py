@@ -349,3 +349,17 @@ def test_capacitor_rejects_other_device_or_load_connectivity_delta() -> None:
         project_netlist_change(plan, _CAP_NETLIST, candidate.replace(b"l=100n", b"l=120n"))
     with pytest.raises(ValueError, match="unsupported CL"):
         project_netlist_change(plan, _CAP_NETLIST, candidate.replace(b"CL (vout 0)", b"CL (vin 0)"))
+
+
+def test_capacitor_rejects_reuse_of_baseline_testbench_revision() -> None:
+    qualification = _capacitor()
+    plan = plan_capacitor_change(qualification, "candidate", CHILD, qualification.expected)
+    baseline = _row(plan, "baseline")
+    stale_binding = {"testbench_revision_sha256": plan.baseline.testbench_revision_sha256}
+    reopened = _row(plan, "reopened").model_copy(update=stale_binding)
+    netlist = _row(plan, "netlist").model_copy(update=stale_binding)
+
+    result = verify_change_readback(plan, baseline=baseline, reopened=reopened, netlist=netlist)
+
+    assert result.status == "STALE"
+    assert result.reason == "capacitor_testbench_revision_reuses_baseline"

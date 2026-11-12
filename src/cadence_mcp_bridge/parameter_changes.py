@@ -557,6 +557,11 @@ def _check_readback(
         or reopened.testbench_revision_sha256 != netlist.testbench_revision_sha256
     ):
         return "STALE", "reopened_and_netlist_revisions_differ"
+    if (
+        isinstance(plan.target, CapacitorTarget)
+        and reopened.testbench_revision_sha256 == reference.testbench_revision_sha256
+    ):
+        return "STALE", "capacitor_testbench_revision_reuses_baseline"
     if len({baseline.artifact_sha256, reopened.artifact_sha256, netlist.artifact_sha256}) != 3:
         return "CONFLICT", "independent_readback_artifacts_required"
     return "MATCHED", "local_projections_match"
