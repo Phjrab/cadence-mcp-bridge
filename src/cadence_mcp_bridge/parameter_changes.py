@@ -1,4 +1,4 @@
-"""Local plans and evidence checks for ADE variables and one observed MOS form."""
+"""Local parameter plans and evidence checks for exact registered targets."""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ from cadence_mcp_bridge.variable_contracts import (
     number_text,
 )
 
-ChangeUnit = Literal["V", "A", "m", "um", "nm"]
+ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF"]
 GeometryProperty = Literal["fw", "as", "ad", "ps", "pd"]
-_LENGTH_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9}
+_UNIT_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9, "F": 0, "pF": -12}
 
 
 def _checked[T: VariableModel](value: T) -> T:
@@ -40,12 +40,15 @@ class ChangeValue(VariableModel):
         value = number_text(self.value)
         if self.unit in ("V", "A"):
             return value, self.unit
-        length = Decimal(value)
-        if length <= 0:
-            raise ValueError("length must be positive")
+        magnitude = Decimal(value)
+        is_capacitance = self.unit in ("F", "pF")
+        if magnitude <= 0:
+            quantity = "capacitance" if is_capacitance else "length"
+            raise ValueError(f"{quantity} must be positive")
         with localcontext() as context:
             context.prec = 128
-            return number_text(str(length.scaleb(_LENGTH_SCALE[self.unit]))), "m"
+            canonical = number_text(str(magnitude.scaleb(_UNIT_SCALE[self.unit])))
+        return canonical, "F" if is_capacitance else "m"
 
     @model_validator(mode="after")
     def valid_value(self) -> Self:
@@ -82,6 +85,26 @@ class MosWidthTarget(VariableModel):
             instance.property_name,
         ) != ("gpdk090", "pmos1v", "symbol", "w"):
             raise ValueError("only the observed gpdk090 pmos1v schematic width route is supported")
+        return self
+
+
+class CapacitorTarget(VariableModel):
+    """The observed top-level load in the owned inverter testbench."""
+
+    kind: Literal["schematic_load_capacitance"] = "schematic_load_capacitance"
+    instance: CandidateSourceTarget
+
+    @model_validator(mode="after")
+    def exact_load(self) -> Self:
+        instance = self.instance
+        if (
+            instance.instance_path,
+            instance.master_library,
+            instance.master_cell,
+            instance.master_view,
+            instance.property_name,
+        ) != ("CL", "analogLib", "cap", "symbol", "c"):
+            raise ValueError("only the observed analogLib cap CL c target is supported")
         return self
 
 
@@ -137,11 +160,34 @@ class MosWidthQualification(VariableModel):
         return self
 
 
+class CapacitorQualification(VariableModel):
+    """One operator-reviewed transition. No production value is registered here."""
+
+    baseline: ChangeBaseline
+    target: CapacitorTarget
+    old: ChangeValue
+    expected: ChangeValue
+    cdf_evidence_sha256: Digest
+    legal_value_evidence_sha256: Digest
+    update_route_evidence_sha256: Digest
+
+    @model_validator(mode="after")
+    def observed_load(self) -> Self:
+        one_pf = ("0.000000000001", "F")
+        if (
+            self.old.normalized != one_pf
+            or self.expected.normalized[1] != "F"
+            or self.expected.normalized == one_pf
+        ):
+            raise ValueError("capacitor qualification requires a finite change from the 1 pF load")
+        return self
+
+
 class ChangePlan(VariableModel):
     baseline: ChangeBaseline
     candidate_id: LogicalId
     candidate_revision: RevisionBinding
-    target: Annotated[AdeTarget | MosWidthTarget, Field(discriminator="kind")]
+    target: Annotated[AdeTarget | MosWidthTarget | CapacitorTarget, Field(discriminator="kind")]
     old: ChangeValue
     requested: ChangeValue
     expected: ChangeValue
@@ -169,6 +215,9 @@ class ChangePlan(VariableModel):
         if isinstance(self.target, AdeTarget):
             if self.old.unit not in ("V", "A") or self.allowed_derived:
                 raise ValueError("ADE change must be a registered V/A scalar")
+        elif isinstance(self.target, CapacitorTarget):
+            if self.old.normalized != ("0.000000000001", "F") or self.allowed_derived:
+                raise ValueError("capacitor change must start from the observed 1 pF load")
         elif self.old.normalized[1] != "m" or not self.allowed_derived:
             raise ValueError("MOS width change requires a qualified geometry transition")
         return self
@@ -240,6 +289,29 @@ def plan_mos_width_change(
     )
 
 
+def plan_capacitor_change(
+    qualification: CapacitorQualification,
+    candidate_id: str,
+    candidate_revision: RevisionBinding,
+    requested: ChangeValue,
+) -> ChangePlan:
+    qualification = _checked(qualification)
+    candidate_revision = _checked(candidate_revision)
+    requested = _checked(requested)
+    if requested.normalized != qualification.expected.normalized:
+        raise ValueError("capacitance is outside the qualified finite transition")
+    return ChangePlan(
+        baseline=qualification.baseline,
+        candidate_id=candidate_id,
+        candidate_revision=candidate_revision,
+        target=qualification.target,
+        old=qualification.old,
+        requested=requested,
+        expected=qualification.expected,
+        qualification_sha256=canonical_digest(qualification),
+    )
+
+
 class NetlistProjection(VariableModel):
     artifact_sha256: Digest
     value: ChangeValue
@@ -299,6 +371,28 @@ def _netlist_width(options: dict[str, str]) -> ChangeValue:
     return ChangeValue(value=token[1:-2], unit="nm")
 
 
+def _load_capacitance(statements: list[str]) -> tuple[list[str], ChangeValue]:
+    """Read the sole top-level CL in the observed Spectre form."""
+    depth = 0
+    matches: list[tuple[int, str]] = []
+    for index, line in enumerate(statements):
+        if line.startswith(("subckt ", "inline subckt ")):
+            depth += 1
+        elif line == "ends" or line.startswith("ends "):
+            depth -= 1
+        elif line.startswith("CL "):
+            match = re.fullmatch(r"CL \(vout 0\) capacitor c=([0-9]+(?:\.[0-9]+)?)p", line)
+            if depth != 0 or match is None:
+                raise ValueError("unsupported CL capacitor statement")
+            matches.append((index, match[1]))
+    if len(matches) != 1:
+        raise ValueError("CL capacitor is missing or ambiguous")
+    index, value = matches[0]
+    fixed = statements.copy()
+    fixed[index] = "CL (vout 0) capacitor"
+    return fixed, ChangeValue(value=value, unit="pF")
+
+
 def project_netlist_change(
     plan: ChangePlan, baseline_input: bytes, candidate_input: bytes
 ) -> NetlistProjection:
@@ -320,6 +414,9 @@ def project_netlist_change(
         unit = plan.old.unit
         old = ChangeValue(value=old_params.pop(name, ""), unit=unit)
         observed = ChangeValue(value=new_params.pop(name, ""), unit=unit)
+    elif isinstance(plan.target, CapacitorTarget):
+        old_static, old = _load_capacitance(old_static)
+        new_static, observed = _load_capacitance(new_static)
     else:
         instance_path = plan.target.instance.instance_path
         old_static, old_options = _width_options(old_static, instance_path)

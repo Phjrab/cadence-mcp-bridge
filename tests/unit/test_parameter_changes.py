@@ -7,6 +7,8 @@ import pytest
 
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget, CandidateVariableBinding
 from cadence_mcp_bridge.parameter_changes import (
+    CapacitorQualification,
+    CapacitorTarget,
     ChangeBaseline,
     ChangePlan,
     ChangeValue,
@@ -16,6 +18,7 @@ from cadence_mcp_bridge.parameter_changes import (
     MosWidthTarget,
     Readback,
     plan_ade_change,
+    plan_capacitor_change,
     plan_mos_width_change,
     project_netlist_change,
     verify_change_readback,
@@ -284,3 +287,65 @@ def test_planning_revalidates_nested_model_copy_values() -> None:
     )
     with pytest.raises(ValueError, match="bounded decimal"):
         verify_change_readback(plan, netlist=forged_row)
+
+
+_CAP_NETLIST = _NETLIST + b"CL (vout 0) capacitor c=1p\n"
+
+
+def _capacitor() -> CapacitorQualification:
+    return CapacitorQualification(
+        baseline=BASELINE.model_copy(
+            update={"netlist_sha256": hashlib.sha256(_CAP_NETLIST).hexdigest()}
+        ),
+        target=CapacitorTarget(
+            instance=CandidateSourceTarget(
+                instance_path="CL",
+                master_library="analogLib",
+                master_cell="cap",
+                master_view="symbol",
+                property_name="c",
+            )
+        ),
+        old=ChangeValue(value="1", unit="pF"),
+        expected=ChangeValue(value="2", unit="pF"),
+        cdf_evidence_sha256="f" * 64,
+        legal_value_evidence_sha256="1" * 64,
+        update_route_evidence_sha256="2" * 64,
+    )
+
+
+def test_capacitor_projects_only_the_registered_load_and_compares_readback() -> None:
+    requested = ChangeValue(value="2e-12", unit="F")
+    plan = plan_capacitor_change(_capacitor(), "candidate", CHILD, requested)
+    candidate = _CAP_NETLIST.replace(b"c=1p", b"c=2p")
+    projection = project_netlist_change(plan, _CAP_NETLIST, candidate)
+    assert plan.requested == requested
+    assert projection.value == ChangeValue(value="2", unit="pF")
+    baseline = _row(plan, "baseline")
+    reopened = _row(plan, "reopened").model_copy(update={"value": requested})
+    netlist = _row(plan, "netlist").model_copy(
+        update={"value": projection.value, "artifact_sha256": projection.artifact_sha256}
+    )
+    result = verify_change_readback(plan, baseline=baseline, reopened=reopened, netlist=netlist)
+    assert result.status == "MATCHED"
+    assert result.execution_authorized is False
+
+
+def test_capacitor_rejects_wrong_unit_or_another_target() -> None:
+    qualification = _capacitor()
+    with pytest.raises(ValueError, match="qualified finite"):
+        plan_capacitor_change(qualification, "candidate", CHILD, ChangeValue(value="2", unit="V"))
+    with pytest.raises(ValueError, match="observed analogLib cap CL c"):
+        CapacitorTarget(
+            instance=qualification.target.instance.model_copy(update={"instance_path": "C1"})
+        )
+
+
+def test_capacitor_rejects_other_device_or_load_connectivity_delta() -> None:
+    qualification = _capacitor()
+    plan = plan_capacitor_change(qualification, "candidate", CHILD, qualification.expected)
+    candidate = _CAP_NETLIST.replace(b"c=1p", b"c=2p")
+    with pytest.raises(ValueError, match="fixed netlist"):
+        project_netlist_change(plan, _CAP_NETLIST, candidate.replace(b"l=100n", b"l=120n"))
+    with pytest.raises(ValueError, match="unsupported CL"):
+        project_netlist_change(plan, _CAP_NETLIST, candidate.replace(b"CL (vout 0)", b"CL (vin 0)"))
