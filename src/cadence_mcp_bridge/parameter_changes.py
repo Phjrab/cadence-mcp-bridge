@@ -1,0 +1,465 @@
+"""Local plans and evidence checks for ADE variables and one observed MOS form."""
+
+from __future__ import annotations
+
+import hashlib
+import re
+from decimal import Decimal, localcontext
+from typing import Annotated, Literal, Self
+
+from pydantic import Field, model_validator
+
+from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget, CandidateVariableBinding
+from cadence_mcp_bridge.schematic_plan import RevisionBinding
+from cadence_mcp_bridge.variable_contracts import (
+    Digest,
+    LogicalId,
+    NumberText,
+    VariableContract,
+    VariableModel,
+    canonical_digest,
+    number_text,
+)
+
+ChangeUnit = Literal["V", "A", "m", "um", "nm"]
+GeometryProperty = Literal["fw", "as", "ad", "ps", "pd"]
+_LENGTH_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9}
+
+
+def _checked[T: VariableModel](value: T) -> T:
+    return type(value).model_validate_json(value.model_dump_json(warnings="error"))
+
+
+class ChangeValue(VariableModel):
+    value: NumberText
+    unit: ChangeUnit
+
+    @property
+    def normalized(self) -> tuple[str, str]:
+        value = number_text(self.value)
+        if self.unit in ("V", "A"):
+            return value, self.unit
+        length = Decimal(value)
+        if length <= 0:
+            raise ValueError("length must be positive")
+        with localcontext() as context:
+            context.prec = 128
+            return number_text(str(length.scaleb(_LENGTH_SCALE[self.unit]))), "m"
+
+    @model_validator(mode="after")
+    def valid_value(self) -> Self:
+        _ = self.normalized
+        return self
+
+
+class ChangeBaseline(VariableModel):
+    revision: RevisionBinding
+    revision_sha256: Digest
+    testbench_revision_sha256: Digest
+    fixed_conditions_sha256: Digest
+    netlist_sha256: Digest
+
+
+class AdeTarget(VariableModel):
+    kind: Literal["ade_variable"] = "ade_variable"
+    binding: CandidateVariableBinding
+
+
+class MosWidthTarget(VariableModel):
+    """One reviewed schematic master; the exact hierarchical target is registered."""
+
+    kind: Literal["schematic_mos_width"] = "schematic_mos_width"
+    instance: CandidateSourceTarget
+
+    @model_validator(mode="after")
+    def observed_master_and_property(self) -> Self:
+        instance = self.instance
+        if (
+            instance.master_library,
+            instance.master_cell,
+            instance.master_view,
+            instance.property_name,
+        ) != ("gpdk090", "pmos1v", "symbol", "w"):
+            raise ValueError("only the observed gpdk090 pmos1v schematic width route is supported")
+        return self
+
+
+class DerivedValue(VariableModel):
+    property_name: GeometryProperty
+    value: Annotated[
+        str, Field(pattern=r"^[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$", max_length=32)
+    ]
+
+
+class DerivedChange(VariableModel):
+    before: DerivedValue
+    after: DerivedValue
+
+    @model_validator(mode="after")
+    def same_property(self) -> Self:
+        if self.before.property_name != self.after.property_name:
+            raise ValueError("derived change must identify a single property")
+        return self
+
+
+class MosWidthQualification(VariableModel):
+    """A registered transition for one single-finger instance on one baseline."""
+
+    baseline: ChangeBaseline
+    target: MosWidthTarget
+    old: ChangeValue
+    expected: ChangeValue
+    fingers: Annotated[int, Field(ge=1, le=1)]
+    multiplicity: Annotated[int, Field(ge=1, le=1)]
+    cdf_evidence_sha256: Digest
+    legal_value_evidence_sha256: Digest
+    update_route_evidence_sha256: Digest
+    derived: Annotated[tuple[DerivedChange, ...], Field(min_length=1, max_length=5)]
+
+    @model_validator(mode="after")
+    def observed_geometry(self) -> Self:
+        names = tuple(change.before.property_name for change in self.derived)
+        if len(set(names)) != len(names) or "fw" not in names:
+            raise ValueError("unique qualified geometry projections including fw are required")
+        if (
+            self.old.normalized[1] != "m"
+            or self.expected.normalized[1] != "m"
+            or self.old.normalized == self.expected.normalized
+        ):
+            raise ValueError("qualified width transition must change a length")
+        fw = self.derived[names.index("fw")]
+        for value, width in ((fw.before, self.old), (fw.after, self.expected)):
+            if not value.value.endswith("n"):
+                raise ValueError("the qualified fw observation must use explicit nm")
+            if ChangeValue(value=value.value[:-1], unit="nm").normalized != width.normalized:
+                raise ValueError("observed single-finger w and fw differ")
+        return self
+
+
+class ChangePlan(VariableModel):
+    baseline: ChangeBaseline
+    candidate_id: LogicalId
+    candidate_revision: RevisionBinding
+    target: Annotated[AdeTarget | MosWidthTarget, Field(discriminator="kind")]
+    old: ChangeValue
+    requested: ChangeValue
+    expected: ChangeValue
+    qualification_sha256: Digest
+    allowed_derived: Annotated[tuple[DerivedChange, ...], Field(max_length=5)] = ()
+
+    @model_validator(mode="after")
+    def exact_parent_and_change(self) -> Self:
+        baseline, candidate = self.baseline.revision, self.candidate_revision
+        if (
+            candidate.workspace_id != baseline.workspace_id
+            or candidate.design_id != baseline.design_id
+            or candidate.source_baseline_sha256 != baseline.source_baseline_sha256
+            or candidate.parent_revision_id != baseline.revision_id
+            or candidate.parent_revision_sha256 != self.baseline.revision_sha256
+            or candidate.revision_id == baseline.revision_id
+        ):
+            raise ValueError("candidate must be a fresh child of the exact baseline")
+        if (
+            self.requested.normalized != self.expected.normalized
+            or self.old.normalized[1] != self.expected.normalized[1]
+            or self.old.normalized == self.expected.normalized
+        ):
+            raise ValueError("incoherent requested, previous or expected value")
+        if isinstance(self.target, AdeTarget):
+            if self.old.unit not in ("V", "A") or self.allowed_derived:
+                raise ValueError("ADE change must be a registered V/A scalar")
+        elif self.old.normalized[1] != "m" or not self.allowed_derived:
+            raise ValueError("MOS width change requires a qualified geometry transition")
+        return self
+
+    @property
+    def plan_sha256(self) -> str:
+        return canonical_digest(self)
+
+
+def plan_ade_change(
+    baseline: ChangeBaseline,
+    candidate_id: str,
+    candidate_revision: RevisionBinding,
+    contract: VariableContract,
+    binding: CandidateVariableBinding,
+    old: ChangeValue,
+    requested: ChangeValue,
+) -> ChangePlan:
+    baseline = _checked(baseline)
+    candidate_revision = _checked(candidate_revision)
+    contract = _checked(contract)
+    binding = _checked(binding)
+    old = _checked(old)
+    requested = _checked(requested)
+    if (
+        contract.mutation_policy != "owned_copy_only"
+        or contract.logical_id != binding.logical_id
+        or contract.cadence_binding != binding.cadence_binding
+        or contract.unit not in ("V", "A")
+        or old.unit != contract.unit
+        or requested.unit != contract.unit
+        or contract.check_number(old.normalized[0]) is not None
+        or contract.check_number(requested.normalized[0]) is not None
+    ):
+        raise ValueError("registered ADE variable or reviewed numeric contract mismatch")
+    return ChangePlan(
+        baseline=baseline,
+        candidate_id=candidate_id,
+        candidate_revision=candidate_revision,
+        target=AdeTarget(binding=binding),
+        old=old,
+        requested=requested,
+        expected=requested,
+        qualification_sha256=canonical_digest(contract),
+    )
+
+
+def plan_mos_width_change(
+    qualification: MosWidthQualification,
+    candidate_id: str,
+    candidate_revision: RevisionBinding,
+    requested: ChangeValue,
+) -> ChangePlan:
+    qualification = _checked(qualification)
+    candidate_revision = _checked(candidate_revision)
+    requested = _checked(requested)
+    if requested.normalized != qualification.expected.normalized:
+        raise ValueError("width is outside the qualified finite transition")
+    return ChangePlan(
+        baseline=qualification.baseline,
+        candidate_id=candidate_id,
+        candidate_revision=candidate_revision,
+        target=qualification.target,
+        old=qualification.old,
+        requested=requested,
+        expected=qualification.expected,
+        qualification_sha256=canonical_digest(qualification),
+        allowed_derived=qualification.derived,
+    )
+
+
+class NetlistProjection(VariableModel):
+    artifact_sha256: Digest
+    value: ChangeValue
+    derived: tuple[DerivedValue, ...] = ()
+
+
+def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[str, str]]:
+    parts = path.split("/")
+    if len(parts) != 2:
+        raise ValueError(
+            "MOS netlist binding requires the registered DUT instance and MOS instance"
+        )
+    dut, device = parts
+    scopes: list[str] = []
+    masters: list[str] = []
+    instances: list[tuple[str, int, str]] = []
+    for index, line in enumerate(statements):
+        words = line.split()
+        opening = words[1:] if words[0] == "inline" else words
+        if opening and opening[0] == "subckt":
+            scopes.append(opening[1])
+        elif words[0] == "ends":
+            scopes.pop()
+        elif not scopes and words[0] == dut:
+            match = re.fullmatch(r"[^ ]+ \([^()]+\) ([A-Za-z][A-Za-z0-9_#-]*)", line)
+            if match is None:
+                raise ValueError("unsupported DUT netlist binding")
+            masters.append(match[1])
+        elif len(scopes) == 1 and words[0] == device:
+            instances.append((scopes[0], index, line))
+    if len(masters) != 1:
+        raise ValueError("DUT netlist binding is missing or ambiguous")
+    matches = [(index, line) for scope, index, line in instances if scope == masters[0]]
+    if len(matches) != 1:
+        raise ValueError("MOS netlist instance is missing or ambiguous")
+    index, line = matches[0]
+    match = re.fullmatch(r"([^ ]+ \([^()]+\) [^ ]+) (.+)", line)
+    if match is None:
+        raise ValueError("unsupported MOS netlist statement")
+    options: dict[str, str] = {}
+    for token in match[2].split():
+        name, separator, value = token.partition("=")
+        if not separator or not name or not value or name in options:
+            raise ValueError("invalid or duplicate MOS netlist option")
+        options[name] = value
+    fixed = statements.copy()
+    fixed[index] = match[1]
+    return fixed, options
+
+
+def _netlist_width(options: dict[str, str]) -> ChangeValue:
+    if options.get("m") != "(1)*(1)" or options.get("simM") != "(1)*(1)":
+        raise ValueError("unsupported effective MOS multiplicity expression")
+    token = options.pop("w", "")
+    if not (token.startswith("(") and token.endswith("n)")):
+        raise ValueError("unsupported effective width expression")
+    return ChangeValue(value=token[1:-2], unit="nm")
+
+
+def project_netlist_change(
+    plan: ChangePlan, baseline_input: bytes, candidate_input: bytes
+) -> NetlistProjection:
+    """Extract effective values from actual inputs and compare the allowed delta.
+
+    Input provenance and model-file bytes are checked by the native caller.
+    """
+    plan = _checked(plan)
+    if hashlib.sha256(baseline_input).hexdigest() != plan.baseline.netlist_sha256:
+        raise ValueError("baseline netlist digest mismatch")
+    old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
+    new_params, new_includes, new_analyses, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
+    if old_includes != new_includes or old_analyses != new_analyses:
+        raise ValueError("model includes or analysis settings changed")
+
+    derived: tuple[DerivedValue, ...] = ()
+    if isinstance(plan.target, AdeTarget):
+        name = plan.target.binding.cadence_binding
+        unit = plan.old.unit
+        old = ChangeValue(value=old_params.pop(name, ""), unit=unit)
+        observed = ChangeValue(value=new_params.pop(name, ""), unit=unit)
+    else:
+        instance_path = plan.target.instance.instance_path
+        old_static, old_options = _width_options(old_static, instance_path)
+        new_static, new_options = _width_options(new_static, instance_path)
+        old = _netlist_width(old_options)
+        observed = _netlist_width(new_options)
+        geometry = [
+            change for change in plan.allowed_derived if change.before.property_name != "fw"
+        ]
+        values = []
+        for change in geometry:
+            name = change.before.property_name
+            previous = DerivedValue(property_name=name, value=old_options.pop(name, ""))
+            current = DerivedValue(property_name=name, value=new_options.pop(name, ""))
+            if (previous, current) != (change.before, change.after):
+                raise ValueError("derived MOS netlist geometry differs from qualification")
+            values.append(current)
+        if old_options != new_options:
+            raise ValueError("fixed MOS netlist options changed")
+        derived = tuple(values)
+    if old_params != new_params or old_static != new_static:
+        raise ValueError("fixed netlist parameters or topology changed")
+    if old.normalized != plan.old.normalized or observed.normalized != plan.expected.normalized:
+        raise ValueError("effective netlist value differs from plan")
+    return NetlistProjection(
+        artifact_sha256=hashlib.sha256(candidate_input).hexdigest(),
+        value=observed,
+        derived=derived,
+    )
+
+
+class Readback(VariableModel):
+    """Value projected by an observer from its own artifact; hashes identify the capture."""
+
+    stage: Literal["baseline", "reopened", "netlist"]
+    plan_sha256: Digest
+    target_sha256: Digest
+    revision: RevisionBinding
+    revision_sha256: Digest
+    testbench_revision_sha256: Digest
+    fixed_conditions_sha256: Digest
+    artifact_sha256: Digest
+    value: ChangeValue
+    derived: Annotated[tuple[DerivedValue, ...], Field(max_length=5)] = ()
+    mos_fingers: Annotated[int, Field(ge=1, le=1)] | None = None
+    mos_multiplicity: Annotated[int, Field(ge=1, le=1)] | None = None
+
+    @model_validator(mode="after")
+    def distinct_properties(self) -> Self:
+        if len({value.property_name for value in self.derived}) != len(self.derived):
+            raise ValueError("readback contains duplicate derived properties")
+        return self
+
+
+class ChangeReadback(VariableModel):
+    plan_sha256: Digest
+    status: Literal["MISSING", "STALE", "CONFLICT", "MATCHED"]
+    reason: str
+    baseline: Readback | None
+    reopened: Readback | None
+    netlist: Readback | None
+    provenance: Literal["LOCAL_EVIDENCE_COMPARISON"] = "LOCAL_EVIDENCE_COMPARISON"
+    execution_authorized: Literal[False] = False
+
+
+def verify_change_readback(
+    plan: ChangePlan,
+    *,
+    baseline: Readback | None = None,
+    reopened: Readback | None = None,
+    netlist: Readback | None = None,
+) -> ChangeReadback:
+    """Compare projected values. Authentication and execution admission stay with C1."""
+    plan = _checked(plan)
+    baseline = None if baseline is None else _checked(baseline)
+    reopened = None if reopened is None else _checked(reopened)
+    netlist = None if netlist is None else _checked(netlist)
+    status, reason = _check_readback(plan, baseline, reopened, netlist)
+    return ChangeReadback(
+        plan_sha256=plan.plan_sha256,
+        status=status,
+        reason=reason,
+        baseline=baseline,
+        reopened=reopened,
+        netlist=netlist,
+    )
+
+
+def _check_readback(
+    plan: ChangePlan,
+    baseline: Readback | None,
+    reopened: Readback | None,
+    netlist: Readback | None,
+) -> tuple[Literal["MISSING", "STALE", "CONFLICT", "MATCHED"], str]:
+    reference = plan.baseline
+    for stage, row in (("baseline", baseline), ("reopened", reopened), ("netlist", netlist)):
+        if row is None:
+            continue
+        is_baseline = stage == "baseline"
+        revision = reference.revision if is_baseline else plan.candidate_revision
+        if (
+            row.stage != stage
+            or row.plan_sha256 != plan.plan_sha256
+            or row.target_sha256 != canonical_digest(plan.target)
+            or row.revision != revision
+            or (row.revision_sha256 == reference.revision_sha256) != is_baseline
+            or (
+                is_baseline and row.testbench_revision_sha256 != reference.testbench_revision_sha256
+            )
+        ):
+            return "STALE", f"{stage}_binding_mismatch"
+        if row.fixed_conditions_sha256 != reference.fixed_conditions_sha256:
+            return "CONFLICT", f"{stage}_fixed_conditions_changed"
+        expected = plan.old if is_baseline else plan.expected
+        if row.value.normalized != expected.normalized:
+            return "CONFLICT", f"{stage}_value_mismatch"
+        observed_mos_counts = (row.mos_fingers, row.mos_multiplicity)
+        expected_mos_counts = (
+            (1, 1)
+            if isinstance(plan.target, MosWidthTarget) and stage != "netlist"
+            else (None, None)
+        )
+        if observed_mos_counts != expected_mos_counts:
+            return "CONFLICT", f"{stage}_mos_shape_mismatch"
+        # The simulator exposes the effective width, not the OA fw property.
+        # Other allowed geometry projections still need their own netlist values.
+        derived = {
+            change.before.property_name: (change.before if is_baseline else change.after).value
+            for change in plan.allowed_derived
+            if stage != "netlist" or change.before.property_name != "fw"
+        }
+        if {value.property_name: value.value for value in row.derived} != derived:
+            return "CONFLICT", f"{stage}_derived_values_mismatch"
+    if baseline is None or reopened is None or netlist is None:
+        return "MISSING", "baseline_reopened_and_netlist_readbacks_required"
+    if (
+        reopened.revision_sha256 != netlist.revision_sha256
+        or reopened.testbench_revision_sha256 != netlist.testbench_revision_sha256
+    ):
+        return "STALE", "reopened_and_netlist_revisions_differ"
+    if len({baseline.artifact_sha256, reopened.artifact_sha256, netlist.artifact_sha256}) != 3:
+        return "CONFLICT", "independent_readback_artifacts_required"
+    return "MATCHED", "local_projections_match"
