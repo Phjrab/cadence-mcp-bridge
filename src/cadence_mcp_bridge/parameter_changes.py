@@ -9,7 +9,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
-from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge._native_rendering import partition_input, statements
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget, CandidateVariableBinding
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
@@ -393,6 +393,65 @@ def _load_capacitance(statements: list[str]) -> tuple[list[str], ChangeValue]:
     return fixed, ChangeValue(value=value, unit="pF")
 
 
+# The source9 inverter testbench has four independent instance declarations.
+# Keep their exact syntax, connectivity, and values when admitting a permutation.
+_INVERTER_BENCH_INSTANCES = frozenset(
+    {
+        "DUT (vdd vin vout 0) InvLong",
+        "VDD (vdd 0) vsource dc=1 type=dc",
+        "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=150n "
+        "delay=10n rise=100p fall=100p width=65n",
+        "CL (vout 0) capacitor c=1p",
+    }
+)
+
+
+def _inverter_bench_block(lines: list[str]) -> tuple[int, int] | None:
+    depth = 0
+    indexes: list[int] = []
+    identifiers: set[str] = set()
+    for index, line in enumerate(lines):
+        if line.startswith(("subckt ", "inline subckt ")):
+            depth += 1
+        elif line == "ends" or line.startswith("ends "):
+            depth -= 1
+        elif depth == 0 and (name := line.split(" ", 1)[0]) in ("DUT", "VDD", "VIN", "CL"):
+            if name in identifiers or line not in _INVERTER_BENCH_INSTANCES:
+                return None
+            identifiers.add(name)
+            indexes.append(index)
+    if len(indexes) == 4 and indexes[-1] - indexes[0] == 3:
+        return indexes[0], indexes[-1] + 1
+    return None
+
+
+def _same_inverter_bench_with_reordered_instances(
+    old_static: list[str], new_static: list[str], old_input: bytes, new_input: bytes
+) -> bool:
+    # Compare blocks in the raw statement sequence too. The partitioned static
+    # sequence omits include, parameters and analysis statements.
+    old_raw: list[str] = statements(old_input)  # type: ignore[no-untyped-call]
+    new_raw: list[str] = statements(new_input)  # type: ignore[no-untyped-call]
+    raw_block = _inverter_bench_block(old_raw)
+    static_block = _inverter_bench_block(old_static)
+    if (
+        raw_block is None
+        or raw_block != _inverter_bench_block(new_raw)
+        or static_block is None
+        or static_block != _inverter_bench_block(new_static)
+    ):
+        return False
+    # Control placement must agree even though the MP value may differ.
+    controls = re.compile(r"^(?:include |parameters |[A-Za-z][A-Za-z0-9_]* (?:dc|ac|tran)(?: |$))")
+    if len(old_raw) != len(new_raw) or any(
+        a != b and (controls.match(a) or controls.match(b))
+        for a, b in zip(old_raw, new_raw, strict=True)
+    ):
+        return False
+    first, last = static_block
+    return old_static[:first] == new_static[:first] and old_static[last:] == new_static[last:]
+
+
 def project_netlist_change(
     plan: ChangePlan, baseline_input: bytes, candidate_input: bytes
 ) -> NetlistProjection:
@@ -437,7 +496,15 @@ def project_netlist_change(
         if old_options != new_options:
             raise ValueError("fixed MOS netlist options changed")
         derived = tuple(values)
-    if old_params != new_params or old_static != new_static:
+    if old_params != new_params or (
+        old_static != new_static
+        and not (
+            isinstance(plan.target, MosWidthTarget)
+            and _same_inverter_bench_with_reordered_instances(
+                old_static, new_static, baseline_input, candidate_input
+            )
+        )
+    ):
         raise ValueError("fixed netlist parameters or topology changed")
     if old.normalized != plan.old.normalized or observed.normalized != plan.expected.normalized:
         raise ValueError("effective netlist value differs from plan")

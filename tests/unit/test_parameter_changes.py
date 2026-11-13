@@ -363,3 +363,32 @@ def test_capacitor_rejects_reuse_of_baseline_testbench_revision() -> None:
 
     assert result.status == "STALE"
     assert result.reason == "capacitor_testbench_revision_reuses_baseline"
+
+
+def test_width_accepts_only_the_exact_contiguous_top_level_bench_permutation() -> None:
+    dut = b"DUT (vdd vin vout 0) InvLong\n"
+    sources = (
+        b"VDD (vdd 0) vsource dc=1 type=dc\n"
+        b"VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=150n "
+        b"delay=10n rise=100p fall=100p width=65n\n"
+        b"CL (vout 0) capacitor c=1p\n"
+    )
+    raw = _NETLIST[: _NETLIST.index(dut)] + dut + sources
+    baseline = BASELINE.model_copy(update={"netlist_sha256": hashlib.sha256(raw).hexdigest()})
+    qualification = _mos().model_copy(update={"baseline": baseline})
+    plan = plan_mos_width_change(qualification, "candidate", CHILD, qualification.expected)
+    candidate = raw.replace(dut + sources, sources + dut).replace(b"(350n)", b"(120n)")
+
+    projected = project_netlist_change(plan, raw, candidate)
+    assert projected.value == qualification.expected
+    assert projected.artifact_sha256 == hashlib.sha256(candidate).hexdigest()
+
+    for changed in (
+        candidate.replace(dut, dut + b"VDD (vdd 0) vsource dc=1 type=dc\n"),
+        candidate.replace(dut, dut + b"Cextra (vin 0) capacitor c=1p\n"),
+        candidate.replace(b"DUT (vdd vin vout 0)", b"DUT (vdd vout vin 0)"),
+        candidate.replace(b"capacitor c=1p", b"capacitor c=2p"),
+        candidate.replace(b"parameters m2_vin=0\n", b"") + b"parameters m2_vin=0\n",
+    ):
+        with pytest.raises(ValueError, match="fixed netlist"):
+            project_netlist_change(plan, raw, changed)
