@@ -182,12 +182,36 @@ def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
         )
     if drift == "unauthorized-geometry":
         child_raw = child_raw.replace(b"as=5.6p", b"as=5.7p")
+    if drift == "ac-circuit":
+        raw = ac.baseline_input + b"CL (Vop 0) capacitor c=1p\n"
+        center = ac.baseline.measurements[1].model_copy(
+            update={"input_sha256": hashlib.sha256(raw).hexdigest()}
+        )
+        sweep = ac.baseline.model_copy(
+            update={
+                "measurements": (ac.baseline.measurements[0], center, ac.baseline.measurements[2])
+            }
+        )
+        ac = replace(
+            ac, baseline=sweep, expected_baseline_sha256=canonical_digest(sweep), baseline_input=raw
+        )
     if child_fixture is not None:
         dc, dc_binding = child_fixture(dc, binding.dc, "dc")
         ac, ac_binding = child_fixture(ac, binding.ac, "ac")
         binding = binding.model_copy(update={"dc": dc_binding, "ac": ac_binding})
     if drift == "ac-grid":
         ac = replace(ac, child_input=ac.child_input.replace(b"dec=10", b"dec=11"))
+    if drift == "unobserved-ac":
+        ac = replace(
+            ac,
+            child=replace(
+                ac.child,
+                record=None,
+                report=None,
+                expected_report_sha256=None,
+                expected_terminal_sha256=None,
+            ),
+        )
     registration = binding.model_dump_json().encode()
     return associate_amplifier_width_pair(
         plan,
@@ -338,9 +362,30 @@ def test_amplifier_width_pair_binds_succeeded_child_analyses(
     assert pair.dc.child_operation.operation_id == pair.dc.child_report.operation_id
     assert pair.ac.child_operation.operation_id == pair.ac.child_report.operation_id
     assert (pair.dc.child_value, pair.ac.child_value) == (0.003, 80.0)
+
+
+def test_amplifier_width_pair_preserves_unobserved_child_operation(
+    amplifier_width_evidence,
+    amplifier_child_fixture,
+):
+    pair = run_amplifier_pair(
+        amplifier_width_evidence, drift="unobserved-ac", child_fixture=amplifier_child_fixture
+    )
+    assert pair.dc.child_status == "SUCCEEDED"
+    assert pair.ac.child_status == "NOT_OBSERVED"
+    assert pair.ac.child_operation is not None
+    assert pair.ac.child_report is pair.ac.child_value is None
+
+
+@pytest.mark.parametrize("drift", ["ac-grid", "ac-circuit"])
+def test_amplifier_width_pair_rejects_ac_drift(
+    amplifier_width_evidence,
+    amplifier_child_fixture,
+    drift,
+):
     with pytest.raises(OperationRejected) as rejected:
         run_amplifier_pair(
-            amplifier_width_evidence, drift="ac-grid", child_fixture=amplifier_child_fixture
+            amplifier_width_evidence, drift=drift, child_fixture=amplifier_child_fixture
         )
     assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
 

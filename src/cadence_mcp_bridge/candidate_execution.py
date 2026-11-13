@@ -497,7 +497,7 @@ class AmplifierWidthAnalysisPair(VariableModel):
     baseline_value: float
     child_operation: NativeOperationQuery | None
     child_terminal_sha256: Digest | None
-    child_status: OperationPhase | Literal["NOT_RUN"]
+    child_status: OperationPhase | Literal["NOT_RUN", "NOT_OBSERVED"]
     child_report: ResultReport | None
     child_value: float | None
     reason: str | None
@@ -922,7 +922,8 @@ def _amp_width_analysis(
     if (
         (params, includes, options)
         != (old_circuit.parameters, old_circuit.includes, old_circuit.pm0_options)
-        or (analysis == "dc" and fixed != old_circuit.fixed_statements)
+        # partition_input has already separated the DC/AC control statements.
+        or fixed != old_circuit.fixed_statements
         or includes != [(model.path, model.section) for model in binding.model_includes]
         or len(analyses) != 1
         or analyses[0][0] != analysis
@@ -931,7 +932,7 @@ def _amp_width_analysis(
     child = evidence.child
     terminal = report = value = None
     reason: str | None = "retained_operation_not_supplied"
-    status: OperationPhase | Literal["NOT_RUN"] = "NOT_RUN"
+    status: OperationPhase | Literal["NOT_RUN", "NOT_OBSERVED"] = "NOT_RUN"
     if child is not None:
         if (
             evidence.child_input is None
@@ -958,12 +959,11 @@ def _amp_width_analysis(
             or reader.maximum_samples != binding.baseline_reader.maximum_samples
         ):
             raise ValueError("child amplifier circuit or measurement differs")
-        phase, terminal, report = _width_report(child, conditions, reader)
-        if phase != "NOT_OBSERVED":
-            status = phase
+        status, terminal, report = _width_report(child, conditions, reader)
+        if status != "NOT_OBSERVED":
             reason = (
                 "retained_result_unavailable"
-                if phase == "SUCCEEDED"
+                if status == "SUCCEEDED"
                 else "retained_operation_not_succeeded"
             )
         if report is not None:
