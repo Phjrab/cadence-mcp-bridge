@@ -10,7 +10,12 @@ from dataclasses import replace
 import pytest
 from test_candidate_batches import candidate_native
 from test_candidate_contracts import candidate_operator, operator, planned
-from test_candidate_execution import measurement_operator, operator_base, pmos_pair
+from test_candidate_execution import (
+    measurement_operator,
+    operator_base,
+    pmos_pair,
+    registered_pmos_change,
+)
 from test_candidate_reports import succeeded
 
 from cadence_mcp_bridge import candidate_cli as cli
@@ -28,11 +33,90 @@ __all__ = [
     "operator",
     "operator_base",
     "pmos_pair",
+    "registered_pmos_change",
 ]
 
 
 def output(capsys):
     return json.loads(capsys.readouterr().out)
+
+
+@pytest.mark.parametrize("case", ["verified", "retained-unknown", "wrong-scope", "missing-netlist"])
+def test_dispatch_pmos_default_change_preserves_typed_boundary(
+    registered_pmos_change, tmp_path, case
+):
+    from pydantic import ValidationError
+
+    from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeResult
+
+    plan, request, fields = registered_pmos_change
+    path = tmp_path / "request.json"
+    raw = request.model_dump_json().encode()
+    path.write_bytes(raw)
+    if case == "retained-unknown":
+        fields.update(
+            outcome="OUTCOME_UNKNOWN",
+            replayed=True,
+            dispatched_this_call=False,
+            netlist_receipt_sha256=None,
+            netlist_sha256=None,
+            reason="netlist_receipt_unavailable",
+        )
+    receipt = PmosDefaultChangeResult.model_validate(fields)
+    calls = []
+
+    class FixtureService:
+        def apply(self, supplied):
+            calls.append(supplied)
+            receipt.check_registered_scope(
+                supplied,
+                registered_plan=plan,
+                registered_scope_sha256=request.expected_scope_sha256,
+            )
+            if case == "wrong-scope":
+                return receipt.model_copy(update={"scope_sha256": "0" * 64})
+            if case == "missing-netlist":
+                return receipt.model_copy(
+                    update={"netlist_receipt_sha256": None, "netlist_sha256": None}
+                )
+            return receipt
+
+    service = FixtureService()
+    if case == "wrong-scope":
+        with pytest.raises(OperationRejected) as rejected:
+            cli.dispatch_pmos_default_change(path, service)
+        assert rejected.value.reason == "pmos_default_change_identity_mismatch"
+    elif case == "missing-netlist":
+        with pytest.raises(ValidationError, match="verified change requires netlist evidence"):
+            cli.dispatch_pmos_default_change(path, service)
+    else:
+        assert cli.dispatch_pmos_default_change(path, service) == receipt
+    assert calls == [request]
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.parametrize("case", ["extra-field", "over-limit"])
+def test_dispatch_pmos_default_change_rejects_before_apply(registered_pmos_change, tmp_path, case):
+    _, request, _ = registered_pmos_change
+    path = tmp_path / "request.json"
+    if case == "extra-field":
+        path.write_text(json.dumps({**request.model_dump(), "callback": "other"}), encoding="utf-8")
+    else:
+        path.write_bytes(b" " * (cli.DOCUMENT_LIMIT + 1))
+
+    class UnusedService:
+        def apply(self, _request):
+            pytest.fail("invalid request reached apply")
+
+    with pytest.raises(ValueError):
+        cli.dispatch_pmos_default_change(path, UnusedService())
+
+
+def test_pmos_default_command_waits_for_registered_factory(monkeypatch):
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    with pytest.raises(SystemExit) as rejected:
+        main(["operator-candidates", "apply-pmos-default"])
+    assert rejected.value.code == 2
 
 
 def test_schema_and_missing_opt_in_never_load_context(monkeypatch, capsys):

@@ -12,7 +12,7 @@ import stat
 import tempfile
 import time
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import Field, TypeAdapter
 
@@ -37,6 +37,12 @@ from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
+
+if TYPE_CHECKING:
+    from cadence_mcp_bridge.candidate_execution import (
+        PmosDefaultChangeResult,
+        PmosDefaultChangeService,
+    )
 
 DOCUMENT_LIMIT = 1048576
 AMPLIFIER_EVIDENCE = ("dc-result", "dc-intent", "ac-result", "ac-intent", "specification")
@@ -203,6 +209,27 @@ def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -
     raw = _read_candidate_bytes(path, expected_sha256=expected_sha256)
     _closed_document(raw, max_bytes=DOCUMENT_LIMIT)
     return raw
+
+
+def dispatch_pmos_default_change(
+    path: Path, service: PmosDefaultChangeService
+) -> PmosDefaultChangeResult:
+    """Parse and dispatch once through a service supplied by the operator adapter."""
+    from cadence_mcp_bridge.candidate_execution import (
+        PmosDefaultChangeRequest,
+        PmosDefaultChangeResult,
+    )
+
+    request = PmosDefaultChangeRequest.model_validate_json(read_candidate_document(path))
+    returned = service.apply(request)
+    result = PmosDefaultChangeResult.model_validate_json(returned.model_dump_json(warnings="error"))
+    if (result.operation_id, result.plan_sha256, result.scope_sha256) != (
+        request.operation_id,
+        request.expected_plan_sha256,
+        request.expected_scope_sha256,
+    ):
+        raise OperationRejected("pmos_default_change_identity_mismatch")
+    return result
 
 
 def _output(path: Path, reserved: set[Path]) -> Path:
