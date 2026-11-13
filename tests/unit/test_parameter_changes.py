@@ -525,10 +525,15 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
             diagnostic_receipt_sha256="7" * 64,
             footprint_receipt_sha256="8" * 64,
             dfm_evidence_sha256="9" * 64,
+            baseline_effective_dfm="Minimum",
+            child_effective_dfm="DFM",
         )
 
     result = observe(candidate)
     assert result.status == "OBSERVATION_ONLY"
+    assert result.scope == "NETLIST_INPUT_ONLY"
+    assert result.oa_footprint == "MISMATCHED"
+    assert result.oa_change_status == "UNQUALIFIED_EXTRA_SETTING"
     assert result.automatic_update_route == result.geometry_mode == "NOT_OBSERVED"
     assert not (
         result.admission_authorized or result.execution_authorized or result.selection_authorized

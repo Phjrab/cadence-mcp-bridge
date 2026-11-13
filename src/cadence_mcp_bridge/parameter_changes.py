@@ -352,6 +352,9 @@ class AmplifierPm0InputEvidence(VariableModel):
 
 class AmplifierPm0InputObservation(VariableModel):
     status: Literal["OBSERVATION_ONLY"] = "OBSERVATION_ONLY"
+    scope: Literal["NETLIST_INPUT_ONLY"] = "NETLIST_INPUT_ONLY"
+    oa_footprint: Literal["MISMATCHED"] = "MISMATCHED"
+    oa_change_status: Literal["UNQUALIFIED_EXTRA_SETTING"] = "UNQUALIFIED_EXTRA_SETTING"
     automatic_update_route: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
     geometry_mode: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
     execution_authorized: Literal[False] = False
@@ -362,8 +365,8 @@ class AmplifierPm0InputObservation(VariableModel):
     diagnostic_receipt_sha256: Digest
     footprint_receipt_sha256: Digest
     dfm_evidence_sha256: Digest
-    baseline_effective_dfm: Literal["Minimum"] = "Minimum"
-    child_effective_dfm: Literal["DFM"] = "DFM"
+    baseline_effective_dfm: Literal["Minimum"]
+    child_effective_dfm: Literal["DFM"]
     netlist: NetlistProjection
 
 
@@ -564,6 +567,8 @@ def observe_amplifier_pm0_input(
     diagnostic_receipt_sha256: Digest,
     footprint_receipt_sha256: Digest,
     dfm_evidence_sha256: Digest,
+    baseline_effective_dfm: Literal["Minimum"],
+    child_effective_dfm: Literal["DFM"],
 ) -> AmplifierPm0InputObservation:
     """Compare the saved PM0 W+DFM revision at center DC.
 
@@ -624,6 +629,8 @@ def observe_amplifier_pm0_input(
         diagnostic_receipt_sha256=diagnostic_receipt_sha256,
         footprint_receipt_sha256=footprint_receipt_sha256,
         dfm_evidence_sha256=dfm_evidence_sha256,
+        baseline_effective_dfm=baseline_effective_dfm,
+        child_effective_dfm=child_effective_dfm,
         netlist=NetlistProjection(
             artifact_sha256=child.netlist_sha256, value=observed, derived=derived
         ),
