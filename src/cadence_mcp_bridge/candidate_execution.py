@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Annotated, Literal, Self
+from dataclasses import dataclass
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, model_validator
 
+from cadence_mcp_bridge._native_rendering import effective_input
 from cadence_mcp_bridge.candidate_contracts import (
     CandidateBatchPlan,
     CandidateFixedEvidence,
@@ -19,12 +21,30 @@ from cadence_mcp_bridge.candidate_reports import (
     CandidateStatus,
     compare_candidate_reports,
 )
+from cadence_mcp_bridge.designs import DesignMeasurementRegistry
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_runtime import KIND
-from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationRejected
+from cadence_mcp_bridge.native_service import NativeOperationQuery
+from cadence_mcp_bridge.operator_operations import (
+    DurableOperation,
+    ExplicitValue,
+    OperationPhase,
+    OperationPlan,
+    OperationRejected,
+)
+from cadence_mcp_bridge.parameter_changes import (
+    ChangePlan,
+    ChangeReadback,
+    ChangeValue,
+    MosWidthTarget,
+    project_netlist_change,
+    verify_change_readback,
+)
+from cadence_mcp_bridge.result_reports import ReportConditions, ResultReport
+from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
 
@@ -97,19 +117,11 @@ def _candidate_values(
     )
 
 
-def validate_cross_analysis_conditions(
-    manifest: CandidateAnalysisManifest,
+def _runtime_routes(
+    first: OperationPlan,
     runtime_manifest: bytes,
     runtime_registration: bytes,
-    *,
-    analyses: frozenset[str],
-) -> None:
-    """Check shared circuit conditions against the existing hash-bound runtime assets."""
-    manifest = CandidateAnalysisManifest.model_validate_json(manifest.model_dump_json())
-    batches = {batch.plans[0].analysis: batch for batch in manifest.batches}
-    if len(analyses) < 2 or analyses - batches.keys():
-        raise OperationRejected("candidate_cross_analysis_inventory_invalid")
-    first = manifest.batches[0].plans[0]
+) -> dict[tuple[str, str], dict[str, Any]]:
     try:
         _closed_document(runtime_manifest)
         _closed_document(runtime_registration)
@@ -146,6 +158,22 @@ def validate_cross_analysis_conditions(
             raise ValueError("duplicate runtime route")
     except (KeyError, TypeError, ValueError):
         raise OperationRejected("candidate_cross_analysis_runtime_binding_invalid") from None
+    return routes
+
+
+def validate_cross_analysis_conditions(
+    manifest: CandidateAnalysisManifest,
+    runtime_manifest: bytes,
+    runtime_registration: bytes,
+    *,
+    analyses: frozenset[str],
+) -> None:
+    """Check shared circuit conditions against the existing hash-bound runtime assets."""
+    manifest = CandidateAnalysisManifest.model_validate_json(manifest.model_dump_json())
+    batches = {batch.plans[0].analysis: batch for batch in manifest.batches}
+    if len(analyses) < 2 or analyses - batches.keys():
+        raise OperationRejected("candidate_cross_analysis_inventory_invalid")
+    routes = _runtime_routes(manifest.batches[0].plans[0], runtime_manifest, runtime_registration)
 
     static_conditions = set()
     source_models = set()
@@ -296,3 +324,301 @@ def collect_candidate_analyses(
             )
         )
     return tuple(results)
+
+
+@dataclass(frozen=True)
+class PmosDcOperation:
+    """One reviewed operation and the original registered assets for that plan."""
+
+    query: NativeOperationQuery
+    plan: OperationPlan
+    runtime_manifest: bytes
+    runtime_registration: bytes
+    design_registry: bytes
+    record: DurableOperation | None = None
+    report: bytes | None = None
+    expected_report_sha256: str | None = None
+    expected_terminal_sha256: str | None = None
+
+
+class PmosDcRow(VariableModel):
+    revision: RevisionBinding
+    revision_sha256: Digest
+    testbench_revision_sha256: Digest
+    requested_width: ChangeValue | None
+    observed_width: ChangeValue
+    effective_width: ChangeValue
+    operation: NativeOperationQuery
+    terminal_receipt_sha256: Digest | None
+    status: OperationPhase | Literal["NOT_OBSERVED"]
+    reason: str | None
+    report: ResultReport | None
+
+
+class PmosDcPair(VariableModel):
+    change_plan_sha256: Digest
+    copy_receipt_sha256: Digest
+    rows: tuple[PmosDcRow, PmosDcRow]
+    verification: Literal["LOCAL_EVIDENCE_COMPARISON"] = "LOCAL_EVIDENCE_COMPARISON"
+    goals: Literal["GOALS_NOT_PROVIDED"] = "GOALS_NOT_PROVIDED"
+    execution_authorized: Literal[False] = False
+
+
+def _pinned_json(raw: bytes, digest: str) -> Any:
+    _closed_document(raw, max_bytes=1048576)
+    if hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError("evidence digest mismatch")
+    return json.loads(raw)
+
+
+def _pmos_dc_route(
+    operation: PmosDcOperation,
+    diagnostic: bytes,
+) -> tuple[dict[str, Any], ReportConditions, GenericReaderRegistration, tuple[object, ...]]:
+    plan = OperationPlan.model_validate_json(operation.plan.model_dump_json())
+    query = NativeOperationQuery.model_validate_json(operation.query.model_dump_json())
+    if plan.plan_sha256 != query.expected_plan_sha256 or plan.analysis != "dc":
+        raise ValueError("DC plan identity mismatch")
+    design, analysis = plan.request.design_id, plan.request.analysis_id
+    route = _runtime_routes(plan, operation.runtime_manifest, operation.runtime_registration)[
+        design, analysis
+    ]
+    ade = AdeExecutionRegistration.model_validate_json(_canonical(route["ade"]))
+    reader = GenericReaderRegistration.model_validate_json(_canonical(route["reader"]))
+    registry = DesignMeasurementRegistry.model_validate_json(
+        _canonical(_pinned_json(operation.design_registry, plan.design_sha256))
+    )
+    profile = registry.profile(design)
+    variables = registry.variable_set(design)
+    (contract,) = (item for item in registry.analyses_for(design) if item.analysis_id == analysis)
+    (measurement,) = (
+        item
+        for item in registry.measurements_for(design)
+        if item.analysis_id == analysis and item.measurement_id == reader.measurement_id
+    )
+    if (
+        variables is None
+        or route["analysis"] != "dc"
+        or contract.analysis != "dc"
+        or ade.inputs.analysis != "dc"
+        or (ade.design_id, ade.analysis_id) != (design, analysis)
+        or (reader.design_id, reader.analysis_id) != (design, analysis)
+        or reader.ade_registration_sha256 != canonical_digest(ade)
+        or reader.measurement_contract_sha256 != canonical_digest(measurement)
+        or measurement.analysis_contract_sha256 != canonical_digest(contract)
+        or ade.design_profile_sha256 != canonical_digest(profile)
+        or ade.variable_set_sha256 != canonical_digest(variables)
+        or route["profile"] != profile.model_dump(mode="json")
+        or route["variables"] != [var.model_dump(mode="json") for var in variables.variables]
+        or reader.transfer is not None
+    ):
+        raise ValueError("DC route binding mismatch")
+    supplied = {value.logical_id: value for value in plan.request.values}
+    if supplied.keys() != {var.logical_id for var in variables.variables} or any(
+        supplied[var.logical_id].unit != var.unit
+        or var.check_number(supplied[var.logical_id].value) is not None
+        for var in variables.variables
+    ):
+        raise ValueError("DC variable binding mismatch")
+    effective_input(  # type: ignore[no-untyped-call]
+        diagnostic,
+        {var.cadence_binding: supplied[var.logical_id].value for var in variables.variables},
+        [(model.path, model.section) for model in ade.model_includes],
+        ade.inputs.model_dump(mode="json"),
+        ade.static_statements_sha256,
+    )
+    conditions = ReportConditions(
+        analysis_inputs=ade.inputs,
+        source_tree_sha256=ade.source_tree_sha256,
+        ade_state_tree_sha256=ade.ade_state_tree_sha256,
+        static_statements_sha256=ade.static_statements_sha256,
+        model_file_sha256=tuple(model.file_sha256 for model in ade.model_includes),
+        transfer=None,
+    )
+    (library,) = (item for item in route["libraries"] if item["name"] == profile.binding.library)
+    if route["source_cell"] != library["path"] + "/" + profile.binding.cell:
+        raise ValueError("DC source cell is outside its registered library binding")
+    semantics = (
+        plan.resource_domain_sha256,
+        plan.ledger_ref,
+        plan.environment_sha256,
+        plan.pdk_sha256,
+        plan.request.values,
+        variables.variables,
+        ade.inputs,
+        ade.model_includes,
+        route["model_files"],
+        [item for item in route["libraries"] if item != library],
+        profile.model_dump(exclude={"design_id": True, "binding": {"library"}}),
+        reader.model_dump(
+            exclude={
+                "design_id",
+                "analysis_id",
+                "ade_registration_sha256",
+                "measurement_contract_sha256",
+            }
+        ),
+        measurement.model_dump(exclude={"design_id", "analysis_id", "analysis_contract_sha256"}),
+        contract.model_dump(
+            exclude={"design_id", "analysis_id", "design_profile_sha256", "variable_set_sha256"}
+        ),
+    )
+    return route, conditions, reader, semantics
+
+
+def _pmos_dc_report(
+    operation: PmosDcOperation,
+    conditions: ReportConditions,
+    reader: GenericReaderRegistration,
+) -> tuple[OperationPhase | Literal["NOT_OBSERVED"], ResultReport | None]:
+    status: OperationPhase | Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
+    record = None
+    if operation.record is not None:
+        record = DurableOperation.model_validate_json(operation.record.model_dump_json())
+        if record.operation_id != operation.query.operation_id or record.plan != operation.plan:
+            raise ValueError("retained operation identity differs")
+        status = record.progress.phase
+    if operation.report is None:
+        return status, None
+    if record is None or operation.expected_report_sha256 is None:
+        raise ValueError("retained report requires a record and an independent pin")
+    report = ResultReport.model_validate_json(
+        _canonical(
+            _pinned_json(
+                operation.report,
+                operation.expected_report_sha256,
+            )
+        )
+    )
+    if (
+        status != "SUCCEEDED"
+        or not operation.expected_terminal_sha256
+        or record.progress.provider_receipt_sha256 != operation.expected_terminal_sha256
+        or report.operation_id != operation.query.operation_id
+        or report.plan != operation.plan
+        or report.analysis_conditions != conditions
+        or report.measurement_id != reader.measurement_id
+        or report.reader_registration_sha256 != canonical_digest(reader)
+    ):
+        raise ValueError("retained report binding differs")
+    return status, report
+
+
+def associate_pmos_dc_pair(
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    *,
+    expected_plan_sha256: str,
+    baseline_input: bytes,
+    candidate_input: bytes,
+    copy_receipt: bytes,
+    expected_copy_receipt_sha256: str,
+    expected_copy_scope_sha256: str,
+    expected_copy_id: str,
+    expected_reopen_receipt_sha256: str,
+    baseline: PmosDcOperation,
+    candidate: PmosDcOperation,
+) -> PmosDcPair:
+    """Associate a reviewed width-only DC pair from pinned retained evidence.
+
+    Expected pins must come from the reviewed C1/C4 packet. This local join
+    does not authenticate imported bytes anew, authorize, or run an operation.
+    """
+    try:
+        if not isinstance(plan.target, MosWidthTarget) or plan.plan_sha256 != expected_plan_sha256:
+            raise ValueError("width change plan differs")
+        checked = verify_change_readback(
+            plan,
+            baseline=readback.baseline,
+            reopened=readback.reopened,
+            netlist=readback.netlist,
+        )
+        old, reopened, netlist = checked.baseline, checked.reopened, checked.netlist
+        if checked != readback or checked.status != "MATCHED" or not (old and reopened and netlist):
+            raise ValueError("complete matched change readback required")
+        projected = project_netlist_change(plan, baseline_input, candidate_input)
+        if (
+            projected.artifact_sha256 != netlist.artifact_sha256
+            or projected.value.normalized != netlist.value.normalized
+            or projected.derived != netlist.derived
+        ):
+            raise ValueError("candidate effective input differs from readback")
+        _, old_conditions, old_reader, old_semantics = _pmos_dc_route(baseline, baseline_input)
+        route, new_conditions, new_reader, new_semantics = _pmos_dc_route(
+            candidate, candidate_input
+        )
+        copy = _pinned_json(copy_receipt, expected_copy_receipt_sha256)
+        if (
+            copy["status"] != "OWNED_INPUT_COPY_VERIFIED"
+            or copy["scope_sha256"] != expected_copy_scope_sha256
+            or copy["copy_id"] != expected_copy_id
+            or copy["source_revision_sha256"] != reopened.revision_sha256
+            or copy["reopen_receipt_sha256"] != expected_reopen_receipt_sha256
+            or copy["source_ade_sha256"] != old_conditions.ade_state_tree_sha256
+            or (copy["source_cell"], copy["source_state"])
+            != (route["source_cell"], route["source_state"])
+            or (copy["source_cell_sha256"], copy["source_state_sha256"])
+            != (new_conditions.source_tree_sha256, new_conditions.ade_state_tree_sha256)
+            or {
+                "name": route["profile"]["binding"]["library"],
+                "path": copy["library_path"],
+                "tree_sha256": copy["dependency_tree_sha256"],
+            }
+            not in route["libraries"]
+        ):
+            raise ValueError("external copy is not bound to the child route")
+        if (
+            old_semantics != new_semantics
+            or baseline.query.operation_id == candidate.query.operation_id
+            or candidate.query.operation_id == expected_copy_id
+        ):
+            raise ValueError("DC comparison conditions differ")
+        old_status, old_report = _pmos_dc_report(baseline, old_conditions, old_reader)
+        new_status, new_report = _pmos_dc_report(candidate, new_conditions, new_reader)
+        if old_report is None or (
+            new_report is not None
+            and [m.model_dump(exclude={"value"}) for m in old_report.metrics]
+            != [m.model_dump(exclude={"value"}) for m in new_report.metrics]
+        ):
+            raise ValueError("baseline report or matching measurement definitions required")
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_pmos_dc_evidence_mismatch") from None
+    reason = None
+    if new_status == "NOT_OBSERVED":
+        reason = "retained_operation_not_supplied"
+    elif new_report is None:
+        reason = "retained_result_unavailable"
+    return PmosDcPair(
+        change_plan_sha256=plan.plan_sha256,
+        copy_receipt_sha256=expected_copy_receipt_sha256,
+        rows=(
+            PmosDcRow(
+                revision=old.revision,
+                revision_sha256=old.revision_sha256,
+                testbench_revision_sha256=old.testbench_revision_sha256,
+                requested_width=None,
+                observed_width=old.value,
+                effective_width=plan.old,
+                operation=baseline.query,
+                terminal_receipt_sha256=baseline.expected_terminal_sha256,
+                status=old_status,
+                reason=None,
+                report=old_report,
+            ),
+            PmosDcRow(
+                revision=reopened.revision,
+                revision_sha256=reopened.revision_sha256,
+                testbench_revision_sha256=reopened.testbench_revision_sha256,
+                requested_width=plan.requested,
+                observed_width=reopened.value,
+                effective_width=netlist.value,
+                operation=candidate.query,
+                terminal_receipt_sha256=(
+                    candidate.expected_terminal_sha256 if new_report is not None else None
+                ),
+                status=new_status,
+                reason=reason,
+                report=new_report,
+            ),
+        ),
+    )

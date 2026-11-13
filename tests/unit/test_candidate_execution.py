@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
 from test_candidate_contracts import candidate_operator, operator
 from test_candidate_reports import succeeded
+from test_generic_measurements import operator as measurement_operator
+from test_generic_measurements import reader_for
+from test_operator_operations import operator as operator_base
+from test_parameter_changes import _NETLIST, BASELINE, CHILD, _mos, _row
 
+from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
 from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepare_candidate_plan
 from cadence_mcp_bridge.candidate_execution import (
     CandidateAnalysisManifest,
+    PmosDcOperation,
+    associate_pmos_dc_pair,
     collect_candidate_analyses,
     validate_cross_analysis_conditions,
 )
@@ -21,11 +29,240 @@ from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
 from cadence_mcp_bridge.native_runtime import KIND
-from cadence_mcp_bridge.operator_operations import OperationProgress, OperationRejected
+from cadence_mcp_bridge.native_service import NativeOperationQuery
+from cadence_mcp_bridge.operator_operations import (
+    DurableOperation,
+    OperationProgress,
+    OperationRejected,
+)
+from cadence_mcp_bridge.parameter_changes import plan_mos_width_change, verify_change_readback
 from cadence_mcp_bridge.result_reports import make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-__all__ = ["candidate_operator", "operator"]
+__all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.fixture
+def pmos_pair(measurement_operator):
+    context, plan, original_ade, original_reader, _, _ = reader_for(measurement_operator)
+    registry = context.binding.design_registry.read_bytes()
+    raw = (
+        _NETLIST.replace(b"m2_vin=0", b"ExampleBiasN=1 ExampleBiasP=1").replace(
+            b"dc=m2_vin", b"dc=ExampleBiasN"
+        )
+        + b"analysis0 dc save=all\n"
+    )
+    changed = raw.replace(b"(350n)", b"(120n)")
+    baseline = BASELINE.model_copy(update={"netlist_sha256": hashlib.sha256(raw).hexdigest()})
+    qualification = _mos().model_copy(update={"baseline": baseline})
+    change = plan_mos_width_change(qualification, "candidate", CHILD, qualification.expected)
+    reopened = _row(change, "reopened")
+    netlist = _row(change, "netlist").model_copy(
+        update={"artifact_sha256": hashlib.sha256(changed).hexdigest()}
+    )
+    readback = verify_change_readback(
+        change,
+        baseline=_row(change, "baseline"),
+        reopened=reopened,
+        netlist=netlist,
+    )
+    receipt = dict(
+        status="OWNED_INPUT_COPY_VERIFIED",
+        scope_sha256="d" * 64,
+        copy_id=str(uuid4()),
+        source_revision_sha256=reopened.revision_sha256,
+        reopen_receipt_sha256="a" * 64,
+        source_ade_sha256=original_ade.ade_state_tree_sha256,
+        source_cell="/synthetic/child/"
+        + context.contracts.designs.profile(plan.request.design_id).binding.cell,
+        source_state="/synthetic/child/ade",
+        source_cell_sha256="6" * 64,
+        source_state_sha256="7" * 64,
+        library_path="/synthetic/child",
+        dependency_tree_sha256="8" * 64,
+    )
+
+    def operation(child, drift=None):
+        profile = context.contracts.designs.profile(plan.request.design_id)
+        variables = context.contracts.designs.variable_set(plan.request.design_id).variables
+        ade = original_ade.model_copy(
+            update={
+                "source_tree_sha256": receipt["source_cell_sha256"] if child else "1" * 64,
+                "ade_state_tree_sha256": receipt["source_state_sha256"] if child else "2" * 64,
+                "static_statements_sha256": static_fingerprint(
+                    partition_input(changed if child else raw)[3]
+                ),
+            }
+        )
+        reader = original_reader.model_copy(
+            update={"ade_registration_sha256": canonical_digest(ade)}
+        )
+        if drift == "reader":
+            reader = reader.model_copy(update={"maximum_samples": reader.maximum_samples + 1})
+        route = dict(
+            analysis="dc",
+            design_id=plan.request.design_id,
+            analysis_id=plan.request.analysis_id,
+            source_cell=receipt["source_cell"]
+            if child
+            else "/synthetic/parent/" + profile.binding.cell,
+            source_state=receipt["source_state"] if child else "/synthetic/parent/ade",
+            libraries=[
+                dict(
+                    name=profile.binding.library,
+                    path=receipt["library_path"] if child else "/synthetic/parent",
+                    tree_sha256=receipt["dependency_tree_sha256"],
+                )
+            ],
+            model_files=[dict(path="/synthetic/other.scs", file_sha256="a" * 64)]
+            if drift == "model"
+            else [],
+            profile=profile.model_dump(mode="json"),
+            variables=[variable.model_dump(mode="json") for variable in variables],
+            ade=ade.model_dump(mode="json"),
+            reader=reader.model_dump(mode="json"),
+        )
+        registration = _canonical(
+            dict(
+                schema_version=1,
+                environment_sha256=plan.environment_sha256,
+                design_sha256=plan.design_sha256,
+                pdk_sha256=plan.pdk_sha256,
+                routes=[route],
+            )
+        )
+        digest = hashlib.sha256(registration).hexdigest()
+        runtime = _canonical(
+            dict(
+                schema_version=3,
+                kind=KIND,
+                profile_sha256=plan.environment_sha256,
+                registration_sha256=digest,
+                files={"registration.json": dict(sha256=digest, bytes=len(registration))},
+            )
+        )
+        bound = plan.model_copy(update={"runner_sha256": hashlib.sha256(runtime).hexdigest()})
+        identity = str(uuid4())
+        query = NativeOperationQuery(operation_id=identity, expected_plan_sha256=bound.plan_sha256)
+        record = DurableOperation(
+            operation_id=identity,
+            plan=bound,
+            event_count=3,
+            progress=OperationProgress(
+                phase="SUCCEEDED", remote_revision=5, provider_receipt_sha256="b" * 64
+            ),
+        )
+        report = (
+            make_report(
+                record,
+                dict(
+                    status="NATIVE_RESULT_RETRIEVED",
+                    operation_id=identity,
+                    plan_sha256=bound.plan_sha256,
+                    design_id=plan.request.design_id,
+                    analysis="dc",
+                    measurement_id=reader.measurement_id,
+                    reader_registration_sha256=canonical_digest(reader),
+                    execution_input_sha256="c" * 64,
+                    extraction_receipt_sha256="d" * 64,
+                    frame_sha256="e" * 64,
+                    native_provenance="FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                    report_conditions=dict(
+                        analysis_inputs=ade.inputs.model_dump(mode="json"),
+                        source_tree_sha256=ade.source_tree_sha256,
+                        ade_state_tree_sha256=ade.ade_state_tree_sha256,
+                        static_statements_sha256=ade.static_statements_sha256,
+                        model_file_sha256=[],
+                        transfer=None,
+                    ),
+                    nodes=[dict(logical_id="output", value=0.9 if child else 1.0, unit="V")],
+                ),
+            )
+            .model_dump_json()
+            .encode()
+        )
+        return PmosDcOperation(
+            query,
+            bound,
+            runtime,
+            registration,
+            registry,
+            record,
+            report,
+            hashlib.sha256(report).hexdigest(),
+            "b" * 64,
+        )
+
+    return change, readback, raw, changed, receipt, operation
+
+
+def pmos_association(pmos_pair, drift=None):
+    change, readback, raw, changed, receipt, operation = pmos_pair
+    baseline, child = operation(False), operation(True, drift)
+    if drift == "copy":
+        receipt["dependency_tree_sha256"] = "9" * 64
+    if drift == "analysis":
+        changed_plan = child.plan.model_copy(update={"analysis": "tran"})
+        child = replace(
+            child,
+            plan=changed_plan,
+            query=child.query.model_copy(
+                update={
+                    "expected_plan_sha256": changed_plan.plan_sha256,
+                }
+            ),
+        )
+    if drift == "report":
+        child = replace(child, expected_report_sha256="0" * 64)
+    if drift == "pending":
+        child = replace(child, record=None, report=None)
+    if drift == "unknown":
+        child = replace(
+            child,
+            report=None,
+            record=child.record.model_copy(
+                update={
+                    "progress": OperationProgress(phase="UNKNOWN_OUTCOME"),
+                }
+            ),
+        )
+    copy = _canonical(receipt)
+    return associate_pmos_dc_pair(
+        change,
+        readback,
+        expected_plan_sha256=change.plan_sha256,
+        baseline_input=raw,
+        candidate_input=changed,
+        copy_receipt=copy,
+        expected_copy_receipt_sha256=hashlib.sha256(copy).hexdigest(),
+        expected_copy_scope_sha256="d" * 64,
+        expected_copy_id=receipt["copy_id"],
+        expected_reopen_receipt_sha256="a" * 64,
+        baseline=baseline,
+        candidate=child,
+    )
+
+
+def test_pmos_pair_preserves_separate_reports_and_unobserved_child(pmos_pair):
+    result = pmos_association(pmos_pair)
+    base, child = result.rows
+    assert (base.status, child.status) == ("SUCCEEDED", "SUCCEEDED")
+    assert base.revision_sha256 != child.revision_sha256
+    assert base.report.operation_id == base.operation.operation_id
+    assert child.report.operation_id == child.operation.operation_id
+    assert child.effective_width.value == "120"
+    assert result.goals == "GOALS_NOT_PROVIDED" and not result.execution_authorized
+    pending = pmos_association(pmos_pair, "pending").rows[1]
+    assert pending.status == "NOT_OBSERVED" and pending.report is None
+    unknown = pmos_association(pmos_pair, "unknown").rows[1]
+    assert unknown.status == "UNKNOWN_OUTCOME" and unknown.report is None
+
+
+@pytest.mark.parametrize("drift", ["analysis", "model", "reader", "copy", "report"])
+def test_pmos_pair_rejects_unbound_or_incomparable_evidence(pmos_pair, drift):
+    with pytest.raises(OperationRejected) as rejected:
+        pmos_association(pmos_pair, drift)
+    assert rejected.value.reason == "candidate_pmos_dc_evidence_mismatch"
 
 
 def analysis_batch(candidate_operator, analysis, change=None):
