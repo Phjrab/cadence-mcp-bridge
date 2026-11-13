@@ -1036,6 +1036,7 @@ def associate_amplifier_width_pair(
             != (old.revision_sha256, old.testbench_revision_sha256)
             or (binding.child_revision_sha256, binding.child_testbench_revision_sha256)
             != (reopened.revision_sha256, reopened.testbench_revision_sha256)
+            or reopened.testbench_revision_sha256 == old.testbench_revision_sha256
             or projection.artifact_sha256 != netlist.artifact_sha256
             or projection.value.normalized != netlist.value.normalized
             or projection.derived != netlist.derived

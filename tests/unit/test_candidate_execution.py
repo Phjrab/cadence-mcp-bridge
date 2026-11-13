@@ -166,6 +166,20 @@ def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
         )
     if drift == "wrong-child-revision":
         binding = binding.model_copy(update={"child_revision_sha256": "0" * 64})
+    if drift == "reused-baseline-testbench":
+        baseline_tb = readback.baseline.testbench_revision_sha256
+        reopened = readback.reopened.model_copy(update={"testbench_revision_sha256": baseline_tb})
+        netlist = readback.netlist.model_copy(update={"testbench_revision_sha256": baseline_tb})
+        readback = verify_change_readback(
+            plan, baseline=readback.baseline, reopened=reopened, netlist=netlist
+        )
+        assert readback.status == "MATCHED"
+        binding = binding.model_copy(
+            update={
+                "child_testbench_revision_sha256": baseline_tb,
+                "readback_sha256": canonical_digest(readback),
+            }
+        )
     if drift == "unauthorized-geometry":
         child_raw = child_raw.replace(b"as=5.6p", b"as=5.7p")
     if child_fixture is not None:
@@ -333,7 +347,13 @@ def test_amplifier_width_pair_binds_succeeded_child_analyses(
 
 @pytest.mark.parametrize(
     "drift",
-    ["baseline-input", "wrong-original-id", "wrong-child-revision", "unauthorized-geometry"],
+    [
+        "baseline-input",
+        "wrong-original-id",
+        "wrong-child-revision",
+        "unauthorized-geometry",
+        "reused-baseline-testbench",
+    ],
 )
 def test_amplifier_width_pair_rejects_changed_evidence(amplifier_width_evidence, drift):
     with pytest.raises(OperationRejected) as rejected:
