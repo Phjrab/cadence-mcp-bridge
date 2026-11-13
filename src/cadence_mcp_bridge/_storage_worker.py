@@ -319,8 +319,10 @@ class LiveEntryVanished(OSError):
     """A listed descendant disappeared before its descriptor could be opened."""
 
 
-def tree(io, parent, name, budget, depth=0, live=False):
-    if depth > 16 or budget[0] >= MAX_NODES:
+def tree(io, parent, name, budget, depth=0, live=False, node_limit=None):
+    if node_limit is None:
+        node_limit = MAX_NODES
+    if depth > 16 or budget[0] >= node_limit:
         raise ValueError("inventory traversal bound")
     try:
         fd = io.open(parent, name)
@@ -338,7 +340,7 @@ def tree(io, parent, name, budget, depth=0, live=False):
         frames = [info]
         if stat.S_ISDIR(mode):
             for child in io.names(fd):
-                size, blocks, frame = tree(io, fd, child, budget, depth + 1, live)
+                size, blocks, frame = tree(io, fd, child, budget, depth + 1, live, node_limit)
                 logical += size
                 allocated += blocks
                 frames.append([hashlib.sha256(child.encode("utf-8")).hexdigest(), frame])

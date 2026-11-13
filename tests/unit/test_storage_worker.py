@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import pytest
 
+from cadence_mcp_bridge import _native_gate as gate_module
 from cadence_mcp_bridge import _storage_worker as w
 
 
@@ -155,6 +156,57 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestIO, int,
     )
     io = TestIO(tmp_path, monkeypatch)
     return io, io.directory(tmp_path), tmp_path
+
+
+
+@pytest.mark.parametrize("native_leaves, accepted", [(3, True), (4, False)])
+def test_native_aggregate_occupancy_shares_one_budget(
+    store: tuple[TestIO, int, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    native_leaves: int,
+    accepted: bool,
+) -> None:
+    io, parent, path = store
+    native = path / "native-mcp-v1-jobs"
+    native.mkdir()
+    for index in range(native_leaves):
+        (native / str(index)).write_bytes(b"x")
+    counter = path / "sim-mcp-v2-jobs/counter.json"
+    monkeypatch.setattr(w, "MAX_NODES", 4)
+    monkeypatch.setattr(gate_module, "AGGREGATE_OCCUPANCY_MAX_NODES", 6)
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    gate = object.__new__(gate_module.ConfirmedGate)
+    gate.root = str(path)
+    gate.storage = w
+    gate.accounting = SimpleNamespace(JOBS=native.name)
+    if accepted:
+        logical, allocated = gate.occupancy()  # type: ignore[no-untyped-call]
+        assert logical == native_leaves + counter.stat().st_size
+        assert allocated > 0
+    else:
+        with pytest.raises(ValueError, match="inventory traversal bound"):
+            gate.occupancy()  # type: ignore[no-untyped-call]
+        with pytest.raises(ValueError, match="inventory traversal bound"):
+            w.tree(io, parent, native.name, [0])  # type: ignore[no-untyped-call]
+    assert set(io.paths) == {parent}
+
+
+def test_native_aggregate_occupancy_keeps_tree_depth_limit(
+    store: tuple[TestIO, int, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    io, parent, path = store
+    nested = path / "native-mcp-v1-jobs"
+    for _ in range(17):
+        nested /= "child"
+    nested.mkdir(parents=True)
+    monkeypatch.setattr(w, "PosixIO", lambda: io)
+    gate = object.__new__(gate_module.ConfirmedGate)
+    gate.root = str(path)
+    gate.storage = w
+    gate.accounting = SimpleNamespace(JOBS="native-mcp-v1-jobs")
+    with pytest.raises(ValueError, match="inventory traversal bound"):
+        gate.occupancy()  # type: ignore[no-untyped-call]
+    assert set(io.paths) == {parent}
 
 
 def register(
