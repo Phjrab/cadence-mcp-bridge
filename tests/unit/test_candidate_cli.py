@@ -10,6 +10,7 @@ from dataclasses import replace
 import pytest
 from test_candidate_batches import candidate_native
 from test_candidate_contracts import candidate_operator, operator, planned
+from test_candidate_execution import measurement_operator, operator_base, pmos_pair
 from test_candidate_reports import succeeded
 
 from cadence_mcp_bridge import candidate_cli as cli
@@ -20,7 +21,14 @@ from cadence_mcp_bridge.candidate_reports import CandidateComparison
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-__all__ = ["candidate_native", "candidate_operator", "operator"]
+__all__ = [
+    "candidate_native",
+    "candidate_operator",
+    "measurement_operator",
+    "operator",
+    "operator_base",
+    "pmos_pair",
+]
 
 
 def output(capsys):
@@ -133,6 +141,98 @@ def test_verify_change_readback_rejects_invalid_inputs_without_overwrite(
     assert summary["remote_contact"] is False
     assert path.read_bytes() == raw
     assert target.exists() == (failure == "collision")
+
+
+@pytest.mark.parametrize("case", ["matched", "missing-power", "bad-pin", "collision", "sidecar"])
+def test_pmos_dc_compare_retained_pair(pmos_pair, tmp_path, monkeypatch, capsys, case):
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.candidate_execution import PmosDcPair
+    from cadence_mcp_bridge.operator_operations import OperationProgress
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    change, readback, baseline_input, candidate_input, copy, operation = pmos_pair
+    pinned = {}
+
+    def save(name, raw):
+        path = tmp_path / name
+        path.write_bytes(raw)
+        pinned[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def side(label, bound):
+        journal = tmp_path / f"{label}.sqlite3"
+        store = AnalysisStore(journal)
+        identity = bound.query.operation_id
+        assert store.admit_operation(identity, bound.plan)
+        dispatch = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(identity, OperationProgress(phase="ADMITTED"), dispatch)
+        store.advance_operation(identity, dispatch, bound.record.progress)
+        journal_raw = journal.read_bytes()
+        pinned[journal] = journal_raw
+        return {
+            "operation_id": identity,
+            "plan_sha256": bound.plan.plan_sha256,
+            "terminal_sha256": bound.expected_terminal_sha256,
+            "journal": {"path": str(journal), "sha256": hashlib.sha256(journal_raw).hexdigest()},
+            "runtime_manifest": save(f"{label}-manifest.json", bound.runtime_manifest),
+            "runtime_registration": save(f"{label}-registration.json", bound.runtime_registration),
+            "design_registry": save(f"{label}-registry.json", bound.design_registry),
+            "report": save(f"{label}-report.json", bound.report),
+        }
+
+    request = {
+        "change_plan": save("plan.json", change.model_dump_json().encode()),
+        "change_plan_sha256": change.plan_sha256,
+        "readback": save("readback.json", readback.model_dump_json().encode()),
+        "baseline_input": save("baseline.scs", baseline_input),
+        "candidate_input": save("candidate.scs", candidate_input),
+        "copy_receipt": save("copy.json", json.dumps(copy).encode()),
+        "copy_scope_sha256": "d" * 64,
+        "copy_id": copy["copy_id"],
+        "reopen_receipt_sha256": "a" * 64,
+        "baseline": side("baseline", operation(False)),
+        "candidate": side(
+            "candidate", operation(True, "power-missing" if case == "missing-power" else None)
+        ),
+    }
+    if case == "bad-pin":
+        request["candidate"]["report"]["sha256"] = "0" * 64
+    request_file = save("request.json", json.dumps(request).encode())
+    target = tmp_path / "result.json"
+    if case == "collision":
+        target = tmp_path / "baseline-report.json"
+    elif case == "sidecar":
+        target = tmp_path / "candidate.sqlite3-wal"
+
+    args = [
+        "operator-candidates",
+        "pmos-dc-compare",
+        "--request",
+        request_file["path"],
+        request_file["sha256"],
+        "--output",
+        str(target),
+    ]
+    if case in ("bad-pin", "collision", "sidecar"):
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.exists() == (case == "collision")
+    else:
+        assert main(args) == 0
+        summary = output(capsys)
+        saved_raw = target.read_bytes()
+        saved = json.loads(saved_raw)
+        pair = PmosDcPair.model_validate_json(json.dumps(saved["association"]))
+        assert summary["status"] == "PMOS_DC_COMPARISON_EXPORTED"
+        assert summary["file_sha256"] == hashlib.sha256(saved_raw).hexdigest()
+        assert summary["remote_contact"] is False and pair.execution_authorized is False
+        assert pair.goals == "GOALS_NOT_PROVIDED" and saved["selected_candidate_id"] is None
+        assert saved["deltas"][0]["absolute_delta"] == pytest.approx(-0.2)
+        assert saved["deltas"][1]["absolute_delta"] == (None if case == "missing-power" else 0.0)
+        assert [row.operation.operation_id for row in pair.rows] == [
+            request[key]["operation_id"] for key in ("baseline", "candidate")
+        ]
+    assert all(path.read_bytes() == raw for path, raw in pinned.items())
 
 
 def test_local_plan_exports_full_vector_without_journal(

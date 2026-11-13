@@ -24,17 +24,19 @@ from cadence_mcp_bridge.candidate_contracts import (
 from cadence_mcp_bridge.candidate_reports import (
     CandidateComparison,
     CandidateObservation,
+    candidate_metric_delta,
     compare_candidate_reports,
     render_candidate_csv,
 )
 from cadence_mcp_bridge.domain_provisioning import _closed_document
 from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant
 from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
-from cadence_mcp_bridge.variable_contracts import canonical_digest
+from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
 
 DOCUMENT_LIMIT = 1048576
 AMPLIFIER_EVIDENCE = ("dc-result", "dc-intent", "ac-result", "ac-intent", "specification")
@@ -42,6 +44,36 @@ CHANGE_READBACK_STAGES = ("baseline", "reopened", "netlist")
 OBSERVATIONS: TypeAdapter[tuple[CandidateObservation, ...]] = TypeAdapter(
     Annotated[tuple[CandidateObservation, ...], Field(max_length=16)]
 )
+
+
+class _PinnedComparisonFile(VariableModel):
+    path: Path
+    sha256: Digest
+
+
+class _PmosDcSide(VariableModel):
+    operation_id: OperationId
+    plan_sha256: Digest
+    terminal_sha256: Digest
+    journal: _PinnedComparisonFile
+    runtime_manifest: _PinnedComparisonFile
+    runtime_registration: _PinnedComparisonFile
+    design_registry: _PinnedComparisonFile
+    report: _PinnedComparisonFile
+
+
+class _PmosDcComparisonRequest(VariableModel):
+    change_plan: _PinnedComparisonFile
+    change_plan_sha256: Digest
+    readback: _PinnedComparisonFile
+    baseline_input: _PinnedComparisonFile
+    candidate_input: _PinnedComparisonFile
+    copy_receipt: _PinnedComparisonFile
+    copy_scope_sha256: Digest
+    copy_id: OperationId
+    reopen_receipt_sha256: Digest
+    baseline: _PmosDcSide
+    candidate: _PmosDcSide
 
 
 def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
@@ -97,6 +129,9 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     for stage in CHANGE_READBACK_STAGES:
         readback.add_argument(f"--{stage}", nargs=2, metavar=("FILE", "SHA256"))
     readback.add_argument("--output", type=Path, required=True)
+    pmos = actions.add_parser("pmos-dc-compare", help="Compare two retained PMOS DC results.")
+    pmos.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    pmos.add_argument("--output", type=Path, required=True)
     compose = actions.add_parser("compose", help="Group existing local analysis plans.")
     compose.add_argument(
         "--batch",
@@ -121,15 +156,13 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     collect.add_argument("--output", type=Path, required=True)
 
 
-def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -> bytes:
-    """Bound a regular local content record, without claiming remote authenticity."""
+def _read_candidate_bytes(
+    path: Path, *, expected_sha256: str | None = None, limit: int = DOCUMENT_LIMIT
+) -> bytes:
+    """Read one bounded regular local file with an optional exact raw digest."""
     path = _local_path(path)
     before = path.stat()
-    if (
-        not stat.S_ISREG(before.st_mode)
-        or before.st_nlink != 1
-        or (before.st_size > DOCUMENT_LIMIT)
-    ):
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > limit:
         raise OperationRejected("candidate_document_invalid")
     descriptor = os.open(
         path,
@@ -143,7 +176,7 @@ def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -
             or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino)
         ):
             raise OperationRejected("candidate_document_changed")
-        raw = stream.read(DOCUMENT_LIMIT + 1)
+        raw = stream.read(limit + 1)
     after = path.stat()
 
     def signature(info: os.stat_result) -> tuple[int, ...]:
@@ -158,8 +191,16 @@ def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -
 
     if signature(before) != signature(opened) or signature(before) != signature(after):
         raise OperationRejected("candidate_document_changed")
+    if len(raw) > limit:
+        raise OperationRejected("candidate_document_invalid")
     if expected_sha256 is not None and hashlib.sha256(raw).hexdigest() != expected_sha256:
         raise OperationRejected("candidate_document_digest_mismatch")
+    return raw
+
+
+def read_candidate_document(path: Path, *, expected_sha256: str | None = None) -> bytes:
+    """Bound a regular local content record, without claiming remote authenticity."""
+    raw = _read_candidate_bytes(path, expected_sha256=expected_sha256)
     _closed_document(raw, max_bytes=DOCUMENT_LIMIT)
     return raw
 
@@ -393,6 +434,126 @@ def _verify_change_readback(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _pmos_dc_compare(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.analysis_store import MAX_BYTES, AnalysisStore
+    from cadence_mcp_bridge.candidate_execution import PmosDcOperation, associate_pmos_dc_pair
+    from cadence_mcp_bridge.native_service import NativeOperationQuery
+    from cadence_mcp_bridge.parameter_changes import ChangePlan, ChangeReadback
+
+    def document(source: _PinnedComparisonFile) -> bytes:
+        return read_candidate_document(source.path, expected_sha256=source.sha256)
+
+    def operation(side: _PmosDcSide) -> PmosDcOperation:
+        query = NativeOperationQuery(
+            operation_id=side.operation_id,
+            expected_plan_sha256=side.plan_sha256,
+        )
+        path, digest = side.journal.path, side.journal.sha256
+        _read_candidate_bytes(path, expected_sha256=digest, limit=MAX_BYTES)
+        with AnalysisStore(path).connection(create=False, read_only=True) as connection:
+            record = AnalysisStore._read_operation(connection, query.operation_id)
+        _read_candidate_bytes(path, expected_sha256=digest, limit=MAX_BYTES)
+        return PmosDcOperation(
+            query=query,
+            plan=record.plan,
+            record=record,
+            report=document(side.report),
+            expected_report_sha256=side.report.sha256,
+            expected_terminal_sha256=side.terminal_sha256,
+            runtime_manifest=document(side.runtime_manifest),
+            runtime_registration=document(side.runtime_registration),
+            design_registry=document(side.design_registry),
+        )
+
+    request_path, request_sha256 = arguments.request
+    request_path = _local_path(Path(request_path))
+    request = _PmosDcComparisonRequest.model_validate_json(
+        read_candidate_document(request_path, expected_sha256=request_sha256)
+    )
+    common = (
+        request.change_plan,
+        request.readback,
+        request.baseline_input,
+        request.candidate_input,
+        request.copy_receipt,
+    )
+    files = list(common)
+    reserved = {request_path}
+    for side in (request.baseline, request.candidate):
+        files.extend(
+            (
+                side.journal,
+                side.runtime_manifest,
+                side.runtime_registration,
+                side.design_registry,
+                side.report,
+            )
+        )
+        journal = _local_path(side.journal.path)
+        reserved.update(journal.with_name(journal.name + s) for s in ("-wal", "-shm", "-journal"))
+    reserved.update(_local_path(source.path) for source in files)
+    output = _output(arguments.output, reserved)
+    pair = associate_pmos_dc_pair(
+        ChangePlan.model_validate_json(document(request.change_plan)),
+        ChangeReadback.model_validate_json(document(request.readback)),
+        expected_plan_sha256=request.change_plan_sha256,
+        baseline_input=_read_candidate_bytes(
+            request.baseline_input.path, expected_sha256=request.baseline_input.sha256
+        ),
+        candidate_input=_read_candidate_bytes(
+            request.candidate_input.path, expected_sha256=request.candidate_input.sha256
+        ),
+        copy_receipt=document(request.copy_receipt),
+        expected_copy_receipt_sha256=request.copy_receipt.sha256,
+        expected_copy_scope_sha256=request.copy_scope_sha256,
+        expected_copy_id=request.copy_id,
+        expected_reopen_receipt_sha256=request.reopen_receipt_sha256,
+        baseline=operation(request.baseline),
+        candidate=operation(request.candidate),
+    )
+    deltas = []
+    for metric in pair.metrics:
+        baseline_value = None if metric.baseline is None else metric.baseline.value
+        candidate_value = None if metric.candidate is None else metric.candidate.value
+        absolute, relative, reason = candidate_metric_delta(
+            candidate_value,
+            baseline_value,
+            baseline_present=metric.baseline is not None,
+        )
+        deltas.append(
+            {
+                "signal_id": metric.signal_id,
+                "absolute_delta": absolute,
+                "relative_delta": relative,
+                "reason": reason,
+            }
+        )
+    raw = json.dumps(
+        {
+            "association": pair.model_dump(mode="json"),
+            "request_sha256": request_sha256,
+            "baseline_report_sha256": request.baseline.report.sha256,
+            "candidate_report_sha256": request.candidate.report.sha256,
+            "deltas": deltas,
+            "selected_candidate_id": None,
+        },
+        sort_keys=True,
+        allow_nan=False,
+    ).encode()
+    file_sha256 = _export(output, raw)
+    read_candidate_document(output, expected_sha256=file_sha256)
+    return {
+        "status": "PMOS_DC_COMPARISON_EXPORTED",
+        "file_sha256": file_sha256,
+        "goals": pair.goals,
+        "selected_candidate_id": None,
+        "execution_authorized": False,
+        "new_simulations": 0,
+        "new_extractions": 0,
+        "new_reservations": 0,
+    }
+
+
 def candidates_cli(arguments: argparse.Namespace) -> int:
     remote_contact: bool | None = False
     action = arguments.candidates_action
@@ -485,6 +646,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _amplifier_select(arguments)
         elif action == "verify-change-readback":
             result = _verify_change_readback(arguments)
+        elif action == "pmos-dc-compare":
+            result = _pmos_dc_compare(arguments)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
@@ -633,6 +796,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                         "select",
                         "amplifier-select",
                         "verify-change-readback",
+                        "pmos-dc-compare",
                     )
                     else (
                         "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
