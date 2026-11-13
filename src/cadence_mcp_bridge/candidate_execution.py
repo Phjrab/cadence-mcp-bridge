@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 
 from pydantic import Field, model_validator
 
@@ -339,6 +339,79 @@ class PmosDcOperation:
     report: bytes | None = None
     expected_report_sha256: str | None = None
     expected_terminal_sha256: str | None = None
+
+
+class PmosDefaultChangeRequest(VariableModel):
+    operation_id: OperationId
+    expected_plan_sha256: Digest
+    expected_scope_sha256: Digest
+
+
+class PmosDefaultChangeResult(VariableModel):
+    operation_id: OperationId
+    plan_sha256: Digest
+    scope_sha256: Digest
+    outcome: Literal["VERIFIED", "FAILED", "OUTCOME_UNKNOWN"]
+    replayed: bool
+    dispatched_this_call: bool | None
+    candidate_revision: RevisionBinding
+    observed_revision_sha256: Digest | None = None
+    observed_testbench_revision_sha256: Digest | None = None
+    source_preservation_sha256: Digest | None = None
+    reopen_receipt_sha256: Digest | None = None
+    netlist_receipt_sha256: Digest | None = None
+    netlist_sha256: Digest | None = None
+    reason: str | None = None
+    new_simulations: Literal[0] = 0
+    new_reservations: Literal[0] = 0
+
+    @model_validator(mode="after")
+    def retained_evidence(self) -> Self:
+        if self.replayed and self.dispatched_this_call is not False:
+            raise ValueError("retained lookup cannot dispatch")
+        if self.dispatched_this_call is None and self.outcome != "OUTCOME_UNKNOWN":
+            raise ValueError("uncertain dispatch requires an unknown outcome")
+        reopen_evidence = (
+            self.observed_revision_sha256,
+            self.observed_testbench_revision_sha256,
+            self.source_preservation_sha256,
+            self.reopen_receipt_sha256,
+        )
+        reopened = all(value is not None for value in reopen_evidence)
+        if (self.outcome == "VERIFIED" or self.reopen_receipt_sha256 is not None) and not reopened:
+            raise ValueError("verified reopen requires observed revision and source preservation")
+        if (self.netlist_receipt_sha256 is None) != (self.netlist_sha256 is None):
+            raise ValueError("netlist evidence requires both receipt and artifact digests")
+        if self.outcome == "VERIFIED" and self.netlist_receipt_sha256 is None:
+            raise ValueError("verified change requires netlist evidence")
+        if self.netlist_receipt_sha256 is not None and not reopened:
+            raise ValueError("netlist evidence requires verified reopen evidence")
+        return self
+
+    def check_registered_scope(
+        self,
+        request: PmosDefaultChangeRequest,
+        *,
+        registered_plan: ChangePlan,
+        registered_scope_sha256: str,
+    ) -> None:
+        """Check the result against independently resolved registration before returning it."""
+        if (
+            not isinstance(registered_plan.target, MosWidthTarget)
+            or self.operation_id != request.operation_id
+            or self.plan_sha256 != request.expected_plan_sha256
+            or self.plan_sha256 != registered_plan.plan_sha256
+            or self.scope_sha256 != request.expected_scope_sha256
+            or self.scope_sha256 != registered_scope_sha256
+            or self.candidate_revision != registered_plan.candidate_revision
+        ):
+            raise OperationRejected("pmos_default_change_identity_mismatch")
+
+
+class PmosDefaultChangeService(Protocol):
+    """C1 resolves registration, verifies receipts and checks scope before returning."""
+
+    def apply(self, request: PmosDefaultChangeRequest) -> PmosDefaultChangeResult: ...
 
 
 class PmosDcRow(VariableModel):

@@ -8,6 +8,7 @@ from dataclasses import replace
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from test_candidate_contracts import candidate_operator, operator
 from test_candidate_reports import succeeded
 from test_generic_measurements import operator as measurement_operator
@@ -20,6 +21,8 @@ from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepar
 from cadence_mcp_bridge.candidate_execution import (
     CandidateAnalysisManifest,
     PmosDcOperation,
+    PmosDefaultChangeRequest,
+    PmosDefaultChangeResult,
     associate_pmos_dc_pair,
     collect_candidate_analyses,
     validate_cross_analysis_conditions,
@@ -40,6 +43,98 @@ from cadence_mcp_bridge.result_reports import make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.fixture
+def registered_pmos_change():
+    qualification = _mos()
+    plan = plan_mos_width_change(qualification, "candidate", CHILD, qualification.expected)
+    request = PmosDefaultChangeRequest(
+        operation_id=str(uuid4()),
+        expected_plan_sha256=plan.plan_sha256,
+        expected_scope_sha256="a" * 64,
+    )
+    result = {
+        "operation_id": request.operation_id,
+        "plan_sha256": plan.plan_sha256,
+        "scope_sha256": "a" * 64,
+        "outcome": "VERIFIED",
+        "replayed": False,
+        "dispatched_this_call": True,
+        "candidate_revision": plan.candidate_revision,
+        "observed_revision_sha256": "b" * 64,
+        "observed_testbench_revision_sha256": "c" * 64,
+        "source_preservation_sha256": "d" * 64,
+        "reopen_receipt_sha256": "e" * 64,
+        "netlist_receipt_sha256": "f" * 64,
+        "netlist_sha256": "0" * 64,
+    }
+    return plan, request, result
+
+
+def test_registered_pmos_change_request_is_closed(registered_pmos_change):
+    _, request, _ = registered_pmos_change
+    payload = request.model_dump()
+    assert PmosDefaultChangeRequest.model_validate(payload) == request
+    with pytest.raises(ValidationError):
+        PmosDefaultChangeRequest.model_validate({**payload, "requires_netlist": True})
+    with pytest.raises(ValidationError):
+        PmosDefaultChangeRequest.model_validate({**payload, "operation_id": "invalid"})
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"source_preservation_sha256": None},
+        {"observed_testbench_revision_sha256": None},
+        {"reopen_receipt_sha256": None},
+        {"replayed": True},
+        {"dispatched_this_call": None},
+        {"netlist_sha256": None},
+        {"netlist_receipt_sha256": None, "netlist_sha256": None},
+        {"new_simulations": 1},
+        {"new_reservations": 1},
+    ],
+)
+def test_registered_pmos_change_rejects_inconsistent_result(registered_pmos_change, override):
+    _, _, fields = registered_pmos_change
+    with pytest.raises(ValidationError):
+        PmosDefaultChangeResult.model_validate({**fields, **override})
+
+
+def test_registered_pmos_change_checks_exact_scope_and_required_receipt(registered_pmos_change):
+    plan, request, fields = registered_pmos_change
+
+    result = PmosDefaultChangeResult.model_validate(fields)
+    result.check_registered_scope(request, registered_plan=plan, registered_scope_sha256="a" * 64)
+    with pytest.raises(OperationRejected) as rejected:
+        result.check_registered_scope(
+            request, registered_plan=plan, registered_scope_sha256="0" * 64
+        )
+    assert rejected.value.reason == "pmos_default_change_identity_mismatch"
+
+
+def test_registered_pmos_change_preserves_replayed_partial_evidence(registered_pmos_change):
+    plan, request, fields = registered_pmos_change
+    result = PmosDefaultChangeResult.model_validate(
+        {
+            **fields,
+            "outcome": "OUTCOME_UNKNOWN",
+            "replayed": True,
+            "dispatched_this_call": False,
+            "netlist_receipt_sha256": None,
+            "netlist_sha256": None,
+            "reason": "netlist_receipt_unavailable",
+        }
+    )
+    result.check_registered_scope(
+        request,
+        registered_plan=plan,
+        registered_scope_sha256="a" * 64,
+    )
+    assert result.reopen_receipt_sha256 == "e" * 64
+    assert result.netlist_receipt_sha256 is None
+    assert result.new_simulations == result.new_reservations == 0
 
 
 @pytest.fixture
