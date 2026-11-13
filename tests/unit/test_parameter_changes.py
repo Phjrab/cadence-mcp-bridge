@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from typing import Literal
 
 import pytest
@@ -534,6 +535,7 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
     assert result.scope == "NETLIST_INPUT_ONLY"
     assert result.oa_footprint == "MISMATCHED"
     assert result.oa_change_status == "UNQUALIFIED_EXTRA_SETTING"
+    assert result.receipt_authentication == "NOT_VERIFIED_BY_THIS_API"
     assert result.automatic_update_route == result.geometry_mode == "NOT_OBSERVED"
     assert not (
         result.admission_authorized or result.execution_authorized or result.selection_authorized
@@ -544,6 +546,21 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
     assert result.baseline == baseline and result.child == child
     assert result.dfm_evidence_sha256 == "9" * 64
     assert (result.baseline_effective_dfm, result.child_effective_dfm) == ("Minimum", "DFM")
+
+    args = dict(
+        baseline=baseline,
+        child=child,
+        diagnostic_receipt_sha256="7" * 64,
+        footprint_receipt_sha256="8" * 64,
+        dfm_evidence_sha256="9" * 64,
+        baseline_effective_dfm="Minimum",
+    )
+    # Exercise malformed inputs from an untyped caller.
+    call_observer: Callable[..., object] = observe_amplifier_pm0_input
+    with pytest.raises(TypeError, match="child_effective_dfm"):
+        call_observer(center, candidate, **args)
+    with pytest.raises(ValueError, match="child_effective_dfm"):
+        call_observer(center, candidate, **args, child_effective_dfm="Minimum")
 
     with pytest.raises(ValueError, match="child netlist digest mismatch"):
         observe(candidate + b"\n")

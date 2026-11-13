@@ -355,6 +355,7 @@ class AmplifierPm0InputObservation(VariableModel):
     scope: Literal["NETLIST_INPUT_ONLY"] = "NETLIST_INPUT_ONLY"
     oa_footprint: Literal["MISMATCHED"] = "MISMATCHED"
     oa_change_status: Literal["UNQUALIFIED_EXTRA_SETTING"] = "UNQUALIFIED_EXTRA_SETTING"
+    receipt_authentication: Literal["NOT_VERIFIED_BY_THIS_API"] = "NOT_VERIFIED_BY_THIS_API"
     automatic_update_route: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
     geometry_mode: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
     execution_authorized: Literal[False] = False
