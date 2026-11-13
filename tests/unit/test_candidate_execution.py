@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from test_amplifier_specifications import source as amplifier_source
 from test_candidate_contracts import candidate_operator, operator
 from test_candidate_reports import succeeded
 from test_generic_measurements import operator as measurement_operator
@@ -19,10 +20,14 @@ from test_parameter_changes import _NETLIST, BASELINE, CHILD, _mos, _row
 from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
 from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepare_candidate_plan
 from cadence_mcp_bridge.candidate_execution import (
+    AmplifierWidthAnalysis,
+    AmplifierWidthAnalysisBinding,
+    AmplifierWidthBinding,
     CandidateAnalysisManifest,
     PmosDcOperation,
     PmosDefaultChangeRequest,
     PmosDefaultChangeResult,
+    associate_amplifier_width_pair,
     associate_pmos_dc_pair,
     collect_candidate_analyses,
     validate_cross_analysis_conditions,
@@ -38,11 +43,302 @@ from cadence_mcp_bridge.operator_operations import (
     OperationProgress,
     OperationRejected,
 )
-from cadence_mcp_bridge.parameter_changes import plan_mos_width_change, verify_change_readback
+from cadence_mcp_bridge.parameter_changes import (
+    ChangeValue,
+    DerivedChange,
+    DerivedValue,
+    plan_mos_width_change,
+    verify_change_readback,
+)
 from cadence_mcp_bridge.result_reports import make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.fixture
+async def amplifier_width_evidence(tmp_path, monkeypatch, measurement_operator):
+    from cadence_mcp_bridge import parameter_changes
+
+    def digest(raw):
+        return hashlib.sha256(raw).hexdigest()
+
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    common = b"simulator lang=spectre\nparameters VBIASN=0.32 VBIASP=0.702\n" + pm0 + b"\n"
+    dc_raw = common + b"analysis0 dc save=all\n"
+    ac_raw = common + b"analysis0 ac start=10 stop=100000000 dec=10\n"
+    child_raw = dc_raw.replace(b"w=(20u)", b"w=(19u)")
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", digest(dc_raw))
+    monkeypatch.setattr(parameter_changes, "_AMP_PM0_STATEMENT_SHA256", digest(pm0))
+    baseline = BASELINE.model_copy(
+        update={
+            "netlist_sha256": digest(dc_raw),
+            "revision": BASELINE.revision.model_copy(
+                update={
+                    "design_id": "reference-differential-amplifier-tb2",
+                    "revision_id": "reference-amplifier-bias-grid-v1",
+                }
+            ),
+        }
+    )
+    candidate = CHILD.model_copy(
+        update={
+            "design_id": baseline.revision.design_id,
+            "parent_revision_id": baseline.revision.revision_id,
+        }
+    )
+    original = _mos()
+    qualification = original.model_copy(
+        update={
+            "baseline": baseline,
+            "target": original.target.model_copy(
+                update={
+                    "instance": original.target.instance.model_copy(update={"instance_path": "PM0"})
+                }
+            ),
+            "old": ChangeValue(value="20", unit="um"),
+            "expected": ChangeValue(value="19", unit="um"),
+            "derived": (
+                DerivedChange(
+                    before=DerivedValue(property_name="fw", value="20u"),
+                    after=DerivedValue(property_name="fw", value="19u"),
+                ),
+            ),
+        }
+    )
+    plan = plan_mos_width_change(qualification, "amp-child", candidate, qualification.expected)
+    old = _row(plan, "baseline").model_copy(update={"revision": baseline.revision})
+    reopened = _row(plan, "reopened").model_copy(update={"revision": candidate})
+    netlist = _row(plan, "netlist").model_copy(
+        update={"revision": candidate, "artifact_sha256": digest(child_raw)}
+    )
+    readback = verify_change_readback(plan, baseline=old, reopened=reopened, netlist=netlist)
+
+    async def analysis(mode, raw):
+        root = tmp_path / mode
+        root.mkdir()
+        _, _, sweep = await amplifier_source(root, mode)
+        center = sweep.measurements[1].model_copy(update={"input_sha256": digest(raw)})
+        sweep = sweep.model_copy(
+            update={"measurements": (sweep.measurements[0], center, sweep.measurements[2])}
+        )
+        _, _, _, reader, _, _ = reader_for(measurement_operator, mode)
+        binding = AmplifierWidthAnalysisBinding(
+            baseline_operation_id=str(center.job_id),
+            baseline_plan_sha256=sweep.engine.plan_hash,
+            baseline_reader=reader,
+            model_includes=(),
+            model_closure_sha256=digest(_canonical([])),
+        )
+        return AmplifierWidthAnalysis(sweep, canonical_digest(sweep), raw), binding
+
+    dc, dc_binding = await analysis("dc", dc_raw)
+    ac, ac_binding = await analysis("ac", ac_raw)
+    binding = AmplifierWidthBinding(
+        change_plan_sha256=plan.plan_sha256,
+        readback_sha256=canonical_digest(readback),
+        baseline_revision_sha256=old.revision_sha256,
+        baseline_testbench_revision_sha256=old.testbench_revision_sha256,
+        child_revision_sha256=reopened.revision_sha256,
+        child_testbench_revision_sha256=reopened.testbench_revision_sha256,
+        child_source_tree_sha256="8" * 64,
+        child_ade_state_sha256="9" * 64,
+        dc=dc_binding,
+        ac=ac_binding,
+    )
+    return plan, readback, binding, dc, ac, child_raw
+
+
+def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
+    plan, readback, binding, dc, ac, child_raw = evidence
+    if drift == "baseline-input":
+        ac = replace(ac, baseline_input=ac.baseline_input.replace(b"0.32", b"0.321"))
+    if drift == "wrong-original-id":
+        binding = binding.model_copy(
+            update={
+                "dc": binding.dc.model_copy(
+                    update={"baseline_operation_id": binding.ac.baseline_operation_id}
+                )
+            }
+        )
+    if drift == "wrong-child-revision":
+        binding = binding.model_copy(update={"child_revision_sha256": "0" * 64})
+    if drift == "unauthorized-geometry":
+        child_raw = child_raw.replace(b"as=5.6p", b"as=5.7p")
+    if child_fixture is not None:
+        dc, dc_binding = child_fixture(dc, binding.dc, "dc")
+        ac, ac_binding = child_fixture(ac, binding.ac, "ac")
+        binding = binding.model_copy(update={"dc": dc_binding, "ac": ac_binding})
+    if drift == "ac-grid":
+        ac = replace(ac, child_input=ac.child_input.replace(b"dec=10", b"dec=11"))
+    registration = binding.model_dump_json().encode()
+    return associate_amplifier_width_pair(
+        plan,
+        readback,
+        expected_plan_sha256=plan.plan_sha256,
+        baseline_input=dc.baseline_input,
+        candidate_input=child_raw,
+        registration_evidence=registration,
+        expected_registration_sha256=hashlib.sha256(registration).hexdigest(),
+        dc=dc,
+        ac=ac,
+    )
+
+
+def test_amplifier_width_pair_preserves_original_dc_ac_and_unrun_child(amplifier_width_evidence):
+    pair = run_amplifier_pair(amplifier_width_evidence)
+    _, _, binding, _, _, _ = amplifier_width_evidence
+    assert str(pair.dc.baseline.job_id) == binding.dc.baseline_operation_id
+    assert str(pair.ac.baseline.job_id) == binding.ac.baseline_operation_id
+    assert (pair.dc.baseline_value, pair.ac.baseline_value) == (0.002, 60.0)
+    assert (pair.dc.child_status, pair.ac.child_status) == ("NOT_RUN", "NOT_RUN")
+    assert pair.dc.child_value is pair.ac.child_value is None
+    assert pair.dc.dc_output_reason == "baseline_output_scalars_not_retained"
+    assert pair.goals == "GOALS_NOT_PROVIDED" and not pair.execution_authorized
+
+
+@pytest.fixture
+def amplifier_child_fixture(monkeypatch, measurement_operator):
+    from cadence_mcp_bridge import candidate_execution
+
+    routes = {}
+    # The P120 fixtures exercise the common compiled-route validator end to end.
+    monkeypatch.setattr(candidate_execution, "_width_route", lambda op, _raw, mode: routes[mode])
+
+    def child(evidence, binding, mode):
+        raw = evidence.baseline_input.replace(b"w=(20u)", b"w=(19u)")
+        _, plan, ade, reader, _, _ = reader_for(measurement_operator, mode)
+        reader_doc = reader.model_dump(mode="json")
+        if mode == "dc":
+            reader_doc["nodes"] = [
+                dict(logical_id=n.lower(), selector="/" + n) for n in ("VDD", "VSS")
+            ]
+            reader_doc["sources"][0].update(
+                source_id="vdd",
+                current_selector="/VDD/PLUS",
+                positive_node="vdd",
+                negative_node=None,
+            )
+            reader_doc["sources"].append(
+                {
+                    **reader_doc["sources"][0],
+                    "source_id": "vss",
+                    "current_selector": "/VSS/PLUS",
+                    "positive_node": "vss",
+                }
+            )
+        else:
+            reader_doc["nodes"] = [
+                dict(logical_id=n.lower(), selector="/" + n) for n in ("Vp", "Vm", "Vop", "Vom")
+            ]
+            reader_doc["transfer"] = dict(
+                positive_input="vp",
+                negative_input="vm",
+                positive_output="vop",
+                negative_output="vom",
+                gain_frequencies_hz=["10"],
+            )
+        reader = GenericReaderRegistration.model_validate_json(json.dumps(reader_doc))
+        conditions = dict(
+            analysis_inputs=ade.inputs.model_dump(mode="json"),
+            source_tree_sha256="8" * 64,
+            ade_state_tree_sha256="9" * 64,
+            static_statements_sha256=ade.static_statements_sha256,
+            model_file_sha256=[],
+            transfer=reader_doc["transfer"],
+        )
+        query = NativeOperationQuery(
+            operation_id=str(uuid4()), expected_plan_sha256=plan.plan_sha256
+        )
+        record = DurableOperation(
+            operation_id=query.operation_id,
+            plan=plan,
+            event_count=4,
+            progress=OperationProgress(
+                phase="SUCCEEDED", remote_revision=5, provider_receipt_sha256="b" * 64
+            ),
+        )
+        report = make_report(
+            record,
+            dict(
+                status="NATIVE_RESULT_RETRIEVED",
+                operation_id=query.operation_id,
+                plan_sha256=plan.plan_sha256,
+                design_id=ade.design_id,
+                analysis=mode,
+                measurement_id=reader.measurement_id,
+                reader_registration_sha256=canonical_digest(reader),
+                execution_input_sha256=hashlib.sha256(raw).hexdigest(),
+                extraction_receipt_sha256="d" * 64,
+                frame_sha256="e" * 64,
+                native_provenance="FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                report_conditions=conditions,
+                nodes=[],
+                sources=[
+                    dict(source_id="vdd", role="supply", delivered_w=0.003),
+                    dict(source_id="vss", role="supply", delivered_w=0.0),
+                ],
+                transfer=[
+                    dict(frequency_hz=10.0, gain_v_per_v=10000.0, gain_db=80.0, phase_deg=0.0)
+                ],
+            ),
+        )
+        routes[mode] = (
+            dict(ade=ade.model_dump(mode="json"), model_files=[]),
+            report.analysis_conditions,
+            reader,
+            (),
+        )
+        report_raw = report.model_dump_json().encode()
+        operation = PmosDcOperation(
+            query,
+            plan,
+            b"",
+            b"",
+            b"",
+            record,
+            report_raw,
+            hashlib.sha256(report_raw).hexdigest(),
+            "b" * 64,
+        )
+        return replace(evidence, child=operation, child_input=raw), binding.model_copy(
+            update={
+                "baseline_reader": reader,
+                "child_operation_id": query.operation_id,
+                "child_plan_sha256": plan.plan_sha256,
+            }
+        )
+
+    return child
+
+
+def test_amplifier_width_pair_binds_succeeded_child_analyses(
+    amplifier_width_evidence,
+    amplifier_child_fixture,
+):
+    pair = run_amplifier_pair(amplifier_width_evidence, child_fixture=amplifier_child_fixture)
+    assert (pair.dc.child_status, pair.ac.child_status) == ("SUCCEEDED", "SUCCEEDED")
+    assert pair.dc.child_operation.operation_id == pair.dc.child_report.operation_id
+    assert pair.ac.child_operation.operation_id == pair.ac.child_report.operation_id
+    assert (pair.dc.child_value, pair.ac.child_value) == (0.003, 80.0)
+    with pytest.raises(OperationRejected) as rejected:
+        run_amplifier_pair(
+            amplifier_width_evidence, drift="ac-grid", child_fixture=amplifier_child_fixture
+        )
+    assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
+
+
+@pytest.mark.parametrize(
+    "drift",
+    ["baseline-input", "wrong-original-id", "wrong-child-revision", "unauthorized-geometry"],
+)
+def test_amplifier_width_pair_rejects_changed_evidence(amplifier_width_evidence, drift):
+    with pytest.raises(OperationRejected) as rejected:
+        run_amplifier_pair(amplifier_width_evidence, drift=drift)
+    assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
 
 
 @pytest.fixture
