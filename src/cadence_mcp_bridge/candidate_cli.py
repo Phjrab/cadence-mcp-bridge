@@ -33,6 +33,7 @@ from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant
+from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputEvidence
 from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
@@ -122,6 +123,18 @@ class _AmplifierWidthComparisonRequest(VariableModel):
     ac: _AmplifierWidthSide
 
 
+class _AmplifierPm0ObservationRequest(VariableModel):
+    baseline_input: Path
+    child_input: Path
+    baseline: AmplifierPm0InputEvidence
+    child: AmplifierPm0InputEvidence
+    diagnostic_receipt_sha256: Digest
+    footprint_receipt_sha256: Digest
+    dfm_evidence_sha256: Digest
+    baseline_effective_dfm: Literal["Minimum"]
+    child_effective_dfm: Literal["DFM"]
+
+
 def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     parser = subparsers.add_parser(
         "operator-candidates",
@@ -131,7 +144,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     schema = actions.add_parser("schema")
     schema.add_argument(
         "--action",
-        choices=("select", "amplifier-select", "amplifier-width-compare"),
+        choices=("select", "amplifier-select", "amplifier-width-compare", "observe-amplifier-pm0"),
         dest="schema_action",
     )
     for name in ("plan", "submit", "advance", "status", "result", "capture"):
@@ -187,6 +200,11 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     )
     amplifier_width.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     amplifier_width.add_argument("--output", type=Path, required=True)
+    pm0_observation = actions.add_parser(
+        "observe-amplifier-pm0", help="Observe retained PM0 netlist inputs without qualification."
+    )
+    pm0_observation.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    pm0_observation.add_argument("--output", type=Path, required=True)
     pmos_apply = actions.add_parser(
         "apply-pmos-default", help="Apply or read back one registered PMOS default change."
     )
@@ -757,6 +775,50 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _observe_amplifier_pm0(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.parameter_changes import (
+        AmplifierPm0InputObservation,
+        observe_amplifier_pm0_input,
+    )
+
+    path, digest = arguments.request
+    request_path = _local_path(Path(path))
+    request = _AmplifierPm0ObservationRequest.model_validate_json(
+        read_candidate_document(request_path, expected_sha256=digest)
+    )
+    baseline_input = _local_path(request.baseline_input)
+    child_input = _local_path(request.child_input)
+    output = _output(arguments.output, {request_path, baseline_input, child_input})
+    observation = observe_amplifier_pm0_input(
+        _read_candidate_bytes(baseline_input, expected_sha256=request.baseline.netlist_sha256),
+        _read_candidate_bytes(child_input, expected_sha256=request.child.netlist_sha256),
+        baseline=request.baseline,
+        child=request.child,
+        diagnostic_receipt_sha256=request.diagnostic_receipt_sha256,
+        footprint_receipt_sha256=request.footprint_receipt_sha256,
+        dfm_evidence_sha256=request.dfm_evidence_sha256,
+        baseline_effective_dfm=request.baseline_effective_dfm,
+        child_effective_dfm=request.child_effective_dfm,
+    )
+    file_sha256 = _export(output, observation.model_dump_json().encode("utf-8"))
+    saved = AmplifierPm0InputObservation.model_validate_json(
+        read_candidate_document(output, expected_sha256=file_sha256)
+    )
+    if saved != observation:
+        raise OperationRejected("amplifier_pm0_observation_output_mismatch")
+    return {
+        "status": saved.status,
+        "scope": saved.scope,
+        "oa_footprint": saved.oa_footprint,
+        "oa_change_status": saved.oa_change_status,
+        "receipt_authentication": saved.receipt_authentication,
+        "execution_authorized": saved.execution_authorized,
+        "admission_authorized": saved.admission_authorized,
+        "selection_authorized": saved.selection_authorized,
+        "file_sha256": file_sha256,
+    }
+
+
 def candidates_cli(arguments: argparse.Namespace) -> int:
     remote_contact: bool | None = False
     action = arguments.candidates_action
@@ -781,6 +843,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 result = {"request_schema": AmplifierCandidateSelectionRequest.model_json_schema()}
             elif arguments.schema_action == "amplifier-width-compare":
                 result = {"request_schema": _AmplifierWidthComparisonRequest.model_json_schema()}
+            elif arguments.schema_action == "observe-amplifier-pm0":
+                result = {"request_schema": _AmplifierPm0ObservationRequest.model_json_schema()}
         elif action in ("compare", "csv"):
             inputs = {
                 _local_path(getattr(arguments, name))
@@ -855,6 +919,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _pmos_dc_compare(arguments)
         elif action == "amplifier-width-compare":
             result = _amplifier_width_compare(arguments)
+        elif action == "observe-amplifier-pm0":
+            result = _observe_amplifier_pm0(arguments)
         else:
             contexts = load_runtime(_local_path(arguments.settings))
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
@@ -1011,6 +1077,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "verify-change-readback",
             "pmos-dc-compare",
             "amplifier-width-compare",
+            "observe-amplifier-pm0",
         ):
             guidance = "Check pinned local documents and use a new output file."
         else:

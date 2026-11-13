@@ -410,6 +410,164 @@ def test_pmos_dc_compare_retained_pair(pmos_pair, tmp_path, monkeypatch, capsys,
     assert all(path.read_bytes() == raw for path, raw in pinned.items())
 
 
+def test_observe_amplifier_pm0_request_schema(capsys):
+    assert main(["operator-candidates", "schema", "--action", "observe-amplifier-pm0"]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {
+        "baseline_input",
+        "child_input",
+        "baseline",
+        "child",
+        "diagnostic_receipt_sha256",
+        "footprint_receipt_sha256",
+        "dfm_evidence_sha256",
+        "baseline_effective_dfm",
+        "child_effective_dfm",
+    }
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "matched",
+        "request-hash",
+        "baseline-hash",
+        "child-hash",
+        "output-alias",
+        "missing-dfm",
+        "wrong-dfm",
+        "missing-geometry",
+        "missing-receipt",
+    ],
+)
+def test_observe_amplifier_pm0_retained_inputs(tmp_path, monkeypatch, capsys, case):
+    from cadence_mcp_bridge import parameter_changes
+    from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputObservation
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    baseline_raw = b"simulator lang=spectre\nparameters VBIASN=0.32 VBIASP=0.702\n" + pm0 + b"\n"
+    child_raw = (
+        baseline_raw.replace(b"w=(20u)", b"w=(120n)")
+        .replace(b"5.6p", b"69.6f")
+        .replace(b"40.56u", b"1.16u")
+    )
+    baseline_hash = hashlib.sha256(baseline_raw).hexdigest()
+    child_hash = hashlib.sha256(child_raw).hexdigest()
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", baseline_hash)
+    monkeypatch.setattr(
+        parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
+    )
+    baseline_path = tmp_path / "baseline.scs"
+    child_path = tmp_path / "child.scs"
+    baseline_path.write_bytes(baseline_raw)
+    child_path.write_bytes(child_raw)
+    request = {
+        "baseline_input": str(baseline_path),
+        "child_input": str(child_path),
+        "baseline": {
+            "revision_sha256": "1" * 64,
+            "testbench_revision_sha256": "2" * 64,
+            "oa_cdf_sha256": "3" * 64,
+            "netlist_sha256": baseline_hash,
+            "width": {"value": "20", "unit": "um"},
+            "geometry": [
+                {"property_name": name, "value": value}
+                for name, value in zip(
+                    ("fw", "as", "ad", "ps", "pd"),
+                    ("20u", "5.6p", "5.6p", "40.56u", "40.56u"),
+                    strict=True,
+                )
+            ],
+        },
+        "child": {
+            "revision_sha256": "4" * 64,
+            "testbench_revision_sha256": "5" * 64,
+            "oa_cdf_sha256": "6" * 64,
+            "netlist_sha256": child_hash,
+            "width": {"value": "120", "unit": "nm"},
+            "geometry": [
+                {"property_name": name, "value": value}
+                for name, value in zip(
+                    ("fw", "as", "ad", "ps", "pd"),
+                    ("120n", "69.6f", "69.6f", "1.16u", "1.16u"),
+                    strict=True,
+                )
+            ],
+        },
+        "diagnostic_receipt_sha256": "7" * 64,
+        "footprint_receipt_sha256": "8" * 64,
+        "dfm_evidence_sha256": "9" * 64,
+        "baseline_effective_dfm": "Minimum",
+        "child_effective_dfm": "DFM",
+    }
+    target = tmp_path / "observation.json"
+    if case in ("baseline-hash", "child-hash"):
+        request[case.split("-")[0]]["netlist_sha256"] = "0" * 64
+    elif case == "output-alias":
+        target = tmp_path / "subdir" / ".." / child_path.name
+        target.parent.parent.mkdir()
+    elif case == "missing-dfm":
+        del request["child_effective_dfm"]
+    elif case == "wrong-dfm":
+        request["child_effective_dfm"] = "Minimum"
+    elif case == "missing-geometry":
+        request["child"]["geometry"].pop()
+    elif case == "missing-receipt":
+        del request["diagnostic_receipt_sha256"]
+    request_path = tmp_path / "request.json"
+    request_raw = json.dumps(request).encode()
+    request_path.write_bytes(request_raw)
+    digest = "0" * 64 if case == "request-hash" else hashlib.sha256(request_raw).hexdigest()
+    args = [
+        "operator-candidates",
+        "observe-amplifier-pm0",
+        "--request",
+        str(request_path),
+        digest,
+        "--output",
+        str(target),
+    ]
+    if case == "matched":
+        assert main(args) == 0
+        summary = output(capsys)
+        raw = target.read_bytes()
+        result = AmplifierPm0InputObservation.model_validate_json(raw)
+        assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+        assert summary["status"] == result.status == "OBSERVATION_ONLY"
+        assert summary["scope"] == result.scope == "NETLIST_INPUT_ONLY"
+        assert summary["oa_footprint"] == result.oa_footprint == "MISMATCHED"
+        assert summary["oa_change_status"] == result.oa_change_status == "UNQUALIFIED_EXTRA_SETTING"
+        assert (
+            summary["receipt_authentication"]
+            == result.receipt_authentication
+            == ("NOT_VERIFIED_BY_THIS_API")
+        )
+        assert summary["remote_contact"] is False
+        assert not any(
+            summary[key]
+            for key in ("execution_authorized", "admission_authorized", "selection_authorized")
+        )
+        assert result.netlist.artifact_sha256 == child_hash
+        assert result.netlist.value.model_dump() == {"value": "120", "unit": "nm"}
+        assert (result.baseline_effective_dfm, result.child_effective_dfm) == ("Minimum", "DFM")
+        assert result.dfm_evidence_sha256 == request["dfm_evidence_sha256"]
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.read_bytes() == raw
+    else:
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.exists() == (case == "output-alias")
+    assert request_path.read_bytes() == request_raw
+    assert baseline_path.read_bytes() == baseline_raw
+    assert child_path.read_bytes() == child_raw
+
+
 def test_amplifier_width_compare_request_schema(capsys):
     assert main(["operator-candidates", "schema", "--action", "amplifier-width-compare"]) == 0
     schema = output(capsys)["request_schema"]
