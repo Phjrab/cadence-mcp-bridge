@@ -58,6 +58,8 @@ class ContextBinding(EnvironmentModel):
     native_specifications_sha256: Digest | None = None
     layout_provider_binding: Path | None = None
     layout_provider_sha256: Digest | None = None
+    pmos_default_change_binding: Path | None = None
+    pmos_default_change_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def native_binding_complete(self) -> ContextBinding:
@@ -73,6 +75,8 @@ class ContextBinding(EnvironmentModel):
             raise ValueError("complete specification catalog binding required")
         if (self.layout_provider_binding is None) != (self.layout_provider_sha256 is None):
             raise ValueError("complete layout provider binding required")
+        if (self.pmos_default_change_binding is None) != (self.pmos_default_change_sha256 is None):
+            raise ValueError("complete PMOS default change binding required")
         return self
 
 
@@ -181,6 +185,32 @@ def load_runtime(path: Path) -> tuple[ExecutionContext, ...]:
         raise RuntimeRejected("runtime_contract_invalid") from None
 
 
+def read_pmos_default_change_binding(path: Path, expected: str) -> bytes:
+    """Read the pinned local registration without following links or aliasing journals."""
+    try:
+        if not path.is_absolute():
+            raise RuntimeRejected("absolute_pmos_default_change_binding_required")
+        source = _local_path(path)
+        info = source.stat()
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 32_768:
+            raise RuntimeRejected("pmos_default_change_binding_document_required")
+        with source.open("rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (opened.st_dev, opened.st_ino, opened.st_nlink) != (info.st_dev, info.st_ino, 1):
+                raise RuntimeRejected("pmos_default_change_binding_document_changed")
+            data = stream.read(32_769)
+        if len(data) > 32_768 or hashlib.sha256(data).hexdigest() != expected:
+            raise RuntimeRejected("stale_pmos_default_change_binding_digest")
+        _closed_json(data)
+        if not isinstance(json.loads(data), dict):
+            raise RuntimeRejected("pmos_default_change_binding_document_required")
+        return data
+    except RuntimeRejected:
+        raise
+    except (OSError, ValueError, RecursionError):
+        raise RuntimeRejected("pmos_default_change_binding_document_required") from None
+
+
 def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext, ...]:
     """Validate a prospective local document using the same runtime checks, without writes."""
     try:
@@ -225,6 +255,12 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
                 if hashlib.sha256(layout_raw).hexdigest() != binding.layout_provider_sha256:
                     raise RuntimeRejected("stale_layout_provider_digest")
                 _closed_json(layout_raw)
+            if binding.pmos_default_change_binding is not None:
+                assert binding.pmos_default_change_sha256 is not None
+                read_pmos_default_change_binding(
+                    binding.pmos_default_change_binding, binding.pmos_default_change_sha256
+                )
+                inputs.add(_local_path(binding.pmos_default_change_binding))
             snapshot = load_contracts(*paths)
             if (snapshot.environment_sha256, snapshot.design_sha256, snapshot.pdk_sha256) != (
                 binding.environment_sha256,
@@ -259,9 +295,12 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
             if analysis == sweep or {analysis, sweep} & journals:
                 raise RuntimeRejected("journal_context_conflict")
             journals.update((analysis, sweep))
-            context_hash = _digest(
-                {"binding": binding.model_dump(mode="json"), "resource_domain": domain}
-            )
+            serialized = binding.model_dump(mode="json")
+            if binding.pmos_default_change_binding is None:
+                # Older contexts included the original optional fields with null values.
+                del serialized["pmos_default_change_binding"]
+                del serialized["pmos_default_change_sha256"]
+            context_hash = _digest({"binding": serialized, "resource_domain": domain})
             contexts.append(
                 ExecutionContext(
                     binding,
