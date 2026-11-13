@@ -406,7 +406,7 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
         b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
         b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
     )
-    raw = b"simulator lang=spectre\nparameters VBIASN=0.320\n" + pm0 + b"\n"
+    raw = b"simulator lang=spectre\nparameters VBIASN=320m VBIASP=702m\n" + pm0 + b"\n"
     monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", hashlib.sha256(raw).hexdigest())
     monkeypatch.setattr(
         parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
@@ -451,7 +451,7 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
         (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
         (candidate.replace(b"net33 Vbiasp", b"net34 Vbiasp"), "PM0 netlist binding"),
         (candidate.replace(b"as=5.6p", b"as=1p"), "fixed MOS netlist options"),
-        (candidate.replace(b"VBIASN=0.320", b"VBIASN=0.321"), "fixed netlist"),
+        (candidate.replace(b"VBIASN=320m", b"VBIASN=0.321"), "fixed netlist"),
         (candidate + pm0 + b"\n", "missing or ambiguous"),
         (
             candidate.replace(b"PM0 ", b"inline subckt Other\nPM0 ") + b"ends Other\n",
@@ -476,11 +476,12 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
         b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
     )
     center = (
-        b"simulator lang=spectre\nparameters VBIASN=0.320\n"
+        b"simulator lang=spectre\nparameters VBIASN=320m VBIASP=702m\n"
         b"CL (net33 0) capacitor c=1p\n" + pm0 + b"\n"
     )
     candidate = (
         center.replace(b"w=(20u)", b"w=(0.12u)")
+        .replace(b"VBIASN=320m VBIASP=702m", b"VBIASN=0.320 VBIASP=0.702")
         .replace(b"5.6p", b"69.6f")
         .replace(b"40.56u", b"1.16u")
     )
@@ -568,6 +569,9 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
         (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
         (candidate.replace(b"gpdk090_pmos1v", b"other_model"), "PM0 netlist binding"),
         (candidate.replace(b"capacitor c=1p", b"capacitor c=2p"), "fixed netlist"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=0.701"), "center bias changed"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=701m"), "scalar_expression_denied"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=(0.702)"), "scalar_expression_denied"),
         (candidate.replace(b"ad=69.6f", b"ad=1p"), "geometry differs"),
         (candidate.replace(b"w=(0.12u)", b"w=(0.13u)"), "effective netlist width differs"),
         (candidate.replace(b"l=1u", b"l=1u dfm=DFM"), "fixed MOS netlist options"),

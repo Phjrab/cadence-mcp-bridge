@@ -25,6 +25,8 @@ from cadence_mcp_bridge.variable_contracts import (
 ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF"]
 _AMP_PM0_STATEMENT_SHA256 = "52bf48b8d845681d1be3727bbadb20eabd424a24c3c822bbc33e8913e3e274c6"
 _AMP_CENTER_SHA256 = "c9bcf3e3bd8a9329ff0bb1513df2a08f8a4f60e314f04075e15a3422c03e4006"
+_AMP_CENTER_BIAS = {"VBIASN": "0.32", "VBIASP": "0.702"}
+_AMP_CENTER_ALIASES = {"VBIASN=320m": "VBIASN=0.320", "VBIASP=702m": "VBIASP=0.702"}
 
 GeometryProperty = Literal["fw", "as", "ad", "ps", "pd"]
 _UNIT_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9, "F": 0, "pF": -12}
@@ -559,6 +561,27 @@ def _compare_mos_options(
     return old, observed, tuple(values)
 
 
+def partition_amplifier_input(
+    raw_input: bytes, *, expected_sha256: str
+) -> tuple[dict[str, str], list[tuple[str, str]], list[tuple[str, str]], list[str]]:
+    """Parse pinned center AMP input with the two observed milli aliases."""
+    if hashlib.sha256(raw_input).hexdigest() != expected_sha256:
+        raise ValueError("amplifier raw netlist digest mismatch")
+    logical: list[str] = statements(raw_input)  # type: ignore[no-untyped-call]
+    normalized = [
+        " ".join(_AMP_CENTER_ALIASES.get(token, token) for token in line.split())
+        if line.startswith("parameters ")
+        else line
+        for line in logical
+    ]
+    # The existing partitioner still rejects scoped parameters and unsupported syntax.
+    prepared = ("simulator lang=spectre\n" + "\n".join(normalized) + "\n").encode("ascii")
+    parameters, includes, analyses, static = partition_input(prepared)  # type: ignore[no-untyped-call]
+    if any(parameters.get(name) != value for name, value in _AMP_CENTER_BIAS.items()):
+        raise ValueError("fixed netlist amplifier center bias changed")
+    return parameters, includes, analyses, static
+
+
 def observe_amplifier_pm0_input(
     baseline_input: bytes,
     child_input: bytes,
@@ -606,8 +629,12 @@ def observe_amplifier_pm0_input(
     ):
         raise ValueError("PM0 observation requires the 20 µm to 120 nm width transition")
 
-    old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
-    new_params, new_includes, new_analyses, new_static = partition_input(child_input)  # type: ignore[no-untyped-call]
+    old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+        baseline_input, expected_sha256=baseline.netlist_sha256
+    )
+    new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+        child_input, expected_sha256=child.netlist_sha256
+    )
     if old_includes != new_includes or old_analyses != new_analyses:
         raise ValueError("model includes or analysis settings changed")
     old_static, old_options = _amp_pm0_options(old_static, baseline=True)
@@ -648,8 +675,19 @@ def project_netlist_change(
     plan = _checked(plan)
     if hashlib.sha256(baseline_input).hexdigest() != plan.baseline.netlist_sha256:
         raise ValueError("baseline netlist digest mismatch")
-    old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
-    new_params, new_includes, new_analyses, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
+    amplifier = (
+        isinstance(plan.target, MosWidthTarget) and plan.target.instance.instance_path == "PM0"
+    )
+    if amplifier:
+        old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+            baseline_input, expected_sha256=plan.baseline.netlist_sha256
+        )
+        new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+            candidate_input, expected_sha256=hashlib.sha256(candidate_input).hexdigest()
+        )
+    else:
+        old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
+        new_params, new_includes, new_analyses, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
     if old_includes != new_includes or old_analyses != new_analyses:
         raise ValueError("model includes or analysis settings changed")
 
@@ -664,7 +702,6 @@ def project_netlist_change(
         new_static, observed = _load_capacitance(new_static)
     else:
         instance_path = plan.target.instance.instance_path
-        amplifier = instance_path == "PM0"
         if amplifier:
             revision = plan.baseline.revision
             if (
