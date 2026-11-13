@@ -138,6 +138,12 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     pmos = actions.add_parser("pmos-dc-compare", help="Compare two retained PMOS DC results.")
     pmos.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     pmos.add_argument("--output", type=Path, required=True)
+    pmos_apply = actions.add_parser(
+        "apply-pmos-default", help="Apply or read back one registered PMOS default change."
+    )
+    pmos_apply.add_argument("--settings", type=Path, required=True)
+    pmos_apply.add_argument("--context", required=True)
+    pmos_apply.add_argument("--request", type=Path, required=True)
     compose = actions.add_parser("compose", help="Group existing local analysis plans.")
     compose.add_argument(
         "--batch",
@@ -680,7 +686,15 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             context = next((c for c in contexts if c.binding.context_id == arguments.context), None)
             if context is None:
                 raise OperationRejected("candidate_context_required")
-            if action == "plan":
+            if action == "apply-pmos-default":
+                from cadence_mcp_bridge.pmos_default_service import registered_pmos_default_change
+
+                service = registered_pmos_default_change(context)
+                remote_contact = None  # A failure after entering the adapter may follow dispatch.
+                receipt = dispatch_pmos_default_change(arguments.request, service)
+                remote_contact = receipt.dispatched_this_call
+                result = receipt.model_dump(mode="json")
+            elif action == "plan":
                 output = _output(
                     arguments.output,
                     _reserved(arguments.settings, contexts)
@@ -810,25 +824,31 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
         print(json.dumps(result, sort_keys=True, allow_nan=False))
         return 0
     except (OSError, ValueError, BridgeError, sqlite3.Error, KeyError, TypeError, RecursionError):
+        if action == "apply-pmos-default":
+            guidance = (
+                "Check the registered PMOS change, context and exact request. "
+                "Review retained evidence before retrying."
+            )
+        elif action in (
+            "compose",
+            "collect",
+            "select",
+            "amplifier-select",
+            "verify-change-readback",
+            "pmos-dc-compare",
+        ):
+            guidance = "Check pinned local documents and use a new output file."
+        else:
+            guidance = (
+                "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
+                "Reconcile unknown or running work before advancing; W/L is unsupported."
+            )
         print(
             json.dumps(
                 {
                     "status": "CANDIDATE_WORKFLOW_REJECTED",
                     "remote_contact": remote_contact,
-                    "guidance": "Check pinned local documents and use a new output file."
-                    if action
-                    in (
-                        "compose",
-                        "collect",
-                        "select",
-                        "amplifier-select",
-                        "verify-change-readback",
-                        "pmos-dc-compare",
-                    )
-                    else (
-                        "Check complete registered V/A inputs, fixed evidence, IDs and grant. "
-                        "Reconcile unknown or running work before advancing; W/L is unsupported."
-                    ),
+                    "guidance": guidance,
                     "budget_reset_or_refund": False,
                 }
             )

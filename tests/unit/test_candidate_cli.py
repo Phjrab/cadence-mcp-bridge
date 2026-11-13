@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 from test_candidate_batches import candidate_native
@@ -112,11 +113,97 @@ def test_dispatch_pmos_default_change_rejects_before_apply(registered_pmos_chang
         cli.dispatch_pmos_default_change(path, UnusedService())
 
 
-def test_pmos_default_command_waits_for_registered_factory(monkeypatch):
+def test_apply_pmos_default_requires_context_and_request_flags(monkeypatch):
     monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
     with pytest.raises(SystemExit) as rejected:
         main(["operator-candidates", "apply-pmos-default"])
     assert rejected.value.code == 2
+
+
+@pytest.mark.parametrize("case", ["verified", "retained-unknown", "unregistered", "wrong-context"])
+def test_apply_pmos_default_uses_registered_service(
+    registered_pmos_change, tmp_path, monkeypatch, capsys, case
+):
+    from cadence_mcp_bridge import pmos_default_service
+    from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeResult
+
+    plan, request, fields = registered_pmos_change
+    settings = tmp_path / "runtime.json"
+    path = tmp_path / "request.json"
+    raw = request.model_dump_json().encode()
+    path.write_bytes(raw)
+    context = SimpleNamespace(
+        binding=SimpleNamespace(
+            context_id="selected",
+            pmos_default_change_binding=None,
+            pmos_default_change_sha256=None,
+        )
+    )
+
+    def load_runtime(received):
+        assert received == settings
+        return (context,)
+
+    monkeypatch.setattr(cli, "load_runtime", load_runtime)
+    calls = []
+    if case == "retained-unknown":
+        fields.update(
+            outcome="OUTCOME_UNKNOWN",
+            replayed=True,
+            dispatched_this_call=False,
+            netlist_receipt_sha256=None,
+            netlist_sha256=None,
+            reason="netlist_receipt_unavailable",
+        )
+    receipt = PmosDefaultChangeResult.model_validate(fields)
+
+    class FixtureService:
+        def apply(self, supplied):
+            calls.append(supplied)
+            receipt.check_registered_scope(
+                supplied,
+                registered_plan=plan,
+                registered_scope_sha256=request.expected_scope_sha256,
+            )
+            return receipt
+
+    def registered(selected):
+        assert selected is context
+        return FixtureService()
+
+    if case in ("verified", "retained-unknown"):
+        monkeypatch.setattr(pmos_default_service, "registered_pmos_default_change", registered)
+    elif case == "wrong-context":
+        monkeypatch.setattr(
+            pmos_default_service,
+            "registered_pmos_default_change",
+            lambda _: pytest.fail("unexpected factory call"),
+        )
+    args = [
+        "operator-candidates",
+        "apply-pmos-default",
+        "--settings",
+        str(settings),
+        "--context",
+        "missing" if case == "wrong-context" else "selected",
+        "--request",
+        str(path),
+    ]
+    if case in ("unregistered", "wrong-context"):
+        assert main(args) == 2
+        rejected = output(capsys)
+        assert rejected["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert rejected["remote_contact"] is False
+        assert not calls
+    else:
+        assert main(args) == 0
+        assert output(capsys) == {
+            **receipt.model_dump(mode="json"),
+            "remote_contact": receipt.dispatched_this_call,
+            "budget_reset_or_refund": False,
+        }
+        assert calls == [request]
+    assert path.read_bytes() == raw
 
 
 def test_schema_and_missing_opt_in_never_load_context(monkeypatch, capsys):
