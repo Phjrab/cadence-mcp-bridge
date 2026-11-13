@@ -23,6 +23,9 @@ from cadence_mcp_bridge.variable_contracts import (
 )
 
 ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF"]
+_AMP_PM0_STATEMENT_SHA256 = "52bf48b8d845681d1be3727bbadb20eabd424a24c3c822bbc33e8913e3e274c6"
+_AMP_CENTER_SHA256 = "c9bcf3e3bd8a9329ff0bb1513df2a08f8a4f60e314f04075e15a3422c03e4006"
+
 GeometryProperty = Literal["fw", "as", "ad", "ps", "pd"]
 _UNIT_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9, "F": 0, "pF": -12}
 
@@ -153,9 +156,13 @@ class MosWidthQualification(VariableModel):
             raise ValueError("qualified width transition must change a length")
         fw = self.derived[names.index("fw")]
         for value, width in ((fw.before, self.old), (fw.after, self.expected)):
-            if not value.value.endswith("n"):
+            if self.target.instance.instance_path == "PM0" and value.value.endswith("u"):
+                observed_width = ChangeValue(value=value.value[:-1], unit="um")
+            elif value.value.endswith("n"):
+                observed_width = ChangeValue(value=value.value[:-1], unit="nm")
+            else:
                 raise ValueError("the qualified fw observation must use explicit nm")
-            if ChangeValue(value=value.value[:-1], unit="nm").normalized != width.normalized:
+            if observed_width.normalized != width.normalized:
                 raise ValueError("observed single-finger w and fw differ")
         return self
 
@@ -347,7 +354,12 @@ def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[st
     matches = [(index, line) for scope, index, line in instances if scope == masters[0]]
     if len(matches) != 1:
         raise ValueError("MOS netlist instance is missing or ambiguous")
-    index, line = matches[0]
+    return _split_mos_options(statements, *matches[0])
+
+
+def _split_mos_options(
+    statements: list[str], index: int, line: str
+) -> tuple[list[str], dict[str, str]]:
     match = re.fullmatch(r"([^ ]+ \([^()]+\) [^ ]+) (.+)", line)
     if match is None:
         raise ValueError("unsupported MOS netlist statement")
@@ -362,10 +374,35 @@ def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[st
     return fixed, options
 
 
-def _netlist_width(options: dict[str, str]) -> ChangeValue:
+def _amp_pm0_options(statements: list[str], *, baseline: bool) -> tuple[list[str], dict[str, str]]:
+    depth = 0
+    matches: list[tuple[int, str]] = []
+    for index, line in enumerate(statements):
+        if line.startswith(("subckt ", "inline subckt ")):
+            depth += 1
+        elif line == "ends" or line.startswith("ends "):
+            depth -= 1
+        elif line.split(" ", 1)[0] == "PM0":
+            if depth or not line.startswith("PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v "):
+                raise ValueError("unsupported amplifier PM0 netlist binding")
+            matches.append((index, line))
+    if len(matches) != 1:
+        raise ValueError("amplifier PM0 is missing or ambiguous")
+    index, line = matches[0]
+    if baseline and hashlib.sha256(line.encode("ascii")).hexdigest() != _AMP_PM0_STATEMENT_SHA256:
+        raise ValueError("amplifier PM0 baseline statement mismatch")
+    fixed, options = _split_mos_options(statements, index, line)
+    if options.get("l") != "1u":
+        raise ValueError("amplifier PM0 length must remain 1u")
+    return fixed, options
+
+
+def _netlist_width(options: dict[str, str], *, amplifier: bool = False) -> ChangeValue:
     if options.get("m") != "(1)*(1)" or options.get("simM") != "(1)*(1)":
         raise ValueError("unsupported effective MOS multiplicity expression")
     token = options.pop("w", "")
+    if amplifier and token.startswith("(") and token.endswith("u)"):
+        return ChangeValue(value=token[1:-2], unit="um")
     if not (token.startswith("(") and token.endswith("n)")):
         raise ValueError("unsupported effective width expression")
     return ChangeValue(value=token[1:-2], unit="nm")
@@ -478,10 +515,22 @@ def project_netlist_change(
         new_static, observed = _load_capacitance(new_static)
     else:
         instance_path = plan.target.instance.instance_path
-        old_static, old_options = _width_options(old_static, instance_path)
-        new_static, new_options = _width_options(new_static, instance_path)
-        old = _netlist_width(old_options)
-        observed = _netlist_width(new_options)
+        amplifier = instance_path == "PM0"
+        if amplifier:
+            revision = plan.baseline.revision
+            if (
+                revision.design_id != "reference-differential-amplifier-tb2"
+                or revision.revision_id != "reference-amplifier-bias-grid-v1"
+                or plan.baseline.netlist_sha256 != _AMP_CENTER_SHA256
+            ):
+                raise ValueError("amplifier PM0 requires the registered center DC baseline")
+            old_static, old_options = _amp_pm0_options(old_static, baseline=True)
+            new_static, new_options = _amp_pm0_options(new_static, baseline=False)
+        else:
+            old_static, old_options = _width_options(old_static, instance_path)
+            new_static, new_options = _width_options(new_static, instance_path)
+        old = _netlist_width(old_options, amplifier=amplifier)
+        observed = _netlist_width(new_options, amplifier=amplifier)
         geometry = [
             change for change in plan.allowed_derived if change.before.property_name != "fw"
         ]
@@ -500,6 +549,7 @@ def project_netlist_change(
         old_static != new_static
         and not (
             isinstance(plan.target, MosWidthTarget)
+            and plan.target.instance.instance_path != "PM0"
             and _same_inverter_bench_with_reordered_instances(
                 old_static, new_static, baseline_input, candidate_input
             )

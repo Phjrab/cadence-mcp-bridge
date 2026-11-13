@@ -392,3 +392,71 @@ def test_width_accepts_only_the_exact_contiguous_top_level_bench_permutation() -
     ):
         with pytest.raises(ValueError, match="fixed netlist"):
             project_netlist_change(plan, raw, changed)
+
+
+def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge import parameter_changes
+
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    raw = b"simulator lang=spectre\nparameters VBIASN=0.320\n" + pm0 + b"\n"
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", hashlib.sha256(raw).hexdigest())
+    monkeypatch.setattr(
+        parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
+    )
+    revision = PARENT.model_copy(
+        update={
+            "design_id": "reference-differential-amplifier-tb2",
+            "revision_id": "reference-amplifier-bias-grid-v1",
+        }
+    )
+    baseline = BASELINE.model_copy(
+        update={"revision": revision, "netlist_sha256": hashlib.sha256(raw).hexdigest()}
+    )
+    child = CHILD.model_copy(
+        update={"design_id": revision.design_id, "parent_revision_id": revision.revision_id}
+    )
+    target = MosWidthTarget(instance=MP.model_copy(update={"instance_path": "PM0"}))
+    # FIXTURE_ONLY: values and evidence are synthetic, including the candidate width.
+    qualification = MosWidthQualification(
+        baseline=baseline,
+        target=target,
+        old=ChangeValue(value="20", unit="um"),
+        expected=ChangeValue(value="19", unit="um"),
+        fingers=1,
+        multiplicity=1,
+        cdf_evidence_sha256="1" * 64,
+        legal_value_evidence_sha256="2" * 64,
+        update_route_evidence_sha256="3" * 64,
+        derived=(
+            DerivedChange(
+                before=DerivedValue(property_name="fw", value="20u"),
+                after=DerivedValue(property_name="fw", value="19u"),
+            ),
+        ),
+    )
+    plan = plan_mos_width_change(qualification, "candidate", child, qualification.expected)
+    candidate = raw.replace(b"w=(20u)", b"w=(19000n)")
+    projected = project_netlist_change(plan, raw, candidate)
+    assert projected.value == ChangeValue(value="19000", unit="nm")
+    assert projected.value != plan.requested
+    for invalid, reason in (
+        (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
+        (candidate.replace(b"net33 Vbiasp", b"net34 Vbiasp"), "PM0 netlist binding"),
+        (candidate.replace(b"as=5.6p", b"as=1p"), "fixed MOS netlist options"),
+        (candidate.replace(b"VBIASN=0.320", b"VBIASN=0.321"), "fixed netlist"),
+        (candidate + pm0 + b"\n", "missing or ambiguous"),
+        (
+            candidate.replace(b"PM0 ", b"inline subckt Other\nPM0 ") + b"ends Other\n",
+            "PM0 netlist binding",
+        ),
+    ):
+        with pytest.raises(ValueError, match=reason):
+            project_netlist_change(plan, raw, invalid)
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", "0" * 64)
+    with pytest.raises(ValueError, match="registered center DC baseline"):
+        project_netlist_change(plan, raw, candidate)
