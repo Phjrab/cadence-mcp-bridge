@@ -109,6 +109,11 @@ def digest(runtime, value):
     return sha(runtime.accounting.canonical(value))
 
 
+def netlist_marker(scope_sha, diagnostic):
+    # Python 2 JSON returns unicode; compare against the OCEAN byte stream.
+    return ("MCP_GENERIC_ADE_NETLIST|" + scope_sha + "|" + diagnostic).encode("ascii")
+
+
 def digest_string(value):
     return re.match(r"^[0-9a-f]{64}\Z", value) is not None
 
@@ -376,12 +381,7 @@ class Source9Change(object):  # noqa: UP004 - Python 2.6 new-style class
         work = self.ocean(session, "netlist", selected, definitions, program)
         frame = runtime.operations.read_bytes(work + "/netlist.stdout")
         assert len(frame) <= RESPONSE
-        assert (
-            frame.splitlines().count(
-                "MCP_GENERIC_ADE_NETLIST|" + self.scope_sha + "|" + self.diagnostic
-            )
-            == 1
-        )
+        assert frame.splitlines().count(netlist_marker(self.scope_sha, self.diagnostic)) == 1
         assert runtime.copying.snapshot(tb) == tb_tree
         raw = runtime.modules["installer"].regular(self.eda.find_input(selected + "/project"))
         assert 0 < len(raw) <= 32768

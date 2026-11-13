@@ -13,7 +13,7 @@ import pytest
 from test_runtime_context import make_settings
 
 from cadence_mcp_bridge import pmos_default_service as service
-from cadence_mcp_bridge._pmos_default_phase import BASELINE, DEFAULTS
+from cadence_mcp_bridge._pmos_default_phase import BASELINE, DEFAULTS, netlist_marker
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.parameter_changes import (
@@ -59,6 +59,21 @@ def frame() -> bytes:
                 lines.append(f"OA|{stage}|{name}|{oa}")
     lines += ["COPY|REOPENED|FIXED_TOPOLOGY_AND_PROPERTIES_EQUAL", "COMPLETE"]
     return ("\n".join(lines) + "\n").encode("ascii")
+
+
+def test_netlist_marker_matches_byte_lines_amid_non_ascii_ocean_output():
+    scope = "a" * 64
+    diagnostic = "74b1b7fd-b977-4a46-8bdd-24929835ecf9"
+    marker = netlist_marker(scope, diagnostic)
+    assert isinstance(marker, bytes)
+    output = (
+        b"\xff Cadence banner\nMCP_GENERIC_ADE_NETLIST|"
+        + scope.encode("ascii")
+        + b"|"
+        + diagnostic.encode("ascii")
+        + b"\n\xa9"
+    )
+    assert output.splitlines().count(marker) == 1
 
 
 def write(path: Path, value: object) -> str:
