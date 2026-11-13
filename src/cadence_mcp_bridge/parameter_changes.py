@@ -361,6 +361,9 @@ class AmplifierPm0InputObservation(VariableModel):
     child: AmplifierPm0InputEvidence
     diagnostic_receipt_sha256: Digest
     footprint_receipt_sha256: Digest
+    dfm_evidence_sha256: Digest
+    baseline_effective_dfm: Literal["Minimum"] = "Minimum"
+    child_effective_dfm: Literal["DFM"] = "DFM"
     netlist: NetlistProjection
 
 
@@ -560,8 +563,13 @@ def observe_amplifier_pm0_input(
     child: AmplifierPm0InputEvidence,
     diagnostic_receipt_sha256: Digest,
     footprint_receipt_sha256: Digest,
+    dfm_evidence_sha256: Digest,
 ) -> AmplifierPm0InputObservation:
-    """Compare one saved PM0 input at center DC. The caller authenticates native receipts."""
+    """Compare the saved PM0 W+DFM revision at center DC.
+
+    The caller authenticates native receipts, including the Minimum to DFM
+    effective CDF change, and binds them to the same saved revision.
+    """
     baseline, child = _checked(baseline), _checked(child)
     if hashlib.sha256(baseline_input).hexdigest() != baseline.netlist_sha256:
         raise ValueError("baseline netlist digest mismatch")
@@ -580,9 +588,10 @@ def observe_amplifier_pm0_input(
                 child.netlist_sha256,
                 diagnostic_receipt_sha256,
                 footprint_receipt_sha256,
+                dfm_evidence_sha256,
             }
         )
-        != 6
+        != 7
     ):
         raise ValueError("distinct PM0 revisions and evidence pins required")
     if baseline.width.normalized != ("0.00002", "m") or child.width.normalized != (
@@ -614,6 +623,7 @@ def observe_amplifier_pm0_input(
         child=child,
         diagnostic_receipt_sha256=diagnostic_receipt_sha256,
         footprint_receipt_sha256=footprint_receipt_sha256,
+        dfm_evidence_sha256=dfm_evidence_sha256,
         netlist=NetlistProjection(
             artifact_sha256=child.netlist_sha256, value=observed, derived=derived
         ),

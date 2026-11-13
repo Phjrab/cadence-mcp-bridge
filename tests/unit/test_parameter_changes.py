@@ -524,6 +524,7 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
             child=evidence,
             diagnostic_receipt_sha256="7" * 64,
             footprint_receipt_sha256="8" * 64,
+            dfm_evidence_sha256="9" * 64,
         )
 
     result = observe(candidate)
@@ -536,6 +537,8 @@ def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
     assert result.netlist.value == ChangeValue(value="0.12", unit="um")
     assert result.netlist.derived == child.geometry[1:]
     assert result.baseline == baseline and result.child == child
+    assert result.dfm_evidence_sha256 == "9" * 64
+    assert (result.baseline_effective_dfm, result.child_effective_dfm) == ("Minimum", "DFM")
 
     with pytest.raises(ValueError, match="child netlist digest mismatch"):
         observe(candidate + b"\n")
