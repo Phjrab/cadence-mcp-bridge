@@ -75,7 +75,8 @@ def inspect_artifact(artifact: Path, project: Path) -> dict[str, object]:
     source = {
         p.relative_to(project / "src").as_posix(): p.read_bytes()
         for p in (project / "src/cadence_mcp_bridge").iterdir()
-        if p.is_file() and (p.suffix == ".py" or p.name in {"py.typed", "_domain_operator.sh"})
+        if p.is_file()
+        and (p.suffix == ".py" or p.name in {"py.typed", "_domain_operator.sh", "_pmos_default_reopen.ocn"})
     }
     starter_files = ("README.md", "environment.json", "designs.json", "pdks.json")
     source.update(
