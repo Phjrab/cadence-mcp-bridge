@@ -737,16 +737,22 @@ class LayoutWorker(object):
             except Exception as error:
                 # Preserve target and logs. Failure record cannot authorize retry.
                 self._write(
-                    job + "/layout-failure.json",
-                    {
-                        "schema_version": 1,
-                        "operation_id": operation_id,
-                        "request_sha256": digest(identity),
-                        "state": "OUTCOME_UNKNOWN",
-                        "reason": type(error).__name__,
-                    },
+                    job + "/layout-failure.json", failure_record(operation_id, identity, error)
                 )
                 raise
+
+
+def failure_record(operation_id, identity, error):
+    record = {
+        "schema_version": 1,
+        "operation_id": operation_id,
+        "request_sha256": digest(identity),
+        "state": "OUTCOME_UNKNOWN",
+        "reason": type(error).__name__,
+    }
+    if hasattr(error, "native_program_failure"):
+        record["native_program_failure"] = error.native_program_failure
+    return record
 
 
 def private_bytes(path, maximum=LIMIT):
@@ -1479,14 +1485,7 @@ class FixedLayoutRuntime(object):
                 return result
             except Exception as error:
                 worker._write(
-                    job + "/layout-failure.json",
-                    {
-                        "schema_version": 1,
-                        "operation_id": operation_id,
-                        "request_sha256": digest(identity),
-                        "state": "OUTCOME_UNKNOWN",
-                        "reason": type(error).__name__,
-                    },
+                    job + "/layout-failure.json", failure_record(operation_id, identity, error)
                 )
                 raise
 

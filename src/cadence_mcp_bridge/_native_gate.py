@@ -23,6 +23,7 @@ PLAN_KEYS = (
     "accounting",
 )
 BINDINGS = ("environment_sha256", "design_sha256", "pdk_sha256")
+AGGREGATE_OCCUPANCY_MAX_NODES = 16384
 
 
 class ConfirmedGate(object):
@@ -209,7 +210,9 @@ class ConfirmedGate(object):
             budget = [0]
             logical, allocated = 0, 0
             for name in (self.accounting.JOBS, "sim-mcp-v2-jobs"):
-                size, blocks, fingerprint = self.storage.tree(io, parent, name, budget)
+                size, blocks, _ = self.storage.tree(
+                    io, parent, name, budget, node_limit=AGGREGATE_OCCUPANCY_MAX_NODES
+                )
                 logical += size
                 allocated += blocks
             return logical, allocated

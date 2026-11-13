@@ -15,6 +15,39 @@ import subprocess
 import time
 
 FRAME_LIMIT = 262144
+LIVE_SCAN_ATTEMPTS = 3
+LIVE_SCAN_PAUSE_SECONDS = 0.01
+PROGRAM_PATH_CATEGORIES = {
+    "LOG_SETUP": "OWNED_JOB_LOG",
+    "PROCESS_LAUNCH": "FIXED_PROGRAM",
+    "PROCESS_IDENTITY": "PROCESS_IDENTITY",
+    "PROCESS_GROUP": "PROCESS_IDENTITY",
+    "LIVE_OCCUPANCY": "OWNED_JOB_TREE",
+    "CHILD_EXIT": "PROCESS_IDENTITY",
+    "FINAL_OCCUPANCY": "OWNED_JOB_TREE",
+    "CLEANUP": "PROCESS_OR_OWNED_JOB_LOG",
+}
+
+
+def _program_errno(error):
+    value = getattr(error, "errno", None)
+    if type(value) is int and 0 < value <= 4095:
+        return value
+    return None
+
+
+def _program_failure(stage, error, child_exit, cleanup, cleanup_error=None):
+    category = PROGRAM_PATH_CATEGORIES[stage]
+    if getattr(error, "live_job_descendant", False):
+        category = "OWNED_JOB_DESCENDANT"
+    return {
+        "stage": stage,
+        "errno": _program_errno(error),
+        "path_category": category,
+        "child_exit": child_exit if type(child_exit) is int and -255 <= child_exit <= 255 else None,
+        "cleanup": cleanup,
+        "cleanup_errno": _program_errno(cleanup_error),
+    }
 
 
 class EdaWorker(object):
@@ -115,16 +148,33 @@ class EdaWorker(object):
         self.installer.exclusive(path, data)
         self.gate.accounting.sync_directory(os.path.dirname(path))
 
-    def size(self, job):
-        io = self.gate.storage.PosixIO()
+    def size(self, job, live=False):
+        storage = self.gate.storage
+        io = storage.PosixIO()
         parent = io.root(os.path.dirname(job))
         try:
-            logical, allocated, fingerprint = self.gate.storage.tree(
-                io, parent, os.path.basename(job), [0]
-            )
-            return logical, allocated, fingerprint
+            return storage.tree(io, parent, os.path.basename(job), [0], live=live)
         finally:
             os.close(parent)
+
+    def measure_live(self, session, job, deadline, limit):
+        for attempt in range(LIVE_SCAN_ATTEMPTS):
+            session.check()
+            if os.times()[4] >= deadline:
+                raise ValueError("native_worker_owned_process_limit")
+            try:
+                logical, allocated, _ = self.size(job, live=True)
+            except self.gate.storage.LiveEntryVanished as error:
+                # Retry a complete scan. A missing entry never contributes a
+                # partial measurement or weakens a quiescent size check.
+                if attempt == LIVE_SCAN_ATTEMPTS - 1:
+                    error.live_job_descendant = True
+                    raise
+                time.sleep(LIVE_SCAN_PAUSE_SECONDS)
+            else:
+                if os.times()[4] >= deadline or max(logical, allocated) > limit:
+                    raise ValueError("native_worker_owned_process_limit")
+                return
 
     def copy_capacity(self, snapshots, job, limit):
         # Logical payload alone misses small-file/directory block allocation.
@@ -221,6 +271,8 @@ class EdaWorker(object):
         session.check()
         process, identity = None, None
         out, err, null = None, None, None
+        failure, child_exit = None, None
+        stage, cleanup = "LOG_SETUP", "NOT_STARTED"
         deadline = os.times()[4] + seconds
         try:
             for suffix in ("stdout", "stderr"):
@@ -239,6 +291,7 @@ class EdaWorker(object):
                 else:
                     err = stream
             null = open(os.devnull, "rb")
+            stage = "PROCESS_LAUNCH"
             process = subprocess.Popen(
                 argv,
                 # HNL relative sensitivity/output paths must stay within this job.
@@ -250,51 +303,76 @@ class EdaWorker(object):
                 preexec_fn=os.setsid,
                 shell=False,
             )
+            stage = "PROCESS_IDENTITY"
             identity = self.process_identity(process.pid)
-            while self.group_active(process, identity):
-                session.check()
-                logical, allocated, fingerprint = self.size(journal.job)
-                if os.times()[4] >= deadline or max(logical, allocated) > limit:
-                    raise ValueError("native_worker_owned_process_limit")
+            while True:
+                stage = "PROCESS_GROUP"
+                if not self.group_active(process, identity):
+                    break
+                stage = "LIVE_OCCUPANCY"
+                self.measure_live(session, journal.job, deadline, limit)
                 time.sleep(0.1)
             # Reap only after the entire owned group has stopped writing.
-            returncode = process.wait()
+            stage = "CHILD_EXIT"
+            child_exit = process.wait()
             process = None
-            if returncode != 0:
+            cleanup = "REAPED"
+            if child_exit != 0:
                 raise ValueError("native_worker_program_failed")
+            stage = "FINAL_OCCUPANCY"
             logical, allocated, fingerprint = self.size(journal.job)
             if max(logical, allocated) > limit:
                 raise ValueError("native_worker_owned_process_limit")
+        except Exception as error:
+            failure = error
+            raise
         finally:
             try:
-                if process is not None:
-                    if identity is None:
-                        identity = self.process_identity(process.pid)
-                    if self.group_active(process, identity):
-                        self.signal_group(process, identity, signal.SIGTERM)
-                        end = os.times()[4] + 2
-                        while self.group_active(process, identity) and os.times()[4] < end:
-                            time.sleep(0.05)
-                        if self.group_active(process, identity):
-                            self.signal_group(process, identity, signal.SIGKILL)
-                        # Retain the worker's lifetime lock until all owned
-                        # group members stop, even if the leader exited first.
-                        while self.group_active(process, identity):
-                            time.sleep(0.05)
-                    process.wait()
-            finally:
-                if null is not None:
-                    null.close()
                 try:
-                    for stream in (out, err):
-                        if stream is not None:
-                            stream.flush()
-                            os.fsync(stream.fileno())
+                    if process is not None:
+                        if identity is None:
+                            identity = self.process_identity(process.pid)
+                        if self.group_active(process, identity):
+                            self.signal_group(process, identity, signal.SIGTERM)
+                            cleanup = "TERM_REAPED"
+                            end = os.times()[4] + 2
+                            while self.group_active(process, identity) and os.times()[4] < end:
+                                time.sleep(0.05)
+                            if self.group_active(process, identity):
+                                self.signal_group(process, identity, signal.SIGKILL)
+                                cleanup = "KILL_REAPED"
+                            # Keep the lifetime lock until the owned group stops.
+                            while self.group_active(process, identity):
+                                time.sleep(0.05)
+                        else:
+                            cleanup = "REAPED"
+                        child_exit = process.wait()
                 finally:
-                    for stream in (out, err):
-                        if stream is not None:
-                            stream.close()
-                self.gate.accounting.sync_directory(journal.work)
+                    if null is not None:
+                        null.close()
+                    try:
+                        for stream in (out, err):
+                            if stream is not None:
+                                stream.flush()
+                                os.fsync(stream.fileno())
+                    finally:
+                        for stream in (out, err):
+                            if stream is not None:
+                                stream.close()
+                    self.gate.accounting.sync_directory(journal.work)
+            except Exception as error:
+                error.native_program_failure = _program_failure(
+                    stage if failure is not None else "CLEANUP",
+                    failure if failure is not None else error,
+                    child_exit,
+                    "FAILED",
+                    error,
+                )
+                raise
+            if failure is not None:
+                failure.native_program_failure = _program_failure(
+                    stage, failure, child_exit, cleanup
+                )
 
     def protected(self, route, before):
         for key, registration_key in (
