@@ -12,6 +12,8 @@ import pytest
 from test_candidate_batches import candidate_native
 from test_candidate_contracts import candidate_operator, operator, planned
 from test_candidate_execution import (
+    amplifier_child_fixture,
+    amplifier_width_evidence,
     measurement_operator,
     operator_base,
     pmos_pair,
@@ -28,6 +30,8 @@ from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = [
+    "amplifier_child_fixture",
+    "amplifier_width_evidence",
     "candidate_native",
     "candidate_operator",
     "measurement_operator",
@@ -404,6 +408,214 @@ def test_pmos_dc_compare_retained_pair(pmos_pair, tmp_path, monkeypatch, capsys,
             request[key]["operation_id"] for key in ("baseline", "candidate")
         ]
     assert all(path.read_bytes() == raw for path, raw in pinned.items())
+
+
+def test_amplifier_width_compare_request_schema(capsys):
+    assert main(["operator-candidates", "schema", "--action", "amplifier-width-compare"]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {
+        "change_plan",
+        "change_plan_sha256",
+        "readback",
+        "baseline_input",
+        "candidate_input",
+        "registration_evidence",
+        "dc",
+        "ac",
+    }
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "matched",
+        "no-child",
+        "unobserved",
+        "no-report",
+        "failed",
+        "bad-pin",
+        "bad-canonical-pin",
+        "bad-terminal-pin",
+        "missing-terminal-pin",
+        "bad-query",
+        "extra-key",
+        "collision",
+        "sidecar",
+        "existing-wal",
+    ],
+)
+def test_amplifier_width_compare_retained_pair(
+    amplifier_width_evidence,
+    amplifier_child_fixture,
+    tmp_path,
+    monkeypatch,
+    capsys,
+    case,
+):
+    from uuid import uuid4
+
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.candidate_execution import AmplifierWidthPair
+    from cadence_mcp_bridge.operator_operations import OperationProgress
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    change, readback, binding, dc, ac, child_raw = amplifier_width_evidence
+    files = {}
+    journals = []
+
+    def save(name, raw):
+        path = tmp_path / name
+        path.write_bytes(raw)
+        files[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def side(mode, evidence, registration):
+        sweep_id = str(evidence.baseline.engine.sweep_id) if case != "bad-query" else str(uuid4())
+        capture = {
+            "query": {"design_id": change.baseline.revision.design_id, "sweep_id": sweep_id},
+            "result": evidence.baseline.model_dump(mode="json"),
+        }
+        data = {
+            "baseline_result": save(f"{mode}-result.json", json.dumps(capture).encode()),
+            "baseline_result_sha256": evidence.expected_baseline_sha256,
+            "baseline_input": save(f"{mode}-input.scs", evidence.baseline_input),
+        }
+        if case == "no-child":
+            return data, registration
+        evidence, registration = amplifier_child_fixture(evidence, registration, mode)
+        child = evidence.child
+        journal = tmp_path / f"{mode}.sqlite3"
+        journals.append(journal)
+        store = AnalysisStore(journal)
+        identity = child.query.operation_id
+        assert store.admit_operation(identity, child.plan)
+        failed = case == "failed" and mode == "ac"
+        dispatch = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(identity, OperationProgress(phase="ADMITTED"), dispatch)
+        progress = child.record.progress
+        if failed:
+            progress = progress.model_copy(update={"phase": "FAILED"})
+        store.advance_operation(identity, dispatch, progress)
+        raw = journal.read_bytes()
+        files[journal] = raw
+        data["child"] = {
+            "operation_id": identity,
+            "plan_sha256": child.plan.plan_sha256,
+            "journal": {"path": str(journal), "sha256": hashlib.sha256(raw).hexdigest()},
+            "runtime_manifest": save(f"{mode}-manifest.json", b"{}"),
+            "runtime_registration": save(f"{mode}-registration.json", b"{}"),
+            "design_registry": save(f"{mode}-registry.json", b"{}"),
+            "effective_input": save(f"{mode}-child.scs", evidence.child_input),
+        }
+        if case == "unobserved" and mode == "ac":
+            del data["child"]["journal"]
+            data["child"]["execution_plan"] = save(
+                f"{mode}-plan.json",
+                child.plan.model_dump_json().encode(),
+            )
+        else:
+            data["child"]["terminal_sha256"] = child.expected_terminal_sha256
+            if not failed and (case != "no-report" or mode != "ac"):
+                data["child"]["report"] = save(f"{mode}-report.json", child.report)
+        return data, registration
+
+    dc_request, dc_binding = side("dc", dc, binding.dc)
+    ac_request, ac_binding = side("ac", ac, binding.ac)
+    binding = binding.model_copy(update={"dc": dc_binding, "ac": ac_binding})
+    request = {
+        "change_plan": save("plan.json", change.model_dump_json().encode()),
+        "change_plan_sha256": change.plan_sha256,
+        "readback": save("readback.json", readback.model_dump_json().encode()),
+        "baseline_input": save("center.scs", dc.baseline_input),
+        "candidate_input": save("diagnostic-child.scs", child_raw),
+        "registration_evidence": save("binding.json", binding.model_dump_json().encode()),
+        "dc": dc_request,
+        "ac": ac_request,
+    }
+    target = tmp_path / "comparison.json"
+    if case == "bad-pin":
+        request["registration_evidence"]["sha256"] = "0" * 64
+    elif case == "bad-canonical-pin":
+        ac_request["baseline_result_sha256"] = "0" * 64
+    elif case == "bad-terminal-pin":
+        ac_request["child"]["terminal_sha256"] = "0" * 64
+    elif case == "missing-terminal-pin":
+        del ac_request["child"]["terminal_sha256"]
+    elif case == "extra-key":
+        request["goals"] = []
+    elif case == "collision":
+        target = tmp_path / "diagnostic-child.scs"
+    elif case == "sidecar":
+        target = tmp_path / "ac.sqlite3-shm"
+    elif case == "existing-wal":
+        save("ac.sqlite3-wal", b"retained sidecar")
+    request_file = save("amp-request.json", json.dumps(request).encode())
+    args = [
+        "operator-candidates",
+        "amplifier-width-compare",
+        "--request",
+        request_file["path"],
+        request_file["sha256"],
+        "--output",
+        str(target),
+    ]
+    if case in ("matched", "no-child", "unobserved", "no-report", "failed"):
+        assert main(args) == 0
+        summary = output(capsys)
+        saved_raw = target.read_bytes()
+        saved = json.loads(saved_raw)
+        pair = AmplifierWidthPair.model_validate_json(json.dumps(saved["association"]))
+        assert summary["status"] == "AMPLIFIER_WIDTH_COMPARISON_EXPORTED"
+        assert summary["remote_contact"] is False and pair.execution_authorized is False
+        assert summary["file_sha256"] == hashlib.sha256(saved_raw).hexdigest()
+        assert saved["request_sha256"] == request_file["sha256"]
+        assert saved["requested_width"] == {"value": "19", "unit": "um"}
+        assert pair.readback == readback and pair.goals == "GOALS_NOT_PROVIDED"
+        assert saved["selected_candidate_id"] is None
+        assert str(pair.dc.baseline.job_id) == binding.dc.baseline_operation_id
+        assert str(pair.ac.baseline.job_id) == binding.ac.baseline_operation_id
+        assert (pair.dc.unit, pair.ac.unit) == ("W", "dB")
+        assert (pair.dc.baseline_value, pair.ac.baseline_value) == (0.002, 60.0)
+        assert pair.dc.dc_output_reason == "baseline_output_scalars_not_retained"
+        if case == "no-child":
+            assert pair.dc.child_status == pair.ac.child_status == "NOT_RUN"
+            assert saved["deltas"]["dc"] == {
+                "absolute_delta": None,
+                "reason": "retained_operation_not_supplied",
+            }
+        else:
+            assert pair.dc.child_operation.operation_id == dc_request["child"]["operation_id"]
+            assert pair.dc.child_report.analysis_conditions is not None
+            assert saved["deltas"]["dc"]["absolute_delta"] == pytest.approx(0.001)
+            assert pair.ac.child_operation.operation_id == ac_request["child"]["operation_id"]
+            if case == "matched":
+                assert pair.ac.child_value == 80.0
+                assert saved["deltas"]["ac"] == {"absolute_delta": 20.0, "reason": "available"}
+                assert main(args) == 2
+                assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+                assert target.read_bytes() == saved_raw
+            else:
+                assert pair.ac.child_report is None and pair.ac.child_value is None
+                status, reason = {
+                    "unobserved": ("NOT_OBSERVED", "retained_operation_not_supplied"),
+                    "no-report": ("SUCCEEDED", "retained_result_unavailable"),
+                    "failed": ("FAILED", "retained_operation_not_succeeded"),
+                }[case]
+                assert pair.ac.child_status == status
+                assert saved["deltas"]["ac"] == {
+                    "absolute_delta": None,
+                    "reason": reason,
+                }
+    else:
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.exists() == (case == "collision")
+    assert all(path.read_bytes() == raw for path, raw in files.items())
+    for journal in journals:
+        for suffix in ("-wal", "-shm", "-journal"):
+            path = journal.with_name(journal.name + suffix)
+            assert path.exists() == (path in files)
 
 
 def test_local_plan_exports_full_vector_without_journal(
