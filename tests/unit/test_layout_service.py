@@ -3,23 +3,30 @@
 from typing import Any
 
 import pytest
-from test_layout_models import fixture_request, fixture_snapshot, reseal
+from test_layout_models import fixture_instance_terminals, fixture_request, fixture_snapshot, reseal
 
 from cadence_mcp_bridge.layout_engine import (
     LayoutRejected,
+    build_plan,
     compute_diff,
     predict_snapshot,
     validate_plan,
 )
 from cadence_mcp_bridge.layout_models import (
+    ZERO_DIGEST,
     LayoutApplyRequest,
     LayoutDiffRequest,
     LayoutEdit,
     LayoutForkRequest,
     LayoutInspectRequest,
+    LayoutInstanceTerminalQualification,
+    LayoutNativeEdit,
+    LayoutOrientationQualification,
+    LayoutPlan,
     LayoutResult,
     LayoutSelectRequest,
     LayoutSnapshot,
+    OrientEdit,
 )
 from cadence_mcp_bridge.layout_service import LayoutService
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -35,6 +42,8 @@ class SyntheticProvider:
         self.dispatches = 0
         self.pin_association = "native_verified"
         self.unknown = False
+        self.orientation_qualification: LayoutOrientationQualification | None = None
+        self.instance_terminal_qualification: LayoutInstanceTerminalQualification | None = None
 
     async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
         return self.current
@@ -51,15 +60,29 @@ class SyntheticProvider:
             digest, result = self.receipts[op]
             if digest != identity:
                 raise LayoutRejected("operation_id_content_conflict")
+            if self.orientation_qualification is not None and result.status == "EDIT_VERIFIED":
+                validate_plan(
+                    self.before, request, orientation_qualification=self.orientation_qualification
+                )
             return result.model_copy(update={"executed": False, "replayed": True})
-        validate_plan(self.current, request)
+        validate_plan(
+            self.current,
+            request,
+            orientation_qualification=self.orientation_qualification,
+            instance_terminal_qualification=self.instance_terminal_qualification,
+        )
         if self.unknown:
             result = LayoutResult(
                 status="OUTCOME_UNKNOWN", binding=request.plan.request.binding, operation_id=op
             )
             self.receipts[op] = (identity, result)
             return result
-        expected, _ = predict_snapshot(self.current, request.plan.request)
+        expected, _ = predict_snapshot(
+            self.current,
+            request.plan.request,
+            orientation_qualification=self.orientation_qualification,
+            instance_terminal_qualification=self.instance_terminal_qualification,
+        )
         self.current = reseal(
             expected,
             provenance="native_readback",
@@ -93,6 +116,122 @@ class SyntheticProvider:
 
 
 @pytest.mark.asyncio
+async def test_instance_terminal_service_gate_and_qualified_replay() -> None:
+    class InspectSpy(SyntheticProvider):
+        inspections = 0
+
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            self.inspections += 1
+            return await super().inspect(request)
+
+    before, request, qualification = fixture_instance_terminals()
+    provider = InspectSpy()
+    provider.before = provider.current = before
+    provider.instance_terminal_qualification = qualification
+    unqualified = LayoutService(provider)
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_qualification_required"):
+        await unqualified.plan(request)
+    assert provider.inspections == 0
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    plan = await service.plan(request)
+    apply = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_native_not_implemented"):
+        await unqualified.apply(apply)
+    assert provider.dispatches == 0
+    result = await service.apply(apply)
+    assert result.saved and result.reopened and result.status == "EDIT_VERIFIED"
+    assert result.diff is not None and result.diff.instance_terminal_changes
+    replay = await LayoutService(provider, instance_terminal_qualification=qualification).apply(
+        apply
+    )
+    assert replay == result.model_copy(update={"executed": False, "replayed": True})
+    assert provider.dispatches == provider.inspections == 1
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_service_rejects_geometry_only_receipt() -> None:
+    class GeometryOnlyReceipt(SyntheticProvider):
+        async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
+            result = await super().apply(request)
+            assert result.diff is not None
+            return result.model_copy(
+                update={"diff": result.diff.model_copy(update={"instance_terminal_changes": None})}
+            )
+
+    before, request, qualification = fixture_instance_terminals()
+    provider = GeometryOnlyReceipt()
+    provider.before = provider.current = before
+    provider.instance_terminal_qualification = qualification
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    plan = await service.plan(request)
+    with pytest.raises(LayoutRejected, match="layout_readback_diff_mismatch"):
+        await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_qualified_route_rejects_geometry_only_request() -> None:
+    class UnexpectedProvider(SyntheticProvider):
+        async def inspect(self, request: LayoutInspectRequest) -> LayoutSnapshot:
+            raise AssertionError("qualification must reject before inspection")
+
+        async def apply(self, request: LayoutApplyRequest) -> LayoutResult:
+            raise AssertionError("qualification must reject before apply dispatch")
+
+    before, _, qualification = fixture_instance_terminals()
+    service = LayoutService(UnexpectedProvider(), instance_terminal_qualification=qualification)
+    geometry = fixture_request(before)
+    with pytest.raises(
+        LayoutRejected, match="layout_instance_terminal_qualification_mapping_mismatch"
+    ):
+        await service.plan(geometry)
+    plan = build_plan(before, geometry)
+    with pytest.raises(
+        LayoutRejected, match="layout_instance_terminal_qualification_mapping_mismatch"
+    ):
+        await service.apply(LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256))
+    other = reseal(before, binding=before.binding.model_copy(update={"revision_id": "other-child"}))
+    assert build_plan(other, fixture_request(other), instance_terminal_qualification=qualification)
+
+
+@pytest.mark.asyncio
+async def test_instance_terminal_fork_requires_the_verified_scope_transition() -> None:
+    before, _, qualification = fixture_instance_terminals()
+    child = reseal(
+        before,
+        provenance="native_readback",
+        technology=before.technology.model_copy(update={"provenance": "native_observed"}),
+    )
+    parent = reseal(child, instance_terminals=None)
+
+    class ForkProvider(SyntheticProvider):
+        observed = child
+
+        async def fork(self, request: LayoutForkRequest) -> LayoutResult:
+            return LayoutResult(
+                status="FORK_VERIFIED",
+                binding=request.binding,
+                operation_id=request.operation_id,
+                snapshot=self.observed,
+                diff=compute_diff(parent, self.observed),
+                saved=True,
+                reopened=True,
+                source_unchanged=True,
+            )
+
+    provider = ForkProvider()
+    service = LayoutService(provider, instance_terminal_qualification=qualification)
+    request = LayoutForkRequest(
+        binding=before.binding,
+        operation_id=fixture_request().operation_id,
+        expected_baseline_sha256=parent.semantic_sha256,
+    )
+    assert (await service.fork(request)).snapshot == child
+    provider.observed = parent
+    with pytest.raises(LayoutRejected, match="layout_instance_terminal_fork_evidence_mismatch"):
+        await service.fork(request)
+
+
+@pytest.mark.asyncio
 async def test_service_plan_apply_replay_conflict_and_stale_never_duplicate() -> None:
     provider = SyntheticProvider()
     service = LayoutService(provider)
@@ -107,8 +246,6 @@ async def test_service_plan_apply_replay_conflict_and_stale_never_duplicate() ->
     replay = await LayoutService(provider).apply(apply)
     assert replay.replayed and not replay.executed and provider.dispatches == 1
     # Same operation ID with a different plan must reject even on a stale baseline.
-    from cadence_mcp_bridge.layout_engine import build_plan
-
     conflict_request = request.model_copy(update={"edits": (request.edits[0],)})
     other = build_plan(provider.before, conflict_request)
     with pytest.raises(LayoutRejected, match="content_conflict"):
@@ -214,6 +351,7 @@ async def test_pin_label_rejects_before_any_provider_call() -> None:
         await service.plan(invalid)
     assert provider.inspect_calls == provider.dispatches == 0
     plan = await service.plan(request)
+    assert isinstance(plan.normalized_edits[-1], LayoutNativeEdit)
     assert plan.normalized_edits[-1].pin is not None
     assert plan.normalized_edits[-1].pin.label is None
     assert provider.inspect_calls == 1 and provider.dispatches == 0
@@ -279,3 +417,129 @@ async def test_untrustworthy_provider_result_is_rejected(
     )
     with pytest.raises(ValueError, match=reason):
         await service.apply(request)
+
+
+async def _qualified_orientation() -> tuple[
+    SyntheticProvider, LayoutOrientationQualification, LayoutApplyRequest
+]:
+    provider = SyntheticProvider()
+    before = reseal(
+        provider.before,
+        provenance="native_readback",
+        technology=provider.before.technology.model_copy(update={"provenance": "native_observed"}),
+        capabilities=provider.before.capabilities.model_copy(update={"rotate": "not_verified"}),
+    )
+    provider.before = provider.current = before
+    request = fixture_request(before).model_copy(
+        update={
+            "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="R90"),),
+        }
+    )
+    qualification = LayoutOrientationQualification(
+        binding=before.binding, orientations=("R0", "R90")
+    )
+    provider.orientation_qualification = qualification
+    service = LayoutService(provider, orientation_qualification=qualification)
+    plan = await service.plan(request)
+    return (
+        provider,
+        qualification,
+        LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256),
+    )
+
+
+async def test_orientation_apply_default_gate_rejects_before_provider() -> None:
+    provider, _, apply = await _qualified_orientation()
+    service = LayoutService(provider)
+    with pytest.raises(LayoutRejected, match="layout_orientation_qualification_required"):
+        await service.plan(apply.plan.request)
+    with pytest.raises(LayoutRejected, match="layout_orientation_native_not_implemented"):
+        await service.apply(apply)
+    assert provider.dispatches == 0 and provider.receipts == {}
+
+
+async def test_orientation_apply_with_pinned_context_and_same_id_replay() -> None:
+    provider, qualification, apply = await _qualified_orientation()
+    service = LayoutService(provider, orientation_qualification=qualification)
+    result = await service.apply(apply)
+    assert result.status == "EDIT_VERIFIED" and result.executed and not result.replayed
+    assert result.snapshot is not None and result.snapshot.instances[0].orientation == "R90"
+    assert result.saved and result.reopened and result.source_unchanged
+    assert provider.current.semantic_sha256 != apply.plan.baseline_sha256
+    replay = await LayoutService(provider, orientation_qualification=qualification).apply(apply)
+    assert replay.replayed and not replay.executed and provider.dispatches == 1
+    other = qualification.model_copy(
+        update={
+            "binding": qualification.binding.model_copy(update={"revision_id": "other-child"}),
+        }
+    )
+    with pytest.raises(LayoutRejected, match="layout_orientation_qualification_binding_mismatch"):
+        await LayoutService(provider, orientation_qualification=other).apply(apply)
+    with pytest.raises(LayoutRejected, match="layout_orientation_native_not_implemented"):
+        await LayoutService(provider).apply(apply)
+    # Capability labels are excluded from the semantic digest. Check the retained
+    # receipt's qualification explicitly even if the geometry still matches.
+    snapshot = reseal(result.snapshot, capabilities=fixture_snapshot().capabilities)
+    assert snapshot.semantic_sha256 == result.snapshot.semantic_sha256
+    provider.receipts[apply.plan.request.operation_id] = (
+        canonical_digest(apply),
+        result.model_copy(update={"snapshot": snapshot}),
+    )
+    with pytest.raises(LayoutRejected, match="layout_orientation_qualification_snapshot_mismatch"):
+        await service.apply(apply)
+    assert provider.dispatches == 1
+
+
+@pytest.mark.parametrize(
+    ("case", "reason"),
+    [
+        ("digest", "layout_expected_plan_digest_mismatch"),
+        ("pair", "unsupported_orientation"),
+        ("command", "layout_orientation_request_mismatch"),
+        ("bbox", "layout_plan_revalidation_mismatch"),
+        ("pcell", "layout_orientation_pcell_submaster_unsupported"),
+    ],
+)
+async def test_orientation_apply_rejects_invalid_plan_before_write(case: str, reason: str) -> None:
+    provider, qualification, apply = await _qualified_orientation()
+    service = LayoutService(provider, orientation_qualification=qualification)
+    plan = apply.plan
+    request = plan.request
+    (command,) = plan.normalized_edits
+    if case == "digest":
+        apply = apply.model_copy(update={"expected_plan_sha256": ZERO_DIGEST})
+    else:
+        if case == "pair":
+            request = request.model_copy(
+                update={
+                    "edits": (OrientEdit(kind="orient", object_id="inst-one", orientation="MX"),)
+                }
+            )
+            command = command.model_copy(update={"orientation": "MX"})
+        elif case == "command":
+            command = command.model_copy(update={"orientation": "R0"})
+        elif case == "bbox":
+            command = command.model_copy(update={"bbox_dbu": provider.before.instances[0].bbox_dbu})
+        elif case == "pcell":
+            provider.current = reseal(
+                provider.before,
+                instances=(
+                    provider.before.instances[0].model_copy(update={"pcell_submaster": True}),
+                ),
+            )
+            request = request.model_copy(
+                update={"expected_baseline_sha256": provider.current.semantic_sha256}
+            )
+        plan = LayoutPlan.model_validate_json(
+            plan.model_copy(
+                update={
+                    "request": request,
+                    "normalized_edits": (command,),
+                    "plan_sha256": ZERO_DIGEST,
+                }
+            ).model_dump_json()
+        )
+        apply = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    with pytest.raises(LayoutRejected, match=f"^{reason}$"):
+        await service.apply(apply)
+    assert provider.dispatches == 0 and provider.receipts == {}

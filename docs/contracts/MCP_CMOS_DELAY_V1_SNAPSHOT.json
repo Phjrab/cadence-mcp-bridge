@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "source_commit": "cb47abde5907609ebff765cf2e5b78c763383d81",
+  "tools": {
+    "cadence_cmos_delay_result": {
+      "_meta": null,
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": null
+      },
+      "description": "Evaluate sampled CMOS delays from an already succeeded registered TRAN operation and exact plan hash, including separate registered supply voltage. No caller waveforms, simulation, extraction or reservation. Local estimates remain NOT_ATTESTED; logic/physical qualification NOT_ASSESSED, transient power unsupported.",
+      "execution": null,
+      "icons": null,
+      "inputSchema": {
+        "$defs": {
+          "CmosDelayResultQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "definition": {
+                "$ref": "#/$defs/DelayDefinition"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "supply_signal": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Supply Signal",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256",
+              "definition",
+              "supply_signal"
+            ],
+            "title": "CmosDelayResultQuery",
+            "type": "object"
+          },
+          "DelayDefinition": {
+            "additionalProperties": false,
+            "properties": {
+              "input_signal": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Input Signal",
+                "type": "string"
+              },
+              "maximum_crossing_bracket_s": {
+                "exclusiveMinimum": 0,
+                "title": "Maximum Crossing Bracket S",
+                "type": "number"
+              },
+              "maximum_sample_gap_s": {
+                "exclusiveMinimum": 0,
+                "title": "Maximum Sample Gap S",
+                "type": "number"
+              },
+              "minimum_delay_resolution_ratio": {
+                "minimum": 1,
+                "title": "Minimum Delay Resolution Ratio",
+                "type": "number"
+              },
+              "minimum_plateau_samples": {
+                "maximum": 64,
+                "minimum": 2,
+                "title": "Minimum Plateau Samples",
+                "type": "integer"
+              },
+              "output_signal": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Output Signal",
+                "type": "string"
+              },
+              "phl_window": {
+                "$ref": "#/$defs/DelayWindow"
+              },
+              "plateau_tolerance_v": {
+                "exclusiveMinimum": 0,
+                "title": "Plateau Tolerance V",
+                "type": "number"
+              },
+              "plh_window": {
+                "$ref": "#/$defs/DelayWindow"
+              },
+              "vdd_v": {
+                "exclusiveMinimum": 0,
+                "title": "Vdd V",
+                "type": "number"
+              }
+            },
+            "required": [
+              "input_signal",
+              "output_signal",
+              "vdd_v",
+              "phl_window",
+              "plh_window",
+              "plateau_tolerance_v",
+              "minimum_plateau_samples",
+              "maximum_sample_gap_s",
+              "maximum_crossing_bracket_s",
+              "minimum_delay_resolution_ratio"
+            ],
+            "title": "DelayDefinition",
+            "type": "object"
+          },
+          "DelayWindow": {
+            "additionalProperties": false,
+            "description": "Saved-sample plateaus enclosing exactly one input and opposite output edge.",
+            "properties": {
+              "final_start_s": {
+                "minimum": 0,
+                "title": "Final Start S",
+                "type": "number"
+              },
+              "initial_stop_s": {
+                "minimum": 0,
+                "title": "Initial Stop S",
+                "type": "number"
+              },
+              "start_s": {
+                "minimum": 0,
+                "title": "Start S",
+                "type": "number"
+              },
+              "stop_s": {
+                "minimum": 0,
+                "title": "Stop S",
+                "type": "number"
+              }
+            },
+            "required": [
+              "start_s",
+              "initial_stop_s",
+              "final_start_s",
+              "stop_s"
+            ],
+            "title": "DelayWindow",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/CmosDelayResultQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "resultArguments",
+        "type": "object"
+      },
+      "name": "cadence_cmos_delay_result",
+      "outputSchema": {
+        "$defs": {
+          "CmosDelayResult": {
+            "additionalProperties": false,
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/DelayEvidence"
+              },
+              "native_authentication": {
+                "const": "NOT_ATTESTED",
+                "default": "NOT_ATTESTED",
+                "title": "Native Authentication",
+                "type": "string"
+              },
+              "power": {
+                "const": "UNSUPPORTED",
+                "default": "UNSUPPORTED",
+                "title": "Power",
+                "type": "string"
+              },
+              "qualification": {
+                "const": "LOCAL_SAMPLED_EVIDENCE_ONLY",
+                "default": "LOCAL_SAMPLED_EVIDENCE_ONLY",
+                "title": "Qualification",
+                "type": "string"
+              },
+              "request_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Request Sha256",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "OBSERVED_SAMPLED_DELAY",
+                  "NOT_EVALUATED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "tphl": {
+                "$ref": "#/$defs/EdgeDelay"
+              },
+              "tplh": {
+                "$ref": "#/$defs/EdgeDelay"
+              }
+            },
+            "required": [
+              "status",
+              "evidence",
+              "request_sha256",
+              "tphl",
+              "tplh"
+            ],
+            "title": "CmosDelayResult",
+            "type": "object"
+          },
+          "Crossing": {
+            "additionalProperties": false,
+            "properties": {
+              "bracket_s": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                ],
+                "title": "Bracket S",
+                "type": "array"
+              },
+              "direction": {
+                "enum": [
+                  "rising",
+                  "falling"
+                ],
+                "title": "Direction",
+                "type": "string"
+              },
+              "time_s": {
+                "minimum": 0,
+                "title": "Time S",
+                "type": "number"
+              }
+            },
+            "required": [
+              "time_s",
+              "bracket_s",
+              "direction"
+            ],
+            "title": "Crossing",
+            "type": "object"
+          },
+          "DelayEvidence": {
+            "additionalProperties": false,
+            "description": "Caller-supplied identities, checked for shape only, not authenticated here.",
+            "properties": {
+              "execution_input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Execution Input Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Sha256",
+                "type": "string"
+              },
+              "reader_registration_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Reader Registration Sha256",
+                "type": "string"
+              },
+              "static_statements_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Static Statements Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "plan_sha256",
+              "frame_sha256",
+              "reader_registration_sha256",
+              "execution_input_sha256",
+              "static_statements_sha256"
+            ],
+            "title": "DelayEvidence",
+            "type": "object"
+          },
+          "DelayResultSource": {
+            "additionalProperties": false,
+            "properties": {
+              "conditions_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Conditions Sha256",
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/DelayEvidence"
+              },
+              "extraction_receipt_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Extraction Receipt Sha256",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "provenance": {
+                "const": "FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                "default": "FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                "title": "Provenance",
+                "type": "string"
+              },
+              "provider_boundary": {
+                "const": "REGISTERED_RESULT_IDENTITY_CHECKS_PASSED",
+                "default": "REGISTERED_RESULT_IDENTITY_CHECKS_PASSED",
+                "title": "Provider Boundary",
+                "type": "string"
+              },
+              "supply_signal": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Supply Signal",
+                "type": "string"
+              },
+              "terminal_receipt_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Terminal Receipt Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "evidence",
+              "measurement_id",
+              "extraction_receipt_sha256",
+              "terminal_receipt_sha256",
+              "conditions_sha256",
+              "supply_signal"
+            ],
+            "title": "DelayResultSource",
+            "type": "object"
+          },
+          "EdgeDelay": {
+            "additionalProperties": false,
+            "properties": {
+              "delay_bracket_s": {
+                "anyOf": [
+                  {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Delay Bracket S"
+              },
+              "delay_s": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Delay S"
+              },
+              "input_crossing": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Crossing"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "output_crossing": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Crossing"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "missing_nodes",
+                      "invalid_time_grid",
+                      "window_outside_samples",
+                      "insufficient_sampling",
+                      "unsettled_endpoints",
+                      "missing_crossing",
+                      "ambiguous_crossings",
+                      "output_before_input"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "status": {
+                "enum": [
+                  "OBSERVED_SAMPLED_DELAY",
+                  "NOT_EVALUATED"
+                ],
+                "title": "Status",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "reason",
+              "delay_s",
+              "delay_bracket_s",
+              "input_crossing",
+              "output_crossing"
+            ],
+            "title": "EdgeDelay",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "evaluation": {
+            "$ref": "#/$defs/CmosDelayResult"
+          },
+          "new_extractions": {
+            "const": 0,
+            "default": 0,
+            "title": "New Extractions",
+            "type": "integer"
+          },
+          "new_reservations": {
+            "const": 0,
+            "default": 0,
+            "title": "New Reservations",
+            "type": "integer"
+          },
+          "new_simulations": {
+            "const": 0,
+            "default": 0,
+            "title": "New Simulations",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/$defs/DelayResultSource"
+          },
+          "vm_logic_physical_qualification": {
+            "const": "NOT_ASSESSED",
+            "default": "NOT_ASSESSED",
+            "title": "Vm Logic Physical Qualification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "evaluation"
+        ],
+        "title": "RegisteredCmosDelayResult",
+        "type": "object"
+      },
+      "title": null
+    }
+  }
+}

@@ -6,12 +6,18 @@ No model establishes native authority or electrical/manufacturing qualification.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import (
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.schematic_plan import RevisionBinding
+from cadence_mcp_bridge.schematic_plan import PlanDryRun, RevisionBinding, TerminalConnection
 from cadence_mcp_bridge.variable_contracts import (
     BindingName,
     Digest,
@@ -26,6 +32,11 @@ ZERO_DIGEST = "0" * 64
 DBU = Annotated[int, Field(ge=-2_147_483_647, le=2_147_483_647)]
 PositiveDBU = Annotated[int, Field(gt=0, le=2_147_483_647)]
 Orientation = Literal["R0", "R90", "R180", "R270", "MX", "MY", "MXR90", "MYR90"]
+
+
+def _optional_array_schema(schema: dict[str, Any]) -> None:
+    # The internal default marks omission. Explicit null is not a wire value.
+    schema.update(next(item for item in schema.pop("anyOf") if item.get("type") == "array"))
 
 
 class LayoutPoint(VariableModel):
@@ -124,7 +135,7 @@ class LayoutCapabilities(VariableModel):
     move: Literal["supported", "not_verified", "unsupported"] = "not_verified"
     add_rect: Literal["supported", "not_verified", "unsupported"] = "not_verified"
     add_pin: Literal["supported", "not_verified", "unsupported"] = "not_verified"
-    rotate: Literal["unsupported"] = "unsupported"
+    rotate: Literal["supported", "not_verified", "unsupported"] = "unsupported"
     edit_path: Literal["unsupported"] = "unsupported"
     delete: Literal["unsupported"] = "unsupported"
     pcell_parameters: Literal["unsupported"] = "unsupported"
@@ -132,7 +143,43 @@ class LayoutCapabilities(VariableModel):
     auto_route: Literal["unsupported"] = "unsupported"
 
 
+class LayoutOrientationQualification(VariableModel):
+    """Operator-pinned input for the private R0/R90 qualification route."""
+
+    binding: RevisionBinding
+    orientations: tuple[Literal["R0"], Literal["R90"]]
+
+    @model_validator(mode="after")
+    def child_required(self) -> Self:
+        if self.binding.parent_revision_id is None:
+            raise ValueError("layout_orientation_qualification_child_required")
+        return self
+
+
 LayoutObject = LayoutInstance | LayoutShape | LayoutPin
+
+
+class LayoutInstanceTerminal(VariableModel):
+    """One known master terminal and its complete instance-terminal observation."""
+
+    object_id: LogicalId
+    master_id: LogicalId
+    terminal: BindingName
+    present: bool
+    net_id: LogicalId | None = None
+    pin_object_id: LogicalId | None = None
+
+    @property
+    def key(self) -> tuple[str, str]:
+        return self.object_id, self.terminal
+
+    @model_validator(mode="after")
+    def coherent(self) -> Self:
+        if (not self.present and self.net_id is not None) or (
+            self.pin_object_id is not None and self.net_id is None
+        ):
+            raise ValueError("invalid_layout_instance_terminal_state")
+        return self
 
 
 class LayoutSnapshot(VariableModel):
@@ -148,6 +195,24 @@ class LayoutSnapshot(VariableModel):
     read_only: bool = True
     capabilities: LayoutCapabilities = LayoutCapabilities()
     semantic_sha256: Digest = ZERO_DIGEST
+    instance_terminals: (
+        Annotated[tuple[LayoutInstanceTerminal, ...], Field(max_length=128)] | None
+    ) = Field(default_factory=lambda: None, json_schema_extra=_optional_array_schema)
+
+    @field_validator("instance_terminals")
+    @classmethod
+    def instance_terminals_require_array(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("null_layout_instance_terminals")
+        return value
+
+    @model_serializer(mode="wrap")
+    def retain_unobserved_wire_shape(self, handler: SerializerFunctionWrapHandler):  # type: ignore[no-untyped-def]
+        # A return annotation replaces the structured serialization schema.
+        value: dict[str, Any] = handler(self)
+        if self.instance_terminals is None:
+            value.pop("instance_terminals", None)
+        return value
 
     @model_validator(mode="after")
     def coherent(self) -> Self:
@@ -176,6 +241,33 @@ class LayoutSnapshot(VariableModel):
                         raise ValueError("path_width_off_grid")
             if any(p.x % grid or p.y % grid for p in points):
                 raise ValueError("layout_coordinate_off_grid")
+        if self.instance_terminals is not None:
+            instances = {instance.object_id: instance for instance in self.instances}
+            pins = {pin.object_id: pin for pin in self.pins}
+            keys: set[tuple[str, str]] = set()
+            for row in self.instance_terminals:
+                instance = instances.get(row.object_id)
+                if instance is None or instance.master_id != row.master_id:
+                    raise ValueError("layout_instance_terminal_master_mismatch")
+                if row.key in keys:
+                    raise ValueError("duplicate_layout_instance_terminal")
+                keys.add(row.key)
+                if row.pin_object_id is not None:
+                    pin = pins.get(row.pin_object_id)
+                    if (
+                        pin is None
+                        or pin.net_id != row.net_id
+                        or (
+                            self.provenance == "native_readback"
+                            and pin.association != "native_verified"
+                        )
+                    ):
+                        raise ValueError("layout_instance_terminal_pin_mismatch")
+            object.__setattr__(
+                self,
+                "instance_terminals",
+                tuple(sorted(self.instance_terminals, key=lambda r: r.key)),
+            )
         # Hash actual geometry and technology, excluding evidence labels/capability
         # claims. Ordering/native database handles do not define semantic identity.
         normalized = self.model_copy(
@@ -249,7 +341,56 @@ class AddPinEdit(VariableModel):
         return a, b, c, d
 
 
-LayoutEdit = Annotated[MoveEdit | AddRectEdit | AddPinEdit, Field(discriminator="kind")]
+class OrientEdit(VariableModel):
+    """Absolute instance orientation about its unchanged placement origin."""
+
+    kind: Literal["orient"]
+    object_id: LogicalId
+    orientation: Orientation
+
+
+class ConnectTerminalEdit(VariableModel):
+    kind: Literal["connect_terminal"]
+    object_id: LogicalId
+    expected_master_id: LogicalId
+    terminal: BindingName
+    pin_object_id: LogicalId
+
+    @property
+    def key(self) -> tuple[str, str]:
+        return self.object_id, self.terminal
+
+
+class LayoutInstanceTerminalQualification(VariableModel):
+    """Operator-pinned create-only mapping for one owned two-device child."""
+
+    binding: RevisionBinding
+    edits: Annotated[tuple[ConnectTerminalEdit, ...], Field(min_length=8, max_length=8)]
+
+    @model_validator(mode="after")
+    def fixed_batch(self) -> Self:
+        terminals: dict[str, set[str]] = {}
+        masters: dict[str, str] = {}
+        for edit in self.edits:
+            terminals.setdefault(edit.object_id, set()).add(edit.terminal)
+            if (
+                masters.setdefault(edit.object_id, edit.expected_master_id)
+                != edit.expected_master_id
+            ):
+                raise ValueError("layout_instance_terminal_qualification_master_mismatch")
+        if (
+            self.binding.parent_revision_id is None
+            or len(terminals) != 2
+            or any(names != {"D", "G", "S", "B"} for names in terminals.values())
+        ):
+            raise ValueError("layout_instance_terminal_qualification_requires_fixed_child_batch")
+        return self
+
+
+LayoutEdit = Annotated[
+    MoveEdit | AddRectEdit | AddPinEdit | OrientEdit | ConnectTerminalEdit,
+    Field(discriminator="kind"),
+]
 
 
 class LayoutInspectRequest(VariableModel):
@@ -323,12 +464,50 @@ class LayoutNativeEdit(VariableModel):
         return self
 
 
+class LayoutOrientNativeEdit(VariableModel):
+    """Candidate fixed orientation command; native execution is not implemented."""
+
+    kind: Literal["orient"]
+    object_id: LogicalId
+    before_sha256: Digest
+    orientation: Orientation
+    origin_dbu: LayoutPoint
+    bbox_dbu: LayoutBBox
+
+
+class LayoutConnectTerminalNativeEdit(ConnectTerminalEdit):
+    before_sha256: Digest
+    net_id: LogicalId
+    terminal_id: LogicalId
+
+
+LayoutNativeCommand = Annotated[
+    LayoutNativeEdit | LayoutOrientNativeEdit | LayoutConnectTerminalNativeEdit,
+    Field(discriminator="kind"),
+]
+
+
 class LayoutChange(VariableModel):
     object_id: LogicalId
     kind: Literal["created", "modified", "deleted"]
     before_sha256: Digest | None = None
     after_sha256: Digest | None = None
     fields: tuple[str, ...] = ()
+
+
+class LayoutInstanceTerminalChange(VariableModel):
+    before: LayoutInstanceTerminal
+    after: LayoutInstanceTerminal
+
+    @model_validator(mode="after")
+    def coherent(self) -> Self:
+        if (
+            self.before.key != self.after.key
+            or self.before.master_id != self.after.master_id
+            or self.before == self.after
+        ):
+            raise ValueError("invalid_layout_instance_terminal_change")
+        return self
 
 
 class LayoutDiff(VariableModel):
@@ -338,6 +517,33 @@ class LayoutDiff(VariableModel):
     unexpected_object_ids: tuple[LogicalId, ...] = ()
     metadata_changes: tuple[str, ...] = ()
     matches_plan: bool | None = None
+    instance_terminal_changes: (
+        Annotated[tuple[LayoutInstanceTerminalChange, ...], Field(max_length=128)] | None
+    ) = Field(default_factory=lambda: None, json_schema_extra=_optional_array_schema)
+
+    @field_validator("instance_terminal_changes")
+    @classmethod
+    def instance_terminal_changes_require_array(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("null_layout_instance_terminal_changes")
+        return value
+
+    @model_validator(mode="after")
+    def canonical_instance_terminal_changes(self) -> Self:
+        if self.instance_terminal_changes is not None:
+            changes = tuple(sorted(self.instance_terminal_changes, key=lambda row: row.before.key))
+            if len({row.before.key for row in changes}) != len(changes):
+                raise ValueError("duplicate_layout_instance_terminal_change")
+            object.__setattr__(self, "instance_terminal_changes", changes)
+        return self
+
+    @model_serializer(mode="wrap")
+    def retain_unobserved_wire_shape(self, handler: SerializerFunctionWrapHandler):  # type: ignore[no-untyped-def]
+        # A return annotation replaces the structured serialization schema.
+        value: dict[str, Any] = handler(self)
+        if self.instance_terminal_changes is None:
+            value.pop("instance_terminal_changes", None)
+        return value
 
 
 class LayoutPreview(VariableModel):
@@ -352,13 +558,21 @@ class LayoutPreview(VariableModel):
     predicted_diff: LayoutDiff
 
 
+class LayoutOrientationPreview(LayoutPreview):
+    """Only orientation plans gain this field; legacy preview bytes stay fixed."""
+
+    oriented: Annotated[int, Field(ge=1, le=128)]
+
+
 class LayoutPlan(VariableModel):
     schema_version: Literal[1] = 1
     request: LayoutPlanRequest
     baseline_sha256: Digest
-    normalized_edits: Annotated[tuple[LayoutNativeEdit, ...], Field(min_length=1, max_length=128)]
+    normalized_edits: Annotated[
+        tuple[LayoutNativeCommand, ...], Field(min_length=1, max_length=128)
+    ]
     expected_semantic_sha256: Digest
-    preview: LayoutPreview
+    preview: LayoutOrientationPreview | LayoutPreview
     plan_sha256: Digest = ZERO_DIGEST
 
     @model_validator(mode="after")
@@ -433,3 +647,94 @@ class LayoutResult(VariableModel):
         if self.replayed and self.executed:
             raise ValueError("replay_cannot_execute_again")
         return self
+
+
+class LayoutDeviceMaster(VariableModel):
+    """Operator-registered logical symbol/device to layout-master relationship."""
+
+    device_id: LogicalId
+    layout_master_id: LogicalId
+
+
+class LayoutMasterMapping(VariableModel):
+    """Resolved independently of the candidate; this record grants no authority."""
+
+    registration_id: LogicalId
+    schematic_registry_sha256: Digest
+    devices: Annotated[tuple[LayoutDeviceMaster, ...], Field(min_length=2, max_length=2)]
+
+    @model_validator(mode="after")
+    def unique(self) -> Self:
+        if (
+            len({d.device_id for d in self.devices}) != 2
+            or len({d.layout_master_id for d in self.devices}) != 2
+        ):
+            raise ValueError("layout_duplicate_device_master_mapping")
+        return self
+
+    @property
+    def semantic_sha256(self) -> str:
+        return canonical_digest(
+            self.model_copy(
+                update={"devices": tuple(sorted(self.devices, key=lambda d: d.device_id))}
+            )
+        )
+
+
+class LayoutDeviceCorrespondence(VariableModel):
+    """Proposed logical terminal intent, not observed instance connectivity."""
+
+    schematic_instance_id: LogicalId
+    layout_object_id: LogicalId
+    connections: Annotated[tuple[TerminalConnection, ...], Field(min_length=4, max_length=4)]
+
+    @model_validator(mode="after")
+    def terminals(self) -> Self:
+        if {c.terminal_id for c in self.connections} != {"d", "g", "s", "b"}:
+            raise ValueError("layout_cmos_terminal_set_mismatch")
+        return self
+
+
+class LayoutCorrespondence(VariableModel):
+    """Explicit pair of independently registered schematic/layout revisions."""
+
+    schematic_binding: RevisionBinding
+    schematic_semantic_sha256: Digest
+    layout_binding: RevisionBinding
+    layout_semantic_sha256: Digest
+    master_mapping_sha256: Digest
+    devices: Annotated[tuple[LayoutDeviceCorrespondence, ...], Field(min_length=2, max_length=2)]
+
+    @model_validator(mode="after")
+    def unique(self) -> Self:
+        if (
+            len({d.schematic_instance_id for d in self.devices}) != 2
+            or len({d.layout_object_id for d in self.devices}) != 2
+        ):
+            raise ValueError("layout_duplicate_device_correspondence")
+        return self
+
+    @property
+    def semantic_sha256(self) -> str:
+        devices = tuple(
+            device.model_copy(
+                update={
+                    "connections": tuple(sorted(device.connections, key=lambda c: c.terminal_id))
+                }
+            )
+            for device in sorted(self.devices, key=lambda d: d.schematic_instance_id)
+        )
+        return canonical_digest(self.model_copy(update={"devices": devices}))
+
+
+class LayoutCorrespondenceCheck(VariableModel):
+    status: Literal["LOCAL_CORRESPONDENCE_CONSISTENT"] = "LOCAL_CORRESPONDENCE_CONSISTENT"
+    executed: Literal[False] = False
+    schematic_check: PlanDryRun
+    layout_binding: RevisionBinding
+    layout_semantic_sha256: Digest
+    master_mapping_sha256: Digest
+    correspondence_sha256: Digest
+    native_connectivity: Literal["NOT_VERIFIED"] = "NOT_VERIFIED"
+    pcell_parameters: Literal["NOT_VERIFIED"] = "NOT_VERIFIED"
+    physical_verification: LayoutPhysicalVerification = LayoutPhysicalVerification()

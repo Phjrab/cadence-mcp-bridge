@@ -1,5 +1,6 @@
 """Synthetic contract fixtures only; these tests never contact Cadence."""
 
+import json
 from typing import Any
 
 import pytest
@@ -9,11 +10,20 @@ from cadence_mcp_bridge.layout_models import (
     ZERO_DIGEST,
     AddPinEdit,
     AddRectEdit,
+    ConnectTerminalEdit,
     LayerPurpose,
     LayoutBBox,
     LayoutCapabilities,
+    LayoutCorrespondence,
+    LayoutDeviceCorrespondence,
+    LayoutDeviceMaster,
+    LayoutDiff,
     LayoutInstance,
+    LayoutInstanceTerminal,
+    LayoutInstanceTerminalQualification,
+    LayoutMasterMapping,
     LayoutPin,
+    LayoutPlan,
     LayoutPlanRequest,
     LayoutPoint,
     LayoutResult,
@@ -21,10 +31,35 @@ from cadence_mcp_bridge.layout_models import (
     LayoutSnapshot,
     LayoutTechnology,
     MoveEdit,
+    OrientEdit,
 )
-from cadence_mcp_bridge.schematic_plan import RevisionBinding
+from cadence_mcp_bridge.schematic_plan import (
+    DeviceRegistry,
+    RevisionBinding,
+    SchematicPlan,
+    synthetic_inverter_fixture,
+)
 
 OPERATION_ID = "37072af1-a8dc-4cb1-a6c1-d4c585baac29"
+
+
+@pytest.mark.parametrize("value", ["R45", "r90", 90, None, float("nan"), float("inf")])
+def test_orient_schema_rejects_unknown_or_nontext_orientation(value: Any) -> None:
+    with pytest.raises(ValidationError):
+        OrientEdit.model_validate({"kind": "orient", "object_id": "inst-one", "orientation": value})
+
+
+@pytest.mark.parametrize("extra", [{"pivot": [0, 0]}, {"angle": 90}, {"dx_um": "1"}])
+def test_orient_schema_rejects_free_pivot_angle_or_translation(extra: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError):
+        OrientEdit.model_validate(
+            {
+                "kind": "orient",
+                "object_id": "inst-one",
+                "orientation": "R90",
+                **extra,
+            }
+        )
 
 
 def box(x0: int = 0, y0: int = 0, x1: int = 100, y1: int = 200) -> LayoutBBox:
@@ -121,6 +156,233 @@ def reseal(snapshot: LayoutSnapshot, **updates: Any) -> LayoutSnapshot:
     return LayoutSnapshot.model_validate_json(
         snapshot.model_copy(update={**updates, "semantic_sha256": ZERO_DIGEST}).model_dump_json()
     )
+
+
+def fixture_instance_terminals() -> tuple[
+    LayoutSnapshot, LayoutPlanRequest, LayoutInstanceTerminalQualification
+]:
+    base = fixture_snapshot()
+    instances = (base.instances[0], base.instances[0].model_copy(update={"object_id": "inst-two"}))
+    pins = tuple(
+        base.pins[0].model_copy(
+            update={
+                "object_id": f"pin-{net}",
+                "net_id": net,
+                "terminal_id": net,
+                "association": "native_verified",
+            }
+        )
+        for net in ("vin", "vout", "vss", "vdd")
+    )
+    edits = tuple(
+        ConnectTerminalEdit(
+            kind="connect_terminal",
+            object_id=instance.object_id,
+            expected_master_id=instance.master_id,
+            terminal=terminal,
+            pin_object_id=f"pin-{net}",
+        )
+        for instance, rail in zip(instances, ("vss", "vdd"), strict=True)
+        for terminal, net in (("D", "vout"), ("G", "vin"), ("S", rail), ("B", rail))
+    )
+    snapshot = reseal(
+        base,
+        instances=instances,
+        pins=pins,
+        instance_terminals=tuple(
+            LayoutInstanceTerminal(
+                object_id=edit.object_id,
+                master_id=edit.expected_master_id,
+                terminal=edit.terminal,
+                present=False,
+            )
+            for edit in edits
+        ),
+    )
+    return (
+        snapshot,
+        LayoutPlanRequest(
+            binding=snapshot.binding,
+            operation_id=OPERATION_ID,
+            expected_baseline_sha256=snapshot.semantic_sha256,
+            edits=edits,
+        ),
+        LayoutInstanceTerminalQualification(binding=snapshot.binding, edits=edits),
+    )
+
+
+def test_instance_terminal_observation_omission_and_closed_schema() -> None:
+    snapshot, _, _ = fixture_instance_terminals()
+    legacy = reseal(snapshot, instance_terminals=None)
+    empty = reseal(snapshot, instance_terminals=())
+    assert len({snapshot.semantic_sha256, legacy.semantic_sha256, empty.semantic_sha256}) == 3
+    assert "instance_terminals" not in legacy.model_dump(mode="json")
+    assert empty.model_dump(mode="json")["instance_terminals"] == []
+    assert snapshot.instance_terminals is not None
+    assert reseal(snapshot, instance_terminals=snapshot.instance_terminals[::-1]) == snapshot
+    for cls, value, key in (
+        (LayoutSnapshot, legacy, "instance_terminals"),
+        (
+            LayoutDiff,
+            LayoutDiff(before_sha256=legacy.semantic_sha256, after_sha256=legacy.semantic_sha256),
+            "instance_terminal_changes",
+        ),
+    ):
+        assert key not in value.model_dump(mode="json")
+        with pytest.raises(ValidationError, match=f"null_layout_{key}"):
+            cls.model_validate_json(json.dumps({**value.model_dump(mode="json"), key: None}))
+        for mode in ("validation", "serialization"):
+            schema = cls.model_json_schema(mode=mode)
+            assert schema["additionalProperties"] is False
+            assert schema["properties"][key]["type"] == "array"
+            assert key not in schema["required"] and "default" not in schema["properties"][key]
+
+
+def test_instance_terminal_nested_schema_and_bounds() -> None:
+    snapshot, _, _ = fixture_instance_terminals()
+    raw = snapshot.model_dump(mode="json")
+    assert LayoutSnapshot.model_validate_json(json.dumps(raw)) == snapshot
+    with pytest.raises(ValidationError, match="tuple_type"):
+        LayoutSnapshot.model_validate({**snapshot.model_dump(), "instance_terminals": []})
+    row = raw["instance_terminals"][0]
+    for rows, reason in (
+        ([{**row, "arbitrary": True}], "extra_forbidden"),
+        ([{**row, "net_id": "unexpected"}], "invalid_layout_instance_terminal_state"),
+        ([row] * 129, "too_long"),
+    ):
+        with pytest.raises(ValidationError, match=reason):
+            LayoutSnapshot.model_validate_json(json.dumps({**raw, "instance_terminals": rows}))
+
+    for cls, names in (
+        (LayoutPlan, {"LayoutDiff": "instance_terminal_changes"}),
+        (
+            LayoutResult,
+            {"LayoutSnapshot": "instance_terminals", "LayoutDiff": "instance_terminal_changes"},
+        ),
+    ):
+        for mode in ("validation", "serialization"):
+            definitions = cls.model_json_schema(mode=mode)["$defs"]
+            for name, field in names.items():
+                assert definitions[name]["additionalProperties"] is False
+                array = definitions[name]["properties"][field]
+                assert array["type"] == "array" and array["maxItems"] == 128
+                assert array["items"]["$ref"]
+
+
+def fixture_correspondence() -> tuple[
+    DeviceRegistry, SchematicPlan, LayoutSnapshot, LayoutMasterMapping, LayoutCorrespondence
+]:
+    """Independent synthetic registrations; no PDK master/parameter assertions."""
+    binding = RevisionBinding(
+        workspace_id="fixture-work",
+        design_id="fixture-design",
+        revision_id="schematic-r1",
+        source_baseline_sha256="c" * 64,
+    )
+    registry, schematic = synthetic_inverter_fixture(binding)
+    layout_binding = binding.model_copy(
+        update={"revision_id": "layout-r1", "source_baseline_sha256": "d" * 64}
+    )
+    snapshot = fixture_snapshot()
+    devices = tuple(
+        LayoutInstance(
+            object_id=f"layout-{device.instance_id}",
+            master_id=f"master-{device.device_id}",
+            origin_dbu=LayoutPoint(x=index * 200, y=0),
+            orientation="R0",
+            bbox_dbu=box(index * 200, 0, index * 200 + 100, 200),
+            pcell_submaster=True,
+        )
+        for index, device in enumerate(schematic.dut.instances)
+    )
+    layout = reseal(
+        snapshot,
+        binding=layout_binding,
+        source_baseline_sha256="d" * 64,
+        instances=devices,
+        shapes=(),
+        pins=(),
+    )
+    mapping = LayoutMasterMapping(
+        registration_id="synthetic-master-map",
+        schematic_registry_sha256=registry.semantic_sha256,
+        devices=tuple(
+            LayoutDeviceMaster(device_id=d.device_id, layout_master_id=f"master-{d.device_id}")
+            for d in schematic.dut.instances
+        ),
+    )
+    correspondence = LayoutCorrespondence(
+        schematic_binding=schematic.binding,
+        schematic_semantic_sha256=schematic.semantic_sha256,
+        layout_binding=layout.binding,
+        layout_semantic_sha256=layout.semantic_sha256,
+        master_mapping_sha256=mapping.semantic_sha256,
+        devices=tuple(
+            LayoutDeviceCorrespondence(
+                schematic_instance_id=d.instance_id,
+                layout_object_id=f"layout-{d.instance_id}",
+                connections=d.connections,
+            )
+            for d in schematic.dut.instances
+        ),
+    )
+    return registry, schematic, layout, mapping, correspondence
+
+
+def test_correspondence_hashes_ignore_device_and_terminal_order() -> None:
+    _, _, _, mapping, correspondence = fixture_correspondence()
+    reordered = correspondence.model_copy(
+        update={
+            "devices": tuple(
+                d.model_copy(update={"connections": d.connections[::-1]})
+                for d in correspondence.devices[::-1]
+            )
+        }
+    )
+    assert reordered.semantic_sha256 == correspondence.semantic_sha256
+    assert mapping.model_copy(update={"devices": mapping.devices[::-1]}).semantic_sha256 == (
+        mapping.semantic_sha256
+    )
+    assert (
+        LayoutCorrespondence.model_validate_json(correspondence.model_dump_json()) == correspondence
+    )
+
+
+@pytest.mark.parametrize("field", ["schematic_instance_id", "layout_object_id"])
+def test_correspondence_duplicate_device_ids_reject(field: str) -> None:
+    correspondence = fixture_correspondence()[-1]
+    data = correspondence.model_dump(mode="json")
+    data["devices"][1][field] = data["devices"][0][field]
+    with pytest.raises(ValidationError, match="duplicate_device_correspondence"):
+        LayoutCorrespondence.model_validate_json(json.dumps(data))
+
+
+@pytest.mark.parametrize("field", ["device_id", "layout_master_id"])
+def test_correspondence_duplicate_registered_master_ids_reject(field: str) -> None:
+    mapping = fixture_correspondence()[-2]
+    data = mapping.model_dump(mode="json")
+    data["devices"][1][field] = data["devices"][0][field]
+    with pytest.raises(ValidationError, match="duplicate_device_master_mapping"):
+        LayoutMasterMapping.model_validate_json(json.dumps(data))
+
+
+def test_correspondence_missing_devices_terminals_and_extra_input_reject() -> None:
+    correspondence = fixture_correspondence()[-1]
+    for devices in ((), correspondence.devices[:1]):
+        with pytest.raises(ValidationError):
+            LayoutCorrespondence.model_validate_json(
+                correspondence.model_copy(update={"devices": devices}).model_dump_json()
+            )
+    device = correspondence.devices[0]
+    for connections in (device.connections[:3], (device.connections[0],) * 4):
+        with pytest.raises(ValidationError):
+            LayoutDeviceCorrespondence.model_validate_json(
+                device.model_copy(update={"connections": connections}).model_dump_json()
+            )
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        LayoutCorrespondence.model_validate_json(
+            json.dumps({**correspondence.model_dump(mode="json"), "pcell_script": "arbitrary"})
+        )
 
 
 def test_snapshot_json_roundtrip_digest_and_stable_order() -> None:

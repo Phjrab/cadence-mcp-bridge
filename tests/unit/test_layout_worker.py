@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from test_layout_engine import _ORIENT_BOXES, _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot, reseal
 from test_shared_reservations import root as root_fixture
 
@@ -13,7 +14,12 @@ from cadence_mcp_bridge import _layout_worker as worker
 from cadence_mcp_bridge import _native_operations as operations
 from cadence_mcp_bridge import _shared_reservations as ledger
 from cadence_mcp_bridge.layout_engine import build_plan
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest, LayoutSnapshot
+from cadence_mcp_bridge.layout_models import (
+    AddRectEdit,
+    LayoutApplyRequest,
+    LayoutSnapshot,
+    OrientEdit,
+)
 
 root = root_fixture
 
@@ -96,6 +102,9 @@ def test_probe_selects_two_but_check_protects_all_six(selected):
 
 
 class Runtime:
+    rendering = rendering
+    orientation_qualification = None
+
     def __init__(self, root):
         self.root = str(root)
         self.snapshot = fixture_snapshot()
@@ -125,7 +134,7 @@ class Runtime:
         self.writes += 1
         if self.failure:
             raise OSError("synthetic failure after durable intent")
-        after = worker.predict(before, request["plan"]["normalized_edits"])
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
         after.pop("semantic_sha256")
         after.update(provenance="native_readback")
         for pin in after["pins"]:
@@ -143,6 +152,413 @@ def request_for(snapshot):
     return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256).model_dump(
         mode="json"
     )
+
+
+def connection_fixture():
+    route = {
+        "binding": dict(
+            fixture_snapshot().binding.model_dump(mode="json"),
+            revision_id="routed-child",
+            parent_revision_id="routed-parent",
+            parent_revision_sha256="a" * 64,
+        ),
+        "owned": True,
+        "read_only": False,
+    }
+    devices = (("inst-mn", "MN", "nmos1v", "vss"), ("inst-mp", "MP", "pmos1v", "vdd"))
+    frame = ["MCP_LAYOUT_FRAME|1", "TECH|2000|10", "LPP|Metal1|drawing"]
+    scope = []
+    for object_id, name, cell, rail in devices:
+        frame.append(f"I|{object_id}|{name}|gpdk090|{cell}|layout|R0|0|0|1|0|0|100|100")
+        master_id = "m-" + worker.digest(["gpdk090", cell, "layout"])[:24]
+        for terminal, net in (("B", rail), ("D", "vout"), ("G", "vin"), ("S", rail)):
+            scope.append(
+                dict(
+                    kind="connect_terminal",
+                    object_id=object_id,
+                    expected_master_id=master_id,
+                    terminal=terminal,
+                    pin_object_id=f"pin-{net}",
+                )
+            )
+    frame.extend(
+        f"P|pin-{net}|Metal1|drawing|{net}|{net}|0|0|50|50" for net in ("vdd", "vin", "vout", "vss")
+    )
+    frame.extend(("END_LAYOUT_FRAME", "MCP_LAYOUT_CONNECTIONS|1"))
+    frame.extend(f"C|{edit['object_id']}|{edit['terminal']}|0|-|0" for edit in scope)
+    frame.append("END_LAYOUT_CONNECTIONS")
+    raw = ("\n".join(frame) + "\n").encode("ascii")
+    before, _ = worker.parse_frame(raw, route, rendering, connections=scope)
+    objects = {inst["object_id"]: inst for inst in before["instances"]}
+    commands = [
+        dict(
+            edit,
+            before_sha256=worker.object_digest(objects[edit["object_id"]]),
+            net_id=edit["pin_object_id"][4:],
+            terminal_id=edit["pin_object_id"][4:],
+        )
+        for edit in scope
+    ]
+    return route, scope, raw, before, commands
+
+
+def test_connection_frame_exact_scope_and_bound_oa_anchor():
+    route, scope, raw, before, commands = connection_fixture()
+    legacy, _ = worker.parse_frame(raw.split(b"MCP_LAYOUT_CONNECTIONS|1")[0], route, rendering)
+    assert "instance_terminals" not in legacy
+    assert worker.snapshot_digest(legacy) != worker.snapshot_digest(before)
+    bound = raw.replace(b"C|inst-mn|D|0|-|0", b"C|inst-mn|D|1|vout|1")
+    observed, _ = worker.parse_frame(bound, route, rendering, connections=scope)
+    assert observed["instance_terminals"][1] == dict(
+        before["instance_terminals"][1], present=True, net_id="vout", pin_object_id="pin-vout"
+    )
+    mismatched = bound.replace(b"vout|1", b"vin|0")
+    observed, _ = worker.parse_frame(mismatched, route, rendering, connections=scope)
+    assert observed["instance_terminals"][1]["pin_object_id"] is None
+    after = worker.predict_connections(before, commands, scope, rendering)
+    assert all(row["present"] and row["pin_object_id"] for row in after["instance_terminals"])
+    assert after["instances"] == before["instances"] and after["pins"] == before["pins"]
+
+
+@pytest.mark.parametrize(
+    "fault", ["partial", "duplicate", "false-match", "wrong-net", "unqualified-source"]
+)
+def test_connection_frame_rejects_incomplete_or_inconsistent_observation(fault):
+    route, scope, raw, before, _ = connection_fixture()
+    row = b"C|inst-mn|D|0|-|0\n"
+    if fault == "unqualified-source":
+        source = raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS")
+        source = source.replace(row, b"C|inst-mn|D|1|-|0\n")
+        with pytest.raises(ValueError, match="instance_terminal_frame_state"):
+            worker.parse_connections(source, before, rendering, scope, source=True)
+        return
+    bad = {
+        "partial": b"",
+        "duplicate": b"C|inst-mn|B|0|-|0\n",
+        "false-match": b"C|inst-mn|D|0|-|1\n",
+        "wrong-net": b"C|inst-mn|D|1|vin|1\n",
+    }[fault]
+    with pytest.raises(ValueError, match="instance_terminal_frame"):
+        worker.parse_frame(raw.replace(row, bad), route, rendering, connections=scope)
+
+
+def connection_request(before, scope, commands):
+    after = worker.predict_connections(before, commands, scope, rendering)
+    plan = dict(
+        request=dict(
+            binding=before["binding"],
+            operation_id=str(uuid4()),
+            expected_baseline_sha256=before["semantic_sha256"],
+            edits=scope,
+        ),
+        normalized_edits=commands,
+        baseline_sha256=before["semantic_sha256"],
+        expected_semantic_sha256=worker.snapshot_digest(after),
+        plan_sha256="0" * 64,
+    )
+    plan["plan_sha256"] = worker.digest(plan)
+    return dict(plan=plan, expected_plan_sha256=plan["plan_sha256"]), after
+
+
+@pytest.mark.parametrize(
+    "fault", ["unobserved", "existing-unbound", "stale-instance", "wrong-pin", "duplicate"]
+)
+def test_connection_preflight_rejects_before_intent(root, fault):
+    _, scope, _, before, commands = connection_fixture()
+    request, _ = connection_request(before, scope, commands)
+    if fault == "unobserved":
+        before.pop("instance_terminals")
+    elif fault == "existing-unbound":
+        before["instance_terminals"][0]["present"] = True
+    elif fault == "stale-instance":
+        commands[0]["before_sha256"] = "f" * 64
+    elif fault == "wrong-pin":
+        commands[0]["net_id"] = "vout"
+    else:
+        commands[-1] = commands[0]
+    plan = request["plan"]
+    plan["plan_sha256"] = "0" * 64
+    plan["plan_sha256"] = request["expected_plan_sha256"] = worker.digest(plan)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (before, {}, {})
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    with pytest.raises(ValueError, match="instance_terminal"):
+        engine.execute("apply", request)
+    assert runtime.writes == 0
+    assert not (root / ledger.JOBS / plan["request"]["operation_id"]).exists()
+
+
+def test_connection_durable_replay_and_readback_loss(root):
+    _, scope, _, before, commands = connection_fixture()
+    request, after = connection_request(before, scope, commands)
+    worker.project_orientation(after, None)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (before, {}, {})
+    returned = copy.deepcopy(after)
+
+    def write(*args):
+        runtime.writes += 1
+        return dict(snapshot=returned, saved=True, reopened=True)
+
+    runtime.write = write
+    first = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert replay == dict(first, executed=False, replayed=True)
+    assert replay["snapshot"]["instance_terminals"] == after["instance_terminals"]
+    assert runtime.writes == 1
+    # A different disposable target simulates failure after a native save.
+    _, scope, _, before, commands = connection_fixture()
+    before["binding"]["revision_id"] = "routed-child-second"
+    worker.project_orientation(before, None)
+    runtime.instance_terminal_qualification = dict(binding=before["binding"], edits=scope)
+    bad, returned = connection_request(before, scope, commands)
+    returned.pop("instance_terminals")
+    with pytest.raises(ValueError, match="readback_geometry_mismatch"):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", bad)
+    unknown = worker.LayoutWorker(runtime, ledger, operations).execute("apply", bad)
+    assert unknown["state"] == "OUTCOME_UNKNOWN" and not unknown["executed"] and unknown["replayed"]
+    assert runtime.writes == 2
+
+
+@pytest.mark.parametrize("source_proof", [True, False])
+def test_qualified_fork_preserves_legacy_source_and_requires_native_absence(root, source_proof):
+    route, scope, raw, child, _ = connection_fixture()
+    parent_route = dict(
+        route,
+        binding=dict(
+            route["binding"],
+            revision_id="routed-parent",
+            parent_revision_id=None,
+            parent_revision_sha256=None,
+        ),
+    )
+    parent, _ = worker.parse_frame(
+        raw.split(b"MCP_LAYOUT_CONNECTIONS|1")[0], parent_route, rendering
+    )
+    child["binding"]["parent_revision_sha256"] = parent["semantic_sha256"]
+    worker.project_orientation(child, None)
+    runtime = Runtime(root)
+    runtime.instance_terminal_qualification = dict(binding=child["binding"], edits=scope)
+    runtime.inspect_for_write = lambda action, request: (parent, {}, {})
+
+    def write(*args):
+        runtime.writes += 1
+        result = dict(snapshot=child, saved=True, reopened=True)
+        if source_proof:
+            result["source_instance_terminals"] = worker.parse_connections(
+                raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS"),
+                parent,
+                rendering,
+                scope,
+                source=True,
+            )
+        return result
+
+    runtime.write = write
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    request = dict(
+        binding=child["binding"],
+        operation_id=str(uuid4()),
+        expected_baseline_sha256=parent["semantic_sha256"],
+    )
+    if source_proof:
+        result = engine.execute("fork", request)
+        assert result["before"] == parent and "instance_terminals" not in result["before"]
+        assert result["snapshot"] == child
+        assert all(not row["present"] for row in result["snapshot"]["instance_terminals"])
+    else:
+        with pytest.raises(ValueError, match="instance_terminal_fork_source_unverified"):
+            engine.execute("fork", request)
+        assert engine.execute("fork", request)["state"] == "OUTCOME_UNKNOWN"
+    assert runtime.writes == 1
+
+
+def orientation_request(snapshot=None, target="R90"):
+    snapshot = snapshot or _orient_snapshot()
+    request = fixture_request(snapshot).model_copy(
+        update={"edits": (OrientEdit(kind="orient", object_id="inst-one", orientation=target),)}
+    )
+    plan = build_plan(snapshot, request)
+    return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256).model_dump(
+        mode="json"
+    )
+
+
+@pytest.mark.parametrize("old", tuple(_ORIENT_BOXES))
+@pytest.mark.parametrize("target", tuple(_ORIENT_BOXES))
+def test_orientation_worker_exact_asymmetric_pairs(old, target):
+    snapshot = _orient_snapshot(old)
+    before = snapshot.model_dump(mode="json")
+    frozen = copy.deepcopy(before)
+    if old == target:
+        command = {
+            "kind": "orient",
+            "object_id": "inst-one",
+            "before_sha256": worker.object_digest(before["instances"][0]),
+            "orientation": target,
+            "origin_dbu": before["instances"][0]["origin_dbu"],
+            "bbox_dbu": before["instances"][0]["bbox_dbu"],
+        }
+        with pytest.raises(ValueError, match="no_change"):
+            worker.predict(before, [command], rendering)
+    else:
+        request = orientation_request(snapshot, target)
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
+        lowx, lowy, highx, highy = _ORIENT_BOXES[target]
+        assert after["instances"][0]["bbox_dbu"] == dict(
+            lower_left=dict(x=lowx, y=lowy), upper_right=dict(x=highx, y=highy)
+        )
+        assert after["instances"][0]["orientation"] == target
+        assert after["instances"][0]["origin_dbu"] == before["instances"][0]["origin_dbu"]
+        assert after["instances"][0]["master_id"] == before["instances"][0]["master_id"]
+        assert after["shapes"] == before["shapes"] and after["pins"] == before["pins"]
+    assert before == frozen
+
+
+def seal_orientation_request(request):
+    request["plan"]["plan_sha256"] = "0" * 64
+    pin = worker.digest(request["plan"])
+    request["plan"]["plan_sha256"] = request["expected_plan_sha256"] = pin
+
+
+def qualify(runtime):
+    runtime.orientation_qualification = {
+        "binding": runtime.snapshot.binding.model_dump(mode="json"),
+        "orientations": ["R0", "R90"],
+    }
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "hash",
+        "origin",
+        "bbox",
+        "extra",
+        "offgrid",
+        "boolean",
+        "overflow",
+        "unknown",
+        "unregistered",
+        "noninstance",
+        "duplicate",
+        "pcell",
+        "capability",
+        "request",
+        "dropped",
+        "qualification",
+        "mirror-target",
+        "mirror-source",
+        "prediction",
+    ],
+)
+def test_orientation_invalid_raw_command_never_publishes_intent(root, fault):
+    runtime = Runtime(root)
+    runtime.snapshot = _orient_snapshot("MX" if fault == "mirror-source" else "R0")
+    qualify(runtime)
+    request = orientation_request(runtime.snapshot, "MX" if fault == "mirror-target" else "R90")
+    command = request["plan"]["normalized_edits"][0]
+    if fault == "hash":
+        command["before_sha256"] = "f" * 64
+    elif fault == "origin":
+        command["origin_dbu"]["x"] += 5
+    elif fault == "bbox":
+        command["bbox_dbu"]["lower_left"]["x"] += 5
+    elif fault == "extra":
+        command["angle"] = 90
+    elif fault == "offgrid":
+        command["origin_dbu"]["x"] += 1
+    elif fault == "boolean":
+        command["origin_dbu"]["x"] = True
+    elif fault == "overflow":
+        command["bbox_dbu"]["upper_right"]["x"] = 2147483648
+    elif fault == "unknown":
+        command["orientation"] = "R45"
+    elif fault == "unregistered":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            technology=runtime.snapshot.technology.model_copy(
+                update={"supported_orientations": ("R0",)}
+            ),
+        )
+    elif fault == "noninstance":
+        command["object_id"] = "rect-one"
+    elif fault == "duplicate":
+        request["plan"]["normalized_edits"].append(copy.deepcopy(command))
+    elif fault == "pcell":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            instances=(runtime.snapshot.instances[0].model_copy(update={"pcell_submaster": True}),),
+        )
+    elif fault == "capability":
+        runtime.snapshot = reseal(
+            runtime.snapshot,
+            capabilities=runtime.snapshot.capabilities.model_copy(update={"rotate": "unsupported"}),
+        )
+    elif fault == "request":
+        request["plan"]["request"]["edits"][0]["orientation"] = "MX"
+    elif fault == "dropped":
+        request["plan"]["normalized_edits"] = request_for(runtime.snapshot)["plan"][
+            "normalized_edits"
+        ]
+    elif fault == "prediction":
+        request["plan"]["expected_semantic_sha256"] = "f" * 64
+    elif fault == "qualification":
+        runtime.orientation_qualification = None
+    request["plan"]["baseline_sha256"] = runtime.snapshot.semantic_sha256
+    seal_orientation_request(request)
+    with pytest.raises(ValueError):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert runtime.writes == 0 and not list(root.rglob("layout-intent.json"))
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [None, "write", "master", "origin", "bbox", "orientation", "protected", "saved", "reopened"],
+)
+def test_orientation_transaction_preservation_and_durable_replay(root, fault):
+    class OrientRuntime(Runtime):
+        def write(self, *args):
+            observed = super().write(*args)
+            if fault in ("saved", "reopened"):
+                observed[fault] = False
+            elif fault == "protected":
+                self.protected = "changed"
+            elif fault in ("master", "origin", "bbox", "orientation"):
+                obj = observed["snapshot"]["instances"][0]
+                if fault == "master":
+                    obj["master_id"] = "changed-master"
+                elif fault == "origin":
+                    obj["origin_dbu"]["x"] += 5
+                elif fault == "bbox":
+                    obj["bbox_dbu"]["upper_right"]["x"] += 5
+                else:
+                    obj["orientation"] = "MX"
+            return observed
+
+    runtime = OrientRuntime(root)
+    runtime.snapshot = _orient_snapshot()
+    qualify(runtime)
+    runtime.failure = fault == "write"
+    request = orientation_request(runtime.snapshot)
+    counter = (root / ledger.LEDGER).read_bytes()
+    native = worker.LayoutWorker(runtime, ledger, operations)
+    if fault:
+        with pytest.raises((ValueError, OSError)):
+            native.execute("apply", request)
+        assert list(root.rglob("layout-failure.json")) and not list(
+            root.rglob("layout-complete.json")
+        )
+    else:
+        assert native.execute("apply", request)["state"] == "SUCCEEDED"
+    # Fresh worker object, same durable ID: no extra write even after expiry.
+    runtime.denied = True
+    result = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    assert result["state"] == ("OUTCOME_UNKNOWN" if fault else "SUCCEEDED")
+    assert result["replayed"] and not result["executed"] and runtime.writes == 1
+    assert (root / ledger.LEDGER).read_bytes() == counter
 
 
 def test_real_shared_lock_receipt_replay_sealed_target_and_counter_unchanged(root):
@@ -199,6 +615,50 @@ def test_auth_or_stale_baseline_does_not_publish_intent(root):
     assert not list(root.rglob("layout-intent.json")) and runtime.writes == 0
 
 
+def test_orientation_qualification_projects_only_exact_child_and_keeps_observed_mirror():
+    child = _orient_snapshot().binding.model_dump(mode="json")
+    parent = dict(
+        child,
+        revision_id=child["parent_revision_id"],
+        parent_revision_id=None,
+        parent_revision_sha256=None,
+    )
+    child_route = dict(binding=child, owned=True, read_only=False)
+    parent_route = dict(binding=parent, owned=True, read_only=False)
+    qualification = {"binding": child, "orientations": ["R0", "R90"]}
+    registration = {
+        "routes": [parent_route, child_route],
+        "orientation_qualification": qualification,
+    }
+    assert worker.orientation_qualification(registration, rendering) == qualification
+    raw = (
+        b"MCP_LAYOUT_FRAME|1\nTECH|1000|5\n"
+        b"I|inst-one|I0|SeedLib|RectMaster|layout|R0|0|0|0|0|0|100|200\n"
+        b"I|inst-two|I1|SeedLib|RectMaster|layout|MX|0|0|0|0|-200|100|0\nEND_LAYOUT_FRAME\n"
+    )
+    baseline, _ = worker.parse_frame(raw, parent_route, rendering)
+    source, _ = worker.parse_frame(raw, parent_route, rendering, qualification)
+    assert source == baseline and source["capabilities"]["rotate"] == "unsupported"
+    before, _ = worker.parse_frame(raw, child_route, rendering, qualification)
+    after, _ = worker.parse_frame(
+        raw.replace(b"|R0|0|0|0|0|0|100|200", b"|R90|0|0|0|-200|0|0|100"),
+        child_route,
+        rendering,
+        qualification,
+    )
+    assert before["technology"]["supported_orientations"] == ["MX", "R0", "R90"]
+    assert before["technology"] == after["technology"]
+    assert before["capabilities"]["rotate"] == after["capabilities"]["rotate"] == "not_verified"
+    assert before["semantic_sha256"] != after["semantic_sha256"]
+    projected = copy.deepcopy(source)
+    projected["binding"] = child
+    worker.project_orientation(projected, qualification)
+    assert worker.geometry(projected) == worker.geometry(before)
+    child_route["read_only"] = True
+    with pytest.raises(ValueError, match="owned_route_required"):
+        worker.orientation_qualification(registration, rendering)
+
+
 def test_native_frame_model_hash_and_semantic_normalization():
     reference = fixture_snapshot()
     route = {
@@ -229,6 +689,72 @@ def test_native_frame_model_hash_and_semantic_normalization():
     assert all("0x" not in key for key in selectors)
     with pytest.raises(ValueError, match="unknown_or_malformed"):
         worker.parse_frame(raw.replace(b"S|-|rect", b"S|-|polygon"), route, rendering)
+
+
+def test_registered_layer_policy_pins_exact_frame_pairs_and_covers_top_level_figures():
+    route = {
+        "binding": fixture_snapshot().binding.model_dump(mode="json"),
+        "owned": True,
+        "read_only": False,
+        "layer_policy": {
+            "technology_library": "Tech",
+            "layer_purposes": [{"layer": "metal1", "purpose": "drawing"}],
+        },
+    }
+    begin = b"MCP_LAYOUT_FRAME|1\nTECH|1000|5\n"
+    end = b"END_LAYOUT_FRAME\n"
+    lpp = b"LPP|metal1|drawing\n"
+    shape = b"S|-|rect|metal1|drawing|300|0|400|100\n"
+    same_session, _ = worker.parse_frame(begin + lpp + shape + end, route, rendering)
+    fresh, _ = worker.parse_frame(begin + shape + lpp + end, route, rendering)
+    assert same_session == fresh
+    assert LayoutSnapshot.model_validate_json(
+        worker.canonical(fresh)
+    ).technology.allowed_layer_purposes
+    for rows in (shape, lpp + shape.replace(b"metal1", b"Poly"), lpp + b"LPP|Poly|drawing\n"):
+        with pytest.raises(ValueError, match="layout_layer_policy_frame_mismatch"):
+            worker.parse_frame(begin + rows + end, route, rendering)
+    with pytest.raises(ValueError, match="layout_layer_policy_duplicate_frame_pair"):
+        worker.parse_frame(begin + lpp + lpp + end, route, rendering)
+    route["layer_policy"]["layer_purposes"] = []
+    empty, _ = worker.parse_frame(begin + end, route, rendering)
+    assert empty["technology"]["allowed_layer_purposes"] == []
+    with pytest.raises(ValueError, match="layout_layer_policy_frame_mismatch"):
+        worker.parse_frame(begin + shape + end, route, rendering)
+    route["layer_policy"] = None
+    with pytest.raises(ValueError, match="layout_layer_policy_shape"):
+        worker.parse_frame(begin + end, route, rendering)
+
+
+def test_layout_layer_policy_mismatch_rejects_fork_before_source_inspect():
+    parent = {"binding": fixture_snapshot().binding.model_dump(mode="json")}
+    target = dict(
+        parent,
+        binding=dict(
+            parent["binding"],
+            revision_id="policy-child",
+            parent_revision_id=parent["binding"]["revision_id"],
+        ),
+        layer_policy={"technology_library": "Tech", "layer_purposes": []},
+    )
+    runtime = SimpleNamespace(
+        registration={"routes": [parent, target]}, route=lambda binding: target
+    )
+    with pytest.raises(ValueError, match="layout_fork_layer_policy_mismatch"):
+        worker.FixedLayoutRuntime.inspect_for_write(runtime, "fork", {"binding": target["binding"]})
+
+
+@pytest.mark.parametrize(("kind", "field"), [("add_rect", "shape"), ("add_pin", "pin")])
+def test_layout_layer_policy_rejects_unregistered_normalized_edit_before_intent(root, kind, field):
+    runtime = Runtime(root)
+    request = request_for(runtime.snapshot)
+    command = next(edit for edit in request["plan"]["normalized_edits"] if edit["kind"] == kind)
+    command[field]["layer"] = "Unregistered"
+    seal_orientation_request(request)
+    with pytest.raises(ValueError, match="layout_layer_purpose_not_registered"):
+        worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+    operation = request["plan"]["request"]["operation_id"]
+    assert runtime.writes == 0 and not (root / ledger.JOBS / operation).exists()
 
 
 def test_safe_error_reasons_do_not_echo_arbitrary_exception():
@@ -343,8 +869,13 @@ def test_operator_seed_uses_durable_identity_and_preserves_failure(root, failure
     runtime.read_check = lambda request: None
     runtime.protected_snapshot = lambda: "original"
     writes = []
+
     # Renderer path syntax is POSIX-only; this test isolates durable dispatch on Windows.
-    runtime.rendering = SimpleNamespace(seed_script=lambda *a: b"fixed seed")
+    def seed_script(*_, policy=None):
+        assert policy is None
+        return b"fixed seed"
+
+    runtime.rendering = SimpleNamespace(seed_script=seed_script)
 
     def program(session, script, selected, job):
         writes.append(job)
@@ -367,3 +898,172 @@ def test_operator_seed_uses_durable_identity_and_preserves_failure(root, failure
     with pytest.raises(ValueError, match="seed_library_exists"):
         runtime.operator_seed(str(uuid4()))
     assert len(writes) == 1
+
+
+def observation_fixture():
+    child_route, _, raw, before, commands = connection_fixture()
+    rows = [
+        dict(row, present=True, net_id=cmd["net_id"], pin_object_id=cmd["pin_object_id"])
+        for row, cmd in zip(before["instance_terminals"], commands, strict=True)
+    ]
+    for row in rows:
+        prefix = f"C|{row['object_id']}|{row['terminal']}|"
+        raw = raw.replace(f"{prefix}0|-|0".encode(), f"{prefix}1|{row['net_id']}|1".encode())
+    parent_binding = dict(
+        child_route["binding"],
+        revision_id="routed-parent",
+        parent_revision_id="earlier-revision",
+        parent_revision_sha256="b" * 64,
+    )
+    parent_route = dict(
+        child_route,
+        binding=parent_binding,
+        cellview={"library": "Owned", "cell": "Parent", "view": "layout"},
+        path="/registered/managed/Owned/Parent/layout",
+    )
+    parent, _ = worker.parse_frame(raw, parent_route, rendering, observations=rows)
+    child_route["binding"]["parent_revision_sha256"] = parent["semantic_sha256"]
+    child_route.update(
+        cellview={"library": "Owned", "cell": "Child", "view": "layout"},
+        path="/registered/managed/Owned/Child/layout",
+    )
+    child, _ = worker.parse_frame(raw, child_route, rendering, observations=rows)
+    scope = dict(parent_binding=parent_binding, child_binding=child["binding"], rows=rows)
+    return scope, parent_route, child_route, raw, parent, child
+
+
+def observed_geometry_request(child):
+    snapshot = LayoutSnapshot.model_validate_json(worker.canonical(child))
+    request = fixture_request(snapshot).model_copy(
+        update={
+            "operation_id": str(uuid4()),
+            "edits": (
+                AddRectEdit(
+                    kind="add_rect",
+                    object_id="new-tap",
+                    layer="Metal1",
+                    purpose="drawing",
+                    bbox_um=("1", "1", "2", "2"),
+                ),
+            ),
+        }
+    )
+    plan = build_plan(snapshot, request)
+    return LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+
+
+@pytest.mark.parametrize(
+    "wrong_row",
+    [b"", b"C|inst-mn|D|0|-|0\n", b"C|inst-mn|D|1|vout|0\n", b"C|inst-mn|D|1|vin|1\n"],
+)
+def test_observation_rejects_missing_or_changed_native_connection(wrong_row):
+    scope, parent_route, child_route, raw, parent, _ = observation_fixture()
+    source = raw.replace(b"LAYOUT_CONNECTIONS", b"LAYOUT_SOURCE_CONNECTIONS")
+    assert (
+        worker.parse_observations(source, parent, rendering, scope["rows"], source=True)
+        == (scope["rows"])
+    )
+    row = b"C|inst-mn|D|1|vout|1\n"
+    for route in (parent_route, child_route):
+        with pytest.raises(ValueError, match="layout_instance_terminal_"):
+            worker.parse_frame(
+                raw.replace(row, wrong_row), route, rendering, observations=scope["rows"]
+            )
+    with pytest.raises(ValueError, match="unregistered_frame"):
+        worker.parse_frame(raw, parent_route, rendering)
+
+
+def test_observation_wrong_edges_and_parent_write_precede_intent(root):
+    scope, _, _, _, parent, child = observation_fixture()
+    runtime = Runtime(root)
+    runtime.instance_terminal_observation_scope = scope
+    runtime.inspect_for_write = lambda *a: pytest.fail("invalid edge reached native inspect")
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    for source in (parent, child):
+        operation_id = str(uuid4())
+        target = dict(
+            source["binding"],
+            revision_id="unexpected-child",
+            parent_revision_id=source["binding"]["revision_id"],
+            parent_revision_sha256=source["semantic_sha256"],
+        )
+        with pytest.raises(ValueError, match="observation_fork_edge"):
+            engine.execute(
+                "fork",
+                dict(
+                    binding=target,
+                    operation_id=operation_id,
+                    expected_baseline_sha256=source["semantic_sha256"],
+                ),
+            )
+        assert not (root / ledger.JOBS / operation_id).exists()
+    request = observed_geometry_request(parent)
+    with pytest.raises(ValueError, match="observation_parent_protected"):
+        engine.execute("apply", request.model_dump(mode="json"))
+    assert not (root / ledger.JOBS / request.plan.request.operation_id).exists()
+    _, edits, _, absent, commands = connection_fixture()
+    write_request, _ = connection_request(absent, edits, commands)
+    raw_plan_request = write_request["plan"]["request"]
+    raw_plan_request["binding"] = child["binding"]
+    with pytest.raises(ValueError, match="instance_terminal_qualification_required"):
+        engine.execute("apply", write_request)
+    assert not (root / ledger.JOBS / raw_plan_request["operation_id"]).exists()
+    assert runtime.writes == 0
+    unrelated = dict(child["binding"], design_id="unrelated")
+    assert not worker.check_observation_write(scope, "fork", unrelated)
+
+
+@pytest.mark.parametrize("fault", [None, "pre_mutation_missing", "reopen_changed"])
+def test_observation_fork_geometry_and_durable_replay(root, fault):
+    scope, _, _, _, parent, child = observation_fixture()
+    runtime = Runtime(root)
+    runtime.instance_terminal_observation_scope = scope
+    runtime.inspect_for_write = lambda action, request: (
+        parent if action == "fork" else child,
+        {},
+        {},
+    )
+
+    def write(session, action, request, before, selectors, route, job):
+        runtime.writes += 1
+        if action == "fork":
+            return dict(
+                snapshot=child,
+                saved=True,
+                reopened=True,
+                pre_mutation_instance_terminals=copy.deepcopy(parent["instance_terminals"]),
+            )
+        after = worker.predict(before, request["plan"]["normalized_edits"], rendering)
+        worker.project_orientation(after, None)
+        observed = dict(snapshot=after, saved=True, reopened=True)
+        if fault != "pre_mutation_missing":
+            observed["pre_mutation_instance_terminals"] = copy.deepcopy(child["instance_terminals"])
+        if fault == "reopen_changed":
+            after["instance_terminals"][0].update(present=False, net_id=None, pin_object_id=None)
+        return observed
+
+    runtime.write = write
+    engine = worker.LayoutWorker(runtime, ledger, operations)
+    fork = engine.execute(
+        "fork",
+        dict(
+            binding=child["binding"],
+            operation_id=str(uuid4()),
+            expected_baseline_sha256=parent["semantic_sha256"],
+        ),
+    )
+    assert fork["before"] == parent and fork["snapshot"] == child
+    request = observed_geometry_request(child).model_dump(mode="json")
+    if fault:
+        with pytest.raises(ValueError, match="pre_mutation_unverified|readback_geometry_mismatch"):
+            engine.execute("apply", request)
+        replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+        assert replay["state"] == "OUTCOME_UNKNOWN" and replay["replayed"]
+        assert not replay["executed"]
+    else:
+        first = engine.execute("apply", request)
+        replay = worker.LayoutWorker(runtime, ledger, operations).execute("apply", request)
+        assert replay == dict(first, executed=False, replayed=True)
+        assert first["snapshot"]["instance_terminals"] == child["instance_terminals"]
+        assert first["snapshot"]["semantic_sha256"] == request["plan"]["expected_semantic_sha256"]
+    assert runtime.writes == 2

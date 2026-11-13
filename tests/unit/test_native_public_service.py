@@ -67,7 +67,7 @@ def configured(operator, tmp_path, monkeypatch):
 async def test_operator_only_conditional_schema_and_no_server_start_side_effects(configured):
     server, service, request, settings, grant_path = configured
     tools = {t.name: t for t in await server.list_tools()}
-    assert len(tools) == 102 and set(tools) >= NAMES
+    assert len(tools) == 103 and set(tools) >= NAMES
     snapshot = json.loads(
         (
             Path(__file__).resolve().parents[2]
@@ -102,7 +102,7 @@ async def test_operator_only_conditional_schema_and_no_server_start_side_effects
         factory=lambda _: object(),
     )
     assert old.native_operations is None
-    assert len(await create_server(cast(CadenceService, old)).list_tools()) == 91
+    assert len(await create_server(cast(CadenceService, old)).list_tools()) == 92
 
 
 @pytest.mark.asyncio

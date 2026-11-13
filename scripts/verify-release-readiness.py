@@ -182,6 +182,15 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     amplifier_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SWEEP_V1_SNAPSHOT.json")
     spec_addition = read_json(project / "docs/contracts/MCP_AMPLIFIER_SPEC_V1_SNAPSHOT.json")
     layout_addition = read_json(project / "docs/contracts/MCP_LAYOUT_EDIT_V1_SNAPSHOT.json")
+    delay_addition = read_json(project / "docs/contracts/MCP_CMOS_DELAY_V1_SNAPSHOT.json")
+    if (
+        type(delay_addition.get("schema_version")) is not int
+        or delay_addition.get("schema_version") != 1
+        or delay_addition.get("source_commit") != "cb47abde5907609ebff765cf2e5b78c763383d81"
+        or set(delay_addition.get("tools", {})) != {"cadence_cmos_delay_result"}
+        or any(not reviewed_schema(n, t) for n, t in delay_addition["tools"].items())
+    ):
+        raise ValueError("unreviewed CMOS delay schema drift")
     if (
         type(layout_addition.get("schema_version")) is not int
         or layout_addition.get("schema_version") != 1
@@ -298,6 +307,7 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
             | set(amplifier_addition["tools"])
             | set(spec_addition["tools"])
             | set(layout_addition["tools"])
+            | set(delay_addition["tools"])
         )
         or any(not reviewed_schema(name, tool) for name, tool in addition["tools"].items())
     ):
@@ -310,6 +320,14 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     if set(current) & set(layout_declarations):
         raise ValueError("duplicate layout tool declaration")
     current.update(layout_declarations)
+    delay_declarations = declarations(
+        (project / "src/cadence_mcp_bridge/cmos_delay_adapters.py").read_text(encoding="utf-8")
+    )
+    if set(delay_declarations) != {"cadence_cmos_delay_result"} or set(current) & set(
+        delay_declarations
+    ):
+        raise ValueError("duplicate or unexpected CMOS delay tool declaration")
+    current.update(delay_declarations)
     if set(current) != set(schemas) or any(current.get(n) != d for n, d in legacy["tools"].items()):
         raise ValueError("legacy tool declaration changed or was removed")
     expected_models = snapshot.get("legacy_model_canonical_lf_sha256")

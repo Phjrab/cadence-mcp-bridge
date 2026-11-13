@@ -113,7 +113,92 @@ def protocol_lines(raw, start, end, reason, prefixes=None):
     return [line.decode("ascii") for line in selected]
 
 
-def parse_frame(raw, route, rendering):
+def project_orientation(snapshot, qualification):
+    if qualification is not None and snapshot["binding"] == qualification["binding"]:
+        if not snapshot["owned"] or snapshot["read_only"]:
+            raise ValueError("layout_orientation_qualification_owned_route_required")
+        technology = snapshot["technology"]
+        technology["supported_orientations"] = sorted(
+            set(technology["supported_orientations"]) | set(qualification["orientations"])
+        )
+        snapshot["capabilities"]["rotate"] = "not_verified"
+    snapshot["semantic_sha256"] = snapshot_digest(snapshot)
+
+
+def qualified_connections(qualification, binding):
+    if qualification is not None and qualification["binding"] == binding:
+        return qualification["edits"]
+    return None
+
+
+def parse_connections(raw, snapshot, rendering, edits, source=False, require_present=False):
+    start = b"MCP_LAYOUT_SOURCE_CONNECTIONS|1" if source else b"MCP_LAYOUT_CONNECTIONS|1"
+    end = b"END_LAYOUT_SOURCE_CONNECTIONS" if source else b"END_LAYOUT_CONNECTIONS"
+    lines = protocol_lines(raw, start, end, "layout_instance_terminal_frame_delimiters")
+    scope = rendering.connection_scope(edits)
+    if len(lines) != len(scope) + 2:
+        raise ValueError("layout_instance_terminal_frame_count")
+    instances = dict((obj["object_id"], obj) for obj in snapshot["instances"])
+    pins = dict((obj["object_id"], obj) for obj in snapshot["pins"])
+    if len(instances) != 2:
+        raise ValueError("layout_instance_terminal_frame_instances")
+    result = []
+    for index, edit in enumerate(scope, 1):
+        fields = lines[index].split("|")
+        object_id, terminal = edit["object_id"], edit["terminal"]
+        instance, pin = instances.get(object_id), pins.get(edit["pin_object_id"])
+        if (
+            len(fields) != 6
+            or fields[:3] != ["C", object_id, terminal]
+            or fields[3] not in ("0", "1")
+            or fields[5] not in ("0", "1")
+            or instance is None
+            or instance["master_id"] != edit["expected_master_id"]
+            or not instance["pcell_submaster"]
+            or pin is None
+            or pin["association"] != "native_verified"
+        ):
+            raise ValueError("layout_instance_terminal_frame_row")
+        present, name, match = fields[3] == "1", fields[4], fields[5] == "1"
+        if (
+            (source and not require_present and present)
+            or (require_present and not (present and match))
+            or (not present and name != "-")
+            or (match and name == "-")
+        ):
+            raise ValueError("layout_instance_terminal_frame_state")
+        net_id = None
+        if name != "-":
+            rendering.token(name)
+            try:
+                net_id = rendering.token(name, rendering.LOGICAL)
+            except ValueError:
+                net_id = "n-" + digest(name)[:24]
+        if match and net_id != pin["net_id"]:
+            raise ValueError("layout_instance_terminal_frame_net")
+        result.append(
+            dict(
+                object_id=object_id,
+                master_id=instance["master_id"],
+                terminal=terminal,
+                present=present,
+                net_id=net_id,
+                pin_object_id=pin["object_id"] if match else None,
+            )
+        )
+    return result
+
+
+def parse_observations(raw, snapshot, rendering, observations, source=False):
+    rows = parse_connections(
+        raw, snapshot, rendering, rendering.observation_edits(observations), source, True
+    )
+    if rows != observations:
+        raise ValueError("layout_instance_terminal_observation_changed")
+    return rows
+
+
+def parse_frame(raw, route, rendering, qualification=None, connections=None, observations=None):
     """Closed bounded frame; private selectors never leave the worker."""
     lines = protocol_lines(
         raw, b"MCP_LAYOUT_FRAME|1", b"END_LAYOUT_FRAME", "layout_frame_delimiters"
@@ -144,6 +229,8 @@ def parse_frame(raw, route, rendering):
         "capabilities": dict(CAPABILITIES),
     }
     selectors, lpps, orientations = {}, set(), set(("R0",))
+    policy = rendering.layer_policy(route["layer_policy"]) if "layer_policy" in route else None
+    declared = set()
 
     def box(values):
         if len(values) != 4:
@@ -156,7 +243,10 @@ def parse_frame(raw, route, rendering):
     for row in rows[1:]:
         kind = row[0]
         if kind == "LPP" and len(row) == 3:
-            lpps.add((rendering.token(row[1]), rendering.token(row[2])))
+            pair = (rendering.token(row[1]), rendering.token(row[2]))
+            if policy is not None and pair in declared:
+                raise ValueError("layout_layer_policy_duplicate_frame_pair")
+            declared.add(pair)
             continue
         if kind == "I" and len(row) == 14:
             for name in row[2:6]:
@@ -232,18 +322,45 @@ def parse_frame(raw, route, rendering):
         or len(result["pins"]) > 1024
     ):
         raise ValueError("layout_frame_object_bound")
+    if policy is not None:
+        if declared != set(policy[1]) or not lpps <= declared:
+            raise ValueError("layout_layer_policy_frame_mismatch")
+        lpps = declared
+    else:
+        lpps.update(declared)
     result["technology"]["allowed_layer_purposes"] = [
         {"layer": a, "purpose": b} for a, b in sorted(lpps)
     ]
     result["technology"]["supported_orientations"] = sorted(orientations)
     result["capabilities"].update(move="supported", add_rect="supported", add_pin="supported")
-    result["semantic_sha256"] = snapshot_digest(result)
+    if observations is not None:
+        result["instance_terminals"] = parse_observations(raw, result, rendering, observations)
+    elif connections is not None:
+        result["instance_terminals"] = parse_connections(raw, result, rendering, connections)
+    elif any(
+        line.startswith((b"MCP_LAYOUT_CONNECTIONS|", b"MCP_LAYOUT_SOURCE_CONNECTIONS|"))
+        for line in raw.splitlines()
+    ):
+        raise ValueError("layout_instance_terminal_unregistered_frame")
+    project_orientation(result, qualification)
     return result, selectors
 
 
-def predict(before, commands):
+def predict(before, commands, rendering=None, orientation_pair=None):
     expected = copy.deepcopy(before)
     objects = {}
+    instances = set(obj["object_id"] for obj in before["instances"])
+    if not isinstance(commands, (tuple, list)) or not 1 <= len(commands) <= 128:
+        raise ValueError("layout_edit_bounds")
+    if any(not isinstance(command, dict) for command in commands):
+        raise ValueError("layout_command_shape")
+    allowed = set(
+        (p["layer"], p["purpose"]) for p in before["technology"]["allowed_layer_purposes"]
+    )
+    if any(command.get("kind") == "orient" for command in commands):
+        keys = [command["object_id"] for command in commands]
+        if len(keys) != len(set(keys)):
+            raise ValueError("layout_duplicate_object_edit")
     for group in ("instances", "shapes", "pins"):
         for obj in expected[group]:
             if obj["object_id"] in objects:
@@ -263,6 +380,30 @@ def predict(before, commands):
                 obj["origin_dbu"] = shifted(obj["origin_dbu"], dx, dy)
             if obj.get("points_dbu"):
                 obj["points_dbu"] = [shifted(p, dx, dy) for p in obj["points_dbu"]]
+        elif command["kind"] == "orient":
+            if rendering is None:
+                raise ValueError("layout_orientation_renderer_required")
+            rendering.orientation_command(command, before["technology"])
+            if key not in instances:
+                raise ValueError("layout_orientation_instance_required")
+            obj = objects[key]
+            if obj["pcell_submaster"]:
+                raise ValueError("layout_orientation_pcell_submaster_unsupported")
+            if before["capabilities"].get("rotate", "unsupported") == "unsupported":
+                raise ValueError("layout_orientation_not_supported")
+            if orientation_pair is not None and (
+                obj["orientation"] not in orientation_pair
+                or command["orientation"] not in orientation_pair
+            ):
+                raise ValueError("layout_orientation_not_qualified")
+            if object_digest(obj) != command["before_sha256"]:
+                raise ValueError("layout_orientation_selector_revision_mismatch")
+            if command["origin_dbu"] != obj["origin_dbu"]:
+                raise ValueError("layout_orientation_origin_changed")
+            box = rendering.oriented_bbox(obj, command["orientation"], before["technology"])
+            if box != command["bbox_dbu"]:
+                raise ValueError("layout_orientation_bbox_mismatch")
+            obj.update(orientation=command["orientation"], bbox_dbu=box)
         elif command["kind"] in ("add_rect", "add_pin"):
             if key in objects:
                 raise ValueError("layout_new_object_already_exists")
@@ -270,11 +411,61 @@ def predict(before, commands):
             obj = copy.deepcopy(command[field])
             if obj["object_id"] != key:
                 raise ValueError("layout_command_object_identity")
+            if (obj["layer"], obj["purpose"]) not in allowed:
+                raise ValueError("layout_layer_purpose_not_registered")
             expected[group].append(obj)
             objects[key] = obj
         else:
             raise ValueError("layout_operation_not_supported")
     return expected
+
+
+def predict_connections(before, commands, edits, rendering):
+    scope = rendering.connection_scope(edits)
+    if (
+        rendering.connection_scope([rendering.connection_command(command) for command in commands])
+        != scope
+    ):
+        raise ValueError("layout_instance_terminal_commands")
+    observed = before.get("instance_terminals")
+    if observed is None or len(observed) != len(scope):
+        raise ValueError("layout_instance_terminal_baseline_unobserved")
+    instances = dict((obj["object_id"], obj) for obj in before["instances"])
+    pins = dict((obj["object_id"], obj) for obj in before["pins"])
+    keyed = dict(((cmd["object_id"], cmd["terminal"]), cmd) for cmd in commands)
+    after = []
+    for index, edit in enumerate(scope):
+        object_id, terminal = edit["object_id"], edit["terminal"]
+        master_id = edit["expected_master_id"]
+        row = dict(
+            object_id=object_id,
+            master_id=master_id,
+            terminal=terminal,
+            present=False,
+            net_id=None,
+            pin_object_id=None,
+        )
+        if observed[index] != row:
+            raise ValueError("layout_instance_terminal_baseline_not_absent")
+        command = keyed[(object_id, terminal)]
+        obj = instances.get(object_id)
+        if (
+            obj is None
+            or obj["master_id"] != master_id
+            or not obj["pcell_submaster"]
+            or object_digest(obj) != command["before_sha256"]
+        ):
+            raise ValueError("layout_instance_terminal_instance_identity")
+        pin = pins.get(edit["pin_object_id"])
+        if (
+            pin is None
+            or pin["association"] != "native_verified"
+            or pin["net_id"] != command["net_id"]
+            or pin["terminal_id"] != command["terminal_id"]
+        ):
+            raise ValueError("layout_instance_terminal_pin_net_identity")
+        after.append(dict(row, present=True, net_id=pin["net_id"], pin_object_id=pin["object_id"]))
+    return dict(before, instance_terminals=after)
 
 
 class LayoutWorker(object):
@@ -380,6 +571,25 @@ class LayoutWorker(object):
             if replay is not None:
                 self.runtime.read_check(identity)
                 return replay
+            binding = (
+                request["binding"] if action == "fork" else request["plan"]["request"]["binding"]
+            )
+            connections = qualified_connections(
+                getattr(self.runtime, "instance_terminal_qualification", None), binding
+            )
+            observation = getattr(self.runtime, "instance_terminal_observation_scope", None)
+            scoped = check_observation_write(observation, action, binding)
+            if action == "apply":
+                edits = request["plan"]["request"]["edits"]
+                commands = request["plan"]["normalized_edits"]
+                if connections is not None:
+                    scope = self.runtime.rendering.connection_scope
+                    if scope(edits) != scope(connections):
+                        raise ValueError("layout_instance_terminal_scope_mismatch")
+                elif any(
+                    edit["kind"] == "connect_terminal" for edit in list(edits) + list(commands)
+                ):
+                    raise ValueError("layout_instance_terminal_qualification_required")
             self.runtime.check(session, identity)
             before, selectors, route = self.runtime.inspect_for_write(action, request)
             baseline = (
@@ -389,6 +599,11 @@ class LayoutWorker(object):
             )
             if before["semantic_sha256"] != baseline:
                 raise ValueError("layout_stale_baseline")
+            if scoped and (
+                before.get("instance_terminals") != observation["rows"]
+                or (action == "fork" and baseline != binding["parent_revision_sha256"])
+            ):
+                raise ValueError("layout_instance_terminal_observation_baseline")
             if action == "apply":
                 if not before["owned"] or before["read_only"]:
                     raise ValueError("layout_owned_working_revision_required")
@@ -400,10 +615,51 @@ class LayoutWorker(object):
                 sealed["plan_sha256"] = "0" * 64
                 if digest(sealed) != plan["plan_sha256"]:
                     raise ValueError("layout_plan_hash_mismatch")
-                expected = predict(before, plan["normalized_edits"])
+                requested = [e for e in plan["request"]["edits"] if e["kind"] == "orient"]
+                qualification = getattr(self.runtime, "orientation_qualification", None)
+                normalized_edits = plan["normalized_edits"]
+                orient = requested or any(c["kind"] == "orient" for c in normalized_edits)
+                if orient and (
+                    qualification is None
+                    or qualification["binding"] != before["binding"]
+                    or before["capabilities"]["rotate"] != "not_verified"
+                ):
+                    raise ValueError("layout_orientation_qualification_required")
+                if connections is not None:
+                    if plan["request"]["expected_baseline_sha256"] != baseline:
+                        raise ValueError("layout_instance_terminal_request_baseline_mismatch")
+                    expected = predict_connections(
+                        before, normalized_edits, connections, self.runtime.rendering
+                    )
+                    if snapshot_digest(expected) != plan["expected_semantic_sha256"]:
+                        raise ValueError("layout_instance_terminal_prediction_mismatch")
+                else:
+                    expected = predict(
+                        before,
+                        normalized_edits,
+                        getattr(self.runtime, "rendering", None),
+                        qualification["orientations"] if orient else None,
+                    )
+                normalized = [
+                    dict((k, c[k]) for k in ("kind", "object_id", "orientation"))
+                    for c in plan["normalized_edits"]
+                    if c["kind"] == "orient"
+                ]
+                if requested != normalized:
+                    raise ValueError("layout_orientation_request_mismatch")
+                if requested and snapshot_digest(expected) != plan["expected_semantic_sha256"]:
+                    raise ValueError("layout_orientation_prediction_mismatch")
+                if scoped and (
+                    plan["request"]["expected_baseline_sha256"] != baseline
+                    or snapshot_digest(expected) != plan["expected_semantic_sha256"]
+                ):
+                    raise ValueError("layout_instance_terminal_observation_prediction")
             else:
                 expected = copy.deepcopy(before)
                 expected.update(binding=request["binding"], owned=True, read_only=False)
+                project_orientation(
+                    expected, getattr(self.runtime, "orientation_qualification", None)
+                )
             protected = self.runtime.protected_snapshot()
             job = self._path(operation_id)
             # Occupied target/ID or active OA lock is checked before this durable
@@ -427,6 +683,24 @@ class LayoutWorker(object):
                 after = observed["snapshot"]
                 if not observed["saved"] or not observed["reopened"]:
                     raise ValueError("layout_save_reopen_not_verified")
+                if action == "fork" and connections is not None:
+                    source_rows = observed.get("source_instance_terminals")
+                    if (
+                        source_rows is None
+                        or len(source_rows) != len(connections)
+                        or any(row["present"] for row in source_rows)
+                    ):
+                        raise ValueError("layout_instance_terminal_fork_source_unverified")
+                    expected["instance_terminals"] = source_rows
+                    project_orientation(
+                        expected, getattr(self.runtime, "orientation_qualification", None)
+                    )
+                if (
+                    scoped
+                    and observed.get("pre_mutation_instance_terminals")
+                    != before["instance_terminals"]
+                ):
+                    raise ValueError("layout_instance_terminal_pre_mutation_unverified")
                 if geometry(expected) != geometry(after):
                     raise ValueError("layout_readback_geometry_mismatch")
                 for pin in after["pins"]:
@@ -559,6 +833,133 @@ def probe_libraries(registration):
     return selected
 
 
+def orientation_qualification(registration, rendering):
+    if "orientation_qualification" not in registration:
+        return None
+    value = registration["orientation_qualification"]
+    if (
+        not isinstance(value, dict)
+        or set(value) != set(("binding", "orientations"))
+        or (value["orientations"] != ["R0", "R90"])
+    ):
+        raise ValueError("layout_orientation_qualification_shape")
+    binding = value["binding"]
+    names = ("workspace_id", "design_id", "revision_id", "parent_revision_id")
+    digests = ("source_baseline_sha256", "parent_revision_sha256")
+    if not isinstance(binding, dict) or set(binding) != set(names + digests):
+        raise ValueError("layout_orientation_qualification_binding")
+    for key in names:
+        rendering.token(binding[key], rendering.LOGICAL)
+    for key in digests:
+        rendering.token(binding[key], r"^[0-9a-f]{64}$")
+    if binding["revision_id"] == binding["parent_revision_id"]:
+        raise ValueError("layout_orientation_qualification_binding")
+    matches = [r for r in registration["routes"] if r["binding"] == binding]
+    if len(matches) != 1 or matches[0]["owned"] is not True or matches[0]["read_only"] is not False:
+        raise ValueError("layout_orientation_qualification_owned_route_required")
+    return value
+
+
+def instance_terminal_qualification(registration, rendering):
+    if "instance_terminal_qualification" not in registration:
+        return None
+    value = registration["instance_terminal_qualification"]
+    if not isinstance(value, dict) or set(value) != set(("binding", "edits")):
+        raise ValueError("layout_instance_terminal_qualification_shape")
+    binding = value["binding"]
+    names = ("workspace_id", "design_id", "revision_id", "parent_revision_id")
+    digests = ("source_baseline_sha256", "parent_revision_sha256")
+    if not isinstance(binding, dict) or set(binding) != set(names + digests):
+        raise ValueError("layout_instance_terminal_qualification_binding")
+    for key in names:
+        rendering.token(binding[key], rendering.LOGICAL)
+    for key in digests:
+        rendering.token(binding[key], r"^[0-9a-f]{64}$")
+    matches = [route for route in registration["routes"] if route["binding"] == binding]
+    if (
+        len(matches) != 1
+        or matches[0]["owned"] is not True
+        or matches[0]["read_only"] is not False
+        or binding["revision_id"] == binding["parent_revision_id"]
+        or (registration.get("seed") or {}).get("revision_id") == binding["revision_id"]
+        or (registration.get("orientation_qualification") or {}).get("binding") == binding
+    ):
+        raise ValueError("layout_instance_terminal_qualification_owned_route_required")
+    return dict(binding=binding, edits=rendering.connection_scope(value["edits"]))
+
+
+def check_observation_write(scope, action, binding):
+    if scope is None:
+        return False
+    parent, child = scope["parent_binding"], scope["child_binding"]
+    if binding == parent:
+        raise ValueError("layout_instance_terminal_observation_parent_protected")
+    if action == "fork":
+        for source in (parent, child):
+            if (
+                source["workspace_id"] == binding["workspace_id"]
+                and source["design_id"] == binding["design_id"]
+                and source["revision_id"] == binding["parent_revision_id"]
+                and binding != child
+            ):
+                raise ValueError("layout_instance_terminal_observation_fork_edge")
+    return binding == child
+
+
+def instance_terminal_observation_scope(registration, rendering):
+    if "instance_terminal_observation_scope" not in registration:
+        return None
+    scope = registration["instance_terminal_observation_scope"]
+    if not isinstance(scope, dict) or set(scope) != set(
+        ("parent_binding", "child_binding", "rows")
+    ):
+        raise ValueError("layout_instance_terminal_observation_shape")
+    parent, child = scope["parent_binding"], scope["child_binding"]
+    common = ("workspace_id", "design_id", "source_baseline_sha256")
+    names = ("workspace_id", "design_id", "revision_id")
+    fields = set(common + names + ("parent_revision_id", "parent_revision_sha256"))
+    routes = []
+    for binding in (parent, child):
+        if not isinstance(binding, dict) or set(binding) != fields:
+            raise ValueError("layout_instance_terminal_observation_binding")
+        for key in names:
+            rendering.token(binding[key], rendering.LOGICAL)
+        rendering.token(binding["source_baseline_sha256"], r"^[0-9a-f]{64}$")
+        if binding["parent_revision_id"] is not None:
+            rendering.token(binding["parent_revision_id"], rendering.LOGICAL)
+            rendering.token(binding["parent_revision_sha256"], r"^[0-9a-f]{64}$")
+        elif binding["parent_revision_sha256"] is not None:
+            raise ValueError("layout_instance_terminal_observation_binding")
+        matches = [route for route in registration["routes"] if route["binding"] == binding]
+        if (
+            len(matches) != 1
+            or matches[0]["owned"] is not True
+            or matches[0]["read_only"] is not False
+            or binding["revision_id"] == binding["parent_revision_id"]
+            or (registration.get("seed") or {}).get("revision_id") == binding["revision_id"]
+        ):
+            raise ValueError("layout_instance_terminal_observation_owned_routes")
+        for field in ("orientation_qualification", "instance_terminal_qualification"):
+            if (registration.get(field) or {}).get("binding") == binding:
+                raise ValueError("layout_instance_terminal_observation_overlap")
+        routes.append(matches[0])
+    if child["parent_revision_id"] != parent["revision_id"] or any(
+        parent[key] != child[key] for key in common
+    ):
+        raise ValueError("layout_instance_terminal_observation_binding")
+    protected = set(entry["path"] for entry in registration["protected_views"])
+    target = routes[1]["path"]
+    if routes[0]["path"] not in protected or any(
+        target == path or target.startswith(path + "/") or path.startswith(target + "/")
+        for path in protected
+    ):
+        raise ValueError("layout_instance_terminal_observation_protection")
+    rendering.observation_edits(scope["rows"])
+    return dict(
+        scope, rows=sorted(scope["rows"], key=lambda row: (row["object_id"], row["terminal"]))
+    )
+
+
 class FixedLayoutRuntime(object):
     """New layout operations retain the original runtime/activation/trust gates.
 
@@ -572,9 +973,24 @@ class FixedLayoutRuntime(object):
         keys = set(
             ("schema_version", "routes", "libraries", "owned_libraries", "protected_views", "seed")
         )
-        if set(registration) not in (keys, keys | set(("probe_libraries",))):
+        optional = set(
+            (
+                "probe_libraries",
+                "orientation_qualification",
+                "instance_terminal_qualification",
+                "instance_terminal_observation_scope",
+            )
+        )
+        if not keys <= set(registration) or not set(registration) <= keys | optional:
             raise ValueError("layout_registration_shape")
         probe_libraries(registration)
+        self.orientation_qualification = orientation_qualification(registration, rendering)
+        self.instance_terminal_qualification = instance_terminal_qualification(
+            registration, rendering
+        )
+        self.instance_terminal_observation_scope = instance_terminal_observation_scope(
+            registration, rendering
+        )
         self.here, self.manifest, self.registration = here, manifest, registration
         self.native, self.native_assets, self.profile = native, native_assets, profile
         self.modules, self.rendering = modules, rendering
@@ -606,6 +1022,13 @@ class FixedLayoutRuntime(object):
         paths = [r["path"] for r in registration["routes"]]
         if len(set(paths)) != len(paths):
             raise ValueError("layout_revision_path_alias")
+        dependencies = set(lib["name"] for lib in registration["libraries"])
+        for route in registration["routes"]:
+            if (
+                "layer_policy" in route
+                and rendering.layer_policy(route["layer_policy"])[0] not in dependencies
+            ):
+                raise ValueError("layout_layer_policy_registered_technology_required")
         for owned in registration["owned_libraries"]:
             for lib in registration["libraries"]:
                 a, b = owned["path"], lib["path"]
@@ -797,6 +1220,18 @@ class FixedLayoutRuntime(object):
         self.operations.directory(job + "/work", self.accounting)
         return job
 
+    def connection_arguments(self, route):
+        scope = getattr(self, "instance_terminal_observation_scope", None)
+        if scope is not None and route["binding"] in (
+            scope["parent_binding"],
+            scope["child_binding"],
+        ):
+            return {"observations": scope["rows"]}
+        connections = qualified_connections(
+            getattr(self, "instance_terminal_qualification", None), route["binding"]
+        )
+        return {} if connections is None else {"connections": connections}
+
     def _program(self, session, script, route, job):
         work = job + "/work"
         script = self.rendering.execution_script(script)
@@ -833,17 +1268,30 @@ class FixedLayoutRuntime(object):
             raise ValueError("layout_native_error_record")
         if route is None:
             return raw
-        snapshot, selectors = parse_frame(raw, route, self.rendering)
+        args = (raw, route, self.rendering, self.orientation_qualification)
+        snapshot, selectors = parse_frame(*args, **self.connection_arguments(route))
         return raw, snapshot, selectors
 
     def inspect(self, session, request):
         route = self.route(request["binding"], request.get("registered_revision", False))
         before = self.copying.snapshot(route["path"])
         raw, snapshot, selectors = self._program(
-            session, self.rendering.inspect_script(route["cellview"]), route, self._job()
+            session,
+            self.rendering.inspect_script(
+                route["cellview"], route.get("layer_policy"), **self.connection_arguments(route)
+            ),
+            route,
+            self._job(),
         )
         if self.copying.snapshot(route["path"]) != before:
             raise ValueError("layout_read_only_view_changed")
+        scope = getattr(self, "instance_terminal_observation_scope", None)
+        if (
+            scope is not None
+            and route["binding"] == scope["parent_binding"]
+            and snapshot["semantic_sha256"] != scope["child_binding"]["parent_revision_sha256"]
+        ):
+            raise ValueError("layout_fork_parent_hash_mismatch")
         return snapshot, selectors, route
 
     def inspect_for_write(self, action, request):
@@ -866,6 +1314,8 @@ class FixedLayoutRuntime(object):
             if len(parents) != 1:
                 raise ValueError("layout_registered_parent_required")
             selected = parents[0]
+            if selected.get("layer_policy") != target.get("layer_policy"):
+                raise ValueError("layout_fork_layer_policy_mismatch")
         before, selectors, _ = self.inspect(self.session, {"binding": selected["binding"]})
         if (
             action == "fork"
@@ -887,26 +1337,42 @@ class FixedLayoutRuntime(object):
         if len(parents) != 1:
             raise ValueError("layout_registered_parent_required")
         parent_state = self.copying.snapshot(parents[0]["path"])
+        connection_args = self.connection_arguments(route)
+        options = dict(connection_args, policy=route.get("layer_policy"))
         if action == "fork":
-            script = self.rendering.write_script(
-                parents[0]["cellview"], route["cellview"], selectors, before["technology"]
+            args = (
+                parents[0]["cellview"],
+                route["cellview"],
+                selectors,
+                before["technology"],
             )
+            script = self.rendering.write_script(*args, **options)
         else:
-            script = self.rendering.apply_script(
+            args = (
                 route["cellview"],
                 selectors,
                 before["technology"],
                 request["plan"]["normalized_edits"],
             )
+            script = self.rendering.apply_script(*args, **options)
         raw, snapshot, unused = self._program(session, script, route, job)
         if self.copying.snapshot(parents[0]["path"]) != parent_state:
             raise ValueError("layout_protected_source_changed")
         marker = b"MCP_LAYOUT_SAVED_REOPENED|1"
-        return {
+        result = {
             "snapshot": snapshot,
             "saved": marker in raw.splitlines(),
             "reopened": marker in raw.splitlines(),
         }
+        if "observations" in connection_args:
+            result["pre_mutation_instance_terminals"] = parse_observations(
+                raw, before, self.rendering, connection_args["observations"], source=True
+            )
+        elif action == "fork" and "connections" in connection_args:
+            result["source_instance_terminals"] = parse_connections(
+                raw, before, self.rendering, connection_args["connections"], source=True
+            )
+        return result
 
     def operator_probe(self, session):
         libraries = probe_libraries(self.registration)
@@ -963,6 +1429,7 @@ class FixedLayoutRuntime(object):
                 route["cellview"]["cell"],
                 seed["technology"],
                 seed["layer_purpose"],
+                policy=route.get("layer_policy"),
             )
             protected = self.protected_snapshot()
             job = worker._path(operation_id)

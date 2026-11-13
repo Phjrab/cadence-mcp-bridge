@@ -13,6 +13,18 @@ from decimal import Decimal, localcontext
 NAME = r"^[A-Za-z][A-Za-z0-9_#-]{0,63}$"
 LOGICAL = r"^[a-z][a-z0-9-]{0,63}$"
 ORIENTATIONS = ("R0", "R90", "R180", "R270", "MX", "MY", "MXR90", "MYR90")
+# Mathematical candidate convention, matching layout_transforms. Native compound
+# mirror semantics remain unqualified; this table does not advertise capability.
+ORIENTATION_MATRICES = {
+    "R0": (1, 0, 0, 1),
+    "R90": (0, -1, 1, 0),
+    "R180": (-1, 0, 0, -1),
+    "R270": (0, 1, -1, 0),
+    "MX": (1, 0, 0, -1),
+    "MY": (-1, 0, 0, 1),
+    "MXR90": (0, 1, 1, 0),
+    "MYR90": (0, -1, -1, 0),
+}
 
 
 def token(value, pattern=NAME):
@@ -73,6 +85,107 @@ def binding(value):
     return " ".join(quote(value[key]) for key in ("library", "cell", "view"))
 
 
+def layer_policy(value):
+    if not isinstance(value, dict) or set(value) != set(("technology_library", "layer_purposes")):
+        raise ValueError("layout_layer_policy_shape")
+    library = token(value["technology_library"])
+    pairs = value["layer_purposes"]
+    if not isinstance(pairs, (list, tuple)) or len(pairs) > 32:
+        raise ValueError("layout_layer_policy_bounds")
+    result = []
+    for pair in pairs:
+        if not isinstance(pair, dict) or set(pair) != set(("layer", "purpose")):
+            raise ValueError("layout_layer_policy_pair")
+        result.append((token(pair["layer"]), token(pair["purpose"])))
+    if result != sorted(set(result)):
+        raise ValueError("layout_layer_policy_order")
+    return library, result
+
+
+def layer_policy_call(policy, cellview="cv", collect=False):
+    if policy is None:
+        return "mcpLayoutCollect(%s)" % cellview if collect else ""
+    library, pairs = layer_policy(policy)
+    layers = (
+        "list(%s)" % " ".join("list(%s %s)" % (quote(a), quote(b)) for a, b in pairs)
+        if pairs
+        else "nil"
+    )
+    procedure = "mcpLayoutCollectPolicy" if collect else "mcpLayoutCheckLayerPolicy"
+    return "%s(%s %s %s)" % (procedure, cellview, quote(library), layers)
+
+
+def grid_point(value, grid):
+    if not isinstance(value, dict) or set(value) != set(("x", "y")):
+        raise ValueError("layout_orientation_point")
+    for axis in ("x", "y"):
+        if integer(value[axis]) % grid:
+            raise ValueError("layout_orientation_off_grid")
+
+
+def grid_bbox(value, grid):
+    if not isinstance(value, dict) or set(value) != set(("lower_left", "upper_right")):
+        raise ValueError("layout_orientation_bbox")
+    low, high = value["lower_left"], value["upper_right"]
+    grid_point(low, grid)
+    grid_point(high, grid)
+    if low["x"] >= high["x"] or low["y"] >= high["y"]:
+        raise ValueError("layout_positive_area_required")
+
+
+def orientation_command(edit, technology):
+    if (
+        not isinstance(edit, dict)
+        or set(edit)
+        != set(("kind", "object_id", "before_sha256", "orientation", "origin_dbu", "bbox_dbu"))
+        or edit["kind"] != "orient"
+    ):
+        raise ValueError("layout_orientation_command_shape")
+    token(edit["object_id"], LOGICAL)
+    token(edit["before_sha256"], r"^[0-9a-f]{64}$")
+    target = token(edit["orientation"])
+    if target not in ORIENTATIONS or target not in technology["supported_orientations"]:
+        raise ValueError("layout_orientation_not_registered")
+    grid = integer(technology["manufacturing_grid_dbu"])
+    if grid <= 0:
+        raise ValueError("layout_edit_bounds")
+    grid_point(edit["origin_dbu"], grid)
+    grid_bbox(edit["bbox_dbu"], grid)
+
+
+def oriented_bbox(obj, target, technology):
+    """Independent Python-2.6 exact new * inverse(old) bbox prediction."""
+    old = obj["orientation"]
+    supported = technology["supported_orientations"]
+    if old not in ORIENTATIONS or old not in supported or target not in supported:
+        raise ValueError("layout_orientation_not_registered")
+    if target not in ORIENTATIONS or old == target:
+        raise ValueError("layout_orientation_no_change")
+    grid = integer(technology["manufacturing_grid_dbu"])
+    if grid <= 0:
+        raise ValueError("layout_edit_bounds")
+    origin, box = obj["origin_dbu"], obj["bbox_dbu"]
+    grid_point(origin, grid)
+    grid_bbox(box, grid)
+    a, b, c, d = ORIENTATION_MATRICES[target]
+    e, f, g, h = ORIENTATION_MATRICES[old]
+    # Orthogonal inverse is the transpose. Compose before applying, keeping
+    # unbounded integer intermediates; only final DBU coordinates are bounded.
+    matrix = (a * e + b * f, a * g + b * h, c * e + d * f, c * g + d * h)
+    a, b, c, d = matrix
+    points = []
+    for x in (box["lower_left"]["x"], box["upper_right"]["x"]):
+        for y in (box["lower_left"]["y"], box["upper_right"]["y"]):
+            dx, dy = x - origin["x"], y - origin["y"]
+            points.append({"x": origin["x"] + a * dx + b * dy, "y": origin["y"] + c * dx + d * dy})
+    result = {
+        "lower_left": dict((axis, min(p[axis] for p in points)) for axis in ("x", "y")),
+        "upper_right": dict((axis, max(p[axis] for p in points)) for axis in ("x", "y")),
+    }
+    grid_bbox(result, grid)
+    return result
+
+
 PRELUDE = r"""
 procedure(mcpLayoutFail(reason)
   printf("MCP_LAYOUT_ERROR|%s\n" reason)
@@ -89,7 +202,17 @@ procedure(mcpLayoutBox(b dbu)
     round(yCoord(car(b))*dbu) round(xCoord(cadr(b))*dbu)
     round(yCoord(cadr(b))*dbu))
 )
-procedure(mcpLayoutCollect(cv)
+procedure(mcpLayoutCheckLayerPolicy(cv library lpps)
+  let((lib tf)
+    lib=ddGetObj(library)
+    tf=techGetTechFile(cv)
+    unless(lib && tf && eq(tf techGetTechFile(lib))
+      mcpLayoutFail("layer_policy_technology_mismatch"))
+    foreach(lpp lpps
+      unless(techGetLP(tf lpp) mcpLayoutFail("layer_policy_pair_missing")))
+  )
+)
+procedure(mcpLayoutCollectPolicy(cv library lpps)
   let((tf dbu grid count)
     tf=techGetTechFile(cv)
     unless(tf mcpLayoutFail("technology_missing"))
@@ -100,9 +223,11 @@ procedure(mcpLayoutCollect(cv)
     unless(abs(grid*dbu-round(grid*dbu))<0.0000001
       mcpLayoutFail("manufacturing_grid_not_integral_dbu"))
     printf("MCP_LAYOUT_FRAME|1\nTECH|%d|%d\n" dbu round(grid*dbu))
-    foreach(lp cv~>lpps
-      printf("LPP|%s|%s\n" lp~>layerName lp~>purpose)
-    )
+    if(library then
+      mcpLayoutCheckLayerPolicy(cv library lpps)
+      foreach(lpp lpps printf("LPP|%s|%s\n" car(lpp) cadr(lpp)))
+    else
+      foreach(lp cv~>lpps printf("LPP|%s|%s\n" lp~>layerName lp~>purpose)))
     count=0
     foreach(inst cv~>instances
       count=count+1
@@ -110,7 +235,7 @@ procedure(mcpLayoutCollect(cv)
       printf("I|%s|%s|%s|%s|%s|%s|%d|%d|%s"
         mcpLayoutId(inst) inst~>name inst~>libName inst~>cellName
         inst~>viewName inst~>orient round(xCoord(inst~>xy)*dbu)
-        round(yCoord(inst~>xy)*dbu) if(inst~>master~>isParamCell then "1" else "0"))
+        round(yCoord(inst~>xy)*dbu) if(inst~>master~>superMaster then "1" else "0"))
       mcpLayoutBox(inst~>bBox dbu)
       printf("\n")
     )
@@ -144,14 +269,283 @@ procedure(mcpLayoutCollect(cv)
     printf("END_LAYOUT_FRAME\n")
   )
 )
+procedure(mcpLayoutCollect(cv)
+  mcpLayoutCollectPolicy(cv nil nil)
+)
+"""
+
+# Kept out of legacy scripts. Absolute instance attribute assignment is a local
+# native candidate, not an installed/qualified Cadence API claim. No parameter
+# callbacks or master writes are permitted; unusual property types fail closed.
+ORIENT_PRELUDE = r"""
+procedure(mcpLayoutOrientState(inst)
+  let((props)
+    when(inst~>master~>superMaster || inst~>master~>isParamCell
+      mcpLayoutFail("orientation_pcell_unsupported"))
+    props=nil
+    foreach(p inst~>prop
+      when(length(props)>=256 mcpLayoutFail("orientation_property_bound"))
+      unless(member(p~>valueType list("string" "int" "float" "boolean"))
+        mcpLayoutFail("orientation_property_type_unsupported"))
+      props=cons(list(p~>name p~>valueType p~>value) props)
+    )
+    list(inst~>name inst~>libName inst~>cellName inst~>viewName
+      list(xCoord(inst~>xy) yCoord(inst~>xy))
+      sort(props lambda((a b) alphalessp(car(a) car(b)))))
+  )
+)
+procedure(mcpLayoutOrientBox(inst dbu)
+  let((b)
+    b=inst~>bBox
+    list(mcpLayoutOrientPoint(car(b) dbu) mcpLayoutOrientPoint(cadr(b) dbu))
+  )
+)
+procedure(mcpLayoutOrientPoint(p dbu)
+  list(round(xCoord(p)*dbu) round(yCoord(p)*dbu))
+)
+procedure(mcpLayoutOrientVerify(cv checks dbu)
+  let((matches inst)
+    foreach(check checks
+      matches=setof(o cv~>instances equal(mcpLayoutId(o) car(check)))
+      unless(length(matches)==1 mcpLayoutFail("orientation_identity_not_unique"))
+      inst=car(matches)
+      unless(equal(mcpLayoutOrientState(inst) cadr(check)) &&
+        equal(inst~>orient caddr(check)) &&
+        equal(mcpLayoutOrientBox(inst dbu) cadddr(check))
+        mcpLayoutFail("orientation_preservation_or_bbox_mismatch"))
+    )
+  )
+)
 """
 
 
-def inspect_script(cellview):
+def has_orientation(edits):
+    return edits is not None and any(e["kind"] == "orient" for e in edits)
+
+
+CONNECTION_MASTERS = {
+    "m-7ce8be0bddec903812d3b15d": ("gpdk090", "nmos1v", "layout"),
+    "m-3a15b6d5a3b240dc243390dc": ("gpdk090", "pmos1v", "layout"),
+}
+CONNECTION_TERMINALS = ("B", "D", "G", "S")
+
+
+def connection_scope(edits):
+    """Only the two observed gpdk090 master types and their eight exact keys."""
+    fields = set(("kind", "object_id", "expected_master_id", "terminal", "pin_object_id"))
+    if not isinstance(edits, (tuple, list)) or len(edits) != 8:
+        raise ValueError("layout_instance_terminal_scope_shape")
+    keys, devices = set(), {}
+    for edit in edits:
+        if not isinstance(edit, dict) or set(edit) != fields or edit["kind"] != "connect_terminal":
+            raise ValueError("layout_instance_terminal_scope_shape")
+        object_id = token(edit["object_id"], LOGICAL)
+        master_id = token(edit["expected_master_id"], LOGICAL)
+        terminal = token(edit["terminal"])
+        token(edit["pin_object_id"], LOGICAL)
+        if terminal not in CONNECTION_TERMINALS or (object_id, terminal) in keys:
+            raise ValueError("layout_instance_terminal_scope_key")
+        if devices.setdefault(object_id, master_id) != master_id:
+            raise ValueError("layout_instance_terminal_scope_master")
+        keys.add((object_id, terminal))
+    if len(devices) != 2 or set(devices.values()) != set(CONNECTION_MASTERS):
+        raise ValueError("layout_instance_terminal_scope_master")
+    return sorted(edits, key=lambda edit: (edit["object_id"], edit["terminal"]))
+
+
+CONNECTION_OBJECTS = r"""
+procedure(mcpLayoutConnectionObjects(cv spec)
+  let((instances inst master terms term seen count top pin fig net anchorCount figureCount)
+    unless(null(cv~>mosaics) && length(cv~>instances)==2 && length(cv~>terminals)<=1024
+      mcpLayoutFail("instance_terminal_inventory"))
+    instances=setof(o cv~>instances equal(mcpLayoutId(o) nth(0 spec)))
+    unless(length(instances)==1 mcpLayoutFail("instance_terminal_instance_identity"))
+    inst=car(instances)
+    master=inst~>master
+    unless(master && master~>superMaster &&
+           equal(list(master~>libName master~>cellName master~>viewName) nth(1 spec))
+      mcpLayoutFail("instance_terminal_master_identity"))
+    terms=setof(o master~>terminals equal(o~>name nth(2 spec)))
+    unless(length(terms)==1 mcpLayoutFail("instance_terminal_master_term_identity"))
+    term=car(terms)
+    seen=nil
+    count=0
+    foreach(it inst~>instTerms
+      count=count+1
+      unless(count<=4 && memq(it~>term master~>terminals) &&
+             member(it~>term~>name list("B" "D" "G" "S")) && null(memq(it~>term seen))
+        mcpLayoutFail("instance_terminal_ambiguous_inventory"))
+      seen=cons(it~>term seen))
+    anchorCount=0
+    figureCount=0
+    net=nil
+    foreach(top cv~>terminals
+      foreach(pin top~>pins
+        foreach(fig pin~>figs
+          figureCount=figureCount+1
+          when(figureCount>1024 mcpLayoutFail("instance_terminal_pin_inventory"))
+          when(equal(mcpLayoutId(fig) nth(3 spec))
+            anchorCount=anchorCount+1
+            unless(top~>net && eq(pin~>net top~>net) &&
+                   eq(dbFindTermByName(cv top~>name) top) &&
+                   eq(dbFindNetByName(cv top~>net~>name) top~>net) &&
+                   (null(nth(4 spec)) || equal(top~>net~>name nth(4 spec))) &&
+                   (null(nth(5 spec)) || equal(top~>name nth(5 spec)))
+              mcpLayoutFail("instance_terminal_pin_net_identity"))
+            net=top~>net))))
+    unless(anchorCount==1 mcpLayoutFail("instance_terminal_pin_identity"))
+    list(inst term net car(setof(it inst~>instTerms eq(it~>term term))))))
+"""
+
+CONNECTION_WRITES = r"""
+procedure(mcpLayoutConnectionPreflight(cv specs)
+  let((rows row)
+    rows=nil
+    foreach(spec specs
+      row=mcpLayoutConnectionObjects(cv spec)
+      when(nth(3 row) mcpLayoutFail("instance_terminal_already_exists"))
+      rows=cons(row rows))
+    reverse(rows)))
+
+procedure(mcpLayoutConnectTerminals(rows)
+  let((inst it)
+    foreach(row rows
+      inst=car(row)
+      it=dbCreateConn(nth(2 row) inst cadr(row))
+      unless(it && eq(it~>term cadr(row)) && eq(it~>net nth(2 row)) &&
+             memq(it inst~>instTerms)
+        mcpLayoutFail("instance_terminal_create_failed")))))
+"""
+
+CONNECTION_COLLECTOR = r"""
+procedure(mcpLayoutCollectConnections(cv specs source)
+  let((row it net)
+    printf("%s\n" if(source then "MCP_LAYOUT_SOURCE_CONNECTIONS|1" else "MCP_LAYOUT_CONNECTIONS|1"))
+    foreach(spec specs
+      row=mcpLayoutConnectionObjects(cv spec)
+      it=nth(3 row)
+      CONNECTION_STATE_CHECK
+      net=if(it then it~>net else nil)
+      printf("C|%s|%s|%s|%s|%s\n" car(spec) nth(2 spec)
+        if(it then "1" else "0") if(net then net~>name else "-")
+        if(net && eq(net nth(2 row)) then "1" else "0")))
+    printf("%s\n" if(source then "END_LAYOUT_SOURCE_CONNECTIONS" else "END_LAYOUT_CONNECTIONS"))))
+"""
+
+
+CONNECTION_PRELUDE = (
+    CONNECTION_OBJECTS
+    + CONNECTION_WRITES
+    + CONNECTION_COLLECTOR.replace(
+        "CONNECTION_STATE_CHECK",
+        'when(source && it mcpLayoutFail("instance_terminal_fork_source_present"))',
+    )
+)
+OBSERVATION_PRELUDE = CONNECTION_OBJECTS + CONNECTION_COLLECTOR.replace(
+    "CONNECTION_STATE_CHECK",
+    'unless(it && eq(it~>net nth(2 row)) mcpLayoutFail("instance_terminal_observation_changed"))',
+)
+
+
+def observation_edits(rows):
+    fields = set(("object_id", "master_id", "terminal", "present", "net_id", "pin_object_id"))
+    if not isinstance(rows, (tuple, list)) or len(rows) != 8:
+        raise ValueError("layout_instance_terminal_observation_shape")
+    edits = []
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != fields or row["present"] is not True:
+            raise ValueError("layout_instance_terminal_observation_shape")
+        token(row["net_id"], LOGICAL)
+        edits.append(
+            dict(
+                kind="connect_terminal",
+                object_id=row["object_id"],
+                expected_master_id=row["master_id"],
+                terminal=row["terminal"],
+                pin_object_id=row["pin_object_id"],
+            )
+        )
+    return connection_scope(edits)
+
+
+def connection_command(command):
+    fields = set(("kind", "object_id", "expected_master_id", "terminal", "pin_object_id"))
+    if not isinstance(command, dict) or set(command) != fields | set(
+        ("before_sha256", "net_id", "terminal_id")
+    ):
+        raise ValueError("layout_instance_terminal_command_shape")
+    token(command["before_sha256"], r"^[0-9a-f]{64}$")
+    token(command["net_id"], LOGICAL)
+    token(command["terminal_id"], LOGICAL)
+    return dict((key, command[key]) for key in fields)
+
+
+def connection_specs(edits, commands=None):
+    """Render authenticated scope and, for writes, the resolved net/term names."""
+    scope = connection_scope(edits)
+    names = {}
+    if commands is not None:
+        if connection_scope([connection_command(command) for command in commands]) != scope:
+            raise ValueError("layout_instance_terminal_commands")
+        for command in commands:
+            names[(command["object_id"], command["terminal"])] = (
+                quote(command["net_id"], True),
+                quote(command["terminal_id"], True),
+            )
+    return _connection_specs(scope, names)
+
+
+def observation_specs(rows):
+    scope = observation_edits(rows)
+    names = dict(
+        ((row["object_id"], row["terminal"]), (quote(row["net_id"], True), "nil")) for row in rows
+    )
+    return _connection_specs(scope, names)
+
+
+def _connection_specs(scope, names):
+    rows = []
+    for edit in scope:
+        object_id, terminal = edit["object_id"], edit["terminal"]
+        master = "list(%s)" % " ".join(
+            quote(name) for name in CONNECTION_MASTERS[edit["expected_master_id"]]
+        )
+        net, top = names.get((object_id, terminal), ("nil", "nil"))
+        rows.append(
+            "list(%s %s %s %s %s %s)"
+            % (
+                quote(object_id, True),
+                master,
+                quote(terminal),
+                quote(edit["pin_object_id"], True),
+                net,
+                top,
+            )
+        )
+    return "list(%s)" % " ".join(rows)
+
+
+def inspect_script(cellview, policy=None, connections=None, observations=None):
+    if connections is not None or observations is not None:
+        if observations is not None:
+            specs, prelude = observation_specs(observations), OBSERVATION_PRELUDE
+        else:
+            specs, prelude = connection_specs(connections), CONNECTION_PRELUDE
+        return "\n".join(
+            [
+                PRELUDE + prelude,
+                'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % binding(cellview),
+                'unless(cv mcpLayoutFail("source_open_failed"))',
+                layer_policy_call(policy, collect=True),
+                "mcpLayoutCollectConnections(cv %s nil)" % specs,
+                'unless(dbClose(cv) mcpLayoutFail("close_failed"))',
+                "exit()\n",
+            ]
+        ).encode("ascii")
     return (
         PRELUDE + '\ncv=dbOpenCellViewByType(%s "maskLayout" "r")\n'
         'unless(cv mcpLayoutFail("source_open_failed"))\n'
-        "mcpLayoutCollect(cv)\ndbClose(cv)\nexit()\n" % binding(cellview)
+        "%s\ndbClose(cv)\nexit()\n" % (binding(cellview), layer_policy_call(policy, collect=True))
     ).encode("ascii")
 
 
@@ -187,15 +581,38 @@ def tags_script(selectors, dbu):
     return "\n".join(lines) + "\n"
 
 
-def edits_script(edits, technology):
+def edits_script(edits, technology, policy=None):
     dbu = technology["dbu_per_um"]
     allowed = set((p["layer"], p["purpose"]) for p in technology["allowed_layer_purposes"])
+    if policy is not None:
+        allowed.intersection_update(layer_policy(policy)[1])
     grid = integer(technology["manufacturing_grid_dbu"])
     if grid <= 0 or not isinstance(edits, (tuple, list)) or not 1 <= len(edits) <= 128:
         raise ValueError("layout_edit_bounds")
-    lines = []
+    lines = ["orientChecks=nil"] if has_orientation(edits) else []
     for edit in edits:
         object_id = quote(edit["object_id"], True)
+        if edit["kind"] == "orient":
+            orientation_command(edit, technology)
+            # Render only integers; check units before constructing the SKILL.
+            coordinate(0, dbu)
+            origin = edit["origin_dbu"]
+            low, high = edit["bbox_dbu"]["lower_left"], edit["bbox_dbu"]["upper_right"]
+            box = "list(list(%d %d) list(%d %d))" % (low["x"], low["y"], high["x"], high["y"])
+            lines.extend(
+                [
+                    "matches=setof(o cv~>instances equal(mcpLayoutId(o) %s))" % object_id,
+                    'unless(length(matches)==1 mcpLayoutFail("orientation_identity_not_unique"))',
+                    "fig=car(matches)",
+                    "unless(equal(mcpLayoutOrientPoint(fig~>xy %d) list(%d %d)) "
+                    'mcpLayoutFail("orientation_origin_changed"))'
+                    % (dbu, origin["x"], origin["y"]),
+                    "orientChecks=cons(list(%s mcpLayoutOrientState(fig) %s %s) orientChecks)"
+                    % (object_id, quote(edit["orientation"]), box),
+                    "fig~>orient=%s" % quote(edit["orientation"]),
+                ]
+            )
+            continue
         if edit["kind"] == "move":
             dx, dy = integer(edit["dx_dbu"]), integer(edit["dy_dbu"])
             if dx % grid or dy % grid:
@@ -258,30 +675,62 @@ def terminals_preflight(edits):
     return "\n".join(lines) + "\n"
 
 
-def write_script(source, target, selectors, technology, edits=None):
+def write_script(
+    source,
+    target,
+    selectors,
+    technology,
+    edits=None,
+    policy=None,
+    connections=None,
+    observations=None,
+):
     if source == target:
         raise ValueError("layout_distinct_cellview_required")
+    if has_orientation(edits):
+        raise ValueError("layout_orientation_requires_owned_apply")
     source_text, target_text = binding(source), binding(target)
+    specs, prelude = None, PRELUDE
+    if observations is not None:
+        specs, prelude = observation_specs(observations), PRELUDE + OBSERVATION_PRELUDE
+    elif connections is not None:
+        specs, prelude = connection_specs(connections), PRELUDE + CONNECTION_PRELUDE
+    if specs is not None and edits is not None:
+        raise ValueError("layout_instance_terminal_fork_edits")
     lines = [
-        PRELUDE,
+        prelude,
         'when(ddGetObj(%s) mcpLayoutFail("destination_already_exists"))' % target_text,
         'src=dbOpenCellViewByType(%s "maskLayout" "r")' % source_text,
         'unless(src mcpLayoutFail("source_open_failed"))',
-        # Copy never overwrites. Source stays read-only for the whole session.
-        "cv=dbCopyCellView(src %s nil nil nil)" % target_text,
-        'unless(cv mcpLayoutFail("copy_failed"))',
-        "dbClose(src)",
-        tags_script(selectors, technology["dbu_per_um"]),
+        layer_policy_call(policy, "src"),
     ]
+    if specs is not None:
+        lines.append("mcpLayoutCollectConnections(src %s t)" % specs)
+    lines.extend(
+        [
+            # Copy never overwrites. Source stays read-only for the whole session.
+            "cv=dbCopyCellView(src %s nil nil nil)" % target_text,
+            'unless(cv mcpLayoutFail("copy_failed"))',
+            "dbClose(src)",
+            layer_policy_call(policy),
+            tags_script(selectors, technology["dbu_per_um"]),
+        ]
+    )
     if edits is not None:
-        lines.append(edits_script(edits, technology))
+        lines.append(edits_script(edits, technology, policy))
     lines.extend(
         [
             'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
             "dbClose(cv)",
             'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
             'unless(cv mcpLayoutFail("reopen_failed"))',
-            "mcpLayoutCollect(cv)",
+            layer_policy_call(policy, collect=True),
+        ]
+    )
+    if specs is not None:
+        lines.append("mcpLayoutCollectConnections(cv %s nil)" % specs)
+    lines.extend(
+        [
             "dbClose(cv)",
             'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
             "exit()",
@@ -290,25 +739,74 @@ def write_script(source, target, selectors, technology, edits=None):
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
-def apply_script(target, selectors, technology, edits):
+def apply_script(
+    target, selectors, technology, edits, policy=None, connections=None, observations=None
+):
     """One exact-baseline edit of a registered, freshly forked owned revision."""
     target_text = binding(target)
-    lines = [
-        PRELUDE,
-        'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
-        'unless(cv mcpLayoutFail("working_revision_open_failed"))',
-        terminals_preflight(edits),
-        tags_script(selectors, technology["dbu_per_um"]),
-        edits_script(edits, technology),
-        'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
-        "dbClose(cv)",
-        'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
-        'unless(cv mcpLayoutFail("reopen_failed"))',
-        "mcpLayoutCollect(cv)",
-        "dbClose(cv)",
-        'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
-        "exit()",
-    ]
+    if connections is not None:
+        if observations is not None:
+            raise ValueError("layout_instance_terminal_observation_overlap")
+        specs = connection_specs(connections, edits)
+        return "\n".join(
+            [
+                PRELUDE + CONNECTION_PRELUDE,
+                'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
+                'unless(cv mcpLayoutFail("working_revision_open_failed"))',
+                layer_policy_call(policy),
+                "connectionSpecs=%s" % specs,
+                "connectionRows=mcpLayoutConnectionPreflight(cv connectionSpecs)",
+                "mcpLayoutConnectTerminals(connectionRows)",
+                'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
+                'unless(dbClose(cv) mcpLayoutFail("close_failed"))',
+                'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
+                'unless(cv mcpLayoutFail("reopen_failed"))',
+                layer_policy_call(policy, collect=True),
+                "mcpLayoutCollectConnections(cv connectionSpecs nil)",
+                'unless(dbClose(cv) mcpLayoutFail("close_failed"))',
+                'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
+                "exit()\n",
+            ]
+        ).encode("ascii")
+    observation_prelude, before_observation, after_observation = "", [], []
+    if observations is not None:
+        specs = observation_specs(observations)
+        observation_prelude = OBSERVATION_PRELUDE
+        before_observation = ["mcpLayoutCollectConnections(cv %s t)" % specs]
+        after_observation = ["mcpLayoutCollectConnections(cv %s nil)" % specs]
+    orient = has_orientation(edits)
+    verify = (
+        ["mcpLayoutOrientVerify(cv orientChecks %d)" % technology["dbu_per_um"]] if orient else []
+    )
+    lines = (
+        [
+            PRELUDE + (ORIENT_PRELUDE if orient else "") + observation_prelude,
+            'cv=dbOpenCellViewByType(%s "maskLayout" "a")' % target_text,
+            'unless(cv mcpLayoutFail("working_revision_open_failed"))',
+            layer_policy_call(policy),
+            terminals_preflight(edits),
+        ]
+        + before_observation
+        + [
+            tags_script(selectors, technology["dbu_per_um"]),
+            edits_script(edits, technology, policy),
+        ]
+        + verify
+        + [
+            'unless(dbSave(cv) mcpLayoutFail("save_failed"))',
+            'unless(dbClose(cv) mcpLayoutFail("close_failed"))' if orient else "dbClose(cv)",
+            'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % target_text,
+            'unless(cv mcpLayoutFail("reopen_failed"))',
+        ]
+        + verify
+        + [layer_policy_call(policy, collect=True)]
+        + after_observation
+        + [
+            "dbClose(cv)",
+            'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
+            "exit()",
+        ]
+    )
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
@@ -366,7 +864,9 @@ def probe_script(libraries, candidates):
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
-def seed_script(library, library_path, technology_library, master_cell, seed_cell, technology, lpp):
+def seed_script(
+    library, library_path, technology_library, master_cell, seed_cell, technology, lpp, policy=None
+):
     """Create a NEW owned basic master+instance seed; no vendor PCell inference."""
     if not re.match(r"^/[A-Za-z0-9_./-]{1,511}$", library_path) or any(
         p in ("", ".", "..") for p in library_path[1:].split("/")
@@ -377,6 +877,10 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
     allowed = [(p["layer"], p["purpose"]) for p in technology["allowed_layer_purposes"]]
     if (lpp["layer"], lpp["purpose"]) not in allowed:
         raise ValueError("layout_seed_observed_lpp_required")
+    if policy is not None:
+        policy_library, pairs = layer_policy(policy)
+        if policy_library != technology_library or (lpp["layer"], lpp["purpose"]) not in pairs:
+            raise ValueError("layout_seed_layer_policy_mismatch")
     dbu, grid = technology["dbu_per_um"], integer(technology["manufacturing_grid_dbu"])
     if grid <= 0:
         raise ValueError("layout_seed_observed_grid_required")
@@ -396,6 +900,7 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         "abs(techGetMfgGridResolution(tf)*%d-%d)<0.0000001 && "
         'techGetLP(tf list(%s %s)) mcpLayoutFail("seed_technology_observation_changed"))'
         % (dbu, dbu, grid, quote(lpp["layer"]), quote(lpp["purpose"])),
+        layer_policy_call(policy, "lib"),
         'master=dbOpenCellViewByType(%s "maskLayout" "w")' % binding(master),
         'unless(master mcpLayoutFail("seed_master_create_failed"))',
         "fig=dbCreateRect(master list(%s %s) %s)"
@@ -415,7 +920,7 @@ def seed_script(library, library_path, technology_library, master_cell, seed_cel
         'cv=dbOpenCellViewByType(%s "maskLayout" "r")' % binding(seed),
         'unless(cv mcpLayoutFail("seed_reopen_failed"))',
         'unless(cv~>DBUPerUU==%d mcpLayoutFail("seed_dbu_mismatch"))' % dbu,
-        "mcpLayoutCollect(cv)",
+        layer_policy_call(policy, collect=True),
         "dbClose(cv)",
         'printf("MCP_LAYOUT_SAVED_REOPENED|1\\n")',
         "exit()",
@@ -428,9 +933,13 @@ def execution_script(script):
     text = script.decode("ascii")
     if not text.startswith(PRELUDE) or not text.rstrip().endswith("exit()"):
         raise ValueError("layout_fixed_program_shape")
-    body = text[len(PRELUDE) :].rstrip()[: -len("exit()")]
+    prelude = PRELUDE
+    for extension in (ORIENT_PRELUDE, CONNECTION_PRELUDE, OBSERVATION_PRELUDE):
+        if text.startswith(prelude + extension):
+            prelude += extension
+    body = text[len(prelude) :].rstrip()[: -len("exit()")]
     return (
-        PRELUDE + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
+        prelude + "\nprocedure(mcpLayoutRun()\n" + body + "\nt)\n"
         "let((result) result=errset(mcpLayoutRun() t) "
         'if(result then exit(0) else mcpLayoutFail("skill_evaluation_failed")))\n'
     ).encode("ascii")

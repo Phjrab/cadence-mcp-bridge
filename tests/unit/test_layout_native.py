@@ -3,19 +3,36 @@
 import hashlib
 import json
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
+from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_snapshot, reseal
-from test_layout_worker import request_for
+from test_layout_worker import (
+    connection_fixture,
+    observation_fixture,
+    observed_geometry_request,
+    orientation_request,
+    request_for,
+)
 
+from cadence_mcp_bridge import _layout_rendering as rendering
+from cadence_mcp_bridge import _layout_worker as worker
 from cadence_mcp_bridge import layout_native as native
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError, RemoteFailureError
-from cadence_mcp_bridge.layout_engine import predict_snapshot
-from cadence_mcp_bridge.layout_models import LayoutApplyRequest
+from cadence_mcp_bridge.layout_engine import build_plan, predict_snapshot
+from cadence_mcp_bridge.layout_models import (
+    LayoutApplyRequest,
+    LayoutForkRequest,
+    LayoutInstanceTerminalQualification,
+    LayoutOrientationQualification,
+    LayoutPlanRequest,
+    LayoutSnapshot,
+)
 
 
-def provider():
+def provider(qualification=None, *, connections=None, observation=None):
     registration = native.LayoutProviderBinding(
         schema_version=1,
         resource_domain_sha256="a" * 64,
@@ -24,6 +41,9 @@ def provider():
         identity_manifest_sha256="d" * 64,
         layout_manifest_sha256="e" * 64,
         worker_sha256="f" * 64,
+        orientation_qualification=qualification,
+        instance_terminal_qualification=connections,
+        instance_terminal_observation_scope=observation,
     )
     context = SimpleNamespace(
         resource_domain_sha256="a" * 64,
@@ -40,9 +60,11 @@ def test_unconfigured_factory_has_precise_setup_error_and_no_remote_contact():
 
 
 @pytest.mark.asyncio
-async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch):
-    before = fixture_snapshot()
-    request = LayoutApplyRequest.model_validate_json(json.dumps(request_for(before)))
+@pytest.mark.parametrize("orientation", [False, True])
+async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch, orientation):
+    before = _orient_snapshot() if orientation else fixture_snapshot()
+    payload = orientation_request(before) if orientation else request_for(before)
+    request = LayoutApplyRequest.model_validate_json(json.dumps(payload))
     expected, _ = predict_snapshot(before, request.plan.request)
     after = reseal(
         expected,
@@ -61,7 +83,12 @@ async def test_replayed_receipt_is_verified_without_current_inspect(monkeypatch)
         "reopened": True,
         "source_unchanged": True,
     }
-    facade, calls = provider(), []
+    qualification = (
+        LayoutOrientationQualification(binding=before.binding, orientations=("R0", "R90"))
+        if orientation
+        else None
+    )
+    facade, calls = provider(qualification), []
 
     async def invoke(action, payload):
         calls.append(action)
@@ -93,6 +120,73 @@ async def test_unknown_receipt_never_inspects_or_reexecutes(monkeypatch):
 
     monkeypatch.setattr(facade, "_invoke", invoke)
     assert (await facade.apply(request)).status == "OUTCOME_UNKNOWN"
+
+
+@pytest.mark.asyncio
+async def test_qualified_factory_dispatch_and_complete_connection_receipt(monkeypatch):
+    _, scope, _, observed, _ = connection_fixture()
+    before = LayoutSnapshot.model_validate_json(json.dumps(observed))
+    qualification = LayoutInstanceTerminalQualification.model_validate_json(
+        json.dumps(dict(binding=observed["binding"], edits=scope))
+    )
+    plan_request = LayoutPlanRequest(
+        binding=before.binding,
+        operation_id=str(uuid4()),
+        expected_baseline_sha256=before.semantic_sha256,
+        edits=qualification.edits,
+    )
+    plan = build_plan(before, plan_request, instance_terminal_qualification=qualification)
+    request = LayoutApplyRequest(plan=plan, expected_plan_sha256=plan.plan_sha256)
+    native_after = worker.predict_connections(
+        observed,
+        [edit.model_dump(mode="json") for edit in plan.normalized_edits],
+        scope,
+        rendering,
+    )
+    worker.project_orientation(native_after, None)
+    assert native_after["semantic_sha256"] == plan.expected_semantic_sha256
+    after = LayoutSnapshot.model_validate_json(json.dumps(native_after))
+    receipt = dict(
+        operation_id=plan_request.operation_id,
+        state="SUCCEEDED",
+        before=observed,
+        snapshot=native_after,
+        executed=False,
+        replayed=True,
+        saved=True,
+        reopened=True,
+        source_unchanged=True,
+    )
+
+    registered = provider(connections=qualification)
+    assert "instance_terminal_qualification" not in provider().registration.model_dump(mode="json")
+    raw = registered.registration.model_dump_json().encode("ascii")
+    registered.context.binding.layout_provider_binding = "synthetic-provider.json"
+    registered.context.binding.layout_provider_sha256 = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(native, "select_context", lambda settings: registered.context)
+    monkeypatch.setattr(native, "bounded_document", lambda path: raw)
+    service = native.create_layout_service(BridgeConfig())
+    calls = []
+
+    async def invoke(action, payload):
+        calls.append(action)
+        assert action == "lookup"
+        return receipt
+
+    monkeypatch.setattr(service.provider, "_invoke", invoke)
+    result = await service.apply(request)
+    assert result.status == "EDIT_VERIFIED" and result.replayed and not result.executed
+    assert result.snapshot == after and result.diff is not None
+    assert (
+        result.diff.instance_terminal_changes
+        == plan.preview.predicted_diff.instance_terminal_changes
+    )
+    assert calls == ["lookup"]
+    assert after.instance_terminals is not None
+    incomplete = reseal(after, instance_terminals=after.instance_terminals[:-1])
+    receipt["snapshot"] = incomplete.model_dump(mode="json")
+    with pytest.raises(InvalidInputError, match="instance terminal qualification mismatch"):
+        await service.apply(request)
 
 
 @pytest.mark.asyncio
@@ -210,6 +304,73 @@ def probe_registration():
     }
 
 
+def test_orientation_qualification_export_pins_same_record_and_omits_absent():
+    document = probe_registration()
+    args = dict(
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    context = provider().context
+    absent = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert "orientation_qualification" not in json.loads(absent.assets["registration.json"])
+    assert "orientation_qualification" not in json.loads(absent.provider.model_dump_json())
+    qualification = {"binding": document["routes"][0]["binding"], "orientations": ["R0", "R90"]}
+    document["orientation_qualification"] = qualification
+    qualified = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert qualified.manifest_sha256 != absent.manifest_sha256
+    assert (
+        json.loads(qualified.assets["registration.json"])["orientation_qualification"]
+        == qualification
+    )
+    assert (
+        json.loads(qualified.provider.model_dump_json())["orientation_qualification"]
+        == qualification
+    )
+    qualification["binding"] = dict(qualification["binding"], parent_revision_sha256="e" * 64)
+    with pytest.raises(ValueError, match="orientation_qualification_owned_route_required"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+
+
+def test_registered_layer_policy_preserves_legacy_bytes_and_pins_explicit_empty():
+    document = probe_registration()
+    args = dict(
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    context = provider().context
+    legacy = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert (
+        legacy.assets["registration.json"]
+        == json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    )
+    policy = {"technology_library": "Tech", "layer_purposes": []}
+    document["routes"][0]["layer_policy"] = policy
+    bound = native.build_layout_bundle(
+        context, native.LayoutRegistration.model_validate_json(json.dumps(document)), **args
+    )
+    assert json.loads(bound.assets["registration.json"])["routes"][0]["layer_policy"] == policy
+    assert bound.manifest_sha256 != legacy.manifest_sha256
+    policy["technology_library"] = "Owned"
+    with pytest.raises(ValueError, match="layout_layer_policy_registered_technology_required"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+    policy.update(
+        technology_library="Tech", layer_purposes=[dict(layer="Metal1", purpose="drawing")] * 2
+    )
+    with pytest.raises(ValueError, match="layout_layer_policy_order"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+    document["routes"][0]["layer_policy"] = None
+    with pytest.raises(ValueError, match="layout_layer_policy_shape"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+
+
 @pytest.mark.parametrize("selected", [None, ["Design", "Tech"]])
 def test_probe_scope_export_preserves_dependencies_and_binds_exact_bytes(selected):
     document = probe_registration()
@@ -259,3 +420,122 @@ def test_invalid_operator_probe_scope_rejected_locally(selected):
     document["probe_libraries"] = selected
     with pytest.raises(ValueError):
         native.LayoutRegistration.model_validate_json(json.dumps(document))
+
+
+def observation_registration():
+    scope, parent, child, _, _, _ = observation_fixture()
+    registration = probe_registration()
+    registration.update(
+        routes=[parent, child],
+        protected_views=[{"path": parent["path"], "tree_sha256": "b" * 64}],
+        instance_terminal_observation_scope=scope,
+    )
+    return registration
+
+
+def test_observation_scope_is_exported_to_both_operator_documents():
+    document = observation_registration()
+    registration = native.LayoutRegistration.model_validate_json(json.dumps(document))
+    assert registration.instance_terminal_qualification is None
+    bundle = native.build_layout_bundle(
+        provider().context,
+        registration,
+        native_provider_sha256="c" * 64,
+        identity_manifest_sha256="d" * 64,
+        confirmation_sha256="e" * 64,
+    )
+    key = "instance_terminal_observation_scope"
+    wire = json.loads(bundle.assets["registration.json"])
+    assert wire[key] == json.loads(bundle.provider.model_dump_json())[key]
+    assert worker.instance_terminal_observation_scope(wire, rendering) == wire[key]
+    assert key not in provider().registration.model_dump(mode="json")
+
+
+@pytest.mark.parametrize(
+    "fault", ["missing-parent-pin", "protected-child-tree", "qual", "row", "edge"]
+)
+def test_observation_scope_rejects_invalid_registration_at_both_boundaries(fault):
+    document = observation_registration()
+    scope = document["instance_terminal_observation_scope"]
+    if fault == "missing-parent-pin":
+        document["protected_views"][0]["path"] = "/observed/Other/View/layout"
+    elif fault == "protected-child-tree":
+        document["protected_views"].append(
+            {"path": "/registered/managed/Owned", "tree_sha256": "b" * 64}
+        )
+    elif fault == "qual":
+        document["orientation_qualification"] = {
+            "binding": scope["child_binding"],
+            "orientations": ["R0", "R90"],
+        }
+    elif fault == "row":
+        scope["rows"][0].update(present=False, net_id=None, pin_object_id=None)
+    else:
+        scope["child_binding"]["parent_revision_id"] = "unrelated"
+    with pytest.raises(ValueError, match="layout_instance_terminal_observation"):
+        native.LayoutRegistration.model_validate_json(json.dumps(document))
+    with pytest.raises(ValueError, match="layout_instance_terminal_observation"):
+        worker.instance_terminal_observation_scope(document, rendering)
+
+
+@pytest.mark.asyncio
+async def test_observation_provider_checks_both_fork_snapshots_and_geometry_replay(monkeypatch):
+    scope, _, _, _, parent, child = observation_fixture()
+    facade = provider(
+        observation=native.LayoutInstanceTerminalObservationScope.model_validate_json(
+            json.dumps(scope)
+        )
+    )
+    fork_request = LayoutForkRequest.model_validate_json(
+        json.dumps(
+            dict(
+                binding=child["binding"],
+                operation_id=str(uuid4()),
+                expected_baseline_sha256=parent["semantic_sha256"],
+            )
+        )
+    )
+    receipt = dict(
+        operation_id=fork_request.operation_id,
+        state="SUCCEEDED",
+        before=parent,
+        snapshot=child,
+        executed=True,
+        replayed=False,
+        saved=True,
+        reopened=True,
+        source_unchanged=True,
+    )
+    actions = []
+
+    async def invoke(action, payload):
+        actions.append(action)
+        return receipt
+
+    monkeypatch.setattr(facade, "_invoke", invoke)
+    fork = await facade.fork(fork_request)
+    assert fork.diff is not None and fork.diff.instance_terminal_changes == ()
+    assert fork.diff.changes == () and fork.diff.metadata_changes == ()
+    changed_parent = reseal(
+        LayoutSnapshot.model_validate_json(json.dumps(parent)),
+        instance_terminals=None,
+    )
+    receipt["before"] = changed_parent.model_dump(mode="json")
+    with pytest.raises(InvalidInputError, match="observation mismatch"):
+        await facade.fork(fork_request)
+
+    apply_request = observed_geometry_request(child)
+    after = worker.predict(child, apply_request.model_dump(mode="json")["plan"]["normalized_edits"])
+    worker.project_orientation(after, None)
+    receipt.update(
+        operation_id=apply_request.plan.request.operation_id,
+        before=child,
+        snapshot=after,
+        executed=False,
+        replayed=True,
+    )
+    result = await facade.apply(apply_request)
+    assert result.status == "EDIT_VERIFIED" and result.replayed and not result.executed
+    assert result.diff is not None and result.diff.instance_terminal_changes == ()
+    assert [change.object_id for change in result.diff.changes] == ["new-tap"]
+    assert actions == ["fork", "fork", "lookup"]

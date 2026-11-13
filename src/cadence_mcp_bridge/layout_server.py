@@ -151,6 +151,7 @@ def register_layout_tools(server: MCPServer, settings: BridgeConfig | None) -> N
     @server.tool(
         name="cadence_layout_plan", annotations=_READ_ONLY, structured_output=True,
         description="Validate typed move/add_rect/add_pin edits against an observed revision. "
+        "Absolute orient and create-only connect_terminal edits require qualified routes. "
         "Returns exact plan hash and predicted diff; planning performs no layout write.",
     )
     async def plan(request: PlanInput) -> Annotated[CallToolResult, LayoutPlan]:

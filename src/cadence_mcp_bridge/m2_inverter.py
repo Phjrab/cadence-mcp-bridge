@@ -60,6 +60,49 @@ class OwnedInverterPlan(VariableModel):
         return canonical_digest(self)
 
 
+InverterExperimentProfile = Literal["long-plateau-150ns-v1"]
+
+
+class _GenerationIntentBody(VariableModel):
+    plan: OwnedInverterPlan
+    experiment_profile: InverterExperimentProfile
+
+
+class OwnedInverterGenerationIntent(_GenerationIntentBody):
+    """Custom stimulus binds its complete base plan and the sole closed preset."""
+
+    intent_sha256: Digest
+
+    @model_validator(mode="after")
+    def exact_digest(self) -> OwnedInverterGenerationIntent:
+        plan = OwnedInverterPlan.model_validate_json(self.plan.model_dump_json())
+        body = _GenerationIntentBody(plan=plan, experiment_profile=self.experiment_profile)
+        if self.intent_sha256 != canonical_digest(body):
+            raise ValueError("generation intent digest mismatch")
+        return self
+
+
+def generation_intent(
+    plan: OwnedInverterPlan, experiment_profile: InverterExperimentProfile,
+) -> OwnedInverterGenerationIntent:
+    """Local custom-generation identity, never an execution grant or legacy plan hash."""
+    body = _GenerationIntentBody(
+        plan=OwnedInverterPlan.model_validate_json(plan.model_dump_json()),
+        experiment_profile=experiment_profile,
+    )
+    return OwnedInverterGenerationIntent(
+        plan=body.plan, experiment_profile=body.experiment_profile,
+        intent_sha256=canonical_digest(body),
+    )
+
+
+def _check_experiment_profile(profile: InverterExperimentProfile | None) -> None:
+    if profile is not None and (
+        type(profile) is not str or profile != "long-plateau-150ns-v1"
+    ):
+        raise ValueError("unsupported inverter experiment profile")
+
+
 def _quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
@@ -98,20 +141,30 @@ def _mos_parameters(device: dict[str, object]) -> dict[str, str]:
     return selected
 
 
-def verify_generated_netlist(plan: OwnedInverterPlan, frame: bytes, native: bytes) -> None:
+def verify_generated_netlist(
+    plan: OwnedInverterPlan, frame: bytes, native: bytes, *,
+    experiment_profile: InverterExperimentProfile | None = None,
+) -> None:
     """Compare effective generated topology/values against independent CDF plan.
 
     A fingerprint computed from the candidate alone cannot establish this match.
     This deliberately accepts only the observed standard-VM single-finger form.
     """
+    _check_experiment_profile(experiment_profile)
     devices = observed_devices(plan, frame)
     _, _, _, static = native_rendering.partition_input(native)  # type: ignore[no-untyped-call]
+    pulse = (
+        "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=4n "
+        "delay=1n rise=100p fall=100p width=2n"
+        if experiment_profile is None else
+        "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=150n "
+        "delay=10n rise=100p fall=100p width=65n"
+    )
     expected_tail = [
         f"ends {plan.dut_cell}",
         f"DUT (vdd vin vout 0) {plan.dut_cell}",
         "VDD (vdd 0) vsource dc=1 type=dc",
-        "VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=4n "
-        "delay=1n rise=100p fall=100p width=2n",
+        pulse,
         "CL (vout 0) capacitor c=1p",
     ]
     expected = ["global 0", f"subckt {plan.dut_cell} vdd vin vout vss"]
@@ -252,14 +305,22 @@ procedure(m2Port(cv name direction x y)
 """
 
 
-def render_generator(plan: OwnedInverterPlan, frame: bytes, *, owned_library_path: str) -> bytes:
+def render_generator(
+    plan: OwnedInverterPlan, frame: bytes, *, owned_library_path: str,
+    experiment_profile: InverterExperimentProfile | None = None,
+) -> bytes:
     """Render only new cells; runner must bind a fresh path below its workspace.
 
     Collision checks precede writes; failures retain partial cells. Every named
     terminal/property is checked before save and after reopen. No delete/rollback
     overwrite, original DUT clone, CDF callback or arbitrary expression input.
     """
+    _check_experiment_profile(experiment_profile)
     devices = observed_devices(plan, frame)
+    marker = (
+        f"M2_OWNED_READBACK_V1|{plan.semantic_sha256}" if experiment_profile is None else
+        f"M2_OWNED_READBACK_V2|{generation_intent(plan, experiment_profile).intent_sha256}"
+    )
     if re.fullmatch(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+", owned_library_path) is None or any(
         part in (".", "..") for part in owned_library_path.split("/")
     ):
@@ -341,11 +402,11 @@ def render_generator(plan: OwnedInverterPlan, frame: bytes, *, owned_library_pat
                 "v2": "1",
                 "dc": "m2_vin",
                 "vdc": "m2_vin",
-                "td": "1n",
+                "td": "1n" if experiment_profile is None else "10n",
                 "tr": "100p",
                 "tf": "100p",
-                "pw": "2n",
-                "per": "4n",
+                "pw": "2n" if experiment_profile is None else "65n",
+                "per": "4n" if experiment_profile is None else "150n",
             },
             {"PLUS": "vin", "MINUS": "gnd!"},
         ),
@@ -363,7 +424,7 @@ def render_generator(plan: OwnedInverterPlan, frame: bytes, *, owned_library_pat
         *checks(bench_maps),
         "m2Require(length(cv~>instances)==4) dbClose(cv)",
         'port=outfile("owned-readback.txt") m2Require(port)',
-        f'fprintf(port "M2_OWNED_READBACK_V1|{plan.semantic_sha256}\\nCOMPLETE\\n") '
+        f'fprintf(port "{marker}\\nCOMPLETE\\n") '
         "close(port) t))",
         "let((result) result=errset(m2Create() t) if(result then exit(0) else exit(1)))",
     ]

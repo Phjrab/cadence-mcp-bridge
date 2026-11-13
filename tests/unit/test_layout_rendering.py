@@ -1,9 +1,17 @@
 """Closed generated SKILL checks. No actual VM/API qualification is implied."""
 
+import re
 from decimal import localcontext
 
 import pytest
+from test_layout_engine import _orient_snapshot
 from test_layout_models import fixture_request, fixture_snapshot
+from test_layout_worker import (
+    connection_fixture,
+    observation_fixture,
+    observed_geometry_request,
+    orientation_request,
+)
 
 from cadence_mcp_bridge import _layout_rendering as rendering
 from cadence_mcp_bridge.layout_engine import build_plan
@@ -32,6 +40,23 @@ def test_exact_dbu_to_skill_with_small_decimal_context():
 def test_name_injection_and_paths_reject(name):
     with pytest.raises(ValueError):
         rendering.inspect_script({"library": name, "cell": "Seed", "view": "layout"})
+
+
+@pytest.mark.parametrize(
+    "is_param_cell,super_master,expected_submaster",
+    [(False, None, False), (True, None, False), (False, "observed-supermaster", True)],
+    ids=["ordinary-master", "source-supermaster", "evaluated-submaster"],
+)
+def test_collector_projects_submaster_relationship(is_param_cell, super_master, expected_submaster):
+    # Check the emitted attribute against observed native master categories;
+    # this bounded projection is not a SKILL runtime or native qualification.
+    script = rendering.inspect_script(
+        {"library": "Observed", "cell": "Pair", "view": "layout"}
+    ).decode("ascii")
+    attributes = re.findall(r'if\(inst~>master~>([A-Za-z]+) then "1" else "0"\)', script)
+    assert len(attributes) == 1
+    observed_master = {"isParamCell": is_param_cell, "superMaster": super_master}
+    assert bool(observed_master[attributes[0]]) is expected_submaster
 
 
 def test_generated_operations_save_close_reopen_and_no_overwrite():
@@ -81,6 +106,80 @@ def test_terminal_preflight_precedes_any_database_mutation():
         rendering.apply_script(target, {}, technology, edits + [edits[-1]])
 
 
+def test_qualified_connection_scripts_preflight_and_independently_read_back():
+    _, scope, _, before, commands = connection_fixture()
+    target = {"library": "Owned", "cell": "Child", "view": "layout"}
+    source = dict(target, cell="Parent")
+    read = rendering.inspect_script(target, connections=scope).decode("ascii")
+    fork = rendering.write_script(
+        source, target, {}, before["technology"], connections=scope
+    ).decode("ascii")
+    apply = rendering.apply_script(
+        target, {}, before["technology"], commands, connections=scope
+    ).decode("ascii")
+    assert "mcpLayoutCollectConnections(cv list(" in read
+    assert fork.index("mcpLayoutCollectConnections(src list(") < fork.index("dbCopyCellView")
+    assert fork.index("mcpLayoutCollectConnections(cv list(") > fork.rindex('"maskLayout" "r"')
+    assert 'when(source && it mcpLayoutFail("instance_terminal_fork_source_present"))' in fork
+    assert (
+        apply.index("connectionRows=mcpLayoutConnectionPreflight(cv connectionSpecs)")
+        < apply.index("mcpLayoutConnectTerminals(connectionRows)")
+        < apply.index("dbSave(cv)")
+    )
+    assert apply.rindex('"maskLayout" "r"') < apply.index(
+        "mcpLayoutCollectConnections(cv connectionSpecs nil)"
+    )
+    assert "dbCreateConn(nth(2 row) inst cadr(row))" in apply and "eq(it~>net nth(2 row))" in apply
+    assert all(
+        name not in apply
+        for name in ("dbCreateNet", "dbCreatePin", "dbCreateRect", "dbReplaceProp")
+    )
+    assert b"MCP_LAYOUT_CONNECTIONS" not in rendering.inspect_script(target)
+    wrapped = rendering.execution_script(apply.encode("ascii")).decode("ascii")
+    assert wrapped.index("procedure(mcpLayoutCollectConnections") < wrapped.index(
+        "procedure(mcpLayoutRun"
+    )
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "unauthorized-net", "injection"])
+def test_connection_renderer_rejects_unregistered_or_malformed_commands(fault):
+    _, scope, _, before, commands = connection_fixture()
+    if fault == "missing":
+        commands.pop()
+    elif fault == "duplicate":
+        commands[-1] = commands[0]
+    elif fault == "unauthorized-net":
+        commands[0]["pin_object_id"] = "pin-vout"
+    else:
+        commands[0]["net_id"] = 'vss") exit()'
+    target = {"library": "Owned", "cell": "Child", "view": "layout"}
+    with pytest.raises(ValueError):
+        rendering.apply_script(target, {}, before["technology"], commands, connections=scope)
+
+
+def test_registered_layer_policy_checks_technology_before_writes_and_on_reopen():
+    technology, edits = commands()
+    target = {"library": "Owned", "cell": "Revision2", "view": "layout"}
+    policy = {"technology_library": "Tech", "layer_purposes": technology["allowed_layer_purposes"]}
+    verify = 'mcpLayoutCheckLayerPolicy(cv "Tech" list('
+    collect = 'mcpLayoutCollectPolicy(cv "Tech" list('
+    inspect = rendering.inspect_script(target, policy).decode("ascii")
+    assert "eq(tf techGetTechFile(lib))" in inspect and "techGetLP(tf lpp)" in inspect
+    assert "if(library then" in inspect and "else\n      foreach(lp cv~>lpps" in inspect
+    assert collect in inspect and "mcpLayoutCollect(cv)\ndbClose(cv)" not in inspect
+    script = rendering.apply_script(target, {}, technology, edits, policy).decode("ascii")
+    assert script.index(verify) < script.index("dbMoveFig") < script.index("dbSave(cv)")
+    assert script.index(collect) > script.rindex('"maskLayout" "r"')
+    source = dict(target, cell="Revision1")
+    fork = rendering.write_script(source, target, {}, technology, policy=policy).decode("ascii")
+    assert fork.index('mcpLayoutCheckLayerPolicy(src "Tech"') < fork.index("dbCopyCellView")
+    assert fork.index(collect) > fork.rindex('"maskLayout" "r"')
+    empty = rendering.inspect_script(target, dict(policy, layer_purposes=[]))
+    assert b'mcpLayoutCollectPolicy(cv "Tech" nil)' in empty
+    with pytest.raises(ValueError, match="layout_layer_purpose_not_registered"):
+        rendering.apply_script(target, {}, technology, edits, dict(policy, layer_purposes=[]))
+
+
 def test_probe_and_seed_are_fixed_bounded_scripts_without_object_handle_output():
     technology, unused = commands()
     view = {"library": "ObservedTech", "cell": "Seed", "view": "layout"}
@@ -121,9 +220,86 @@ def test_runtime_program_catches_skill_errors_before_clean_exit():
     view = {"library": "Owned", "cell": "Seed", "view": "layout"}
     wrapped = rendering.execution_script(rendering.inspect_script(view)).decode()
     assert wrapped.index("procedure(mcpLayoutCollect") < wrapped.index("procedure(mcpLayoutRun")
-    assert 'errset(mcpLayoutRun() t)' in wrapped
+    assert "errset(mcpLayoutRun() t)" in wrapped
     assert 'then exit(0) else mcpLayoutFail("skill_evaluation_failed")' in wrapped
     assert wrapped.count("exit()") == 0
     assert wrapped.index("dbClose(cv)") < wrapped.index("errset(mcpLayoutRun() t)")
     with pytest.raises(ValueError, match="fixed_program_shape"):
         rendering.execution_script(b"exit()\n")
+
+
+@pytest.mark.parametrize("target", ["R90", "MX", "MYR90"])
+def test_orientation_absolute_assignment_and_save_reopen_preservation_guards(target):
+    snapshot = _orient_snapshot()
+    edits = orientation_request(snapshot, target)["plan"]["normalized_edits"]
+    technology = snapshot.technology.model_dump(mode="json")
+    cellview = {"library": "Owned", "cell": "Revision2", "view": "layout"}
+    script = rendering.execution_script(
+        rendering.apply_script(cellview, {}, technology, edits)
+    ).decode("ascii")
+    assert script.index("procedure(mcpLayoutOrientVerify") < script.index("procedure(mcpLayoutRun")
+    assert f'fig~>orient="{target}"' in script
+    assert script.index("mcpLayoutOrientState(fig)") < script.index("fig~>orient=")
+    before_save = script.index("mcpLayoutOrientVerify(cv orientChecks 1000)")
+    assert before_save < script.index("dbSave(cv)") < script.index("unless(dbClose(cv)")
+    after_reopen = script.rindex("mcpLayoutOrientVerify(cv orientChecks 1000)")
+    assert after_reopen > script.rindex('"maskLayout" "r"')
+    assert after_reopen < script.index('printf("MCP_LAYOUT_SAVED_REOPENED')
+    assert (
+        "orientation_origin_changed" in script
+        and "orientation_preservation_or_bbox_mismatch" in script
+    )
+    assert "inst~>master~>superMaster || inst~>master~>isParamCell" in script
+    assert "p~>name p~>valueType p~>value" in script
+    assert "orientation_property_type_unsupported" in script
+    assert "fig~>xy=" not in script and "fig~>master=" not in script
+    assert "dbMoveFig" not in script and "dbCreateParamInst" not in script
+    with pytest.raises(ValueError, match="orientation_requires_owned_apply"):
+        rendering.write_script(dict(cellview, cell="Revision1"), cellview, {}, technology, edits)
+
+
+@pytest.mark.parametrize("fault", ["extra", "orientation", "origin", "bbox", "hash"])
+def test_orientation_renderer_rejects_malformed_command(fault):
+    snapshot = _orient_snapshot()
+    edits = orientation_request(snapshot)["plan"]["normalized_edits"]
+    if fault == "extra":
+        edits[0]["pivot"] = {"x": 0, "y": 0}
+    elif fault == "orientation":
+        edits[0]["orientation"] = 'R90") exit()'
+    elif fault == "origin":
+        edits[0]["origin_dbu"]["x"] = True
+    elif fault == "bbox":
+        edits[0]["bbox_dbu"]["upper_right"]["x"] = 2147483648
+    else:
+        edits[0]["before_sha256"] = "f" * 63
+    with pytest.raises(ValueError):
+        rendering.edits_script(edits, snapshot.technology.model_dump(mode="json"))
+
+
+def test_observation_scripts_resolve_present_oa_before_and_after_geometry():
+    scope, parent, child, _, _, snapshot = observation_fixture()
+    request = observed_geometry_request(snapshot)
+    edits = [edit.model_dump(mode="json") for edit in request.plan.normalized_edits]
+    rows = scope["rows"]
+    read = rendering.inspect_script(child["cellview"], observations=rows).decode("ascii")
+    fork = rendering.write_script(
+        parent["cellview"], child["cellview"], {}, snapshot["technology"], observations=rows
+    ).decode("ascii")
+    apply = rendering.apply_script(
+        child["cellview"], {}, snapshot["technology"], edits, observations=rows
+    ).decode("ascii")
+    for script in (read, fork, apply):
+        assert "dbCreateConn" not in script
+        assert "instance_terminal_fork_source_present" not in script
+        assert "unless(it && eq(it~>net nth(2 row))" in script
+        assert '"pin-vout" "vout" nil' in script
+    assert fork.index("mcpLayoutCollectConnections(src list(") < fork.index("dbCopyCellView")
+    assert fork.rindex('"maskLayout" "r"') < fork.index("mcpLayoutCollectConnections(cv list(")
+    pre = apply.index("mcpLayoutCollectConnections(cv list(")
+    post = apply.rindex("mcpLayoutCollectConnections(cv list(")
+    assert pre < apply.index("dbCreateRect") < apply.index("dbSave(cv)")
+    assert apply.rindex('"maskLayout" "r"') < post < apply.index("MCP_LAYOUT_SAVED_REOPENED")
+    executable = rendering.execution_script(apply.encode("ascii")).decode("ascii")
+    definitions, body = executable.split("procedure(mcpLayoutRun()")
+    assert "procedure(mcpLayoutCollectConnections(" in definitions
+    assert "procedure(" not in body
