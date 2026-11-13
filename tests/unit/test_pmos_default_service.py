@@ -284,6 +284,13 @@ def fake_transport(monkeypatch, packet, *, broken: str | None = None):
         body = {key: value for key, value in row.items() if not key.endswith("_base64")}
         row["receipt_sha256"] = service._sha(service._canonical(body))
         last[phase] = row["receipt_sha256"]
+        warning = b"x" * 130
+        if phase == "netlist" and broken in ("retained warning", "different warning"):
+            return (
+                0,
+                service._canonical(row),
+                warning if broken == "retained warning" else b"y" * 130,
+            )
         return 0, service._canonical(row), b""
 
     monkeypatch.setattr(service, "run_fixed", run)
@@ -303,6 +310,44 @@ def test_verified_once_and_replayed_without_authority(packet, monkeypatch):
     assert replay == first.model_copy(update=dict(replayed=True, dispatched_this_call=False))
     assert calls == ["revert", "netlist"]
     assert {p.name: p.read_bytes() for p in directory.iterdir()} == snapshot
+
+
+@pytest.mark.parametrize(
+    ("warning", "mismatch", "expected"),
+    [
+        ("retained warning", None, "VERIFIED"),
+        ("different warning", None, "OUTCOME_UNKNOWN"),
+        ("retained warning", "scope", "OUTCOME_UNKNOWN"),
+        ("retained warning", "phase", "OUTCOME_UNKNOWN"),
+    ],
+)
+def test_retained_warning_is_scoped_and_never_admitted_on_apply(
+    packet,
+    monkeypatch,
+    warning,
+    mismatch,
+    expected,
+):
+    directory, settings, scope, request = packet
+    monkeypatch.setattr(
+        service,
+        "_RECONCILABLE_SCOPE",
+        "0" * 64 if mismatch == "scope" else request.expected_scope_sha256,
+    )
+    monkeypatch.setattr(
+        service, "_RECONCILABLE_PHASE", "0" * 64 if mismatch == "phase" else scope["phase_sha256"]
+    )
+    monkeypatch.setattr(service, "_RECONCILABLE_STDERR", service._sha(b"x" * 130))
+    calls = fake_transport(monkeypatch, packet, broken=warning)
+    context = load_runtime(settings)[0]
+    first = service.registered_pmos_default_change(context).apply(request)
+    assert first.outcome == "OUTCOME_UNKNOWN" and not first.replayed
+    assert first.reopen_receipt_sha256 and first.netlist_receipt_sha256 is None
+    before = {p.name: p.read_bytes() for p in directory.iterdir()}
+    replay = service.registered_pmos_default_change(context).apply(request)
+    assert replay.outcome == expected and replay.replayed and replay.dispatched_this_call is False
+    assert calls == ["revert", "netlist"]
+    assert {p.name: p.read_bytes() for p in directory.iterdir()} == before
 
 
 @pytest.mark.parametrize(
