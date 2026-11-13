@@ -313,9 +313,11 @@ class DesignContractServer(MCPServer):
     """Close new design inputs using public SDK hooks; preserve legacy schemas."""
 
     async def list_tools(self) -> list[Tool]:
+        from cadence_mcp_bridge.layout_server import LAYOUT_TOOLS
+
         tools = await super().list_tools()
         for tool in tools:
-            if tool.name in {
+            if tool.name in LAYOUT_TOOLS or tool.name in {
                 "cadence_amplifier_specification_catalog",
                 "cadence_evaluate_amplifier_specifications",
                 "cadence_prepare_amplifier_sweep",
@@ -387,6 +389,12 @@ class DesignContractServer(MCPServer):
         arguments: dict[str, Any],
         context: Context[Any, Any] | None = None,
     ) -> CallToolResult | InputRequiredResult:
+        from cadence_mcp_bridge.layout_server import LAYOUT_TOOLS
+
+        if name in LAYOUT_TOOLS and (
+            set(arguments) != {"request"} or type(arguments["request"]) is not dict
+        ):
+            raise ToolError("Layout tools accept only their typed request object")
         if name in {"cadence_runtime_info", "cadence_runtime_info_v2"} and arguments:
             raise ToolError("Runtime information accepts no arguments")
         if (
@@ -473,7 +481,9 @@ class DesignContractServer(MCPServer):
         return await super().call_tool(name, arguments, context)
 
 
-def create_server(service: CadenceService) -> MCPServer:
+def create_server(
+    service: CadenceService, *, layout_settings: BridgeConfig | None = None,
+) -> MCPServer:
     """Build an MCP server around an injected service for production or tests."""
 
     server = DesignContractServer(
@@ -1551,6 +1561,9 @@ def create_server(service: CadenceService) -> MCPServer:
 
         register_native_tools(server, native)
 
+    from cadence_mcp_bridge.layout_server import register_layout_tools
+
+    register_layout_tools(server, layout_settings)
     return server
 
 
@@ -1565,7 +1578,9 @@ def create_default_server(*, operator_mode: bool = False) -> MCPServer:
     if config.runtime_mode == "operator":
         from cadence_mcp_bridge.runtime_context import create_operator_service
 
-        return create_server(cast(CadenceService, create_operator_service(config)))
+        return create_server(
+            cast(CadenceService, create_operator_service(config)), layout_settings=config,
+        )
     designs = None
     pdks = None
     amplifier_specs = None

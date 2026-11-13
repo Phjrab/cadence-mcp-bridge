@@ -125,3 +125,6 @@ jobs:
 
       - name: Read-only enrollment and native Sweep/spec synthetic contracts
         run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_native_registration.py tests/unit/test_native_sweeps.py tests/unit/test_native_specifications.py -q --basetemp "$HOME/grel-enrollment-tests"
+
+      - name: Layout contracts, native receipt recovery and MCP boundaries
+        run: .venv/bin/python -I -X utf8 -m pytest tests/unit/test_layout_*.py -q --basetemp "$HOME/layout-edit-tests"

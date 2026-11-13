@@ -1,3 +1,17 @@
+## Layout MVP execution overlay, 2026-11-11
+
+Apply the latest direct layout instruction and AGENTS.md overlay before historical
+phase text below. Local implementation, focused tests, role branches and integration
+candidate preparation are authorized. Registered source reads and owned-copy layout
+work use the existing trusted connection, retained guards and resource limits;
+do not reset a spent allowance or call a mock result native success.
+Success requires actual instance/primitive/pin edits, OA save/close/reopen, source
+conservation and no second write on identical apply ID through MCP/CLI. DRC/LVS/PEX
+are separately NOT_RUN/UNAVAILABLE unless actually executed and verified.
+Repeated full-suite runs, historical experiment replay and PR164/installer completion
+are not prerequisites. C0 reassigns completed work and isolates specific blockers;
+main merge and public release remain outside this scope.
+
 ## Whole model-union observation and resumed inventory, 2026-10-11
 
 Independent P1 finding4240280936 is corrected: the gate retains file/ancestor

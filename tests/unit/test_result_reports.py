@@ -151,7 +151,7 @@ async def test_resource_catalog_and_report_preserve_96_tool_contracts(configured
         report = json.loads((await client.read_resource(uri)).contents[0].text)
         assert report["report"]["operation_id"] == record.operation_id
         assert report["remote_contact"] is True and report["new_simulations"] == 0
-        assert len((await client.list_tools()).tools) == 96
+        assert len((await client.list_tools()).tools) == 102
     assert inventory(native.context.binding.analysis_journal.parent) == before
 
 

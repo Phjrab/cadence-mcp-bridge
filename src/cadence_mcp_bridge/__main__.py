@@ -69,6 +69,9 @@ def build_parser() -> argparse.ArgumentParser:
     from cadence_mcp_bridge.design_cli import add_design_plan_parser
 
     add_design_plan_parser(subparsers)
+    from cadence_mcp_bridge.layout_cli import add_layout_parser
+
+    add_layout_parser(subparsers)
     from cadence_mcp_bridge.feature_guidance import add_features_parser
 
     add_features_parser(subparsers)
@@ -367,6 +370,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "layout":
+        from cadence_mcp_bridge.layout_cli import layout_cli
+
+        return layout_cli(arguments)
     if arguments.command == "operator-design":
         from cadence_mcp_bridge.design_cli import run_design_plan
 

@@ -275,6 +275,12 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
 
     tools = {tool.name: tool for tool in listing.tools}
     assert set(tools) == {
+        "cadence_layout_inspect",
+        "cadence_layout_fork",
+        "cadence_layout_plan",
+        "cadence_layout_apply",
+        "cadence_layout_diff",
+        "cadence_layout_select",
         "cadence_amplifier_specification_catalog",
         "cadence_evaluate_amplifier_specifications",
         "cadence_prepare_amplifier_sweep",
@@ -405,6 +411,9 @@ async def test_in_memory_client_lists_exact_typed_tools() -> None:
         if tool.annotations is not None and tool.annotations.read_only_hint
     }
     assert read_only == {
+        "cadence_layout_inspect",
+        "cadence_layout_plan",
+        "cadence_layout_diff",
         "cadence_amplifier_specification_catalog",
         "cadence_evaluate_amplifier_specifications",
         "cadence_prepare_amplifier_sweep",

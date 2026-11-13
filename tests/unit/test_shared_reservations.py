@@ -286,13 +286,16 @@ def test_conflicting_replay_is_preserved(root, change):
     [
         {"max_attempts": 9},
         {"max_reserved_bytes": 9 * AMOUNT},
-        {"expires_at": int(time.time()) + 1200},
+        {"expires_at": None},
         {"runner_sha256": "e" * 64},
         {"resource_domain_sha256": "e" * 64},
     ],
 )
 def test_same_grant_policy_drift_cannot_reset_usage(root, change):
     permit = binding(root)
+    if "expires_at" in change:
+        # Collection may precede this test by more than the grant's lifetime.
+        change = {"expires_at": permit["expires_at"] + 600}
     reserve(root, job(root), permit)
     before = snapshot(root)
     with pytest.raises(ValueError, match="grant_binding_drift|identity_manifest_binding"):

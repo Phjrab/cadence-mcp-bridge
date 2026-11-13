@@ -124,7 +124,7 @@ async def verify(workspace: Path, examples: Path) -> dict[str, object]:
             current = [
                 t.model_dump(mode="json", by_alias=True) for t in (await client.list_tools()).tools
             ]
-            assert len(current) == 85
+            assert len(current) == 91
             if schemas is None:
                 schemas = current
             assert current == schemas
