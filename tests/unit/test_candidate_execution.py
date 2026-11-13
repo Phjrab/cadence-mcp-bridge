@@ -58,7 +58,7 @@ __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_b
 
 @pytest.fixture
 async def amplifier_width_evidence(tmp_path, monkeypatch, measurement_operator):
-    from cadence_mcp_bridge import parameter_changes
+    from cadence_mcp_bridge import candidate_execution, parameter_changes
 
     def digest(raw):
         return hashlib.sha256(raw).hexdigest()
@@ -67,8 +67,10 @@ async def amplifier_width_evidence(tmp_path, monkeypatch, measurement_operator):
         b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
         b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
     )
-    common = b"simulator lang=spectre\nparameters VBIASN=0.32 VBIASP=0.702\n" + pm0 + b"\n"
-    dc_raw = common + b"analysis0 dc save=all\n"
+    common = b"simulator lang=spectre\nparameters VBIASN=320m VBIASP=702m\n" + pm0 + b"\n"
+    directive = b"dcOpInfo info what=oppoint where=rawfile"
+    monkeypatch.setattr(candidate_execution, "_AMP_DC_OUTPUT_DIRECTIVE_SHA256", digest(directive))
+    dc_raw = common + b"analysis0 dc save=all\n" + directive + b"\n"
     ac_raw = common + b"analysis0 ac start=10 stop=100000000 dec=10\n"
     child_raw = dc_raw.replace(b"w=(20u)", b"w=(19u)")
     monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", digest(dc_raw))
@@ -155,7 +157,7 @@ async def amplifier_width_evidence(tmp_path, monkeypatch, measurement_operator):
 def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
     plan, readback, binding, dc, ac, child_raw = evidence
     if drift == "baseline-input":
-        ac = replace(ac, baseline_input=ac.baseline_input.replace(b"0.32", b"0.321"))
+        ac = replace(ac, baseline_input=ac.baseline_input.replace(b"320m", b"321m"))
     if drift == "wrong-original-id":
         binding = binding.model_copy(
             update={
@@ -201,6 +203,13 @@ def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
         binding = binding.model_copy(update={"dc": dc_binding, "ac": ac_binding})
     if drift == "ac-grid":
         ac = replace(ac, child_input=ac.child_input.replace(b"dec=10", b"dec=11"))
+        binding = binding.model_copy(
+            update={
+                "ac": binding.ac.model_copy(
+                    update={"child_input_sha256": hashlib.sha256(ac.child_input).hexdigest()}
+                )
+            }
+        )
     if drift == "unobserved-ac":
         ac = replace(
             ac,
@@ -236,6 +245,23 @@ def test_amplifier_width_pair_preserves_original_dc_ac_and_unrun_child(amplifier
     assert pair.dc.child_value is pair.ac.child_value is None
     assert pair.dc.dc_output_reason == "baseline_output_scalars_not_retained"
     assert pair.goals == "GOALS_NOT_PROVIDED" and not pair.execution_authorized
+
+
+def test_amplifier_cross_analysis_body_omits_only_the_pinned_dc_directive(monkeypatch):
+    from cadence_mcp_bridge import candidate_execution
+
+    directive = "dcOpInfo info what=oppoint where=rawfile"
+    other_info = "other info what=oppoint where=rawfile"
+    monkeypatch.setattr(
+        candidate_execution,
+        "_AMP_DC_OUTPUT_DIRECTIVE_SHA256",
+        hashlib.sha256(directive.encode("ascii")).hexdigest(),
+    )
+    assert candidate_execution._amplifier_cross_analysis_body(
+        ["circuit statement", directive, other_info]
+    ) == ["circuit statement", other_info]
+    with pytest.raises(ValueError):
+        candidate_execution._amplifier_cross_analysis_body([directive, directive])
 
 
 @pytest.fixture
@@ -347,6 +373,7 @@ def amplifier_child_fixture(monkeypatch, measurement_operator):
                 "baseline_reader": reader,
                 "child_operation_id": query.operation_id,
                 "child_plan_sha256": plan.plan_sha256,
+                "child_input_sha256": hashlib.sha256(raw).hexdigest(),
             }
         )
 

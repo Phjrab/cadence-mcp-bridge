@@ -10,7 +10,7 @@ from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self
 
 from pydantic import Field, model_validator
 
-from cadence_mcp_bridge._native_rendering import effective_input, partition_input
+from cadence_mcp_bridge._native_rendering import effective_input
 from cadence_mcp_bridge.amplifier_specifications import AmplifierFactProvenance, provenance
 from cadence_mcp_bridge.amplifier_sweeps import AmplifierSweepResult
 from cadence_mcp_bridge.candidate_contracts import (
@@ -44,6 +44,7 @@ from cadence_mcp_bridge.parameter_changes import (
     ChangeValue,
     MosWidthTarget,
     _amp_pm0_options,
+    partition_amplifier_input,
     project_netlist_change,
     verify_change_readback,
 )
@@ -459,11 +460,13 @@ class AmplifierWidthAnalysisBinding(VariableModel):
     model_closure_sha256: Digest
     child_operation_id: OperationId | None = None
     child_plan_sha256: Digest | None = None
+    child_input_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def child_identity_pair(self) -> Self:
-        if (self.child_operation_id is None) != (self.child_plan_sha256 is None):
-            raise ValueError("child operation and plan pins must be supplied together")
+        pins = (self.child_operation_id, self.child_plan_sha256, self.child_input_sha256)
+        if any(pin is None for pin in pins) and any(pin is not None for pin in pins):
+            raise ValueError("child operation, plan and input pins must be supplied together")
         return self
 
 
@@ -519,6 +522,22 @@ class _AmplifierCircuit(NamedTuple):
     includes: list[tuple[str, str]]
     fixed_statements: list[str]
     pm0_options: dict[str, str]
+
+
+_AMP_DC_OUTPUT_DIRECTIVE_SHA256 = "a9ca38379d1571bcd44fe8525109abeceea855e2784c0dc93c6c3384f0447fbd"
+
+
+def _amplifier_cross_analysis_body(statements: list[str]) -> list[str]:
+    # The original center DC alone emits this exact operating-point output directive.
+    indexes = [
+        index
+        for index, statement in enumerate(statements)
+        if hashlib.sha256(statement.encode("ascii")).hexdigest() == _AMP_DC_OUTPUT_DIRECTIVE_SHA256
+    ]
+    if not indexes:
+        return statements
+    (index,) = indexes
+    return statements[:index] + statements[index + 1 :]
 
 
 def _pinned_json(raw: bytes, digest: str) -> Any:
@@ -917,13 +936,19 @@ def _amp_width_analysis(
         or hashlib.sha256(evidence.baseline_input).hexdigest() != metric.input_sha256
     ):
         raise ValueError("original amplifier measurement identity differs")
-    params, includes, analyses, static = partition_input(evidence.baseline_input)  # type: ignore[no-untyped-call]
+    params, includes, analyses, static = partition_amplifier_input(
+        evidence.baseline_input, expected_sha256=metric.input_sha256
+    )
     fixed, options = _amp_pm0_options(static, baseline=True)
     if (
         (params, includes, options)
         != (old_circuit.parameters, old_circuit.includes, old_circuit.pm0_options)
-        # partition_input has already separated the DC/AC control statements.
-        or fixed != old_circuit.fixed_statements
+        or fixed
+        != (
+            old_circuit.fixed_statements
+            if analysis == "dc"
+            else _amplifier_cross_analysis_body(old_circuit.fixed_statements)
+        )
         or includes != [(model.path, model.section) for model in binding.model_includes]
         or len(analyses) != 1
         or analyses[0][0] != analysis
@@ -941,7 +966,11 @@ def _amp_width_analysis(
         ):
             raise ValueError("child operation requires registered effective input and plan")
         route, conditions, reader, _ = _width_route(child, evidence.child_input, analysis)
-        new_params, new_includes, new_analyses, new_static = partition_input(evidence.child_input)  # type: ignore[no-untyped-call]
+        if binding.child_input_sha256 is None:
+            raise ValueError("child operation requires pinned effective input")
+        new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+            evidence.child_input, expected_sha256=binding.child_input_sha256
+        )
         new_fixed, new_options = _amp_pm0_options(new_static, baseline=False)
         if (
             (new_params, new_includes, new_options)
@@ -1066,8 +1095,12 @@ def associate_amplifier_width_pair(
                 m.counter for source in (dc_source, ac_source) for m in source.source.measurements
             )
         )
-        old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
-        new_params, new_includes, _, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
+        old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+            baseline_input, expected_sha256=plan.baseline.netlist_sha256
+        )
+        new_params, new_includes, _, new_static = partition_amplifier_input(
+            candidate_input, expected_sha256=netlist.artifact_sha256
+        )
         if (
             old_params.get("VBIASN") != "0.32"
             or old_params.get("VBIASP") != "0.702"
@@ -1075,7 +1108,7 @@ def associate_amplifier_width_pair(
             or old_analyses[0][0] != "dc"
         ):
             raise ValueError("center amplifier DC operating point required")
-        if partition_input(dc.baseline_input)[2] != old_analyses:  # type: ignore[no-untyped-call]
+        if dc.baseline_input != baseline_input:
             raise ValueError("center DC analysis differs")
         old_circuit = _AmplifierCircuit(
             old_params, old_includes, *_amp_pm0_options(old_static, baseline=True)
