@@ -27,7 +27,7 @@ from cadence_mcp_bridge.candidate_execution import (
 from cadence_mcp_bridge.candidate_reports import CandidateObservation
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
-from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
+from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, NodeSignal
 from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.native_service import NativeOperationQuery
 from cadence_mcp_bridge.operator_operations import (
@@ -45,6 +45,24 @@ __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_b
 @pytest.fixture
 def pmos_pair(measurement_operator):
     context, plan, original_ade, original_reader, _, _ = reader_for(measurement_operator)
+    original_reader = original_reader.model_copy(
+        update={
+            "nodes": (
+                NodeSignal(logical_id="cmos-vin", selector="/in"),
+                NodeSignal(logical_id="cmos-vout", selector="/out"),
+                NodeSignal(logical_id="cmos-vdd", selector="/vdd"),
+            ),
+            "sources": (
+                original_reader.sources[0].model_copy(
+                    update={
+                        "source_id": "supply-rail",
+                        "positive_node": "cmos-vdd",
+                        "negative_node": None,
+                    }
+                ),
+            ),
+        }
+    )
     registry = context.binding.design_registry.read_bytes()
     raw = (
         _NETLIST.replace(b"m2_vin=0", b"ExampleBiasN=1 ExampleBiasP=1").replace(
@@ -152,6 +170,15 @@ def pmos_pair(measurement_operator):
                 phase="SUCCEEDED", remote_revision=5, provider_receipt_sha256="b" * 64
             ),
         )
+        nodes = [
+            dict(logical_id="cmos-vin", value=0.0, unit="V"),
+            dict(logical_id="cmos-vout", value=0.8 if child else 1.0, unit="V"),
+            dict(logical_id="cmos-vdd", value=0.95 if drift == "rail" else 1.0, unit="V"),
+        ]
+        if child:
+            nodes.reverse()
+        if drift == "vin-missing":
+            nodes.pop()
         report = (
             make_report(
                 record,
@@ -175,7 +202,16 @@ def pmos_pair(measurement_operator):
                         model_file_sha256=[],
                         transfer=None,
                     ),
-                    nodes=[dict(logical_id="output", value=0.9 if child else 1.0, unit="V")],
+                    nodes=nodes,
+                    sources=[]
+                    if drift == "power-missing"
+                    else [
+                        dict(
+                            source_id="supply-rail",
+                            role="bias" if drift == "power-role" else "supply",
+                            delivered_w=1e-7,
+                        )
+                    ],
                 ),
             )
             .model_dump_json()
@@ -215,14 +251,18 @@ def pmos_association(pmos_pair, drift=None):
     if drift == "report":
         child = replace(child, expected_report_sha256="0" * 64)
     if drift == "pending":
-        child = replace(child, record=None, report=None)
+        child = replace(child, record=None, report=None, expected_terminal_sha256=None)
+    if drift == "capture-missing":
+        child = replace(child, report=None)
     if drift == "unknown":
         child = replace(
             child,
             report=None,
             record=child.record.model_copy(
                 update={
-                    "progress": OperationProgress(phase="UNKNOWN_OUTCOME"),
+                    "progress": child.record.progress.model_copy(
+                        update={"phase": "UNKNOWN_OUTCOME"}
+                    ),
                 }
             ),
         )
@@ -251,14 +291,31 @@ def test_pmos_pair_preserves_separate_reports_and_unobserved_child(pmos_pair):
     assert base.report.operation_id == base.operation.operation_id
     assert child.report.operation_id == child.operation.operation_id
     assert child.effective_width.value == "120"
+    vout, power = result.metrics
+    assert (vout.baseline.value, vout.candidate.value) == (1.0, 0.8)
+    assert (power.baseline.value, power.candidate.value) == (1e-7, 1e-7)
     assert result.goals == "GOALS_NOT_PROVIDED" and not result.execution_authorized
     pending = pmos_association(pmos_pair, "pending").rows[1]
     assert pending.status == "NOT_OBSERVED" and pending.report is None
+    assert pending.reason == "retained_operation_not_supplied"
     unknown = pmos_association(pmos_pair, "unknown").rows[1]
     assert unknown.status == "UNKNOWN_OUTCOME" and unknown.report is None
+    assert unknown.reason == "retained_operation_not_succeeded"
+    assert unknown.terminal_receipt_sha256 == "b" * 64
+    capture_missing = pmos_association(pmos_pair, "capture-missing").rows[1]
+    assert capture_missing.status == "SUCCEEDED" and capture_missing.report is None
+    assert capture_missing.reason == "retained_result_unavailable"
 
 
-@pytest.mark.parametrize("drift", ["analysis", "model", "reader", "copy", "report"])
+def test_pmos_pair_preserves_vout_when_power_is_missing(pmos_pair):
+    vout, power = pmos_association(pmos_pair, "power-missing").metrics
+    assert vout.candidate.value == 0.8
+    assert power.baseline.value == 1e-7 and power.candidate is None
+
+
+@pytest.mark.parametrize(
+    "drift", ["analysis", "model", "reader", "copy", "report", "rail", "vin-missing", "power-role"]
+)
 def test_pmos_pair_rejects_unbound_or_incomparable_evidence(pmos_pair, drift):
     with pytest.raises(OperationRejected) as rejected:
         pmos_association(pmos_pair, drift)

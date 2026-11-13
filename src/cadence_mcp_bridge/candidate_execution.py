@@ -43,7 +43,7 @@ from cadence_mcp_bridge.parameter_changes import (
     project_netlist_change,
     verify_change_readback,
 )
-from cadence_mcp_bridge.result_reports import ReportConditions, ResultReport
+from cadence_mcp_bridge.result_reports import ReportConditions, ReportMetric, ResultReport
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
@@ -355,10 +355,17 @@ class PmosDcRow(VariableModel):
     report: ResultReport | None
 
 
+class PmosDcMetricPair(VariableModel):
+    signal_id: Literal["cmos-vout", "supply-rail"]
+    baseline: ReportMetric | None
+    candidate: ReportMetric | None
+
+
 class PmosDcPair(VariableModel):
     change_plan_sha256: Digest
     copy_receipt_sha256: Digest
     rows: tuple[PmosDcRow, PmosDcRow]
+    metrics: tuple[PmosDcMetricPair, PmosDcMetricPair]
     verification: Literal["LOCAL_EVIDENCE_COMPARISON"] = "LOCAL_EVIDENCE_COMPARISON"
     goals: Literal["GOALS_NOT_PROVIDED"] = "GOALS_NOT_PROVIDED"
     execution_authorized: Literal[False] = False
@@ -470,7 +477,7 @@ def _pmos_dc_report(
     operation: PmosDcOperation,
     conditions: ReportConditions,
     reader: GenericReaderRegistration,
-) -> tuple[OperationPhase | Literal["NOT_OBSERVED"], ResultReport | None]:
+) -> tuple[OperationPhase | Literal["NOT_OBSERVED"], str | None, ResultReport | None]:
     status: OperationPhase | Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
     record = None
     if operation.record is not None:
@@ -478,8 +485,13 @@ def _pmos_dc_report(
         if record.operation_id != operation.query.operation_id or record.plan != operation.plan:
             raise ValueError("retained operation identity differs")
         status = record.progress.phase
+    terminal = operation.expected_terminal_sha256
+    if terminal is not None and (
+        record is None or record.progress.provider_receipt_sha256 != terminal
+    ):
+        raise ValueError("retained terminal receipt differs")
     if operation.report is None:
-        return status, None
+        return status, terminal, None
     if record is None or operation.expected_report_sha256 is None:
         raise ValueError("retained report requires a record and an independent pin")
     report = ResultReport.model_validate_json(
@@ -492,8 +504,7 @@ def _pmos_dc_report(
     )
     if (
         status != "SUCCEEDED"
-        or not operation.expected_terminal_sha256
-        or record.progress.provider_receipt_sha256 != operation.expected_terminal_sha256
+        or terminal is None
         or report.operation_id != operation.query.operation_id
         or report.plan != operation.plan
         or report.analysis_conditions != conditions
@@ -501,7 +512,49 @@ def _pmos_dc_report(
         or report.reader_registration_sha256 != canonical_digest(reader)
     ):
         raise ValueError("retained report binding differs")
-    return status, report
+    nodes = {node.logical_id for node in reader.nodes}
+    sources = {source.source_id: source.role for source in reader.sources}
+    voltages = {}
+    for metric in report.metrics:
+        if metric.sample_count is not None:
+            raise ValueError("DC point metric cannot have a sample count")
+        if metric.kind == "node_voltage" and metric.signal_id in nodes:
+            voltages[metric.signal_id] = metric.value
+        elif (
+            metric.kind != "delivered_power"
+            or metric.signal_id not in sources
+            or metric.source_role != sources[metric.signal_id]
+        ):
+            raise ValueError("report metric differs from the registered reader")
+    for signal, nominal in (("cmos-vin", 0.0), ("cmos-vdd", 1.0)):
+        observed = voltages.get(signal)
+        if observed is None or not nominal - 0.01 <= observed <= nominal + 0.01:
+            raise ValueError("measured DC input or rail differs")
+    return status, terminal, report
+
+
+def _pmos_dc_metric_pair(
+    signal_id: Literal["cmos-vout", "supply-rail"],
+    baseline: ResultReport,
+    candidate: ResultReport | None,
+) -> PmosDcMetricPair:
+    kind = "node_voltage" if signal_id == "cmos-vout" else "delivered_power"
+    old = next((m for m in baseline.metrics if (m.kind, m.signal_id) == (kind, signal_id)), None)
+    new = (
+        None
+        if candidate is None
+        else next(
+            (m for m in candidate.metrics if (m.kind, m.signal_id) == (kind, signal_id)),
+            None,
+        )
+    )
+    if (
+        old is not None
+        and new is not None
+        and old.model_dump(exclude={"value"}) != (new.model_dump(exclude={"value"}))
+    ):
+        raise ValueError("DC metric definitions differ")
+    return PmosDcMetricPair(signal_id=signal_id, baseline=old, candidate=new)
 
 
 def associate_pmos_dc_pair(
@@ -573,24 +626,27 @@ def associate_pmos_dc_pair(
             or candidate.query.operation_id == expected_copy_id
         ):
             raise ValueError("DC comparison conditions differ")
-        old_status, old_report = _pmos_dc_report(baseline, old_conditions, old_reader)
-        new_status, new_report = _pmos_dc_report(candidate, new_conditions, new_reader)
-        if old_report is None or (
-            new_report is not None
-            and [m.model_dump(exclude={"value"}) for m in old_report.metrics]
-            != [m.model_dump(exclude={"value"}) for m in new_report.metrics]
-        ):
-            raise ValueError("baseline report or matching measurement definitions required")
+        old_status, old_terminal, old_report = _pmos_dc_report(baseline, old_conditions, old_reader)
+        new_status, new_terminal, new_report = _pmos_dc_report(
+            candidate, new_conditions, new_reader
+        )
+        if old_report is None:
+            raise ValueError("baseline report required")
+        vout = _pmos_dc_metric_pair("cmos-vout", old_report, new_report)
+        power = _pmos_dc_metric_pair("supply-rail", old_report, new_report)
     except (KeyError, TypeError, ValueError):
         raise OperationRejected("candidate_pmos_dc_evidence_mismatch") from None
     reason = None
     if new_status == "NOT_OBSERVED":
         reason = "retained_operation_not_supplied"
+    elif new_status != "SUCCEEDED":
+        reason = "retained_operation_not_succeeded"
     elif new_report is None:
         reason = "retained_result_unavailable"
     return PmosDcPair(
         change_plan_sha256=plan.plan_sha256,
         copy_receipt_sha256=expected_copy_receipt_sha256,
+        metrics=(vout, power),
         rows=(
             PmosDcRow(
                 revision=old.revision,
@@ -600,7 +656,7 @@ def associate_pmos_dc_pair(
                 observed_width=old.value,
                 effective_width=plan.old,
                 operation=baseline.query,
-                terminal_receipt_sha256=baseline.expected_terminal_sha256,
+                terminal_receipt_sha256=old_terminal,
                 status=old_status,
                 reason=None,
                 report=old_report,
@@ -613,9 +669,7 @@ def associate_pmos_dc_pair(
                 observed_width=reopened.value,
                 effective_width=netlist.value,
                 operation=candidate.query,
-                terminal_receipt_sha256=(
-                    candidate.expected_terminal_sha256 if new_report is not None else None
-                ),
+                terminal_receipt_sha256=new_terminal,
                 status=new_status,
                 reason=reason,
                 report=new_report,
