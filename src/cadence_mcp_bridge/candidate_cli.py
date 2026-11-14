@@ -143,11 +143,21 @@ class _SavedWidthBiasSide(VariableModel):
     candidate: _AmplifierWidthChild | None = None
 
 
+class _PersistedBiasReadback(VariableModel):
+    change_plan: _PinnedComparisonFile
+    change_plan_sha256: Digest
+    readback: _PinnedComparisonFile
+    readback_sha256: Digest
+    baseline_input: _PinnedComparisonFile | None = None
+    candidate_input: _PinnedComparisonFile | None = None
+
+
 class _SavedWidthBiasRequest(VariableModel):
     width_binding: _PinnedComparisonFile
     requested_bias: ChangeValue
     dc: _SavedWidthBiasSide
     ac: _SavedWidthBiasSide
+    persisted_bias_readback: _PersistedBiasReadback | None = None
 
 
 class _AmplifierPm0ObservationRequest(VariableModel):
@@ -920,8 +930,10 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         FreshAmplifierMeasurement,
         FreshAmplifierOperation,
         FreshAmplifierWidthBinding,
+        associate_persisted_amplifier_bias,
         associate_saved_width_bias_analysis,
     )
+    from cadence_mcp_bridge.parameter_changes import ChangePlan, ChangeReadback
 
     path, request_sha256 = arguments.request
     request_path = _local_path(Path(path))
@@ -935,6 +947,18 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         _comparison_document(request.width_binding)
     )
     reserved = {request_path, _local_path(request.width_binding.path)}
+    persistence = request.persisted_bias_readback
+    if persistence is not None:
+        reserved.update(
+            _local_path(ref.path)
+            for ref in (
+                persistence.change_plan,
+                persistence.readback,
+                persistence.baseline_input,
+                persistence.candidate_input,
+            )
+            if ref is not None
+        )
     operation_ids = {
         pin.operation_id for pin in (binding.baseline.dc, binding.baseline.ac) if pin is not None
     }
@@ -961,6 +985,26 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                 if operation.execution_plan is not None:
                     reserved.add(_local_path(operation.execution_plan.path))
     output = _output(arguments.output, reserved)
+
+    persisted = None
+    if persistence is not None:
+        persisted = associate_persisted_amplifier_bias(
+            binding.candidate,
+            ChangePlan.model_validate_json(_comparison_document(persistence.change_plan)),
+            ChangeReadback.model_validate_json(_comparison_document(persistence.readback)),
+            expected_plan_sha256=persistence.change_plan_sha256,
+            expected_readback_sha256=persistence.readback_sha256,
+            baseline_input=(
+                _comparison_bytes(persistence.baseline_input)
+                if persistence.baseline_input is not None
+                else None
+            ),
+            candidate_input=(
+                _comparison_bytes(persistence.candidate_input)
+                if persistence.candidate_input is not None
+                else None
+            ),
+        )
 
     pairs = {}
     deltas = {}
@@ -1050,10 +1094,12 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         "saved_testbench_revision_sha256": binding.candidate.testbench_revision_sha256,
         "requested_vbiasn": request.requested_bias.model_dump(mode="json"),
         "executed_netlist_vbiasn": executed_bias,
-        "saved_ade_bias_readback_status": "MISSING",
+        "saved_ade_bias_readback_status": "MISSING" if persisted is None else persisted.status,
         "deltas": deltas,
         "selected_candidate_id": None,
     }
+    if persisted is not None:
+        payload["persisted_bias_readback"] = persisted.model_dump(mode="json")
     encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
     file_sha256 = _export(output, encoded)
     if json.loads(read_candidate_document(output, expected_sha256=file_sha256)) != payload:

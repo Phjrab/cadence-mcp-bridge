@@ -1026,10 +1026,16 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     from uuid import uuid4
 
     import test_candidate_execution as execution_fixture
+    from test_parameter_changes import BASELINE, BIAS, CHILD, VIN, _row
 
     from cadence_mcp_bridge import candidate_execution
     from cadence_mcp_bridge.analysis_store import AnalysisStore
     from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationProgress
+    from cadence_mcp_bridge.parameter_changes import (
+        ChangeValue,
+        plan_ade_change,
+        verify_change_readback,
+    )
 
     calls = []
     associate_width = candidate_execution.associate_fresh_amplifier_width_pair
@@ -1233,11 +1239,100 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
         "candidate": {"value": "0.321", "unit": "V"},
     }
     assert saved["saved_ade_bias_readback_status"] == "MISSING"
+    assert "persisted_bias_readback" not in saved
     assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
     assert saved["association"]["ac"]["baseline"]["status"] == "SUCCEEDED"
     assert saved["association"]["ac"]["candidate"]["status"] == "NOT_OBSERVED"
     assert saved["executed_netlist_vbiasn"]["ac"]["candidate"] is None
     assert saved["deltas"]["ac"]["absolute_delta"] is None
+
+    width = binding["candidate"]
+    change = plan_ade_change(
+        BASELINE.model_copy(
+            update={
+                "revision_sha256": width["ade_state_sha256"],
+                "testbench_revision_sha256": width["testbench_revision_sha256"],
+                "netlist_sha256": hashlib.sha256(dc_raw).hexdigest(),
+            }
+        ),
+        "saved-bias",
+        CHILD.model_copy(update={"parent_revision_sha256": width["ade_state_sha256"]}),
+        BIAS.model_copy(
+            update={
+                "logical_id": "vbiasn",
+                "cadence_binding": "VBIASN",
+                "default": "0.32",
+                "minimum": "0.32",
+                "maximum": "0.321",
+                "step": "0.001",
+            }
+        ),
+        VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"}),
+        ChangeValue(value="0.32", unit="V"),
+        ChangeValue(value="0.321", unit="V"),
+        schematic_revision_sha256=width["revision_sha256"],
+    )
+    baseline, reopened, netlist = (
+        _row(change, mode).model_copy(
+            update={
+                "schematic_revision_sha256": width["revision_sha256"],
+                "testbench_revision_sha256": width["testbench_revision_sha256"],
+                "revision": change.baseline.revision
+                if mode == "baseline"
+                else change.candidate_revision,
+                **({"revision_sha256": width["ade_state_sha256"]} if mode == "baseline" else {}),
+            }
+        )
+        for mode in ("baseline", "reopened", "netlist")
+    )
+    reopened = reopened.model_copy(update={"value": ChangeValue(value="0.32100", unit="V")})
+    netlist = netlist.model_copy(update={"artifact_sha256": hashlib.sha256(new_raw).hexdigest()})
+    readback = verify_change_readback(change, baseline=baseline, reopened=reopened, netlist=netlist)
+    assert readback.status == "MATCHED"
+    persistence = {
+        "change_plan": pin("persisted-plan.json", change.model_dump_json().encode()),
+        "change_plan_sha256": change.plan_sha256,
+        "readback": pin("persisted-readback.json", readback.model_dump_json().encode()),
+        "readback_sha256": canonical_digest(readback),
+        "baseline_input": request["dc"]["baseline"]["effective_input"],
+        "candidate_input": pin("persisted-child.scs", new_raw),
+    }
+    request["persisted_bias_readback"] = persistence
+    persisted_target = tmp_path / "persisted.json"
+    assert compare("with-persisted-evidence", persisted_target) == 0
+    receipt = output(capsys)
+    persisted_raw = persisted_target.read_bytes()
+    assert receipt["file_sha256"] == hashlib.sha256(persisted_raw).hexdigest()
+    persisted_saved = json.loads(persisted_raw)
+    assert persisted_saved["saved_ade_bias_readback_status"] == "MATCHED"
+    assert persisted_saved["association"] == saved["association"]
+    assert persisted_saved["persisted_bias_readback"] == readback.model_dump(mode="json")
+    assert persisted_saved["persisted_bias_readback"]["reopened"]["value"]["value"] == "0.32100"
+    historical_report = saved["association"]["dc"]["candidate"]["report"]
+    assert (
+        historical_report["analysis_conditions"]["ade_state_tree_sha256"]
+        == width["ade_state_sha256"]
+    )
+    assert reopened.revision_sha256 != width["ade_state_sha256"]
+
+    assert compare("persisted-alias", tmp_path / "persisted-child.scs") == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("persisted-repeat", persisted_target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    bad = tmp_path / "persisted-rejected.json"
+    sensitivity = (
+        (persistence, "readback_sha256"),
+        (persistence["readback"], "sha256"),
+    )
+    for index, (document, key) in enumerate(sensitivity):
+        pin_sha = document[key]
+        document[key] = "0" * 64
+        assert compare(f"persisted-wrong-pin-{index}", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        document[key] = pin_sha
+    assert not bad.exists()
+    assert persisted_target.read_bytes() == persisted_raw
+    del request["persisted_bias_readback"]
 
     sidecar = tmp_path / "new-dc.sqlite3-wal"
     assert compare("sidecar", sidecar) == 2
