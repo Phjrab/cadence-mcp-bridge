@@ -24,17 +24,23 @@ from cadence_mcp_bridge.candidate_execution import (
     AmplifierWidthAnalysisBinding,
     AmplifierWidthBinding,
     CandidateAnalysisManifest,
+    FreshAmplifierOperation,
+    FreshAmplifierOperationBinding,
+    FreshAmplifierRevisionBinding,
+    FreshAmplifierWidthAnalysis,
+    FreshAmplifierWidthBinding,
     PmosDcOperation,
     PmosDefaultChangeRequest,
     PmosDefaultChangeResult,
     associate_amplifier_width_pair,
+    associate_fresh_amplifier_width_pair,
     associate_pmos_dc_pair,
     collect_candidate_analyses,
     validate_cross_analysis_conditions,
 )
 from cadence_mcp_bridge.candidate_reports import CandidateObservation
 from cadence_mcp_bridge.domain_provisioning import _canonical
-from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, ModelInclude
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, NodeSignal
 from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.native_service import NativeOperationQuery
@@ -50,7 +56,7 @@ from cadence_mcp_bridge.parameter_changes import (
     plan_mos_width_change,
     verify_change_readback,
 )
-from cadence_mcp_bridge.result_reports import make_report
+from cadence_mcp_bridge.result_reports import ReportConditions, make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
@@ -129,6 +135,266 @@ def test_amplifier_requires_pinned_historical_include_equivalence(monkeypatch, d
         input_pin = "e" * 64
     with pytest.raises(ValueError):
         candidate_execution._amp_model_comparison(includes, binding, input_pin)
+
+
+@pytest.mark.parametrize(
+    "drift",
+    [None, "not-run", "failed", "duplicate", "closure", "orientation", "ac-control"],
+)
+def test_fresh_amplifier_associates_only_bound_native_reports(
+    monkeypatch, measurement_operator, drift
+):
+    from cadence_mcp_bridge import candidate_execution, parameter_changes
+
+    def digest(raw):
+        return hashlib.sha256(raw).hexdigest()
+
+    model = ModelInclude(path="/synthetic/amp.scs", section="NN", file_sha256="1" * 64)
+    models = [dict(path=model.path, file_sha256=model.file_sha256)]
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    body = (
+        b"simulator lang=spectre\nparameters VBIASN=0.320 VBIASP=0.702\n"
+        b'include "/synthetic/amp.scs" section=NN\n'
+        b"V0 (VDD 0) vsource dc=1\nV5 (VSS 0) vsource dc=0\n" + pm0 + b"\n"
+    )
+    center = body + b"analysis0 dc save=all\n"
+    changed = center.replace(b"w=(20u)", b"w=(120n)")
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", digest(center))
+    monkeypatch.setattr(parameter_changes, "_AMP_PM0_STATEMENT_SHA256", digest(pm0))
+    original = BASELINE.revision.model_copy(
+        update={
+            "design_id": "reference-differential-amplifier-tb2",
+            "revision_id": "reference-amplifier-bias-grid-v1",
+        }
+    )
+    candidate = CHILD.model_copy(
+        update={
+            "design_id": original.design_id,
+            "parent_revision_id": original.revision_id,
+        }
+    )
+    qualification = _mos()
+    qualification = qualification.model_copy(
+        update={
+            "baseline": BASELINE.model_copy(
+                update={"revision": original, "netlist_sha256": digest(center)}
+            ),
+            "target": qualification.target.model_copy(
+                update={
+                    "instance": qualification.target.instance.model_copy(
+                        update={"instance_path": "PM0"}
+                    )
+                }
+            ),
+            "old": ChangeValue(value="20", unit="um"),
+            "derived": (
+                DerivedChange(
+                    before=DerivedValue(property_name="fw", value="20u"),
+                    after=DerivedValue(property_name="fw", value="120n"),
+                ),
+            ),
+        }
+    )
+    plan = plan_mos_width_change(qualification, "amp-child", candidate, qualification.expected)
+    old = _row(plan, "baseline").model_copy(update={"revision": original})
+    reopened = _row(plan, "reopened").model_copy(update={"revision": candidate})
+    netlist = _row(plan, "netlist").model_copy(
+        update={"revision": candidate, "artifact_sha256": digest(changed)}
+    )
+    readback = verify_change_readback(plan, baseline=old, reopened=reopened, netlist=netlist)
+    routes = {}
+    monkeypatch.setattr(
+        candidate_execution, "_width_route", lambda op, raw, mode: routes[op.query.operation_id]
+    )
+
+    def side(is_baseline):
+        side_tree, ade_tree = ("2" * 64, "3" * 64) if is_baseline else ("4" * 64, "5" * 64)
+        circuit = center if is_baseline else changed
+        row = old if is_baseline else reopened
+        pins, ops = {}, {}
+        for mode in ("dc", "ac"):
+            if not is_baseline and mode == "ac" and drift == "not-run":
+                continue
+            raw = (
+                circuit
+                if mode == "dc"
+                else circuit.replace(b"dc save=all", b"ac start=10 stop=100000000 dec=10")
+            )
+            if not is_baseline and mode == "ac" and drift == "ac-control":
+                raw = raw.replace(b"dec=10", b"dec=11")
+            _, ap, ade, reader, _, _ = reader_for(measurement_operator, mode)
+            ap = ap.model_copy(update={"runner_sha256": side_tree})
+            ade = ade.model_copy(update={"model_includes": (model,)})
+            definition = reader.model_dump(mode="json")
+            if mode == "dc":
+                definition["nodes"] = [
+                    dict(logical_id=n.lower(), selector="/" + n) for n in ("VDD", "VSS")
+                ]
+                template = definition["sources"][0]
+                definition["sources"] = [
+                    {
+                        **template,
+                        "source_id": "vdd",
+                        "role": "supply",
+                        "positive_node": "vdd",
+                        "negative_node": None,
+                        "current_selector": "/V0/PLUS",
+                    },
+                    {
+                        **template,
+                        "source_id": "vss",
+                        "role": "supply",
+                        "positive_node": "vss",
+                        "negative_node": None,
+                        "current_selector": "/V5/PLUS",
+                    },
+                ]
+                if not is_baseline and drift == "orientation":
+                    definition["sources"][0]["negative_node"] = "vss"
+            else:
+                definition["nodes"] = [
+                    dict(logical_id=n.lower(), selector="/" + n) for n in ("Vp", "Vm", "Vop", "Vom")
+                ]
+                definition["transfer"] = dict(
+                    positive_input="vp",
+                    negative_input="vm",
+                    positive_output="vop",
+                    negative_output="vom",
+                    gain_frequencies_hz=["10"],
+                )
+            reader = GenericReaderRegistration.model_validate_json(json.dumps(definition))
+            conditions = ReportConditions(
+                analysis_inputs=ade.inputs,
+                source_tree_sha256=side_tree,
+                ade_state_tree_sha256=ade_tree,
+                static_statements_sha256=ade.static_statements_sha256,
+                model_file_sha256=(model.file_sha256,),
+                transfer=reader.transfer,
+            )
+            identity = (
+                str(uuid4()) if drift != "duplicate" else "b130b66e-7f23-47c0-87ef-df1029ce5720"
+            )
+            query = NativeOperationQuery(operation_id=identity, expected_plan_sha256=ap.plan_sha256)
+            phase = (
+                "FAILED" if not is_baseline and mode == "ac" and drift == "failed" else "SUCCEEDED"
+            )
+            record = DurableOperation(
+                operation_id=identity,
+                plan=ap,
+                event_count=4,
+                progress=OperationProgress(
+                    phase=phase, remote_revision=5, provider_receipt_sha256="b" * 64
+                ),
+            )
+            report_raw = None
+            if phase == "SUCCEEDED":
+                report_raw = (
+                    make_report(
+                        record,
+                        dict(
+                            status="NATIVE_RESULT_RETRIEVED",
+                            operation_id=identity,
+                            plan_sha256=ap.plan_sha256,
+                            design_id=ade.design_id,
+                            analysis=mode,
+                            measurement_id=reader.measurement_id,
+                            reader_registration_sha256=canonical_digest(reader),
+                            execution_input_sha256=digest(raw),
+                            extraction_receipt_sha256="d" * 64,
+                            frame_sha256="e" * 64,
+                            native_provenance="FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                            report_conditions=conditions.model_dump(mode="json"),
+                            nodes=[],
+                            sources=[
+                                dict(source_id="vdd", role="supply", delivered_w=0.003),
+                                dict(source_id="vss", role="supply", delivered_w=0.0),
+                            ],
+                            transfer=[
+                                dict(
+                                    frequency_hz=10.0,
+                                    gain_v_per_v=10000.0,
+                                    gain_db=80.0,
+                                    phase_deg=0.0,
+                                )
+                            ],
+                        ),
+                    )
+                    .model_dump_json()
+                    .encode()
+                )
+            route_models = [] if not is_baseline and drift == "closure" else models
+            routes[identity] = (
+                dict(ade=ade.model_dump(mode="json"), model_files=route_models),
+                conditions,
+                reader,
+                (),
+            )
+            op = PmosDcOperation(
+                query,
+                ap,
+                b"",
+                b"",
+                b"",
+                record,
+                report_raw,
+                None if report_raw is None else digest(report_raw),
+                "b" * 64,
+            )
+            ops[mode] = FreshAmplifierOperation(op, raw)
+            pins[mode] = FreshAmplifierOperationBinding(
+                operation_id=identity, plan_sha256=ap.plan_sha256, input_sha256=digest(raw)
+            )
+        return ops, FreshAmplifierRevisionBinding(
+            revision_sha256=row.revision_sha256,
+            testbench_revision_sha256=row.testbench_revision_sha256,
+            source_tree_sha256=side_tree,
+            ade_state_sha256=ade_tree,
+            **pins,
+        )
+
+    baseline_ops, baseline_binding = side(True)
+    candidate_ops, candidate_binding = side(False)
+    binding = FreshAmplifierWidthBinding(
+        change_plan_sha256=plan.plan_sha256,
+        readback_sha256=canonical_digest(readback),
+        canonical_model_include=model,
+        diagnostic_model_closure_sha256=digest(_canonical(models)),
+        diagnostic_model_receipt_sha256="6" * 64,
+        baseline=baseline_binding,
+        candidate=candidate_binding,
+    )
+    raw = binding.model_dump_json().encode()
+
+    def compare_pair():
+        return associate_fresh_amplifier_width_pair(
+            plan,
+            readback,
+            expected_plan_sha256=plan.plan_sha256,
+            baseline_input=center,
+            candidate_input=changed,
+            registration_evidence=raw,
+            expected_registration_sha256=digest(raw),
+            dc=FreshAmplifierWidthAnalysis(baseline_ops["dc"], candidate_ops["dc"]),
+            ac=FreshAmplifierWidthAnalysis(baseline_ops["ac"], candidate_ops.get("ac")),
+        )
+
+    if drift in ("duplicate", "closure", "orientation", "ac-control"):
+        with pytest.raises(OperationRejected) as rejected:
+            compare_pair()
+        assert rejected.value.reason == "candidate_fresh_amplifier_width_evidence_mismatch"
+        return
+    result = compare_pair()
+    assert result.dc.baseline.value == result.dc.candidate.value == 0.003
+    assert result.ac.baseline.value == 80.0
+    assert result.ac.candidate.status == {"not-run": "NOT_RUN", "failed": "FAILED"}.get(
+        drift, "SUCCEEDED"
+    )
+    assert result.ac.candidate.value == (None if drift else 80.0)
+    assert result.goals == "GOALS_NOT_PROVIDED" and result.selected_candidate_id is None
+    assert not result.execution_authorized
 
 
 @pytest.fixture
