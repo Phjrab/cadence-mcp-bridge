@@ -153,12 +153,21 @@ class _PersistedBiasReadback(VariableModel):
     candidate_input: _PinnedComparisonFile | None = None
 
 
+class _PersistedBiasExportRefs(VariableModel):
+    export: _PinnedComparisonFile
+    policy_receipt: _PinnedComparisonFile
+    baseline_profile: _PinnedComparisonFile
+    candidate_profile: _PinnedComparisonFile
+    reopened_receipt: _PinnedComparisonFile
+
+
 class _SavedWidthBiasRequest(VariableModel):
     width_binding: _PinnedComparisonFile
     requested_bias: ChangeValue
     dc: _SavedWidthBiasSide
     ac: _SavedWidthBiasSide
     persisted_bias_readback: _PersistedBiasReadback | None = None
+    export_evidence: _PersistedBiasExportRefs | None = None
 
 
 class _AmplifierPm0ObservationRequest(VariableModel):
@@ -932,6 +941,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         FreshAmplifierOperation,
         FreshAmplifierRevisionBinding,
         FreshAmplifierWidthBinding,
+        PersistedBiasExportEvidence,
         associate_persisted_amplifier_bias,
         associate_saved_width_bias_analysis,
     )
@@ -950,6 +960,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
     )
     reserved = {request_path, _local_path(request.width_binding.path)}
     persistence = request.persisted_bias_readback
+    export_refs = request.export_evidence
     if persistence is not None:
         reserved.update(
             _local_path(ref.path)
@@ -961,6 +972,17 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                 persistence.candidate_input,
             )
             if ref is not None
+        )
+    if export_refs is not None:
+        reserved.update(
+            _local_path(ref.path)
+            for ref in (
+                export_refs.export,
+                export_refs.policy_receipt,
+                export_refs.baseline_profile,
+                export_refs.candidate_profile,
+                export_refs.reopened_receipt,
+            )
         )
     operation_ids = {
         pin.operation_id for pin in (binding.baseline.dc, binding.baseline.ac) if pin is not None
@@ -1023,6 +1045,21 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
             ),
         )
 
+    export_evidence = None
+    if export_refs is not None:
+        if persisted is None or persisted.status != "MATCHED":
+            raise OperationRejected("candidate_export_requires_matched_persistence")
+        export_evidence = PersistedBiasExportEvidence(
+            readback=persisted,
+            export=_comparison_document(export_refs.export),
+            export_sha256=export_refs.export.sha256,
+            policy_receipt=_comparison_document(export_refs.policy_receipt),
+            policy_receipt_sha256=export_refs.policy_receipt.sha256,
+            baseline_profile=_comparison_document(export_refs.baseline_profile),
+            candidate_profile=_comparison_document(export_refs.candidate_profile),
+            reopened_receipt=_comparison_document(export_refs.reopened_receipt),
+        )
+
     pairs = {}
     deltas = {}
     executed_bias = {}
@@ -1080,6 +1117,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                 candidate_input_sha256=side.candidate.effective_input.sha256,
                 candidate_query=side.candidate_query,
                 requested_bias=request.requested_bias,
+                export_evidence=export_evidence,
             )
             for name, row, raw in (
                 ("baseline", pair.baseline, baseline.effective_input),
@@ -1119,6 +1157,9 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         payload["persisted_bias_readback"] = persisted.model_dump(mode="json")
     if persistence is not None and persistence.persistence_baseline is not None:
         payload["persistence_baseline_sha256"] = persistence.persistence_baseline.sha256
+    if export_refs is not None:
+        payload["export_receipt_sha256"] = export_refs.export.sha256
+        payload["export_policy_receipt_sha256"] = export_refs.policy_receipt.sha256
     encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
     file_sha256 = _export(output, encoded)
     if json.loads(read_candidate_document(output, expected_sha256=file_sha256)) != payload:

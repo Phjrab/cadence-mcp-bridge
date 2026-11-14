@@ -1242,6 +1242,8 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     }
     assert saved["saved_ade_bias_readback_status"] == "MISSING"
     assert "persisted_bias_readback" not in saved
+    assert "export_receipt_sha256" not in saved
+    assert "export_policy_receipt_sha256" not in saved
     assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
     assert saved["association"]["ac"]["baseline"]["status"] == "SUCCEEDED"
     assert saved["association"]["ac"]["candidate"]["status"] == "NOT_OBSERVED"
@@ -1381,6 +1383,61 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
             assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
     assert not bad.exists()
     assert persisted_target.read_bytes() == persisted_raw
+
+    if not separate_baseline:
+        refs = {
+            name: pin(f"export-{name}.json", json.dumps({"artifact": name}).encode())
+            for name in (
+                "export",
+                "policy_receipt",
+                "baseline_profile",
+                "candidate_profile",
+                "reopened_receipt",
+            )
+        }
+        persistence["readback_sha256"] = canonical_digest(readback)
+        request["export_evidence"] = refs
+        captured = []
+        associate = candidate_execution.associate_saved_width_bias_analysis
+
+        def check_export(*args, export_evidence, **kwargs):
+            captured.append(export_evidence)
+            return associate(*args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(candidate_execution, "associate_saved_width_bias_analysis", check_export)
+            export_target = tmp_path / "export-comparison.json"
+            assert compare("with-export-evidence", export_target) == 0
+            stdout = output(capsys)
+            export_raw = export_target.read_bytes()
+            assert stdout["file_sha256"] == hashlib.sha256(export_raw).hexdigest()
+            assert stdout["remote_contact"] is stdout["execution_authorized"] is False
+            exported = json.loads(export_raw)
+            assert exported["export_receipt_sha256"] == refs["export"]["sha256"]
+            assert exported["export_policy_receipt_sha256"] == refs["policy_receipt"]["sha256"]
+            assert exported["persisted_bias_readback"] == persisted_saved["persisted_bias_readback"]
+            assert exported["association"] == persisted_saved["association"]
+            (evidence,) = captured
+            assert evidence.readback == readback
+            assert evidence.export_sha256 == refs["export"]["sha256"]
+            assert evidence.policy_receipt_sha256 == refs["policy_receipt"]["sha256"]
+            for name in refs:
+                assert getattr(evidence, name) == (tmp_path / f"export-{name}.json").read_bytes()
+
+            assert compare("export-alias", tmp_path / "export-reopened_receipt.json") == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert compare("export-repeat", export_target) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            refs["candidate_profile"]["sha256"] = "0" * 64
+            assert compare("export-wrong-pin", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            del request["persisted_bias_readback"]
+            assert compare("export-missing-persistence", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert len(captured) == 1
+            assert not bad.exists() and export_target.read_bytes() == export_raw
+            request["persisted_bias_readback"] = persistence
+        del request["export_evidence"]
     del request["persisted_bias_readback"]
 
     sidecar = tmp_path / "new-dc.sqlite3-wal"
