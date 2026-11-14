@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 import re
 from decimal import Decimal, localcontext
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input, statements
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget, CandidateVariableBinding
@@ -69,7 +69,18 @@ class ChangeBaseline(VariableModel):
     netlist_sha256: Digest
 
 
-class AdeTarget(VariableModel):
+class _SchematicRevisionPin(VariableModel):
+    schematic_revision_sha256: Digest | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_schematic_pin(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.schematic_revision_sha256 is None:
+            document.pop("schematic_revision_sha256", None)
+        return document
+
+
+class AdeTarget(_SchematicRevisionPin):
     kind: Literal["ade_variable"] = "ade_variable"
     binding: CandidateVariableBinding
 
@@ -244,7 +255,14 @@ def plan_ade_change(
     binding: CandidateVariableBinding,
     old: ChangeValue,
     requested: ChangeValue,
+    *,
+    schematic_revision_sha256: str | None = None,
 ) -> ChangePlan:
+    """Plan an ADE change, optionally pinning the unchanged physical schematic.
+
+    For persisted ADE evidence, the revision digests identify independently
+    verified ADE states and the schematic and testbench pins identify OA.
+    """
     baseline = _checked(baseline)
     candidate_revision = _checked(candidate_revision)
     contract = _checked(contract)
@@ -266,7 +284,7 @@ def plan_ade_change(
         baseline=baseline,
         candidate_id=candidate_id,
         candidate_revision=candidate_revision,
-        target=AdeTarget(binding=binding),
+        target=AdeTarget(binding=binding, schematic_revision_sha256=schematic_revision_sha256),
         old=old,
         requested=requested,
         expected=requested,
@@ -738,7 +756,7 @@ def project_netlist_change(
     )
 
 
-class Readback(VariableModel):
+class Readback(_SchematicRevisionPin):
     """Value projected by an observer from its own artifact; hashes identify the capture."""
 
     stage: Literal["baseline", "reopened", "netlist"]
@@ -802,6 +820,9 @@ def _check_readback(
     netlist: Readback | None,
 ) -> tuple[Literal["MISSING", "STALE", "CONFLICT", "MATCHED"], str]:
     reference = plan.baseline
+    schematic_pin = (
+        plan.target.schematic_revision_sha256 if isinstance(plan.target, AdeTarget) else None
+    )
     for stage, row in (("baseline", baseline), ("reopened", reopened), ("netlist", netlist)):
         if row is None:
             continue
@@ -818,6 +839,13 @@ def _check_readback(
             )
         ):
             return "STALE", f"{stage}_binding_mismatch"
+        if schematic_pin is not None:
+            if row.schematic_revision_sha256 is None:
+                return "MISSING", f"{stage}_schematic_revision_required"
+            if row.schematic_revision_sha256 != schematic_pin:
+                return "CONFLICT", f"{stage}_schematic_revision_changed"
+            if row.testbench_revision_sha256 != reference.testbench_revision_sha256:
+                return "CONFLICT", f"{stage}_testbench_revision_changed"
         if row.fixed_conditions_sha256 != reference.fixed_conditions_sha256:
             return "CONFLICT", f"{stage}_fixed_conditions_changed"
         expected = plan.old if is_baseline else plan.expected
