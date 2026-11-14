@@ -16,8 +16,12 @@ REVIEWED_OPERATOR_SHA256 = {
     "probe.py": "5db6297d16bfd4d60471983aa084702697c00cc0f41d8c9c908249e3925d15e2",
     "runner.py": "aa3e40fdbce271940545bc7cd62883cb454d7c6712d229c9aa991434237bf9db",
     "launcher.py": "1fc18429942ad801b4c379f7c7f03be003067eedd518b3b26f6ed46c68a8672f",
-    "reservations.py": "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372",
+    "reservations.py": "7262380c6e7dde4557769507cfa535034e2bc7756727c6d10a3dd0dedfbb96a7",
 }
+# Still used by exact retained activation and same-asset preflight updates.
+REVIEWED_RETAINED_RESERVATIONS_SHA256 = (
+    "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372"
+)
 
 
 def canonical(value):
@@ -366,8 +370,12 @@ def _operator_state(path):
 
 def reviewed_operator_assets(contents, action):
     for name, expected in REVIEWED_OPERATOR_SHA256.items():
-        if digest(contents[name].replace(b"\r\n", b"\n")) != expected:
-            raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
+        actual = digest(contents[name].replace(b"\r\n", b"\n"))
+        if actual == expected:
+            continue
+        if name == "reservations.py" and actual == REVIEWED_RETAINED_RESERVATIONS_SHA256:
+            continue
+        raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
 
 
 def _file_metadata(info):

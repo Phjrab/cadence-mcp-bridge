@@ -37,7 +37,8 @@ def read(path):
 
 def run(directory, action, expected):
     if (action not in ("inventory-existing", "apply-existing", "inventory-legacy-seal",
-                      "seal-existing") or len(expected) != 64 or
+                      "seal-existing", "plan-result-limit-v7",
+                      "apply-result-limit-v7") or len(expected) != 64 or
             any(c not in "0123456789abcdef" for c in expected) or
             not os.path.isabs(directory) or os.path.realpath(directory) != directory):
         raise ValueError("migration_entry_binding")

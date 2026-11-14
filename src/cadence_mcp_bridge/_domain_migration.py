@@ -162,14 +162,15 @@ def identity(value):
         raise ValueError("migration_host_identity")
 
 
-def profile(value):
+def profile(value, result_limit=None):
     accounting, installer, probe = helpers()
     value = probe.validate_profile(value)
     identity(value)
     limits = value["limits"]
     if (
         limits["spectre_attempts"] != accounting.CEILING_COUNT
-        or limits["result_reserved_bytes"] != accounting.CEILING_BYTES
+        or limits["result_reserved_bytes"] !=
+        (accounting.CEILING_BYTES if result_limit is None else result_limit)
     ):
         raise ValueError("existing_legacy_policy_required")
     root = value["paths"]["managed_root"]
@@ -697,6 +698,270 @@ def apply_result_limit(request, assets_sha256):
             os.close(fd)
 
 
+def retained_v7_quiet(root):
+    if any(os.path.lexists(os.path.join(root, name)) for name in (
+        "execution.lock", "jobs/active", "native-mcp-v1-jobs/active",
+        "native-grel-v1-jobs/active", "sim-mcp-v2-jobs/active",
+        "ade-pvt-qual-v1-jobs/active", "bias-headroom-v1-jobs/active",
+    )):
+        raise ValueError("migration_active_or_unresolved")
+    if os.name != "posix":
+        return  # Disposable host fixtures only. The native entry requires POSIX.
+    import subprocess
+
+    process = subprocess.Popen(
+        ["/bin/ps", "-C", "spectre,ocean,virtuoso", "-o", "comm="],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
+    )
+    out, errors = process.communicate()
+    if process.returncode != 1 or out.strip() or errors:
+        raise ValueError("migration_active_or_unresolved")
+
+
+def retained_v7_snapshot(value, root, lock):
+    accounting, installer, _ = helpers()
+    installer._operator_guard(root, lock)
+    retained_v7_quiet(root)
+    index_path = os.path.expanduser("~/.cadence_mcp-domain/manifest.json")
+    accounting.safe(os.path.dirname(index_path), True)
+    index = accounting.read(index_path)
+    domain = digest(canonical({
+        "hostname": value["host"]["hostname"].lower().rstrip("."),
+        "architecture": value["host"]["architecture"],
+    }))
+    if (
+        not isinstance(index, dict)
+        or set(index) != set((
+            "schema_version", "root", "resource_domain_sha256",
+            "identity_manifest_sha256", "plan_sha256",
+        ))
+        or type(index["schema_version"]) is not int
+        or index["schema_version"] != 1
+        or index["root"] != root
+        or index["resource_domain_sha256"] != domain
+        or not all(accounting.matches(accounting.HASH, index[key]) for key in (
+            "identity_manifest_sha256", "plan_sha256",
+        ))
+    ):
+        raise ValueError("result_limit_registered_domain")
+    binding = {
+        "root_sha256": digest(root.encode("utf-8")),
+        "resource_domain_sha256": domain,
+        "identity_manifest_sha256": index["identity_manifest_sha256"],
+        "ledger_ref": accounting.LEDGER,
+    }
+    anchor = accounting.identity_manifest(root, binding)
+    if anchor["schema_version"] != 1:
+        raise ValueError("result_limit_retained_domain_only")
+    state, records = accounting.state(root, binding)
+    if state != accounting.RESULT_POLICY_V7_BASELINE:
+        raise ValueError("result_limit_v7_baseline_drift")
+    if any(receipt is None for _, receipt in records):
+        raise ValueError("migration_active_or_unresolved")
+    registry = os.path.join(root, accounting.REGISTRY)
+    accounting.safe(registry, True)
+    prior = os.path.join(registry, accounting.RESULT_POLICY_FILE)
+    pointer_path = os.path.join(root, "active-native-provider.json")
+    pointer = accounting.read(pointer_path)
+    if (
+        not isinstance(pointer, dict)
+        or set(pointer) != set(("schema_version", "manifest_sha256"))
+        or type(pointer["schema_version"]) is not int
+        or pointer["schema_version"] != 1
+        or not accounting.matches(accounting.HASH, pointer["manifest_sha256"])
+    ):
+        raise ValueError("result_limit_native_predecessor")
+    history = os.path.join(root, "native-provider-history", pointer["manifest_sha256"] + ".json")
+    accounting.safe(os.path.dirname(history), True)
+    if any(os.path.lexists(path) for path in (
+        os.path.join(root, "native-provider-revoked.json"), history[:-5] + ".revoked.json",
+    )):
+        raise ValueError("result_limit_native_predecessor")
+    history_document = accounting.read(history)
+    if (
+        not isinstance(history_document, dict)
+        or set(history_document) != set((
+            "schema_version", "manifest_sha256", "identity_manifest_sha256", "operator_authority",
+        ))
+        or type(history_document["schema_version"]) is not int
+        or history_document["schema_version"] != 1
+        or history_document["manifest_sha256"] != pointer["manifest_sha256"]
+        or history_document["identity_manifest_sha256"] != binding["identity_manifest_sha256"]
+        or not isinstance(history_document["operator_authority"], accounting.STRING_TYPES)
+        or not 1 <= len(history_document["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in history_document["operator_authority"])
+    ):
+        raise ValueError("result_limit_native_predecessor")
+    jobs = os.path.join(root, accounting.JOBS)
+    ledger_path = os.path.join(root, accounting.LEDGER)
+    lock_path = os.path.join(root, "run.lock")
+    controls = [
+        index_path, os.path.join(registry, "manifest.json"), prior, pointer_path, history,
+    ]
+    seal = os.path.join(registry, "legacy-seal.json")
+    if os.path.lexists(seal):
+        controls.append(seal)
+    reservations = []
+    for name in bounded_job_names(jobs):
+        if name == "control.lock":
+            continue  # Existing active-job sentinel checked independently.
+        work = os.path.join(jobs, name, "work")
+        leaves = []
+        if os.path.lexists(work):
+            accounting.safe(work, True)
+            for leaf in ("attempt-reserved", "reservation-intent.json", "reservation-receipt.json"):
+                path = os.path.join(work, leaf)
+                if os.path.lexists(path):
+                    leaves.append((leaf, digest(accounting.read_bytes(path))))
+            if os.path.lexists(os.path.join(registry, name + ".json")):
+                leaves.append(("registry", digest(accounting.read_bytes(os.path.join(
+                    registry, name + ".json"
+                )))))
+        reservations.append((name, leaves))
+    result = {
+        "baseline": state,
+        "ledger_sha256": digest(accounting.read_bytes(ledger_path)),
+        "ledger_metadata": file_metadata(ledger_path),
+        "lock_inode": accounting.identity(accounting.safe(lock_path)),
+        "lock_sha256": digest(installer.regular(lock_path)),
+        "controls_sha256": digest(canonical([
+            (path, file_metadata(path), digest(accounting.read_bytes(path))) for path in controls
+        ])),
+        "reservations_sha256": digest(canonical(reservations)),
+        "transaction_count": len(records),
+        "native_predecessor": pointer["manifest_sha256"],
+        "prior_receipt_sha256": digest(accounting.read_bytes(prior)),
+    }
+    retained_v7_quiet(root)
+    installer._operator_guard(root, lock)
+    return binding, result
+
+
+def result_limit_v7_plan(value, assets_sha256):
+    accounting, installer, _ = helpers()
+    root = profile(value, accounting.MAX_POLICY_BYTES)
+    lock = installer._operator_lock(root)
+    try:
+        successor = os.path.join(root, accounting.REGISTRY, accounting.RESULT_POLICY_V7_FILE)
+        if os.path.lexists(successor):
+            raise ValueError("result_limit_v7_use_original_plan")
+        binding, current = retained_v7_snapshot(value, root, lock)
+        plan = {
+            "schema_version": 7,
+            "recipe_id": "retained-result-limit-v7",
+            "profile": value,
+            "profile_sha256": digest(canonical(value)),
+            "binding": binding,
+            "snapshot": current,
+            "authority": "PLAN_IS_NOT_OPERATOR_APPROVAL",
+            "helper_manifest_sha256": assets_sha256,
+            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+        }
+        return {
+            "plan": plan,
+            "plan_sha256": digest(canonical(plan)),
+            "execution_authorized": False,
+            "ledger_initialized": False,
+        }
+    finally:
+        if lock is not None:
+            os.close(lock)
+
+
+def apply_result_limit_v7(request, assets_sha256):
+    accounting, installer, _ = helpers()
+    if (
+        not isinstance(request, dict)
+        or set(request) != set(("plan", "expected_plan_sha256", "operator_authority"))
+        or not isinstance(request["operator_authority"], accounting.STRING_TYPES)
+        or not 1 <= len(request["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in request["operator_authority"])
+    ):
+        raise ValueError("result_limit_operator_authority")
+    plan = request["plan"]
+    if (
+        not isinstance(plan, dict)
+        or set(plan) != set((
+            "schema_version", "recipe_id", "profile", "profile_sha256", "binding", "snapshot",
+            "authority", "helper_manifest_sha256", "policy_sha256",
+        ))
+        or type(plan["schema_version"]) is not int
+        or plan["schema_version"] != 7
+        or plan["recipe_id"] != "retained-result-limit-v7"
+        or plan["helper_manifest_sha256"] != assets_sha256
+        or plan["policy_sha256"] != accounting.RESULT_POLICY_V7_SHA
+        or plan["authority"] != "PLAN_IS_NOT_OPERATOR_APPROVAL"
+        or digest(canonical(plan)) != request["expected_plan_sha256"]
+        or digest(canonical(plan["profile"])) != plan["profile_sha256"]
+    ):
+        raise ValueError("result_limit_plan_binding")
+    root = profile(plan["profile"], accounting.MAX_POLICY_BYTES)
+    lock = installer._operator_lock(root)
+    try:
+        def guard():
+            actual = retained_v7_snapshot(plan["profile"], root, lock)
+            if canonical(actual) != canonical((plan["binding"], plan["snapshot"])):
+                raise ValueError("result_limit_snapshot_drift")
+
+        guard()
+        binding, current = plan["binding"], plan["snapshot"]
+        document = {
+            "schema_version": 7,
+            "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V7",
+            "root_sha256": binding["root_sha256"],
+            "resource_domain_sha256": binding["resource_domain_sha256"],
+            "identity_manifest_sha256": binding["identity_manifest_sha256"],
+            "prior_receipt_sha256": current["prior_receipt_sha256"],
+            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+            "baseline": current["baseline"],
+            "plan_sha256": request["expected_plan_sha256"],
+            "operator_authority": request["operator_authority"],
+        }
+        path = os.path.join(root, accounting.REGISTRY, accounting.RESULT_POLICY_V7_FILE)
+        raw = canonical(document)
+        created = not os.path.lexists(path)
+        if created:
+            candidate = os.path.join(root, ".result-policy-v7-" + digest(os.urandom(32)))
+            installer.exclusive(candidate, raw)
+            accounting.sync_directory(root)
+            guard()
+            if installer.regular(candidate) != raw or os.path.lexists(path):
+                raise ValueError("result_limit_publish_conflict")
+            os.rename(candidate, path)
+            accounting.sync_directory(os.path.dirname(path))
+            accounting.sync_directory(root)
+        elif accounting.read_bytes(path) != raw:
+            raise ValueError("result_limit_retained_conflict")
+        # Re-establish durability after interruption at the same receipt.
+        accounting.sync_directory(root)
+        installer._sync_exact_file(
+            path, raw, guard=lambda: installer._operator_guard(root, lock), mode=384,
+        )
+        accounting.sync_directory(os.path.dirname(path))
+        guard()
+        anchor = accounting.identity_manifest(root, binding)
+        if accounting.effective_policy(root, anchor)["result_ceiling_bytes"] != (
+            accounting.RESULT_POLICY_V7_BYTES
+        ):
+            raise ValueError("result_limit_v7_post_policy")
+        return {
+            "status": "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE",
+            "created": created,
+            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+            "policy_receipt_sha256": digest(raw),
+            "plan_sha256": request["expected_plan_sha256"],
+            "ledger_sha256": current["ledger_sha256"],
+            "result_ceiling_bytes": accounting.RESULT_POLICY_V7_BYTES,
+            "execution_authorized": False,
+            "ledger_modified": False,
+            "ledger_initialized": False,
+            "reservation_cost": 0,
+        }
+    finally:
+        if lock is not None:
+            os.close(lock)
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in (
         "inventory-existing",
@@ -705,6 +970,8 @@ def main():
         "seal-existing",
         "plan-result-limit-v6",
         "apply-result-limit-v6",
+        "plan-result-limit-v7",
+        "apply-result-limit-v7",
     ):
         raise ValueError("fixed_existing_migration_command_required")
     if os.name != "posix":
@@ -715,6 +982,10 @@ def main():
         result = result_limit_plan(data, assets)
     elif sys.argv[1] == "apply-result-limit-v6":
         result = apply_result_limit(data, assets)
+    elif sys.argv[1] == "plan-result-limit-v7":
+        result = result_limit_v7_plan(data, assets)
+    elif sys.argv[1] == "apply-result-limit-v7":
+        result = apply_result_limit_v7(data, assets)
     elif sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
         result = plan(data, assets, sys.argv[1] == "inventory-legacy-seal")
     else:

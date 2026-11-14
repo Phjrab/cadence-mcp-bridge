@@ -1202,6 +1202,32 @@ def test_reviewed_operator_pins_match_exact_package_assets(prepared_bound):
     assert set(installer.REVIEWED_OPERATOR_SHA256) == set(installer.FILES) - {"profile.json"}
 
 
+@pytest.mark.parametrize("action", ["activation", "update"])
+def test_retained_operator_pin_applies_only_to_reservations(prepared_bound, monkeypatch, action):
+    source, _, digest = prepared_bound
+    _, contents, _ = installer.validate(str(source), digest)
+    current = contents["reservations.py"]
+    current_sha = installer.digest(current.replace(b"\r\n", b"\n"))
+    original_digest = installer.digest
+
+    # The retained source bytes live in the previous immutable bundle. Simulate
+    # their exact digest so this test needs no archived asset or git history.
+    def retained_digest(raw):
+        match = original_digest(raw)
+        if match == current_sha:
+            return "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372"
+        return match
+
+    monkeypatch.setattr(installer, "digest", retained_digest)
+    installer.reviewed_operator_assets(contents, action)
+    with pytest.raises(ValueError, match="operator_" + action + "_probe_not_reviewed"):
+        installer.reviewed_operator_assets(dict(contents, **{"probe.py": current}), action)
+    with pytest.raises(ValueError, match="operator_" + action + "_reservations_not_reviewed"):
+        installer.reviewed_operator_assets(
+            dict(contents, **{"reservations.py": current + b"\n# unreviewed bytes\n"}), action,
+        )
+
+
 @pytest.mark.parametrize("barrier", ["version", "runtime"])
 @pytest.mark.parametrize("existing", [False, True])
 def test_operator_runtime_durability_failure_preserves_pointer_and_retries(

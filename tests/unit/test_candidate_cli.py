@@ -1017,19 +1017,27 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     assert not any(tmp_path.glob("*.sqlite3-*"))
 
 
+@pytest.mark.parametrize("separate_baseline", [False, True])
 def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     measurement_operator,
     tmp_path,
     monkeypatch,
     capsys,
+    separate_baseline,
 ):
     from uuid import uuid4
 
     import test_candidate_execution as execution_fixture
+    from test_parameter_changes import BASELINE, BIAS, CHILD, VIN, _row
 
     from cadence_mcp_bridge import candidate_execution
     from cadence_mcp_bridge.analysis_store import AnalysisStore
     from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationProgress
+    from cadence_mcp_bridge.parameter_changes import (
+        ChangeValue,
+        plan_ade_change,
+        verify_change_readback,
+    )
 
     calls = []
     associate_width = candidate_execution.associate_fresh_amplifier_width_pair
@@ -1092,6 +1100,7 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     old_dc, dc_raw = center("dc")
     old_ac, ac_raw = center("ac")
     new_raw = dc_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
+    new_ac_raw = ac_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
     new_plan = old_dc.plan.model_copy(
         update={
             "runner_sha256": "f" * 64,
@@ -1233,11 +1242,243 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
         "candidate": {"value": "0.321", "unit": "V"},
     }
     assert saved["saved_ade_bias_readback_status"] == "MISSING"
+    assert "persisted_bias_readback" not in saved
+    assert "export_receipt_sha256" not in saved
+    assert "export_policy_receipt_sha256" not in saved
     assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
     assert saved["association"]["ac"]["baseline"]["status"] == "SUCCEEDED"
     assert saved["association"]["ac"]["candidate"]["status"] == "NOT_OBSERVED"
     assert saved["executed_netlist_vbiasn"]["ac"]["candidate"] is None
     assert saved["deltas"]["ac"]["absolute_delta"] is None
+
+    historical_width = binding["candidate"]
+    width = {
+        key: historical_width[key]
+        for key in (
+            "revision_sha256",
+            "testbench_revision_sha256",
+            "source_tree_sha256",
+            "ade_state_sha256",
+        )
+    }
+    if separate_baseline:
+        width["ade_state_sha256"] = "8" * 64
+    change = plan_ade_change(
+        BASELINE.model_copy(
+            update={
+                "revision_sha256": width["ade_state_sha256"],
+                "testbench_revision_sha256": width["testbench_revision_sha256"],
+                "netlist_sha256": hashlib.sha256(dc_raw).hexdigest(),
+            }
+        ),
+        "saved-bias",
+        CHILD.model_copy(update={"parent_revision_sha256": width["ade_state_sha256"]}),
+        BIAS.model_copy(
+            update={
+                "logical_id": "vbiasn",
+                "cadence_binding": "VBIASN",
+                "default": "0.32",
+                "minimum": "0.32",
+                "maximum": "0.321",
+                "step": "0.001",
+            }
+        ),
+        VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"}),
+        ChangeValue(value="0.32", unit="V"),
+        ChangeValue(value="0.321", unit="V"),
+        schematic_revision_sha256=width["revision_sha256"],
+    )
+    baseline, reopened, netlist = (
+        _row(change, mode).model_copy(
+            update={
+                "schematic_revision_sha256": width["revision_sha256"],
+                "testbench_revision_sha256": width["testbench_revision_sha256"],
+                "revision": change.baseline.revision
+                if mode == "baseline"
+                else change.candidate_revision,
+                **({"revision_sha256": width["ade_state_sha256"]} if mode == "baseline" else {}),
+            }
+        )
+        for mode in ("baseline", "reopened", "netlist")
+    )
+    reopened = reopened.model_copy(update={"value": ChangeValue(value="0.32100", unit="V")})
+    netlist = netlist.model_copy(update={"artifact_sha256": hashlib.sha256(new_raw).hexdigest()})
+    readback = verify_change_readback(change, baseline=baseline, reopened=reopened, netlist=netlist)
+    assert readback.status == "MATCHED"
+    persistence = {
+        "change_plan": pin("persisted-plan.json", change.model_dump_json().encode()),
+        "change_plan_sha256": change.plan_sha256,
+        "readback": pin("persisted-readback.json", readback.model_dump_json().encode()),
+        "readback_sha256": canonical_digest(readback),
+        "baseline_input": request["dc"]["baseline"]["effective_input"],
+        "candidate_input": pin("persisted-child.scs", new_raw),
+    }
+    request["persisted_bias_readback"] = persistence
+    persisted_target = tmp_path / "persisted.json"
+    if separate_baseline:
+        assert compare("without-required-persistence-baseline", persisted_target) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not persisted_target.exists()
+        persistence["persistence_baseline"] = pin(
+            "persistence-baseline.json", json.dumps(width).encode()
+        )
+    assert compare("with-persisted-evidence", persisted_target) == 0
+    receipt = output(capsys)
+    persisted_raw = persisted_target.read_bytes()
+    assert receipt["file_sha256"] == hashlib.sha256(persisted_raw).hexdigest()
+    persisted_saved = json.loads(persisted_raw)
+    assert persisted_saved["saved_ade_bias_readback_status"] == "MATCHED"
+    assert persisted_saved["association"] == saved["association"]
+    assert persisted_saved["persisted_bias_readback"] == readback.model_dump(mode="json")
+    assert persisted_saved["persisted_bias_readback"]["reopened"]["value"]["value"] == "0.32100"
+    historical_report = saved["association"]["dc"]["candidate"]["report"]
+    assert (
+        historical_report["analysis_conditions"]["ade_state_tree_sha256"]
+        == historical_width["ade_state_sha256"]
+    )
+    assert reopened.revision_sha256 != width["ade_state_sha256"]
+    assert (
+        persisted_saved["persisted_bias_readback"]["baseline"]["revision_sha256"]
+        == width["ade_state_sha256"]
+    )
+    if separate_baseline:
+        assert (
+            persisted_saved["persistence_baseline_sha256"]
+            == persistence["persistence_baseline"]["sha256"]
+        )
+        assert width["ade_state_sha256"] != historical_width["ade_state_sha256"]
+    else:
+        assert "persistence_baseline_sha256" not in persisted_saved
+
+    assert compare("persisted-alias", tmp_path / "persisted-child.scs") == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("persisted-repeat", persisted_target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    bad = tmp_path / "persisted-rejected.json"
+    sensitivity = (
+        (persistence, "readback_sha256"),
+        (persistence["readback"], "sha256"),
+    )
+    for index, (document, key) in enumerate(sensitivity):
+        pin_sha = document[key]
+        document[key] = "0" * 64
+        assert compare(f"persisted-wrong-pin-{index}", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        document[key] = pin_sha
+    if separate_baseline:
+        baseline_ref = persistence["persistence_baseline"]
+        assert compare("persistence-baseline-alias", tmp_path / "persistence-baseline.json") == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        persistence["persistence_baseline"] = {**baseline_ref, "sha256": "0" * 64}
+        assert compare("persistence-baseline-wrong-pin", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        for key, value in (
+            ("source_tree_sha256", "0" * 64),
+            ("testbench_revision_sha256", "0" * 64),
+            ("revision_sha256", "0" * 64),
+            ("dc", historical_width["dc"]),
+        ):
+            changed = json.dumps({**width, key: value}).encode()
+            persistence["persistence_baseline"] = pin(f"wrong-{key}.json", changed)
+            assert compare(f"persistence-baseline-wrong-{key}", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert not bad.exists()
+    assert persisted_target.read_bytes() == persisted_raw
+
+    if separate_baseline:
+        persistence["persistence_baseline"] = baseline_ref
+        ac_change = change.model_copy(
+            update={
+                "baseline": change.baseline.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(ac_raw).hexdigest()}
+                )
+            }
+        )
+        ac_readback = verify_change_readback(
+            ac_change,
+            baseline=baseline.model_copy(update={"plan_sha256": ac_change.plan_sha256}),
+            reopened=reopened.model_copy(update={"plan_sha256": ac_change.plan_sha256}),
+            netlist=netlist.model_copy(
+                update={
+                    "plan_sha256": ac_change.plan_sha256,
+                    "artifact_sha256": hashlib.sha256(new_ac_raw).hexdigest(),
+                }
+            ),
+        )
+        ac_pins = {
+            "change_plan": pin("export-ac-plan.json", ac_change.model_dump_json().encode()),
+            "change_plan_sha256": ac_change.plan_sha256,
+            "readback": pin("export-ac-readback.json", ac_readback.model_dump_json().encode()),
+            "readback_sha256": canonical_digest(ac_readback),
+            "baseline_input": pin("export-ac-baseline.scs", ac_raw),
+            "candidate_input": pin("export-ac-candidate.scs", new_ac_raw),
+        }
+        refs = {
+            name: pin(f"export-{name}.json", json.dumps({"artifact": name}).encode())
+            for name in (
+                "export",
+                "policy_receipt",
+                "baseline_profile",
+                "candidate_profile",
+                "reopened_receipt",
+                "baseline_receipt",
+            )
+        }
+        request["export_evidence"] = {**refs, "ac_persistence": ac_pins}
+        captured = []
+        associate = candidate_execution.associate_saved_width_bias_analysis
+
+        def check_export(*args, export_evidence, **kwargs):
+            captured.append(export_evidence)
+            return associate(*args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(candidate_execution, "associate_saved_width_bias_analysis", check_export)
+            export_target = tmp_path / "export-comparison.json"
+            assert compare("with-export-evidence", export_target) == 0
+            stdout = output(capsys)
+            export_raw = export_target.read_bytes()
+            assert stdout["file_sha256"] == hashlib.sha256(export_raw).hexdigest()
+            assert stdout["remote_contact"] is stdout["execution_authorized"] is False
+            exported = json.loads(export_raw)
+            assert exported["export_receipt_sha256"] == refs["export"]["sha256"]
+            assert exported["export_policy_receipt_sha256"] == refs["policy_receipt"]["sha256"]
+            assert exported["persisted_bias_readback"] == persisted_saved["persisted_bias_readback"]
+            assert exported["association"] == persisted_saved["association"]
+            (evidence,) = captured
+            assert evidence.readback == readback
+            assert evidence.persistence_baseline.ade_state_sha256 == width["ade_state_sha256"]
+            assert evidence.plan == change and evidence.plan_sha256 == change.plan_sha256
+            assert evidence.readback_sha256 == canonical_digest(readback)
+            assert evidence.baseline_input == dc_raw and evidence.candidate_input == new_raw
+            assert evidence.export_sha256 == refs["export"]["sha256"]
+            assert evidence.policy_receipt_sha256 == refs["policy_receipt"]["sha256"]
+            for name in refs:
+                assert getattr(evidence, name) == (tmp_path / f"export-{name}.json").read_bytes()
+
+            assert compare("export-alias", tmp_path / "export-reopened_receipt.json") == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert compare("export-repeat", export_target) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert compare("export-ac-alias", tmp_path / "export-ac-readback.json") == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            refs["candidate_profile"]["sha256"] = "0" * 64
+            assert compare("export-wrong-pin", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            refs["candidate_profile"]["sha256"] = hashlib.sha256(
+                (tmp_path / "export-candidate_profile.json").read_bytes()
+            ).hexdigest()
+            ac_pins["readback_sha256"] = "0" * 64
+            assert compare("export-wrong-ac-pin", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            del request["persisted_bias_readback"]
+            assert compare("export-missing-persistence", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert len(captured) == 1
+            assert not bad.exists() and export_target.read_bytes() == export_raw
+            request["persisted_bias_readback"] = persistence
+        del request["export_evidence"]
+    del request["persisted_bias_readback"]
 
     sidecar = tmp_path / "new-dc.sqlite3-wal"
     assert compare("sidecar", sidecar) == 2
