@@ -12,6 +12,8 @@ import pytest
 from test_candidate_batches import candidate_native
 from test_candidate_contracts import candidate_operator, operator, planned
 from test_candidate_execution import (
+    amplifier_child_fixture,
+    amplifier_width_evidence,
     measurement_operator,
     operator_base,
     pmos_pair,
@@ -28,6 +30,8 @@ from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = [
+    "amplifier_child_fixture",
+    "amplifier_width_evidence",
     "candidate_native",
     "candidate_operator",
     "measurement_operator",
@@ -404,6 +408,859 @@ def test_pmos_dc_compare_retained_pair(pmos_pair, tmp_path, monkeypatch, capsys,
             request[key]["operation_id"] for key in ("baseline", "candidate")
         ]
     assert all(path.read_bytes() == raw for path, raw in pinned.items())
+
+
+def test_observe_amplifier_pm0_request_schema(capsys):
+    assert main(["operator-candidates", "schema", "--action", "observe-amplifier-pm0"]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {
+        "baseline_input",
+        "child_input",
+        "baseline",
+        "child",
+        "diagnostic_receipt_sha256",
+        "footprint_receipt_sha256",
+        "dfm_evidence_sha256",
+        "baseline_effective_dfm",
+        "child_effective_dfm",
+    }
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "matched",
+        "request-hash",
+        "baseline-hash",
+        "child-hash",
+        "output-alias",
+        "missing-dfm",
+        "wrong-dfm",
+        "missing-geometry",
+        "missing-receipt",
+    ],
+)
+def test_observe_amplifier_pm0_retained_inputs(tmp_path, monkeypatch, capsys, case):
+    from cadence_mcp_bridge import parameter_changes
+    from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputObservation
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    baseline_raw = b"simulator lang=spectre\nparameters VBIASN=0.32 VBIASP=0.702\n" + pm0 + b"\n"
+    child_raw = (
+        baseline_raw.replace(b"w=(20u)", b"w=(120n)")
+        .replace(b"5.6p", b"69.6f")
+        .replace(b"40.56u", b"1.16u")
+    )
+    baseline_hash = hashlib.sha256(baseline_raw).hexdigest()
+    child_hash = hashlib.sha256(child_raw).hexdigest()
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", baseline_hash)
+    monkeypatch.setattr(
+        parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
+    )
+    baseline_path = tmp_path / "baseline.scs"
+    child_path = tmp_path / "child.scs"
+    baseline_path.write_bytes(baseline_raw)
+    child_path.write_bytes(child_raw)
+    request = {
+        "baseline_input": str(baseline_path),
+        "child_input": str(child_path),
+        "baseline": {
+            "revision_sha256": "1" * 64,
+            "testbench_revision_sha256": "2" * 64,
+            "oa_cdf_sha256": "3" * 64,
+            "netlist_sha256": baseline_hash,
+            "width": {"value": "20", "unit": "um"},
+            "geometry": [
+                {"property_name": name, "value": value}
+                for name, value in zip(
+                    ("fw", "as", "ad", "ps", "pd"),
+                    ("20u", "5.6p", "5.6p", "40.56u", "40.56u"),
+                    strict=True,
+                )
+            ],
+        },
+        "child": {
+            "revision_sha256": "4" * 64,
+            "testbench_revision_sha256": "5" * 64,
+            "oa_cdf_sha256": "6" * 64,
+            "netlist_sha256": child_hash,
+            "width": {"value": "120", "unit": "nm"},
+            "geometry": [
+                {"property_name": name, "value": value}
+                for name, value in zip(
+                    ("fw", "as", "ad", "ps", "pd"),
+                    ("120n", "69.6f", "69.6f", "1.16u", "1.16u"),
+                    strict=True,
+                )
+            ],
+        },
+        "diagnostic_receipt_sha256": "7" * 64,
+        "footprint_receipt_sha256": "8" * 64,
+        "dfm_evidence_sha256": "9" * 64,
+        "baseline_effective_dfm": "Minimum",
+        "child_effective_dfm": "DFM",
+    }
+    target = tmp_path / "observation.json"
+    if case in ("baseline-hash", "child-hash"):
+        request[case.split("-")[0]]["netlist_sha256"] = "0" * 64
+    elif case == "output-alias":
+        target = tmp_path / "subdir" / ".." / child_path.name
+        target.parent.parent.mkdir()
+    elif case == "missing-dfm":
+        del request["child_effective_dfm"]
+    elif case == "wrong-dfm":
+        request["child_effective_dfm"] = "Minimum"
+    elif case == "missing-geometry":
+        request["child"]["geometry"].pop()
+    elif case == "missing-receipt":
+        del request["diagnostic_receipt_sha256"]
+    request_path = tmp_path / "request.json"
+    request_raw = json.dumps(request).encode()
+    request_path.write_bytes(request_raw)
+    digest = "0" * 64 if case == "request-hash" else hashlib.sha256(request_raw).hexdigest()
+    args = [
+        "operator-candidates",
+        "observe-amplifier-pm0",
+        "--request",
+        str(request_path),
+        digest,
+        "--output",
+        str(target),
+    ]
+    if case == "matched":
+        assert main(args) == 0
+        summary = output(capsys)
+        raw = target.read_bytes()
+        result = AmplifierPm0InputObservation.model_validate_json(raw)
+        assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+        assert summary["status"] == result.status == "OBSERVATION_ONLY"
+        assert summary["scope"] == result.scope == "NETLIST_INPUT_ONLY"
+        assert summary["oa_footprint"] == result.oa_footprint == "MISMATCHED"
+        assert summary["oa_change_status"] == result.oa_change_status == "UNQUALIFIED_EXTRA_SETTING"
+        assert (
+            summary["receipt_authentication"]
+            == result.receipt_authentication
+            == ("NOT_VERIFIED_BY_THIS_API")
+        )
+        assert summary["remote_contact"] is False
+        assert not any(
+            summary[key]
+            for key in ("execution_authorized", "admission_authorized", "selection_authorized")
+        )
+        assert result.netlist.artifact_sha256 == child_hash
+        assert result.netlist.value.model_dump() == {"value": "120", "unit": "nm"}
+        assert (result.baseline_effective_dfm, result.child_effective_dfm) == ("Minimum", "DFM")
+        assert result.dfm_evidence_sha256 == request["dfm_evidence_sha256"]
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.read_bytes() == raw
+    else:
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.exists() == (case == "output-alias")
+    assert request_path.read_bytes() == request_raw
+    assert baseline_path.read_bytes() == baseline_raw
+    assert child_path.read_bytes() == child_raw
+
+
+def test_amplifier_width_compare_request_schema(capsys):
+    assert main(["operator-candidates", "schema", "--action", "amplifier-width-compare"]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {
+        "change_plan",
+        "change_plan_sha256",
+        "readback",
+        "baseline_input",
+        "candidate_input",
+        "registration_evidence",
+        "dc",
+        "ac",
+    }
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing-historical-proof",
+        "matched",
+        "no-child",
+        "unobserved",
+        "no-report",
+        "failed",
+        "bad-pin",
+        "bad-canonical-pin",
+        "bad-terminal-pin",
+        "missing-terminal-pin",
+        "bad-query",
+        "extra-key",
+        "collision",
+        "sidecar",
+        "existing-wal",
+    ],
+)
+def test_amplifier_width_compare_retained_pair(
+    amplifier_width_evidence,
+    amplifier_child_fixture,
+    tmp_path,
+    monkeypatch,
+    capsys,
+    case,
+):
+    from uuid import uuid4
+
+    from cadence_mcp_bridge import candidate_execution, parameter_changes
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.candidate_execution import AmplifierWidthPair
+    from cadence_mcp_bridge.domain_provisioning import _canonical
+    from cadence_mcp_bridge.generic_ade import ModelInclude
+    from cadence_mcp_bridge.operator_operations import OperationProgress
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    change, readback, binding, dc, ac, child_raw = amplifier_width_evidence
+    missing_historical_proof = case == "missing-historical-proof"
+    archived = "/fixture/old/../models/root.scs"
+    canonical = ModelInclude(path="/fixture/models/root.scs", section="NN", file_sha256="a" * 64)
+    model_files = [{"path": canonical.path, "file_sha256": canonical.file_sha256}]
+    closure = hashlib.sha256(_canonical(model_files)).hexdigest()
+
+    if missing_historical_proof:
+        archived_sha256 = hashlib.sha256(archived.encode()).hexdigest()
+        monkeypatch.setattr(
+            candidate_execution, "_AMP_ARCHIVED_INCLUDE_PATH_SHA256", archived_sha256
+        )
+        monkeypatch.setattr(
+            candidate_execution,
+            "_AMP_CANONICAL_INCLUDE_PATH_SHA256",
+            hashlib.sha256(canonical.path.encode()).hexdigest(),
+        )
+        header = b"simulator lang=spectre\n"
+        include = f'include "{archived}" section=NN\n'.encode()
+
+        def archived_input(evidence):
+            raw = evidence.baseline_input.replace(header, header + include, 1)
+            measurements = list(evidence.baseline.measurements)
+            measurements[1] = measurements[1].model_copy(
+                update={"input_sha256": hashlib.sha256(raw).hexdigest()}
+            )
+            sweep = evidence.baseline.model_copy(update={"measurements": tuple(measurements)})
+            return replace(
+                evidence,
+                baseline=sweep,
+                baseline_input=raw,
+                expected_baseline_sha256=canonical_digest(sweep),
+            )
+
+        dc, ac = archived_input(dc), archived_input(ac)
+        child_raw = child_raw.replace(header, header + include, 1)
+        center_sha256 = hashlib.sha256(dc.baseline_input).hexdigest()
+        monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", center_sha256)
+        change = change.model_copy(
+            update={
+                "baseline": change.baseline.model_copy(update={"netlist_sha256": center_sha256}),
+            }
+        )
+        fields = {"plan_sha256": change.plan_sha256}
+        readback = parameter_changes.verify_change_readback(
+            change,
+            baseline=readback.baseline.model_copy(update=fields),
+            reopened=readback.reopened.model_copy(update=fields),
+            netlist=readback.netlist.model_copy(
+                update={**fields, "artifact_sha256": hashlib.sha256(child_raw).hexdigest()},
+            ),
+        )
+        binding = binding.model_copy(
+            update={
+                "change_plan_sha256": change.plan_sha256,
+                "readback_sha256": canonical_digest(readback),
+            }
+        )
+    files = {}
+    journals = []
+
+    def save(name, raw):
+        path = tmp_path / name
+        path.write_bytes(raw)
+        files[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def side(mode, evidence, registration):
+        sweep_id = str(evidence.baseline.engine.sweep_id) if case != "bad-query" else str(uuid4())
+        capture = {
+            "query": {"design_id": change.baseline.revision.design_id, "sweep_id": sweep_id},
+            "result": evidence.baseline.model_dump(mode="json"),
+        }
+        data = {
+            "baseline_result": save(f"{mode}-result.json", json.dumps(capture).encode()),
+            "baseline_result_sha256": evidence.expected_baseline_sha256,
+            "baseline_input": save(f"{mode}-input.scs", evidence.baseline_input),
+        }
+        if case == "no-child":
+            return data, registration
+        evidence, registration = amplifier_child_fixture(evidence, registration, mode)
+        child = evidence.child
+        effective_input, report = evidence.child_input, child.report
+        if missing_historical_proof:
+            effective_input = effective_input.replace(archived.encode(), canonical.path.encode())
+            input_sha256 = hashlib.sha256(effective_input).hexdigest()
+            alias = None
+            if mode == "dc":
+                alias = candidate_execution.AmplifierBaselineIncludeAlias(
+                    baseline_input_sha256=hashlib.sha256(evidence.baseline_input).hexdigest(),
+                    archived_path_sha256=hashlib.sha256(archived.encode()).hexdigest(),
+                    canonical_include=canonical,
+                    historical_model_closure_sha256=closure,
+                    historical_equivalence_receipt_sha256="c" * 64,
+                )
+            registration = registration.model_copy(
+                update={
+                    "model_includes": (canonical,),
+                    "model_closure_sha256": closure,
+                    "baseline_include_alias": alias,
+                    "child_input_sha256": input_sha256,
+                }
+            )
+            route, _, _, _ = candidate_execution._width_route(child, effective_input, mode)
+            route["ade"]["model_includes"] = [canonical.model_dump(mode="json")]
+            route["model_files"] = model_files
+            report_data = json.loads(report)
+            report_data["execution_input_sha256"] = input_sha256
+            report = json.dumps(report_data).encode()
+        journal = tmp_path / f"{mode}.sqlite3"
+        journals.append(journal)
+        store = AnalysisStore(journal)
+        identity = child.query.operation_id
+        assert store.admit_operation(identity, child.plan)
+        failed = case == "failed" and mode == "ac"
+        dispatch = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(identity, OperationProgress(phase="ADMITTED"), dispatch)
+        progress = child.record.progress
+        if failed:
+            progress = progress.model_copy(update={"phase": "FAILED"})
+        store.advance_operation(identity, dispatch, progress)
+        raw = journal.read_bytes()
+        files[journal] = raw
+        data["child"] = {
+            "operation_id": identity,
+            "plan_sha256": child.plan.plan_sha256,
+            "journal": {"path": str(journal), "sha256": hashlib.sha256(raw).hexdigest()},
+            "runtime_manifest": save(f"{mode}-manifest.json", b"{}"),
+            "runtime_registration": save(f"{mode}-registration.json", b"{}"),
+            "design_registry": save(f"{mode}-registry.json", b"{}"),
+            "effective_input": save(f"{mode}-child.scs", effective_input),
+        }
+        if case == "unobserved" and mode == "ac":
+            del data["child"]["journal"]
+            data["child"]["execution_plan"] = save(
+                f"{mode}-plan.json",
+                child.plan.model_dump_json().encode(),
+            )
+        else:
+            data["child"]["terminal_sha256"] = child.expected_terminal_sha256
+            if not failed and (case != "no-report" or mode != "ac"):
+                data["child"]["report"] = save(f"{mode}-report.json", report)
+        return data, registration
+
+    dc_request, dc_binding = side("dc", dc, binding.dc)
+    ac_request, ac_binding = side("ac", ac, binding.ac)
+    binding = binding.model_copy(update={"dc": dc_binding, "ac": ac_binding})
+    request = {
+        "change_plan": save("plan.json", change.model_dump_json().encode()),
+        "change_plan_sha256": change.plan_sha256,
+        "readback": save("readback.json", readback.model_dump_json().encode()),
+        "baseline_input": save("center.scs", dc.baseline_input),
+        "candidate_input": save("diagnostic-child.scs", child_raw),
+        "registration_evidence": save("binding.json", binding.model_dump_json().encode()),
+        "dc": dc_request,
+        "ac": ac_request,
+    }
+    target = tmp_path / "comparison.json"
+    if case == "bad-pin":
+        request["registration_evidence"]["sha256"] = "0" * 64
+    elif case == "bad-canonical-pin":
+        ac_request["baseline_result_sha256"] = "0" * 64
+    elif case == "bad-terminal-pin":
+        ac_request["child"]["terminal_sha256"] = "0" * 64
+    elif case == "missing-terminal-pin":
+        del ac_request["child"]["terminal_sha256"]
+    elif case == "extra-key":
+        request["goals"] = []
+    elif case == "collision":
+        target = tmp_path / "diagnostic-child.scs"
+    elif case == "sidecar":
+        target = tmp_path / "ac.sqlite3-shm"
+    elif case == "existing-wal":
+        save("ac.sqlite3-wal", b"retained sidecar")
+    request_file = save("amp-request.json", json.dumps(request).encode())
+    args = [
+        "operator-candidates",
+        "amplifier-width-compare",
+        "--request",
+        request_file["path"],
+        request_file["sha256"],
+        "--output",
+        str(target),
+    ]
+    if case in (
+        "matched",
+        "missing-historical-proof",
+        "no-child",
+        "unobserved",
+        "no-report",
+        "failed",
+    ):
+        assert main(args) == 0
+        summary = output(capsys)
+        saved_raw = target.read_bytes()
+        saved = json.loads(saved_raw)
+        pair = AmplifierWidthPair.model_validate_json(json.dumps(saved["association"]))
+        assert summary["status"] == "AMPLIFIER_WIDTH_COMPARISON_EXPORTED"
+        assert summary["remote_contact"] is False and pair.execution_authorized is False
+        assert summary["file_sha256"] == hashlib.sha256(saved_raw).hexdigest()
+        assert saved["request_sha256"] == request_file["sha256"]
+        assert saved["requested_width"] == {"value": "19", "unit": "um"}
+        assert pair.readback == readback and pair.goals == "GOALS_NOT_PROVIDED"
+        assert saved["selected_candidate_id"] is None
+        assert str(pair.dc.baseline.job_id) == binding.dc.baseline_operation_id
+        assert str(pair.ac.baseline.job_id) == binding.ac.baseline_operation_id
+        assert (pair.dc.unit, pair.ac.unit) == ("W", "dB")
+        assert (pair.dc.baseline_value, pair.ac.baseline_value) == (0.002, 60.0)
+        assert pair.dc.dc_output_reason == "baseline_output_scalars_not_retained"
+        if case == "no-child":
+            assert pair.dc.child_status == pair.ac.child_status == "NOT_RUN"
+            assert saved["deltas"]["dc"] == {
+                "absolute_delta": None,
+                "reason": "retained_operation_not_supplied",
+            }
+        else:
+            assert pair.dc.child_operation.operation_id == dc_request["child"]["operation_id"]
+            assert pair.dc.child_report.analysis_conditions is not None
+            assert saved["deltas"]["dc"]["absolute_delta"] == pytest.approx(0.001)
+            assert pair.ac.child_operation.operation_id == ac_request["child"]["operation_id"]
+            if missing_historical_proof:
+                assert pair.dc.model_comparison == "MATCHED"
+                assert pair.ac.model_comparison == "NOT_EVALUATED"
+                assert pair.ac.child_status == "SUCCEEDED" and pair.ac.child_report is not None
+                assert pair.ac.child_value is None
+                assert saved["deltas"]["ac"] == {
+                    "absolute_delta": None,
+                    "reason": "historical_model_equivalence_unavailable",
+                }
+            elif case == "matched":
+                assert pair.ac.child_value == 80.0
+                assert saved["deltas"]["ac"] == {"absolute_delta": 20.0, "reason": "available"}
+                assert main(args) == 2
+                assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+                assert target.read_bytes() == saved_raw
+            else:
+                assert pair.ac.child_report is None and pair.ac.child_value is None
+                status, reason = {
+                    "unobserved": ("NOT_OBSERVED", "retained_operation_not_supplied"),
+                    "no-report": ("SUCCEEDED", "retained_result_unavailable"),
+                    "failed": ("FAILED", "retained_operation_not_succeeded"),
+                }[case]
+                assert pair.ac.child_status == status
+                assert saved["deltas"]["ac"] == {
+                    "absolute_delta": None,
+                    "reason": reason,
+                }
+    else:
+        assert main(args) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert target.exists() == (case == "collision")
+    assert all(path.read_bytes() == raw for path, raw in files.items())
+    for journal in journals:
+        for suffix in ("-wal", "-shm", "-journal"):
+            path = journal.with_name(journal.name + suffix)
+            assert path.exists() == (path in files)
+
+
+def test_amplifier_fresh_width_compare_retains_registered_evidence(
+    measurement_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    import test_candidate_execution as execution_fixture
+
+    from cadence_mcp_bridge import candidate_execution
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import OperationProgress
+
+    # Reuse the C7 synthetic registered-pair fixture and its compiled-route stub.
+    calls = []
+    associate = candidate_execution.associate_fresh_amplifier_width_pair
+
+    def record(*args, **kwargs):
+        calls.append((args, kwargs))
+        return associate(*args, **kwargs)
+
+    with monkeypatch.context() as fixture:
+        fixture.setattr(execution_fixture, "associate_fresh_amplifier_width_pair", record)
+        execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
+            monkeypatch,
+            measurement_operator,
+            "not-run",
+        )
+
+    (plan, readback), evidence = calls.pop()
+    originals = {}
+
+    def pin(path, raw):
+        with path.open("xb") as output_file:
+            output_file.write(raw)
+        originals[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def operation(label, retained):
+        op = retained.operation
+        journal = tmp_path / f"{label}.sqlite3"
+        store = AnalysisStore(journal)
+        operation_id = op.query.operation_id
+        assert store.admit_operation(operation_id, op.plan)
+        pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(operation_id, OperationProgress(phase="ADMITTED"), pending)
+        store.advance_operation(operation_id, pending, op.record.progress)
+        raw = journal.read_bytes()
+        originals[journal] = raw
+        data = {
+            "operation_id": operation_id,
+            "plan_sha256": op.plan.plan_sha256,
+            "journal": {"path": str(journal), "sha256": hashlib.sha256(raw).hexdigest()},
+            "terminal_sha256": op.expected_terminal_sha256,
+            "effective_input": pin(tmp_path / f"{label}.scs", retained.effective_input),
+            "runtime_manifest": pin(tmp_path / f"{label}-manifest.json", b"{}"),
+            "runtime_registration": pin(tmp_path / f"{label}-registration.json", b"{}"),
+            "design_registry": pin(tmp_path / f"{label}-registry.json", b"{}"),
+        }
+        if op.report is not None:
+            data["report"] = pin(tmp_path / f"{label}-report.json", op.report)
+        return data
+
+    request = {
+        "change_plan": pin(tmp_path / "plan.json", plan.model_dump_json().encode()),
+        "change_plan_sha256": evidence["expected_plan_sha256"],
+        "readback": pin(tmp_path / "readback.json", readback.model_dump_json().encode()),
+        "baseline_input": pin(tmp_path / "center.scs", evidence["baseline_input"]),
+        "candidate_input": pin(tmp_path / "diagnostic.scs", evidence["candidate_input"]),
+        "registration_evidence": pin(tmp_path / "binding.json", evidence["registration_evidence"]),
+        "dc": {
+            "baseline": operation("dc-baseline", evidence["dc"].baseline),
+            "candidate": operation("dc-candidate", evidence["dc"].candidate),
+        },
+        "ac": {"baseline": operation("ac-baseline", evidence["ac"].baseline)},
+    }
+
+    def compare(label, destination):
+        ref = pin(tmp_path / f"{label}.json", json.dumps(request).encode())
+        return main(
+            [
+                "operator-candidates",
+                "amplifier-fresh-width-compare",
+                "--request",
+                ref["path"],
+                ref["sha256"],
+                "--output",
+                str(destination),
+            ]
+        )
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    assert (
+        main(
+            [
+                "operator-candidates",
+                "schema",
+                "--action",
+                "amplifier-fresh-width-compare",
+            ]
+        )
+        == 0
+    )
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["_FreshAmplifierWidthSide"]["additionalProperties"] is False
+    target = tmp_path / "comparison.json"
+    assert compare("valid", target) == 0
+    summary = output(capsys)
+    raw = target.read_bytes()
+    saved = json.loads(raw)
+    pair = candidate_execution.FreshAmplifierWidthPair.model_validate_json(
+        json.dumps(saved["association"])
+    )
+    assert summary["status"] == "AMPLIFIER_FRESH_WIDTH_COMPARISON_EXPORTED"
+    assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert summary["remote_contact"] is False and not pair.execution_authorized
+    assert pair.goals == "GOALS_NOT_PROVIDED" and saved["selected_candidate_id"] is None
+    assert pair.dc.candidate.operation.operation_id == request["dc"]["candidate"]["operation_id"]
+    assert pair.dc.candidate.report.analysis_conditions is not None
+    assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
+    assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
+    assert saved["deltas"]["ac"] == {"absolute_delta": None, "reason": "measurement_unavailable"}
+
+    sidecar = tmp_path / "dc-candidate.sqlite3-wal"
+    assert compare("sidecar-collision", sidecar) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("duplicate", target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["dc"]["candidate"]["effective_input"]["sha256"] = "0" * 64
+    rejected = tmp_path / "rejected.json"
+    assert compare("wrong-effective-input-pin", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert not rejected.exists() and target.read_bytes() == raw
+    assert all(path.read_bytes() == raw for path, raw in originals.items())
+    assert not any(tmp_path.glob("*.sqlite3-*"))
+
+
+def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
+    measurement_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from uuid import uuid4
+
+    import test_candidate_execution as execution_fixture
+
+    from cadence_mcp_bridge import candidate_execution
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationProgress
+
+    calls = []
+    associate_width = candidate_execution.associate_fresh_amplifier_width_pair
+
+    def capture(*args, **kwargs):
+        calls.append(kwargs)
+        return associate_width(*args, **kwargs)
+
+    with monkeypatch.context() as fixture:
+        fixture.setattr(execution_fixture, "associate_fresh_amplifier_width_pair", capture)
+        execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
+            monkeypatch,
+            measurement_operator,
+            None,
+        )
+    evidence = calls.pop()
+    width_route = candidate_execution._width_route
+    routes = {}
+    originals = {}
+
+    def pin(name, raw):
+        path = tmp_path / name
+        with path.open("xb") as handle:
+            handle.write(raw)
+        originals[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def stage(label, op, raw):
+        store = AnalysisStore(tmp_path / f"{label}.sqlite3")
+        query = op.query
+        assert store.admit_operation(query.operation_id, op.plan)
+        intent = OperationProgress(phase="ADMITTED")
+        pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(query.operation_id, intent, pending)
+        store.advance_operation(query.operation_id, pending, op.record.progress)
+        saved = (tmp_path / f"{label}.sqlite3").read_bytes()
+        originals[tmp_path / f"{label}.sqlite3"] = saved
+        return {
+            "operation_id": query.operation_id,
+            "plan_sha256": query.expected_plan_sha256,
+            "terminal_sha256": op.expected_terminal_sha256,
+            "journal": {
+                "path": str(tmp_path / f"{label}.sqlite3"),
+                "sha256": hashlib.sha256(saved).hexdigest(),
+            },
+            "runtime_manifest": pin(f"{label}-manifest.json", b"{}"),
+            "runtime_registration": pin(f"{label}-registration.json", b"{}"),
+            "design_registry": pin(f"{label}-registry.json", b"{}"),
+            "effective_input": pin(f"{label}.scs", raw),
+            "report": pin(f"{label}-report.json", op.report),
+        }
+
+    def center(mode):
+        retained = evidence[mode].candidate
+        op = retained.operation
+        route, conditions, reader, semantics = width_route(op, retained.effective_input, mode)
+        routes[op.query.operation_id] = (route, conditions, reader, semantics)
+        return op, retained.effective_input
+
+    old_dc, dc_raw = center("dc")
+    old_ac, ac_raw = center("ac")
+    new_raw = dc_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
+    new_plan = old_dc.plan.model_copy(
+        update={
+            "runner_sha256": "f" * 64,
+            "request": old_dc.plan.request.model_copy(
+                update={
+                    "design_id": "saved-width-bias321",
+                    "values": (ExplicitValue(logical_id="vbiasn", value="0.321", unit="V"),),
+                }
+            ),
+        }
+    )
+    new_query = old_dc.query.model_copy(
+        update={
+            "operation_id": str(uuid4()),
+            "expected_plan_sha256": new_plan.plan_sha256,
+        }
+    )
+    report = json.loads(old_dc.report)
+    report.update(
+        operation_id=new_query.operation_id,
+        plan=new_plan.model_dump(mode="json"),
+        execution_input_sha256=hashlib.sha256(new_raw).hexdigest(),
+    )
+    report_raw = json.dumps(report).encode()
+    new_dc = replace(
+        old_dc,
+        query=new_query,
+        plan=new_plan,
+        report=report_raw,
+        expected_report_sha256=hashlib.sha256(report_raw).hexdigest(),
+        record=old_dc.record.model_copy(
+            update={
+                "operation_id": new_query.operation_id,
+                "plan": new_plan,
+            }
+        ),
+    )
+    for op, bias in ((old_dc, "0.32"), (new_dc, "0.321")):
+        route, conditions, reader, semantics = routes[old_dc.query.operation_id]
+        variable = dict(
+            logical_id="vbiasn",
+            cadence_binding="VBIASN",
+            unit="V",
+            value_type="real",
+            default=bias,
+            mutation_policy="fixed",
+            range_status="unqualified",
+            minimum=None,
+            maximum=None,
+            step_policy="fixed",
+            step=None,
+            fixed_value=bias,
+            review_id=None,
+        )
+        routes[op.query.operation_id] = (
+            {**route, "variables": [variable], "source_cell": "/fixture/cell", "libraries": []},
+            conditions,
+            reader,
+            semantics,
+        )
+    old_plan = old_dc.plan.model_copy(
+        update={
+            "request": old_dc.plan.request.model_copy(
+                update={
+                    "values": (ExplicitValue(logical_id="vbiasn", value="0.32", unit="V"),),
+                }
+            ),
+        }
+    )
+    old_report = json.loads(old_dc.report)
+    old_report["plan"] = old_plan.model_dump(mode="json")
+    old_report_raw = json.dumps(old_report).encode()
+    old_dc = replace(
+        old_dc,
+        plan=old_plan,
+        report=old_report_raw,
+        query=old_dc.query.model_copy(update={"expected_plan_sha256": old_plan.plan_sha256}),
+        expected_report_sha256=hashlib.sha256(old_report_raw).hexdigest(),
+        record=old_dc.record.model_copy(update={"plan": old_plan}),
+    )
+    binding = json.loads(evidence["registration_evidence"])
+    binding["candidate"]["dc"]["plan_sha256"] = old_dc.plan.plan_sha256
+    monkeypatch.setattr(
+        candidate_execution,
+        "_width_route",
+        lambda op, raw, mode, *, varied_id: routes[op.query.operation_id],
+    )
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+
+    action = "amplifier-saved-width-bias-compare"
+    request = {
+        "width_binding": pin("binding.json", json.dumps(binding).encode()),
+        "requested_bias": {"value": "0.3210", "unit": "V"},
+        "dc": {
+            "baseline": stage("center-dc", old_dc, dc_raw),
+            "candidate_query": new_query.model_dump(mode="json"),
+            "candidate": stage("new-dc", new_dc, new_raw),
+        },
+        "ac": {
+            "baseline": stage("center-ac", old_ac, ac_raw),
+            "candidate_query": {"operation_id": str(uuid4()), "expected_plan_sha256": "e" * 64},
+        },
+    }
+
+    def compare(label, target):
+        ref = pin(f"{label}.json", json.dumps(request).encode())
+        return main(
+            [
+                "operator-candidates",
+                action,
+                "--request",
+                ref["path"],
+                ref["sha256"],
+                "--output",
+                str(target),
+            ]
+        )
+
+    assert main(["operator-candidates", "schema", "--action", action]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["_SavedWidthBiasSide"]["additionalProperties"] is False
+    target = tmp_path / "comparison.json"
+    assert compare("valid", target) == 0
+    summary = output(capsys)
+    raw = target.read_bytes()
+    saved = json.loads(raw)
+    assert summary["status"] == "AMPLIFIER_SAVED_WIDTH_BIAS_COMPARISON_EXPORTED"
+    assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert summary["remote_contact"] is summary["execution_authorized"] is False
+    assert (
+        summary["new_simulations"] == summary["new_extractions"] == summary["new_reservations"] == 0
+    )
+    assert saved["association"]["goals"] == "GOALS_NOT_PROVIDED"
+    assert saved["selected_candidate_id"] is None
+    assert saved["requested_vbiasn"] == request["requested_bias"]
+    assert saved["executed_netlist_vbiasn"]["dc"] == {
+        "baseline": {"value": "0.32", "unit": "V"},
+        "candidate": {"value": "0.321", "unit": "V"},
+    }
+    assert saved["saved_ade_bias_readback_status"] == "MISSING"
+    assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
+    assert saved["association"]["ac"]["baseline"]["status"] == "SUCCEEDED"
+    assert saved["association"]["ac"]["candidate"]["status"] == "NOT_OBSERVED"
+    assert saved["executed_netlist_vbiasn"]["ac"]["candidate"] is None
+    assert saved["deltas"]["ac"]["absolute_delta"] is None
+
+    sidecar = tmp_path / "new-dc.sqlite3-wal"
+    assert compare("sidecar", sidecar) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("repeat", target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    identity = dict(request["ac"]["candidate_query"])
+    request["ac"]["candidate_query"] = request["dc"]["candidate_query"]
+    rejected = tmp_path / "rejected.json"
+    assert compare("duplicate-id", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["ac"]["candidate_query"] = identity
+    terminal = request["ac"]["baseline"]["terminal_sha256"]
+    request["ac"]["baseline"]["terminal_sha256"] = "0" * 64
+    assert compare("wrong-center-terminal", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["ac"]["baseline"]["terminal_sha256"] = terminal
+    request["dc"]["candidate"]["effective_input"]["sha256"] = "0" * 64
+    assert compare("wrong-pin", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert not rejected.exists() and target.read_bytes() == raw
+    assert all(path.read_bytes() == content for path, content in originals.items())
+    assert not any(tmp_path.glob("*.sqlite3-*"))
 
 
 def test_local_plan_exports_full_vector_without_journal(

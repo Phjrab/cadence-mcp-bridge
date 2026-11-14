@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal, Protocol, Self
+from math import isfinite
+from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self
 
 from pydantic import Field, model_validator
 
-from cadence_mcp_bridge._native_rendering import effective_input
+from cadence_mcp_bridge._native_rendering import effective_input, partition_input
+from cadence_mcp_bridge.amplifier_specifications import AmplifierFactProvenance, provenance
+from cadence_mcp_bridge.amplifier_sweeps import AmplifierSweepResult
 from cadence_mcp_bridge.candidate_contracts import (
     CandidateBatchPlan,
     CandidateFixedEvidence,
@@ -23,8 +27,13 @@ from cadence_mcp_bridge.candidate_reports import (
 )
 from cadence_mcp_bridge.designs import DesignMeasurementRegistry
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
-from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
-from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, ModelInclude
+from cadence_mcp_bridge.generic_measurements import (
+    GenericReaderRegistration,
+    _ac_axis,
+    _matches_ac_axis,
+    _sample_indices,
+)
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.native_service import NativeOperationQuery
@@ -40,12 +49,21 @@ from cadence_mcp_bridge.parameter_changes import (
     ChangeReadback,
     ChangeValue,
     MosWidthTarget,
+    _amp_pm0_options,
+    partition_amplifier_input,
     project_netlist_change,
     verify_change_readback,
 )
+from cadence_mcp_bridge.power_measurements import require_same_resource_policy
 from cadence_mcp_bridge.result_reports import ReportConditions, ReportMetric, ResultReport
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
-from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
+from cadence_mcp_bridge.variable_contracts import (
+    Digest,
+    LogicalId,
+    VariableContract,
+    VariableModel,
+    canonical_digest,
+)
 
 
 class CandidateAnalysisManifest(VariableModel):
@@ -444,6 +462,150 @@ class PmosDcPair(VariableModel):
     execution_authorized: Literal[False] = False
 
 
+class AmplifierBaselineIncludeAlias(VariableModel):
+    """Receipt references independently authenticated for one archived AMP input."""
+
+    baseline_input_sha256: Digest
+    archived_path_sha256: Digest
+    canonical_include: ModelInclude
+    historical_model_closure_sha256: Digest
+    historical_equivalence_receipt_sha256: Digest
+
+
+class AmplifierWidthAnalysisBinding(VariableModel):
+    """Independently verified legacy measurement and native child route bindings."""
+
+    baseline_operation_id: str
+    baseline_plan_sha256: Digest
+    baseline_reader: GenericReaderRegistration
+    model_includes: tuple[ModelInclude, ...]
+    model_closure_sha256: Digest
+    baseline_include_alias: AmplifierBaselineIncludeAlias | None = None
+    child_operation_id: OperationId | None = None
+    child_plan_sha256: Digest | None = None
+    child_input_sha256: Digest | None = None
+
+    @model_validator(mode="after")
+    def child_identity_pair(self) -> Self:
+        pins = (self.child_operation_id, self.child_plan_sha256, self.child_input_sha256)
+        if any(pin is None for pin in pins) and any(pin is not None for pin in pins):
+            raise ValueError("child operation, plan and input pins must be supplied together")
+        return self
+
+
+class AmplifierWidthBinding(VariableModel):
+    change_plan_sha256: Digest
+    readback_sha256: Digest
+    baseline_revision_sha256: Digest
+    baseline_testbench_revision_sha256: Digest
+    child_revision_sha256: Digest
+    child_testbench_revision_sha256: Digest
+    child_source_tree_sha256: Digest
+    child_ade_state_sha256: Digest
+    dc: AmplifierWidthAnalysisBinding
+    ac: AmplifierWidthAnalysisBinding
+
+
+@dataclass(frozen=True)
+class AmplifierWidthAnalysis:
+    baseline: AmplifierSweepResult
+    expected_baseline_sha256: str
+    baseline_input: bytes
+    child: PmosDcOperation | None = None
+    child_input: bytes | None = None
+
+
+class AmplifierWidthAnalysisPair(VariableModel):
+    analysis: Literal["dc", "ac"]
+    metric_id: Literal["dc-supply-power-grid-v2", "gain-10hz-grid-v1"]
+    unit: Literal["W", "dB"]
+    baseline: AmplifierFactProvenance
+    baseline_value: float
+    child_operation: NativeOperationQuery | None
+    child_terminal_sha256: Digest | None
+    child_status: OperationPhase | Literal["NOT_RUN", "NOT_OBSERVED"]
+    child_report: ResultReport | None
+    child_value: float | None
+    reason: str | None
+    model_comparison: Literal["MATCHED", "NOT_EVALUATED"] = "MATCHED"
+    dc_output_reason: Literal["baseline_output_scalars_not_retained"] | None = None
+
+
+class AmplifierWidthPair(VariableModel):
+    change_plan_sha256: Digest
+    binding_sha256: Digest
+    readback: ChangeReadback
+    dc: AmplifierWidthAnalysisPair
+    ac: AmplifierWidthAnalysisPair
+    goals: Literal["GOALS_NOT_PROVIDED"] = "GOALS_NOT_PROVIDED"
+    execution_authorized: Literal[False] = False
+
+
+class _AmplifierCircuit(NamedTuple):
+    parameters: dict[str, str]
+    includes: list[tuple[str, str]]
+    fixed_statements: list[str]
+    pm0_options: dict[str, str]
+
+
+_AMP_DC_OUTPUT_DIRECTIVE_SHA256 = "a9ca38379d1571bcd44fe8525109abeceea855e2784c0dc93c6c3384f0447fbd"
+
+
+_AMP_ARCHIVED_INCLUDE_PATH_SHA256 = (
+    "b628372fdce9ae6af7a2a6e3fc6fb4091e2c8a0b5c605d1432ba3152bd0cd47e"
+)
+_AMP_CANONICAL_INCLUDE_PATH_SHA256 = (
+    "6d4ec0a3bfc8d8e3742a09c5ff7f817ff5c11c5d4f33187b3a6e8e1ba6c4e8f7"
+)
+
+
+def _amp_model_comparison(
+    includes: list[tuple[str, str]],
+    binding: AmplifierWidthAnalysisBinding,
+    baseline_input_sha256: str,
+) -> Literal["MATCHED", "NOT_EVALUATED"]:
+    registered = [(model.path, model.section) for model in binding.model_includes]
+    evidence = binding.baseline_include_alias
+    if includes == registered and evidence is None:
+        return "MATCHED"
+    ((archived_path, section),) = includes
+    (canonical,) = binding.model_includes
+    if (
+        hashlib.sha256(archived_path.encode("ascii")).hexdigest()
+        != _AMP_ARCHIVED_INCLUDE_PATH_SHA256
+        or hashlib.sha256(canonical.path.encode("ascii")).hexdigest()
+        != _AMP_CANONICAL_INCLUDE_PATH_SHA256
+        or section != "NN"
+        or canonical.section != section
+    ):
+        raise ValueError("amplifier model include differs")
+    if evidence is None:
+        return "NOT_EVALUATED"
+    if (
+        evidence.baseline_input_sha256 != baseline_input_sha256
+        or evidence.archived_path_sha256 != _AMP_ARCHIVED_INCLUDE_PATH_SHA256
+        or evidence.canonical_include != canonical
+        or evidence.historical_model_closure_sha256 != binding.model_closure_sha256
+        or evidence.historical_equivalence_receipt_sha256
+        in (baseline_input_sha256, canonical.file_sha256, binding.model_closure_sha256)
+    ):
+        raise ValueError("amplifier archived model evidence differs")
+    return "MATCHED"
+
+
+def _amplifier_cross_analysis_body(statements: list[str]) -> list[str]:
+    # The original center DC alone emits this exact operating-point output directive.
+    indexes = [
+        index
+        for index, statement in enumerate(statements)
+        if hashlib.sha256(statement.encode("ascii")).hexdigest() == _AMP_DC_OUTPUT_DIRECTIVE_SHA256
+    ]
+    if not indexes:
+        return statements
+    (index,) = indexes
+    return statements[:index] + statements[index + 1 :]
+
+
 def _pinned_json(raw: bytes, digest: str) -> Any:
     _closed_document(raw, max_bytes=1048576)
     if hashlib.sha256(raw).hexdigest() != digest:
@@ -451,14 +613,78 @@ def _pinned_json(raw: bytes, digest: str) -> Any:
     return json.loads(raw)
 
 
-def _pmos_dc_route(
+def _reader_signals(reader: GenericReaderRegistration) -> tuple[object, ...]:
+    return reader.nodes, reader.sources, reader.transfer
+
+
+def _amp_child_metric(
+    report: ResultReport,
+    reader: GenericReaderRegistration,
+    *,
+    physical_sources: tuple[str, str] = ("VDD", "VSS"),
+) -> float | None:
+    if report.plan.analysis == "ac":
+        transfer = reader.transfer
+        if transfer is None or transfer.negative_input is None or transfer.negative_output is None:
+            raise ValueError("differential AC reader required")
+        selectors = {node.logical_id: node.selector for node in reader.nodes}
+        if tuple(
+            selectors[node]
+            for node in (
+                transfer.positive_input,
+                transfer.negative_input,
+                transfer.positive_output,
+                transfer.negative_output,
+            )
+        ) != ("/Vp", "/Vm", "/Vop", "/Vom"):
+            raise ValueError("amplifier differential selectors differ")
+        return next(
+            (
+                m.value
+                for m in report.metrics
+                if m.kind == "voltage_gain_db" and m.frequency_hz == 10 and m.signal_id is None
+            ),
+            None,
+        )
+    selectors = {node.logical_id: node.selector for node in reader.nodes}
+    rails = {
+        source.source_id: (
+            source.current_selector,
+            selectors.get(source.positive_node or ""),
+            source.negative_node,
+        )
+        for source in reader.sources
+        if source.role == "supply"
+    }
+    vdd, vss = physical_sources
+    if rails != {"vdd": (f"/{vdd}/PLUS", "/VDD", None), "vss": (f"/{vss}/PLUS", "/VSS", None)}:
+        raise ValueError("amplifier rail inventory differs")
+    values = {
+        metric.signal_id: metric.value
+        for metric in report.metrics
+        if metric.kind == "delivered_power" and metric.source_role == "supply"
+    }
+    if values.keys() - rails.keys():
+        raise ValueError("unregistered supply power")
+    if values.keys() != rails.keys():
+        return None
+    total = sum(value for value in values.values() if value is not None)
+    if not isfinite(total):
+        raise ValueError("nonfinite amplifier power")
+    return total
+
+
+def _width_route(
     operation: PmosDcOperation,
     diagnostic: bytes,
+    analysis_kind: Literal["dc", "ac"],
+    *,
+    varied_id: str | None = None,
 ) -> tuple[dict[str, Any], ReportConditions, GenericReaderRegistration, tuple[object, ...]]:
     plan = OperationPlan.model_validate_json(operation.plan.model_dump_json())
     query = NativeOperationQuery.model_validate_json(operation.query.model_dump_json())
-    if plan.plan_sha256 != query.expected_plan_sha256 or plan.analysis != "dc":
-        raise ValueError("DC plan identity mismatch")
+    if plan.plan_sha256 != query.expected_plan_sha256 or plan.analysis != analysis_kind:
+        raise ValueError("analysis plan identity mismatch")
     design, analysis = plan.request.design_id, plan.request.analysis_id
     route = _runtime_routes(plan, operation.runtime_manifest, operation.runtime_registration)[
         design, analysis
@@ -478,9 +704,9 @@ def _pmos_dc_route(
     )
     if (
         variables is None
-        or route["analysis"] != "dc"
-        or contract.analysis != "dc"
-        or ade.inputs.analysis != "dc"
+        or route["analysis"] != analysis_kind
+        or contract.analysis != analysis_kind
+        or ade.inputs.analysis != analysis_kind
         or (ade.design_id, ade.analysis_id) != (design, analysis)
         or (reader.design_id, reader.analysis_id) != (design, analysis)
         or reader.ade_registration_sha256 != canonical_digest(ade)
@@ -490,7 +716,7 @@ def _pmos_dc_route(
         or ade.variable_set_sha256 != canonical_digest(variables)
         or route["profile"] != profile.model_dump(mode="json")
         or route["variables"] != [var.model_dump(mode="json") for var in variables.variables]
-        or reader.transfer is not None
+        or (reader.transfer is not None) != (analysis_kind == "ac")
     ):
         raise ValueError("DC route binding mismatch")
     supplied = {value.logical_id: value for value in plan.request.values}
@@ -513,7 +739,7 @@ def _pmos_dc_route(
         ade_state_tree_sha256=ade.ade_state_tree_sha256,
         static_statements_sha256=ade.static_statements_sha256,
         model_file_sha256=tuple(model.file_sha256 for model in ade.model_includes),
-        transfer=None,
+        transfer=reader.transfer,
     )
     (library,) = (item for item in route["libraries"] if item["name"] == profile.binding.library)
     if route["source_cell"] != library["path"] + "/" + profile.binding.cell:
@@ -523,8 +749,8 @@ def _pmos_dc_route(
         plan.ledger_ref,
         plan.environment_sha256,
         plan.pdk_sha256,
-        plan.request.values,
-        variables.variables,
+        tuple(value for value in plan.request.values if value.logical_id != varied_id),
+        tuple(variable for variable in variables.variables if variable.logical_id != varied_id),
         ade.inputs,
         ade.model_includes,
         route["model_files"],
@@ -546,7 +772,7 @@ def _pmos_dc_route(
     return route, conditions, reader, semantics
 
 
-def _pmos_dc_report(
+def _width_report(
     operation: PmosDcOperation,
     conditions: ReportConditions,
     reader: GenericReaderRegistration,
@@ -585,6 +811,17 @@ def _pmos_dc_report(
         or report.reader_registration_sha256 != canonical_digest(reader)
     ):
         raise ValueError("retained report binding differs")
+    return status, terminal, report
+
+
+def _pmos_dc_report(
+    operation: PmosDcOperation,
+    conditions: ReportConditions,
+    reader: GenericReaderRegistration,
+) -> tuple[OperationPhase | Literal["NOT_OBSERVED"], str | None, ResultReport | None]:
+    status, terminal, report = _width_report(operation, conditions, reader)
+    if report is None:
+        return status, terminal, report
     nodes = {node.logical_id for node in reader.nodes}
     sources = {source.source_id: source.role for source in reader.sources}
     voltages = {}
@@ -669,9 +906,9 @@ def associate_pmos_dc_pair(
             or projected.derived != netlist.derived
         ):
             raise ValueError("candidate effective input differs from readback")
-        _, old_conditions, old_reader, old_semantics = _pmos_dc_route(baseline, baseline_input)
-        route, new_conditions, new_reader, new_semantics = _pmos_dc_route(
-            candidate, candidate_input
+        _, old_conditions, old_reader, old_semantics = _width_route(baseline, baseline_input, "dc")
+        route, new_conditions, new_reader, new_semantics = _width_route(
+            candidate, candidate_input, "dc"
         )
         copy = _pinned_json(copy_receipt, expected_copy_receipt_sha256)
         if (
@@ -748,4 +985,719 @@ def associate_pmos_dc_pair(
                 report=new_report,
             ),
         ),
+    )
+
+
+def _amp_width_analysis(
+    analysis: Literal["dc", "ac"],
+    evidence: AmplifierWidthAnalysis,
+    binding: AmplifierWidthAnalysisBinding,
+    revision: AmplifierWidthBinding,
+    old_circuit: _AmplifierCircuit,
+    child_circuit: _AmplifierCircuit,
+) -> AmplifierWidthAnalysisPair:
+    metric_id: Literal["dc-supply-power-grid-v2", "gain-10hz-grid-v1"] = (
+        "dc-supply-power-grid-v2" if analysis == "dc" else "gain-10hz-grid-v1"
+    )
+    (metric,) = (
+        m
+        for m in evidence.baseline.measurements
+        if m.requested_vbiasn_v == "0.32" and m.measurement_id == metric_id
+    )
+    if (
+        str(metric.job_id) != binding.baseline_operation_id
+        or evidence.baseline.engine.plan_hash != binding.baseline_plan_sha256
+        or hashlib.sha256(evidence.baseline_input).hexdigest() != metric.input_sha256
+    ):
+        raise ValueError("original amplifier measurement identity differs")
+    params, includes, analyses, static = partition_amplifier_input(
+        evidence.baseline_input, expected_sha256=metric.input_sha256
+    )
+    fixed, options = _amp_pm0_options(static, baseline=True)
+    if (
+        (params, includes, options)
+        != (old_circuit.parameters, old_circuit.includes, old_circuit.pm0_options)
+        or fixed
+        != (
+            old_circuit.fixed_statements
+            if analysis == "dc"
+            else _amplifier_cross_analysis_body(old_circuit.fixed_statements)
+        )
+        or len(analyses) != 1
+        or analyses[0][0] != analysis
+    ):
+        raise ValueError("baseline measurement circuit differs from center")
+    model_comparison = _amp_model_comparison(includes, binding, metric.input_sha256)
+    child = evidence.child
+    terminal = report = value = None
+    reason: str | None = "retained_operation_not_supplied"
+    status: OperationPhase | Literal["NOT_RUN", "NOT_OBSERVED"] = "NOT_RUN"
+    if child is not None:
+        if (
+            evidence.child_input is None
+            or child.plan.plan_sha256 != binding.child_plan_sha256
+            or child.query.operation_id != binding.child_operation_id
+        ):
+            raise ValueError("child operation requires registered effective input and plan")
+        route, conditions, reader, _ = _width_route(child, evidence.child_input, analysis)
+        if binding.child_input_sha256 is None:
+            raise ValueError("child operation requires pinned effective input")
+        new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+            evidence.child_input, expected_sha256=binding.child_input_sha256
+        )
+        new_fixed, new_options = _amp_pm0_options(new_static, baseline=False)
+        if (
+            (new_params, new_options) != (child_circuit.parameters, child_circuit.pm0_options)
+            or new_includes != [(model.path, model.section) for model in binding.model_includes]
+            or new_fixed != fixed
+            or new_analyses != analyses
+            or AdeExecutionRegistration.model_validate_json(_canonical(route["ade"])).model_includes
+            != binding.model_includes
+            or hashlib.sha256(_canonical(route["model_files"])).hexdigest()
+            != binding.model_closure_sha256
+            or conditions.source_tree_sha256 != revision.child_source_tree_sha256
+            or conditions.ade_state_tree_sha256 != revision.child_ade_state_sha256
+            or _reader_signals(reader) != _reader_signals(binding.baseline_reader)
+            or reader.measurement_id != binding.baseline_reader.measurement_id
+            or reader.maximum_samples != binding.baseline_reader.maximum_samples
+        ):
+            raise ValueError("child amplifier circuit or measurement differs")
+        status, terminal, report = _width_report(child, conditions, reader)
+        if status != "NOT_OBSERVED":
+            reason = (
+                "retained_result_unavailable"
+                if status == "SUCCEEDED"
+                else "retained_operation_not_succeeded"
+            )
+        if report is not None:
+            if report.execution_input_sha256 != hashlib.sha256(evidence.child_input).hexdigest():
+                raise ValueError("child report effective input differs")
+            if model_comparison == "MATCHED":
+                value = _amp_child_metric(report, reader)
+                reason = "registered_measurement_unavailable" if value is None else None
+            else:
+                reason = "historical_model_equivalence_unavailable"
+    elif evidence.child_input is not None:
+        raise ValueError("unbound child input")
+    return AmplifierWidthAnalysisPair(
+        analysis=analysis,
+        metric_id=metric_id,
+        unit=metric.unit,
+        baseline=provenance(metric, binding.baseline_plan_sha256),
+        baseline_value=metric.value,
+        child_operation=None if child is None else child.query,
+        child_terminal_sha256=terminal,
+        child_status=status,
+        child_report=report,
+        child_value=value,
+        reason=reason,
+        model_comparison=model_comparison,
+        dc_output_reason="baseline_output_scalars_not_retained" if analysis == "dc" else None,
+    )
+
+
+def associate_amplifier_width_pair(
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    *,
+    expected_plan_sha256: str,
+    baseline_input: bytes,
+    candidate_input: bytes,
+    registration_evidence: bytes,
+    expected_registration_sha256: str,
+    dc: AmplifierWidthAnalysis,
+    ac: AmplifierWidthAnalysis,
+) -> AmplifierWidthPair:
+    """Join a qualified PM0 child to the retained 0.320 V DC and AC measurements.
+
+    The registration pin must come from C1/C4's independent verification of
+    source lineage, model closure and original measurement reader semantics.
+    A local comparison of these retained records conveys no execution authority.
+    """
+    from cadence_mcp_bridge.amplifier_candidate_selection import _checked_source
+
+    try:
+        binding = AmplifierWidthBinding.model_validate_json(
+            _canonical(_pinned_json(registration_evidence, expected_registration_sha256))
+        )
+        checked = verify_change_readback(
+            plan, baseline=readback.baseline, reopened=readback.reopened, netlist=readback.netlist
+        )
+        old, reopened, netlist = checked.baseline, checked.reopened, checked.netlist
+        if (
+            not isinstance(plan.target, MosWidthTarget)
+            or plan.target.instance.instance_path != "PM0"
+            or plan.plan_sha256 != expected_plan_sha256
+            or binding.change_plan_sha256 != expected_plan_sha256
+            or binding.readback_sha256 != canonical_digest(readback)
+            or checked != readback
+            or checked.status != "MATCHED"
+            or old is None
+            or reopened is None
+            or netlist is None
+        ):
+            raise ValueError("complete PM0 change readback required")
+        projection = project_netlist_change(plan, baseline_input, candidate_input)
+        dc_alias, ac_alias = binding.dc.baseline_include_alias, binding.ac.baseline_include_alias
+        if (
+            dc_alias is not None
+            and ac_alias is not None
+            and dc_alias.historical_equivalence_receipt_sha256
+            == ac_alias.historical_equivalence_receipt_sha256
+        ):
+            raise ValueError("distinct archived DC and AC model receipts required")
+        if (
+            (binding.baseline_revision_sha256, binding.baseline_testbench_revision_sha256)
+            != (old.revision_sha256, old.testbench_revision_sha256)
+            or (binding.child_revision_sha256, binding.child_testbench_revision_sha256)
+            != (reopened.revision_sha256, reopened.testbench_revision_sha256)
+            or reopened.testbench_revision_sha256 == old.testbench_revision_sha256
+            or projection.artifact_sha256 != netlist.artifact_sha256
+            or projection.value.normalized != netlist.value.normalized
+            or projection.derived != netlist.derived
+            or (
+                binding.dc.child_plan_sha256 is not None
+                and binding.dc.child_plan_sha256 == binding.ac.child_plan_sha256
+            )
+            or binding.dc.model_closure_sha256 != binding.ac.model_closure_sha256
+            or binding.dc.model_includes != binding.ac.model_includes
+            or (
+                dc.child is not None
+                and ac.child is not None
+                and (
+                    dc.child.query.operation_id == ac.child.query.operation_id
+                    or dc.child.plan.resource_domain_sha256 != ac.child.plan.resource_domain_sha256
+                    or dc.child.plan.ledger_ref != ac.child.plan.ledger_ref
+                )
+            )
+        ):
+            raise ValueError("PM0 child evidence binding differs")
+        dc_source = _checked_source(
+            dc.baseline, dc.expected_baseline_sha256, "dc-supply-power-grid-v2"
+        )
+        ac_source = _checked_source(ac.baseline, ac.expected_baseline_sha256, "gain-10hz-grid-v1")
+        require_same_resource_policy(
+            tuple(
+                m.counter for source in (dc_source, ac_source) for m in source.source.measurements
+            )
+        )
+        old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+            baseline_input, expected_sha256=plan.baseline.netlist_sha256
+        )
+        new_params, new_includes, _, new_static = partition_amplifier_input(
+            candidate_input, expected_sha256=netlist.artifact_sha256
+        )
+        if (
+            old_params.get("VBIASN") != "0.32"
+            or old_params.get("VBIASP") != "0.702"
+            or len(old_analyses) != 1
+            or old_analyses[0][0] != "dc"
+        ):
+            raise ValueError("center amplifier DC operating point required")
+        if dc.baseline_input != baseline_input:
+            raise ValueError("center DC analysis differs")
+        old_circuit = _AmplifierCircuit(
+            old_params, old_includes, *_amp_pm0_options(old_static, baseline=True)
+        )
+        child_circuit = _AmplifierCircuit(
+            new_params, new_includes, *_amp_pm0_options(new_static, baseline=False)
+        )
+        dc_pair = _amp_width_analysis("dc", dc, binding.dc, binding, old_circuit, child_circuit)
+        ac_pair = _amp_width_analysis("ac", ac, binding.ac, binding, old_circuit, child_circuit)
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_amplifier_width_evidence_mismatch") from None
+    return AmplifierWidthPair(
+        change_plan_sha256=expected_plan_sha256,
+        binding_sha256=expected_registration_sha256,
+        readback=checked,
+        dc=dc_pair,
+        ac=ac_pair,
+    )
+
+
+class FreshAmplifierOperationBinding(VariableModel):
+    operation_id: OperationId
+    plan_sha256: Digest
+    input_sha256: Digest
+
+
+class FreshAmplifierRevisionBinding(VariableModel):
+    revision_sha256: Digest
+    testbench_revision_sha256: Digest
+    source_tree_sha256: Digest
+    ade_state_sha256: Digest
+    dc: FreshAmplifierOperationBinding | None = None
+    ac: FreshAmplifierOperationBinding | None = None
+
+
+class FreshAmplifierWidthBinding(VariableModel):
+    change_plan_sha256: Digest
+    readback_sha256: Digest
+    canonical_model_include: ModelInclude
+    diagnostic_model_closure_sha256: Digest
+    diagnostic_model_receipt_sha256: Digest
+    baseline: FreshAmplifierRevisionBinding
+    candidate: FreshAmplifierRevisionBinding
+
+
+@dataclass(frozen=True)
+class FreshAmplifierOperation:
+    operation: PmosDcOperation
+    effective_input: bytes
+
+
+@dataclass(frozen=True)
+class FreshAmplifierWidthAnalysis:
+    baseline: FreshAmplifierOperation | None = None
+    candidate: FreshAmplifierOperation | None = None
+
+
+class FreshAmplifierMeasurement(VariableModel):
+    operation: NativeOperationQuery | None
+    terminal_sha256: Digest | None
+    status: OperationPhase | Literal["NOT_RUN", "NOT_OBSERVED"]
+    report: ResultReport | None
+    value: float | None
+    reason: str | None
+
+
+class FreshAmplifierAnalysisPair(VariableModel):
+    analysis: Literal["dc", "ac"]
+    metric_id: Literal["dc-supply-power-grid-v2", "gain-10hz-grid-v1"]
+    unit: Literal["W", "dB"]
+    baseline: FreshAmplifierMeasurement
+    candidate: FreshAmplifierMeasurement
+
+
+class FreshAmplifierWidthPair(VariableModel):
+    change_plan_sha256: Digest
+    binding_sha256: Digest
+    readback: ChangeReadback
+    dc: FreshAmplifierAnalysisPair
+    ac: FreshAmplifierAnalysisPair
+    goals: Literal["GOALS_NOT_PROVIDED"] = "GOALS_NOT_PROVIDED"
+    selected_candidate_id: Literal[None] = None
+    execution_authorized: Literal[False] = False
+
+
+def _fresh_amplifier_reader(
+    mode: Literal["dc", "ac"], reader: GenericReaderRegistration, static: list[str]
+) -> None:
+    selectors = {node.logical_id: node.selector for node in reader.nodes}
+    if mode == "dc":
+        top_level = {}
+        in_subcircuit = False
+        for line in static:
+            name = line.split()[0]
+            if line.startswith(("subckt ", "inline subckt ")):
+                in_subcircuit = True
+            elif name == "ends":
+                in_subcircuit = False
+            elif not in_subcircuit and name in ("V0", "V5"):
+                if name in top_level:
+                    raise ValueError("ambiguous fresh amplifier supply instance")
+                top_level[name] = line
+        for source_id, instance, node in (("vdd", "V0", "VDD"), ("vss", "V5", "VSS")):
+            line = top_level[instance]
+            (source,) = (s for s in reader.sources if s.source_id == source_id)
+            if (
+                re.match(rf"{instance} \({node} 0\) vsource(?: |$)", line) is None
+                or source.role != "supply"
+                or source.current_selector != f"/{instance}/PLUS"
+                or selectors.get(source.positive_node or "") != f"/{node}"
+                or source.negative_node is not None
+            ):
+                raise ValueError("fresh amplifier supply orientation differs")
+        if {s.source_id for s in reader.sources if s.role == "supply"} != {"vdd", "vss"}:
+            raise ValueError("fresh amplifier supply inventory differs")
+        return
+    transfer = reader.transfer
+    if (
+        transfer is None
+        or tuple(
+            selectors.get(signal or "")
+            for signal in (
+                transfer.positive_input,
+                transfer.negative_input,
+                transfer.positive_output,
+                transfer.negative_output,
+            )
+        )
+        != ("/Vp", "/Vm", "/Vop", "/Vom")
+        or "10" not in transfer.gain_frequencies_hz
+    ):
+        raise ValueError("fresh amplifier differential measurement differs")
+
+
+def _fresh_amplifier_metric(
+    report: ResultReport, reader: GenericReaderRegistration, ade: AdeExecutionRegistration
+) -> float | None:
+    if ade.inputs.analysis == "ac":
+        axes = tuple(float(format(axis, ".16g")) for axis in _ac_axis(ade.inputs))
+        (index,) = _sample_indices(("10",), axes)
+        gains = [
+            metric
+            for metric in report.metrics
+            if metric.kind == "voltage_gain_db"
+            and metric.frequency_hz is not None
+            and _matches_ac_axis(metric.frequency_hz, axes, index)
+        ]
+        if not gains:
+            return None
+        (gain,) = gains
+        if gain.signal_id is not None or gain.sample_count is not None:
+            raise ValueError("fresh amplifier gain is not a point measurement")
+        return gain.value
+
+    sources = {source.source_id: source.role for source in reader.sources}
+    seen = set()
+    for metric in report.metrics:
+        if metric.sample_count is not None:
+            raise ValueError("fresh amplifier DC report contains a sampled metric")
+        if metric.kind == "delivered_power":
+            if metric.signal_id not in sources or metric.source_role != sources[metric.signal_id]:
+                raise ValueError("fresh amplifier DC power is not registered")
+            if metric.signal_id in seen:
+                raise ValueError("duplicate fresh amplifier DC power")
+            seen.add(metric.signal_id)
+    return _amp_child_metric(report, reader, physical_sources=("V0", "V5"))
+
+
+def _fresh_amplifier_measurement(
+    mode: Literal["dc", "ac"],
+    operation: PmosDcOperation,
+    conditions: ReportConditions,
+    reader: GenericReaderRegistration,
+    ade: AdeExecutionRegistration,
+    static: list[str],
+    input_sha256: str,
+) -> FreshAmplifierMeasurement:
+    _fresh_amplifier_reader(mode, reader, static)
+    status, terminal, report = _width_report(operation, conditions, reader)
+    value = None
+    reason: str | None = {
+        "NOT_OBSERVED": "retained_record_unavailable",
+        "SUCCEEDED": "retained_result_unavailable",
+    }.get(status, "retained_operation_not_succeeded")
+    if report is not None:
+        if report.execution_input_sha256 != input_sha256:
+            raise ValueError("fresh amplifier report input differs")
+        value = _fresh_amplifier_metric(report, reader, ade)
+        reason = "registered_measurement_unavailable" if value is None else None
+    return FreshAmplifierMeasurement(
+        operation=operation.query, terminal_sha256=terminal, status=status,
+        report=report,
+        value=value,
+        reason=reason,
+    )
+
+
+def associate_saved_width_bias_analysis(
+    mode: Literal["dc", "ac"],
+    baseline: FreshAmplifierOperation,
+    candidate: FreshAmplifierOperation,
+    *,
+    saved_width: FreshAmplifierRevisionBinding,
+    baseline_input_sha256: Digest,
+    candidate_input_sha256: Digest,
+    candidate_query: NativeOperationQuery,
+    requested_bias: ChangeValue,
+) -> FreshAmplifierAnalysisPair:
+    """Compare an existing saved-width center to one separately registered bias point.
+
+    The caller supplies independently pinned execution inputs and an authenticated
+    saved-width binding. Each operation retains its own original runtime and grant.
+    """
+    try:
+        center = baseline.operation
+        changed = candidate.operation
+        center_pin = saved_width.dc if mode == "dc" else saved_width.ac
+        if (
+            center_pin is None
+            or (center.query.operation_id, center.query.expected_plan_sha256, baseline_input_sha256)
+            != (center_pin.operation_id, center_pin.plan_sha256, center_pin.input_sha256)
+            or center.query.operation_id == changed.query.operation_id
+            or changed.query != NativeOperationQuery.model_validate_json(
+                candidate_query.model_dump_json()
+            )
+            or requested_bias.normalized[1] != "V"
+        ):
+            raise ValueError("saved-width bias operation identity differs")
+
+        measurements = []
+        fixed_conditions = []
+        for side, pin, bias in (
+            (baseline, baseline_input_sha256, "0.32"),
+            (candidate, candidate_input_sha256, requested_bias.normalized[0]),
+        ):
+            operation, raw = side.operation, side.effective_input
+            if hashlib.sha256(raw).hexdigest() != pin:
+                raise ValueError("saved-width bias input digest differs")
+            route, conditions, reader, semantics = _width_route(
+                operation, raw, mode, varied_id="vbiasn"
+            )
+            (variable,) = (
+                VariableContract.model_validate(row)
+                for row in route["variables"]
+                if row["logical_id"] == "vbiasn"
+            )
+            (value,) = (v for v in operation.plan.request.values if v.logical_id == "vbiasn")
+            if (
+                (variable.cadence_binding, variable.unit, value.unit, value.value)
+                != ("VBIASN", "V", "V", bias)
+                or conditions.source_tree_sha256 != saved_width.source_tree_sha256
+                or conditions.ade_state_tree_sha256 != saved_width.ade_state_sha256
+                or variable.mutation_policy != "fixed"
+                or variable.fixed_value != bias
+            ):
+                raise ValueError("saved-width bias is outside the registered revision or variable")
+            parameters, includes, analyses, static = partition_input(raw)  # type: ignore[no-untyped-call]
+            if parameters.pop("VBIASN") != bias:
+                raise ValueError("saved-width bias input value differs")
+            ade = AdeExecutionRegistration.model_validate_json(_canonical(route["ade"]))
+            measurements.append(
+                _fresh_amplifier_measurement(mode, operation, conditions, reader, ade, static, pin)
+            )
+            fixed_conditions.append((
+                conditions,
+                semantics,
+                route["source_cell"],
+                route["libraries"],
+                parameters,
+                includes,
+                analyses,
+                static,
+            ))
+
+        if requested_bias.normalized[0] == "0.32" or fixed_conditions[0] != fixed_conditions[1]:
+            raise ValueError("saved-width bias fixed conditions differ")
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_saved_width_bias_evidence_mismatch") from None
+    return FreshAmplifierAnalysisPair(
+        analysis=mode,
+        metric_id="dc-supply-power-grid-v2" if mode == "dc" else "gain-10hz-grid-v1",
+        unit="W" if mode == "dc" else "dB",
+        baseline=measurements[0],
+        candidate=measurements[1],
+    )
+
+
+def _fresh_amplifier_row(
+    mode: Literal["dc", "ac"],
+    evidence: FreshAmplifierOperation | None,
+    revision: FreshAmplifierRevisionBinding,
+    binding: FreshAmplifierWidthBinding,
+    diagnostic: _AmplifierCircuit,
+    diagnostic_dc: tuple[str, str],
+    *,
+    baseline: bool,
+) -> tuple[FreshAmplifierMeasurement, tuple[object, ...] | None]:
+    identity = revision.dc if mode == "dc" else revision.ac
+    if evidence is None and identity is None:
+        return FreshAmplifierMeasurement(
+            operation=None,
+            terminal_sha256=None,
+            status="NOT_RUN",
+            report=None,
+            value=None,
+            reason="retained_operation_not_supplied",
+        ), None
+    if evidence is None or identity is None:
+        raise ValueError("fresh amplifier operation and registration must occur together")
+    operation, raw = evidence.operation, evidence.effective_input
+    if (operation.query.operation_id, operation.query.expected_plan_sha256) != (
+        identity.operation_id,
+        identity.plan_sha256,
+    ):
+        raise ValueError("fresh amplifier operation differs from registration")
+    params, includes, analyses, static = partition_amplifier_input(
+        raw, expected_sha256=identity.input_sha256
+    )
+    fixed, options = _amp_pm0_options(static, baseline=baseline)
+    model = binding.canonical_model_include
+    if (
+        params != diagnostic.parameters
+        or includes != [(model.path, model.section)]
+        or fixed
+        != (
+            diagnostic.fixed_statements
+            if mode == "dc"
+            else _amplifier_cross_analysis_body(diagnostic.fixed_statements)
+        )
+        or options != diagnostic.pm0_options
+        or len(analyses) != 1
+        or analyses[0][0] != mode
+        or (mode == "dc" and analyses[0] != diagnostic_dc)
+    ):
+        raise ValueError("fresh amplifier input differs from qualified circuit")
+    route, conditions, reader, semantics = _width_route(operation, raw, mode)
+    ade = AdeExecutionRegistration.model_validate_json(_canonical(route["ade"]))
+    if (
+        conditions.source_tree_sha256 != revision.source_tree_sha256
+        or conditions.ade_state_tree_sha256 != revision.ade_state_sha256
+        or ade.model_includes != (model,)
+        or hashlib.sha256(_canonical(route["model_files"])).hexdigest()
+        != binding.diagnostic_model_closure_sha256
+    ):
+        raise ValueError("fresh amplifier route differs from registered revision or model closure")
+    measurement = _fresh_amplifier_measurement(
+        mode, operation, conditions, reader, ade, static, identity.input_sha256
+    )
+    return measurement, (*semantics, analyses[0])
+
+
+def associate_fresh_amplifier_width_pair(
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    *,
+    expected_plan_sha256: str,
+    baseline_input: bytes,
+    candidate_input: bytes,
+    registration_evidence: bytes,
+    expected_registration_sha256: str,
+    dc: FreshAmplifierWidthAnalysis,
+    ac: FreshAmplifierWidthAnalysis,
+) -> FreshAmplifierWidthPair:
+    """Compare four retained native operations with independently authenticated bindings.
+
+    The model receipt must attest current diagnostic-to-canonical resolution and
+    the entire graph. No historical measurement or model equivalence is inferred.
+    """
+    try:
+        binding = FreshAmplifierWidthBinding.model_validate_json(
+            _canonical(_pinned_json(registration_evidence, expected_registration_sha256))
+        )
+        checked = verify_change_readback(
+            plan, baseline=readback.baseline, reopened=readback.reopened, netlist=readback.netlist
+        )
+        old, reopened, netlist = checked.baseline, checked.reopened, checked.netlist
+        if (
+            not isinstance(plan.target, MosWidthTarget)
+            or plan.target.instance.instance_path != "PM0"
+            or plan.plan_sha256 != expected_plan_sha256
+            or binding.change_plan_sha256 != expected_plan_sha256
+            or binding.readback_sha256 != canonical_digest(readback)
+            or checked != readback
+            or checked.status != "MATCHED"
+            or old is None
+            or reopened is None
+            or netlist is None
+            or old.testbench_revision_sha256 == reopened.testbench_revision_sha256
+            or binding.baseline.source_tree_sha256 == binding.candidate.source_tree_sha256
+        ):
+            raise ValueError("complete PM0 change and distinct revision evidence required")
+        projection = project_netlist_change(plan, baseline_input, candidate_input)
+        if (
+            projection.artifact_sha256 != netlist.artifact_sha256
+            or projection.value.normalized != netlist.value.normalized
+            or projection.derived != netlist.derived
+        ):
+            raise ValueError("fresh amplifier diagnostic differs from verified readback")
+        circuits = []
+        controls = []
+        model = binding.canonical_model_include
+        for raw, observed, revision in (
+            (baseline_input, old, binding.baseline),
+            (candidate_input, netlist, binding.candidate),
+        ):
+            if (observed.revision_sha256, observed.testbench_revision_sha256) != (
+                revision.revision_sha256,
+                revision.testbench_revision_sha256,
+            ):
+                raise ValueError("fresh amplifier physical revision differs")
+            pin = plan.baseline.netlist_sha256 if observed is old else observed.artifact_sha256
+            params, includes, analyses, static = partition_amplifier_input(raw, expected_sha256=pin)
+            (control,) = analyses
+            ((path, section),) = includes
+            if (
+                control[0] != "dc"
+                or section != model.section
+                or section != "NN"
+                or (
+                    path != model.path
+                    and (
+                        hashlib.sha256(path.encode("ascii")).hexdigest()
+                        != _AMP_ARCHIVED_INCLUDE_PATH_SHA256
+                        or hashlib.sha256(model.path.encode("ascii")).hexdigest()
+                        != _AMP_CANONICAL_INCLUDE_PATH_SHA256
+                    )
+                )
+            ):
+                raise ValueError("fresh amplifier diagnostic route differs")
+            circuits.append(
+                _AmplifierCircuit(
+                    params, includes, *_amp_pm0_options(static, baseline=observed is old)
+                )
+            )
+            controls.append(control)
+
+        operations = [
+            side.operation
+            for pair in (dc, ac)
+            for side in (pair.baseline, pair.candidate)
+            if side is not None
+        ]
+        if (
+            len({op.query.operation_id for op in operations}) != len(operations)
+            or len(
+                {
+                    (
+                        op.plan.resource_domain_sha256,
+                        op.plan.ledger_ref,
+                        op.plan.environment_sha256,
+                        op.plan.pdk_sha256,
+                    )
+                    for op in operations
+                }
+            )
+            > 1
+        ):
+            raise ValueError("fresh amplifier operation or resource identity differs")
+        rows = []
+        analysis_pairs: tuple[tuple[Literal["dc", "ac"], FreshAmplifierWidthAnalysis], ...] = (
+            ("dc", dc),
+            ("ac", ac),
+        )
+        for mode, pair in analysis_pairs:
+            baseline_row, old_semantics = _fresh_amplifier_row(
+                mode,
+                pair.baseline,
+                binding.baseline,
+                binding,
+                circuits[0],
+                controls[0],
+                baseline=True,
+            )
+            child_row, child_semantics = _fresh_amplifier_row(
+                mode,
+                pair.candidate,
+                binding.candidate,
+                binding,
+                circuits[1],
+                controls[1],
+                baseline=False,
+            )
+            if (
+                old_semantics is not None
+                and child_semantics is not None
+                and old_semantics != child_semantics
+            ):
+                raise ValueError("fresh amplifier analysis conditions differ")
+            rows.append(
+                FreshAmplifierAnalysisPair(
+                    analysis=mode,
+                    metric_id="dc-supply-power-grid-v2" if mode == "dc" else "gain-10hz-grid-v1",
+                    unit="W" if mode == "dc" else "dB",
+                    baseline=baseline_row,
+                    candidate=child_row,
+                )
+            )
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_fresh_amplifier_width_evidence_mismatch") from None
+    return FreshAmplifierWidthPair(
+        change_plan_sha256=expected_plan_sha256,
+        binding_sha256=expected_registration_sha256,
+        readback=checked,
+        dc=rows[0],
+        ac=rows[1],
     )

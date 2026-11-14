@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from typing import Literal
 
 import pytest
 
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget, CandidateVariableBinding
 from cadence_mcp_bridge.parameter_changes import (
+    AmplifierPm0InputEvidence,
     CapacitorQualification,
     CapacitorTarget,
     ChangeBaseline,
@@ -17,6 +19,7 @@ from cadence_mcp_bridge.parameter_changes import (
     MosWidthQualification,
     MosWidthTarget,
     Readback,
+    observe_amplifier_pm0_input,
     plan_ade_change,
     plan_capacitor_change,
     plan_mos_width_change,
@@ -403,7 +406,7 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
         b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
         b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
     )
-    raw = b"simulator lang=spectre\nparameters VBIASN=0.320\n" + pm0 + b"\n"
+    raw = b"simulator lang=spectre\nparameters VBIASN=320m VBIASP=702m\n" + pm0 + b"\n"
     monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", hashlib.sha256(raw).hexdigest())
     monkeypatch.setattr(
         parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
@@ -448,7 +451,7 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
         (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
         (candidate.replace(b"net33 Vbiasp", b"net34 Vbiasp"), "PM0 netlist binding"),
         (candidate.replace(b"as=5.6p", b"as=1p"), "fixed MOS netlist options"),
-        (candidate.replace(b"VBIASN=0.320", b"VBIASN=0.321"), "fixed netlist"),
+        (candidate.replace(b"VBIASN=320m", b"VBIASN=0.321"), "fixed netlist"),
         (candidate + pm0 + b"\n", "missing or ambiguous"),
         (
             candidate.replace(b"PM0 ", b"inline subckt Other\nPM0 ") + b"ends Other\n",
@@ -460,3 +463,130 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
     monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", "0" * 64)
     with pytest.raises(ValueError, match="registered center DC baseline"):
         project_netlist_change(plan, raw, candidate)
+
+
+def test_amplifier_pm0_input_observation_requires_independent_matching_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cadence_mcp_bridge import parameter_changes
+
+    # FIXTURE_ONLY: both raw inputs and every evidence pin are synthetic.
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    center = (
+        b"simulator lang=spectre\nparameters VBIASN=320m VBIASP=702m\n"
+        b"CL (net33 0) capacitor c=1p\n" + pm0 + b"\n"
+    )
+    candidate = (
+        center.replace(b"w=(20u)", b"w=(0.12u)")
+        .replace(b"VBIASN=320m VBIASP=702m", b"VBIASN=0.320 VBIASP=0.702")
+        .replace(b"5.6p", b"69.6f")
+        .replace(b"40.56u", b"1.16u")
+    )
+    monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", hashlib.sha256(center).hexdigest())
+    monkeypatch.setattr(
+        parameter_changes, "_AMP_PM0_STATEMENT_SHA256", hashlib.sha256(pm0).hexdigest()
+    )
+    baseline = AmplifierPm0InputEvidence(
+        revision_sha256="1" * 64,
+        testbench_revision_sha256="2" * 64,
+        oa_cdf_sha256="3" * 64,
+        netlist_sha256=hashlib.sha256(center).hexdigest(),
+        width=ChangeValue(value="20", unit="um"),
+        geometry=(
+            DerivedValue(property_name="fw", value="20u"),
+            DerivedValue(property_name="as", value="5.6p"),
+            DerivedValue(property_name="ad", value="5.6p"),
+            DerivedValue(property_name="ps", value="40.56u"),
+            DerivedValue(property_name="pd", value="40.56u"),
+        ),
+    )
+    child = AmplifierPm0InputEvidence(
+        revision_sha256="4" * 64,
+        testbench_revision_sha256="5" * 64,
+        oa_cdf_sha256="6" * 64,
+        netlist_sha256=hashlib.sha256(candidate).hexdigest(),
+        width=ChangeValue(value="120", unit="nm"),
+        geometry=(
+            DerivedValue(property_name="fw", value="120n"),
+            DerivedValue(property_name="as", value="69.6f"),
+            DerivedValue(property_name="ad", value="69.6f"),
+            DerivedValue(property_name="ps", value="1.16u"),
+            DerivedValue(property_name="pd", value="1.16u"),
+        ),
+    )
+
+    def observe(raw: bytes, evidence: AmplifierPm0InputEvidence = child):
+        return observe_amplifier_pm0_input(
+            center,
+            raw,
+            baseline=baseline,
+            child=evidence,
+            diagnostic_receipt_sha256="7" * 64,
+            footprint_receipt_sha256="8" * 64,
+            dfm_evidence_sha256="9" * 64,
+            baseline_effective_dfm="Minimum",
+            child_effective_dfm="DFM",
+        )
+
+    result = observe(candidate)
+    assert result.status == "OBSERVATION_ONLY"
+    assert result.scope == "NETLIST_INPUT_ONLY"
+    assert result.oa_footprint == "MISMATCHED"
+    assert result.oa_change_status == "UNQUALIFIED_EXTRA_SETTING"
+    assert result.receipt_authentication == "NOT_VERIFIED_BY_THIS_API"
+    assert result.automatic_update_route == result.geometry_mode == "NOT_OBSERVED"
+    assert not (
+        result.admission_authorized or result.execution_authorized or result.selection_authorized
+    )
+    assert result.netlist.artifact_sha256 == child.netlist_sha256
+    assert result.netlist.value == ChangeValue(value="0.12", unit="um")
+    assert result.netlist.derived == child.geometry[1:]
+    assert result.baseline == baseline and result.child == child
+    assert result.dfm_evidence_sha256 == "9" * 64
+    assert (result.baseline_effective_dfm, result.child_effective_dfm) == ("Minimum", "DFM")
+
+    args = dict(
+        baseline=baseline,
+        child=child,
+        diagnostic_receipt_sha256="7" * 64,
+        footprint_receipt_sha256="8" * 64,
+        dfm_evidence_sha256="9" * 64,
+        baseline_effective_dfm="Minimum",
+    )
+    # Exercise malformed inputs from an untyped caller.
+    call_observer: Callable[..., object] = observe_amplifier_pm0_input
+    with pytest.raises(TypeError, match="child_effective_dfm"):
+        call_observer(center, candidate, **args)
+    with pytest.raises(ValueError, match="child_effective_dfm"):
+        call_observer(center, candidate, **args, child_effective_dfm="Minimum")
+
+    with pytest.raises(ValueError, match="child netlist digest mismatch"):
+        observe(candidate + b"\n")
+    for invalid, reason in (
+        (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
+        (candidate.replace(b"gpdk090_pmos1v", b"other_model"), "PM0 netlist binding"),
+        (candidate.replace(b"capacitor c=1p", b"capacitor c=2p"), "fixed netlist"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=0.701"), "center bias changed"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=701m"), "scalar_expression_denied"),
+        (candidate.replace(b"VBIASP=0.702", b"VBIASP=(0.702)"), "scalar_expression_denied"),
+        (candidate.replace(b"ad=69.6f", b"ad=1p"), "geometry differs"),
+        (candidate.replace(b"w=(0.12u)", b"w=(0.13u)"), "effective netlist width differs"),
+        (candidate.replace(b"l=1u", b"l=1u dfm=DFM"), "fixed MOS netlist options"),
+    ):
+        with pytest.raises(ValueError, match=reason):
+            observe(
+                invalid,
+                child.model_copy(update={"netlist_sha256": hashlib.sha256(invalid).hexdigest()}),
+            )
+    with pytest.raises(ValueError, match="distinct PM0 revisions"):
+        observe(
+            candidate,
+            child.model_copy(
+                update={"testbench_revision_sha256": baseline.testbench_revision_sha256}
+            ),
+        )
+    with pytest.raises(ValueError, match="complete observed PM0 geometry"):
+        observe(candidate, child.model_copy(update={"geometry": (child.geometry[0],) * 5}))

@@ -25,6 +25,8 @@ from cadence_mcp_bridge.variable_contracts import (
 ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF"]
 _AMP_PM0_STATEMENT_SHA256 = "52bf48b8d845681d1be3727bbadb20eabd424a24c3c822bbc33e8913e3e274c6"
 _AMP_CENTER_SHA256 = "c9bcf3e3bd8a9329ff0bb1513df2a08f8a4f60e314f04075e15a3422c03e4006"
+_AMP_CENTER_BIAS = {"VBIASN": "0.32", "VBIASP": "0.702"}
+_AMP_CENTER_ALIASES = {"VBIASN=320m": "VBIASN=0.320", "VBIASP=702m": "VBIASP=0.702"}
 
 GeometryProperty = Literal["fw", "as", "ad", "ps", "pd"]
 _UNIT_SCALE: dict[str, int] = {"m": 0, "um": -6, "nm": -9, "F": 0, "pF": -12}
@@ -325,6 +327,52 @@ class NetlistProjection(VariableModel):
     derived: tuple[DerivedValue, ...] = ()
 
 
+class AmplifierPm0InputEvidence(VariableModel):
+    """Pins and values from an independently collected PM0 OA/CDF frame."""
+
+    revision_sha256: Digest
+    testbench_revision_sha256: Digest
+    oa_cdf_sha256: Digest
+    netlist_sha256: Digest
+    width: ChangeValue
+    geometry: Annotated[tuple[DerivedValue, ...], Field(min_length=5, max_length=5)]
+
+    @model_validator(mode="after")
+    def complete_geometry(self) -> Self:
+        values = {row.property_name: row.value for row in self.geometry}
+        if set(values) != {"fw", "as", "ad", "ps", "pd"}:
+            raise ValueError("complete observed PM0 geometry is required")
+        fw = values["fw"]
+        if (
+            not fw.endswith(("n", "u"))
+            or ChangeValue(value=fw[:-1], unit="nm" if fw.endswith("n") else "um").normalized
+            != self.width.normalized
+        ):
+            raise ValueError("observed single-finger w and fw differ")
+        return self
+
+
+class AmplifierPm0InputObservation(VariableModel):
+    status: Literal["OBSERVATION_ONLY"] = "OBSERVATION_ONLY"
+    scope: Literal["NETLIST_INPUT_ONLY"] = "NETLIST_INPUT_ONLY"
+    oa_footprint: Literal["MISMATCHED"] = "MISMATCHED"
+    oa_change_status: Literal["UNQUALIFIED_EXTRA_SETTING"] = "UNQUALIFIED_EXTRA_SETTING"
+    receipt_authentication: Literal["NOT_VERIFIED_BY_THIS_API"] = "NOT_VERIFIED_BY_THIS_API"
+    automatic_update_route: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
+    geometry_mode: Literal["NOT_OBSERVED"] = "NOT_OBSERVED"
+    execution_authorized: Literal[False] = False
+    admission_authorized: Literal[False] = False
+    selection_authorized: Literal[False] = False
+    baseline: AmplifierPm0InputEvidence
+    child: AmplifierPm0InputEvidence
+    diagnostic_receipt_sha256: Digest
+    footprint_receipt_sha256: Digest
+    dfm_evidence_sha256: Digest
+    baseline_effective_dfm: Literal["Minimum"]
+    child_effective_dfm: Literal["DFM"]
+    netlist: NetlistProjection
+
+
 def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[str, str]]:
     parts = path.split("/")
     if len(parts) != 2:
@@ -489,6 +537,134 @@ def _same_inverter_bench_with_reordered_instances(
     return old_static[:first] == new_static[:first] and old_static[last:] == new_static[last:]
 
 
+def _compare_mos_options(
+    old_options: dict[str, str],
+    new_options: dict[str, str],
+    geometry: tuple[DerivedChange, ...],
+    *,
+    amplifier: bool,
+) -> tuple[ChangeValue, ChangeValue, tuple[DerivedValue, ...]]:
+    old = _netlist_width(old_options, amplifier=amplifier)
+    observed = _netlist_width(new_options, amplifier=amplifier)
+    values = []
+    for change in geometry:
+        name = change.before.property_name
+        if name == "fw":
+            continue
+        previous = DerivedValue(property_name=name, value=old_options.pop(name, ""))
+        current = DerivedValue(property_name=name, value=new_options.pop(name, ""))
+        if (previous, current) != (change.before, change.after):
+            raise ValueError("derived MOS netlist geometry differs from qualification")
+        values.append(current)
+    if old_options != new_options:
+        raise ValueError("fixed MOS netlist options changed")
+    return old, observed, tuple(values)
+
+
+def partition_amplifier_input(
+    raw_input: bytes, *, expected_sha256: str
+) -> tuple[dict[str, str], list[tuple[str, str]], list[tuple[str, str]], list[str]]:
+    """Parse pinned center AMP input with the two observed milli aliases."""
+    if hashlib.sha256(raw_input).hexdigest() != expected_sha256:
+        raise ValueError("amplifier raw netlist digest mismatch")
+    logical: list[str] = statements(raw_input)  # type: ignore[no-untyped-call]
+    normalized = [
+        " ".join(_AMP_CENTER_ALIASES.get(token, token) for token in line.split())
+        if line.startswith("parameters ")
+        else line
+        for line in logical
+    ]
+    # The existing partitioner still rejects scoped parameters and unsupported syntax.
+    prepared = ("simulator lang=spectre\n" + "\n".join(normalized) + "\n").encode("ascii")
+    parameters, includes, analyses, static = partition_input(prepared)  # type: ignore[no-untyped-call]
+    if any(parameters.get(name) != value for name, value in _AMP_CENTER_BIAS.items()):
+        raise ValueError("fixed netlist amplifier center bias changed")
+    return parameters, includes, analyses, static
+
+
+def observe_amplifier_pm0_input(
+    baseline_input: bytes,
+    child_input: bytes,
+    *,
+    baseline: AmplifierPm0InputEvidence,
+    child: AmplifierPm0InputEvidence,
+    diagnostic_receipt_sha256: Digest,
+    footprint_receipt_sha256: Digest,
+    dfm_evidence_sha256: Digest,
+    baseline_effective_dfm: Literal["Minimum"],
+    child_effective_dfm: Literal["DFM"],
+) -> AmplifierPm0InputObservation:
+    """Compare the saved PM0 W+DFM revision at center DC.
+
+    The caller authenticates native receipts, including the Minimum to DFM
+    effective CDF change, and binds them to the same saved revision.
+    """
+    baseline, child = _checked(baseline), _checked(child)
+    if hashlib.sha256(baseline_input).hexdigest() != baseline.netlist_sha256:
+        raise ValueError("baseline netlist digest mismatch")
+    if baseline.netlist_sha256 != _AMP_CENTER_SHA256:
+        raise ValueError("amplifier PM0 requires the registered center DC baseline")
+    if hashlib.sha256(child_input).hexdigest() != child.netlist_sha256:
+        raise ValueError("child netlist digest mismatch")
+    if (
+        baseline.revision_sha256 == child.revision_sha256
+        or baseline.testbench_revision_sha256 == child.testbench_revision_sha256
+        or len(
+            {
+                baseline.oa_cdf_sha256,
+                child.oa_cdf_sha256,
+                baseline.netlist_sha256,
+                child.netlist_sha256,
+                diagnostic_receipt_sha256,
+                footprint_receipt_sha256,
+                dfm_evidence_sha256,
+            }
+        )
+        != 7
+    ):
+        raise ValueError("distinct PM0 revisions and evidence pins required")
+    if baseline.width.normalized != ("0.00002", "m") or child.width.normalized != (
+        "0.00000012",
+        "m",
+    ):
+        raise ValueError("PM0 observation requires the 20 µm to 120 nm width transition")
+
+    old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+        baseline_input, expected_sha256=baseline.netlist_sha256
+    )
+    new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+        child_input, expected_sha256=child.netlist_sha256
+    )
+    if old_includes != new_includes or old_analyses != new_analyses:
+        raise ValueError("model includes or analysis settings changed")
+    old_static, old_options = _amp_pm0_options(old_static, baseline=True)
+    new_static, new_options = _amp_pm0_options(new_static, baseline=False)
+    if old_params != new_params or old_static != new_static:
+        raise ValueError("fixed netlist parameters or topology changed")
+    child_geometry = {row.property_name: row for row in child.geometry}
+    geometry = tuple(
+        DerivedChange(before=row, after=child_geometry[row.property_name])
+        for row in baseline.geometry
+    )
+    old, observed, derived = _compare_mos_options(
+        old_options, new_options, geometry, amplifier=True
+    )
+    if old.normalized != baseline.width.normalized or observed.normalized != child.width.normalized:
+        raise ValueError("effective netlist width differs from the OA/CDF observation")
+    return AmplifierPm0InputObservation(
+        baseline=baseline,
+        child=child,
+        diagnostic_receipt_sha256=diagnostic_receipt_sha256,
+        footprint_receipt_sha256=footprint_receipt_sha256,
+        dfm_evidence_sha256=dfm_evidence_sha256,
+        baseline_effective_dfm=baseline_effective_dfm,
+        child_effective_dfm=child_effective_dfm,
+        netlist=NetlistProjection(
+            artifact_sha256=child.netlist_sha256, value=observed, derived=derived
+        ),
+    )
+
+
 def project_netlist_change(
     plan: ChangePlan, baseline_input: bytes, candidate_input: bytes
 ) -> NetlistProjection:
@@ -499,8 +675,19 @@ def project_netlist_change(
     plan = _checked(plan)
     if hashlib.sha256(baseline_input).hexdigest() != plan.baseline.netlist_sha256:
         raise ValueError("baseline netlist digest mismatch")
-    old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
-    new_params, new_includes, new_analyses, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
+    amplifier = (
+        isinstance(plan.target, MosWidthTarget) and plan.target.instance.instance_path == "PM0"
+    )
+    if amplifier:
+        old_params, old_includes, old_analyses, old_static = partition_amplifier_input(
+            baseline_input, expected_sha256=plan.baseline.netlist_sha256
+        )
+        new_params, new_includes, new_analyses, new_static = partition_amplifier_input(
+            candidate_input, expected_sha256=hashlib.sha256(candidate_input).hexdigest()
+        )
+    else:
+        old_params, old_includes, old_analyses, old_static = partition_input(baseline_input)  # type: ignore[no-untyped-call]
+        new_params, new_includes, new_analyses, new_static = partition_input(candidate_input)  # type: ignore[no-untyped-call]
     if old_includes != new_includes or old_analyses != new_analyses:
         raise ValueError("model includes or analysis settings changed")
 
@@ -515,7 +702,6 @@ def project_netlist_change(
         new_static, observed = _load_capacitance(new_static)
     else:
         instance_path = plan.target.instance.instance_path
-        amplifier = instance_path == "PM0"
         if amplifier:
             revision = plan.baseline.revision
             if (
@@ -529,22 +715,9 @@ def project_netlist_change(
         else:
             old_static, old_options = _width_options(old_static, instance_path)
             new_static, new_options = _width_options(new_static, instance_path)
-        old = _netlist_width(old_options, amplifier=amplifier)
-        observed = _netlist_width(new_options, amplifier=amplifier)
-        geometry = [
-            change for change in plan.allowed_derived if change.before.property_name != "fw"
-        ]
-        values = []
-        for change in geometry:
-            name = change.before.property_name
-            previous = DerivedValue(property_name=name, value=old_options.pop(name, ""))
-            current = DerivedValue(property_name=name, value=new_options.pop(name, ""))
-            if (previous, current) != (change.before, change.after):
-                raise ValueError("derived MOS netlist geometry differs from qualification")
-            values.append(current)
-        if old_options != new_options:
-            raise ValueError("fixed MOS netlist options changed")
-        derived = tuple(values)
+        old, observed, derived = _compare_mos_options(
+            old_options, new_options, plan.allowed_derived, amplifier=amplifier
+        )
     if old_params != new_params or (
         old_static != new_static
         and not (

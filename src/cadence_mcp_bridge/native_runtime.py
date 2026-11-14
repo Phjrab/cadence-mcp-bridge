@@ -49,6 +49,7 @@ SOURCES = {
     "modeltrust.py": "_installation_repair.py",
 }
 KIND = "STANDARD_VM_CONFIRMED_NATIVE_RUNTIME"
+REGISTRATION_DOCUMENT_LIMIT = 65536
 
 
 def source_assets() -> dict[str, bytes]:
@@ -212,7 +213,9 @@ def projection(context: ExecutionContext, registration: NativeRegistration) -> d
 
 
 def bundle(context: ExecutionContext, registration_path: Path, output: Path) -> dict[str, object]:
-    registration = NativeRegistration.model_validate_json(bounded_document(registration_path))
+    registration = NativeRegistration.model_validate_json(
+        bounded_document(registration_path, maximum_bytes=REGISTRATION_DOCUMENT_LIMIT)
+    )
     environment, profile_raw = load_environment(context.binding.environment_profile)
     if hashlib.sha256(profile_raw).hexdigest() != context.binding.environment_sha256:
         raise OperationRejected("native_runtime_environment_changed")
