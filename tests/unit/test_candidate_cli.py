@@ -1017,11 +1017,13 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     assert not any(tmp_path.glob("*.sqlite3-*"))
 
 
+@pytest.mark.parametrize("separate_baseline", [False, True])
 def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     measurement_operator,
     tmp_path,
     monkeypatch,
     capsys,
+    separate_baseline,
 ):
     from uuid import uuid4
 
@@ -1246,7 +1248,18 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     assert saved["executed_netlist_vbiasn"]["ac"]["candidate"] is None
     assert saved["deltas"]["ac"]["absolute_delta"] is None
 
-    width = binding["candidate"]
+    historical_width = binding["candidate"]
+    width = {
+        key: historical_width[key]
+        for key in (
+            "revision_sha256",
+            "testbench_revision_sha256",
+            "source_tree_sha256",
+            "ade_state_sha256",
+        )
+    }
+    if separate_baseline:
+        width["ade_state_sha256"] = "8" * 64
     change = plan_ade_change(
         BASELINE.model_copy(
             update={
@@ -1299,6 +1312,13 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     }
     request["persisted_bias_readback"] = persistence
     persisted_target = tmp_path / "persisted.json"
+    if separate_baseline:
+        assert compare("without-required-persistence-baseline", persisted_target) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not persisted_target.exists()
+        persistence["persistence_baseline"] = pin(
+            "persistence-baseline.json", json.dumps(width).encode()
+        )
     assert compare("with-persisted-evidence", persisted_target) == 0
     receipt = output(capsys)
     persisted_raw = persisted_target.read_bytes()
@@ -1311,9 +1331,21 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     historical_report = saved["association"]["dc"]["candidate"]["report"]
     assert (
         historical_report["analysis_conditions"]["ade_state_tree_sha256"]
-        == width["ade_state_sha256"]
+        == historical_width["ade_state_sha256"]
     )
     assert reopened.revision_sha256 != width["ade_state_sha256"]
+    assert (
+        persisted_saved["persisted_bias_readback"]["baseline"]["revision_sha256"]
+        == width["ade_state_sha256"]
+    )
+    if separate_baseline:
+        assert (
+            persisted_saved["persistence_baseline_sha256"]
+            == persistence["persistence_baseline"]["sha256"]
+        )
+        assert width["ade_state_sha256"] != historical_width["ade_state_sha256"]
+    else:
+        assert "persistence_baseline_sha256" not in persisted_saved
 
     assert compare("persisted-alias", tmp_path / "persisted-child.scs") == 2
     assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
@@ -1330,6 +1362,23 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
         assert compare(f"persisted-wrong-pin-{index}", bad) == 2
         assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
         document[key] = pin_sha
+    if separate_baseline:
+        baseline_ref = persistence["persistence_baseline"]
+        assert compare("persistence-baseline-alias", tmp_path / "persistence-baseline.json") == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        persistence["persistence_baseline"] = {**baseline_ref, "sha256": "0" * 64}
+        assert compare("persistence-baseline-wrong-pin", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        for key, value in (
+            ("source_tree_sha256", "0" * 64),
+            ("testbench_revision_sha256", "0" * 64),
+            ("revision_sha256", "0" * 64),
+            ("dc", historical_width["dc"]),
+        ):
+            changed = json.dumps({**width, key: value}).encode()
+            persistence["persistence_baseline"] = pin(f"wrong-{key}.json", changed)
+            assert compare(f"persistence-baseline-wrong-{key}", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
     assert not bad.exists()
     assert persisted_target.read_bytes() == persisted_raw
     del request["persisted_bias_readback"]

@@ -148,6 +148,7 @@ class _PersistedBiasReadback(VariableModel):
     change_plan_sha256: Digest
     readback: _PinnedComparisonFile
     readback_sha256: Digest
+    persistence_baseline: _PinnedComparisonFile | None = None
     baseline_input: _PinnedComparisonFile | None = None
     candidate_input: _PinnedComparisonFile | None = None
 
@@ -929,6 +930,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
         FreshAmplifierAnalysisPair,
         FreshAmplifierMeasurement,
         FreshAmplifierOperation,
+        FreshAmplifierRevisionBinding,
         FreshAmplifierWidthBinding,
         associate_persisted_amplifier_bias,
         associate_saved_width_bias_analysis,
@@ -954,6 +956,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
             for ref in (
                 persistence.change_plan,
                 persistence.readback,
+                persistence.persistence_baseline,
                 persistence.baseline_input,
                 persistence.candidate_input,
             )
@@ -988,8 +991,22 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
 
     persisted = None
     if persistence is not None:
+        saved_width = binding.candidate
+        if persistence.persistence_baseline is not None:
+            saved_width = FreshAmplifierRevisionBinding.model_validate_json(
+                _comparison_document(persistence.persistence_baseline)
+            )
+            if (
+                saved_width.revision_sha256 != binding.candidate.revision_sha256
+                or saved_width.testbench_revision_sha256
+                != binding.candidate.testbench_revision_sha256
+                or saved_width.source_tree_sha256 != binding.candidate.source_tree_sha256
+                or saved_width.dc is not None
+                or saved_width.ac is not None
+            ):
+                raise OperationRejected("candidate_persistence_baseline_binding_invalid")
         persisted = associate_persisted_amplifier_bias(
-            binding.candidate,
+            saved_width,
             ChangePlan.model_validate_json(_comparison_document(persistence.change_plan)),
             ChangeReadback.model_validate_json(_comparison_document(persistence.readback)),
             expected_plan_sha256=persistence.change_plan_sha256,
@@ -1100,6 +1117,8 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
     }
     if persisted is not None:
         payload["persisted_bias_readback"] = persisted.model_dump(mode="json")
+    if persistence is not None and persistence.persistence_baseline is not None:
+        payload["persistence_baseline_sha256"] = persistence.persistence_baseline.sha256
     encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
     file_sha256 = _export(output, encoded)
     if json.loads(read_candidate_document(output, expected_sha256=file_sha256)) != payload:
