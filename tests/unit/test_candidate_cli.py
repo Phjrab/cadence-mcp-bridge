@@ -1017,6 +1017,252 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     assert not any(tmp_path.glob("*.sqlite3-*"))
 
 
+def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
+    measurement_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from uuid import uuid4
+
+    import test_candidate_execution as execution_fixture
+
+    from cadence_mcp_bridge import candidate_execution
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import ExplicitValue, OperationProgress
+
+    calls = []
+    associate_width = candidate_execution.associate_fresh_amplifier_width_pair
+
+    def capture(*args, **kwargs):
+        calls.append(kwargs)
+        return associate_width(*args, **kwargs)
+
+    with monkeypatch.context() as fixture:
+        fixture.setattr(execution_fixture, "associate_fresh_amplifier_width_pair", capture)
+        execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
+            monkeypatch,
+            measurement_operator,
+            None,
+        )
+    evidence = calls.pop()
+    width_route = candidate_execution._width_route
+    routes = {}
+    originals = {}
+
+    def pin(name, raw):
+        path = tmp_path / name
+        with path.open("xb") as handle:
+            handle.write(raw)
+        originals[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def stage(label, op, raw):
+        store = AnalysisStore(tmp_path / f"{label}.sqlite3")
+        query = op.query
+        assert store.admit_operation(query.operation_id, op.plan)
+        intent = OperationProgress(phase="ADMITTED")
+        pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(query.operation_id, intent, pending)
+        store.advance_operation(query.operation_id, pending, op.record.progress)
+        saved = (tmp_path / f"{label}.sqlite3").read_bytes()
+        originals[tmp_path / f"{label}.sqlite3"] = saved
+        return {
+            "operation_id": query.operation_id,
+            "plan_sha256": query.expected_plan_sha256,
+            "terminal_sha256": op.expected_terminal_sha256,
+            "journal": {
+                "path": str(tmp_path / f"{label}.sqlite3"),
+                "sha256": hashlib.sha256(saved).hexdigest(),
+            },
+            "runtime_manifest": pin(f"{label}-manifest.json", b"{}"),
+            "runtime_registration": pin(f"{label}-registration.json", b"{}"),
+            "design_registry": pin(f"{label}-registry.json", b"{}"),
+            "effective_input": pin(f"{label}.scs", raw),
+            "report": pin(f"{label}-report.json", op.report),
+        }
+
+    def center(mode):
+        retained = evidence[mode].candidate
+        op = retained.operation
+        route, conditions, reader, semantics = width_route(op, retained.effective_input, mode)
+        routes[op.query.operation_id] = (route, conditions, reader, semantics)
+        return op, retained.effective_input
+
+    old_dc, dc_raw = center("dc")
+    old_ac, ac_raw = center("ac")
+    new_raw = dc_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
+    new_plan = old_dc.plan.model_copy(
+        update={
+            "runner_sha256": "f" * 64,
+            "request": old_dc.plan.request.model_copy(
+                update={
+                    "design_id": "saved-width-bias321",
+                    "values": (ExplicitValue(logical_id="vbiasn", value="0.321", unit="V"),),
+                }
+            ),
+        }
+    )
+    new_query = old_dc.query.model_copy(
+        update={
+            "operation_id": str(uuid4()),
+            "expected_plan_sha256": new_plan.plan_sha256,
+        }
+    )
+    report = json.loads(old_dc.report)
+    report.update(
+        operation_id=new_query.operation_id,
+        plan=new_plan.model_dump(mode="json"),
+        execution_input_sha256=hashlib.sha256(new_raw).hexdigest(),
+    )
+    report_raw = json.dumps(report).encode()
+    new_dc = replace(
+        old_dc,
+        query=new_query,
+        plan=new_plan,
+        report=report_raw,
+        expected_report_sha256=hashlib.sha256(report_raw).hexdigest(),
+        record=old_dc.record.model_copy(
+            update={
+                "operation_id": new_query.operation_id,
+                "plan": new_plan,
+            }
+        ),
+    )
+    for op, bias in ((old_dc, "0.32"), (new_dc, "0.321")):
+        route, conditions, reader, semantics = routes[old_dc.query.operation_id]
+        variable = dict(
+            logical_id="vbiasn",
+            cadence_binding="VBIASN",
+            unit="V",
+            value_type="real",
+            default=bias,
+            mutation_policy="fixed",
+            range_status="unqualified",
+            minimum=None,
+            maximum=None,
+            step_policy="fixed",
+            step=None,
+            fixed_value=bias,
+            review_id=None,
+        )
+        routes[op.query.operation_id] = (
+            {**route, "variables": [variable], "source_cell": "/fixture/cell", "libraries": []},
+            conditions,
+            reader,
+            semantics,
+        )
+    old_plan = old_dc.plan.model_copy(
+        update={
+            "request": old_dc.plan.request.model_copy(
+                update={
+                    "values": (ExplicitValue(logical_id="vbiasn", value="0.32", unit="V"),),
+                }
+            ),
+        }
+    )
+    old_report = json.loads(old_dc.report)
+    old_report["plan"] = old_plan.model_dump(mode="json")
+    old_report_raw = json.dumps(old_report).encode()
+    old_dc = replace(
+        old_dc,
+        plan=old_plan,
+        report=old_report_raw,
+        query=old_dc.query.model_copy(update={"expected_plan_sha256": old_plan.plan_sha256}),
+        expected_report_sha256=hashlib.sha256(old_report_raw).hexdigest(),
+        record=old_dc.record.model_copy(update={"plan": old_plan}),
+    )
+    binding = json.loads(evidence["registration_evidence"])
+    binding["candidate"]["dc"]["plan_sha256"] = old_dc.plan.plan_sha256
+    monkeypatch.setattr(
+        candidate_execution,
+        "_width_route",
+        lambda op, raw, mode, *, varied_id: routes[op.query.operation_id],
+    )
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+
+    action = "amplifier-saved-width-bias-compare"
+    request = {
+        "width_binding": pin("binding.json", json.dumps(binding).encode()),
+        "requested_bias": {"value": "0.3210", "unit": "V"},
+        "dc": {
+            "baseline": stage("center-dc", old_dc, dc_raw),
+            "candidate_query": new_query.model_dump(mode="json"),
+            "candidate": stage("new-dc", new_dc, new_raw),
+        },
+        "ac": {
+            "baseline": stage("center-ac", old_ac, ac_raw),
+            "candidate_query": {"operation_id": str(uuid4()), "expected_plan_sha256": "e" * 64},
+        },
+    }
+
+    def compare(label, target):
+        ref = pin(f"{label}.json", json.dumps(request).encode())
+        return main(
+            [
+                "operator-candidates",
+                action,
+                "--request",
+                ref["path"],
+                ref["sha256"],
+                "--output",
+                str(target),
+            ]
+        )
+
+    assert main(["operator-candidates", "schema", "--action", action]) == 0
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["_SavedWidthBiasSide"]["additionalProperties"] is False
+    target = tmp_path / "comparison.json"
+    assert compare("valid", target) == 0
+    summary = output(capsys)
+    raw = target.read_bytes()
+    saved = json.loads(raw)
+    assert summary["status"] == "AMPLIFIER_SAVED_WIDTH_BIAS_COMPARISON_EXPORTED"
+    assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert summary["remote_contact"] is summary["execution_authorized"] is False
+    assert (
+        summary["new_simulations"] == summary["new_extractions"] == summary["new_reservations"] == 0
+    )
+    assert saved["association"]["goals"] == "GOALS_NOT_PROVIDED"
+    assert saved["selected_candidate_id"] is None
+    assert saved["requested_vbiasn"] == request["requested_bias"]
+    assert saved["executed_netlist_vbiasn"]["dc"] == {
+        "baseline": {"value": "0.32", "unit": "V"},
+        "candidate": {"value": "0.321", "unit": "V"},
+    }
+    assert saved["saved_ade_bias_readback_status"] == "MISSING"
+    assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
+    assert saved["association"]["ac"]["baseline"]["status"] == "SUCCEEDED"
+    assert saved["association"]["ac"]["candidate"]["status"] == "NOT_OBSERVED"
+    assert saved["executed_netlist_vbiasn"]["ac"]["candidate"] is None
+    assert saved["deltas"]["ac"]["absolute_delta"] is None
+
+    sidecar = tmp_path / "new-dc.sqlite3-wal"
+    assert compare("sidecar", sidecar) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("repeat", target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    identity = dict(request["ac"]["candidate_query"])
+    request["ac"]["candidate_query"] = request["dc"]["candidate_query"]
+    rejected = tmp_path / "rejected.json"
+    assert compare("duplicate-id", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["ac"]["candidate_query"] = identity
+    terminal = request["ac"]["baseline"]["terminal_sha256"]
+    request["ac"]["baseline"]["terminal_sha256"] = "0" * 64
+    assert compare("wrong-center-terminal", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["ac"]["baseline"]["terminal_sha256"] = terminal
+    request["dc"]["candidate"]["effective_input"]["sha256"] = "0" * 64
+    assert compare("wrong-pin", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert not rejected.exists() and target.read_bytes() == raw
+    assert all(path.read_bytes() == content for path, content in originals.items())
+    assert not any(tmp_path.glob("*.sqlite3-*"))
+
+
 def test_local_plan_exports_full_vector_without_journal(
     candidate_operator, tmp_path, monkeypatch, capsys
 ):

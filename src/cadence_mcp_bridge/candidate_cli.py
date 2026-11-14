@@ -31,9 +31,10 @@ from cadence_mcp_bridge.candidate_reports import (
 from cadence_mcp_bridge.domain_provisioning import _closed_document
 from cadence_mcp_bridge.errors import BridgeError
 from cadence_mcp_bridge.native_diagnostics import OperationId
+from cadence_mcp_bridge.native_service import NativeOperationQuery
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant
-from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputEvidence
+from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputEvidence, ChangeValue
 from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
 from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
@@ -136,6 +137,19 @@ class _FreshAmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
     ac: _FreshAmplifierWidthSide
 
 
+class _SavedWidthBiasSide(VariableModel):
+    baseline: _AmplifierWidthChild
+    candidate_query: NativeOperationQuery
+    candidate: _AmplifierWidthChild | None = None
+
+
+class _SavedWidthBiasRequest(VariableModel):
+    width_binding: _PinnedComparisonFile
+    requested_bias: ChangeValue
+    dc: _SavedWidthBiasSide
+    ac: _SavedWidthBiasSide
+
+
 class _AmplifierPm0ObservationRequest(VariableModel):
     baseline_input: Path
     child_input: Path
@@ -162,6 +176,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
             "amplifier-select",
             "amplifier-width-compare",
             "amplifier-fresh-width-compare",
+            "amplifier-saved-width-bias-compare",
             "observe-amplifier-pm0",
         ),
         dest="schema_action",
@@ -225,6 +240,12 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     )
     fresh_width.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     fresh_width.add_argument("--output", type=Path, required=True)
+    saved_width_bias = actions.add_parser(
+        "amplifier-saved-width-bias-compare",
+        help="Compare retained VBIASN results for the same saved amplifier width revision.",
+    )
+    saved_width_bias.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    saved_width_bias.add_argument("--output", type=Path, required=True)
     pm0_observation = actions.add_parser(
         "observe-amplifier-pm0", help="Observe retained PM0 netlist inputs without qualification."
     )
@@ -570,7 +591,6 @@ def _comparison_bytes(source: _PinnedComparisonFile) -> bytes:
 def _retained_analysis_operation(side: _RetainedAnalysisOperation) -> PmosDcOperation:
     from cadence_mcp_bridge.analysis_store import MAX_BYTES, AnalysisStore
     from cadence_mcp_bridge.candidate_execution import PmosDcOperation
-    from cadence_mcp_bridge.native_service import NativeOperationQuery
     from cadence_mcp_bridge.operator_operations import OperationPlan
 
     query = NativeOperationQuery(
@@ -893,6 +913,163 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
     }
 
 
+def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge._native_rendering import partition_input
+    from cadence_mcp_bridge.candidate_execution import (
+        FreshAmplifierAnalysisPair,
+        FreshAmplifierMeasurement,
+        FreshAmplifierOperation,
+        FreshAmplifierWidthBinding,
+        associate_saved_width_bias_analysis,
+    )
+
+    path, request_sha256 = arguments.request
+    request_path = _local_path(Path(path))
+    request = _SavedWidthBiasRequest.model_validate_json(
+        read_candidate_document(request_path, expected_sha256=request_sha256)
+    )
+    if request.requested_bias.normalized != ("0.321", "V"):
+        raise OperationRejected("candidate_saved_width_bias_point_invalid")
+
+    binding = FreshAmplifierWidthBinding.model_validate_json(
+        _comparison_document(request.width_binding)
+    )
+    reserved = {request_path, _local_path(request.width_binding.path)}
+    operation_ids = {
+        pin.operation_id for pin in (binding.baseline.dc, binding.baseline.ac) if pin is not None
+    }
+    sides: tuple[tuple[Literal["dc", "ac"], _SavedWidthBiasSide], ...] = (
+        ("dc", request.dc),
+        ("ac", request.ac),
+    )
+    for mode, side in sides:
+        center = binding.candidate.dc if mode == "dc" else binding.candidate.ac
+        if center is None or (
+            side.baseline.operation_id,
+            side.baseline.plan_sha256,
+            side.baseline.effective_input.sha256,
+        ) != (center.operation_id, center.plan_sha256, center.input_sha256):
+            raise OperationRejected("candidate_saved_width_bias_center_invalid")
+        for operation_id in (center.operation_id, side.candidate_query.operation_id):
+            if operation_id in operation_ids:
+                raise OperationRejected("candidate_saved_width_bias_operation_reused")
+            operation_ids.add(operation_id)
+        for operation in (side.baseline, side.candidate):
+            if operation is not None:
+                reserved.update(_retained_analysis_paths(operation))
+                reserved.add(_local_path(operation.effective_input.path))
+                if operation.execution_plan is not None:
+                    reserved.add(_local_path(operation.execution_plan.path))
+    output = _output(arguments.output, reserved)
+
+    pairs = {}
+    deltas = {}
+    executed_bias = {}
+    for mode, side in sides:
+        netlist_bias: dict[str, dict[str, str] | None] = {"baseline": None, "candidate": None}
+        baseline = FreshAmplifierOperation(
+            _retained_analysis_operation(side.baseline),
+            _comparison_bytes(side.baseline.effective_input),
+        )
+        if side.candidate is None:
+            retained_center = baseline.operation
+            record = retained_center.record
+            terminal = retained_center.expected_terminal_sha256
+            if (
+                retained_center.plan.plan_sha256 != retained_center.query.expected_plan_sha256
+                or retained_center.plan.analysis != mode
+                or (
+                    terminal is not None
+                    and (record is None or record.progress.provider_receipt_sha256 != terminal)
+                )
+            ):
+                raise OperationRejected("candidate_saved_width_bias_center_invalid")
+            pair = FreshAmplifierAnalysisPair(
+                analysis=mode,
+                metric_id="dc-supply-power-grid-v2" if mode == "dc" else "gain-10hz-grid-v1",
+                unit="W" if mode == "dc" else "dB",
+                baseline=FreshAmplifierMeasurement(
+                    operation=retained_center.query,
+                    terminal_sha256=terminal,
+                    status=record.progress.phase if record is not None else "NOT_OBSERVED",
+                    report=None,
+                    value=None,
+                    reason="candidate_evidence_unavailable_for_association",
+                ),
+                candidate=FreshAmplifierMeasurement(
+                    operation=side.candidate_query,
+                    terminal_sha256=None,
+                    status="NOT_OBSERVED",
+                    report=None,
+                    value=None,
+                    reason="retained_candidate_evidence_unavailable",
+                ),
+            )
+        else:
+            candidate = FreshAmplifierOperation(
+                _retained_analysis_operation(side.candidate),
+                _comparison_bytes(side.candidate.effective_input),
+            )
+            pair = associate_saved_width_bias_analysis(
+                mode,
+                baseline,
+                candidate,
+                saved_width=binding.candidate,
+                baseline_input_sha256=side.baseline.effective_input.sha256,
+                candidate_input_sha256=side.candidate.effective_input.sha256,
+                candidate_query=side.candidate_query,
+                requested_bias=request.requested_bias,
+            )
+            for name, row, raw in (
+                ("baseline", pair.baseline, baseline.effective_input),
+                ("candidate", pair.candidate, candidate.effective_input),
+            ):
+                if row.report is not None:
+                    parameters, _, _, _ = partition_input(raw)  # type: ignore[no-untyped-call]
+                    netlist_bias[name] = {"value": parameters["VBIASN"], "unit": "V"}
+        pairs[mode] = pair
+        absolute, _, reason = candidate_metric_delta(
+            pair.candidate.value,
+            pair.baseline.value,
+            baseline_present=pair.baseline.value is not None,
+        )
+        deltas[mode] = {"absolute_delta": absolute, "reason": reason}
+        executed_bias[mode] = netlist_bias
+
+    payload = {
+        "association": {
+            "dc": pairs["dc"].model_dump(mode="json"),
+            "ac": pairs["ac"].model_dump(mode="json"),
+            "goals": "GOALS_NOT_PROVIDED",
+            "selected_candidate_id": None,
+            "execution_authorized": False,
+        },
+        "request_sha256": request_sha256,
+        "width_binding_sha256": request.width_binding.sha256,
+        "saved_revision_sha256": binding.candidate.revision_sha256,
+        "saved_testbench_revision_sha256": binding.candidate.testbench_revision_sha256,
+        "requested_vbiasn": request.requested_bias.model_dump(mode="json"),
+        "executed_netlist_vbiasn": executed_bias,
+        "saved_ade_bias_readback_status": "MISSING",
+        "deltas": deltas,
+        "selected_candidate_id": None,
+    }
+    encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
+    file_sha256 = _export(output, encoded)
+    if json.loads(read_candidate_document(output, expected_sha256=file_sha256)) != payload:
+        raise OperationRejected("candidate_saved_width_bias_output_mismatch")
+    return {
+        "status": "AMPLIFIER_SAVED_WIDTH_BIAS_COMPARISON_EXPORTED",
+        "file_sha256": file_sha256,
+        "goals": "GOALS_NOT_PROVIDED",
+        "selected_candidate_id": None,
+        "execution_authorized": False,
+        "new_simulations": 0,
+        "new_extractions": 0,
+        "new_reservations": 0,
+    }
+
+
 def _observe_amplifier_pm0(arguments: argparse.Namespace) -> dict[str, Any]:
     from cadence_mcp_bridge.parameter_changes import (
         AmplifierPm0InputObservation,
@@ -965,6 +1142,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 result = {
                     "request_schema": _FreshAmplifierWidthComparisonRequest.model_json_schema(),
                 }
+            elif arguments.schema_action == "amplifier-saved-width-bias-compare":
+                result = {"request_schema": _SavedWidthBiasRequest.model_json_schema()}
             elif arguments.schema_action == "observe-amplifier-pm0":
                 result = {"request_schema": _AmplifierPm0ObservationRequest.model_json_schema()}
         elif action in ("compare", "csv"):
@@ -1043,6 +1222,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _amplifier_width_compare(arguments)
         elif action == "amplifier-fresh-width-compare":
             result = _amplifier_fresh_width_compare(arguments)
+        elif action == "amplifier-saved-width-bias-compare":
+            result = _amplifier_saved_width_bias_compare(arguments)
         elif action == "observe-amplifier-pm0":
             result = _observe_amplifier_pm0(arguments)
         else:
@@ -1202,6 +1383,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "pmos-dc-compare",
             "amplifier-width-compare",
             "amplifier-fresh-width-compare",
+            "amplifier-saved-width-bias-compare",
             "observe-amplifier-pm0",
         ):
             guidance = "Check pinned local documents and use a new output file."
