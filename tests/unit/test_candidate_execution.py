@@ -35,6 +35,7 @@ from cadence_mcp_bridge.candidate_execution import (
     associate_amplifier_width_pair,
     associate_fresh_amplifier_width_pair,
     associate_pmos_dc_pair,
+    associate_saved_width_bias_analysis,
     collect_candidate_analyses,
     validate_cross_analysis_conditions,
 )
@@ -46,6 +47,7 @@ from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.native_service import NativeOperationQuery
 from cadence_mcp_bridge.operator_operations import (
     DurableOperation,
+    ExplicitValue,
     OperationProgress,
     OperationRejected,
 )
@@ -60,6 +62,109 @@ from cadence_mcp_bridge.result_reports import ReportConditions, make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.mark.parametrize(
+    "drift", [None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias"]
+)
+def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
+    measurement_operator, monkeypatch, drift
+):
+    from cadence_mcp_bridge import candidate_execution
+
+    _, plan, ade, reader, _, _ = reader_for(measurement_operator)
+    routes = {}
+    monkeypatch.setattr(
+        candidate_execution,
+        "_width_route",
+        lambda op, raw, mode, *, varied_id: routes[op.query.operation_id],
+    )
+    monkeypatch.setattr(candidate_execution, "_fresh_amplifier_reader", lambda *args: None)
+
+    def point(bias, design, runner, *, candidate=False):
+        pm0 = b"130n" if candidate and drift == "pm0" else b"120n"
+        input_bias = b"0.322" if candidate and drift == "bias" else bias.encode()
+        fixed_bias = b"0.703" if candidate and drift == "fixed-bias" else b"0.702"
+        raw = (
+            b"simulator lang=spectre\nparameters VBIASN=" + input_bias
+            + b" VBIASP=" + fixed_bias + b"\n"
+            + b"PM0 (d g s b) gpdk090_pmos1v w=" + pm0 + b" l=1u\n"
+            + b"analysis0 dc save=all\n"
+        )
+        request = plan.request.model_copy(update={
+            "design_id": design,
+            "values": (ExplicitValue(logical_id="vbiasn", value=bias, unit="V"),),
+        })
+        child = plan.model_copy(update={"request": request, "runner_sha256": runner})
+        query = NativeOperationQuery(
+            operation_id=str(uuid4()), expected_plan_sha256=child.plan_sha256
+        )
+        record = DurableOperation(
+            operation_id=query.operation_id,
+            plan=child,
+            event_count=4,
+            progress=OperationProgress(
+                phase="FAILED", remote_revision=5, provider_receipt_sha256="b" * 64
+            ),
+        )
+        source = "2" * 64 if candidate and drift == "source" else "3" * 64
+        conditions = ReportConditions(
+            analysis_inputs=ade.inputs,
+            source_tree_sha256=source,
+            ade_state_tree_sha256="4" * 64,
+            static_statements_sha256="5" * 64,
+            model_file_sha256=("6" * 64,),
+            transfer=None,
+        )
+        variable = dict(
+            logical_id="vbiasn", cadence_binding="VBIASN", unit="V", value_type="real",
+            default=bias, mutation_policy="fixed", range_status="unqualified",
+            minimum=None, maximum=None, step_policy="fixed", step=None, fixed_value=bias,
+            review_id=None,
+        )
+        routes[query.operation_id] = (
+            dict(variables=[variable], source_cell="/same/cell", libraries=[],
+                 ade=ade.model_dump(mode="json")),
+            conditions,
+            reader,
+            ("model-drift",) if candidate and drift == "model" else (),
+        )
+        return FreshAmplifierOperation(PmosDcOperation(query, child, b"", b"", b"", record), raw)
+
+    center = point("0.32", "saved-width", "7" * 64)
+    candidate = point("0.321", "saved-width-bias321", "8" * 64, candidate=True)
+    center_sha = hashlib.sha256(center.effective_input).hexdigest()
+    candidate_sha = hashlib.sha256(candidate.effective_input).hexdigest()
+    saved_width = FreshAmplifierRevisionBinding(
+        revision_sha256="9" * 64,
+        testbench_revision_sha256="a" * 64,
+        source_tree_sha256="3" * 64,
+        ade_state_sha256="4" * 64,
+        dc=FreshAmplifierOperationBinding(
+            operation_id=center.operation.query.operation_id,
+            plan_sha256=center.operation.query.expected_plan_sha256,
+            input_sha256=center_sha,
+        ),
+    )
+    kwargs = dict(
+        saved_width=saved_width,
+        baseline_input_sha256=center_sha,
+        candidate_input_sha256="0" * 64 if drift == "input-pin" else candidate_sha,
+        candidate_query=(
+            candidate.operation.query.model_copy(update={"expected_plan_sha256": "1" * 64})
+            if drift == "alias" else candidate.operation.query
+        ),
+        requested_bias=ChangeValue(value="0.321", unit="V"),
+    )
+    if drift:
+        with pytest.raises(OperationRejected) as rejected:
+            associate_saved_width_bias_analysis("dc", center, candidate, **kwargs)
+        assert rejected.value.reason == "candidate_saved_width_bias_evidence_mismatch"
+    else:
+        result = associate_saved_width_bias_analysis("dc", center, candidate, **kwargs)
+        assert (result.baseline.status, result.candidate.status) == ("FAILED", "FAILED")
+        assert result.baseline.value is result.candidate.value is None
+        assert result.candidate.operation == candidate.operation.query
 
 
 @pytest.mark.parametrize(

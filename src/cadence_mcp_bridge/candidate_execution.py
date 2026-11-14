@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self
 
 from pydantic import Field, model_validator
 
-from cadence_mcp_bridge._native_rendering import effective_input
+from cadence_mcp_bridge._native_rendering import effective_input, partition_input
 from cadence_mcp_bridge.amplifier_specifications import AmplifierFactProvenance, provenance
 from cadence_mcp_bridge.amplifier_sweeps import AmplifierSweepResult
 from cadence_mcp_bridge.candidate_contracts import (
@@ -57,7 +57,13 @@ from cadence_mcp_bridge.parameter_changes import (
 from cadence_mcp_bridge.power_measurements import require_same_resource_policy
 from cadence_mcp_bridge.result_reports import ReportConditions, ReportMetric, ResultReport
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
-from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
+from cadence_mcp_bridge.variable_contracts import (
+    Digest,
+    LogicalId,
+    VariableContract,
+    VariableModel,
+    canonical_digest,
+)
 
 
 class CandidateAnalysisManifest(VariableModel):
@@ -672,6 +678,8 @@ def _width_route(
     operation: PmosDcOperation,
     diagnostic: bytes,
     analysis_kind: Literal["dc", "ac"],
+    *,
+    varied_id: str | None = None,
 ) -> tuple[dict[str, Any], ReportConditions, GenericReaderRegistration, tuple[object, ...]]:
     plan = OperationPlan.model_validate_json(operation.plan.model_dump_json())
     query = NativeOperationQuery.model_validate_json(operation.query.model_dump_json())
@@ -741,8 +749,8 @@ def _width_route(
         plan.ledger_ref,
         plan.environment_sha256,
         plan.pdk_sha256,
-        plan.request.values,
-        variables.variables,
+        tuple(value for value in plan.request.values if value.logical_id != varied_id),
+        tuple(variable for variable in variables.variables if variable.logical_id != varied_id),
         ade.inputs,
         ade.model_includes,
         route["model_files"],
@@ -1355,6 +1363,125 @@ def _fresh_amplifier_metric(
     return _amp_child_metric(report, reader, physical_sources=("V0", "V5"))
 
 
+def _fresh_amplifier_measurement(
+    mode: Literal["dc", "ac"],
+    operation: PmosDcOperation,
+    conditions: ReportConditions,
+    reader: GenericReaderRegistration,
+    ade: AdeExecutionRegistration,
+    static: list[str],
+    input_sha256: str,
+) -> FreshAmplifierMeasurement:
+    _fresh_amplifier_reader(mode, reader, static)
+    status, terminal, report = _width_report(operation, conditions, reader)
+    value = None
+    reason: str | None = {
+        "NOT_OBSERVED": "retained_record_unavailable",
+        "SUCCEEDED": "retained_result_unavailable",
+    }.get(status, "retained_operation_not_succeeded")
+    if report is not None:
+        if report.execution_input_sha256 != input_sha256:
+            raise ValueError("fresh amplifier report input differs")
+        value = _fresh_amplifier_metric(report, reader, ade)
+        reason = "registered_measurement_unavailable" if value is None else None
+    return FreshAmplifierMeasurement(
+        operation=operation.query, terminal_sha256=terminal, status=status,
+        report=report,
+        value=value,
+        reason=reason,
+    )
+
+
+def associate_saved_width_bias_analysis(
+    mode: Literal["dc", "ac"],
+    baseline: FreshAmplifierOperation,
+    candidate: FreshAmplifierOperation,
+    *,
+    saved_width: FreshAmplifierRevisionBinding,
+    baseline_input_sha256: Digest,
+    candidate_input_sha256: Digest,
+    candidate_query: NativeOperationQuery,
+    requested_bias: ChangeValue,
+) -> FreshAmplifierAnalysisPair:
+    """Compare an existing saved-width center to one separately registered bias point.
+
+    The caller supplies independently pinned execution inputs and an authenticated
+    saved-width binding. Each operation retains its own original runtime and grant.
+    """
+    try:
+        center = baseline.operation
+        changed = candidate.operation
+        center_pin = saved_width.dc if mode == "dc" else saved_width.ac
+        if (
+            center_pin is None
+            or (center.query.operation_id, center.query.expected_plan_sha256, baseline_input_sha256)
+            != (center_pin.operation_id, center_pin.plan_sha256, center_pin.input_sha256)
+            or center.query.operation_id == changed.query.operation_id
+            or changed.query != NativeOperationQuery.model_validate_json(
+                candidate_query.model_dump_json()
+            )
+            or requested_bias.normalized[1] != "V"
+        ):
+            raise ValueError("saved-width bias operation identity differs")
+
+        measurements = []
+        fixed_conditions = []
+        for side, pin, bias in (
+            (baseline, baseline_input_sha256, "0.32"),
+            (candidate, candidate_input_sha256, requested_bias.normalized[0]),
+        ):
+            operation, raw = side.operation, side.effective_input
+            if hashlib.sha256(raw).hexdigest() != pin:
+                raise ValueError("saved-width bias input digest differs")
+            route, conditions, reader, semantics = _width_route(
+                operation, raw, mode, varied_id="vbiasn"
+            )
+            (variable,) = (
+                VariableContract.model_validate(row)
+                for row in route["variables"]
+                if row["logical_id"] == "vbiasn"
+            )
+            (value,) = (v for v in operation.plan.request.values if v.logical_id == "vbiasn")
+            if (
+                (variable.cadence_binding, variable.unit, value.unit, value.value)
+                != ("VBIASN", "V", "V", bias)
+                or conditions.source_tree_sha256 != saved_width.source_tree_sha256
+                or conditions.ade_state_tree_sha256 != saved_width.ade_state_sha256
+                or variable.mutation_policy != "fixed"
+                or variable.fixed_value != bias
+            ):
+                raise ValueError("saved-width bias is outside the registered revision or variable")
+            parameters, includes, analyses, static = partition_input(raw)  # type: ignore[no-untyped-call]
+            if parameters.pop("VBIASN") != bias:
+                raise ValueError("saved-width bias input value differs")
+            ade = AdeExecutionRegistration.model_validate_json(_canonical(route["ade"]))
+            measurements.append(
+                _fresh_amplifier_measurement(mode, operation, conditions, reader, ade, static, pin)
+            )
+            fixed_conditions.append((
+                conditions,
+                semantics,
+                route["source_cell"],
+                route["libraries"],
+                parameters,
+                includes,
+                analyses,
+                static,
+            ))
+
+        if requested_bias.normalized[0] == "0.32" or fixed_conditions[0] != fixed_conditions[1]:
+            raise ValueError("saved-width bias fixed conditions differ")
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("candidate_saved_width_bias_evidence_mismatch") from None
+    return FreshAmplifierAnalysisPair(
+        analysis=mode,
+        metric_id="dc-supply-power-grid-v2" if mode == "dc" else "gain-10hz-grid-v1",
+        unit="W" if mode == "dc" else "dB",
+        baseline=measurements[0],
+        candidate=measurements[1],
+    )
+
+
 def _fresh_amplifier_row(
     mode: Literal["dc", "ac"],
     evidence: FreshAmplifierOperation | None,
@@ -1413,26 +1540,10 @@ def _fresh_amplifier_row(
         != binding.diagnostic_model_closure_sha256
     ):
         raise ValueError("fresh amplifier route differs from registered revision or model closure")
-    _fresh_amplifier_reader(mode, reader, static)
-    status, terminal, report = _width_report(operation, conditions, reader)
-    value = None
-    reason: str | None = {
-        "NOT_OBSERVED": "retained_record_unavailable",
-        "SUCCEEDED": "retained_result_unavailable",
-    }.get(status, "retained_operation_not_succeeded")
-    if report is not None:
-        if report.execution_input_sha256 != identity.input_sha256:
-            raise ValueError("fresh amplifier report input differs")
-        value = _fresh_amplifier_metric(report, reader, ade)
-        reason = "registered_measurement_unavailable" if value is None else None
-    return FreshAmplifierMeasurement(
-        operation=operation.query,
-        terminal_sha256=terminal,
-        status=status,
-        report=report,
-        value=value,
-        reason=reason,
-    ), (*semantics, analyses[0])
+    measurement = _fresh_amplifier_measurement(
+        mode, operation, conditions, reader, ade, static, identity.input_sha256
+    )
+    return measurement, (*semantics, analyses[0])
 
 
 def associate_fresh_amplifier_width_pair(
