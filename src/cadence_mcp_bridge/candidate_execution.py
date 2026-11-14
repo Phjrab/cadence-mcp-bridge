@@ -45,6 +45,7 @@ from cadence_mcp_bridge.operator_operations import (
     OperationRejected,
 )
 from cadence_mcp_bridge.parameter_changes import (
+    AdeTarget,
     ChangePlan,
     ChangeReadback,
     ChangeValue,
@@ -1238,6 +1239,58 @@ class FreshAmplifierWidthBinding(VariableModel):
     diagnostic_model_receipt_sha256: Digest
     baseline: FreshAmplifierRevisionBinding
     candidate: FreshAmplifierRevisionBinding
+
+
+def associate_persisted_amplifier_bias(
+    saved_width: FreshAmplifierRevisionBinding,
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    *,
+    expected_plan_sha256: Digest,
+    expected_readback_sha256: Digest,
+    baseline_input: bytes | None = None,
+    candidate_input: bytes | None = None,
+) -> ChangeReadback:
+    """Bind independently captured ADE and Netlist observations to the saved width.
+
+    The caller authenticates the native observations before pinning their typed
+    readback. Their association does not change any retained operation's ADE state.
+    """
+    try:
+        checked = verify_change_readback(
+            plan, baseline=readback.baseline, reopened=readback.reopened, netlist=readback.netlist
+        )
+        if (
+            plan.plan_sha256 != expected_plan_sha256
+            or canonical_digest(readback) != expected_readback_sha256
+            or not isinstance(plan.target, AdeTarget)
+            or plan.target.schematic_revision_sha256 != saved_width.revision_sha256
+            or (plan.target.binding.logical_id, plan.target.binding.cadence_binding)
+            != ("vbiasn", "VBIASN")
+            or plan.baseline.testbench_revision_sha256 != saved_width.testbench_revision_sha256
+            or plan.baseline.revision_sha256 != saved_width.ade_state_sha256
+            or plan.old.normalized != ("0.32", "V")
+            or plan.requested.normalized != ("0.321", "V")
+            or plan.expected.normalized != ("0.321", "V")
+            or checked != readback
+        ):
+            raise ValueError("persisted Bias plan or readback differs from the saved width")
+        if checked.status == "MATCHED":
+            if baseline_input is None or candidate_input is None or checked.netlist is None:
+                raise ValueError("matched persisted Bias requires both observed Netlists")
+            projection = project_netlist_change(plan, baseline_input, candidate_input)
+            if (
+                projection.artifact_sha256 != checked.netlist.artifact_sha256
+                or projection.value.normalized != checked.netlist.value.normalized
+                or projection.derived != checked.netlist.derived
+            ):
+                raise ValueError("persisted Bias Netlist differs from readback")
+            parameters, _, _, _ = partition_input(baseline_input)  # type: ignore[no-untyped-call]
+            if parameters.get("VBIASP") != "0.702":
+                raise ValueError("persisted Bias fixed VBIASP differs")
+    except (TypeError, ValueError):
+        raise OperationRejected("candidate_persisted_amplifier_bias_evidence_mismatch") from None
+    return checked
 
 
 @dataclass(frozen=True)

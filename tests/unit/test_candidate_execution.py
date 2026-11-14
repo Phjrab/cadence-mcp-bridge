@@ -15,7 +15,7 @@ from test_candidate_reports import succeeded
 from test_generic_measurements import operator as measurement_operator
 from test_generic_measurements import reader_for
 from test_operator_operations import operator as operator_base
-from test_parameter_changes import _NETLIST, BASELINE, CHILD, _mos, _row
+from test_parameter_changes import _NETLIST, BASELINE, BIAS, CHILD, VIN, _mos, _row
 
 from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
 from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepare_candidate_plan
@@ -34,6 +34,7 @@ from cadence_mcp_bridge.candidate_execution import (
     PmosDefaultChangeResult,
     associate_amplifier_width_pair,
     associate_fresh_amplifier_width_pair,
+    associate_persisted_amplifier_bias,
     associate_pmos_dc_pair,
     associate_saved_width_bias_analysis,
     collect_candidate_analyses,
@@ -55,6 +56,7 @@ from cadence_mcp_bridge.parameter_changes import (
     ChangeValue,
     DerivedChange,
     DerivedValue,
+    plan_ade_change,
     plan_mos_width_change,
     verify_change_readback,
 )
@@ -62,6 +64,102 @@ from cadence_mcp_bridge.result_reports import ReportConditions, make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.mark.parametrize(
+    ("scenario", "status"),
+    [
+        ("matched", "MATCHED"),
+        ("missing-reopen", "MISSING"),
+        ("reused-ade", "STALE"),
+        ("different-ade", "STALE"),
+        ("wrong-observed-bias", "CONFLICT"),
+        ("reused-artifact", "CONFLICT"),
+        ("fabricated-status", None),
+        ("bad-width", None),
+        ("stale-parent", None),
+        ("bad-readback-pin", None),
+        ("different-netlist", None),
+        ("missing-raw", None),
+    ],
+)
+def test_persisted_amplifier_bias_requires_independent_saved_width_evidence(scenario, status):
+    center = (
+        b"simulator lang=spectre\n"
+        b"parameters VBIASN=0.320 VBIASP=0.702\n"
+        b"PM0 (d g s b) gpdk090_pmos1v w=120n l=1u\n"
+        b"analysis0 dc save=all\n"
+    )
+    changed = center.replace(b"0.320", b"0.321")
+    width = FreshAmplifierRevisionBinding(
+        revision_sha256="1" * 64,
+        testbench_revision_sha256=BASELINE.testbench_revision_sha256,
+        source_tree_sha256="2" * 64,
+        ade_state_sha256=BASELINE.revision_sha256,
+    )
+    target = VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"})
+    contract = BIAS.model_copy(
+        update={
+            "logical_id": "vbiasn", "cadence_binding": "VBIASN",
+            "default": "0.32", "minimum": "0.32", "maximum": "0.321", "step": "0.001",
+        }
+    )
+    plan = plan_ade_change(
+        BASELINE.model_copy(update={"netlist_sha256": hashlib.sha256(center).hexdigest()}),
+        "saved-bias",
+        CHILD,
+        contract,
+        target,
+        ChangeValue(value="0.32", unit="V"),
+        ChangeValue(value="0.321", unit="V"),
+        schematic_revision_sha256=width.revision_sha256,
+    )
+    baseline, reopened, netlist = (
+        _row(plan, stage).model_copy(
+            update={
+                "schematic_revision_sha256": width.revision_sha256,
+                "testbench_revision_sha256": width.testbench_revision_sha256,
+            }
+        )
+        for stage in ("baseline", "reopened", "netlist")
+    )
+    netlist = netlist.model_copy(update={"artifact_sha256": hashlib.sha256(changed).hexdigest()})
+    if scenario == "missing-reopen":
+        reopened = None
+    elif scenario == "reused-ade":
+        reopened = reopened.model_copy(update={"revision_sha256": width.ade_state_sha256})
+    elif scenario == "different-ade":
+        reopened = reopened.model_copy(update={"revision_sha256": "0" * 64})
+    elif scenario == "wrong-observed-bias":
+        reopened = reopened.model_copy(update={"value": plan.old})
+    elif scenario == "reused-artifact":
+        reopened = reopened.model_copy(update={"artifact_sha256": netlist.artifact_sha256})
+    elif scenario == "fabricated-status":
+        reopened = None
+    readback = verify_change_readback(plan, baseline=baseline, reopened=reopened, netlist=netlist)
+    if scenario == "fabricated-status":
+        readback = readback.model_copy(update={"status": "MATCHED"})
+    elif scenario == "bad-width":
+        width = width.model_copy(update={"revision_sha256": "5" * 64})
+    elif scenario == "stale-parent":
+        width = width.model_copy(update={"ade_state_sha256": "5" * 64})
+    elif scenario == "different-netlist":
+        changed = changed.replace(b"w=120n", b"w=130n")
+    kwargs = dict(
+        expected_plan_sha256=plan.plan_sha256,
+        expected_readback_sha256=(
+            "0" * 64 if scenario == "bad-readback-pin" else canonical_digest(readback)
+        ),
+        baseline_input=center,
+        candidate_input=None if scenario == "missing-raw" else changed,
+    )
+    if status is None:
+        with pytest.raises(OperationRejected) as rejected:
+            associate_persisted_amplifier_bias(width, plan, readback, **kwargs)
+        assert rejected.value.reason == "candidate_persisted_amplifier_bias_evidence_mismatch"
+    else:
+        result = associate_persisted_amplifier_bias(width, plan, readback, **kwargs)
+        assert result == readback and result.status == status and not result.execution_authorized
 
 
 @pytest.mark.parametrize(
