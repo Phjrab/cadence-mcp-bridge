@@ -587,6 +587,7 @@ def test_amplifier_width_compare_request_schema(capsys):
 @pytest.mark.parametrize(
     "case",
     [
+        "missing-historical-proof",
         "matched",
         "no-child",
         "unobserved",
@@ -613,12 +614,72 @@ def test_amplifier_width_compare_retained_pair(
 ):
     from uuid import uuid4
 
+    from cadence_mcp_bridge import candidate_execution, parameter_changes
     from cadence_mcp_bridge.analysis_store import AnalysisStore
     from cadence_mcp_bridge.candidate_execution import AmplifierWidthPair
+    from cadence_mcp_bridge.domain_provisioning import _canonical
+    from cadence_mcp_bridge.generic_ade import ModelInclude
     from cadence_mcp_bridge.operator_operations import OperationProgress
 
     monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
     change, readback, binding, dc, ac, child_raw = amplifier_width_evidence
+    missing_historical_proof = case == "missing-historical-proof"
+    archived = "/fixture/old/../models/root.scs"
+    canonical = ModelInclude(path="/fixture/models/root.scs", section="NN", file_sha256="a" * 64)
+    model_files = [{"path": canonical.path, "file_sha256": canonical.file_sha256}]
+    closure = hashlib.sha256(_canonical(model_files)).hexdigest()
+
+    if missing_historical_proof:
+        archived_sha256 = hashlib.sha256(archived.encode()).hexdigest()
+        monkeypatch.setattr(
+            candidate_execution, "_AMP_ARCHIVED_INCLUDE_PATH_SHA256", archived_sha256
+        )
+        monkeypatch.setattr(
+            candidate_execution,
+            "_AMP_CANONICAL_INCLUDE_PATH_SHA256",
+            hashlib.sha256(canonical.path.encode()).hexdigest(),
+        )
+        header = b"simulator lang=spectre\n"
+        include = f'include "{archived}" section=NN\n'.encode()
+
+        def archived_input(evidence):
+            raw = evidence.baseline_input.replace(header, header + include, 1)
+            measurements = list(evidence.baseline.measurements)
+            measurements[1] = measurements[1].model_copy(
+                update={"input_sha256": hashlib.sha256(raw).hexdigest()}
+            )
+            sweep = evidence.baseline.model_copy(update={"measurements": tuple(measurements)})
+            return replace(
+                evidence,
+                baseline=sweep,
+                baseline_input=raw,
+                expected_baseline_sha256=canonical_digest(sweep),
+            )
+
+        dc, ac = archived_input(dc), archived_input(ac)
+        child_raw = child_raw.replace(header, header + include, 1)
+        center_sha256 = hashlib.sha256(dc.baseline_input).hexdigest()
+        monkeypatch.setattr(parameter_changes, "_AMP_CENTER_SHA256", center_sha256)
+        change = change.model_copy(
+            update={
+                "baseline": change.baseline.model_copy(update={"netlist_sha256": center_sha256}),
+            }
+        )
+        fields = {"plan_sha256": change.plan_sha256}
+        readback = parameter_changes.verify_change_readback(
+            change,
+            baseline=readback.baseline.model_copy(update=fields),
+            reopened=readback.reopened.model_copy(update=fields),
+            netlist=readback.netlist.model_copy(
+                update={**fields, "artifact_sha256": hashlib.sha256(child_raw).hexdigest()},
+            ),
+        )
+        binding = binding.model_copy(
+            update={
+                "change_plan_sha256": change.plan_sha256,
+                "readback_sha256": canonical_digest(readback),
+            }
+        )
     files = {}
     journals = []
 
@@ -643,6 +704,33 @@ def test_amplifier_width_compare_retained_pair(
             return data, registration
         evidence, registration = amplifier_child_fixture(evidence, registration, mode)
         child = evidence.child
+        effective_input, report = evidence.child_input, child.report
+        if missing_historical_proof:
+            effective_input = effective_input.replace(archived.encode(), canonical.path.encode())
+            input_sha256 = hashlib.sha256(effective_input).hexdigest()
+            alias = None
+            if mode == "dc":
+                alias = candidate_execution.AmplifierBaselineIncludeAlias(
+                    baseline_input_sha256=hashlib.sha256(evidence.baseline_input).hexdigest(),
+                    archived_path_sha256=hashlib.sha256(archived.encode()).hexdigest(),
+                    canonical_include=canonical,
+                    historical_model_closure_sha256=closure,
+                    historical_equivalence_receipt_sha256="c" * 64,
+                )
+            registration = registration.model_copy(
+                update={
+                    "model_includes": (canonical,),
+                    "model_closure_sha256": closure,
+                    "baseline_include_alias": alias,
+                    "child_input_sha256": input_sha256,
+                }
+            )
+            route, _, _, _ = candidate_execution._width_route(child, effective_input, mode)
+            route["ade"]["model_includes"] = [canonical.model_dump(mode="json")]
+            route["model_files"] = model_files
+            report_data = json.loads(report)
+            report_data["execution_input_sha256"] = input_sha256
+            report = json.dumps(report_data).encode()
         journal = tmp_path / f"{mode}.sqlite3"
         journals.append(journal)
         store = AnalysisStore(journal)
@@ -664,7 +752,7 @@ def test_amplifier_width_compare_retained_pair(
             "runtime_manifest": save(f"{mode}-manifest.json", b"{}"),
             "runtime_registration": save(f"{mode}-registration.json", b"{}"),
             "design_registry": save(f"{mode}-registry.json", b"{}"),
-            "effective_input": save(f"{mode}-child.scs", evidence.child_input),
+            "effective_input": save(f"{mode}-child.scs", effective_input),
         }
         if case == "unobserved" and mode == "ac":
             del data["child"]["journal"]
@@ -675,7 +763,7 @@ def test_amplifier_width_compare_retained_pair(
         else:
             data["child"]["terminal_sha256"] = child.expected_terminal_sha256
             if not failed and (case != "no-report" or mode != "ac"):
-                data["child"]["report"] = save(f"{mode}-report.json", child.report)
+                data["child"]["report"] = save(f"{mode}-report.json", report)
         return data, registration
 
     dc_request, dc_binding = side("dc", dc, binding.dc)
@@ -718,7 +806,14 @@ def test_amplifier_width_compare_retained_pair(
         "--output",
         str(target),
     ]
-    if case in ("matched", "no-child", "unobserved", "no-report", "failed"):
+    if case in (
+        "matched",
+        "missing-historical-proof",
+        "no-child",
+        "unobserved",
+        "no-report",
+        "failed",
+    ):
         assert main(args) == 0
         summary = output(capsys)
         saved_raw = target.read_bytes()
@@ -747,7 +842,16 @@ def test_amplifier_width_compare_retained_pair(
             assert pair.dc.child_report.analysis_conditions is not None
             assert saved["deltas"]["dc"]["absolute_delta"] == pytest.approx(0.001)
             assert pair.ac.child_operation.operation_id == ac_request["child"]["operation_id"]
-            if case == "matched":
+            if missing_historical_proof:
+                assert pair.dc.model_comparison == "MATCHED"
+                assert pair.ac.model_comparison == "NOT_EVALUATED"
+                assert pair.ac.child_status == "SUCCEEDED" and pair.ac.child_report is not None
+                assert pair.ac.child_value is None
+                assert saved["deltas"]["ac"] == {
+                    "absolute_delta": None,
+                    "reason": "historical_model_equivalence_unavailable",
+                }
+            elif case == "matched":
                 assert pair.ac.child_value == 80.0
                 assert saved["deltas"]["ac"] == {"absolute_delta": 20.0, "reason": "available"}
                 assert main(args) == 2
