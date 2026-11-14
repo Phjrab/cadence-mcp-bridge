@@ -146,7 +146,7 @@ class EnvironmentObservation(EnvironmentModel):
     license_environment: LicenseFlags
 
 
-def _closed_json(data: bytes) -> None:
+def _closed_json(data: bytes, *, maximum_bytes: int = probe.PROFILE_LIMIT) -> None:
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in items:
@@ -158,7 +158,7 @@ def _closed_json(data: bytes) -> None:
     def constant(_: str) -> None:
         raise ValueError("nonfinite JSON")
 
-    if len(data) > probe.PROFILE_LIMIT:
+    if len(data) > maximum_bytes:
         raise ValueError("environment document too large")
     json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=constant)
 

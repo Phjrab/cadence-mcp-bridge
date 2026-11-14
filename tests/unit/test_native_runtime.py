@@ -12,7 +12,7 @@ from test_generic_measurements import operator_base, reader_for
 from cadence_mcp_bridge import _native_dispatch as dispatch
 from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.native_runtime import NativeRegistration, bundle, projection
-from cadence_mcp_bridge.operator_operations import OperationRejected
+from cadence_mcp_bridge.operator_operations import OperationRejected, bounded_document
 
 operator = operator_fixture
 __all__ = ["operator_base"]
@@ -68,6 +68,42 @@ def test_export_has_exact_fixed_assets_bound_hashes_and_no_authority(registered,
         bundle(context, path, output)
     assert failure.value.reason == "native_runtime_exclusive_output_required"
     assert retained == {p.name: p.read_bytes() for p in output.iterdir()}
+
+
+def test_registration_document_limit_is_independent_of_default(registered, tmp_path):
+    context, registration, path = registered
+    original = path.read_bytes()
+    assert len(original) < 32768
+    path.write_bytes(original.ljust(65536))
+    with pytest.raises(ValueError, match="environment document too large"):
+        bounded_document(path)
+
+    output = tmp_path / "expanded-registration"
+    bundle(context, path, output)
+    assert json.loads((output / "registration.json").read_bytes()) == projection(
+        context, registration
+    )
+
+    path.write_bytes(original.ljust(65537))
+    rejected = tmp_path / "oversize"
+    with pytest.raises(ValueError, match="environment document too large"):
+        bundle(context, path, rejected)
+    assert not rejected.exists()
+
+
+@pytest.mark.parametrize(
+    ("prefix", "message"),
+    [(b'"schema_version":1,', "duplicate JSON field"), (b'"bad":NaN,', "nonfinite JSON")],
+)
+def test_expanded_registration_still_requires_closed_json(registered, tmp_path, prefix, message):
+    context, _, path = registered
+    original = path.read_bytes()
+    path.write_bytes((b"{" + prefix + original[1:]).ljust(40000))
+
+    output = tmp_path / "invalid-registration"
+    with pytest.raises(ValueError, match=message):
+        bundle(context, path, output)
+    assert not output.exists()
 
 
 def test_crlf_package_exports_same_authenticated_bytes_and_installer_hashes(

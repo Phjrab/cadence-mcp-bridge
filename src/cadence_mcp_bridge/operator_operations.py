@@ -16,6 +16,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field, PrivateAttr, TypeAdapter, field_validator, model_validator
 
+from cadence_mcp_bridge._environment_probe import PROFILE_LIMIT
 from cadence_mcp_bridge.environments import _closed_json
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
@@ -181,7 +182,7 @@ class OperationPlan(VariableModel):
         return canonical_digest(self)
 
 
-def bounded_document(path: Path) -> bytes:
+def bounded_document(path: Path, *, maximum_bytes: int = PROFILE_LIMIT) -> bytes:
     source = _local_path(path)
     metadata = source.stat()
     if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
@@ -190,8 +191,8 @@ def bounded_document(path: Path) -> bytes:
         opened = os.fstat(stream.fileno())
         if (metadata.st_dev, metadata.st_ino) != (opened.st_dev, opened.st_ino):
             raise OperationRejected("operator_document_identity_invalid")
-        data = stream.read(65537)
-    _closed_json(data)
+        data = stream.read(maximum_bytes + 1)
+    _closed_json(data, maximum_bytes=maximum_bytes)
     return data
 
 
