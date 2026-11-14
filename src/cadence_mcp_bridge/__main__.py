@@ -106,7 +106,8 @@ def build_parser() -> argparse.ArgumentParser:
     domain_export = domain_actions.add_parser("export-helper-bundle")
     domain_export.add_argument("--output", type=Path, required=True)
     domain_plan = domain_actions.add_parser(
-        "plan-existing", aliases=["plan-legacy-seal", "plan-result-limit-v6"]
+        "plan-existing",
+        aliases=["plan-legacy-seal", "plan-result-limit-v6", "plan-result-limit-v7"],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
     domain_plan.add_argument("--output", type=Path, required=True)
@@ -133,7 +134,8 @@ def build_parser() -> argparse.ArgumentParser:
     setup_existing.add_argument("--identity-manifest-sha256", required=True)
     setup_existing.add_argument("--operator-authority", required=True)
     domain_apply = domain_actions.add_parser(
-        "apply-existing", aliases=["seal-existing", "apply-result-limit-v6"]
+        "apply-existing",
+        aliases=["seal-existing", "apply-result-limit-v6", "apply-result-limit-v7"],
     )
     for name in ("profile", "plan", "output"):
         domain_apply.add_argument("--" + name, type=Path, required=True)
@@ -878,6 +880,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "apply-existing",
                 "seal-existing",
                 "apply-result-limit-v6",
+                "apply-result-limit-v7",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -888,6 +891,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.operator_authority,
                     arguments.domain_action == "seal-existing",
                     arguments.domain_action == "apply-result-limit-v6",
+                    result_limit_v7=arguments.domain_action == "apply-result-limit-v7",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -896,6 +900,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.expected_helper_sha256,
                     arguments.domain_action == "plan-legacy-seal",
                     arguments.domain_action == "plan-result-limit-v6",
+                    result_limit_v7=arguments.domain_action == "plan-result-limit-v7",
                 )
         except (OSError, ValueError):
             print(

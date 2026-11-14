@@ -119,19 +119,26 @@ def prepare(
     expected_helper_sha256: str,
     seal: bool = False,
     result_limit: bool = False,
+    *,
+    result_limit_v7: bool = False,
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     assets, _, expected = contents()
     if expected_helper_sha256 != expected:
         raise ValueError("helper_package_binding_mismatch")
     raw_profile: bytes = _canonical(json.loads(data))
+    action = "inventory-legacy-seal" if seal else "inventory-existing"
+    if result_limit_v7:
+        if seal or result_limit:
+            raise ValueError("conflicting_domain_action")
+        action = "plan-result-limit-v7"
+    elif result_limit:
+        action = "plan-result-limit-v6"
     return _transport(
         environment,
         raw_profile,
         expected,
-        "plan-result-limit-v6"
-        if result_limit
-        else ("inventory-legacy-seal" if seal else "inventory-existing"),
+        action,
         output,
         _entry_from_assets(assets),
     )
@@ -142,8 +149,10 @@ def _transport(
     entry_source: str | None = None,
 ) -> dict[str, object]:
     output = _local_path(output)
-    if (action in {"inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing"}
-            and entry_source is None):
+    if action in {
+        "inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing",
+        "plan-result-limit-v7", "apply-result-limit-v7",
+    } and entry_source is None:
         raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
         raise ValueError("exclusive_receipt_parent_required")
@@ -160,6 +169,8 @@ def _transport(
         "register-existing",
         "plan-result-limit-v6",
         "apply-result-limit-v6",
+        "plan-result-limit-v7",
+        "apply-result-limit-v7",
     }
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
@@ -173,6 +184,8 @@ def _transport(
             "seal-existing",
             "plan-result-limit-v6",
             "apply-result-limit-v6",
+            "plan-result-limit-v7",
+            "apply-result-limit-v7",
         }
         else "setup.py"
     )
@@ -210,33 +223,33 @@ def _transport(
     receipt = json.loads(stdout)
     if action in {"apply-fresh", "register-existing"}:
         return _setup_receipt(receipt, stdout, output, json.loads(payload), action)
-    if action == "apply-result-limit-v6":
+    if action in {"apply-result-limit-v6", "apply-result-limit-v7"}:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
         request = json.loads(payload)
         value = request["plan"]
+        v7 = action == "apply-result-limit-v7"
+        required = {
+            "status", "created", "policy_sha256", "plan_sha256", "ledger_sha256",
+            "result_ceiling_bytes", "execution_authorized", "ledger_modified",
+            "ledger_initialized", "reservation_cost",
+        }
+        status_name = "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE"
+        policy_sha, ceiling = accounting.RESULT_POLICY_SHA, accounting.MAX_POLICY_BYTES
+        if v7:
+            required.add("policy_receipt_sha256")
+            status_name = "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE"
+            policy_sha, ceiling = accounting.RESULT_POLICY_V7_SHA, accounting.RESULT_POLICY_V7_BYTES
         if (
             not isinstance(receipt, dict)
-            or set(receipt)
-            != {
-                "status",
-                "created",
-                "policy_sha256",
-                "plan_sha256",
-                "ledger_sha256",
-                "result_ceiling_bytes",
-                "execution_authorized",
-                "ledger_modified",
-                "ledger_initialized",
-                "reservation_cost",
-            }
-            or receipt["status"] != "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE"
+            or set(receipt) != required
+            or receipt["status"] != status_name
             or type(receipt["created"]) is not bool
-            or receipt["policy_sha256"] != accounting.RESULT_POLICY_SHA
+            or receipt["policy_sha256"] != policy_sha
             or receipt["plan_sha256"] != request["expected_plan_sha256"]
             or receipt["ledger_sha256"] != value["snapshot"]["ledger_sha256"]
             or type(receipt["result_ceiling_bytes"]) is not int
-            or receipt["result_ceiling_bytes"] != accounting.MAX_POLICY_BYTES
+            or receipt["result_ceiling_bytes"] != ceiling
             or any(
                 receipt[k] is not False
                 for k in ("execution_authorized", "ledger_modified", "ledger_initialized")
@@ -245,6 +258,22 @@ def _transport(
             or receipt["reservation_cost"] != 0
         ):
             raise ValueError("result_limit_apply_receipt_binding")
+        if v7:
+            binding = value["binding"]
+            record = dict(
+                schema_version=7,
+                kind="EXPLICIT_RETAINED_RESULT_LIMIT_V7",
+                root_sha256=binding["root_sha256"],
+                resource_domain_sha256=binding["resource_domain_sha256"],
+                identity_manifest_sha256=binding["identity_manifest_sha256"],
+                prior_receipt_sha256=value["snapshot"]["prior_receipt_sha256"],
+                policy_sha256=policy_sha,
+                baseline=accounting.RESULT_POLICY_V7_BASELINE,
+                plan_sha256=request["expected_plan_sha256"],
+                operator_authority=request["operator_authority"],
+            )
+            if receipt["policy_receipt_sha256"] != hashlib.sha256(_canonical(record)).hexdigest():
+                raise ValueError("result_limit_apply_receipt_binding")
         installer.exclusive(str(output), stdout)  # type: ignore[no-untyped-call]
         return {**receipt, "remote_contact": True}
     if action in {"apply-existing", "seal-existing"}:
@@ -260,6 +289,20 @@ def _transport(
         or receipt["plan_sha256"] != hashlib.sha256(_canonical(receipt["plan"])).hexdigest()
     ):
         raise ValueError("existing_domain_receipt_binding")
+    if action == "plan-result-limit-v7":
+        from cadence_mcp_bridge import _shared_reservations as accounting
+
+        plan = receipt["plan"]
+        observed = plan.get("snapshot")
+        if (
+            plan.get("schema_version") != 7
+            or plan.get("recipe_id") != "retained-result-limit-v7"
+            or plan.get("policy_sha256") != accounting.RESULT_POLICY_V7_SHA
+            or _canonical(plan.get("profile")) != payload
+            or not isinstance(observed, dict)
+            or observed.get("baseline") != accounting.RESULT_POLICY_V7_BASELINE
+        ):
+            raise ValueError("result_limit_v7_plan_receipt_binding")
     installer.exclusive(str(_local_path(output)), stdout)  # type: ignore[no-untyped-call]
     return {
         "status": "EXISTING_DOMAIN_PLAN_PRIVATE_NOT_APPROVAL",
@@ -280,6 +323,8 @@ def apply_existing(
     operator_authority: str,
     seal: bool = False,
     result_limit: bool = False,
+    *,
+    result_limit_v7: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
@@ -308,13 +353,18 @@ def apply_existing(
         "expected_plan_sha256": expected_plan_sha256,
         "operator_authority": operator_authority,
     }
+    action = "seal-existing" if seal else "apply-existing"
+    if result_limit_v7:
+        if seal or result_limit:
+            raise ValueError("conflicting_domain_action")
+        action = "apply-result-limit-v7"
+    elif result_limit:
+        action = "apply-result-limit-v6"
     return _transport(
         environment,
         _canonical(request),
         expected,
-        "apply-result-limit-v6"
-        if result_limit
-        else ("seal-existing" if seal else "apply-existing"),
+        action,
         output,
         _entry_from_assets(assets),
     )

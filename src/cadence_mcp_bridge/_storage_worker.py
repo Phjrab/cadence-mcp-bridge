@@ -470,12 +470,21 @@ def fresh_ledger(io, root, counter, lock_held=True):
         os.close(registry)
     if type(anchor) is not dict or type(anchor.get("schema_version")) is not int:
         raise ValueError("storage anchor schema required")
+    successor = False
     if anchor["schema_version"] == 1:
         registry = private_directory(io, root, "reservation-identity")
         try:
             try:
+                read_json(io, registry, "result-policy-v7.json", 8192, private=True)
+                successor = True
+            except OSError as failure:
+                if failure.errno != errno.ENOENT:
+                    raise
+            try:
                 read_json(io, registry, "result-policy-v6.json", 8192, private=True)
             except OSError as failure:
+                if failure.errno == errno.ENOENT and successor:
+                    raise ValueError("storage retained v7 predecessor required")
                 if failure.errno == errno.ENOENT:
                     return None  # Historical retained policy; unchanged legacy path.
                 raise
@@ -610,9 +619,22 @@ def fresh_ledger(io, root, counter, lock_held=True):
     ):
         raise ValueError("storage committed ledger integrity")
     policy = accounting.effective_policy(path, anchor)
+    if counter["result_reserved_bytes"] > policy["result_ceiling_bytes"]:
+        raise ValueError("storage committed ledger policy exceeded")
     if anchor["schema_version"] == 1:
+        policy_sha = accounting.RESULT_POLICY_SHA
+        if successor:
+            baseline = getattr(accounting, "RESULT_POLICY_V7_BASELINE", None)
+            if (
+                baseline is None
+                or policy["result_ceiling_bytes"] != accounting.RESULT_POLICY_V7_BYTES
+                or counter["count"] < baseline["count"]
+                or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
+            ):
+                raise ValueError("storage retained v7 ledger binding")
+            policy_sha = accounting.RESULT_POLICY_V7_SHA
         policy = dict(
-            policy, campaign_id="AUTO-PHASE-01", policy_sha256=accounting.RESULT_POLICY_SHA
+            policy, campaign_id="AUTO-PHASE-01", policy_sha256=policy_sha
         )
     if not lock_held:
         return policy
@@ -817,8 +839,13 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
             raise ValueError("invalid cumulative ledger")
     disk = os.fstatvfs(root)
     is_active = is_active or any(a["active_dependency"] for a in artifacts)
+    version = 1
+    if policy is not None:
+        version = 2
+        if "policy_sha256" in policy:
+            version = 4 if policy["result_ceiling_bytes"] == 17381195776 else 3
     value = dict(
-        contract_version=(3 if "policy_sha256" in policy else 2) if policy else 1,
+        contract_version=version,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),
         coverage_complete=complete,
         group_coverage=coverage,
