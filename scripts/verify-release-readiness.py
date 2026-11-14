@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import ast
 import asyncio
+import copy
 import hashlib
 import json
 import tomllib
@@ -32,6 +33,9 @@ RUNTIME_CONFIG_COMMIT = "b015b7151239e5613f8960fa896b8422b0b680aa"
 FRESH_CONSUMER_SNAPSHOT_SHA256 = "2c4beca566fc4d12ff155a0a73ddc69cdbde2d972da36817480cae1db821d728"
 STANDARD_VM_CONSUMER_SNAPSHOT_SHA256 = (
     "6e25c9863bc2787748c8d1aaf79396291474555b57f16ee41d2113f9e288a154"
+)
+RETAINED_V7_STORAGE_SUMMARY_SHA256 = (
+    "72145497117bd1f3ca17ae4c00d3a17d22736d07856ef9cbd29ad0e09030f7fb"
 )
 FRESH_CONSUMER_TOOLS = {
     "cadence_amplifier_sweep_result",
@@ -146,7 +150,6 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         or set(standard.get("previous_tool_sha256", {})) != FRESH_CONSUMER_TOOLS
         or any(
             standard["previous_tool_sha256"][name] != schema_digest(fresh["tools"][name])
-            or schemas.get(name) != standard["tools"][name]
             or {key: value for key, value in fresh["tools"][name].items() if key != "outputSchema"}
             != {
                 key: value for key, value in standard["tools"][name].items()
@@ -157,16 +160,24 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
     ):
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
 
+    # The retained v7 ceiling changes one output bound in the reviewed v2 schema.
+    current_tools = standard["tools"].copy()
+    storage_summary = copy.deepcopy(current_tools["cadence_storage_summary"])
+    storage_summary["outputSchema"]["properties"]["result_ceiling_bytes"]["maximum"] = 17381195776
+    current_tools["cadence_storage_summary"] = storage_summary
+    if (
+        schema_digest(storage_summary) != RETAINED_V7_STORAGE_SUMMARY_SHA256
+        or any(schemas.get(name) != current_tools[name] for name in FRESH_CONSUMER_TOOLS)
+    ):
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+
     def reviewed_schema(name: str, tool: dict[str, Any]) -> bool:
-        if name in FRESH_CONSUMER_TOOLS:
-            # Pin both sides of this explicit output-only transition. Historical
-            # snapshots stay unchanged and unrelated schemas must still match.
+        if name in current_tools:
             return (
                 schema_digest(tool) == fresh["historical_tool_sha256"][name]
-                and schemas.get(name) == standard["tools"][name]
                 and {key: value for key, value in tool.items() if key != "outputSchema"}
                 == {
-                    key: value for key, value in standard["tools"][name].items()
+                    key: value for key, value in current_tools[name].items()
                     if key != "outputSchema"
                 }
             )
