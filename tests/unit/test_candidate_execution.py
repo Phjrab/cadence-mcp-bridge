@@ -29,6 +29,7 @@ from cadence_mcp_bridge.candidate_execution import (
     FreshAmplifierRevisionBinding,
     FreshAmplifierWidthAnalysis,
     FreshAmplifierWidthBinding,
+    PersistedBiasExportEvidence,
     PmosDcOperation,
     PmosDefaultChangeRequest,
     PmosDefaultChangeResult,
@@ -163,7 +164,11 @@ def test_persisted_amplifier_bias_requires_independent_saved_width_evidence(scen
 
 
 @pytest.mark.parametrize(
-    "drift", [None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias"]
+    "drift",
+    [
+        None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias",
+        "export", "export-content", "export-profile", "export-pm0", "export-path",
+    ],
 )
 def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
     measurement_operator, monkeypatch, drift
@@ -171,16 +176,24 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
     from cadence_mcp_bridge import candidate_execution
 
     _, plan, ade, reader, _, _ = reader_for(measurement_operator)
+    exported = (drift or "").startswith("export")
+    old_profile = _canonical({"limits": {"result_reserved_bytes": 17179869184}})
+    new_profile = _canonical({
+        "limits": {"result_reserved_bytes": 17381195776},
+        **({"host": "unexpected"} if drift == "export-profile" else {}),
+    })
+    library = {"name": "export", "path": "/export", "tree_sha256": "c" * 64}
+    technology = {"name": "cdsDefTechLib", "path": "/tech", "tree_sha256": "d" * 64}
     routes = {}
     monkeypatch.setattr(
         candidate_execution,
         "_width_route",
-        lambda op, raw, mode, *, varied_id: routes[op.query.operation_id],
+        lambda op, raw, mode, **kwargs: routes[op.query.operation_id],
     )
     monkeypatch.setattr(candidate_execution, "_fresh_amplifier_reader", lambda *args: None)
 
     def point(bias, design, runner, *, candidate=False):
-        pm0 = b"130n" if candidate and drift == "pm0" else b"120n"
+        pm0 = b"130n" if candidate and drift in ("pm0", "export-pm0") else b"120n"
         input_bias = b"0.322" if candidate and drift == "bias" else bias.encode()
         fixed_bias = b"0.703" if candidate and drift == "fixed-bias" else b"0.702"
         raw = (
@@ -193,7 +206,12 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
             "design_id": design,
             "values": (ExplicitValue(logical_id="vbiasn", value=bias, unit="V"),),
         })
-        child = plan.model_copy(update={"request": request, "runner_sha256": runner})
+        child = plan.model_copy(update={
+            "request": request, "runner_sha256": runner,
+            "environment_sha256": hashlib.sha256(
+                new_profile if candidate else old_profile
+            ).hexdigest(),
+        })
         query = NativeOperationQuery(
             operation_id=str(uuid4()), expected_plan_sha256=child.plan_sha256
         )
@@ -205,11 +223,11 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
                 phase="FAILED", remote_revision=5, provider_receipt_sha256="b" * 64
             ),
         )
-        source = "2" * 64 if candidate and drift == "source" else "3" * 64
+        source = "2" * 64 if candidate and (drift == "source" or exported) else "3" * 64
         conditions = ReportConditions(
             analysis_inputs=ade.inputs,
             source_tree_sha256=source,
-            ade_state_tree_sha256="4" * 64,
+            ade_state_tree_sha256=("e" if candidate and exported else "4") * 64,
             static_statements_sha256="5" * 64,
             model_file_sha256=("6" * 64,),
             transfer=None,
@@ -221,8 +239,14 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
             review_id=None,
         )
         routes[query.operation_id] = (
-            dict(variables=[variable], source_cell="/same/cell", libraries=[],
-                 ade=ade.model_dump(mode="json")),
+            dict(
+                variables=[variable],
+                source_cell="/export/cell" if candidate and exported else "/same/cell",
+                source_state="/wrong" if drift == "export-path" else "/export/state",
+                libraries=[library, technology] if candidate and exported else [],
+                profile={"binding": {"ade": {"state": "Candidate321"}}},
+                ade=ade.model_dump(mode="json"),
+            ),
             conditions,
             reader,
             ("model-drift",) if candidate and drift == "model" else (),
@@ -254,7 +278,46 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
         ),
         requested_bias=ChangeValue(value="0.321", unit="V"),
     )
-    if drift:
+    if exported:
+        reopen = _canonical({
+            "phase": "bias-reopen", "candidate_ade_tree_sha256": "f" * 64,
+            "candidate_ade_content_sha256": "a" * 64, "physical_oa_sha256": "9" * 64,
+        })
+        change_plan = plan_ade_change(
+            BASELINE, "candidate", CHILD, BIAS, VIN,
+            ChangeValue(value="0.3", unit="V"), ChangeValue(value="0.4", unit="V"),
+        )
+        observation = _row(change_plan, "reopened").model_copy(update={
+            "revision_sha256": "f" * 64, "schematic_revision_sha256": "9" * 64,
+            "testbench_revision_sha256": "a" * 64,
+            "value": ChangeValue(value="0.321", unit="V"),
+            "artifact_sha256": hashlib.sha256(reopen).hexdigest(),
+        })
+        readback = verify_change_readback(change_plan).model_copy(update={
+            "status": "MATCHED", "reopened": observation,
+        })
+        export = _canonical({
+            "status": "CANDIDATE321_EXTERNAL_INPUTS_VERIFIED",
+            "physical_oa_sha256": "9" * 64,
+            "source_owned_state_tree_sha256": "f" * 64, "state_tree_sha256": "e" * 64,
+            "state_content_sha256": ("b" if drift == "export-content" else "a") * 64,
+            "route_changes": 0, "simulations": 0, "reservations": 0,
+            "technology_path": technology["path"],
+            "technology_tree_sha256": technology["tree_sha256"],
+            "source_cell_tree_sha256": "2" * 64, "source_cell_path": "/export/cell",
+            "source_library_path": library["path"],
+            "source_library_tree_sha256": library["tree_sha256"],
+            "state_path": "/export/state",
+        })
+        policy = _canonical({
+            "status": "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE",
+            "ledger_modified": False, "result_ceiling_bytes": 17381195776,
+        })
+        kwargs["export_evidence"] = PersistedBiasExportEvidence(
+            readback, export, hashlib.sha256(export).hexdigest(),
+            policy, hashlib.sha256(policy).hexdigest(), old_profile, new_profile, reopen,
+        )
+    if drift not in (None, "export"):
         with pytest.raises(OperationRejected) as rejected:
             associate_saved_width_bias_analysis("dc", center, candidate, **kwargs)
         assert rejected.value.reason == "candidate_saved_width_bias_evidence_mismatch"
