@@ -139,7 +139,19 @@ def test_amplifier_requires_pinned_historical_include_equivalence(monkeypatch, d
 
 @pytest.mark.parametrize(
     "drift",
-    [None, "not-run", "failed", "duplicate", "closure", "orientation", "ac-control"],
+    [
+        None,
+        "not-run",
+        "failed",
+        "duplicate",
+        "closure",
+        "orientation",
+        "ac-control",
+        "ac-roundoff",
+        "ac-missing",
+        "dc-duplicate",
+        "dc-missing",
+    ],
 )
 def test_fresh_amplifier_associates_only_bound_native_reports(
     monkeypatch, measurement_operator, drift
@@ -228,6 +240,18 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
             _, ap, ade, reader, _, _ = reader_for(measurement_operator, mode)
             ap = ap.model_copy(update={"runner_sha256": side_tree})
             ade = ade.model_copy(update={"model_includes": (model,)})
+            if mode == "ac":
+                ade = ade.model_copy(
+                    update={
+                        "inputs": ade.inputs.model_copy(
+                            update={
+                                "start_hz": "10",
+                                "stop_hz": "100000000",
+                                "points_per_decade": 10,
+                            }
+                        )
+                    }
+                )
             definition = reader.model_dump(mode="json")
             if mode == "dc":
                 definition["nodes"] = [
@@ -325,6 +349,16 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
                     .model_dump_json()
                     .encode()
                 )
+            if not is_baseline and report_raw is not None:
+                saved = json.loads(report_raw)
+                if mode == "ac" and drift in ("ac-roundoff", "ac-missing"):
+                    for metric in saved["metrics"]:
+                        metric["frequency_hz"] = 10.000000000005 if drift == "ac-roundoff" else 10.1
+                if mode == "dc" and drift == "dc-duplicate":
+                    saved["metrics"].append({**saved["metrics"][0], "sample_count": 2})
+                if mode == "dc" and drift == "dc-missing":
+                    saved["metrics"].pop()
+                report_raw = json.dumps(saved).encode()
             route_models = [] if not is_baseline and drift == "closure" else models
             routes[identity] = (
                 dict(ade=ade.model_dump(mode="json"), model_files=route_models),
@@ -381,18 +415,21 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
             ac=FreshAmplifierWidthAnalysis(baseline_ops["ac"], candidate_ops.get("ac")),
         )
 
-    if drift in ("duplicate", "closure", "orientation", "ac-control"):
+    if drift in ("duplicate", "closure", "orientation", "ac-control", "dc-duplicate"):
         with pytest.raises(OperationRejected) as rejected:
             compare_pair()
         assert rejected.value.reason == "candidate_fresh_amplifier_width_evidence_mismatch"
         return
     result = compare_pair()
-    assert result.dc.baseline.value == result.dc.candidate.value == 0.003
+    assert result.dc.baseline.value == 0.003
+    assert result.dc.candidate.value == (None if drift == "dc-missing" else 0.003)
     assert result.ac.baseline.value == 80.0
     assert result.ac.candidate.status == {"not-run": "NOT_RUN", "failed": "FAILED"}.get(
         drift, "SUCCEEDED"
     )
-    assert result.ac.candidate.value == (None if drift else 80.0)
+    assert result.ac.candidate.value == (
+        None if drift in ("not-run", "failed", "ac-missing") else 80.0
+    )
     assert result.goals == "GOALS_NOT_PROVIDED" and result.selected_candidate_id is None
     assert not result.execution_authorized
 

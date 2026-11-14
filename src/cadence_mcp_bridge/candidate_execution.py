@@ -28,7 +28,12 @@ from cadence_mcp_bridge.candidate_reports import (
 from cadence_mcp_bridge.designs import DesignMeasurementRegistry
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, ModelInclude
-from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration
+from cadence_mcp_bridge.generic_measurements import (
+    GenericReaderRegistration,
+    _ac_axis,
+    _matches_ac_axis,
+    _sample_indices,
+)
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_runtime import KIND
 from cadence_mcp_bridge.native_service import NativeOperationQuery
@@ -1316,6 +1321,40 @@ def _fresh_amplifier_reader(
         raise ValueError("fresh amplifier differential measurement differs")
 
 
+def _fresh_amplifier_metric(
+    report: ResultReport, reader: GenericReaderRegistration, ade: AdeExecutionRegistration
+) -> float | None:
+    if ade.inputs.analysis == "ac":
+        axes = tuple(float(format(axis, ".16g")) for axis in _ac_axis(ade.inputs))
+        (index,) = _sample_indices(("10",), axes)
+        gains = [
+            metric
+            for metric in report.metrics
+            if metric.kind == "voltage_gain_db"
+            and metric.frequency_hz is not None
+            and _matches_ac_axis(metric.frequency_hz, axes, index)
+        ]
+        if not gains:
+            return None
+        (gain,) = gains
+        if gain.signal_id is not None or gain.sample_count is not None:
+            raise ValueError("fresh amplifier gain is not a point measurement")
+        return gain.value
+
+    sources = {source.source_id: source.role for source in reader.sources}
+    seen = set()
+    for metric in report.metrics:
+        if metric.sample_count is not None:
+            raise ValueError("fresh amplifier DC report contains a sampled metric")
+        if metric.kind == "delivered_power":
+            if metric.signal_id not in sources or metric.source_role != sources[metric.signal_id]:
+                raise ValueError("fresh amplifier DC power is not registered")
+            if metric.signal_id in seen:
+                raise ValueError("duplicate fresh amplifier DC power")
+            seen.add(metric.signal_id)
+    return _amp_child_metric(report, reader, physical_sources=("V0", "V5"))
+
+
 def _fresh_amplifier_row(
     mode: Literal["dc", "ac"],
     evidence: FreshAmplifierOperation | None,
@@ -1384,7 +1423,7 @@ def _fresh_amplifier_row(
     if report is not None:
         if report.execution_input_sha256 != identity.input_sha256:
             raise ValueError("fresh amplifier report input differs")
-        value = _amp_child_metric(report, reader, physical_sources=("V0", "V5"))
+        value = _fresh_amplifier_metric(report, reader, ade)
         reason = "registered_measurement_unavailable" if value is None else None
     return FreshAmplifierMeasurement(
         operation=operation.query,
