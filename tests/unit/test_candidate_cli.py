@@ -1100,6 +1100,7 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     old_dc, dc_raw = center("dc")
     old_ac, ac_raw = center("ac")
     new_raw = dc_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
+    new_ac_raw = ac_raw.replace(b"VBIASN=0.320", b"VBIASN=0.321")
     new_plan = old_dc.plan.model_copy(
         update={
             "runner_sha256": "f" * 64,
@@ -1384,7 +1385,34 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
     assert not bad.exists()
     assert persisted_target.read_bytes() == persisted_raw
 
-    if not separate_baseline:
+    if separate_baseline:
+        persistence["persistence_baseline"] = baseline_ref
+        ac_change = change.model_copy(
+            update={
+                "baseline": change.baseline.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(ac_raw).hexdigest()}
+                )
+            }
+        )
+        ac_readback = verify_change_readback(
+            ac_change,
+            baseline=baseline.model_copy(update={"plan_sha256": ac_change.plan_sha256}),
+            reopened=reopened.model_copy(update={"plan_sha256": ac_change.plan_sha256}),
+            netlist=netlist.model_copy(
+                update={
+                    "plan_sha256": ac_change.plan_sha256,
+                    "artifact_sha256": hashlib.sha256(new_ac_raw).hexdigest(),
+                }
+            ),
+        )
+        ac_pins = {
+            "change_plan": pin("export-ac-plan.json", ac_change.model_dump_json().encode()),
+            "change_plan_sha256": ac_change.plan_sha256,
+            "readback": pin("export-ac-readback.json", ac_readback.model_dump_json().encode()),
+            "readback_sha256": canonical_digest(ac_readback),
+            "baseline_input": pin("export-ac-baseline.scs", ac_raw),
+            "candidate_input": pin("export-ac-candidate.scs", new_ac_raw),
+        }
         refs = {
             name: pin(f"export-{name}.json", json.dumps({"artifact": name}).encode())
             for name in (
@@ -1393,10 +1421,10 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
                 "baseline_profile",
                 "candidate_profile",
                 "reopened_receipt",
+                "baseline_receipt",
             )
         }
-        persistence["readback_sha256"] = canonical_digest(readback)
-        request["export_evidence"] = refs
+        request["export_evidence"] = {**refs, "ac_persistence": ac_pins}
         captured = []
         associate = candidate_execution.associate_saved_width_bias_analysis
 
@@ -1419,6 +1447,10 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
             assert exported["association"] == persisted_saved["association"]
             (evidence,) = captured
             assert evidence.readback == readback
+            assert evidence.persistence_baseline.ade_state_sha256 == width["ade_state_sha256"]
+            assert evidence.plan == change and evidence.plan_sha256 == change.plan_sha256
+            assert evidence.readback_sha256 == canonical_digest(readback)
+            assert evidence.baseline_input == dc_raw and evidence.candidate_input == new_raw
             assert evidence.export_sha256 == refs["export"]["sha256"]
             assert evidence.policy_receipt_sha256 == refs["policy_receipt"]["sha256"]
             for name in refs:
@@ -1428,8 +1460,16 @@ def test_amplifier_saved_width_bias_compare_preserves_retained_and_missing_rows(
             assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
             assert compare("export-repeat", export_target) == 2
             assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert compare("export-ac-alias", tmp_path / "export-ac-readback.json") == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
             refs["candidate_profile"]["sha256"] = "0" * 64
             assert compare("export-wrong-pin", bad) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            refs["candidate_profile"]["sha256"] = hashlib.sha256(
+                (tmp_path / "export-candidate_profile.json").read_bytes()
+            ).hexdigest()
+            ac_pins["readback_sha256"] = "0" * 64
+            assert compare("export-wrong-ac-pin", bad) == 2
             assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
             del request["persisted_bias_readback"]
             assert compare("export-missing-persistence", bad) == 2

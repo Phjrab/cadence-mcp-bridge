@@ -143,14 +143,24 @@ class _SavedWidthBiasSide(VariableModel):
     candidate: _AmplifierWidthChild | None = None
 
 
-class _PersistedBiasReadback(VariableModel):
+class _PersistedBiasInputs(VariableModel):
     change_plan: _PinnedComparisonFile
     change_plan_sha256: Digest
     readback: _PinnedComparisonFile
     readback_sha256: Digest
-    persistence_baseline: _PinnedComparisonFile | None = None
     baseline_input: _PinnedComparisonFile | None = None
     candidate_input: _PinnedComparisonFile | None = None
+
+    def files(self) -> tuple[_PinnedComparisonFile, ...]:
+        return tuple(
+            ref
+            for ref in (self.change_plan, self.readback, self.baseline_input, self.candidate_input)
+            if ref is not None
+        )
+
+
+class _PersistedBiasReadback(_PersistedBiasInputs):
+    persistence_baseline: _PinnedComparisonFile | None = None
 
 
 class _PersistedBiasExportRefs(VariableModel):
@@ -159,6 +169,8 @@ class _PersistedBiasExportRefs(VariableModel):
     baseline_profile: _PinnedComparisonFile
     candidate_profile: _PinnedComparisonFile
     reopened_receipt: _PinnedComparisonFile
+    baseline_receipt: _PinnedComparisonFile
+    ac_persistence: _PersistedBiasInputs
 
 
 class _SavedWidthBiasRequest(VariableModel):
@@ -962,17 +974,9 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
     persistence = request.persisted_bias_readback
     export_refs = request.export_evidence
     if persistence is not None:
-        reserved.update(
-            _local_path(ref.path)
-            for ref in (
-                persistence.change_plan,
-                persistence.readback,
-                persistence.persistence_baseline,
-                persistence.baseline_input,
-                persistence.candidate_input,
-            )
-            if ref is not None
-        )
+        reserved.update(_local_path(ref.path) for ref in persistence.files())
+        if persistence.persistence_baseline is not None:
+            reserved.add(_local_path(persistence.persistence_baseline.path))
     if export_refs is not None:
         reserved.update(
             _local_path(ref.path)
@@ -982,6 +986,8 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                 export_refs.baseline_profile,
                 export_refs.candidate_profile,
                 export_refs.reopened_receipt,
+                export_refs.baseline_receipt,
+                *export_refs.ac_persistence.files(),
             )
         )
     operation_ids = {
@@ -1011,54 +1017,82 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                     reserved.add(_local_path(operation.execution_plan.path))
     output = _output(arguments.output, reserved)
 
-    persisted = None
-    if persistence is not None:
-        saved_width = binding.candidate
-        if persistence.persistence_baseline is not None:
-            saved_width = FreshAmplifierRevisionBinding.model_validate_json(
-                _comparison_document(persistence.persistence_baseline)
-            )
-            if (
-                saved_width.revision_sha256 != binding.candidate.revision_sha256
-                or saved_width.testbench_revision_sha256
-                != binding.candidate.testbench_revision_sha256
-                or saved_width.source_tree_sha256 != binding.candidate.source_tree_sha256
-                or saved_width.dc is not None
-                or saved_width.ac is not None
-            ):
-                raise OperationRejected("candidate_persistence_baseline_binding_invalid")
-        persisted = associate_persisted_amplifier_bias(
-            saved_width,
-            ChangePlan.model_validate_json(_comparison_document(persistence.change_plan)),
-            ChangeReadback.model_validate_json(_comparison_document(persistence.readback)),
-            expected_plan_sha256=persistence.change_plan_sha256,
-            expected_readback_sha256=persistence.readback_sha256,
-            baseline_input=(
-                _comparison_bytes(persistence.baseline_input)
-                if persistence.baseline_input is not None
-                else None
-            ),
-            candidate_input=(
-                _comparison_bytes(persistence.candidate_input)
-                if persistence.candidate_input is not None
-                else None
-            ),
+    saved_width = binding.candidate
+    if persistence is not None and persistence.persistence_baseline is not None:
+        saved_width = FreshAmplifierRevisionBinding.model_validate_json(
+            _comparison_document(persistence.persistence_baseline)
         )
+        if (
+            saved_width.revision_sha256 != binding.candidate.revision_sha256
+            or saved_width.testbench_revision_sha256 != binding.candidate.testbench_revision_sha256
+            or saved_width.source_tree_sha256 != binding.candidate.source_tree_sha256
+            or saved_width.dc is not None
+            or saved_width.ac is not None
+        ):
+            raise OperationRejected("candidate_persistence_baseline_binding_invalid")
 
-    export_evidence = None
-    if export_refs is not None:
-        if persisted is None or persisted.status != "MATCHED":
-            raise OperationRejected("candidate_export_requires_matched_persistence")
-        export_evidence = PersistedBiasExportEvidence(
-            readback=persisted,
-            export=_comparison_document(export_refs.export),
-            export_sha256=export_refs.export.sha256,
-            policy_receipt=_comparison_document(export_refs.policy_receipt),
-            policy_receipt_sha256=export_refs.policy_receipt.sha256,
-            baseline_profile=_comparison_document(export_refs.baseline_profile),
-            candidate_profile=_comparison_document(export_refs.candidate_profile),
-            reopened_receipt=_comparison_document(export_refs.reopened_receipt),
+    def load_persistence(
+        refs: _PersistedBiasInputs,
+    ) -> tuple[ChangePlan, ChangeReadback, bytes | None, bytes | None]:
+        plan = ChangePlan.model_validate_json(_comparison_document(refs.change_plan))
+        readback = ChangeReadback.model_validate_json(_comparison_document(refs.readback))
+        before = None if refs.baseline_input is None else _comparison_bytes(refs.baseline_input)
+        after = None if refs.candidate_input is None else _comparison_bytes(refs.candidate_input)
+        checked = associate_persisted_amplifier_bias(
+            saved_width,
+            plan,
+            readback,
+            expected_plan_sha256=refs.change_plan_sha256,
+            expected_readback_sha256=refs.readback_sha256,
+            baseline_input=before,
+            candidate_input=after,
         )
+        return plan, checked, before, after
+
+    persisted = None
+    dc_persistence = None
+    if persistence is not None:
+        dc_persistence = load_persistence(persistence)
+        persisted = dc_persistence[1]
+
+    export_by_mode: dict[str, PersistedBiasExportEvidence] = {}
+    if export_refs is not None:
+        if (
+            persistence is None
+            or persistence.persistence_baseline is None
+            or dc_persistence is None
+        ):
+            raise OperationRejected("candidate_export_requires_matched_persistence")
+        export = _comparison_document(export_refs.export)
+        policy_receipt = _comparison_document(export_refs.policy_receipt)
+        baseline_profile = _comparison_document(export_refs.baseline_profile)
+        candidate_profile = _comparison_document(export_refs.candidate_profile)
+        reopened_receipt = _comparison_document(export_refs.reopened_receipt)
+        baseline_receipt = _comparison_document(export_refs.baseline_receipt)
+        for mode, refs, loaded in (
+            ("dc", persistence, dc_persistence),
+            ("ac", export_refs.ac_persistence, load_persistence(export_refs.ac_persistence)),
+        ):
+            plan, checked, before, after = loaded
+            if checked.status != "MATCHED" or before is None or after is None:
+                raise OperationRejected("candidate_export_requires_matched_persistence")
+            export_by_mode[mode] = PersistedBiasExportEvidence(
+                readback=checked,
+                export=export,
+                export_sha256=export_refs.export.sha256,
+                policy_receipt=policy_receipt,
+                policy_receipt_sha256=export_refs.policy_receipt.sha256,
+                baseline_profile=baseline_profile,
+                candidate_profile=candidate_profile,
+                reopened_receipt=reopened_receipt,
+                persistence_baseline=saved_width,
+                plan=plan,
+                plan_sha256=refs.change_plan_sha256,
+                readback_sha256=refs.readback_sha256,
+                baseline_input=before,
+                candidate_input=after,
+                baseline_receipt=baseline_receipt,
+            )
 
     pairs = {}
     deltas = {}
@@ -1117,7 +1151,7 @@ def _amplifier_saved_width_bias_compare(arguments: argparse.Namespace) -> dict[s
                 candidate_input_sha256=side.candidate.effective_input.sha256,
                 candidate_query=side.candidate_query,
                 requested_bias=request.requested_bias,
-                export_evidence=export_evidence,
+                export_evidence=export_by_mode.get(mode),
             )
             for name, row, raw in (
                 ("baseline", pair.baseline, baseline.effective_input),
