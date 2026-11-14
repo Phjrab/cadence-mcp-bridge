@@ -450,6 +450,16 @@ class PmosDcPair(VariableModel):
     execution_authorized: Literal[False] = False
 
 
+class AmplifierBaselineIncludeAlias(VariableModel):
+    """Receipt references independently authenticated for one archived AMP input."""
+
+    baseline_input_sha256: Digest
+    archived_path_sha256: Digest
+    canonical_include: ModelInclude
+    historical_model_closure_sha256: Digest
+    historical_equivalence_receipt_sha256: Digest
+
+
 class AmplifierWidthAnalysisBinding(VariableModel):
     """Independently verified legacy measurement and native child route bindings."""
 
@@ -458,6 +468,7 @@ class AmplifierWidthAnalysisBinding(VariableModel):
     baseline_reader: GenericReaderRegistration
     model_includes: tuple[ModelInclude, ...]
     model_closure_sha256: Digest
+    baseline_include_alias: AmplifierBaselineIncludeAlias | None = None
     child_operation_id: OperationId | None = None
     child_plan_sha256: Digest | None = None
     child_input_sha256: Digest | None = None
@@ -504,6 +515,7 @@ class AmplifierWidthAnalysisPair(VariableModel):
     child_report: ResultReport | None
     child_value: float | None
     reason: str | None
+    model_comparison: Literal["MATCHED", "NOT_EVALUATED"] = "MATCHED"
     dc_output_reason: Literal["baseline_output_scalars_not_retained"] | None = None
 
 
@@ -525,6 +537,48 @@ class _AmplifierCircuit(NamedTuple):
 
 
 _AMP_DC_OUTPUT_DIRECTIVE_SHA256 = "a9ca38379d1571bcd44fe8525109abeceea855e2784c0dc93c6c3384f0447fbd"
+
+
+_AMP_ARCHIVED_INCLUDE_PATH_SHA256 = (
+    "b628372fdce9ae6af7a2a6e3fc6fb4091e2c8a0b5c605d1432ba3152bd0cd47e"
+)
+_AMP_CANONICAL_INCLUDE_PATH_SHA256 = (
+    "6d4ec0a3bfc8d8e3742a09c5ff7f817ff5c11c5d4f33187b3a6e8e1ba6c4e8f7"
+)
+
+
+def _amp_model_comparison(
+    includes: list[tuple[str, str]],
+    binding: AmplifierWidthAnalysisBinding,
+    baseline_input_sha256: str,
+) -> Literal["MATCHED", "NOT_EVALUATED"]:
+    registered = [(model.path, model.section) for model in binding.model_includes]
+    evidence = binding.baseline_include_alias
+    if includes == registered and evidence is None:
+        return "MATCHED"
+    ((archived_path, section),) = includes
+    (canonical,) = binding.model_includes
+    if (
+        hashlib.sha256(archived_path.encode("ascii")).hexdigest()
+        != _AMP_ARCHIVED_INCLUDE_PATH_SHA256
+        or hashlib.sha256(canonical.path.encode("ascii")).hexdigest()
+        != _AMP_CANONICAL_INCLUDE_PATH_SHA256
+        or section != "NN"
+        or canonical.section != section
+    ):
+        raise ValueError("amplifier model include differs")
+    if evidence is None:
+        return "NOT_EVALUATED"
+    if (
+        evidence.baseline_input_sha256 != baseline_input_sha256
+        or evidence.archived_path_sha256 != _AMP_ARCHIVED_INCLUDE_PATH_SHA256
+        or evidence.canonical_include != canonical
+        or evidence.historical_model_closure_sha256 != binding.model_closure_sha256
+        or evidence.historical_equivalence_receipt_sha256
+        in (baseline_input_sha256, canonical.file_sha256, binding.model_closure_sha256)
+    ):
+        raise ValueError("amplifier archived model evidence differs")
+    return "MATCHED"
 
 
 def _amplifier_cross_analysis_body(statements: list[str]) -> list[str]:
@@ -949,11 +1003,11 @@ def _amp_width_analysis(
             if analysis == "dc"
             else _amplifier_cross_analysis_body(old_circuit.fixed_statements)
         )
-        or includes != [(model.path, model.section) for model in binding.model_includes]
         or len(analyses) != 1
         or analyses[0][0] != analysis
     ):
         raise ValueError("baseline measurement circuit differs from center")
+    model_comparison = _amp_model_comparison(includes, binding, metric.input_sha256)
     child = evidence.child
     terminal = report = value = None
     reason: str | None = "retained_operation_not_supplied"
@@ -973,8 +1027,8 @@ def _amp_width_analysis(
         )
         new_fixed, new_options = _amp_pm0_options(new_static, baseline=False)
         if (
-            (new_params, new_includes, new_options)
-            != (child_circuit.parameters, child_circuit.includes, child_circuit.pm0_options)
+            (new_params, new_options) != (child_circuit.parameters, child_circuit.pm0_options)
+            or new_includes != [(model.path, model.section) for model in binding.model_includes]
             or new_fixed != fixed
             or new_analyses != analyses
             or AdeExecutionRegistration.model_validate_json(_canonical(route["ade"])).model_includes
@@ -998,8 +1052,11 @@ def _amp_width_analysis(
         if report is not None:
             if report.execution_input_sha256 != hashlib.sha256(evidence.child_input).hexdigest():
                 raise ValueError("child report effective input differs")
-            value = _amp_child_metric(report, reader)
-            reason = "registered_measurement_unavailable" if value is None else None
+            if model_comparison == "MATCHED":
+                value = _amp_child_metric(report, reader)
+                reason = "registered_measurement_unavailable" if value is None else None
+            else:
+                reason = "historical_model_equivalence_unavailable"
     elif evidence.child_input is not None:
         raise ValueError("unbound child input")
     return AmplifierWidthAnalysisPair(
@@ -1014,6 +1071,7 @@ def _amp_width_analysis(
         child_report=report,
         child_value=value,
         reason=reason,
+        model_comparison=model_comparison,
         dc_output_reason="baseline_output_scalars_not_retained" if analysis == "dc" else None,
     )
 
@@ -1060,6 +1118,14 @@ def associate_amplifier_width_pair(
         ):
             raise ValueError("complete PM0 change readback required")
         projection = project_netlist_change(plan, baseline_input, candidate_input)
+        dc_alias, ac_alias = binding.dc.baseline_include_alias, binding.ac.baseline_include_alias
+        if (
+            dc_alias is not None
+            and ac_alias is not None
+            and dc_alias.historical_equivalence_receipt_sha256
+            == ac_alias.historical_equivalence_receipt_sha256
+        ):
+            raise ValueError("distinct archived DC and AC model receipts required")
         if (
             (binding.baseline_revision_sha256, binding.baseline_testbench_revision_sha256)
             != (old.revision_sha256, old.testbench_revision_sha256)

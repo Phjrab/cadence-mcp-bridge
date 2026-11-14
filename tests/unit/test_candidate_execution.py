@@ -56,6 +56,81 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
 
 
+@pytest.mark.parametrize(
+    "drift",
+    [None, "missing", "alias", "section", "graph", "current-only", "input", "root", "extra"],
+)
+def test_amplifier_requires_pinned_historical_include_equivalence(monkeypatch, drift):
+    from cadence_mcp_bridge import candidate_execution
+    from cadence_mcp_bridge.generic_ade import ModelInclude
+
+    archived = "/fixture/old/../models/root.scs"
+    canonical = ModelInclude(path="/fixture/models/root.scs", section="NN", file_sha256="a" * 64)
+    archived_pin = hashlib.sha256(archived.encode("ascii")).hexdigest()
+    monkeypatch.setattr(candidate_execution, "_AMP_ARCHIVED_INCLUDE_PATH_SHA256", archived_pin)
+    monkeypatch.setattr(
+        candidate_execution,
+        "_AMP_CANONICAL_INCLUDE_PATH_SHA256",
+        hashlib.sha256(canonical.path.encode("ascii")).hexdigest(),
+    )
+    input_pin, closure = "b" * 64, "c" * 64
+    evidence = candidate_execution.AmplifierBaselineIncludeAlias(
+        baseline_input_sha256=input_pin,
+        archived_path_sha256=archived_pin,
+        canonical_include=canonical,
+        historical_model_closure_sha256=closure,
+        historical_equivalence_receipt_sha256="d" * 64,
+    )
+    binding = AmplifierWidthAnalysisBinding.model_construct(
+        model_includes=(canonical,),
+        model_closure_sha256=closure,
+        baseline_include_alias=evidence,
+    )
+    includes = [(archived, "NN")]
+    if drift == "missing":
+        binding = binding.model_copy(update={"baseline_include_alias": None})
+        assert (
+            candidate_execution._amp_model_comparison(includes, binding, input_pin)
+            == "NOT_EVALUATED"
+        )
+        assert (
+            candidate_execution._amp_model_comparison(
+                [(canonical.path, canonical.section)],
+                binding,
+                input_pin,
+            )
+            == "MATCHED"
+        )
+        return
+    if drift is None:
+        assert candidate_execution._amp_model_comparison(includes, binding, input_pin) == "MATCHED"
+        return
+    if drift == "alias":
+        includes = [(archived.replace("/old/", "/other/"), "NN")]
+    elif drift == "section":
+        includes = [(archived, "SS")]
+    elif drift == "extra":
+        includes.append((canonical.path, "NN"))
+    elif drift == "graph":
+        binding = binding.model_copy(update={"model_closure_sha256": "e" * 64})
+    elif drift == "root":
+        binding = binding.model_copy(
+            update={"model_includes": (canonical.model_copy(update={"file_sha256": "e" * 64}),)}
+        )
+    elif drift == "current-only":
+        binding = binding.model_copy(
+            update={
+                "baseline_include_alias": evidence.model_copy(
+                    update={"historical_equivalence_receipt_sha256": closure}
+                )
+            }
+        )
+    else:
+        input_pin = "e" * 64
+    with pytest.raises(ValueError):
+        candidate_execution._amp_model_comparison(includes, binding, input_pin)
+
+
 @pytest.fixture
 async def amplifier_width_evidence(tmp_path, monkeypatch, measurement_operator):
     from cadence_mcp_bridge import candidate_execution, parameter_changes
