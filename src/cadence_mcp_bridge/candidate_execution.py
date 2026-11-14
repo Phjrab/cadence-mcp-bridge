@@ -1462,6 +1462,13 @@ class PersistedBiasExportEvidence:
     baseline_profile: bytes
     candidate_profile: bytes
     reopened_receipt: bytes
+    persistence_baseline: FreshAmplifierRevisionBinding
+    plan: ChangePlan
+    plan_sha256: Digest
+    readback_sha256: Digest
+    baseline_input: bytes
+    candidate_input: bytes
+    baseline_receipt: bytes
 
 
 def _persisted_bias_export(
@@ -1469,6 +1476,7 @@ def _persisted_bias_export(
     saved_width: FreshAmplifierRevisionBinding,
     baseline: OperationPlan,
     candidate: OperationPlan,
+    mode: Literal["dc", "ac"],
 ) -> dict[str, Any]:
     export = _pinned_json(evidence.export, evidence.export_sha256)
     policy = _pinned_json(evidence.policy_receipt, evidence.policy_receipt_sha256)
@@ -1476,9 +1484,26 @@ def _persisted_bias_export(
     new_profile = _pinned_json(evidence.candidate_profile, candidate.environment_sha256)
     old_ceiling = old_profile["limits"].pop("result_reserved_bytes")
     new_ceiling = new_profile["limits"].pop("result_reserved_bytes")
-    readback = evidence.readback
+    persistence_baseline = evidence.persistence_baseline
+    if (
+        persistence_baseline.revision_sha256 != saved_width.revision_sha256
+        or persistence_baseline.testbench_revision_sha256 != saved_width.testbench_revision_sha256
+        or persistence_baseline.source_tree_sha256 != saved_width.source_tree_sha256
+        or persistence_baseline.ade_state_sha256 == saved_width.ade_state_sha256
+    ):
+        raise ValueError("persisted Bias baseline differs from the retained physical source")
+    readback = associate_persisted_amplifier_bias(
+        persistence_baseline,
+        evidence.plan,
+        evidence.readback,
+        expected_plan_sha256=evidence.plan_sha256,
+        expected_readback_sha256=evidence.readback_sha256,
+        baseline_input=evidence.baseline_input,
+        candidate_input=evidence.candidate_input,
+    )
     if (
         readback.status != "MATCHED"
+        or readback.baseline is None
         or readback.reopened is None
         or readback.reopened.value.normalized != ("0.321", "V")
         or readback.reopened.schematic_revision_sha256 != saved_width.revision_sha256
@@ -1495,12 +1520,24 @@ def _persisted_bias_export(
         or policy["ledger_modified"] is not False
     ):
         raise ValueError("persisted Bias export or policy successor differs")
+    for raw in (evidence.baseline_input, evidence.candidate_input):
+        _, _, analyses, _ = partition_input(raw)  # type: ignore[no-untyped-call]
+        if len(analyses) != 1 or analyses[0][0] != mode:
+            raise ValueError("persisted Bias Netlist analysis differs")
+    center = _pinned_json(evidence.baseline_receipt, readback.baseline.artifact_sha256)
     reopened = _pinned_json(evidence.reopened_receipt, readback.reopened.artifact_sha256)
     if (
-        reopened["phase"] != "bias-reopen"
+        center["phase"] != "center-reopen"
+        or center["center_ade_tree_sha256"] != persistence_baseline.ade_state_sha256
+        or center["physical_oa_sha256"] != saved_width.revision_sha256
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.32"' not in center["rows"]
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"' not in center["rows"]
+        or reopened["phase"] != "bias-reopen"
         or reopened["candidate_ade_tree_sha256"] != readback.reopened.revision_sha256
         or reopened["candidate_ade_content_sha256"] != export["state_content_sha256"]
         or reopened["physical_oa_sha256"] != saved_width.revision_sha256
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.321"' not in reopened["rows"]
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"' not in reopened["rows"]
     ):
         raise ValueError("persisted Bias reopened content differs from the exported copy")
     return export  # type: ignore[no-any-return]
@@ -1541,7 +1578,9 @@ def associate_saved_width_bias_analysis(
 
         export = (
             None if export_evidence is None
-            else _persisted_bias_export(export_evidence, saved_width, center.plan, changed.plan)
+            else _persisted_bias_export(
+                export_evidence, saved_width, center.plan, changed.plan, mode
+            )
         )
         measurements = []
         fixed_conditions = []
@@ -1571,6 +1610,12 @@ def associate_saved_width_bias_analysis(
                 )
             source_tree = saved_width.source_tree_sha256
             ade_tree = saved_width.ade_state_sha256
+            if (
+                export is not None
+                and not is_candidate
+                and route["profile"]["binding"]["ade"]["state"] != "state1"
+            ):
+                raise ValueError("retained center ADE selector differs")
             if side_export is not None:
                 source_tree = side_export["source_cell_tree_sha256"]
                 ade_tree = side_export["state_tree_sha256"]
@@ -1625,7 +1670,7 @@ def associate_saved_width_bias_analysis(
 
         if requested_bias.normalized[0] == "0.32" or fixed_conditions[0] != fixed_conditions[1]:
             raise ValueError("saved-width bias fixed conditions differ")
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OperationRejected):
         raise OperationRejected("candidate_saved_width_bias_evidence_mismatch") from None
     return FreshAmplifierAnalysisPair(
         analysis=mode,

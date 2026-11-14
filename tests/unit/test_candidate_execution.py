@@ -168,6 +168,7 @@ def test_persisted_amplifier_bias_requires_independent_saved_width_evidence(scen
     [
         None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias",
         "export", "export-content", "export-profile", "export-pm0", "export-path",
+        "export-incomplete", "export-selector", "export-foreign-plan", "export-mode",
     ],
 )
 def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
@@ -244,7 +245,10 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
                 source_cell="/export/cell" if candidate and exported else "/same/cell",
                 source_state="/wrong" if drift == "export-path" else "/export/state",
                 libraries=[library, technology] if candidate and exported else [],
-                profile={"binding": {"ade": {"state": "Candidate321"}}},
+                profile={"binding": {"ade": {"state": (
+                    "Candidate321" if candidate else
+                    "other" if drift == "export-selector" else "state1"
+                )}}},
                 ade=ade.model_dump(mode="json"),
             ),
             conditions,
@@ -279,23 +283,65 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
         requested_bias=ChangeValue(value="0.321", unit="V"),
     )
     if exported:
+        baseline_input, candidate_input = center.effective_input, candidate.effective_input
+        if drift == "export-mode":
+            baseline_input = baseline_input.replace(b"analysis0 dc save=all", b"ac ac start=10")
+            candidate_input = candidate_input.replace(b"analysis0 dc save=all", b"ac ac start=10")
+        if drift == "export-pm0":
+            candidate_input = candidate_input.replace(b"w=130n", b"w=120n")
+        center_receipt = _canonical({
+            "phase": "center-reopen",
+            "center_ade_tree_sha256": BASELINE.revision_sha256,
+            "physical_oa_sha256": "9" * 64,
+            "rows": [
+                'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.32"',
+                'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"',
+            ],
+        })
         reopen = _canonical({
             "phase": "bias-reopen", "candidate_ade_tree_sha256": "f" * 64,
             "candidate_ade_content_sha256": "a" * 64, "physical_oa_sha256": "9" * 64,
+            "rows": [
+                'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.321"',
+                'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"',
+            ],
+        })
+        persistence_baseline = saved_width.model_copy(update={
+            "ade_state_sha256": BASELINE.revision_sha256, "dc": None,
         })
         change_plan = plan_ade_change(
-            BASELINE, "candidate", CHILD, BIAS, VIN,
-            ChangeValue(value="0.3", unit="V"), ChangeValue(value="0.4", unit="V"),
+            BASELINE.model_copy(update={
+                "testbench_revision_sha256": saved_width.testbench_revision_sha256,
+                "netlist_sha256": hashlib.sha256(baseline_input).hexdigest(),
+            }),
+            "candidate", CHILD,
+            BIAS.model_copy(update={
+                "logical_id": "vbiasn", "cadence_binding": "VBIASN", "default": "0.32",
+                "minimum": "0.32", "maximum": "0.321", "step": "0.001",
+            }),
+            VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"}),
+            ChangeValue(value="0.32", unit="V"), ChangeValue(value="0.321", unit="V"),
+            schematic_revision_sha256=saved_width.revision_sha256,
         )
-        observation = _row(change_plan, "reopened").model_copy(update={
-            "revision_sha256": "f" * 64, "schematic_revision_sha256": "9" * 64,
-            "testbench_revision_sha256": "a" * 64,
-            "value": ChangeValue(value="0.321", unit="V"),
-            "artifact_sha256": hashlib.sha256(reopen).hexdigest(),
-        })
-        readback = verify_change_readback(change_plan).model_copy(update={
-            "status": "MATCHED", "reopened": observation,
-        })
+        baseline_row, reopened_row, netlist_row = (
+            _row(change_plan, stage).model_copy(update={
+                "revision_sha256": BASELINE.revision_sha256 if stage == "baseline" else "f" * 64,
+                "schematic_revision_sha256": saved_width.revision_sha256,
+                "testbench_revision_sha256": saved_width.testbench_revision_sha256,
+                "artifact_sha256": hashlib.sha256(artifact).hexdigest(),
+            })
+            for stage, artifact in (
+                ("baseline", center_receipt), ("reopened", reopen), ("netlist", candidate_input)
+            )
+        )
+        readback = verify_change_readback(
+            change_plan, baseline=baseline_row, reopened=reopened_row, netlist=netlist_row
+        )
+        assert readback.status == "MATCHED"
+        if drift == "export-incomplete":
+            readback = readback.model_copy(update={"baseline": None, "netlist": None})
+        if drift == "export-foreign-plan":
+            change_plan = change_plan.model_copy(update={"candidate_id": "foreign"})
         export = _canonical({
             "status": "CANDIDATE321_EXTERNAL_INPUTS_VERIFIED",
             "physical_oa_sha256": "9" * 64,
@@ -316,6 +362,8 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
         kwargs["export_evidence"] = PersistedBiasExportEvidence(
             readback, export, hashlib.sha256(export).hexdigest(),
             policy, hashlib.sha256(policy).hexdigest(), old_profile, new_profile, reopen,
+            persistence_baseline, change_plan, change_plan.plan_sha256,
+            canonical_digest(readback), baseline_input, candidate_input, center_receipt,
         )
     if drift not in (None, "export"):
         with pytest.raises(OperationRejected) as rejected:
