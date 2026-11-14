@@ -880,6 +880,143 @@ def test_amplifier_width_compare_retained_pair(
             assert path.exists() == (path in files)
 
 
+def test_amplifier_fresh_width_compare_retains_registered_evidence(
+    measurement_operator,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    import test_candidate_execution as execution_fixture
+
+    from cadence_mcp_bridge import candidate_execution
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.operator_operations import OperationProgress
+
+    # Reuse the C7 synthetic registered-pair fixture and its compiled-route stub.
+    calls = []
+    associate = candidate_execution.associate_fresh_amplifier_width_pair
+
+    def record(*args, **kwargs):
+        calls.append((args, kwargs))
+        return associate(*args, **kwargs)
+
+    with monkeypatch.context() as fixture:
+        fixture.setattr(execution_fixture, "associate_fresh_amplifier_width_pair", record)
+        execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
+            monkeypatch,
+            measurement_operator,
+            "not-run",
+        )
+
+    (plan, readback), evidence = calls.pop()
+    originals = {}
+
+    def pin(path, raw):
+        with path.open("xb") as output_file:
+            output_file.write(raw)
+        originals[path] = raw
+        return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def operation(label, retained):
+        op = retained.operation
+        journal = tmp_path / f"{label}.sqlite3"
+        store = AnalysisStore(journal)
+        operation_id = op.query.operation_id
+        assert store.admit_operation(operation_id, op.plan)
+        pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+        store.advance_operation(operation_id, OperationProgress(phase="ADMITTED"), pending)
+        store.advance_operation(operation_id, pending, op.record.progress)
+        raw = journal.read_bytes()
+        originals[journal] = raw
+        data = {
+            "operation_id": operation_id,
+            "plan_sha256": op.plan.plan_sha256,
+            "journal": {"path": str(journal), "sha256": hashlib.sha256(raw).hexdigest()},
+            "terminal_sha256": op.expected_terminal_sha256,
+            "effective_input": pin(tmp_path / f"{label}.scs", retained.effective_input),
+            "runtime_manifest": pin(tmp_path / f"{label}-manifest.json", b"{}"),
+            "runtime_registration": pin(tmp_path / f"{label}-registration.json", b"{}"),
+            "design_registry": pin(tmp_path / f"{label}-registry.json", b"{}"),
+        }
+        if op.report is not None:
+            data["report"] = pin(tmp_path / f"{label}-report.json", op.report)
+        return data
+
+    request = {
+        "change_plan": pin(tmp_path / "plan.json", plan.model_dump_json().encode()),
+        "change_plan_sha256": evidence["expected_plan_sha256"],
+        "readback": pin(tmp_path / "readback.json", readback.model_dump_json().encode()),
+        "baseline_input": pin(tmp_path / "center.scs", evidence["baseline_input"]),
+        "candidate_input": pin(tmp_path / "diagnostic.scs", evidence["candidate_input"]),
+        "registration_evidence": pin(tmp_path / "binding.json", evidence["registration_evidence"]),
+        "dc": {
+            "baseline": operation("dc-baseline", evidence["dc"].baseline),
+            "candidate": operation("dc-candidate", evidence["dc"].candidate),
+        },
+        "ac": {"baseline": operation("ac-baseline", evidence["ac"].baseline)},
+    }
+
+    def compare(label, destination):
+        ref = pin(tmp_path / f"{label}.json", json.dumps(request).encode())
+        return main(
+            [
+                "operator-candidates",
+                "amplifier-fresh-width-compare",
+                "--request",
+                ref["path"],
+                ref["sha256"],
+                "--output",
+                str(destination),
+            ]
+        )
+
+    monkeypatch.setattr(cli, "load_runtime", lambda _: pytest.fail("unexpected context load"))
+    assert (
+        main(
+            [
+                "operator-candidates",
+                "schema",
+                "--action",
+                "amplifier-fresh-width-compare",
+            ]
+        )
+        == 0
+    )
+    schema = output(capsys)["request_schema"]
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["_FreshAmplifierWidthSide"]["additionalProperties"] is False
+    target = tmp_path / "comparison.json"
+    assert compare("valid", target) == 0
+    summary = output(capsys)
+    raw = target.read_bytes()
+    saved = json.loads(raw)
+    pair = candidate_execution.FreshAmplifierWidthPair.model_validate_json(
+        json.dumps(saved["association"])
+    )
+    assert summary["status"] == "AMPLIFIER_FRESH_WIDTH_COMPARISON_EXPORTED"
+    assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert summary["remote_contact"] is False and not pair.execution_authorized
+    assert pair.goals == "GOALS_NOT_PROVIDED" and saved["selected_candidate_id"] is None
+    assert pair.dc.candidate.operation.operation_id == request["dc"]["candidate"]["operation_id"]
+    assert pair.dc.candidate.report.analysis_conditions is not None
+    assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
+    assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
+    assert saved["deltas"]["ac"] == {"absolute_delta": None, "reason": "measurement_unavailable"}
+
+    sidecar = tmp_path / "dc-candidate.sqlite3-wal"
+    assert compare("sidecar-collision", sidecar) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert compare("duplicate", target) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    request["dc"]["candidate"]["effective_input"]["sha256"] = "0" * 64
+    rejected = tmp_path / "rejected.json"
+    assert compare("wrong-effective-input-pin", rejected) == 2
+    assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+    assert not rejected.exists() and target.read_bytes() == raw
+    assert all(path.read_bytes() == raw for path, raw in originals.items())
+    assert not any(tmp_path.glob("*.sqlite3-*"))
+
+
 def test_local_plan_exports_full_vector_without_journal(
     candidate_operator, tmp_path, monkeypatch, capsys
 ):

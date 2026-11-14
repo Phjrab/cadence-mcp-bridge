@@ -112,15 +112,28 @@ class _AmplifierWidthSide(VariableModel):
     child: _AmplifierWidthChild | None = None
 
 
-class _AmplifierWidthComparisonRequest(VariableModel):
+class _AmplifierWidthComparisonEvidence(VariableModel):
     change_plan: _PinnedComparisonFile
     change_plan_sha256: Digest
     readback: _PinnedComparisonFile
     baseline_input: _PinnedComparisonFile
     candidate_input: _PinnedComparisonFile
     registration_evidence: _PinnedComparisonFile
+
+
+class _AmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
     dc: _AmplifierWidthSide
     ac: _AmplifierWidthSide
+
+
+class _FreshAmplifierWidthSide(VariableModel):
+    baseline: _AmplifierWidthChild | None = None
+    candidate: _AmplifierWidthChild | None = None
+
+
+class _FreshAmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
+    dc: _FreshAmplifierWidthSide
+    ac: _FreshAmplifierWidthSide
 
 
 class _AmplifierPm0ObservationRequest(VariableModel):
@@ -144,7 +157,13 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     schema = actions.add_parser("schema")
     schema.add_argument(
         "--action",
-        choices=("select", "amplifier-select", "amplifier-width-compare", "observe-amplifier-pm0"),
+        choices=(
+            "select",
+            "amplifier-select",
+            "amplifier-width-compare",
+            "amplifier-fresh-width-compare",
+            "observe-amplifier-pm0",
+        ),
         dest="schema_action",
     )
     for name in ("plan", "submit", "advance", "status", "result", "capture"):
@@ -200,6 +219,12 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     )
     amplifier_width.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     amplifier_width.add_argument("--output", type=Path, required=True)
+    fresh_width = actions.add_parser(
+        "amplifier-fresh-width-compare",
+        help="Compare newly registered baseline and candidate AMP DC/AC results.",
+    )
+    fresh_width.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    fresh_width.add_argument("--output", type=Path, required=True)
     pm0_observation = actions.add_parser(
         "observe-amplifier-pm0", help="Observe retained PM0 netlist inputs without qualification."
     )
@@ -775,6 +800,99 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
+    from cadence_mcp_bridge.candidate_execution import (
+        FreshAmplifierOperation,
+        FreshAmplifierWidthAnalysis,
+        FreshAmplifierWidthPair,
+        associate_fresh_amplifier_width_pair,
+    )
+    from cadence_mcp_bridge.parameter_changes import ChangePlan, ChangeReadback
+
+    path, request_sha256 = arguments.request
+    request_path = _local_path(Path(path))
+    request = _FreshAmplifierWidthComparisonRequest.model_validate_json(
+        read_candidate_document(request_path, expected_sha256=request_sha256)
+    )
+    common = (
+        request.change_plan,
+        request.readback,
+        request.baseline_input,
+        request.candidate_input,
+        request.registration_evidence,
+    )
+    reserved = {request_path} | {_local_path(source.path) for source in common}
+    for side in (request.dc, request.ac):
+        for operation in (side.baseline, side.candidate):
+            if operation is not None:
+                reserved.update(_retained_analysis_paths(operation))
+                reserved.add(_local_path(operation.effective_input.path))
+                if operation.execution_plan is not None:
+                    reserved.add(_local_path(operation.execution_plan.path))
+    output = _output(arguments.output, reserved)
+
+    def retained(operation: _AmplifierWidthChild | None) -> FreshAmplifierOperation | None:
+        if operation is None:
+            return None
+        return FreshAmplifierOperation(
+            operation=_retained_analysis_operation(operation),
+            effective_input=_comparison_bytes(operation.effective_input),
+        )
+
+    plan = ChangePlan.model_validate_json(_comparison_document(request.change_plan))
+    pair = associate_fresh_amplifier_width_pair(
+        plan,
+        ChangeReadback.model_validate_json(_comparison_document(request.readback)),
+        expected_plan_sha256=request.change_plan_sha256,
+        baseline_input=_comparison_bytes(request.baseline_input),
+        candidate_input=_comparison_bytes(request.candidate_input),
+        registration_evidence=_comparison_document(request.registration_evidence),
+        expected_registration_sha256=request.registration_evidence.sha256,
+        dc=FreshAmplifierWidthAnalysis(
+            retained(request.dc.baseline), retained(request.dc.candidate)
+        ),
+        ac=FreshAmplifierWidthAnalysis(
+            retained(request.ac.baseline), retained(request.ac.candidate)
+        ),
+    )
+    deltas = {}
+    for row in (pair.dc, pair.ac):
+        absolute, _, reason = candidate_metric_delta(
+            row.candidate.value,
+            row.baseline.value,
+            baseline_present=row.baseline.value is not None,
+        )
+        deltas[row.analysis] = {
+            "absolute_delta": absolute,
+            "reason": reason,
+        }
+    raw = json.dumps(
+        {
+            "association": pair.model_dump(mode="json"),
+            "requested_width": plan.requested.model_dump(mode="json"),
+            "request_sha256": request_sha256,
+            "deltas": deltas,
+            "selected_candidate_id": pair.selected_candidate_id,
+        },
+        sort_keys=True,
+        allow_nan=False,
+    ).encode()
+    file_sha256 = _export(output, raw)
+    saved = json.loads(read_candidate_document(output, expected_sha256=file_sha256))
+    if FreshAmplifierWidthPair.model_validate_json(json.dumps(saved["association"])) != pair:
+        raise OperationRejected("amplifier_fresh_width_comparison_output_mismatch")
+    return {
+        "status": "AMPLIFIER_FRESH_WIDTH_COMPARISON_EXPORTED",
+        "file_sha256": file_sha256,
+        "goals": pair.goals,
+        "selected_candidate_id": pair.selected_candidate_id,
+        "execution_authorized": pair.execution_authorized,
+        "new_simulations": 0,
+        "new_extractions": 0,
+        "new_reservations": 0,
+    }
+
+
 def _observe_amplifier_pm0(arguments: argparse.Namespace) -> dict[str, Any]:
     from cadence_mcp_bridge.parameter_changes import (
         AmplifierPm0InputObservation,
@@ -843,6 +961,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 result = {"request_schema": AmplifierCandidateSelectionRequest.model_json_schema()}
             elif arguments.schema_action == "amplifier-width-compare":
                 result = {"request_schema": _AmplifierWidthComparisonRequest.model_json_schema()}
+            elif arguments.schema_action == "amplifier-fresh-width-compare":
+                result = {
+                    "request_schema": _FreshAmplifierWidthComparisonRequest.model_json_schema(),
+                }
             elif arguments.schema_action == "observe-amplifier-pm0":
                 result = {"request_schema": _AmplifierPm0ObservationRequest.model_json_schema()}
         elif action in ("compare", "csv"):
@@ -919,6 +1041,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _pmos_dc_compare(arguments)
         elif action == "amplifier-width-compare":
             result = _amplifier_width_compare(arguments)
+        elif action == "amplifier-fresh-width-compare":
+            result = _amplifier_fresh_width_compare(arguments)
         elif action == "observe-amplifier-pm0":
             result = _observe_amplifier_pm0(arguments)
         else:
@@ -1077,6 +1201,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "verify-change-readback",
             "pmos-dc-compare",
             "amplifier-width-compare",
+            "amplifier-fresh-width-compare",
             "observe-amplifier-pm0",
         ):
             guidance = "Check pinned local documents and use a new output file."
