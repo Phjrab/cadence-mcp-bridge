@@ -66,7 +66,6 @@ def test_composite_write_and_independent_read_only_reopen() -> None:
     assert result.generate.index("M2_OWNED_BENCH_COLLISION") < result.generate.index(
         f'"{plan.bench.name}" "schematic" "schematic" "w"'
     )
-    assert 'm2Instance(cv "analogLib" "vpulse" "VIN" 8 0)' in result.generate
     assert 'm2Param(inst "per" "150n")' in result.generate
     assert 'm2BlockInstance(cv "DUT" "OwnedBlock" "Dut" 0 0 4)' in result.reopen
     assert 'm2Property(cv "VIN" "dc" "m2_vin")' in result.reopen
@@ -84,6 +83,42 @@ def test_composite_write_and_independent_read_only_reopen() -> None:
         render_research_bench(
             plan, dut, cdf_frames, expected_plan_sha256="0" * 64, owned_library_path="/owned/block"
         )
+
+
+def test_bench_checks_position_before_wiring_and_before_save() -> None:
+    plan, dut = _plans(_definition())
+    inverter, frame = inverter_fixture()
+    scripts = render_research_bench(
+        plan,
+        dut,
+        {inverter.cdf_frame_sha256: frame},
+        expected_plan_sha256=canonical_digest(plan),
+        owned_library_path="/owned/block",
+    )
+    bench_open = f'"{plan.bench.name}" "schematic" "schematic" "w"'
+    bench_write = scripts.generate.split(bench_open, 1)[1].splitlines()
+    check = bench_write.index("m2Require(schCheck(cv))")
+    save = bench_write.index("m2Require(dbSave(cv)) dbClose(cv)")
+    assert check < save
+    assert not any(line.startswith("inst=m2Instance(") for line in bench_write)
+    devices = {device.name: device for device in plan.bench.instances}
+    for name, lib, cell, x in (
+        ("DUT", "OwnedBlock", "Dut", 0),
+        ("VDD", "analogLib", "vdc", 4),
+        ("VIN", "analogLib", "vpulse", 8),
+        ("CL", "analogLib", "cap", 12),
+    ):
+        open_master = f'master=m2Require(dbOpenCellViewByType("{lib}" "{cell}" "symbol" "" "r"))'
+        create = f'inst=m2Require(dbCreateInst(cv master "{name}" list({x} 0) "R0"))'
+        check_immediate = f'm2BlockPlacement(inst {x} 0 "R0")'
+        check_saved = f'm2BlockCheckPlacement(cv "{name}" {x} 0 "R0")'
+        start = bench_write.index(open_master)
+        assert bench_write[start : start + 3] == [open_master, create, check_immediate]
+        terminal, net = next(iter(devices[name].connections.items()))
+        first_wire = bench_write.index(f'm2Wire(cv inst "{terminal}" "{net}")', start)
+        assert start + 2 < first_wire < check
+        assert bench_write.count(check_saved) == 1
+        assert check < bench_write.index(check_saved) < save
 
 
 def test_reject_unobserved_bench_timing() -> None:

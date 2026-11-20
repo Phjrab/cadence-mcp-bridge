@@ -11,6 +11,7 @@ from cadence_mcp_bridge.m2_inverter import _quote
 from cadence_mcp_bridge.research_circuit import (
     Child,
     Circuit,
+    Master,
     MosBlockScripts,
     OwnedMosBlockPlan,
     Pulse,
@@ -20,6 +21,7 @@ from cadence_mcp_bridge.research_circuit import (
     plan_owned_mos_block,
     project_mos_block_netlist,
     render_owned_mos_block,
+    render_research_positioned_instance,
 )
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
 
@@ -196,21 +198,27 @@ def render_research_bench(
         f'cv=dbOpenCellViewByType({library} {bench} "schematic" "" "r") m2Require(cv)',
         "m2Require(length(cv~>instances)==4 && length(cv~>terminals)==0)",
     ]
+    saved_positions: list[str] = []
     devices = {device.name: device for device in plan.bench.instances}
-    for x, name in zip((0, 4, 8, 12), ("DUT", "VDD", "VIN", "CL"), strict=True):
+    for name in ("DUT", "VDD", "VIN", "CL"):
         device = devices[name]
         props: dict[str, str]
         if isinstance(device, Child):
-            master_lib, master, props = library, q(dut_plan.root), {}
+            master = Master(library=dut_plan.output_library, cell=dut_plan.root, view="symbol")
+            props = {}
         else:
             primitive, props = _PRIMITIVES[name]
-            master_lib, master = q("analogLib"), q(primitive)
-        create.append(f"inst=m2Instance(cv {master_lib} {master} {q(name)} {x} 0)")
+            master = Master(library="analogLib", cell=primitive, view="symbol")
+        positioned, saved_position = render_research_positioned_instance(master, device)
+        create.extend(positioned)
+        saved_positions.append(saved_position)
         create.extend(f"m2Param(inst {q(key)} {q(value)})" for key, value in props.items())
         links = device.connections
         create.extend(f"m2Wire(cv inst {q(key)} {q(net)})" for key, net in links.items())
+        origin = device.placement.origin
         reopen.append(
-            f"inst=m2BlockInstance(cv {q(name)} {master_lib} {master} {x} 0 {len(links)})"
+            f"inst=m2BlockInstance(cv {q(name)} {q(master.library)} {q(master.cell)} "
+            f"{origin.x} {origin.y} {len(links)})"
         )
         reopen.extend(f"m2Net(cv {q(name)} {q(key)} {q(net)})" for key, net in links.items())
         reopen.extend(f"m2Property(cv {q(name)} {q(key)} {q(v)})" for key, v in props.items())
@@ -218,9 +226,9 @@ def render_research_bench(
     reopened = f"RESEARCH_BENCH_REOPENED_CHECKED|{expected_plan_sha256}|{plan.bench.name}"
     block_saved = f"MOS_BLOCK_SAVED|{plan.dut_plan_sha256}"
     block_reopened = f"MOS_BLOCK_REOPENED_CHECKED|{plan.dut_plan_sha256}"
-    create.extend(
-        ("m2Require(schCheck(cv))", "m2Require(dbSave(cv)) dbClose(cv)", f'printf("{saved}\\n")')
-    )
+    create.append("m2Require(schCheck(cv))")
+    create.extend(saved_positions)
+    create.extend(("m2Require(dbSave(cv)) dbClose(cv)", f'printf("{saved}\\n")'))
     reopen.extend(("dbClose(cv)", f'printf("{reopened}\\n")'))
     return ResearchBenchScripts(
         plan_sha256=dut.plan_sha256,
