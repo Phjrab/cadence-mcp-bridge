@@ -266,6 +266,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
         ("research-transient-result", "Measure an existing registered TRAN result.", True),
         ("research-ac-gain-result", "Measure an existing registered AC gain result.", True),
         ("research-supply-power-result", "Measure static power from registered DC results.", True),
+        ("research-device-op-result", "Read operator-pinned retained device OP results.", True),
     ):
         research = actions.add_parser(name, help=help_text)
         research.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
@@ -273,6 +274,13 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
         if retained:
             research.add_argument("--settings", type=Path, required=True)
             research.add_argument("--context", required=True)
+    raw_netlist = actions.add_parser(
+        "verify-research-raw-netlist", help="Compare a local pinned DUT-only Spectre netlist."
+    )
+    raw_netlist.add_argument("--plan", type=Path, required=True)
+    raw_netlist.add_argument("--expected-plan-sha256", required=True)
+    raw_netlist.add_argument("--netlist", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    raw_netlist.add_argument("--output", type=Path, required=True)
     pmos = actions.add_parser("pmos-dc-compare", help="Compare two retained PMOS DC results.")
     pmos.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     pmos.add_argument("--output", type=Path, required=True)
@@ -1377,6 +1385,33 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _amplifier_select(arguments)
         elif action == "verify-change-readback":
             result = _verify_change_readback(arguments)
+        elif action == "verify-research-raw-netlist":
+            from cadence_mcp_bridge.research_adapters import (
+                ResearchMosBlockPreparation,
+                compare_raw_netlist,
+            )
+
+            path, digest = arguments.netlist
+            netlist_path = Path(path)
+            output = _output(
+                arguments.output, {_local_path(arguments.plan), _local_path(netlist_path)}
+            )
+            preparation = ResearchMosBlockPreparation.model_validate_json(
+                read_candidate_document(arguments.plan)
+            )
+            if preparation.plan_sha256 != arguments.expected_plan_sha256:
+                raise OperationRejected("research_mos_block_plan_digest_mismatch")
+            netlist_result = compare_raw_netlist(
+                preparation.plan,
+                _read_candidate_bytes(netlist_path, expected_sha256=digest),
+                expected_plan_sha256=arguments.expected_plan_sha256,
+                expected_netlist_artifact_sha256=digest,
+            )
+            result = {
+                "status": "RESEARCH_DUT_NETLIST_COMPARISON_EXPORTED",
+                "file_sha256": _export_research(output, netlist_result.model_dump_json().encode()),
+                "execution_authorized": False,
+            }
         elif action in (
             "validate-research-circuit",
             "plan-research-mos-block",
@@ -1438,6 +1473,29 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 receipt = dispatch_pmos_default_change(arguments.request, service)
                 remote_contact = receipt.dispatched_this_call
                 result = receipt.model_dump(mode="json")
+            elif action == "research-device-op-result":
+                from cadence_mcp_bridge.native_service import NativeOperationService
+                from cadence_mcp_bridge.research_adapters import device_op_result
+                from cadence_mcp_bridge.research_measurements import DeviceOpQuery
+
+                path, digest = arguments.request
+                request_path = Path(path)
+                output = _output(
+                    arguments.output,
+                    _reserved(arguments.settings, contexts) | {_local_path(request_path)},
+                )
+                op_request = DeviceOpQuery.model_validate_json(
+                    read_candidate_document(request_path, expected_sha256=digest)
+                )
+                op_result = device_op_result(NativeOperationService(context), op_request)
+                result = {
+                    "status": op_result.status,
+                    "reason": op_result.reason,
+                    "file_sha256": _export_research(output, op_result.model_dump_json().encode()),
+                    "new_simulations": op_result.new_simulations,
+                    "new_extractions": op_result.new_extractions,
+                    "new_reservations": op_result.new_reservations,
+                }
             elif action in (
                 "research-transient-result",
                 "research-ac-gain-result",
@@ -1627,6 +1685,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "validate-research-circuit",
             "plan-research-mos-block",
             "verify-research-mos-block",
+            "verify-research-raw-netlist",
             "plan-registered-mos-change",
             "pmos-dc-compare",
             "amplifier-width-compare",
@@ -1636,7 +1695,8 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
         ):
             guidance = "Check pinned local documents and use a new output file."
         elif action in (
-            "research-transient-result", "research-ac-gain-result", "research-supply-power-result"
+            "research-transient-result", "research-ac-gain-result", "research-supply-power-result",
+            "research-device-op-result",
         ):
             guidance = "Check the registered operation, exact plan digest and new output path."
         else:

@@ -736,7 +736,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 assert catalog["remote_contact"] is False
                 tools = (await client.list_tools()).tools
                 names = {tool.name for tool in tools}
-                assert len(names) == 111
+                assert len(names) == 112
                 assert {
                     "cadence_submit_operation",
                     "cadence_verify_change_readback",
@@ -747,6 +747,7 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                     "cadence_research_transient_result",
                     "cadence_research_ac_gain_result",
                     "cadence_research_supply_power_result",
+                    "cadence_research_device_op_result",
                 } <= names
                 planned = await client.call_tool(
                     "cadence_plan_operation",

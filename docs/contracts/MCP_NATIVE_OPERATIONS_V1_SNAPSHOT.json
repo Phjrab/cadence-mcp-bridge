@@ -9566,6 +9566,68 @@
             "title": "TransferSignal",
             "type": "object"
           },
+          "TransientAveragePower": {
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": [
+                  "ESTIMATED",
+                  "NOT_EVALUATED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "unit": {
+                "const": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "sources": {
+                "items": {
+                  "$ref": "#/$defs/TransientSupplyContribution"
+                },
+                "maxItems": 6,
+                "minItems": 1,
+                "title": "Sources",
+                "type": "array"
+              },
+              "method": {
+                "const": "time_mean_of_negative_terminal_voltage_times_signed_current_piecewise_linear",
+                "title": "Method",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "reason",
+              "value",
+              "unit"
+            ],
+            "title": "TransientAveragePower",
+            "type": "object"
+          },
           "TransientDelay": {
             "additionalProperties": false,
             "properties": {
@@ -9611,6 +9673,34 @@
               "direction"
             ],
             "title": "TransientEdge",
+            "type": "object"
+          },
+          "TransientMeasurements": {
+            "additionalProperties": false,
+            "properties": {
+              "delay": {
+                "additionalProperties": true,
+                "title": "Delay",
+                "type": "object"
+              },
+              "slew": {
+                "additionalProperties": true,
+                "title": "Slew",
+                "type": "object"
+              },
+              "settling": {
+                "additionalProperties": true,
+                "title": "Settling",
+                "type": "object"
+              },
+              "average_supply_power": {
+                "$ref": "#/$defs/TransientAveragePower"
+              }
+            },
+            "required": [
+              "average_supply_power"
+            ],
+            "title": "TransientMeasurements",
             "type": "object"
           },
           "TransientSettling": {
@@ -9660,6 +9750,116 @@
               "signal"
             ],
             "title": "TransientSlew",
+            "type": "object"
+          },
+          "TransientSupplyContribution": {
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Source Id",
+                "type": "string"
+              },
+              "role": {
+                "const": "supply",
+                "title": "Role",
+                "type": "string"
+              },
+              "positive_node": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Positive Node"
+              },
+              "negative_node": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Negative Node"
+              },
+              "current_selector": {
+                "maxLength": 128,
+                "pattern": "^/[A-Za-z0-9_#][A-Za-z0-9_#./-]{0,126}$",
+                "title": "Current Selector",
+                "type": "string"
+              },
+              "current_convention": {
+                "const": "positive_into_source_positive_terminal_A",
+                "title": "Current Convention",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "ESTIMATED",
+                  "NOT_EVALUATED"
+                ],
+                "title": "Status",
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "unit": {
+                "const": "W",
+                "title": "Unit",
+                "type": "string"
+              },
+              "maximum_observed_gap_s": {
+                "title": "Maximum Observed Gap S",
+                "type": "number"
+              },
+              "saved_vector_samples": {
+                "title": "Saved Vector Samples",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "source_id",
+              "role",
+              "positive_node",
+              "negative_node",
+              "current_selector",
+              "current_convention",
+              "status",
+              "reason",
+              "value",
+              "unit"
+            ],
+            "title": "TransientSupplyContribution",
             "type": "object"
           },
           "TransientWindow": {
@@ -9732,12 +9932,7 @@
             "type": "object"
           },
           "measurements": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Measurements",
-            "type": "object"
+            "$ref": "#/$defs/TransientMeasurements"
           },
           "sample_kind": {
             "const": "NATIVE_SAVED_VECTOR",
@@ -11292,6 +11487,977 @@
           "conditions_sha256"
         ],
         "title": "ResearchPowerResult",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
+    },
+    "cadence_research_device_op_result": {
+      "name": "cadence_research_device_op_result",
+      "title": null,
+      "description": "Read an operator-pinned device operating-point artifact from an exact retained DC operation. Local lookup only; no new extraction or simulation.",
+      "inputSchema": {
+        "$defs": {
+          "DeviceOpQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "registration_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Registration Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation_id",
+              "expected_plan_sha256",
+              "registration_id"
+            ],
+            "title": "DeviceOpQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/DeviceOpQuery"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_research_device_op_resultArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "AcInputs": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "const": "ac",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "start_hz": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Start Hz",
+                "type": "string"
+              },
+              "stop_hz": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Stop Hz",
+                "type": "string"
+              },
+              "points_per_decade": {
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Points Per Decade",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "analysis",
+              "start_hz",
+              "stop_hz",
+              "points_per_decade"
+            ],
+            "title": "AcInputs",
+            "type": "object"
+          },
+          "DcInputs": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "const": "dc",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "mode": {
+                "const": "saved_operating_point",
+                "title": "Mode",
+                "type": "string"
+              },
+              "statement_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Statement Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis",
+              "mode",
+              "statement_sha256"
+            ],
+            "title": "DcInputs",
+            "type": "object"
+          },
+          "DeviceOpMeasurement": {
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Sha256",
+                "type": "string"
+              },
+              "execution_input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Execution Input Sha256",
+                "type": "string"
+              },
+              "registration_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Registration Sha256",
+                "type": "string"
+              },
+              "op_frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Op Frame Sha256",
+                "type": "string"
+              },
+              "verification_at_read": {
+                "const": "LOCAL_OP_PAYLOAD_IDENTITY_ONLY",
+                "title": "Verification At Read",
+                "type": "string"
+              },
+              "measurements": {
+                "items": {
+                  "$ref": "#/$defs/DeviceOpMeasurementRow"
+                },
+                "maxItems": 448,
+                "title": "Measurements",
+                "type": "array"
+              }
+            },
+            "required": [
+              "operation_id",
+              "plan_sha256",
+              "execution_input_sha256",
+              "registration_sha256",
+              "op_frame_sha256",
+              "verification_at_read",
+              "measurements"
+            ],
+            "title": "DeviceOpMeasurement",
+            "type": "object"
+          },
+          "DeviceOpMeasurementRow": {
+            "additionalProperties": false,
+            "properties": {
+              "instance_path": {
+                "maxLength": 256,
+                "pattern": "^/?[A-Za-z_][A-Za-z0-9_]*(/[A-Za-z_][A-Za-z0-9_]*)*$",
+                "title": "Instance Path",
+                "type": "string"
+              },
+              "field": {
+                "enum": [
+                  "id",
+                  "gm",
+                  "gds",
+                  "vgs",
+                  "vds",
+                  "vdsat",
+                  "region"
+                ],
+                "title": "Field",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "A",
+                  "S",
+                  "V",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "field_not_available",
+                      "instance_not_available",
+                      "field_not_retained"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reason"
+              },
+              "interpretation_reason": {
+                "anyOf": [
+                  {
+                    "const": "registered_model_region_meaning_unavailable",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Interpretation Reason"
+              }
+            },
+            "required": [
+              "instance_path",
+              "field",
+              "unit",
+              "value",
+              "reason",
+              "interpretation_reason"
+            ],
+            "title": "DeviceOpMeasurementRow",
+            "type": "object"
+          },
+          "ExplicitValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "ohm",
+                  "F",
+                  "s",
+                  "Hz",
+                  "K",
+                  "degC",
+                  "1"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "logical_id"
+            ],
+            "title": "ExplicitValue",
+            "type": "object"
+          },
+          "OperationPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "resource_domain_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Resource Domain Sha256",
+                "type": "string"
+              },
+              "runner_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Runner Sha256",
+                "type": "string"
+              },
+              "ledger_ref": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Ledger Ref",
+                "type": "string"
+              },
+              "environment_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Environment Sha256",
+                "type": "string"
+              },
+              "design_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Design Sha256",
+                "type": "string"
+              },
+              "pdk_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Pdk Sha256",
+                "type": "string"
+              },
+              "grant_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Grant Sha256",
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/$defs/OperationRequest"
+              },
+              "analysis": {
+                "enum": [
+                  "dc",
+                  "ac",
+                  "tran"
+                ],
+                "title": "Analysis",
+                "type": "string"
+              },
+              "attempt_cost": {
+                "const": 1,
+                "default": 1,
+                "title": "Attempt Cost",
+                "type": "integer"
+              },
+              "accounting": {
+                "const": "existing_remote_shared_ledger_no_reset",
+                "default": "existing_remote_shared_ledger_no_reset",
+                "title": "Accounting",
+                "type": "string"
+              }
+            },
+            "required": [
+              "resource_domain_sha256",
+              "runner_sha256",
+              "ledger_ref",
+              "environment_sha256",
+              "design_sha256",
+              "pdk_sha256",
+              "grant_sha256",
+              "request",
+              "analysis"
+            ],
+            "title": "OperationPlan",
+            "type": "object"
+          },
+          "OperationRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "analysis_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Analysis Id",
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/$defs/ExplicitValue"
+                },
+                "maxItems": 32,
+                "title": "Values",
+                "type": "array"
+              },
+              "result_reservation_bytes": {
+                "maximum": 1099511627776,
+                "minimum": 1,
+                "title": "Result Reservation Bytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "schema_version",
+              "design_id",
+              "analysis_id",
+              "values",
+              "result_reservation_bytes"
+            ],
+            "title": "OperationRequest",
+            "type": "object"
+          },
+          "ReportConditions": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis_inputs": {
+                "discriminator": {
+                  "mapping": {
+                    "ac": "#/$defs/AcInputs",
+                    "dc": "#/$defs/DcInputs",
+                    "tran": "#/$defs/TranInputs"
+                  },
+                  "propertyName": "analysis"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/AcInputs"
+                  },
+                  {
+                    "$ref": "#/$defs/TranInputs"
+                  },
+                  {
+                    "$ref": "#/$defs/DcInputs"
+                  }
+                ],
+                "title": "Analysis Inputs"
+              },
+              "source_tree_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Tree Sha256",
+                "type": "string"
+              },
+              "ade_state_tree_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Ade State Tree Sha256",
+                "type": "string"
+              },
+              "static_statements_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Static Statements Sha256",
+                "type": "string"
+              },
+              "model_file_sha256": {
+                "items": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "title": "Model File Sha256",
+                "type": "array"
+              },
+              "transfer": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/TransferSignal"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "analysis_inputs",
+              "source_tree_sha256",
+              "ade_state_tree_sha256",
+              "static_statements_sha256",
+              "model_file_sha256",
+              "transfer"
+            ],
+            "title": "ReportConditions",
+            "type": "object"
+          },
+          "ReportMetric": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "node_voltage",
+                  "delivered_power",
+                  "voltage_gain",
+                  "voltage_gain_db",
+                  "voltage_phase",
+                  "minimum",
+                  "maximum",
+                  "first",
+                  "last",
+                  "time_weighted_mean"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "signal_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Signal Id"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Value"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "W",
+                  "V/V",
+                  "dB",
+                  "deg"
+                ],
+                "title": "Unit",
+                "type": "string"
+              },
+              "frequency_hz": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Frequency Hz"
+              },
+              "start_s": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Start S"
+              },
+              "stop_s": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Stop S"
+              },
+              "sample_count": {
+                "anyOf": [
+                  {
+                    "maximum": 256,
+                    "minimum": 2,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Sample Count"
+              },
+              "source_role": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "supply",
+                      "bias",
+                      "stimulus"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Source Role"
+              }
+            },
+            "required": [
+              "kind",
+              "value",
+              "unit"
+            ],
+            "title": "ReportMetric",
+            "type": "object"
+          },
+          "ResultReport": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "operation_id": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/$defs/OperationPlan"
+              },
+              "captured_at_utc": {
+                "format": "date-time",
+                "title": "Captured At Utc",
+                "type": "string"
+              },
+              "execution_timestamp": {
+                "const": null,
+                "default": null,
+                "title": "Execution Timestamp",
+                "type": "null"
+              },
+              "date_semantics": {
+                "const": "capture_date_not_simulation_date",
+                "default": "capture_date_not_simulation_date",
+                "title": "Date Semantics",
+                "type": "string"
+              },
+              "measurement_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Measurement Id",
+                "type": "string"
+              },
+              "reader_registration_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Reader Registration Sha256",
+                "type": "string"
+              },
+              "execution_input_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Execution Input Sha256",
+                "type": "string"
+              },
+              "extraction_receipt_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Extraction Receipt Sha256",
+                "type": "string"
+              },
+              "frame_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Frame Sha256",
+                "type": "string"
+              },
+              "source_provenance": {
+                "const": "FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+                "title": "Source Provenance",
+                "type": "string"
+              },
+              "analysis_conditions": {
+                "$ref": "#/$defs/ReportConditions"
+              },
+              "metrics": {
+                "items": {
+                  "$ref": "#/$defs/ReportMetric"
+                },
+                "maxItems": 256,
+                "minItems": 1,
+                "title": "Metrics",
+                "type": "array"
+              }
+            },
+            "required": [
+              "operation_id",
+              "plan",
+              "captured_at_utc",
+              "measurement_id",
+              "reader_registration_sha256",
+              "execution_input_sha256",
+              "extraction_receipt_sha256",
+              "frame_sha256",
+              "source_provenance",
+              "analysis_conditions",
+              "metrics"
+            ],
+            "title": "ResultReport",
+            "type": "object"
+          },
+          "TranInputs": {
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "const": "tran",
+                "title": "Analysis",
+                "type": "string"
+              },
+              "stop_s": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Stop S",
+                "type": "string"
+              },
+              "maxstep_s": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Maxstep S",
+                "type": "string"
+              },
+              "method": {
+                "enum": [
+                  "trap",
+                  "gear2only"
+                ],
+                "title": "Method",
+                "type": "string"
+              }
+            },
+            "required": [
+              "analysis",
+              "stop_s",
+              "maxstep_s",
+              "method"
+            ],
+            "title": "TranInputs",
+            "type": "object"
+          },
+          "TransferSignal": {
+            "additionalProperties": false,
+            "properties": {
+              "positive_input": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Positive Input",
+                "type": "string"
+              },
+              "negative_input": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Negative Input"
+              },
+              "positive_output": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Positive Output",
+                "type": "string"
+              },
+              "negative_output": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Negative Output"
+              },
+              "gain_frequencies_hz": {
+                "items": {
+                  "maxLength": 48,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Gain Frequencies Hz",
+                "type": "array"
+              }
+            },
+            "required": [
+              "positive_input",
+              "negative_input",
+              "positive_output",
+              "negative_output",
+              "gain_frequencies_hz"
+            ],
+            "title": "TransferSignal",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_AVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "device_op_source_not_configured",
+                  "registered_op_record_unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason"
+          },
+          "registration_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Registration Id"
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/DeviceOpMeasurement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ResultReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source_report_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Report Sha256"
+          },
+          "terminal_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Terminal Sha256"
+          },
+          "catalog_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Catalog Sha256"
+          },
+          "verification_at_read": {
+            "anyOf": [
+              {
+                "const": "OPERATOR_PINNED_ARTIFACT_AND_RETAINED_TERMINAL_VERIFIED",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verification At Read"
+          },
+          "remote_contact": {
+            "const": false,
+            "title": "Remote Contact",
+            "type": "boolean"
+          },
+          "new_simulations": {
+            "const": 0,
+            "title": "New Simulations",
+            "type": "integer"
+          },
+          "new_extractions": {
+            "const": 0,
+            "title": "New Extractions",
+            "type": "integer"
+          },
+          "new_reservations": {
+            "const": 0,
+            "title": "New Reservations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "remote_contact",
+          "new_simulations",
+          "new_extractions",
+          "new_reservations"
+        ],
+        "title": "DeviceOpResult",
         "type": "object"
       },
       "icons": null,

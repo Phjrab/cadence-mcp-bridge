@@ -60,6 +60,8 @@ class ContextBinding(EnvironmentModel):
     layout_provider_sha256: Digest | None = None
     pmos_default_change_binding: Path | None = None
     pmos_default_change_sha256: Digest | None = None
+    device_op_catalog_path: Path | None = None
+    device_op_catalog_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def native_binding_complete(self) -> ContextBinding:
@@ -77,6 +79,8 @@ class ContextBinding(EnvironmentModel):
             raise ValueError("complete layout provider binding required")
         if (self.pmos_default_change_binding is None) != (self.pmos_default_change_sha256 is None):
             raise ValueError("complete PMOS default change binding required")
+        if (self.device_op_catalog_path is None) != (self.device_op_catalog_sha256 is None):
+            raise ValueError("complete device OP catalog binding required")
         return self
 
 
@@ -240,7 +244,8 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
             native_paths = tuple(
                 p
                 for p in (binding.native_provider_binding, binding.operator_grant,
-                          binding.native_specifications, binding.layout_provider_binding)
+                          binding.native_specifications, binding.layout_provider_binding,
+                          binding.device_op_catalog_path)
                 if p is not None
             )
             if any(not p.is_absolute() for p in native_paths):
@@ -300,6 +305,9 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
                 # Older contexts included the original optional fields with null values.
                 del serialized["pmos_default_change_binding"]
                 del serialized["pmos_default_change_sha256"]
+            if binding.device_op_catalog_path is None:
+                del serialized["device_op_catalog_path"]
+                del serialized["device_op_catalog_sha256"]
             context_hash = _digest({"binding": serialized, "resource_domain": domain})
             contexts.append(
                 ExecutionContext(

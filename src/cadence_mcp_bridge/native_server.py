@@ -1,6 +1,7 @@
 """Conditional fixed-operation tools for an explicitly configured operator service."""
 
 import json
+import sqlite3
 from collections.abc import Awaitable
 from typing import Annotated, Any
 
@@ -39,6 +40,7 @@ from cadence_mcp_bridge.parameter_changes import (
     verify_change_readback,
 )
 from cadence_mcp_bridge.research_adapters import (
+    DeviceOpResult,
     RegisteredMosChangeRequest,
     ResearchAcGainRequest,
     ResearchAcGainResult,
@@ -56,12 +58,14 @@ from cadence_mcp_bridge.research_adapters import (
     RetainedResearchResult,
     ac_gain_result,
     compare_mos_block,
+    device_op_result,
     plan_mos,
     prepare_mos_block,
     supply_power_result,
     transient_result,
     validate_circuit,
 )
+from cadence_mcp_bridge.research_measurements import DeviceOpQuery
 from cadence_mcp_bridge.server import _READ_ONLY, _stable_result
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
@@ -230,6 +234,18 @@ def register_native_tools(server: MCPServer, native: NativeOperationService) -> 
         request: ResearchSupplyPowerRequest,
     ) -> ResearchPowerResult:
         return await _research_result(supply_power_result(native, request))
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Read an operator-pinned device operating-point artifact from an exact "
+        "retained DC operation. Local lookup only; no new extraction or simulation.",
+    )
+    def cadence_research_device_op_result(request: DeviceOpQuery) -> DeviceOpResult:
+        try:
+            return device_op_result(native, request)
+        except (BridgeError, OSError, ValueError, sqlite3.Error) as exc:
+            raise ToolError("registered_research_device_op_unavailable") from exc
 
     @server.tool(
         name="cadence_plan_operation",

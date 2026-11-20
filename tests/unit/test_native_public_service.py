@@ -33,6 +33,7 @@ NAMES = {
     "cadence_research_transient_result",
     "cadence_research_ac_gain_result",
     "cadence_research_supply_power_result",
+    "cadence_research_device_op_result",
     "cadence_plan_operation",
     "cadence_submit_operation",
     "cadence_operation_status",
@@ -78,7 +79,7 @@ def configured(operator, tmp_path, monkeypatch):
 async def test_operator_only_conditional_schema_and_no_server_start_side_effects(configured):
     server, service, request, settings, grant_path = configured
     tools = {t.name: t for t in await server.list_tools()}
-    assert len(tools) == 111 and set(tools) >= NAMES
+    assert len(tools) == 112 and set(tools) >= NAMES
     snapshot = json.loads(
         (
             Path(__file__).resolve().parents[2]
@@ -314,6 +315,112 @@ async def test_research_supply_mcp_uses_signed_retained_dc(configured):
         await server.call_tool(name, {"request": {**request, "supply_ids": ["rail", "rail"]}})
     assert native.provider.report_result.await_count == 1
     assert inventory(folder) == before
+
+
+@pytest.mark.asyncio
+async def test_research_device_op_reads_only_operator_pinned_artifacts(
+    configured, tmp_path, capsys, monkeypatch,
+):
+    from test_result_reports import seed
+
+    from cadence_mcp_bridge.__main__ import main
+    from cadence_mcp_bridge.research_measurements import DeviceOpRegistration
+    from cadence_mcp_bridge.result_reports import make_report
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    server, service, _, settings, _ = configured
+    native, record, data = seed(configured)
+    report = make_report(record, data)
+    registration = DeviceOpRegistration(instance_paths=("/DUT/PM0",))
+    name = "cadence_research_device_op_result"
+    request = {
+        "operation_id": record.operation_id,
+        "expected_plan_sha256": record.plan.plan_sha256,
+        "registration_id": "op",
+    }
+    unconfigured = await server.call_tool(name, {"request": request})
+    assert unconfigured.structured_content["reason"] == "device_op_source_not_configured"
+
+    def write(name, raw):
+        target = tmp_path / name
+        target.write_bytes(raw)
+        return {"path": str(target), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    frame = (
+        "BEGIN\nOP|registered|mos01|id|value|-3e-6\n"
+        + "".join(
+            f"OP|registered|mos01|{field}|missing|nil\n"
+            for field in ("gm", "gds", "vgs", "vds", "vdsat", "region")
+        )
+        + "END\n"
+    ).encode()
+    catalog = {
+        "schema_version": 1,
+        "records": [{
+            "registration_id": "op",
+            "operation_id": record.operation_id,
+            "plan_sha256": record.plan.plan_sha256,
+            "execution_input_sha256": report.execution_input_sha256,
+            "terminal_sha256": record.progress.provider_receipt_sha256,
+            "registration": registration.model_dump(mode="json"),
+            "registration_sha256": canonical_digest(registration),
+            "report": write("op-report.json", report.model_dump_json().encode()),
+            "frame": write("op-frame.txt", frame),
+        }],
+    }
+    catalog_ref = write("op-catalog.json", json.dumps(catalog).encode())
+    runtime = json.loads(settings.read_bytes())
+    runtime["contexts"][0]["device_op_catalog_path"] = catalog_ref["path"]
+    settings.write_text(json.dumps(runtime))
+    with pytest.raises(ConfigurationError):
+        load_runtime(settings)
+    runtime["contexts"][0]["device_op_catalog_sha256"] = catalog_ref["sha256"]
+    settings.write_text(json.dumps(runtime))
+    context = load_runtime(settings)[0]
+    assert context.context_sha256 != service.context.context_sha256
+    assert context.resource_domain_sha256 == service.context.resource_domain_sha256
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    operator = create_operator_service(
+        BridgeConfig(runtime_mode="operator", runtime_settings_path=settings,
+                     runtime_context_id=context.binding.context_id),
+        factory=lambda _: object(),
+    )
+    server = create_server(cast(CadenceService, operator))
+    journal = context.binding.analysis_journal
+    before = journal.read_bytes()
+    first = await server.call_tool(name, {"request": request})
+    second = await server.call_tool(name, {"request": request})
+    assert not first.is_error and first.structured_content == second.structured_content
+    result = first.structured_content
+    assert result["status"] == "AVAILABLE"
+    assert result["remote_contact"] is False and result["new_extractions"] == 0
+    row, missing, *_ = result["measurement"]["measurements"]
+    assert (row["field"], row["value"]) == ("id", -3e-6)
+    assert (missing["field"], missing["value"], missing["reason"]) == (
+        "gm", None, "field_not_available",
+    )
+    missing_result = await server.call_tool(
+        name, {"request": {**request, "registration_id": "unknown"}},
+    )
+    assert missing_result.structured_content["status"] == "NOT_AVAILABLE"
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**request, "catalog_path": catalog_ref["path"]}})
+
+    request_ref = write("op-request.json", json.dumps(request).encode())
+    saved = tmp_path / "op-result.json"
+    args = [
+        "operator-candidates", "research-device-op-result",
+        "--request", request_ref["path"], request_ref["sha256"],
+        "--settings", str(settings), "--context", context.binding.context_id,
+        "--output", str(saved),
+    ]
+    assert main(args) == 0
+    assert json.loads(saved.read_bytes()) == result
+    assert json.loads(capsys.readouterr().out)["status"] == "AVAILABLE"
+    (tmp_path / "op-frame.txt").write_bytes(frame.replace(b"-3e-6", b"-4e-6"))
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": request})
+    assert journal.read_bytes() == before
 
 
 @pytest.mark.asyncio
