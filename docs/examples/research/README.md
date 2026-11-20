@@ -108,12 +108,28 @@ uv run cadence-mcp-bridge operator-candidates verify-research-raw-netlist `
 
 MCP OP readback과 raw Netlist CLI 비교는 기존에 보존된 입력에 대한 국소 확인이며, 새 회로 생성·편집·시뮬레이션 권한을 부여하지 않습니다. 실제 등록, 분석 실행과 같은 operation ID의 결과 조회는 운영자 연결 설정과 승인 범위 안에서만 진행합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
 
+## 새 테스트벤치를 등록할 때
+
+Source9 형식의 인버터를 새 작업용 라이브러리에 생성할 때는 DUT와 테스트벤치를 한 번에 저장합니다. 별도 Cadence 프로세스에서 두 셀을 다시 열고, 그 테스트벤치의 전체 Spectre 입력을 생성합니다. 같은 작업 ID에 속한 세 단계의 기록과 실제 실행한 생성·재개방 스크립트를 보존합니다.
+
+운영자 코드의 `verify_mos_block_handoff`는 선언·CDF로 스크립트를 재생성해 실행된 바이트와 대조합니다. 전체 Netlist에서 DUT의 포트 순서와 내부 소자, 최상위 DUT 연결, 전원·입력·부하를 확인합니다. 운영자는 이 결과와 `native-registration observe`의 관측값을 다음 명령에 전달합니다.
+
+```powershell
+cadence-mcp-bridge operator-candidates assemble-research-registration `
+  --settings SETTINGS --context CONTEXT --request REQUEST.json REQUEST_FILE_SHA256 `
+  --output NEW_REGISTRATION.json
+```
+
+`REQUEST.json`에는 스키마 버전 1, `expected_context_sha256`, `expected_handoff_sha256`, `identity_manifest_sha256`와 네 입력(`probe`, `observation`, `reader_definition`, `handoff`)의 `path`·`sha256` 쌍이 들어갑니다. 파일 해시는 실제 바이트 기준이고, `expected_handoff_sha256`은 검증된 handoff 객체의 정규화된 해시입니다. 등록 대상은 테스트벤치 셀과 해당 ADE 상태입니다. 라이브러리 전체, DUT 셀, 테스트벤치 셀의 지문을 구분해 보관합니다.
+
+출력은 운영자가 검토할 등록 후보입니다. 이후 활성화된 대상과 권한을 갖춘 context에서 위의 MCP 계획·제출·조회 절차를 사용합니다.
+
 ## 버전별 구현과 검증 상태
 
 | 기능 | 구현·MCP 연결 상태 | 검증 수준과 근거 | 관련 커밋/PR | 남은 입력 또는 작업 |
 |---|---|---|---|---|
 | 등록된 분석과 동일 ID 조회 | 개발용 stdio MCP에서 계획·제출·상태·결과 조회 | 설치본에서 합성 DC 실행 1회. 재제출·반복 조회·없는 결과 조회 후 추가 예약과 실행 0회 | `e548621` | 실제 연구 revision, 등록한 분석·reader 및 실행 범위 |
-| 회로 정의·MOS 블록 | MCP에서 선언 검증·계획·재개방 및 Netlist 증거 비교. 원시 Netlist는 운영자 CLI에서 비교 | 설치본에서 합성 인버터 정의와 계층 증거 일치. 보존된 실제 인버터 CDF와 DUT Netlist에서 NMOS 120 nm, PMOS 350 nm, L 100 nm, m/fingers 1, 모델·D/G/S/B 일치 | `491fc06`, `b2fa35d` | 일반 계층 writer의 실제 저장·독립 재개방 및 실행 등록 연결. 현재 renderer에는 CDF로 확인된 단일 finger 등 제한이 있음 |
+| 회로 정의·MOS 블록 | MCP에서 선언 검증·계획·증거 비교. 운영자 코드에서 DUT·심볼·테스트벤치를 생성하고 CLI에서 등록 후보 조립 | 실제 GPDK090 인버터의 세 뷰 저장, 별도 Cadence 프로세스의 배치·연결·속성 재조회, 전체 테스트벤치의 Spectre DC Netlist 생성 확인. 이전 사본의 NMOS 좌표 불일치도 독립 재조회에서 검출 | `9a8ac69`, [PR 172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 실제 생성 사례는 Source9 형식의 2 MOS·단일 finger 인버터. 새 분석 실행에는 해당 revision에 등록한 reader와 운영자 실행 권한 필요 |
 | MOS 변경과 저장값 | 등록된 W/L/m/finger 계획과 증거 비교를 MCP에서 호출 | 설치본이 수동 수정한 AMP의 보존 OA·Netlist 증거에서 PM0 120 nm 일치를 반환. 자동 편집 시도는 CHECK 단계에서 멈춰 저장·재개방·child Netlist 증거 없음 | `345aba3`, `4aab9ca`, `e548621` | 사본 잠금·백업을 Cadence 정상 복구 절차로 확인한 뒤 자동 경로 검증 |
 | AC·DC·OP | MCP에서 복소 이득·unity 교차·부호 있는 공급전력·등록 소자 OP 조회 | 설치 합성 입력에서 교차와 DC 2 mW 확인. OP 예제에서 id −3 µA와 gm 누락 사유 반환. 기존 AMP Bias 두 값의 실제 DC/AC·CLI 비교는 이전 실측 | `65f1ffd`, `e548621`, [PR 171](https://github.com/Phjrab/cadence-mcp-bridge/pull/171) | 실제 OTA 관측 경로·소자 OP catalog·전류 방향. 위상여유는 별도의 검증된 loop-gain 조건 필요 |
 | TRAN 구간 측정 | MCP에서 원래 저장된 표본으로 delay·slew·settling·평균 공급전력을 평가. CLI는 크기가 제한된 파일 출력 지원 | 설치된 reader의 합성 전류 포함 결과에서 평균 3 mW, 전류 없는 버전에서는 미평가 확인. 표시용 축소 파형은 정밀 지표에서 제외 | `4c153f8`, `5012914`, `e548621` | 실제 공급전류 selector·부호, 등록된 native reader와 해상도 확인 |
