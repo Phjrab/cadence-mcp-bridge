@@ -36,48 +36,88 @@
 - 작업용 라이브러리, 스케메틱·심볼·테스트벤치 정의, 전원·부하·클록·분석 조건, 실제 관측 경로·단위·전류 방향. 사용자 선택이 필요한 목표와 허용 오차는 별도로 기록합니다.
 - 기존 운영자 context와 대상별 등록·실행 범위, 설치 wheel 버전과 정확한 SHA, 런타임 자산 및 결과 한도. 원본·PDK·실행 장부와 사설 증거는 운영자 관리 저장소에 둡니다.
 
-## 현재 앱 연결과 로컬 운영자 stdio
+## 현재 앱 connector와 개발 저장소 stdio
 
-C0가 실제 앱 연결에서 읽기 전용으로 조회한 결과, `cadence_runtime_info_v2`는 bridge 1.0.0, stdio, 설계 설명 1개, PDK 2개를 보고했습니다. `cadence_list_designs`에서 확인한 유일한 설명은 `reference-differential-amplifier-tb2`이며 실행 검증이 없는 설명용 항목입니다. 앱의 connector에 노출된 26개 도구에는 아래 네 작업 도구가 없습니다. 통합 소스 및 설치 검증용 개발 wheel `2.2.0.dev0`의 운영자 stdio 경로는 별도입니다.
+현재 앱의 실제 read-only 조회는 `cadence_runtime_info_v2`에서 bridge `1.0.0`, stdio, 설계 설명 1개, PDK 2개를 반환했습니다. `cadence_list_designs`의 `reference-differential-amplifier-tb2`는 설명 전용이며 검증되지 않은 항목입니다. 이 connector에는 총 26개 도구가 노출되고, `cadence_plan_operation`·`cadence_submit_operation`·`cadence_operation_status`·`cadence_operation_result`는 없습니다. 따라서 현재 앱 connector로 이 연구의 등록 회로나 시뮬레이션을 호출할 수 없습니다.
 
-연구용 클라이언트에는 선택한 wheel의 Python을 지정하고 `python -m cadence_mcp_bridge operator-setup export-client --settings RUNTIME --context CONTEXT_ID --format codex --output NEW_CLIENT_FRAGMENT`로 생성한 설정을 사용합니다. 설정의 `serve-operator` 연결을 추가해 다시 연결한 뒤 `tools/list`로 작업 도구와 스키마가 보이는지 확인합니다. `SETUP_REQUIRED` 또는 도구 누락은 context·등록·실행 제한을 다시 확인할 신호입니다. [운영자 연결 절차](../../POST_01_OPERATOR_SETUP.md)
+개발용 `serve-operator` 설치본은 `2.2.0.dev0`, 소스 커밋 `e5486215808ed02438f6b08e8e3fcee15ef2f9b3`, wheel SHA-256 `10ee8302cef94a8dced6b13b9bf07940ed0633bc5d14726c820e85802d2f2797`입니다. 설치 검증 환경의 운영자 프로필에서 도구 112개를 확인했습니다. 기준 설치본의 103개 도구 스키마를 유지하고 연구용 도구 9개를 추가했습니다. 같은 작업 ID로 상태·결과를 재조회하고 제출을 반복해도 합성 실행 수와 예약량이 유지됐습니다.
 
+이 설치본을 사용할 때는 운영자가 `operator-setup export-client --settings RUNTIME --context CONTEXT_ID --format codex --output NEW_CLIENT_FRAGMENT`으로 만든 클라이언트 설정의 Python 경로와 `serve-operator` 인수를 사용합니다. 연결 후 `tools/list`에서 아래 도구와 입력 스키마를 확인합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
 
-## 등록과 MCP 호출
+## 검증 가능한 synthetic 예제
 
-1. 확인한 회로 정의를 설치본이 실제 지원하는 생성 경로에 맞춥니다. 작업용 대상에서 생성·저장·별도 프로세스 재오픈·D/G/S/B와 속성 재조회·Spectre Netlist 대조를 마친 후 등록합니다. 파라미터 수정 후에는 변경 계획과 적용값, 재오픈값, Netlist의 모델·연결·유효 파라미터와 비대상 변경 여부를 다시 확인합니다.
-2. `native-registration schema`와 `native-registration reader-schema`로 버전별 형식을 확인합니다. `native-registration observe --settings SETTINGS --context CONTEXT --request REQUEST --output NEW_RECORD`로 실제 지문을 수집합니다. `native-registration assemble`에 같은 설정·context와 `--identity-manifest-sha256`, 대응하는 `--request`, `--record`, `--reader-definition` 묶음, `--output`을 제공합니다. Design registry의 설명 등록과 native 실행 등록은 별도입니다.
-3. 등록을 `native-runtime bundle`에 연결한 뒤 현재 운영자 절차에 따라 기존 장부를 유지하며 stage·activate/update·preflight를 진행합니다. 설치본의 `operator-setup export-client`로 `serve-operator` context를 연결하고 MCP `tools/list`에서 실제 이름과 입력 스키마를 확인합니다. 아래는 등록과 실행 범위 확정 뒤 사용하는 인수 구조입니다. [운영자 설정](../../POST_01_OPERATOR_SETUP.md) · [실행 준비](../../../README.md#run-query-and-repeat)
+`inverter.synthetic.json`은 `ResearchCircuit` 형식의 필드 완비 합성 사례입니다. `TestPdk`, 두 MOS, D/G/S/B, DUT와 testbench, 심볼, 펄스 입력, DC 분석, gm 관측을 담아 Python validator에 전달할 수 있습니다. GPDK090이나 논문 회로의 셀·CDF·전기적 근거는 제공하지 않습니다. 이 파일은 design registry 문서와 다른 구조라서 `design validate --registry` 입력으로 사용하지 않습니다.
 
-```text
-cadence_plan_operation({
-  "request": {
-    "schema_version": 1, "design_id": DESIGN_ID, "analysis_id": ANALYSIS_ID,
-    "values": [{"logical_id": VARIABLE_ID, "value": NUMBER_TEXT, "unit": UNIT}],
-    "result_reservation_bytes": APPROVED_BYTES
-  }
-})
-cadence_submit_operation({
-  "submission": {
-    "operation_id": UUID, "expected_plan_sha256": RETURNED_PLAN_SHA256,
-    "request": SAME_PLAN_REQUEST
-  }
-})
-cadence_operation_status({"request": {"operation_id": UUID, "expected_plan_sha256": RETURNED_PLAN_SHA256}})
-cadence_operation_result({"request": {"operation_id": UUID, "expected_plan_sha256": RETURNED_PLAN_SHA256}})
+저장소 루트에서 현재 checkout의 validator를 호출하는 로컬 예시는 다음과 같습니다. 이 검사는 회로 문서 구조만 확인하며 cellview를 만들거나 native registration 또는 실행 권한을 생성하지 않습니다.
+
+```powershell
+uv run --locked python -c "from pathlib import Path; from cadence_mcp_bridge.research_circuit import ResearchCircuit, validate_research_circuit; p=Path('docs/examples/research/inverter.synthetic.json'); d=validate_research_circuit(ResearchCircuit.model_validate_json(p.read_text(encoding='utf-8'))); print(d.binding.design_id, len(d.circuits), d.source.reference)"
 ```
 
-`values`에는 등록된 명시 입력 전체를 넣습니다. 계획으로 실행 권한이 생기지 않습니다. 같은 UUID와 계획 해시로 상태와 결과를 재조회하고, 미완료나 실패는 원래 기록을 보존합니다. 입력 등록용 템플릿과 위 기호 자리표시자는 직접 제출 전에 각각 설치 스키마와 실제 등록값으로 채웁니다.
+실제 회로는 합성 예제를 등록에 재사용하지 않습니다. 허용된 경로로 작업용 회로를 만들고 저장·독립 재오픈·단자/CDF·Spectre Netlist를 확인한 뒤, 운영자 context의 `native-registration schema`, `reader-schema`, `observe`, `assemble` 절차로 등록합니다. 설명용 design registry와 실행 등록은 별개입니다. [운영자 설정](../../POST_01_OPERATOR_SETUP.md)
 
-## 버전별 근거
+## 설치 MCP에서 시작하는 순서
 
-| 기능 | 구현·MCP 연결 상태 | 검증 수준과 근거 | 커밋·PR | 남은 입력 또는 작업 |
-| --- | --- | --- | --- | --- |
-| 운영자 등록과 등록된 DC/AC/TRAN 호출 | 기존 operator CLI와 MCP 네 도구 재사용 | 공개 2.0.0의 실제 Codex 자격 기록과 2.1.0의 배포 범위. 현 브랜치는 `2.2.0.dev0` 소스 확인 | [2.1.0 자격 범위](../../releases/2.1.0/QUALIFICATION.md), [native MCP 기록](../../NATIVE_MCP_01_RESULT_V1.md) | 실제 설치본·context·grant 확인 |
-| 생성·재오픈·Layout | 기존 인버터 생성 및 제한된 Layout 기능 참고 | 기존 검증 회로에서의 생성·Layout 증거 | PR167/168, [M2 인버터](../../M2_OWNED_INVERTER_ACCEPTANCE_20261015.md), [Layout MCP](../../LAYOUT_MCP_CLI.md) | 17 MOS 선언형 생성부터 등록까지 확인 |
-| 파라미터 변경 | 제한된 기존 변경·readback 경로 재사용 후보 | 등록 인버터 변경과 AMP 수동 변경 검증. AUTO120 최신 소스에서 stale readback 회귀 확인, 실제 자동 변경 결과 대기 | PR169/170, `4aab9ca4aacf4604a150c2d5d48305425b7da948` | 정확한 OTA CDF·연결과 자동 변경 저장·재오픈·Netlist 검증 |
-| 저장 ADE 비교 | 기존 내부 operator CLI에서 증거 비교 | 실제 AMP DC/AC, 설치 CLI, 동일 SHA CI Windows 13/13 및 POSIX 25/25 | `d95342b527b68f74d631a504c47548d4af4eb26d`, PR171, run `43580064449` | OTA 생성 또는 OTA 전용 측정 경로의 실제 MCP 검증 |
-| OTA OP·AC·TRAN | 기존 결과 reader·측정 계약 재사용 후보 | 이 문서의 초안과 스키마 대조. 17 MOS OP, 단일 출력 이득, 정밀 TRAN 지표의 통합 지원은 별도 확인 | [측정 바인딩](../../MEASUREMENT_BINDINGS_V2.md), [ADC 측정 계약](../../ADC_MEASUREMENT_CONTRACTS.md) | 모델·관측·시뮬레이터 입력과 출력 수단 검증 |
+연결한 stdio 클라이언트에서 `tools/list`로 도구를 확인합니다. 아래는 각 `tools/call`의 도구 이름과 인수 조합입니다. `definition`에는 예제 파일을 파싱한 JSON 객체를 사용합니다. `output_library`에는 계획할 새 작업용 라이브러리 이름을 넣습니다.
+
+```text
+cadence_validate_research_circuit({"request": {"definition": definition}})
+cadence_plan_research_mos_block({"request": {
+  "definition": definition, "expected_binding": definition.binding,
+  "expected_definition_sha256": validation.definition_sha256, "output_library": output_library
+}})
+```
+
+계획 뒤에는 담당자가 지원되는 Cadence 생성 경로에서 작업 사본을 저장하고, 독립 재오픈 및 실제 Netlist를 확인합니다. `cadence_verify_research_mos_block`으로 계획과 추출 증거를 대조한 뒤 해당 revision과 DC·AC·TRAN reader를 등록합니다. 아래 기호는 이 등록과 기존 실행 범위에서 얻습니다. `values`는 분석에 등록된 모든 명시 변수를 담고, `bytes`는 해당 작업의 등록된 결과 예약량입니다.
+
+```text
+request = {"schema_version": 1, "design_id": design_id, "analysis_id": analysis_id,
+           "values": [{"logical_id": variable_id, "value": number_text, "unit": unit}],
+           "result_reservation_bytes": bytes}
+plan = cadence_plan_operation({"request": request})
+key = {"operation_id": uuid, "expected_plan_sha256": plan.plan_sha256}
+cadence_submit_operation({"submission": {"operation_id": uuid,
+  "expected_plan_sha256": plan.plan_sha256, "request": request}})
+cadence_operation_status({"request": key})
+cadence_operation_result({"request": key})
+```
+
+작업마다 UUID와 계획 해시를 함께 보관합니다. 같은 결과를 확인할 때는 보관한 두 값으로 상태와 결과를 다시 조회합니다. 보존 AC에는 `cadence_research_ac_gain_result`, DC 공급전력에는 `cadence_research_supply_power_result`, TRAN 구간에는 `cadence_research_transient_result`를 사용합니다.
+
+## 결과 조회와 Netlist 확인 예
+
+등록된 DC operation에서 OP 읽기는 아래 입력만 받습니다. `device_op_catalog_path`와 `device_op_catalog_sha256`는 operator context에 함께 고정된 설정이며 요청에 경로나 파일 내용을 직접 전달하지 않습니다. 이 도구는 보존 결과를 읽기만 합니다.
+
+```text
+cadence_research_device_op_result({
+  "request": {
+    "registration_id": "DEVICE_OP_REGISTRATION_ID",
+    "operation_id": "SUCCEEDED_DC_OPERATION_UUID",
+    "expected_plan_sha256": "CANONICAL_PLAN_SHA256"
+  }
+})
+```
+
+Raw Spectre Netlist 파일은 MCP에 보내지 않습니다. 로컬 operator CLI에서 계획·파일 해시로 제한해 비교합니다.
+
+```powershell
+uv run cadence-mcp-bridge operator-candidates verify-research-raw-netlist `
+  --plan PLAN.json --expected-plan-sha256 PLAN_SHA256 `
+  --netlist DUT_NETLIST.scs NETLIST_FILE_SHA256 --output NEW_RESULT.json
+```
+
+MCP OP readback과 raw Netlist CLI 비교는 기존에 보존된 입력에 대한 국소 확인이며, 새 회로 생성·편집·시뮬레이션 권한을 부여하지 않습니다. 실제 등록, 분석 실행과 같은 operation ID의 결과 조회는 운영자 연결 설정과 승인 범위 안에서만 진행합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
+
+## 버전별 구현과 검증 상태
+
+| 기능 | 구현·MCP 연결 상태 | 검증 수준과 근거 | 관련 커밋/PR | 남은 입력 또는 작업 |
+|---|---|---|---|---|
+| 등록된 분석과 동일 ID 조회 | 개발용 stdio MCP에서 계획·제출·상태·결과 조회 | 설치본에서 합성 DC 실행 1회. 재제출·반복 조회·없는 결과 조회 후 추가 예약과 실행 0회 | `e548621` | 실제 연구 revision, 등록한 분석·reader 및 실행 범위 |
+| 회로 정의·MOS 블록 | MCP에서 선언 검증·계획·재개방 및 Netlist 증거 비교. 원시 Netlist는 운영자 CLI에서 비교 | 설치본에서 합성 인버터 정의와 계층 증거 일치. 보존된 실제 인버터 CDF와 DUT Netlist에서 NMOS 120 nm, PMOS 350 nm, L 100 nm, m/fingers 1, 모델·D/G/S/B 일치 | `491fc06`, `b2fa35d` | 일반 계층 writer의 실제 저장·독립 재개방 및 실행 등록 연결. 현재 renderer에는 CDF로 확인된 단일 finger 등 제한이 있음 |
+| MOS 변경과 저장값 | 등록된 W/L/m/finger 계획과 증거 비교를 MCP에서 호출 | 설치본이 수동 수정한 AMP의 보존 OA·Netlist 증거에서 PM0 120 nm 일치를 반환. 자동 편집 시도는 CHECK 단계에서 멈춰 저장·재개방·child Netlist 증거 없음 | `345aba3`, `4aab9ca`, `e548621` | 사본 잠금·백업을 Cadence 정상 복구 절차로 확인한 뒤 자동 경로 검증 |
+| AC·DC·OP | MCP에서 복소 이득·unity 교차·부호 있는 공급전력·등록 소자 OP 조회 | 설치 합성 입력에서 교차와 DC 2 mW 확인. OP 예제에서 id −3 µA와 gm 누락 사유 반환. 기존 AMP Bias 두 값의 실제 DC/AC·CLI 비교는 이전 실측 | `65f1ffd`, `e548621`, [PR 171](https://github.com/Phjrab/cadence-mcp-bridge/pull/171) | 실제 OTA 관측 경로·소자 OP catalog·전류 방향. 위상여유는 별도의 검증된 loop-gain 조건 필요 |
+| TRAN 구간 측정 | MCP에서 원래 저장된 표본으로 delay·slew·settling·평균 공급전력을 평가. CLI는 크기가 제한된 파일 출력 지원 | 설치된 reader의 합성 전류 포함 결과에서 평균 3 mW, 전류 없는 버전에서는 미평가 확인. 표시용 축소 파형은 정밀 지표에서 제외 | `4c153f8`, `5012914`, `e548621` | 실제 공급전류 selector·부호, 등록된 native reader와 해상도 확인 |
+| 작업용 Layout | 기존 조회·fork·편집·저장·재개방·diff 도구 유지 | 이전 실제 Cadence 작업용 Layout에서 instance 이동, 도형·연결 pin 추가 후 재개방. 동일 ID 재호출 시 추가 실행 0회 | [PR 167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 회로 Layout·DRC·LVS·PEX는 별도 단계 |
 
 ## 재개 프롬프트
 
