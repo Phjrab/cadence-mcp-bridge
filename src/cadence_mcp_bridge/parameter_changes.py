@@ -221,6 +221,7 @@ class RegisteredMosTarget(VariableModel):
     quantity: Literal["length", "count"]
     scalar_option: Literal["w", "fw", "l", "m", "simM", "fingers", "nf"]
     scalar_unit: Literal["m", "um", "nm", "count"]
+    baseline_scalar_unit: Literal["m", "um", "nm", "count"] | None = None
     netlist_path: Annotated[
         str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]*(/[A-Za-z][A-Za-z0-9_#-]*)?$", max_length=256)
     ]
@@ -236,18 +237,20 @@ class RegisteredMosTarget(VariableModel):
             item.name == self.scalar_option and item.before != item.after for item in self.options
         ):
             raise ValueError("registered MOS scalar option must change")
-        if (self.quantity == "count") != (self.scalar_unit == "count"):
+        units = (self.baseline_scalar_unit or self.scalar_unit, self.scalar_unit)
+        if any((self.quantity == "count") != (unit == "count") for unit in units):
             raise ValueError("registered MOS scalar unit does not match quantity")
         return self
 
-    def parse_scalar(self, token: str) -> ChangeValue:
-        suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[self.scalar_unit]
+    def parse_scalar(self, token: str, *, baseline: bool = False) -> ChangeValue:
+        unit = (self.baseline_scalar_unit or self.scalar_unit) if baseline else self.scalar_unit
+        suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[unit]
         if token.startswith("(") and token.endswith(")"):
             token = token[1:-1]
         match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?|\.[0-9]+)" + suffix, token)
         if match is None:
             raise ValueError("registered MOS scalar must be a literal in the registered unit")
-        return ChangeValue(value=match[1], unit=self.scalar_unit)
+        return ChangeValue(value=match[1], unit=unit)
 
 
 class RegisteredMosQualification(VariableModel):
@@ -845,7 +848,7 @@ def project_netlist_change(
         target = plan.target
         old_static, old_options = _width_options(old_static, target.netlist_path, registered=target)
         new_static, new_options = _width_options(new_static, target.netlist_path, registered=target)
-        old = target.parse_scalar(old_options.get(target.scalar_option, ""))
+        old = target.parse_scalar(old_options.get(target.scalar_option, ""), baseline=True)
         observed = target.parse_scalar(new_options.get(target.scalar_option, ""))
         for option in target.options:
             if (old_options.pop(option.name, None), new_options.pop(option.name, None)) != (

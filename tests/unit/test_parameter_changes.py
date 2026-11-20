@@ -325,6 +325,20 @@ def test_registered_mos_uses_explicit_emitted_mapping(
         verify_change_readback(plan, baseline=original, reopened=reopened, netlist=netlist).status
         == "MATCHED"
     )
+    if property_name == "w":
+        mixed_raw = baseline_raw.replace(b"w=(350n)", b"w=(0.35u)")
+        mixed_target = qualification.target.model_dump(mode="json")
+        mixed_target["baseline_scalar_unit"] = "um"
+        mixed_target["options"] = [{"name": "w", "before": "(0.35u)", "after": "(120n)"}]
+        mixed = plan.model_copy(
+            update={
+                "target": type(qualification.target).model_validate_json(json.dumps(mixed_target)),
+                "baseline": plan.baseline.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(mixed_raw).hexdigest()}
+                ),
+            }
+        )
+        assert project_netlist_change(mixed, mixed_raw, changed).value == projected.value
     assert verify_change_readback(plan, baseline=original, netlist=netlist).status == "MISSING"
     with pytest.raises(ValueError, match="registered MOS option"):
         project_netlist_change(plan, baseline_raw, baseline_raw)
