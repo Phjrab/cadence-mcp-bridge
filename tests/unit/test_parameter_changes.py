@@ -530,6 +530,30 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
     projected = project_netlist_change(plan, raw, candidate)
     assert projected.value == ChangeValue(value="19000", unit="nm")
     assert projected.value != plan.requested
+    original = _row(plan, "baseline").model_copy(update={"revision": revision})
+    reopened = _row(plan, "reopened").model_copy(update={"revision": child})
+    emitted = _row(plan, "netlist").model_copy(
+        update={
+            "revision": child,
+            "value": projected.value,
+            "artifact_sha256": projected.artifact_sha256,
+        }
+    )
+    assert (
+        verify_change_readback(plan, baseline=original, reopened=reopened, netlist=emitted).status
+        == "MATCHED"
+    )
+    stale_testbench = {"testbench_revision_sha256": baseline.testbench_revision_sha256}
+    stale = verify_change_readback(
+        plan,
+        baseline=original,
+        reopened=reopened.model_copy(update=stale_testbench),
+        netlist=emitted.model_copy(update=stale_testbench),
+    )
+    assert (stale.status, stale.reason) == (
+        "STALE",
+        "amplifier_pm0_testbench_revision_reuses_baseline",
+    )
     for invalid, reason in (
         (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
         (candidate.replace(b"net33 Vbiasp", b"net34 Vbiasp"), "PM0 netlist binding"),
