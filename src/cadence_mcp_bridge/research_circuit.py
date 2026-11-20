@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Mapping
 from decimal import Decimal, localcontext
+from hashlib import sha256
 from typing import Annotated, Literal, Self
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from cadence_mcp_bridge.m2_inverter import OwnedInverterPlan, _mos_parameters, observed_devices
+from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge.m2_cdf import parse_frame
+from cadence_mcp_bridge.m2_inverter import (
+    _PRELUDE,
+    OwnedInverterPlan,
+    _mos_parameters,
+    _quote,
+    observed_devices,
+)
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
     BindingName,
@@ -875,3 +886,411 @@ def verify_owned_mos_block(
         _netlisted_identity(_netlisted_circuit(cell, cells)) for cell in expected
     ]:
         raise ValueError("netlisted MOS block topology or effective values mismatch")
+
+
+class MosBlockScripts(VariableModel):
+    """Two local script texts for separate operator-controlled invocations."""
+
+    plan_sha256: Digest
+    generate: str
+    reopen: str
+
+
+_BLOCK_PRELUDE = r"""
+procedure(m2BlockPoint(point x y)
+ m2Require(and(xCoord(point)==x yCoord(point)==y)))
+procedure(m2BlockTerminal(cv name direction net)
+ let((term)
+  term=car(setof(entry cv~>terminals entry~>name==name))
+  m2Require(and(term term~>direction==direction term~>net~>name==net))
+  term))
+procedure(m2BlockSymbolPin(cv name direction x y)
+ let((term fig box)
+  term=m2BlockTerminal(cv name direction name)
+  m2Require(length(term~>pins)==1)
+  m2Require(length(car(term~>pins)~>figs)==1)
+  fig=car(car(term~>pins)~>figs)
+  box=fig~>bBox
+  m2BlockPoint(lowerLeft(box) x y)
+  m2BlockPoint(upperRight(box) x+0.125 y+0.125)))
+procedure(m2BlockInstance(cv name library cell x y terms)
+ let((inst)
+  inst=car(setof(entry cv~>instances entry~>name==name))
+  m2Require(and(inst inst~>libName==library inst~>cellName==cell
+                inst~>viewName=="symbol" inst~>orient=="R0"
+                length(inst~>instTerms)==terms))
+  m2BlockPoint(inst~>xy x y)
+  inst))
+procedure(m2BlockBody(cv x0 y0 x1 y1)
+ let((body box)
+  body=setof(entry cv~>shapes entry~>layerName=="device" && entry~>purpose=="drawing")
+  m2Require(length(body)==1)
+  m2Require(car(body)~>objType=="rect")
+  box=car(body)~>bBox
+  m2BlockPoint(lowerLeft(box) x0 y0)
+  m2BlockPoint(upperRight(box) x1 y1)))
+procedure(m2BlockEffective(inst name expected)
+ let((cdf param)
+  cdf=m2Require(cdfGetInstCDF(inst))
+  param=car(setof(entry cdf~>parameters entry~>name==name))
+  m2Require(and(param param~>value==expected))))
+"""
+
+
+def _pinned_block(plan: OwnedMosBlockPlan, expected_plan_sha256: Digest) -> OwnedMosBlockPlan:
+    plan = OwnedMosBlockPlan.model_validate_json(plan.model_dump_json())
+    if canonical_digest(plan) != expected_plan_sha256:
+        raise ValueError("MOS block plan digest mismatch")
+    return plan
+
+
+def _child_first(plan: OwnedMosBlockPlan) -> list[Circuit]:
+    cells = {cell.name: cell for cell in plan.circuits}
+    if len(cells) != len(plan.circuits):
+        raise ValueError("duplicate MOS block cell")
+    ordered: dict[str, Circuit] = {}
+    active: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in ordered:
+            return
+        if name in active or name not in cells:
+            raise ValueError("cyclic or missing MOS block cell")
+        active.add(name)
+        cell = cells[name]
+        for inst in cell.instances:
+            if isinstance(inst, Child):
+                visit(inst.circuit)
+        ordered[name] = cell
+        active.remove(name)
+
+    visit(plan.root)
+    if ordered.keys() != cells.keys():
+        raise ValueError("unreachable MOS block cell")
+    return list(ordered.values())
+
+
+def _block_cdf_values(inst: Mos, devices: tuple[dict[str, object], ...]) -> dict[str, str]:
+    matches = [
+        device
+        for device in devices
+        if device["library"] == inst.master.library and device["cell"] == inst.master.cell
+    ]
+    if len(matches) != 1:
+        raise ValueError("MOS CDF master observation is missing or ambiguous")
+    device = matches[0]
+    terminals = ("D", "G", "S", "B")
+    observed = device["terminals"]
+    if (
+        not isinstance(observed, tuple)
+        or len(observed) != 4
+        or set(observed) != set(terminals)
+        or device["spectre"] != (("base", None, terminals), ("effective", None, terminals))
+    ):
+        raise ValueError("MOS Spectre D/G/S/B order is unsupported")
+    values = _mos_parameters(device)
+    geometry = inst.geometry
+    spectre = inst.spectre
+    if (
+        spectre is None
+        or (_cdf_length(values["w"]), _cdf_length(values["fw"]), _cdf_length(values["l"]))
+        != (geometry.w.metres(), geometry.fw.metres(), geometry.length.metres())
+        or geometry.multiplier != int(values["m"])
+        or geometry.fingers != int(values["fingers"])
+        or (spectre.model, spectre.width.metres(), spectre.length.metres(), spectre.multiplier)
+        != (values["model"], _cdf_length(values["fw"]), _cdf_length(values["l"]), int(values["m"]))
+    ):
+        raise ValueError("MOS CDF values disagree with declared geometry or Spectre mapping")
+    return values
+
+
+def _block_generation_parts(
+    plan: OwnedMosBlockPlan, ordered: list[Circuit], cdf_frames: Mapping[str, bytes]
+) -> tuple[list[str], list[str]]:
+    devices: dict[str, tuple[dict[str, object], ...]] = {}
+    create: list[str] = []
+    reopen: list[str] = []
+    q = _quote
+    lib = q(plan.output_library)
+    for cell in ordered:
+        symbol = cell.symbol
+        if (
+            symbol is None
+            or not cell.ports
+            or cell.wires
+            or any(port.name != port.net for port in cell.ports)
+            or any(inst.placement.orientation != "R0" for inst in cell.instances)
+        ):
+            raise ValueError("renderer supports R0, named ports and terminal label stubs only")
+        symbol_pins = {pin.port: pin.origin for pin in symbol.pins}
+        name = q(cell.name)
+        create.append(
+            f'cv=m2Require(dbOpenCellViewByType({lib} {name} "schematic" "schematic" "w"))'
+        )
+        reopen.append(f'cv=m2Require(dbOpenCellViewByType({lib} {name} "schematic" "" "r"))')
+        reopen.extend(
+            (
+                f"m2Require(length(cv~>terminals)=={len(cell.ports)})",
+                f"m2Require(length(cv~>nets)=={len(cell.nets)})",
+                f"m2Require(length(setof(entry cv~>instances "
+                f'!(entry~>libName=="basic" && entry~>cellName=="iopin")))=={len(cell.instances)})',
+            )
+        )
+        initial_checks: list[str] = []
+        for port in cell.ports:
+            args = f"{q(port.name)} {q(port.direction)}"
+            create.append(f"m2Port(cv {args} {port.origin.x} {port.origin.y})")
+            reopen.append(f"m2BlockTerminal(cv {args} {q(port.net)})")
+        for inst in cell.instances:
+            props: dict[str, str] = {}
+            if isinstance(inst, Child):
+                master_lib, master_cell = plan.output_library, inst.circuit
+            elif isinstance(inst, Mos):
+                master_lib, master_cell = inst.master.library, inst.master.cell
+                pin = inst.master_source.sha256
+                if (
+                    inst.master.view != "symbol"
+                    or master_lib == plan.output_library
+                    or inst.master_source.status != "confirmed"
+                    or inst.geometry.source.status != "confirmed"
+                    or inst.spectre is None
+                    or inst.spectre.source.status != "confirmed"
+                    or pin is None
+                    or pin != inst.geometry.source.sha256
+                    or pin != inst.spectre.source.sha256
+                ):
+                    raise ValueError("renderer requires a common confirmed per-MOS CDF pin")
+                if pin not in devices:
+                    raw = cdf_frames.get(pin)
+                    if (
+                        raw is None
+                        or sha256(raw).hexdigest() != pin
+                        or not raw.startswith(b"M2_CDF_V2\n")
+                    ):
+                        raise ValueError("missing or stale MOS CDF frame")
+                    devices[pin] = parse_frame(raw)
+                props = _block_cdf_values(inst, devices[pin])
+            else:
+                raise ValueError("renderer accepts only MOS and child cells")
+            x, y = inst.placement.origin.x, inst.placement.origin.y
+            target = f"{q(master_lib)} {q(master_cell)}"
+            inst_name = q(inst.name)
+            create.append(f"inst=m2Instance(cv {target} {inst_name} {x} {y})")
+            reopen.append(
+                f"inst=m2BlockInstance(cv {inst_name} {target} {x} {y} {len(inst.links)})"
+            )
+            for key, value in props.items():
+                create.append(f"m2Param(inst {q(key)} {q(value)})")
+                reopen.append(f"m2Property(cv {inst_name} {q(key)} {q(value)})")
+                reopen.append(f"m2BlockEffective(inst {q(key)} {q(value)})")
+            for link in inst.links:
+                args = f"{q(link.terminal)} {q(link.net)}"
+                create.append(f"m2Wire(cv inst {args})")
+                reopen.append(f"m2Net(cv {inst_name} {args})")
+                initial_checks.append(f"m2Net(cv {inst_name} {args})")
+        lo, hi = symbol.lower_left, symbol.upper_right
+        create.extend(
+            (
+                "m2Require(schCheck(cv))",
+                *initial_checks,
+                "m2Require(dbSave(cv)) dbClose(cv)",
+                f'cv=m2Require(dbOpenCellViewByType({lib} {name} "symbol" "schematicSymbol" "w"))',
+                f'm2Require(dbCreateRect(cv list("device" "drawing") '
+                f"list(list({lo.x} {lo.y}) list({hi.x} {hi.y}))))",
+            )
+        )
+        reopen.extend(
+            (
+                "dbClose(cv)",
+                f'cv=m2Require(dbOpenCellViewByType({lib} {name} "symbol" "" "r"))',
+                f"m2Require(length(cv~>terminals)=={len(cell.ports)})",
+            )
+        )
+        reopen.append(f"m2BlockBody(cv {lo.x} {lo.y} {hi.x} {hi.y})")
+        for port in cell.ports:
+            origin = symbol_pins[port.name]
+            net = q(port.name)
+            create.extend(
+                (
+                    f"net=m2Require(dbCreateNet(cv {net}))",
+                    f"m2Require(dbCreateTerm(net {net} {q(port.direction)}))",
+                    f'fig=m2Require(dbCreateRect(cv list("pin" "drawing") '
+                    f"list(list({origin.x} {origin.y}) list({origin.x}+0.125 {origin.y}+0.125))))",
+                    "m2Require(dbCreatePin(net fig))",
+                )
+            )
+            reopen.append(f"m2BlockSymbolPin(cv {net} {q(port.direction)} {origin.x} {origin.y})")
+        create.append("m2Require(dbSave(cv)) dbClose(cv)")
+        reopen.append("dbClose(cv)")
+    return create, reopen
+
+
+def render_owned_mos_block(
+    plan: OwnedMosBlockPlan,
+    cdf_frames: Mapping[str, bytes],
+    *,
+    expected_plan_sha256: Digest,
+    owned_library_path: str,
+) -> MosBlockScripts:
+    """Render a fresh-library writer and separate read-only saved-view checker."""
+    plan = _pinned_block(plan, expected_plan_sha256)
+    if (
+        re.fullmatch(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+", owned_library_path) is None
+        or any(part in (".", "..") for part in owned_library_path.split("/"))
+        or plan.output_library in {"basic", "analogLib"}
+    ):
+        raise ValueError("invalid operator-bound owned block destination")
+    create, reopen = _block_generation_parts(plan, _child_first(plan), cdf_frames)
+
+    def script(body: list[str]) -> str:
+        text = "\n".join(
+            (
+                _PRELUDE,
+                _BLOCK_PRELUDE,
+                "procedure(m2BlockRun() let((cv inst net fig)",
+                *body,
+                "t))",
+                "let((result) result=errset(m2BlockRun() t) if(result then exit(0) else exit(1)))",
+                "",
+            )
+        )
+
+        if len(text) > 1_048_576:
+            raise ValueError("rendered MOS block script exceeds size bound")
+        return text
+
+    lib = _quote(plan.output_library)
+    return MosBlockScripts(
+        plan_sha256=expected_plan_sha256,
+        generate=script(
+            [
+                f'when(ddGetObj({lib}) error("M2_OWNED_LIBRARY_COLLISION"))',
+                f"m2Require(ddCreateLib({lib} {_quote(owned_library_path)}))",
+                *create,
+                f'printf("MOS_BLOCK_SAVED|{expected_plan_sha256}\\n")',
+            ]
+        ),
+        reopen=script(
+            [
+                *reopen,
+                f'printf("MOS_BLOCK_REOPENED_CHECKED|{expected_plan_sha256}\\n")',
+            ]
+        ),
+    )
+
+
+_SPECTRE_ID = r"[A-Za-z_][A-Za-z0-9_#-]{0,63}"
+_SPECTRE_DECIMAL = r"[0-9]{1,20}(?:\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?"
+_BLOCK_DEVICE = re.compile(rf"({_SPECTRE_ID}) \(([^()]{{1,8192}})\) ({_SPECTRE_ID})(?: (.+))?")
+_BLOCK_PRODUCT = re.compile(r"(?:([1-9][0-9]{0,5})|\(([1-9][0-9]{0,5})\)\*\(1\))")
+
+
+def _netlist_dimension(text: str) -> Length:
+    if re.fullmatch(rf"(?:{_SPECTRE_DECIMAL}|\({_SPECTRE_DECIMAL}\))", text) is None:
+        raise ValueError("unsupported MOS Spectre dimension")
+    return Length(value=str(_cdf_length(text.strip("()"))), unit="m")
+
+
+def _netlist_multiplier(text: str) -> int:
+    found = _BLOCK_PRODUCT.fullmatch(text)
+    if found is None:
+        raise ValueError("unsupported MOS Spectre multiplier")
+    return int(found.group(1) or found.group(2))
+
+
+def _netlist_mos(name: str, model: str, nodes: list[str], options: str | None) -> NetlistedMos:
+    pairs = [] if options is None else [token.split("=", 1) for token in options.split()]
+    if any(len(pair) != 2 for pair in pairs) or len(nodes) != 4:
+        raise ValueError("invalid MOS Spectre terminal or option list")
+    values = dict(pairs)
+    junctions = {"as", "ad", "ps", "pd"}
+    expected = {"w", "l", "m", *junctions}
+    if len(values) != len(pairs) or set(values) not in (expected, expected | {"simM"}):
+        raise ValueError("missing, duplicate or unsupported MOS Spectre option")
+    if any(re.fullmatch(_SPECTRE_DECIMAL, values[key]) is None for key in junctions):
+        raise ValueError("unsupported MOS Spectre junction geometry")
+    multiplicity = _netlist_multiplier(values["m"])
+    if "simM" in values and _netlist_multiplier(values["simM"]) != multiplicity:
+        raise ValueError("inconsistent MOS Spectre multiplicity")
+    d, g, s, b = nodes
+    return NetlistedMos(
+        name=name,
+        model=model,
+        terminals=(d, g, s, b),
+        width=_netlist_dimension(values["w"]),
+        length=_netlist_dimension(values["l"]),
+        multiplier=multiplicity,
+    )
+
+
+def project_mos_block_netlist(
+    plan: OwnedMosBlockPlan,
+    raw: bytes,
+    *,
+    expected_plan_sha256: Digest,
+    expected_netlist_artifact_sha256: Digest,
+) -> tuple[NetlistedCircuit, ...]:
+    """Read and compare a bounded DUT-only hierarchical Spectre artifact.
+
+    Input authentication, model closure, junction acceptance and bench analysis
+    provenance remain caller responsibilities. Only the declared circuit body
+    and W/L/m projection are compared here.
+    """
+    plan = _pinned_block(plan, expected_plan_sha256)
+    if len(raw) > 1_048_576 or sha256(raw).hexdigest() != expected_netlist_artifact_sha256:
+        raise ValueError("MOS block raw netlist digest or size mismatch")
+    cells = {cell.name: cell for cell in _child_first(plan)}
+    expected = {name: _netlisted_circuit(cell, cells) for name, cell in cells.items()}
+    _, _, analyses, static = partition_input(raw)  # type: ignore[no-untyped-call]
+    if analyses:
+        raise ValueError("MOS block projection requires a DUT-only Spectre artifact")
+    projected: dict[str, NetlistedCircuit] = {}
+    current: str | None = None
+    ports: tuple[str, ...] = ()
+    mos: list[NetlistedMos] = []
+    children: list[NetlistedChild] = []
+    seen_global = False
+    for line in static:
+        if current is None:
+            if line == "global 0" and not seen_global and not projected:
+                seen_global = True
+                continue
+            head = re.fullmatch(rf"subckt ({_SPECTRE_ID}) (.+)", line)
+            if head is None or head.group(1) not in expected or head.group(1) in projected:
+                raise ValueError("unexpected or duplicate Spectre subcircuit")
+            current = head.group(1)
+            formals = head.group(2)
+            if formals.startswith("(") and formals.endswith(")"):
+                formals = formals[1:-1]
+            ports = tuple(formals.split())
+            mos, children = [], []
+            continue
+        if line in ("ends", f"ends {current}"):
+            projected[current] = NetlistedCircuit(
+                name=current, ports=ports, mos=tuple(mos), children=tuple(children)
+            )
+            current = None
+            continue
+        device = _BLOCK_DEVICE.fullmatch(line)
+        if device is None:
+            raise ValueError("unsupported MOS block Spectre statement")
+        name, nodes, model, options = device.groups()
+        terminals = nodes.split()
+        if any(inst.name == name for inst in expected[current].children):
+            if options is not None:
+                raise ValueError("parameterized child subcircuit is unsupported")
+            children.append(NetlistedChild(name=name, circuit=model, terminals=tuple(terminals)))
+        else:
+            mos.append(_netlist_mos(name, model, terminals, options))
+        if len(children) + len(mos) > 128:
+            raise ValueError("MOS block Spectre instance bound exceeded")
+    if (
+        current is not None
+        or projected.keys() != expected.keys()
+        or any(
+            _netlisted_identity(projected[name]) != _netlisted_identity(cell)
+            for name, cell in expected.items()
+        )
+    ):
+        raise ValueError("netlisted MOS block topology or effective values mismatch")
+    return tuple(projected[name] for name in sorted(projected))

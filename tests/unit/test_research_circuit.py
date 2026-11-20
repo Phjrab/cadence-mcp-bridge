@@ -2,6 +2,7 @@
 
 import json
 from copy import deepcopy
+from hashlib import sha256
 from typing import Any
 
 import pytest
@@ -15,6 +16,8 @@ from cadence_mcp_bridge.research_circuit import (
     ResearchCircuit,
     adapt_owned_inverter,
     plan_owned_mos_block,
+    project_mos_block_netlist,
+    render_owned_mos_block,
     verify_owned_mos_block,
 )
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -343,4 +346,102 @@ def test_mos_block_requires_confirmed_simulator_mapping() -> None:
             expected_binding=inverter.binding,
             expected_definition_sha256=canonical_digest(definition),
             output_library="OwnedBlock",
+        )
+
+
+def test_block_renderer_emits_separate_save_and_reopen_checks() -> None:
+    plan, _ = mos_block_fixture()
+    inverter, frame = inverter_fixture()
+    pins = {inverter.cdf_frame_sha256: frame}
+    one = render_owned_mos_block(
+        plan, pins, expected_plan_sha256=canonical_digest(plan), owned_library_path="/owned/block"
+    )
+    assert one == render_owned_mos_block(
+        plan, pins, expected_plan_sha256=canonical_digest(plan), owned_library_path="/owned/block"
+    )
+    assert one.generate.index('"Helper" "symbol" "schematicSymbol" "w"') < one.generate.index(
+        '"Dut" "schematic" "schematic" "w"'
+    )
+    assert one.generate.index("M2_OWNED_LIBRARY_COLLISION") < one.generate.index("ddCreateLib(")
+    assert one.generate.count("dbSave(cv)") == 4
+    assert "ddCreateLib(" not in one.reopen and "dbSave(" not in one.reopen
+    assert one.reopen.count('"" "r"') >= 4
+    assert 'm2Net(cv "MN" "B" "vss")' in one.reopen
+    assert 'm2BlockEffective(inst "w" "120n")' in one.reopen
+    assert "MOS_BLOCK_REOPENED_CHECKED|" + canonical_digest(plan) in one.reopen
+
+
+@pytest.mark.parametrize("issue", ["missing", "changed", "wrong_plan", "routed"])
+def test_block_renderer_fails_closed(issue: str) -> None:
+    plan, _ = mos_block_fixture()
+    inverter, frame = inverter_fixture()
+    pins = {inverter.cdf_frame_sha256: frame}
+    digest = canonical_digest(plan)
+    if issue == "missing":
+        pins.clear()
+    elif issue == "changed":
+        pins[inverter.cdf_frame_sha256] += b"x"
+    elif issue == "wrong_plan":
+        digest = "d" * 64
+    else:
+        raw = plan.model_dump(mode="json")
+        raw["circuits"][0]["wires"] = [
+            {"net": "vin", "points": [{"x": "0", "y": "0"}, {"x": "1", "y": "0"}]}
+        ]
+        plan = OwnedMosBlockPlan.model_validate_json(json.dumps(raw))
+        digest = canonical_digest(plan)
+    with pytest.raises(ValueError, match="frame|digest|label stubs"):
+        render_owned_mos_block(
+            plan, pins, expected_plan_sha256=digest, owned_library_path="/owned/block"
+        )
+
+
+def raw_block_netlist() -> bytes:
+    transistors = (
+        "MN (vout vin vss vss) test_n w=(120n) l=100n as=1f ad=1f ps=1u pd=1u "
+        "m=(1)*(1) simM=(1)*(1)\n"
+        "MP (vout vin vdd vdd) test_p w=(350n) l=100n as=1f ad=1f ps=1u pd=1u "
+        "m=(1)*(1) simM=(1)*(1)\n"
+    )
+    return (
+        "simulator lang=spectre\nglobal 0\nsubckt Helper vin vout vdd vss\n"
+        + transistors
+        + "ends Helper\nsubckt Dut (vin vout vdd vss)\n"
+        + transistors
+        + "U1 (vin vout vdd vss) Helper\nU2 (vin vout vdd vss) Helper\nends Dut\n"
+    ).encode("ascii")
+
+
+def test_project_raw_hierarchical_spectre() -> None:
+    plan, _ = mos_block_fixture()
+    raw = raw_block_netlist()
+    projected = project_mos_block_netlist(
+        plan,
+        raw,
+        expected_plan_sha256=canonical_digest(plan),
+        expected_netlist_artifact_sha256=sha256(raw).hexdigest(),
+    )
+    assert [cell.name for cell in projected] == ["Dut", "Helper"]
+    assert [inst.name for inst in projected[0].children] == ["U1", "U2"]
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (b"w=(350n)", b"w=(120n)"),
+        (b"(vout vin vdd vdd)", b"(vout vin vdd vss)"),
+        (b"simM=(1)*(1)", b"simM=(2)*(1)"),
+        (b"U1 (vin vout vdd vss) Helper", b"U1 (vout vin vdd vss) Helper"),
+        (b"ends Dut", b"ends Dut\nX (vin vout vdd vss) Dut"),
+    ],
+)
+def test_raw_projection_rejects_changed_spectre_body(old: bytes, new: bytes) -> None:
+    plan, _ = mos_block_fixture()
+    raw = raw_block_netlist().replace(old, new, 1)
+    with pytest.raises(ValueError, match="mismatch|multiplicity|unexpected"):
+        project_mos_block_netlist(
+            plan,
+            raw,
+            expected_plan_sha256=canonical_digest(plan),
+            expected_netlist_artifact_sha256=sha256(raw).hexdigest(),
         )
