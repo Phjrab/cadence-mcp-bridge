@@ -11,7 +11,7 @@ from pydantic import Field, TypeAdapter, model_validator
 
 from cadence_mcp_bridge.cmos_delay import _crossings
 from cadence_mcp_bridge.domain_provisioning import _canonical
-from cadence_mcp_bridge.generic_measurements import MAX_SAMPLES
+from cadence_mcp_bridge.generic_measurements import MAX_SAMPLES, SourceSignal
 from cadence_mcp_bridge.native_service import NativeOperationQuery, NativeOperationService
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.result_reports import make_report
@@ -84,8 +84,32 @@ class _Point(VariableModel):
     value_v: Finite
 
 
+class _CurrentPoint(VariableModel):
+    time_s: Nonnegative
+    value_a: Finite
+
+
 _Wave = Annotated[list[_Point], Field(min_length=2, max_length=MAX_SAMPLES)]
 _Waves = TypeAdapter(dict[LogicalId, _Wave])
+_CurrentWave = Annotated[list[_CurrentPoint], Field(min_length=2, max_length=MAX_SAMPLES)]
+
+
+class TransientSupplyEvidence(VariableModel):
+    """Registration and saved branch-current vectors from a trusted result adapter."""
+
+    sources: Annotated[tuple[SourceSignal, ...], Field(min_length=1, max_length=6)]
+    currents: Annotated[dict[LogicalId, _CurrentWave], Field(max_length=6)]
+
+    @model_validator(mode="after")
+    def registered_supplies(self) -> Self:
+        ids = {source.source_id for source in self.sources}
+        if (
+            len(ids) != len(self.sources)
+            or any(source.role != "supply" for source in self.sources)
+            or self.currents.keys() - ids
+        ):
+            raise ValueError("unique registered supply sources required for branch currents")
+        return self
 
 
 def _metric(
@@ -97,7 +121,7 @@ def _metric(
             "reason": reason, "value": value, "unit": unit, **details}
 
 
-def _voltage_at(axis: list[float], values: list[float], time: float) -> float:
+def _linear_at(axis: list[float], values: list[float], time: float) -> float:
     right = bisect_left(axis, time)
     if axis[right] == time:
         return values[right]
@@ -137,7 +161,7 @@ def _settling(
 ) -> dict[str, Any]:
     times = [window.start_s, *(t for t in axis if window.start_s < t < window.stop_s),
              window.stop_s]
-    values = [_voltage_at(axis, series, time) for time in times]
+    values = [_linear_at(axis, series, time) for time in times]
     outside = [i for i, value in enumerate(values) if abs(value - spec.target_v) > spec.tolerance_v]
     if outside and outside[-1] == len(times) - 1:
         return _metric("s", "outside_tolerance_at_window_end")
@@ -154,11 +178,96 @@ def _settling(
                    method="last_band_entry_held_through_window_end_piecewise_linear")
 
 
+def _source_power(
+    window: TransientWindow, waves: dict[str, list[_Point]],
+    source: SourceSignal, current: list[_CurrentPoint] | None,
+) -> dict[str, Any]:
+    if current is None:
+        return _metric("W", "missing_registered_supply_current")
+    axis = [point.time_s for point in current]
+    if any(a >= b for a, b in zip(axis, axis[1:], strict=False)):
+        raise OperationRejected("research_transient_nonmonotonic_current_axis")
+    voltages = []
+    for node in (source.positive_node, source.negative_node):
+        if node is None:
+            voltages.append([0.0] * len(axis))
+            continue
+        wave = waves.get(node)
+        if wave is None:
+            return _metric("W", "missing_registered_supply_voltage")
+        if [point.time_s for point in wave] != axis:
+            return _metric("W", "supply_voltage_current_time_axes_differ")
+        voltages.append([point.value_v for point in wave])
+    if axis[0] > window.start_s or axis[-1] < window.stop_s:
+        return _metric("W", "insufficient_observation_duration")
+    gaps = [
+        b - a for a, b in zip(axis, axis[1:], strict=False)
+        if a < window.stop_s and b > window.start_s
+    ]
+    maximum_gap = max(gaps)
+    if maximum_gap > window.maximum_gap_s and not math.isclose(
+        maximum_gap, window.maximum_gap_s, rel_tol=1e-12,
+    ):
+        return _metric("W", "insufficient_time_resolution", maximum_observed_gap_s=maximum_gap)
+    positive, negative = voltages
+    current_values = [point.value_a for point in current]
+    knots = [window.start_s, *(t for t in axis if window.start_s < t < window.stop_s),
+             window.stop_s]
+    voltage = [
+        _linear_at(axis, positive, t) - _linear_at(axis, negative, t) for t in knots
+    ]
+    amperes = [_linear_at(axis, current_values, t) for t in knots]
+    duration = window.stop_s - window.start_s
+    try:
+        # Endpoint weights integrate the quadratic product of two linear traces.
+        mean = math.fsum(
+            -(dt / duration) * (
+                (v0 / 3) * i0 + (v0 / 6) * i1
+                + (v1 / 6) * i0 + (v1 / 3) * i1
+            )
+            for dt, v0, v1, i0, i1 in zip(
+                (b - a for a, b in zip(knots, knots[1:], strict=False)),
+                voltage[:-1], voltage[1:], amperes[:-1], amperes[1:], strict=True,
+            )
+        )
+    except (OverflowError, ValueError):
+        return _metric("W", "nonfinite_estimate")
+    return _metric(
+        "W", None, mean, maximum_observed_gap_s=maximum_gap, saved_vector_samples=len(axis),
+    )
+
+
+def _average_supply_power(
+    window: TransientWindow, waves: dict[str, list[_Point]], supply: TransientSupplyEvidence,
+) -> dict[str, Any]:
+    rows = [
+        {
+            **source.model_dump(mode="json"),
+            **_source_power(window, waves, source, supply.currents.get(source.source_id)),
+        }
+        for source in supply.sources
+    ]
+    details: dict[str, Any] = {
+        "sources": rows,
+        "method": "time_mean_of_negative_terminal_voltage_times_signed_current_piecewise_linear",
+    }
+    if any(row["value"] is None for row in rows):
+        return _metric("W", "incomplete_registered_supply_evidence", **details)
+    try:
+        return _metric("W", None, math.fsum(row["value"] for row in rows), **details)
+    except OverflowError:
+        return _metric("W", "nonfinite_estimate", **details)
+
+
 def evaluate_research_transient(
     query: ResearchTransientQuery, waveforms: object, *,
     sample_kind: Literal["NATIVE_SAVED_VECTOR", "DISPLAY_DOWNSAMPLED", "UNVERIFIED"],
+    supply: TransientSupplyEvidence | None = None,
 ) -> dict[str, Any]:
-    """Measure the retained window and independently bound display point count."""
+    """Measure supplied samples without attesting their origin.
+
+    The trusted adapter, not the public query, supplies resolution and optional current evidence.
+    """
     query = ResearchTransientQuery.model_validate_json(query.model_dump_json())
     waves = _Waves.validate_python(waveforms)
     if sum(map(len, waves.values())) > 1536:
@@ -228,8 +337,8 @@ def evaluate_research_transient(
             measurements["slew"] = _metric("V/s", reason)
         else:
             axis, values, _ = series[signal]
-            slope = (_voltage_at(axis, values, window.stop_s)
-                     - _voltage_at(axis, values, window.start_s)) / (window.stop_s - window.start_s)
+            slope = (_linear_at(axis, values, window.stop_s)
+                     - _linear_at(axis, values, window.start_s)) / (window.stop_s - window.start_s)
             measurements["slew"] = _metric("V/s", None, slope, method="signed_window_secant")
     if query.settling:
         signal = query.settling.signal
@@ -238,9 +347,13 @@ def evaluate_research_transient(
             _metric("s", reason) if reason else
             _settling(series[signal][0], series[signal][1], window, query.settling)
         )
-    measurements["average_supply_power"] = _metric(
-        "W", "registered_tran_supply_current_unavailable",
-    )
+    if supply is None:
+        power = _metric("W", "registered_tran_supply_current_unavailable")
+    elif sample_kind != "NATIVE_SAVED_VECTOR":
+        power = _metric("W", "original_saved_resolution_unverified")
+    else:
+        power = _average_supply_power(window, waves, supply)
+    measurements["average_supply_power"] = power
     out["sample_kind"] = sample_kind
     out["qualification"] = "SAVED_SAMPLE_ESTIMATES_NO_SOLVER_GRID_CONVERGENCE"
     out["definition"] = query.model_dump(mode="json")
