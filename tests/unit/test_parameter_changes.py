@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Callable
 from typing import Literal
 
@@ -19,10 +20,12 @@ from cadence_mcp_bridge.parameter_changes import (
     MosWidthQualification,
     MosWidthTarget,
     Readback,
+    RegisteredMosQualification,
     observe_amplifier_pm0_input,
     plan_ade_change,
     plan_capacitor_change,
     plan_mos_width_change,
+    plan_registered_mos_change,
     project_netlist_change,
     verify_change_readback,
 )
@@ -273,6 +276,59 @@ def test_raw_ade_projection_and_fixed_source_binding() -> None:
         project_netlist_change(plan, _NETLIST, changed.replace(b"dc=m2_vin", b"dc=0"))
     with pytest.raises(ValueError, match="baseline netlist digest"):
         project_netlist_change(plan, changed, changed)
+
+
+@pytest.mark.parametrize(
+    ("property_name", "quantity", "unit", "old", "new", "option", "before", "after"),
+    [
+        ("w", "length", "nm", "350", "120", "w", "(350n)", "(120n)"),
+        ("l", "length", "nm", "100", "120", "l", "100n", "120n"),
+        ("m", "count", "count", "1", "2", "m", "(1)*(1)", "(2)*(1)"),
+        ("fingers", "count", "count", "1", "2", "m", "(1)*(1)", "(1)*(2)"),
+    ],
+)
+def test_registered_mos_uses_explicit_emitted_mapping(
+    property_name, quantity, unit, old, new, option, before, after
+) -> None:
+    # Fixture only. The two count mappings intentionally share an emitted option.
+    qualification = RegisteredMosQualification.model_validate_json(
+        json.dumps(
+            {
+                "baseline": BASELINE.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(_NETLIST).hexdigest()}
+                ).model_dump(),
+                "target": {
+                    "instance": MP.model_copy(update={"property_name": property_name}).model_dump(),
+                    "quantity": quantity,
+                    "netlist_path": "DUT/MP",
+                    "netlist_model": "pmos",
+                    "netlist_terminals": ["vout", "vin", "vdd", "vdd"],
+                    "options": [{"name": option, "before": before, "after": after}],
+                },
+                "old": {"value": old, "unit": unit},
+                "expected": {"value": new, "unit": unit},
+                "evidence_sha256": "1" * 64,
+            }
+        )
+    )
+    plan = plan_registered_mos_change(qualification, "candidate", CHILD, qualification.expected)
+    changed = _NETLIST.replace(f" {option}={before} ".encode(), f" {option}={after} ".encode())
+    projected = project_netlist_change(plan, _NETLIST, changed)
+    original, reopened, netlist = (_row(plan, stage) for stage in _READBACK_STAGES)
+    netlist = netlist.model_copy(
+        update={"artifact_sha256": projected.artifact_sha256, "value": projected.value}
+    )
+    assert (
+        verify_change_readback(plan, baseline=original, reopened=reopened, netlist=netlist).status
+        == "MATCHED"
+    )
+    assert verify_change_readback(plan, baseline=original, netlist=netlist).status == "MISSING"
+    with pytest.raises(ValueError, match="registered MOS option"):
+        project_netlist_change(plan, _NETLIST, _NETLIST)
+    with pytest.raises(ValueError, match="registered MOS netlist binding"):
+        project_netlist_change(plan, _NETLIST, changed.replace(b") pmos ", b") other_model "))
+    with pytest.raises(ValueError, match="fixed netlist"):
+        project_netlist_change(plan, _NETLIST, changed.replace(b"dc=m2_vin", b"dc=1"))
 
 
 def test_persisted_ade_checks_independent_values_and_keeps_physical_revision() -> None:
