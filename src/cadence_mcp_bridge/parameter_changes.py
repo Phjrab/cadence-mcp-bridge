@@ -219,6 +219,8 @@ class RegisteredMosTarget(VariableModel):
     kind: Literal["registered_mos_property"] = "registered_mos_property"
     instance: CandidateSourceTarget
     quantity: Literal["length", "count"]
+    scalar_option: Literal["w", "fw", "l", "m", "simM", "fingers", "nf"]
+    scalar_unit: Literal["m", "um", "nm", "count"]
     netlist_path: Annotated[
         str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]*(/[A-Za-z][A-Za-z0-9_#-]*)?$", max_length=256)
     ]
@@ -230,9 +232,22 @@ class RegisteredMosTarget(VariableModel):
     def unique_options(self) -> Self:
         if len({item.name for item in self.options}) != len(self.options):
             raise ValueError("duplicate registered MOS option")
-        if not any(item.before != item.after for item in self.options):
-            raise ValueError("registered MOS transition must change an emitted option")
+        if not any(
+            item.name == self.scalar_option and item.before != item.after for item in self.options
+        ):
+            raise ValueError("registered MOS scalar option must change")
+        if (self.quantity == "count") != (self.scalar_unit == "count"):
+            raise ValueError("registered MOS scalar unit does not match quantity")
         return self
+
+    def parse_scalar(self, token: str) -> ChangeValue:
+        suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[self.scalar_unit]
+        if token.startswith("(") and token.endswith(")"):
+            token = token[1:-1]
+        match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?|\.[0-9]+)" + suffix, token)
+        if match is None:
+            raise ValueError("registered MOS scalar must be a literal in the registered unit")
+        return ChangeValue(value=match[1], unit=self.scalar_unit)
 
 
 class RegisteredMosQualification(VariableModel):
@@ -830,6 +845,8 @@ def project_netlist_change(
         target = plan.target
         old_static, old_options = _width_options(old_static, target.netlist_path, registered=target)
         new_static, new_options = _width_options(new_static, target.netlist_path, registered=target)
+        old = target.parse_scalar(old_options.get(target.scalar_option, ""))
+        observed = target.parse_scalar(new_options.get(target.scalar_option, ""))
         for option in target.options:
             if (old_options.pop(option.name, None), new_options.pop(option.name, None)) != (
                 option.before,
@@ -838,8 +855,6 @@ def project_netlist_change(
                 raise ValueError("registered MOS option differs from evidence")
         if old_options != new_options:
             raise ValueError("fixed MOS netlist options changed")
-        # Exact emitted tokens independently confirm the registered scalar pair.
-        old, observed = plan.old, plan.expected
     else:
         instance_path = plan.target.instance.instance_path
         if amplifier:

@@ -283,23 +283,26 @@ def test_raw_ade_projection_and_fixed_source_binding() -> None:
     [
         ("w", "length", "nm", "350", "120", "w", "(350n)", "(120n)"),
         ("l", "length", "nm", "100", "120", "l", "100n", "120n"),
-        ("m", "count", "count", "1", "2", "m", "(1)*(1)", "(2)*(1)"),
-        ("fingers", "count", "count", "1", "2", "m", "(1)*(1)", "(1)*(2)"),
+        ("m", "count", "count", "1", "2", "m", "1", "2"),
+        ("fingers", "count", "count", "1", "2", "nf", "1", "2"),
     ],
 )
 def test_registered_mos_uses_explicit_emitted_mapping(
     property_name, quantity, unit, old, new, option, before, after
 ) -> None:
-    # Fixture only. The two count mappings intentionally share an emitted option.
+    # Fixture only. Each case explicitly registers its emitted scalar.
+    baseline_raw = _NETLIST.replace(b" m=(1)*(1) ", b" m=1 nf=1 ")
     qualification = RegisteredMosQualification.model_validate_json(
         json.dumps(
             {
                 "baseline": BASELINE.model_copy(
-                    update={"netlist_sha256": hashlib.sha256(_NETLIST).hexdigest()}
+                    update={"netlist_sha256": hashlib.sha256(baseline_raw).hexdigest()}
                 ).model_dump(),
                 "target": {
                     "instance": MP.model_copy(update={"property_name": property_name}).model_dump(),
                     "quantity": quantity,
+                    "scalar_option": option,
+                    "scalar_unit": unit,
                     "netlist_path": "DUT/MP",
                     "netlist_model": "pmos",
                     "netlist_terminals": ["vout", "vin", "vdd", "vdd"],
@@ -312,8 +315,8 @@ def test_registered_mos_uses_explicit_emitted_mapping(
         )
     )
     plan = plan_registered_mos_change(qualification, "candidate", CHILD, qualification.expected)
-    changed = _NETLIST.replace(f" {option}={before} ".encode(), f" {option}={after} ".encode())
-    projected = project_netlist_change(plan, _NETLIST, changed)
+    changed = baseline_raw.replace(f" {option}={before} ".encode(), f" {option}={after} ".encode())
+    projected = project_netlist_change(plan, baseline_raw, changed)
     original, reopened, netlist = (_row(plan, stage) for stage in _READBACK_STAGES)
     netlist = netlist.model_copy(
         update={"artifact_sha256": projected.artifact_sha256, "value": projected.value}
@@ -324,11 +327,38 @@ def test_registered_mos_uses_explicit_emitted_mapping(
     )
     assert verify_change_readback(plan, baseline=original, netlist=netlist).status == "MISSING"
     with pytest.raises(ValueError, match="registered MOS option"):
-        project_netlist_change(plan, _NETLIST, _NETLIST)
+        project_netlist_change(plan, baseline_raw, baseline_raw)
     with pytest.raises(ValueError, match="registered MOS netlist binding"):
-        project_netlist_change(plan, _NETLIST, changed.replace(b") pmos ", b") other_model "))
+        project_netlist_change(plan, baseline_raw, changed.replace(b") pmos ", b") other_model "))
     with pytest.raises(ValueError, match="fixed netlist"):
-        project_netlist_change(plan, _NETLIST, changed.replace(b"dc=m2_vin", b"dc=1"))
+        project_netlist_change(plan, baseline_raw, changed.replace(b"dc=m2_vin", b"dc=1"))
+
+    target_data = qualification.target.model_dump(mode="json")
+    if quantity == "length":
+        # Both registered token assertions match, but the actual child value does not.
+        target_data["scalar_unit"] = "um"
+        target_data["options"] = [{"name": option, "before": "19u", "after": "18u"}]
+        raw_old = baseline_raw.replace(f" {option}={before} ".encode(), f" {option}=19u ".encode())
+        raw_new = raw_old.replace(f" {option}=19u ".encode(), f" {option}=18u ".encode())
+        old_value = ChangeValue(value="19000", unit="nm")
+        message = "effective netlist value differs"
+    else:
+        target_data["options"] = [{"name": option, "before": before, "after": "(1)*(2)"}]
+        raw_old = baseline_raw
+        raw_new = raw_old.replace(f" {option}={before} ".encode(), f" {option}=(1)*(2) ".encode())
+        old_value = qualification.old
+        message = "scalar must be a literal"
+    poisoned = plan.model_copy(
+        update={
+            "target": type(qualification.target).model_validate_json(json.dumps(target_data)),
+            "baseline": plan.baseline.model_copy(
+                update={"netlist_sha256": hashlib.sha256(raw_old).hexdigest()}
+            ),
+            "old": old_value,
+        }
+    )
+    with pytest.raises(ValueError, match=message):
+        project_netlist_change(poisoned, raw_old, raw_new)
 
 
 def test_persisted_ade_checks_independent_values_and_keeps_physical_revision() -> None:
