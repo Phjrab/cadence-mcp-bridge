@@ -10,7 +10,8 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
+from cadence_mcp_bridge.generic_ade import LIMIT as ADE_INPUT_LIMIT
 from cadence_mcp_bridge.m2_cdf import parse_frame
 from cadence_mcp_bridge.m2_inverter import (
     _PRELUDE,
@@ -1350,6 +1351,7 @@ class MosBlockRegistrationHandoff(VariableModel):
     bench_cell: RemotePath
     bench_tree_sha256: Digest
     pins: MosBlockHandoffPins
+    static_statements_sha256: Digest
 
     @property
     def handoff_sha256(self) -> Digest:
@@ -1409,9 +1411,9 @@ def _check_full_bench_dut_identity(
     full_netlist: bytes,
     raw_dut_netlist: bytes,
     expected_full_netlist_sha256: Digest,
-) -> None:
+) -> Digest:
     if (
-        len(full_netlist) > 1_048_576
+        len(full_netlist) > ADE_INPUT_LIMIT
         or sha256(full_netlist).hexdigest() != expected_full_netlist_sha256
     ):
         raise ValueError("full bench netlist digest or size mismatch")
@@ -1422,6 +1424,8 @@ def _check_full_bench_dut_identity(
         dut_static, expected
     ):
         raise ValueError("DUT projection differs from the full bench netlist")
+    static_digest: Digest = static_fingerprint(full_static)  # type: ignore[no-untyped-call]
+    return static_digest
 
 
 def _verify_mos_block_handoff(
@@ -1483,7 +1487,9 @@ def _verify_mos_block_handoff(
         expected_plan_sha256=pins.plan_sha256,
         expected_netlist_artifact_sha256=pins.raw_netlist_sha256,
     )
-    _check_full_bench_dut_identity(plan, full_netlist, raw_netlist, pins.full_netlist_sha256)
+    static_digest = _check_full_bench_dut_identity(
+        plan, full_netlist, raw_netlist, pins.full_netlist_sha256
+    )
     return MosBlockRegistrationHandoff(
         operation_id=saved.operation_id,
         binding=plan.binding,
@@ -1493,6 +1499,7 @@ def _verify_mos_block_handoff(
         bench_cell=saved.bench_cell,
         bench_tree_sha256=saved.bench_tree_sha256,
         pins=pins,
+        static_statements_sha256=static_digest,
     )
 
 
@@ -1520,6 +1527,7 @@ def verify_mos_block_registration_source(
         or observation.ade.design_id != handoff.binding.design_id
         or observation.ade.source_tree_sha256 != handoff.bench_tree_sha256
         or observation.baseline_input_sha256 != handoff.pins.full_netlist_sha256
+        or observation.ade.static_statements_sha256 != handoff.static_statements_sha256
         or libraries != [handoff.library]
     ):
         raise ValueError("MOS block registration source or library fingerprint mismatch")

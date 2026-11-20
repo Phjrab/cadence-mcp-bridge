@@ -534,7 +534,7 @@ def test_mos_handoff_matches_existing_registration_source_contract() -> None:
             variable_set_sha256=None,
             source_tree_sha256=handoff.bench_tree_sha256,
             ade_state_tree_sha256="2" * 64,
-            static_statements_sha256="3" * 64,
+            static_statements_sha256=handoff.static_statements_sha256,
             model_includes=(),
             inputs=DcInputs(analysis="dc", mode="saved_operating_point", statement_sha256="4" * 64),
         ),
@@ -556,10 +556,12 @@ def test_mos_handoff_matches_existing_registration_source_contract() -> None:
         expected_observation_sha256=canonical_digest(observation),
     )
     wrong_tree = observation.ade.model_copy(update={"source_tree_sha256": "9" * 64})
+    wrong_static = observation.ade.model_copy(update={"static_statements_sha256": "9" * 64})
     wrong_lib = handoff.library.model_copy(update={"tree_sha256": "9" * 64})
     for change in (
         {"source_cell": "/owned/block/Dut"},
         {"ade": wrong_tree},
+        {"ade": wrong_static},
         {"libraries": (wrong_lib,)},
         {"baseline_input_sha256": "9" * 64},
     ):
