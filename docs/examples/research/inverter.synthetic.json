@@ -1,0 +1,370 @@
+{
+  "binding": {
+    "workspace_id": "work",
+    "design_id": "owned-inverter",
+    "revision_id": "r1",
+    "parent_revision_id": null,
+    "parent_revision_sha256": null,
+    "source_baseline_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "source": {
+    "reference": "synthetic CDF fixture",
+    "status": "confirmed",
+    "sha256": "cfc1863f6506661c5eb8904d5379dbd8b9072b2788207ed9f3a0f84adc7a6454"
+  },
+  "dut": "Dut",
+  "bench": "Bench",
+  "circuits": [
+    {
+      "name": "Dut",
+      "nets": [
+        "vin",
+        "vout",
+        "vdd",
+        "vss"
+      ],
+      "instances": [
+        {
+          "name": "MN",
+          "kind": "nmos",
+          "placement": {
+            "origin": {
+              "x": "0",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "D",
+              "net": "vout"
+            },
+            {
+              "terminal": "G",
+              "net": "vin"
+            },
+            {
+              "terminal": "S",
+              "net": "vss"
+            },
+            {
+              "terminal": "B",
+              "net": "vss"
+            }
+          ],
+          "master": {
+            "library": "TestPdk",
+            "cell": "N",
+            "view": "symbol"
+          },
+          "master_source": {
+            "reference": "synthetic CDF fixture",
+            "status": "confirmed",
+            "sha256": "cfc1863f6506661c5eb8904d5379dbd8b9072b2788207ed9f3a0f84adc7a6454"
+          },
+          "geometry": {
+            "w": {
+              "value": "120",
+              "unit": "nm"
+            },
+            "fw": {
+              "value": "120",
+              "unit": "nm"
+            },
+            "length": {
+              "value": "0.1",
+              "unit": "um"
+            },
+            "multiplier": 1,
+            "fingers": 1,
+            "width_meaning": "total_width",
+            "source": {
+              "reference": "synthetic CDF fixture",
+              "status": "confirmed",
+              "sha256": "cfc1863f6506661c5eb8904d5379dbd8b9072b2788207ed9f3a0f84adc7a6454"
+            }
+          }
+        },
+        {
+          "name": "MP",
+          "kind": "pmos",
+          "placement": {
+            "origin": {
+              "x": "4",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "D",
+              "net": "vout"
+            },
+            {
+              "terminal": "G",
+              "net": "vin"
+            },
+            {
+              "terminal": "S",
+              "net": "vdd"
+            },
+            {
+              "terminal": "B",
+              "net": "vdd"
+            }
+          ],
+          "master": {
+            "library": "TestPdk",
+            "cell": "P",
+            "view": "symbol"
+          },
+          "master_source": {
+            "reference": "synthetic CDF fixture",
+            "status": "confirmed",
+            "sha256": "cfc1863f6506661c5eb8904d5379dbd8b9072b2788207ed9f3a0f84adc7a6454"
+          },
+          "geometry": {
+            "w": {
+              "value": "350",
+              "unit": "nm"
+            },
+            "fw": {
+              "value": "350",
+              "unit": "nm"
+            },
+            "length": {
+              "value": "0.1",
+              "unit": "um"
+            },
+            "multiplier": 1,
+            "fingers": 1,
+            "width_meaning": "total_width",
+            "source": {
+              "reference": "synthetic CDF fixture",
+              "status": "confirmed",
+              "sha256": "cfc1863f6506661c5eb8904d5379dbd8b9072b2788207ed9f3a0f84adc7a6454"
+            }
+          }
+        }
+      ],
+      "ports": [
+        {
+          "name": "vin",
+          "net": "vin",
+          "direction": "input",
+          "origin": {
+            "x": "100",
+            "y": "100"
+          }
+        },
+        {
+          "name": "vout",
+          "net": "vout",
+          "direction": "output",
+          "origin": {
+            "x": "102",
+            "y": "100"
+          }
+        },
+        {
+          "name": "vdd",
+          "net": "vdd",
+          "direction": "inputOutput",
+          "origin": {
+            "x": "104",
+            "y": "100"
+          }
+        },
+        {
+          "name": "vss",
+          "net": "vss",
+          "direction": "inputOutput",
+          "origin": {
+            "x": "106",
+            "y": "100"
+          }
+        }
+      ],
+      "symbol": {
+        "lower_left": {
+          "x": "-1",
+          "y": "-1"
+        },
+        "upper_right": {
+          "x": "1",
+          "y": "1"
+        },
+        "pins": [
+          {
+            "port": "vin",
+            "origin": {
+              "x": "-1",
+              "y": "0"
+            }
+          },
+          {
+            "port": "vout",
+            "origin": {
+              "x": "1",
+              "y": "0"
+            }
+          },
+          {
+            "port": "vdd",
+            "origin": {
+              "x": "0",
+              "y": "1"
+            }
+          },
+          {
+            "port": "vss",
+            "origin": {
+              "x": "0",
+              "y": "-1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Bench",
+      "nets": [
+        "vin",
+        "vout",
+        "vdd",
+        "gnd!"
+      ],
+      "instances": [
+        {
+          "name": "DUT",
+          "kind": "child",
+          "placement": {
+            "origin": {
+              "x": "0",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "vin",
+              "net": "vin"
+            },
+            {
+              "terminal": "vout",
+              "net": "vout"
+            },
+            {
+              "terminal": "vdd",
+              "net": "vdd"
+            },
+            {
+              "terminal": "vss",
+              "net": "gnd!"
+            }
+          ],
+          "circuit": "Dut"
+        },
+        {
+          "name": "VDD",
+          "kind": "voltage",
+          "placement": {
+            "origin": {
+              "x": "4",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "PLUS",
+              "net": "vdd"
+            },
+            {
+              "terminal": "MINUS",
+              "net": "gnd!"
+            }
+          ],
+          "dc_v": "1"
+        },
+        {
+          "name": "VIN",
+          "kind": "voltage",
+          "placement": {
+            "origin": {
+              "x": "8",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "PLUS",
+              "net": "vin"
+            },
+            {
+              "terminal": "MINUS",
+              "net": "gnd!"
+            }
+          ],
+          "dc_variable": "m2_vin",
+          "pulse": {
+            "low_v": "0",
+            "high_v": "1",
+            "delay_s": "1e-9",
+            "rise_s": "100e-12",
+            "fall_s": "100e-12",
+            "width_s": "2e-9",
+            "period_s": "4e-9"
+          }
+        },
+        {
+          "name": "CL",
+          "kind": "capacitor",
+          "placement": {
+            "origin": {
+              "x": "12",
+              "y": "0"
+            }
+          },
+          "links": [
+            {
+              "terminal": "PLUS",
+              "net": "vout"
+            },
+            {
+              "terminal": "MINUS",
+              "net": "gnd!"
+            }
+          ],
+          "capacitance_f": "1e-12"
+        }
+      ]
+    }
+  ],
+  "analyses": [
+    {
+      "kind": "dc",
+      "temperature_c": "27"
+    }
+  ],
+  "observations": [
+    {
+      "kind": "device",
+      "path": [
+        "DUT",
+        "MN"
+      ],
+      "quantity": "gm"
+    }
+  ],
+  "measurements": [
+    {
+      "name": "power",
+      "analysis": "dc",
+      "quantity": "supply_power",
+      "nets": [
+        "vdd",
+        "gnd!"
+      ],
+      "supply_path": [
+        "VDD"
+      ]
+    }
+  ]
+}
