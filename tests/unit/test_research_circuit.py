@@ -380,6 +380,40 @@ def test_block_renderer_emits_separate_save_and_reopen_checks() -> None:
     assert "MOS_BLOCK_REOPENED_CHECKED|" + canonical_digest(plan) in one.reopen
 
 
+def test_research_writer_checks_literal_positions_before_wiring_and_save() -> None:
+    plan, _ = mos_block_fixture()
+    inverter, frame = inverter_fixture()
+    scripts = render_owned_mos_block(
+        plan,
+        {inverter.cdf_frame_sha256: frame},
+        expected_plan_sha256=canonical_digest(plan),
+        owned_library_path="/owned/block",
+    )
+    body = scripts.generate.split("procedure(m2BlockRun()", 1)[1]
+    assert "m2Instance(" not in body
+    assert "m2Require(and(inst inst~>orient==orientation))" in scripts.generate
+    assert "m2BlockPoint(inst~>xy x y)" in scripts.generate
+    assert "xCoord(point)==x yCoord(point)==y" in scripts.generate
+    for cell in plan.circuits:
+        view_start = body.index(f'"{cell.name}" "schematic" "schematic" "w"')
+        view_end = body.index("m2Require(dbSave(cv))", view_start)
+        view = body[view_start:view_end]
+        checked = view.index("m2Require(schCheck(cv))")
+        for instance in cell.instances:
+            x, y = instance.placement.origin.x, instance.placement.origin.y
+            name = instance.name
+            pos = view.index(f'inst=m2Require(dbCreateInst(cv master "{name}" list({x} {y}) "R0"))')
+            assert "master=m2Require(dbOpenCellViewByType(" in view[:pos].splitlines()[-1]
+            following = view[pos:].splitlines()
+            assert following[1] == f'm2BlockPlacement(inst {x} {y} "R0")'
+            assert any(line.startswith("m2Wire(") for line in following[2:])
+            gate = view.index(f'm2BlockCheckPlacement(cv "{name}" {x} {y} "R0")')
+            assert checked < gate
+    reopen_body = scripts.reopen.split("procedure(m2BlockRun()", 1)[1]
+    assert "dbCreateInst(" not in reopen_body
+    assert 'm2BlockInstance(cv "MN" "TestPdk" "N" 0 0 4)' in reopen_body
+
+
 @pytest.mark.parametrize("issue", ["missing", "changed", "wrong_plan", "routed"])
 def test_block_renderer_fails_closed(issue: str) -> None:
     plan, _ = mos_block_fixture()

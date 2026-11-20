@@ -907,6 +907,13 @@ class MosBlockScripts(VariableModel):
 _BLOCK_PRELUDE = r"""
 procedure(m2BlockPoint(point x y)
  m2Require(and(xCoord(point)==x yCoord(point)==y)))
+procedure(m2BlockPlacement(inst x y orientation)
+ m2Require(and(inst inst~>orient==orientation))
+ m2BlockPoint(inst~>xy x y))
+procedure(m2BlockCheckPlacement(cv name x y orientation)
+ let((inst)
+  inst=m2Require(car(setof(entry cv~>instances entry~>name==name)))
+  m2BlockPlacement(inst x y orientation)))
 procedure(m2BlockTerminal(cv name direction net)
  let((term)
   term=car(setof(entry cv~>terminals entry~>name==name))
@@ -1012,6 +1019,28 @@ def _block_cdf_values(inst: Mos, devices: tuple[dict[str, object], ...]) -> dict
     return values
 
 
+def render_research_positioned_instance(
+    master: Master,
+    instance: Component,
+) -> tuple[tuple[str, ...], str]:
+    """Open the symbol first, then create and verify the instance at literal XY."""
+    master = Master.model_validate_json(master.model_dump_json())
+    placement = Placement.model_validate_json(instance.placement.model_dump_json())
+    if master.view != "symbol" or placement.orientation != "R0":
+        raise ValueError("research instance requires a symbol master and R0 placement")
+    x, y = placement.origin.x, placement.origin.y
+    name = _quote(instance.name)
+    library, cell = _quote(master.library), _quote(master.cell)
+    return (
+        (
+            f'master=m2Require(dbOpenCellViewByType({library} {cell} "symbol" "" "r"))',
+            f'inst=m2Require(dbCreateInst(cv master {name} list({x} {y}) "R0"))',
+            f'm2BlockPlacement(inst {x} {y} "R0")',
+        ),
+        f'm2BlockCheckPlacement(cv {name} {x} {y} "R0")',
+    )
+
+
 def _block_generation_parts(
     plan: OwnedMosBlockPlan, ordered: list[Circuit], cdf_frames: Mapping[str, bytes]
 ) -> tuple[list[str], list[str]]:
@@ -1045,6 +1074,7 @@ def _block_generation_parts(
             )
         )
         initial_checks: list[str] = []
+        placement_checks: list[str] = []
         for port in cell.ports:
             args = f"{q(port.name)} {q(port.direction)}"
             create.append(f"m2Port(cv {args} {port.origin.x} {port.origin.y})")
@@ -1083,7 +1113,11 @@ def _block_generation_parts(
             x, y = inst.placement.origin.x, inst.placement.origin.y
             target = f"{q(master_lib)} {q(master_cell)}"
             inst_name = q(inst.name)
-            create.append(f"inst=m2Instance(cv {target} {inst_name} {x} {y})")
+            creation, placement_check = render_research_positioned_instance(
+                Master(library=master_lib, cell=master_cell, view="symbol"), inst
+            )
+            create.extend(creation)
+            placement_checks.append(placement_check)
             reopen.append(
                 f"inst=m2BlockInstance(cv {inst_name} {target} {x} {y} {len(inst.links)})"
             )
@@ -1101,6 +1135,7 @@ def _block_generation_parts(
             (
                 "m2Require(schCheck(cv))",
                 *initial_checks,
+                *placement_checks,
                 "m2Require(dbSave(cv)) dbClose(cv)",
                 f'cv=m2Require(dbOpenCellViewByType({lib} {name} "symbol" "schematicSymbol" "w"))',
                 f'm2Require(dbCreateRect(cv list("device" "drawing") '
@@ -1155,7 +1190,7 @@ def render_owned_mos_block(
             (
                 _PRELUDE,
                 _BLOCK_PRELUDE,
-                "procedure(m2BlockRun() let((cv inst net fig)",
+                "procedure(m2BlockRun() let((cv inst net fig master)",
                 *body,
                 "t))",
                 "let((result) result=errset(m2BlockRun() t) if(result then exit(0) else exit(1)))",
