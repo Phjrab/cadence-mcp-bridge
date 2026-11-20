@@ -1,0 +1,531 @@
+{
+  "document_kind": "research-draft-v1",
+  "execution_ready": false,
+  "source": {
+    "title": "Design of a 12-bit Sigma Delta ADC in 45 nm CMOS technology",
+    "repository_record": "https://hdl.handle.net/11117/11332",
+    "figure": "2-12",
+    "table": "7",
+    "values_source": "user-provided secondary notes",
+    "primary_circuit_verified": false
+  },
+  "design": {
+    "name": "self_cascode_ota_17mos",
+    "symbol": null,
+    "testbench": null,
+    "internal_nets": null,
+    "hierarchy_connections": null,
+    "pins_candidates": [
+      {
+        "name": "VDD",
+        "role": "supply"
+      },
+      {
+        "name": "VSS",
+        "role": "ground"
+      },
+      {
+        "name": "inp",
+        "role": "input"
+      },
+      {
+        "name": "inn",
+        "role": "input"
+      },
+      {
+        "name": "out",
+        "role": "single_output"
+      }
+    ],
+    "devices": [
+      {
+        "name": "NM0",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 1.5,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM1",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 1.5,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM8",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 15,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM9",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 15,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM2",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 3,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM3",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 3,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM8",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 3,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM4",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 30,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM5",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 30,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM7",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 10,
+          "L": 1,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "PM6",
+        "instance_path": null,
+        "device_kind_candidate": "pmos",
+        "pdk_mapping_key": "pmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 16,
+          "L": 1,
+          "unit": "um",
+          "multiplier": 6,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM2",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 1,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM3",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 1,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM10",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 1,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM6",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 10,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM7",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 10,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      },
+      {
+        "name": "NM11",
+        "instance_path": null,
+        "device_kind_candidate": "nmos",
+        "pdk_mapping_key": "nmos",
+        "terminals": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "dimensions_candidate": {
+          "W": 10,
+          "L": 0.25,
+          "unit": "um",
+          "multiplier": 1,
+          "fingers": null
+        },
+        "placement": null,
+        "role": null,
+        "verification": "unverified"
+      }
+    ],
+    "wiring": null,
+    "pdk_target": "GPDK090"
+  },
+  "pdk_mapping": {
+    "model_section": null,
+    "technology_library": null,
+    "model_dependency_evidence": null,
+    "device_mappings": {
+      "nmos": {
+        "library": null,
+        "cell": null,
+        "view": null,
+        "terminal_map": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "cdf": {
+          "w": null,
+          "fw": null,
+          "l": null,
+          "m": null,
+          "fingers": null,
+          "width_semantics": null,
+          "unit_conversion": null,
+          "allowed_ranges": null
+        },
+        "model": null,
+        "source_evidence": null
+      },
+      "pmos": {
+        "library": null,
+        "cell": null,
+        "view": null,
+        "terminal_map": {
+          "D": null,
+          "G": null,
+          "S": null,
+          "B": null
+        },
+        "cdf": {
+          "w": null,
+          "fw": null,
+          "l": null,
+          "m": null,
+          "fingers": null,
+          "width_semantics": null,
+          "unit_conversion": null,
+          "allowed_ranges": null
+        },
+        "model": null,
+        "source_evidence": null
+      }
+    }
+  },
+  "bench_candidates": {
+    "VDD_V": 1,
+    "VSS_V": 0,
+    "input_common_mode_V": 0.5,
+    "temperature_C": 27,
+    "output_load_pF": 1,
+    "ac": {
+      "inp": {
+        "dc_V": 0.5,
+        "magnitude": 0.5,
+        "phase_deg": 0
+      },
+      "inn": {
+        "dc_V": 0.5,
+        "magnitude": 0.5,
+        "phase_deg": 180
+      },
+      "start_Hz": 1,
+      "stop_Hz": 1000000000,
+      "points_per_decade": 16
+    },
+    "tran": {
+      "stop_s": null,
+      "max_step_s": null,
+      "metric_windows_s": null
+    },
+    "clock": {
+      "kind": "ideal_non_overlap",
+      "frequency_Hz": null,
+      "dead_time_s": null,
+      "rise_s": null,
+      "fall_s": null
+    },
+    "measurements": {
+      "mos_operating_point": [
+        "id",
+        "gm",
+        "gds",
+        "vgs",
+        "vds",
+        "vdsat",
+        "region"
+      ],
+      "differential_gain": {
+        "output": "out",
+        "input_positive": "inp",
+        "input_negative": "inn"
+      },
+      "supply_sources": null,
+      "loop_gain_fixture": null
+    },
+    "targets": null
+  },
+  "reference_only": {
+    "gain_dB": 63.91,
+    "unity_gain_Hz": 20210000,
+    "whole_modulator_power_uW": 38.8,
+    "circuit_values_verified": false
+  }
+}
