@@ -226,14 +226,35 @@ async def test_research_mos_block_mcp_plans_and_checks_pinned_projections(config
 
 
 @pytest.mark.asyncio
-async def test_research_transient_mcp_repeat_reads_only_retained_result(connected):
+@pytest.mark.parametrize("with_current", [False, True])
+async def test_research_transient_mcp_repeat_reads_only_retained_result(connected, with_current):
+    from test_research_transient import _supplies
+
     from cadence_mcp_bridge.native_server import register_native_tools
     from cadence_mcp_bridge.server import DesignContractServer
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-    _, native, query, record, _, _ = connected
+    _, native, query, record, _, data = connected
     store = native.lifecycle.store = Mock()
     store.connection.side_effect = lambda **_: nullcontext()
     store._read_operation.return_value = record
+    digest = None
+    if with_current:
+        waves = data["tran_waveforms"]
+        supply = _supplies({
+            key: [{"time_s": point["time_s"], "value_a": amps} for point in waves["vin"]]
+            for key, amps in (("supply", -0.002), ("absorb", 0.001))
+        })
+        waves["pos"] = waves["vdd"]
+        waves["neg"] = [{"time_s": point["time_s"], "value_v": 0} for point in waves["vin"]]
+        rail = next(row for row in data["transient"] if row["logical_id"] == "vdd")
+        data["transient"].extend([
+            {**rail, "logical_id": "pos"},
+            {**rail, "logical_id": "neg", "minimum": 0, "maximum": 0,
+             "first": 0, "last": 0, "time_weighted_mean": 0},
+        ])
+        data["tran_supply_evidence"] = supply.model_dump(mode="json")
+        digest = canonical_digest(supply)
     server = DesignContractServer("research-fixture")
     register_native_tools(server, native)
     request = {
@@ -250,7 +271,13 @@ async def test_research_transient_mcp_repeat_reads_only_retained_result(connecte
         assert not response.is_error and result is not None
         assert result["source"]["operation_id"] == query.operation_id
         assert len(result["signals"]["vout"]["points"]) == 2
-        assert result["measurements"]["average_supply_power"]["value"] is None
+        power = result["measurements"]["average_supply_power"]
+        if with_current:
+            assert power["value"] == pytest.approx(0.002)
+        else:
+            assert power["reason"] == "registered_tran_supply_current_unavailable"
+            assert power["value"] is None
+        assert result["tran_supply_evidence_sha256"] == digest
         assert [result[key] for key in (
             "new_simulations", "new_extractions", "new_reservations",
         )] == [0, 0, 0]

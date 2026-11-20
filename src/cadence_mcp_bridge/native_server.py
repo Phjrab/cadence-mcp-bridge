@@ -201,7 +201,8 @@ def register_native_tools(server: MCPServer, native: NativeOperationService) -> 
         annotations=_READ_ONLY,
         structured_output=True,
         description="Measure a bounded saved waveform window from a retained registered TRAN "
-        "operation. No simulation or extraction replay; TRAN supply power is unavailable.",
+        "operation. Signed power requires registered retained supply-current evidence. "
+        "No simulation or extraction replay.",
     )
     async def cadence_research_transient_result(
         request: ResearchTransientRequest,

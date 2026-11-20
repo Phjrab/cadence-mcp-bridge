@@ -8642,7 +8642,7 @@
     "cadence_research_transient_result": {
       "name": "cadence_research_transient_result",
       "title": null,
-      "description": "Measure a bounded saved waveform window from a retained registered TRAN operation. No simulation or extraction replay; TRAN supply power is unavailable.",
+      "description": "Measure a bounded saved waveform window from a retained registered TRAN operation. Signed power requires registered retained supply-current evidence. No simulation or extraction replay.",
       "inputSchema": {
         "$defs": {
           "ResearchTransientRequest": {
@@ -9764,6 +9764,19 @@
             "pattern": "^[0-9a-f]{64}$",
             "title": "Terminal Receipt Sha256",
             "type": "string"
+          },
+          "tran_supply_evidence_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tran Supply Evidence Sha256"
           }
         },
         "required": [

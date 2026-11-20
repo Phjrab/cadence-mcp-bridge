@@ -192,6 +192,7 @@ class ResearchTransientResult(RetainedResearchResult):
     declared_maxstep_s: NumberText
     waveforms_sha256: Digest
     terminal_receipt_sha256: Digest
+    tran_supply_evidence_sha256: Digest | None = None
 
 
 class ResearchSupplyPowerRequest(NativeOperationQuery):
