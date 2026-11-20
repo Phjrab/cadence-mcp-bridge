@@ -43,6 +43,7 @@ def research_registration(assembly, operator, tmp_path, monkeypatch):
                 "source_tree_sha256": "2" * 64,
                 "bench_cell": observation.source_cell,
                 "bench_tree_sha256": observation.ade.source_tree_sha256,
+                "static_statements_sha256": observation.ade.static_statements_sha256,
                 "pins": {
                     "plan_sha256": "3" * 64,
                     "save_receipt_sha256": "4" * 64,
@@ -50,6 +51,8 @@ def research_registration(assembly, operator, tmp_path, monkeypatch):
                     "netlist_receipt_sha256": "6" * 64,
                     "raw_netlist_sha256": "7" * 64,
                     "full_netlist_sha256": observation.baseline_input_sha256,
+                    "bench_plan_sha256": "8" * 64,
+                    "bench_conditions_sha256": "9" * 64,
                 },
             }
         )
@@ -122,7 +125,9 @@ def test_assembled_research_registration_is_read_back_and_exclusive(
     transport.assert_not_called()
 
 
-@pytest.mark.parametrize("part", ["baseline", "source_tree", "library_tree", "context", "handoff"])
+@pytest.mark.parametrize(
+    "part", ["baseline", "source_tree", "library_tree", "context", "handoff", "static"]
+)
 def test_research_registration_rejects_mixed_evidence(
     research_registration,
     part,
@@ -138,8 +143,10 @@ def test_research_registration_rejects_mixed_evidence(
         record["libraries"][0]["tree_sha256"] = "f" * 64
     elif part == "context":
         payload["expected_context_sha256"] = "f" * 64
-    else:
+    elif part == "handoff":
         payload["expected_handoff_sha256"] = "f" * 64
+    else:
+        record["ade"]["static_statements_sha256"] = "f" * 64
     observation_path.write_text(json.dumps(record))
     payload["observation"] = pinned(observation_path)
     assert invoke(settings, document, payload, output) == 2
