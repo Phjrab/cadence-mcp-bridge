@@ -1,11 +1,17 @@
+import hashlib
 import json
 from contextlib import nullcontext
+from types import SimpleNamespace
 from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from test_cmos_delay_service import connected, no_dispatch
+from test_generic_measurements import operator, operator_base, reader_for
 
+from cadence_mcp_bridge._native_eda_worker import EdaWorker
+from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, project_frame
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.research_transient import (
     MAX_RESULT_BYTES,
@@ -15,8 +21,9 @@ from cadence_mcp_bridge.research_transient import (
     evaluate_research_transient,
     research_transient_export_bytes,
 )
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
-__all__ = ["connected"]
+__all__ = ["connected", "operator", "operator_base"]
 
 
 def _query(**updates):
@@ -146,11 +153,28 @@ def test_average_signed_supply_power_requires_complete_registered_vectors(case, 
 
 
 @pytest.mark.asyncio
-async def test_same_id_reads_registered_result_without_reconcile_or_submit(connected):
+@pytest.mark.parametrize("with_current", [False, True])
+async def test_same_id_reads_registered_result_without_reconcile_or_submit(connected, with_current):
     _, native, original, record, _, data = connected
     store = native.lifecycle.store = Mock()
     store.connection.side_effect = lambda **_: nullcontext("read connection")
     store._read_operation.return_value = record
+    if with_current:
+        supply = _supplies({
+            key: [{"time_s": p["time_s"], "value_a": amps} for p in data["tran_waveforms"]["vin"]]
+            for key, amps in (("supply", -0.002), ("absorb", 0.001))
+        })
+        data["tran_waveforms"]["pos"] = data["tran_waveforms"]["vdd"]
+        data["tran_waveforms"]["neg"] = [
+            {"time_s": p["time_s"], "value_v": 0} for p in data["tran_waveforms"]["vin"]
+        ]
+        vdd = next(row for row in data["transient"] if row["logical_id"] == "vdd")
+        data["transient"].extend([
+            {**vdd, "logical_id": "pos"},
+            {**vdd, "logical_id": "neg", "minimum": 0, "maximum": 0,
+             "first": 0, "last": 0, "time_weighted_mean": 0},
+        ])
+        data["tran_supply_evidence"] = supply.model_dump(mode="json")
     query = _query(
         operation_id=original.operation_id,
         expected_plan_sha256=original.expected_plan_sha256,
@@ -162,6 +186,12 @@ async def test_same_id_reads_registered_result_without_reconcile_or_submit(conne
         assert result["source"]["frame_sha256"] == data["frame_sha256"]
         assert result["sample_kind"] == "NATIVE_SAVED_VECTOR"
         assert result["new_simulations"] == result["new_reservations"] == 0
+        power = result["measurements"]["average_supply_power"]
+        if with_current:
+            assert power["value"] == pytest.approx(0.002)
+            assert result["tran_supply_evidence_sha256"] == canonical_digest(supply)
+        else:
+            assert power["reason"] == "registered_tran_supply_current_unavailable"
     assert native.provider.analog_result.await_count == 2
     store.connection.assert_called_with(create=False, read_only=True)
     native.lifecycle.reconcile.assert_not_called()
@@ -171,3 +201,60 @@ async def test_same_id_reads_registered_result_without_reconcile_or_submit(conne
     with pytest.raises(OperationRejected) as error:
         await capture_research_transient(native, query)
     assert error.value.reason == "research_transient_saved_vector_inventory_mismatch"
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_compiled_tran_supply_frame_and_legacy_projection(operator, version):
+    context, plan, ade, reader, operation, execution = reader_for(operator, "tran")
+    dc_source = reader_for(operator, "dc")[3].sources[0]
+    reader = GenericReaderRegistration.model_validate_json(json.dumps({
+        **reader.model_dump(mode="json"), "schema_version": version,
+        "sources": [dc_source.model_dump(mode="json")] if version == 2 else [],
+    }))
+    reader_document = reader.model_dump(mode="json")
+    header = "|".join((
+        "MCP_GREL_FRAME", str(version), operation, plan.plan_sha256, execution,
+        canonical_digest(reader),
+    ))
+    rows = ["P|input|0|0|3|0", "P|input|1|0.004|3|0",
+            "P|output|0|0|1|0", "P|output|1|0.004|1|0"]
+    if version == 2:
+        rows.extend(["C|rail|0|0|-0.001|0", "C|rail|1|0.004|-0.002|0"])
+    frame = "\n".join([header, *rows, "END", ""]).encode()
+    worker = SimpleNamespace(
+        operations=SimpleNamespace(
+            canonical=_canonical, digest=lambda raw: hashlib.sha256(raw).hexdigest(),
+        ),
+        operation_id=operation,
+        finite=float,
+    )
+    EdaWorker.frame(
+        worker, frame, plan.model_dump(mode="json"), {"reader": reader_document}, execution,
+    )
+    args = context, plan, ade, reader, operation, execution
+    projected = project_frame(*args, frame, include_tran_waveforms=True)
+    assert ("tran_supply_evidence" in projected) == (version == 2)
+    if version == 2:
+        query = _query(
+            window={"start_s": 0, "stop_s": 0.004, "maximum_gap_s": 0.004},
+            signals=["input"], delay=None, slew=None, settling=None,
+        )
+        evidence = TransientSupplyEvidence.model_validate_json(
+            json.dumps(projected["tran_supply_evidence"]),
+        )
+        result = evaluate_research_transient(
+            query, projected["tran_waveforms"], sample_kind="NATIVE_SAVED_VECTOR", supply=evidence,
+        )
+        assert result["measurements"]["average_supply_power"]["value"] == pytest.approx(0.003)
+        for changed in (
+            frame.replace(b"C|rail|1|0.004", b"C|rail|1|0.003"),
+            frame.replace(b"C|rail|1|0.004|-0.002|0", b"C|rail|1|0.004|-0.002|1"),
+            frame.replace(b"C|rail|1|0.004|-0.002|0\n", b""),
+        ):
+            with pytest.raises(OperationRejected):
+                project_frame(*args, changed, include_tran_waveforms=True)
+            with pytest.raises(ValueError):
+                EdaWorker.frame(
+                    worker, changed, plan.model_dump(mode="json"),
+                    {"reader": reader_document}, execution,
+                )

@@ -15,7 +15,7 @@ from cadence_mcp_bridge.generic_measurements import MAX_SAMPLES, SourceSignal
 from cadence_mcp_bridge.native_service import NativeOperationQuery, NativeOperationService
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.result_reports import make_report
-from cadence_mcp_bridge.variable_contracts import LogicalId, VariableModel
+from cadence_mcp_bridge.variable_contracts import LogicalId, VariableModel, canonical_digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
 Positive = Annotated[float, Field(gt=0, allow_inf_nan=False)]
@@ -408,7 +408,15 @@ async def capture_research_transient(
             len(points), points[0].time_s, points[-1].time_s,
         ):
             raise OperationRejected("research_transient_saved_vector_inventory_mismatch")
-    result = evaluate_research_transient(query, waves, sample_kind="NATIVE_SAVED_VECTOR")
+    supply = (
+        TransientSupplyEvidence.model_validate_json(_canonical(data["tran_supply_evidence"]))
+        if "tran_supply_evidence" in data else None
+    )
+    result = evaluate_research_transient(
+        query, waves, sample_kind="NATIVE_SAVED_VECTOR", supply=supply,
+    )
+    if supply is not None:
+        result["tran_supply_evidence_sha256"] = canonical_digest(supply)
     result.update(
         source=report.model_dump(mode="json"),
         declared_maxstep_s=inputs.maxstep_s,
