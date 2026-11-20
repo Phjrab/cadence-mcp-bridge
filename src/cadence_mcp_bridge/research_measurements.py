@@ -4,21 +4,25 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
+import stat
 from itertools import pairwise
+from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, TypeAdapter, model_validator
 
-from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.generic_analog import (
     Positive,
     _capture_retained_transfer,
     _interpolate_db_crossing,
 )
 from cadence_mcp_bridge.native_diagnostics import OperationId
-from cadence_mcp_bridge.native_service import NativeOperationService
+from cadence_mcp_bridge.native_service import NativeOperationQuery, NativeOperationService
+from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected
-from cadence_mcp_bridge.result_reports import ResultReport, capture, conditions_digest
+from cadence_mcp_bridge.result_reports import REPORT_LIMIT, ResultReport, capture, conditions_digest
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
@@ -366,3 +370,158 @@ def parse_device_op_frame(
         op_frame_sha256=expected_frame_sha256,
         rows=tuple(rows),
     )
+
+
+class DeviceOpQuery(NativeOperationQuery):
+    registration_id: LogicalId
+
+
+class DeviceOpSourceBinding(VariableModel):
+    """Trusted local operator setting; public requests never supply this value."""
+
+    catalog_path: Path
+    catalog_sha256: Digest
+
+
+class _DeviceOpArtifact(VariableModel):
+    path: Path
+    sha256: Digest
+
+
+class _DeviceOpRecord(VariableModel):
+    registration_id: LogicalId
+    operation_id: OperationId
+    plan_sha256: Digest
+    execution_input_sha256: Digest
+    terminal_sha256: Digest
+    registration: DeviceOpRegistration
+    registration_sha256: Digest
+    report: _DeviceOpArtifact
+    frame: _DeviceOpArtifact
+
+
+class _DeviceOpCatalog(VariableModel):
+    schema_version: Literal[1]
+    records: Annotated[tuple[_DeviceOpRecord, ...], Field(max_length=64)]
+
+    @model_validator(mode="after")
+    def distinct(self) -> Self:
+        ids = {(row.operation_id, row.registration_id) for row in self.records}
+        if len(ids) != len(self.records):
+            raise ValueError("distinct device OP lookup keys required")
+        return self
+
+
+def _read_op_artifact(path: Path, digest: str, *, limit: int) -> bytes:
+    if not path.is_absolute() or path.drive.startswith("\\"):
+        raise OperationRejected("research_op_local_absolute_path_required")
+    try:
+        source = _local_path(path)
+        before = source.stat()
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > limit:
+            raise OperationRejected("research_op_artifact_invalid")
+        fd = os.open(
+            source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        )
+        with os.fdopen(fd, "rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or opened.st_nlink != 1
+                or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino)
+            ):
+                raise OperationRejected("research_op_artifact_changed")
+            raw = stream.read(limit + 1)
+    except OperationRejected:
+        raise
+    except (OSError, ValueError):
+        raise OperationRejected("research_op_artifact_unreadable") from None
+    if len(raw) > limit or hashlib.sha256(raw).hexdigest() != digest:
+        raise OperationRejected("research_op_artifact_digest_or_size_mismatch")
+    return raw
+
+
+def capture_device_operating_points(
+    native: NativeOperationService,
+    query: DeviceOpQuery,
+    *,
+    source: DeviceOpSourceBinding | None,
+) -> dict[str, Any]:
+    """Validate retained DC operation identity and read an operator-pinned OP frame."""
+    effects = {
+        "remote_contact": False,
+        "new_simulations": 0,
+        "new_extractions": 0,
+        "new_reservations": 0,
+    }
+    if source is None:
+        return {"status": "NOT_AVAILABLE", "reason": "device_op_source_not_configured", **effects}
+    raw = _read_op_artifact(source.catalog_path, source.catalog_sha256, limit=REPORT_LIMIT)
+    try:
+        _closed_document(raw, max_bytes=REPORT_LIMIT)
+        catalog = _DeviceOpCatalog.model_validate_json(raw)
+    except ValueError:
+        raise OperationRejected("research_op_catalog_invalid") from None
+    evidence = next(
+        (
+            row
+            for row in catalog.records
+            if (row.operation_id, row.registration_id)
+            == (query.operation_id, query.registration_id)
+        ),
+        None,
+    )
+    if evidence is None:
+        return {"status": "NOT_AVAILABLE", "reason": "registered_op_record_unavailable", **effects}
+    if evidence.plan_sha256 != query.expected_plan_sha256 or (
+        canonical_digest(evidence.registration) != evidence.registration_sha256
+    ):
+        raise OperationRejected("research_op_registration_or_plan_mismatch")
+
+    native.current()
+    store = native.lifecycle.store
+    with store.connection(create=False, read_only=True) as connection:
+        record = store._read_operation(connection, query.operation_id)
+    if (
+        record.operation_id != query.operation_id
+        or record.plan.plan_sha256 != evidence.plan_sha256
+        or record.plan.resource_domain_sha256 != native.context.resource_domain_sha256
+        or record.plan.ledger_ref != native.context.binding.ledger_ref
+        or record.plan.analysis != "dc"
+        or record.progress.phase != "SUCCEEDED"
+        or record.progress.provider_receipt_sha256 != evidence.terminal_sha256
+    ):
+        raise OperationRejected("research_op_retained_terminal_mismatch")
+
+    report_raw = _read_op_artifact(evidence.report.path, evidence.report.sha256, limit=REPORT_LIMIT)
+    try:
+        _closed_document(report_raw, max_bytes=REPORT_LIMIT)
+        report = ResultReport.model_validate_json(report_raw)
+    except ValueError:
+        raise OperationRejected("research_op_source_report_invalid") from None
+    if (
+        report.operation_id != record.operation_id
+        or report.plan != record.plan
+        or report.execution_input_sha256 != evidence.execution_input_sha256
+    ):
+        raise OperationRejected("research_op_source_report_mismatch")
+
+    frame = _read_op_artifact(evidence.frame.path, evidence.frame.sha256, limit=_OP_FRAME_LIMIT)
+    payload = parse_device_op_frame(
+        report,
+        evidence.registration,
+        frame,
+        expected_frame_sha256=evidence.frame.sha256,
+    )
+    measurement = project_device_operating_points(report, evidence.registration, payload)
+    return {
+        "status": "AVAILABLE",
+        "registration_id": query.registration_id,
+        "measurement": measurement,
+        "source": report.model_dump(mode="json"),
+        "source_report_sha256": evidence.report.sha256,
+        "terminal_sha256": evidence.terminal_sha256,
+        "catalog_sha256": source.catalog_sha256,
+        "verification_at_read": "OPERATOR_PINNED_ARTIFACT_AND_RETAINED_TERMINAL_VERIFIED",
+        **effects,
+    }
