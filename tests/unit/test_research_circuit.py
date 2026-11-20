@@ -16,6 +16,7 @@ from cadence_mcp_bridge.native_runtime import NativeLibrary
 from cadence_mcp_bridge.research_circuit import (
     MosBlockEvidence,
     MosBlockHandoffPins,
+    MosBlockRegistrationHandoff,
     MosBlockStageReceipt,
     OwnedMosBlockPlan,
     ResearchCircuit,
@@ -24,6 +25,7 @@ from cadence_mcp_bridge.research_circuit import (
     plan_owned_mos_block,
     project_mos_block_netlist,
     render_owned_mos_block,
+    verify_mos_block_handoff,
     verify_mos_block_registration_source,
     verify_owned_mos_block,
 )
@@ -512,6 +514,8 @@ def handoff_fixture() -> tuple[OwnedMosBlockPlan, dict[str, Any]]:
             netlist_receipt_sha256=canonical_digest(netlisted),
             raw_netlist_sha256=sha256(raw).hexdigest(),
             full_netlist_sha256=sha256(full).hexdigest(),
+            bench_plan_sha256="d" * 64,
+            bench_conditions_sha256="e" * 64,
         ),
     )
 
@@ -647,3 +651,105 @@ def test_mos_handoff_checks_exact_artifacts_and_dut_content(change: str) -> None
         ValueError, match="binding|stdout|marker|digest|topology|projection differs"
     ):
         _verify_mos_block_handoff(plan, **options)
+
+
+def test_composite_handoff_requires_the_exact_top_level_bench() -> None:
+    from cadence_mcp_bridge import research_bench as bench_api
+
+    fixture_plan, options = handoff_fixture()
+    inverter, frame = inverter_fixture()
+    data = payload(inverter)
+    bench = data["circuits"][1]
+    bench["instances"][2]["pulse"].update(delay_s="10e-9", width_s="65e-9", period_s="150e-9")
+    data["circuits"] = [cell.model_dump(mode="json") for cell in fixture_plan.circuits] + [bench]
+    definition = ResearchCircuit.model_validate_json(json.dumps(data))
+    definition_sha = canonical_digest(definition)
+    plan = plan_owned_mos_block(
+        definition,
+        expected_binding=inverter.binding,
+        expected_definition_sha256=definition_sha,
+        output_library=fixture_plan.output_library,
+    )
+    plan_sha = canonical_digest(plan)
+    bench_plan = bench_api.plan_research_bench(
+        definition,
+        plan,
+        expected_definition_sha256=definition_sha,
+        expected_dut_plan_sha256=plan_sha,
+    )
+    bench_sha = canonical_digest(bench_plan)
+    frames = {inverter.cdf_frame_sha256: frame}
+    scripts = bench_api.render_research_bench(
+        bench_plan,
+        plan,
+        frames,
+        expected_plan_sha256=bench_sha,
+        owned_library_path="/owned/block",
+    )
+    conditions = bench_api.BenchNetlistConditions(
+        parameters={"m2_vin": "0.5"},
+        includes=(),
+        analyses=(("dc", 'write="spectre.dc" annotate=status'),),
+        fixed_top_level=("global 0",),
+    )
+    raw = options["raw_netlist"]
+    full = raw.replace(b"global 0\n", b"global 0\nparameters m2_vin=0.5\n", 1) + (
+        b"DUT (vin vout vdd 0) Dut\n"
+        b"VDD (vdd 0) vsource dc=1 type=dc\n"
+        b"VIN (vin 0) vsource dc=m2_vin type=pulse val0=0 val1=1 period=150n "
+        b"delay=10n rise=100p fall=100p width=65n\n"
+        b"CL (vout 0) capacitor c=1p\n"
+        b'dc dc write="spectre.dc" annotate=status\n'
+    )
+    stdout = []
+    receipts = []
+    for key, markers, script in (
+        ("saved", scripts.save_markers, scripts.generate),
+        ("reopened", scripts.reopen_markers, scripts.reopen),
+    ):
+        output = ("\n".join(markers) + "\n").encode("ascii")
+        stdout.append(output)
+        receipts.append(
+            options[key].model_copy(
+                update={
+                    "plan_sha256": plan_sha,
+                    "artifact_sha256": sha256(output).hexdigest(),
+                    "script_sha256": sha256(script.encode("ascii")).hexdigest(),
+                }
+            )
+        )
+    saved, reopened = receipts
+
+    def verify(candidate: bytes) -> MosBlockRegistrationHandoff:
+        full_sha = sha256(candidate).hexdigest()
+        netlisted = options["netlisted"].model_copy(
+            update={"plan_sha256": plan_sha, "artifact_sha256": full_sha}
+        )
+        pins = MosBlockHandoffPins(
+            plan_sha256=plan_sha,
+            bench_plan_sha256=bench_sha,
+            bench_conditions_sha256=canonical_digest(conditions),
+            save_receipt_sha256=canonical_digest(saved),
+            reopen_receipt_sha256=canonical_digest(reopened),
+            netlist_receipt_sha256=canonical_digest(netlisted),
+            raw_netlist_sha256=sha256(raw).hexdigest(),
+            full_netlist_sha256=full_sha,
+        )
+        return verify_mos_block_handoff(
+            plan,
+            bench_plan,
+            frames,
+            pins=pins,
+            conditions=conditions,
+            saved=saved,
+            reopened=reopened,
+            netlisted=netlisted,
+            save_stdout=stdout[0],
+            reopen_stdout=stdout[1],
+            raw_netlist=raw,
+            full_netlist=candidate,
+        )
+
+    assert verify(full).bench_cell == "/owned/block/Bench"
+    with pytest.raises(ValueError, match="bench device, model, terminals or effective values"):
+        verify(full.replace(b"capacitor c=1p", b"capacitor c=2p"))

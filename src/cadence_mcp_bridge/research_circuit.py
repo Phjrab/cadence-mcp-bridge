@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from decimal import Decimal, localcontext
 from hashlib import sha256
-from typing import Annotated, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from pydantic import BeforeValidator, Field, model_validator
 
@@ -31,6 +31,10 @@ from cadence_mcp_bridge.variable_contracts import (
     canonical_digest,
     number_text,
 )
+
+if TYPE_CHECKING:
+    from cadence_mcp_bridge.research_bench import BenchNetlistConditions, ResearchBenchPlan
+
 
 Numeric = Annotated[str, BeforeValidator(number_text)]
 PositiveInt = Annotated[int, Field(ge=1, le=100_000)]
@@ -1334,6 +1338,8 @@ class MosBlockHandoffPins(VariableModel):
     netlist_receipt_sha256: Digest
     raw_netlist_sha256: Digest
     full_netlist_sha256: Digest
+    bench_plan_sha256: Digest
+    bench_conditions_sha256: Digest
 
 
 class MosBlockRegistrationHandoff(VariableModel):
@@ -1501,6 +1507,66 @@ def _verify_mos_block_handoff(
         pins=pins,
         static_statements_sha256=static_digest,
     )
+
+
+def verify_mos_block_handoff(
+    plan: OwnedMosBlockPlan,
+    bench_plan: ResearchBenchPlan,
+    cdf_frames: Mapping[str, bytes],
+    *,
+    pins: MosBlockHandoffPins,
+    conditions: BenchNetlistConditions,
+    saved: MosBlockStageReceipt,
+    reopened: MosBlockStageReceipt,
+    netlisted: MosBlockStageReceipt,
+    save_stdout: bytes,
+    reopen_stdout: bytes,
+    raw_netlist: bytes,
+    full_netlist: bytes,
+) -> MosBlockRegistrationHandoff:
+    """Check the package's exact composite build and its complete bench baseline."""
+    from cadence_mcp_bridge.research_bench import (
+        render_research_bench,
+        verify_research_bench_netlist,
+    )
+
+    pins = MosBlockHandoffPins.model_validate_json(pins.model_dump_json())
+    plan = _pinned_block(plan, pins.plan_sha256)
+    saved = MosBlockStageReceipt.model_validate_json(saved.model_dump_json())
+    scripts = render_research_bench(
+        bench_plan,
+        plan,
+        cdf_frames,
+        expected_plan_sha256=pins.bench_plan_sha256,
+        owned_library_path=saved.library.path,
+    )
+    handoff = _verify_mos_block_handoff(
+        plan,
+        scripts,
+        pins=pins,
+        bench_name=scripts.bench_cell,
+        save_markers=scripts.save_markers,
+        reopen_markers=scripts.reopen_markers,
+        saved=saved,
+        reopened=reopened,
+        netlisted=netlisted,
+        save_stdout=save_stdout,
+        reopen_stdout=reopen_stdout,
+        raw_netlist=raw_netlist,
+        full_netlist=full_netlist,
+    )
+    verify_research_bench_netlist(
+        bench_plan,
+        plan,
+        full_netlist,
+        raw_netlist,
+        expected_plan_sha256=pins.bench_plan_sha256,
+        expected_netlist_sha256=pins.full_netlist_sha256,
+        expected_dut_netlist_sha256=pins.raw_netlist_sha256,
+        conditions=conditions,
+        expected_conditions_sha256=pins.bench_conditions_sha256,
+    )
+    return handoff
 
 
 def verify_mos_block_registration_source(
