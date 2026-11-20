@@ -1,6 +1,7 @@
 """Local fixtures for explicit circuit definitions and the existing inverter path."""
 
 import json
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -8,7 +9,14 @@ from pydantic import ValidationError
 from test_m2_inverter import fixture as inverter_fixture
 
 from cadence_mcp_bridge.m2_inverter import OwnedInverterPlan, render_generator
-from cadence_mcp_bridge.research_circuit import ResearchCircuit, adapt_owned_inverter
+from cadence_mcp_bridge.research_circuit import (
+    MosBlockEvidence,
+    OwnedMosBlockPlan,
+    ResearchCircuit,
+    adapt_owned_inverter,
+    plan_owned_mos_block,
+    verify_owned_mos_block,
+)
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 
@@ -187,4 +195,152 @@ def test_rejects_stale_independent_definition_pin() -> None:
             expected_definition_sha256="f" * 64,
             expected_cdf_frame_sha256=plan.cdf_frame_sha256,
             output_library=plan.output_library,
+        )
+
+
+def mos_block_fixture() -> tuple[OwnedMosBlockPlan, MosBlockEvidence]:
+    inverter, _ = inverter_fixture()
+    data = payload(inverter)
+    dut, _ = data["circuits"]
+    mn, mp = dut["instances"]
+    for inst, model in ((mn, "test_n"), (mp, "test_p")):
+        geo = inst["geometry"]
+        inst["spectre"] = {
+            "model": model,
+            "width": geo["fw"],
+            "length": geo["length"],
+            "multiplier": geo["multiplier"],
+            "source": geo["source"],
+        }
+    # Two instantiations of a named helper produce a larger hierarchical block.
+    helper = deepcopy(dut)
+    helper["name"] = "Helper"
+    for name, x in (("U1", 8), ("U2", 12)):
+        dut["instances"].append(
+            {
+                "name": name,
+                "kind": "child",
+                "circuit": "Helper",
+                "placement": {"origin": {"x": str(x), "y": "0"}},
+                "links": [
+                    {"terminal": port, "net": port} for port in ("vin", "vout", "vdd", "vss")
+                ],
+            }
+        )
+    data["circuits"].append(helper)
+    definition = ResearchCircuit.model_validate_json(json.dumps(data))
+    plan = plan_owned_mos_block(
+        definition,
+        expected_binding=inverter.binding,
+        expected_definition_sha256=canonical_digest(definition),
+        output_library="OwnedBlock",
+    )
+    reopened = []
+    netlisted = []
+    for cell in (dut, helper):
+        raw = deepcopy(cell)
+        for inst in raw["instances"]:
+            if inst["kind"] == "child":
+                inst.update(library="OwnedBlock", view="symbol")
+                continue
+            geo = inst.pop("geometry")
+            inst.pop("master_source")
+            inst.pop("spectre")
+            for key in ("w", "fw", "length", "multiplier", "fingers"):
+                inst[key] = geo[key]
+        raw["wires"] = []
+        reopened.append(raw)
+        netlisted.append(
+            {
+                "name": cell["name"],
+                "ports": ["vin", "vout", "vdd", "vss"],
+                "mos": [
+                    {
+                        "name": name,
+                        "model": model,
+                        "terminals": ["vout", "vin", rail, rail],
+                        "width": {"value": width, "unit": "um"},
+                        "length": {"value": "100", "unit": "nm"},
+                        "multiplier": 1,
+                    }
+                    for name, model, rail, width in (
+                        ("MN", "test_n", "vss", "0.12"),
+                        ("MP", "test_p", "vdd", "0.35"),
+                    )
+                ],
+                "children": [
+                    {"name": name, "circuit": "Helper", "terminals": ["vin", "vout", "vdd", "vss"]}
+                    for name in (("U1", "U2") if cell is dut else ())
+                ],
+            }
+        )
+    evidence = MosBlockEvidence.model_validate_json(
+        json.dumps(
+            {
+                "plan_sha256": canonical_digest(plan),
+                "output_library": "OwnedBlock",
+                "reopened_tree_sha256": "a" * 64,
+                "netlist_source_tree_sha256": "a" * 64,
+                "reopen_artifact_sha256": "b" * 64,
+                "netlist_artifact_sha256": "c" * 64,
+                "reopened": reopened,
+                "netlisted": netlisted,
+            }
+        )
+    )
+    return plan, evidence
+
+
+def verify_block(plan: OwnedMosBlockPlan, evidence: MosBlockEvidence) -> None:
+    verify_owned_mos_block(
+        plan,
+        evidence,
+        expected_plan_sha256=canonical_digest(plan),
+        expected_reopened_tree_sha256="a" * 64,
+        expected_reopen_artifact_sha256="b" * 64,
+        expected_netlist_artifact_sha256="c" * 64,
+    )
+
+
+def test_hierarchical_mos_block_compares_reopen_and_effective_netlist() -> None:
+    plan, evidence = mos_block_fixture()
+    assert {cell.name for cell in plan.circuits} == {"Dut", "Helper"}
+    verify_block(plan, evidence)
+
+
+@pytest.mark.parametrize(
+    "field", ["pin", "bulk", "w", "multiplier", "subckt", "child_library", "old_tree", "artifact"]
+)
+def test_hierarchical_mos_block_rejects_changed_evidence(field: str) -> None:
+    plan, evidence = mos_block_fixture()
+    data = evidence.model_dump(mode="json")
+    if field == "pin":
+        data["reopened"][0]["symbol"]["pins"].pop()
+    elif field == "bulk":
+        data["netlisted"][0]["mos"][1]["terminals"][3] = "vss"
+    elif field == "w":
+        data["reopened"][0]["instances"][0]["fw"]["value"] = "350"
+    elif field == "multiplier":
+        data["netlisted"][0]["mos"][1]["multiplier"] = 6
+    elif field == "subckt":
+        data["netlisted"][0]["children"][0]["terminals"] = ["vout", "vin", "vdd", "vss"]
+    elif field == "child_library":
+        data["reopened"][0]["instances"][2]["library"] = "Foreign"
+    elif field == "old_tree":
+        data["netlist_source_tree_sha256"] = "d" * 64
+    else:
+        data["netlist_artifact_sha256"] = "d" * 64
+    with pytest.raises(ValueError, match="mismatch"):
+        verify_block(plan, MosBlockEvidence.model_validate_json(json.dumps(data)))
+
+
+def test_mos_block_requires_confirmed_simulator_mapping() -> None:
+    inverter, _ = inverter_fixture()
+    definition = ResearchCircuit.model_validate_json(json.dumps(payload(inverter)))
+    with pytest.raises(ValueError, match="confirmed symbol, geometry and Spectre mapping"):
+        plan_owned_mos_block(
+            definition,
+            expected_binding=inverter.binding,
+            expected_definition_sha256=canonical_digest(definition),
+            output_library="OwnedBlock",
         )

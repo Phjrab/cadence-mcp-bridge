@@ -150,11 +150,22 @@ class Component(VariableModel):
         return self
 
 
+class SpectreMos(VariableModel):
+    """Independently sourced expected simulator mapping for this MOS."""
+
+    model: BindingName
+    width: Length
+    length: Length
+    multiplier: PositiveInt
+    source: Evidence
+
+
 class Mos(Component):
     kind: Literal["nmos", "pmos"]
     master: Master
     master_source: Evidence
     geometry: MosGeometry
+    spectre: SpectreMos | None = None
 
     @model_validator(mode="after")
     def four_terminals(self) -> Self:
@@ -506,6 +517,22 @@ def _inverter_symbol(dut: Circuit) -> bool:
     )
 
 
+def _generation_definition(
+    definition: ResearchCircuit,
+    expected_binding: RevisionBinding,
+    expected_definition_sha256: Digest,
+) -> ResearchCircuit:
+    checked = validate_research_circuit(definition)
+    if (
+        checked.binding != expected_binding
+        or canonical_digest(checked) != expected_definition_sha256
+    ):
+        raise ValueError("research definition binding or digest mismatch")
+    if checked.unresolved or checked.source.status != "confirmed":
+        raise ValueError("research definition has unresolved or unconfirmed inputs")
+    return checked
+
+
 def adapt_owned_inverter(
     definition: ResearchCircuit,
     frame: bytes,
@@ -521,14 +548,7 @@ def adapt_owned_inverter(
     and observations are consumed separately by operation planning. The returned
     plan uses the existing owned destination, renderer and netlist verifier.
     """
-    checked = validate_research_circuit(definition)
-    if (
-        checked.binding != expected_binding
-        or canonical_digest(checked) != expected_definition_sha256
-    ):
-        raise ValueError("research definition binding or digest mismatch")
-    if checked.unresolved or checked.source.status != "confirmed":
-        raise ValueError("research definition has unresolved or unconfirmed inputs")
+    checked = _generation_definition(definition, expected_binding, expected_definition_sha256)
     cells = {cell.name: cell for cell in checked.circuits}
     dut, bench = cells[checked.dut], cells[checked.bench]
     if (
@@ -556,6 +576,7 @@ def adapt_owned_inverter(
             or inst.master_source.sha256 != expected_cdf_frame_sha256
             or inst.geometry.source.status != "confirmed"
             or inst.geometry.source.sha256 != expected_cdf_frame_sha256
+            or inst.spectre is not None
             or not _placed_at(inst, index * 4)
             or inst.connections != {"D": "vout", "G": "vin", "S": rail, "B": rail}
         ):
@@ -583,3 +604,274 @@ def adapt_owned_inverter(
         ):
             raise ValueError("inverter geometry differs from the observed effective CDF")
     return plan
+
+
+class OwnedMosBlockPlan(VariableModel):
+    """Local declaration for the DUT hierarchy and its expected reopened content."""
+
+    definition_sha256: Digest
+    binding: RevisionBinding
+    output_library: BindingName
+    root: Name
+    circuits: Annotated[tuple[Circuit, ...], Field(min_length=1, max_length=31)]
+
+
+def plan_owned_mos_block(
+    definition: ResearchCircuit,
+    *,
+    expected_binding: RevisionBinding,
+    expected_definition_sha256: Digest,
+    output_library: str,
+) -> OwnedMosBlockPlan:
+    """Resolve only the DUT closure. The bench remains operation-planning data."""
+    checked = _generation_definition(definition, expected_binding, expected_definition_sha256)
+    circuits = {cell.name: cell for cell in checked.circuits}
+    pending = [checked.dut]
+    closure: dict[str, Circuit] = {}
+    while pending:
+        name = pending.pop()
+        if name in closure:
+            continue
+        cell = circuits[name]
+        closure[name] = cell
+        for inst in cell.instances:
+            if isinstance(inst, Child):
+                pending.append(inst.circuit)
+            elif not isinstance(inst, Mos):
+                raise ValueError("owned MOS block accepts only MOS and child cells")
+            elif (
+                inst.master.view != "symbol"
+                or inst.master_source.status != "confirmed"
+                or inst.geometry.source.status != "confirmed"
+                or inst.spectre is None
+                or inst.spectre.source.status != "confirmed"
+                or inst.master.library == output_library
+            ):
+                raise ValueError(
+                    "owned MOS block requires confirmed symbol, geometry and Spectre mapping"
+                )
+    if output_library in {"analogLib", "basic"}:
+        raise ValueError("owned library collides with a primitive library")
+    return OwnedMosBlockPlan(
+        definition_sha256=expected_definition_sha256,
+        binding=checked.binding,
+        output_library=output_library,
+        root=checked.dut,
+        circuits=tuple(closure[name] for name in sorted(closure)),
+    )
+
+
+class ReopenedMos(Component):
+    kind: Literal["nmos", "pmos"]
+    master: Master
+    w: Length
+    fw: Length
+    length: Length
+    multiplier: PositiveInt
+    fingers: PositiveInt
+
+
+class ReopenedChild(Child):
+    library: BindingName
+    view: BindingName
+
+
+class ReopenedCircuit(VariableModel):
+    name: Name
+    nets: Annotated[tuple[Name, ...], Field(min_length=1, max_length=256)]
+    ports: Annotated[tuple[Port, ...], Field(max_length=64)]
+    wires: Annotated[tuple[Wire, ...], Field(max_length=512)]
+    symbol: Symbol
+    instances: Annotated[
+        tuple[Annotated[ReopenedMos | ReopenedChild, Field(discriminator="kind")], ...],
+        Field(min_length=1, max_length=128),
+    ]
+
+
+class NetlistedMos(VariableModel):
+    name: Name
+    model: BindingName
+    terminals: tuple[Name, Name, Name, Name]
+    width: Length
+    length: Length
+    multiplier: PositiveInt
+
+
+class NetlistedChild(VariableModel):
+    name: Name
+    circuit: Name
+    terminals: Annotated[tuple[Name, ...], Field(min_length=1, max_length=64)]
+
+
+class NetlistedCircuit(VariableModel):
+    name: Name
+    ports: Annotated[tuple[Name, ...], Field(min_length=1, max_length=64)]
+    mos: Annotated[tuple[NetlistedMos, ...], Field(max_length=128)]
+    children: Annotated[tuple[NetlistedChild, ...], Field(max_length=128)]
+
+
+class MosBlockEvidence(VariableModel):
+    """Projections from independently authenticated, complete native receipts."""
+
+    plan_sha256: Digest
+    output_library: BindingName
+    reopened_tree_sha256: Digest
+    netlist_source_tree_sha256: Digest
+    reopen_artifact_sha256: Digest
+    netlist_artifact_sha256: Digest
+    reopened: Annotated[tuple[ReopenedCircuit, ...], Field(min_length=1, max_length=31)]
+    netlisted: Annotated[tuple[NetlistedCircuit, ...], Field(min_length=1, max_length=31)]
+
+
+def _reopened_circuit(cell: Circuit, output_library: str) -> ReopenedCircuit:
+    instances: list[ReopenedMos | ReopenedChild] = []
+    for inst in cell.instances:
+        if isinstance(inst, Child):
+            instances.append(
+                ReopenedChild(**inst.model_dump(), library=output_library, view="symbol")
+            )
+        elif isinstance(inst, Mos):
+            geometry = inst.geometry
+            instances.append(
+                ReopenedMos(
+                    kind=inst.kind,
+                    name=inst.name,
+                    placement=inst.placement,
+                    links=inst.links,
+                    master=inst.master,
+                    w=geometry.w,
+                    fw=geometry.fw,
+                    length=geometry.length,
+                    multiplier=geometry.multiplier,
+                    fingers=geometry.fingers,
+                )
+            )
+        else:
+            raise ValueError("unexpected non-MOS device in block")
+    if cell.symbol is None:
+        raise ValueError("generated block cell requires a symbol")
+    return ReopenedCircuit(
+        name=cell.name,
+        nets=cell.nets,
+        ports=cell.ports,
+        wires=cell.wires,
+        symbol=cell.symbol,
+        instances=tuple(instances),
+    )
+
+
+def _netlisted_circuit(cell: Circuit, cells: dict[str, Circuit]) -> NetlistedCircuit:
+    mos = []
+    children = []
+    for inst in cell.instances:
+        if isinstance(inst, Child):
+            links = inst.connections
+            children.append(
+                NetlistedChild(
+                    name=inst.name,
+                    circuit=inst.circuit,
+                    terminals=tuple(links[port.name] for port in cells[inst.circuit].ports),
+                )
+            )
+        elif isinstance(inst, Mos) and inst.spectre is not None:
+            d, g, s, b = (inst.connections[name] for name in ("D", "G", "S", "B"))
+            mos.append(
+                NetlistedMos(
+                    name=inst.name,
+                    model=inst.spectre.model,
+                    terminals=(d, g, s, b),
+                    width=inst.spectre.width,
+                    length=inst.spectre.length,
+                    multiplier=inst.spectre.multiplier,
+                )
+            )
+        else:
+            raise ValueError("unexpected device without Spectre mapping")
+    return NetlistedCircuit(
+        name=cell.name,
+        ports=tuple(port.net for port in cell.ports),
+        mos=tuple(mos),
+        children=tuple(children),
+    )
+
+
+def _reopened_identity(cell: ReopenedCircuit) -> tuple[object, ...]:
+    def instance_identity(inst: ReopenedMos | ReopenedChild) -> tuple[object, ...]:
+        common = (inst.kind, inst.name, inst.placement, inst.connections)
+        if isinstance(inst, ReopenedChild):
+            return (*common, inst.library, inst.circuit, inst.view)
+        return (
+            *common,
+            inst.master,
+            inst.w.metres(),
+            inst.fw.metres(),
+            inst.length.metres(),
+            inst.multiplier,
+            inst.fingers,
+        )
+
+    return (
+        cell.name,
+        sorted(cell.nets),
+        sorted(cell.ports, key=lambda port: port.name),
+        cell.symbol.lower_left,
+        cell.symbol.upper_right,
+        sorted(cell.symbol.pins, key=lambda pin: pin.port),
+        sorted(cell.wires, key=canonical_digest),
+        [instance_identity(inst) for inst in sorted(cell.instances, key=lambda inst: inst.name)],
+    )
+
+
+def _netlisted_identity(cell: NetlistedCircuit) -> tuple[object, ...]:
+    return (
+        cell.name,
+        cell.ports,
+        [
+            (
+                inst.name,
+                inst.model,
+                inst.terminals,
+                inst.width.metres(),
+                inst.length.metres(),
+                inst.multiplier,
+            )
+            for inst in sorted(cell.mos, key=lambda inst: inst.name)
+        ],
+        sorted(cell.children, key=lambda inst: inst.name),
+    )
+
+
+def verify_owned_mos_block(
+    plan: OwnedMosBlockPlan,
+    evidence: MosBlockEvidence,
+    *,
+    expected_plan_sha256: Digest,
+    expected_reopened_tree_sha256: Digest,
+    expected_reopen_artifact_sha256: Digest,
+    expected_netlist_artifact_sha256: Digest,
+) -> None:
+    """Compare complete normalized projections. The caller authenticates the raw artifacts."""
+    plan = OwnedMosBlockPlan.model_validate_json(plan.model_dump_json())
+    evidence = MosBlockEvidence.model_validate_json(evidence.model_dump_json())
+    if (
+        canonical_digest(plan) != expected_plan_sha256
+        or evidence.plan_sha256 != expected_plan_sha256
+        or evidence.output_library != plan.output_library
+        or evidence.reopened_tree_sha256 != expected_reopened_tree_sha256
+        or evidence.netlist_source_tree_sha256 != expected_reopened_tree_sha256
+        or evidence.reopen_artifact_sha256 != expected_reopen_artifact_sha256
+        or evidence.netlist_artifact_sha256 != expected_netlist_artifact_sha256
+    ):
+        raise ValueError("MOS block plan or native evidence pin mismatch")
+    cells = {cell.name: cell for cell in plan.circuits}
+    reopened = sorted(evidence.reopened, key=lambda cell: cell.name)
+    expected = sorted(plan.circuits, key=lambda cell: cell.name)
+    if [_reopened_identity(cell) for cell in reopened] != [
+        _reopened_identity(_reopened_circuit(cell, plan.output_library)) for cell in expected
+    ]:
+        raise ValueError("reopened MOS block topology or attributes mismatch")
+    netlisted = sorted(evidence.netlisted, key=lambda cell: cell.name)
+    if [_netlisted_identity(cell) for cell in netlisted] != [
+        _netlisted_identity(_netlisted_circuit(cell, cells)) for cell in expected
+    ]:
+        raise ValueError("netlisted MOS block topology or effective values mismatch")
