@@ -281,6 +281,16 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     raw_netlist.add_argument("--expected-plan-sha256", required=True)
     raw_netlist.add_argument("--netlist", nargs=2, metavar=("FILE", "SHA256"), required=True)
     raw_netlist.add_argument("--output", type=Path, required=True)
+    research_registration = actions.add_parser(
+        "assemble-research-registration",
+        help="Assemble a local native registration from pinned research evidence.",
+    )
+    research_registration.add_argument(
+        "--request", nargs=2, metavar=("FILE", "SHA256"), required=True
+    )
+    research_registration.add_argument("--settings", type=Path, required=True)
+    research_registration.add_argument("--context", required=True)
+    research_registration.add_argument("--output", type=Path, required=True)
     pmos = actions.add_parser("pmos-dc-compare", help="Compare two retained PMOS DC results.")
     pmos.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     pmos.add_argument("--output", type=Path, required=True)
@@ -1473,6 +1483,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 receipt = dispatch_pmos_default_change(arguments.request, service)
                 remote_contact = receipt.dispatched_this_call
                 result = receipt.model_dump(mode="json")
+            elif action == "assemble-research-registration":
+                from cadence_mcp_bridge.research_registration_cli import assemble_research
+
+                result = assemble_research(arguments, context, contexts)
             elif action == "research-device-op-result":
                 from cadence_mcp_bridge.native_service import NativeOperationService
                 from cadence_mcp_bridge.research_adapters import device_op_result
@@ -1686,6 +1700,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "plan-research-mos-block",
             "verify-research-mos-block",
             "verify-research-raw-netlist",
+            "assemble-research-registration",
             "plan-registered-mos-change",
             "pmos-dc-compare",
             "amplifier-width-compare",
