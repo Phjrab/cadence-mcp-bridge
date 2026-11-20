@@ -860,20 +860,6 @@ def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
         )
     if drift == "wrong-child-revision":
         binding = binding.model_copy(update={"child_revision_sha256": "0" * 64})
-    if drift == "reused-baseline-testbench":
-        baseline_tb = readback.baseline.testbench_revision_sha256
-        reopened = readback.reopened.model_copy(update={"testbench_revision_sha256": baseline_tb})
-        netlist = readback.netlist.model_copy(update={"testbench_revision_sha256": baseline_tb})
-        readback = verify_change_readback(
-            plan, baseline=readback.baseline, reopened=reopened, netlist=netlist
-        )
-        assert readback.status == "MATCHED"
-        binding = binding.model_copy(
-            update={
-                "child_testbench_revision_sha256": baseline_tb,
-                "readback_sha256": canonical_digest(readback),
-            }
-        )
     if drift == "unauthorized-geometry":
         child_raw = child_raw.replace(b"as=5.6p", b"as=5.7p")
     if drift == "ac-circuit":
@@ -1116,12 +1102,41 @@ def test_amplifier_width_pair_rejects_ac_drift(
         "wrong-original-id",
         "wrong-child-revision",
         "unauthorized-geometry",
-        "reused-baseline-testbench",
     ],
 )
 def test_amplifier_width_pair_rejects_changed_evidence(amplifier_width_evidence, drift):
     with pytest.raises(OperationRejected) as rejected:
         run_amplifier_pair(amplifier_width_evidence, drift=drift)
+    assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
+
+
+@pytest.mark.parametrize("trust_forged_verifier", [False, True])
+def test_amplifier_width_pair_rejects_reused_baseline_testbench(
+    amplifier_width_evidence, monkeypatch, trust_forged_verifier,
+):
+    from cadence_mcp_bridge import candidate_execution
+
+    plan, readback, binding, dc, ac, child_raw = amplifier_width_evidence
+    baseline_tb = readback.baseline.testbench_revision_sha256
+    reopened = readback.reopened.model_copy(update={"testbench_revision_sha256": baseline_tb})
+    netlist = readback.netlist.model_copy(update={"testbench_revision_sha256": baseline_tb})
+    stale = verify_change_readback(
+        plan, baseline=readback.baseline, reopened=reopened, netlist=netlist
+    )
+    assert stale.status == "STALE"
+    assert stale.reason == "amplifier_pm0_testbench_revision_reuses_baseline"
+    forged = stale.model_copy(update={"status": readback.status, "reason": readback.reason})
+    binding = binding.model_copy(
+        update={
+            "child_testbench_revision_sha256": baseline_tb,
+            "readback_sha256": canonical_digest(forged),
+        }
+    )
+    if trust_forged_verifier:
+        # Exercise the association's own revision check after accepting every readback pin.
+        monkeypatch.setattr(candidate_execution, "verify_change_readback", lambda *a, **k: forged)
+    with pytest.raises(OperationRejected) as rejected:
+        run_amplifier_pair((plan, forged, binding, dc, ac, child_raw))
     assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
 
 

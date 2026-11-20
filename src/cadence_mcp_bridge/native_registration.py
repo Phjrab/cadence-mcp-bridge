@@ -381,7 +381,7 @@ def assemble(
         reader = GenericReaderRegistration.model_validate_json(
             json.dumps(
                 dict(
-                    schema_version=1,
+                    schema_version=2 if ade.inputs.analysis == "tran" and definition.sources else 1,
                     design_id=ade.design_id,
                     analysis_id=ade.analysis_id,
                     ade_registration_sha256=canonical_digest(ade),

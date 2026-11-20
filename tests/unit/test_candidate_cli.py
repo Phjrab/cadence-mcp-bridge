@@ -294,6 +294,64 @@ def test_verify_change_readback_exports_typed_status(
     assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
 
 
+def test_research_circuit_export_is_exclusive_and_hash_checked(tmp_path, capsys):
+    from test_m2_inverter import fixture
+    from test_research_circuit import payload
+
+    from cadence_mcp_bridge.research_adapters import ResearchCircuitValidation
+
+    plan, _ = fixture()
+    request, destination = tmp_path / "definition.json", tmp_path / "checked.json"
+    document = json.dumps({"definition": payload(plan)}).encode()
+    request.write_bytes(document)
+    args = [
+        "operator-candidates", "validate-research-circuit",
+        "--request", str(request), hashlib.sha256(document).hexdigest(),
+        "--output", str(destination),
+    ]
+    assert main(args) == 0
+    summary = output(capsys)
+    saved = destination.read_bytes()
+    assert summary["file_sha256"] == hashlib.sha256(saved).hexdigest()
+    assert ResearchCircuitValidation.model_validate_json(saved).execution_authorized is False
+    assert main(args) == 2
+    assert destination.read_bytes() == saved and request.read_bytes() == document
+
+
+def test_research_raw_netlist_compares_pinned_local_dut_only(tmp_path, capsys):
+    from test_research_circuit import mos_block_fixture, raw_block_netlist
+
+    from cadence_mcp_bridge.research_adapters import (
+        ResearchMosBlockPreparation,
+        ResearchRawNetlistResult,
+    )
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    plan, _ = mos_block_fixture()
+    prepared = ResearchMosBlockPreparation(plan=plan, plan_sha256=canonical_digest(plan))
+    plan_path, netlist, destination = (tmp_path / name for name in ("plan.json", "dut.scs", "out"))
+    plan_path.write_text(prepared.model_dump_json())
+    raw = raw_block_netlist()
+    netlist.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    args = [
+        "operator-candidates", "verify-research-raw-netlist",
+        "--plan", str(plan_path), "--expected-plan-sha256", prepared.plan_sha256,
+        "--netlist", str(netlist), digest, "--output", str(destination),
+    ]
+    assert main(args) == 0
+    body = destination.read_bytes()
+    result = ResearchRawNetlistResult.model_validate_json(body)
+    assert result.status == "MATCHED" and result.netlist_artifact_sha256 == digest
+    assert result.execution_authorized is False and len(result.netlisted) == 2
+    assert output(capsys)["file_sha256"] == hashlib.sha256(body).hexdigest()
+    assert main(args) == 2
+    assert netlist.read_bytes() == raw and destination.read_bytes() == body
+    wrong = [*args[:-3], "0" * 64, "--output", str(tmp_path / "wrong.json")]
+    assert main(wrong) == 2
+    assert not (tmp_path / "wrong.json").exists()
+
+
 @pytest.mark.parametrize("failure", ["plan_pin", "stage_pin", "malformed", "extra", "collision"])
 def test_verify_change_readback_rejects_invalid_inputs_without_overwrite(
     change_readback_case, tmp_path, capsys, failure

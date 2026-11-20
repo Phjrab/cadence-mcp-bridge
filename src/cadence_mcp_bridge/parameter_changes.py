@@ -22,7 +22,7 @@ from cadence_mcp_bridge.variable_contracts import (
     number_text,
 )
 
-ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF"]
+ChangeUnit = Literal["V", "A", "m", "um", "nm", "F", "pF", "count"]
 _AMP_PM0_STATEMENT_SHA256 = "52bf48b8d845681d1be3727bbadb20eabd424a24c3c822bbc33e8913e3e274c6"
 _AMP_CENTER_SHA256 = "c9bcf3e3bd8a9329ff0bb1513df2a08f8a4f60e314f04075e15a3422c03e4006"
 _AMP_CENTER_BIAS = {"VBIASN": "0.32", "VBIASP": "0.702"}
@@ -46,6 +46,10 @@ class ChangeValue(VariableModel):
         if self.unit in ("V", "A"):
             return value, self.unit
         magnitude = Decimal(value)
+        if self.unit == "count":
+            if magnitude < 1 or magnitude != magnitude.to_integral_value():
+                raise ValueError("MOS count must be a positive integer")
+            return value, "count"
         is_capacitance = self.unit in ("F", "pF")
         if magnitude <= 0:
             quantity = "capacitance" if is_capacitance else "length"
@@ -203,11 +207,69 @@ class CapacitorQualification(VariableModel):
         return self
 
 
+class MosOptionTransition(VariableModel):
+    name: Literal["w", "fw", "l", "m", "simM", "fingers", "nf", "as", "ad", "ps", "pd"]
+    before: Annotated[str, Field(pattern=r"^[A-Za-z0-9_.()+*/-]{1,64}$")]
+    after: Annotated[str, Field(pattern=r"^[A-Za-z0-9_.()+*/-]{1,64}$")]
+
+
+class RegisteredMosTarget(VariableModel):
+    """One registered OA property and its exact observed Spectre option mapping."""
+
+    kind: Literal["registered_mos_property"] = "registered_mos_property"
+    instance: CandidateSourceTarget
+    quantity: Literal["length", "count"]
+    scalar_option: Literal["w", "fw", "l", "m", "simM", "fingers", "nf"]
+    scalar_unit: Literal["m", "um", "nm", "count"]
+    baseline_scalar_unit: Literal["m", "um", "nm", "count"] | None = None
+    netlist_path: Annotated[
+        str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]*(/[A-Za-z][A-Za-z0-9_#-]*)?$", max_length=256)
+    ]
+    netlist_model: Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]*$", max_length=128)]
+    netlist_terminals: tuple[str, str, str, str]
+    options: Annotated[tuple[MosOptionTransition, ...], Field(min_length=1, max_length=12)]
+
+    @model_validator(mode="after")
+    def unique_options(self) -> Self:
+        if len({item.name for item in self.options}) != len(self.options):
+            raise ValueError("duplicate registered MOS option")
+        if not any(
+            item.name == self.scalar_option and item.before != item.after for item in self.options
+        ):
+            raise ValueError("registered MOS scalar option must change")
+        units = (self.baseline_scalar_unit or self.scalar_unit, self.scalar_unit)
+        if any((self.quantity == "count") != (unit == "count") for unit in units):
+            raise ValueError("registered MOS scalar unit does not match quantity")
+        return self
+
+    def parse_scalar(self, token: str, *, baseline: bool = False) -> ChangeValue:
+        unit = (self.baseline_scalar_unit or self.scalar_unit) if baseline else self.scalar_unit
+        suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[unit]
+        if token.startswith("(") and token.endswith(")"):
+            token = token[1:-1]
+        match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?|\.[0-9]+)" + suffix, token)
+        if match is None:
+            raise ValueError("registered MOS scalar must be a literal in the registered unit")
+        return ChangeValue(value=match[1], unit=unit)
+
+
+class RegisteredMosQualification(VariableModel):
+    baseline: ChangeBaseline
+    target: RegisteredMosTarget
+    old: ChangeValue
+    expected: ChangeValue
+    evidence_sha256: Digest
+    derived: Annotated[tuple[DerivedChange, ...], Field(max_length=5)] = ()
+
+
 class ChangePlan(VariableModel):
     baseline: ChangeBaseline
     candidate_id: LogicalId
     candidate_revision: RevisionBinding
-    target: Annotated[AdeTarget | MosWidthTarget | CapacitorTarget, Field(discriminator="kind")]
+    target: Annotated[
+        AdeTarget | MosWidthTarget | CapacitorTarget | RegisteredMosTarget,
+        Field(discriminator="kind"),
+    ]
     old: ChangeValue
     requested: ChangeValue
     expected: ChangeValue
@@ -238,6 +300,14 @@ class ChangePlan(VariableModel):
         elif isinstance(self.target, CapacitorTarget):
             if self.old.normalized != ("0.000000000001", "F") or self.allowed_derived:
                 raise ValueError("capacitor change must start from the observed 1 pF load")
+        elif isinstance(self.target, RegisteredMosTarget):
+            unit = "m" if self.target.quantity == "length" else "count"
+            if self.old.normalized[1] != unit:
+                raise ValueError("registered MOS quantity mismatch")
+            if len({item.before.property_name for item in self.allowed_derived}) != len(
+                self.allowed_derived
+            ):
+                raise ValueError("duplicate registered MOS derived property")
         elif self.old.normalized[1] != "m" or not self.allowed_derived:
             raise ValueError("MOS width change requires a qualified geometry transition")
         return self
@@ -310,6 +380,27 @@ def plan_mos_width_change(
         target=qualification.target,
         old=qualification.old,
         requested=requested,
+        expected=qualification.expected,
+        qualification_sha256=canonical_digest(qualification),
+        allowed_derived=qualification.derived,
+    )
+
+
+def plan_registered_mos_change(
+    qualification: RegisteredMosQualification,
+    candidate_id: str,
+    candidate_revision: RevisionBinding,
+    requested: ChangeValue,
+) -> ChangePlan:
+    """Plan a finite transition from independently reviewed native evidence."""
+    qualification = _checked(qualification)
+    return ChangePlan(
+        baseline=qualification.baseline,
+        candidate_id=candidate_id,
+        candidate_revision=_checked(candidate_revision),
+        target=qualification.target,
+        old=qualification.old,
+        requested=_checked(requested),
         expected=qualification.expected,
         qualification_sha256=canonical_digest(qualification),
         allowed_derived=qualification.derived,
@@ -391,8 +482,13 @@ class AmplifierPm0InputObservation(VariableModel):
     netlist: NetlistProjection
 
 
-def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[str, str]]:
+def _width_options(
+    statements: list[str], path: str, *, registered: RegisteredMosTarget | None = None
+) -> tuple[list[str], dict[str, str]]:
     parts = path.split("/")
+    if registered is not None and len(parts) == 1:
+        matches = _top_level_mos(statements, path)
+        return _registered_mos_options(statements, matches, registered)
     if len(parts) != 2:
         raise ValueError(
             "MOS netlist binding requires the registered DUT instance and MOS instance"
@@ -418,6 +514,15 @@ def _width_options(statements: list[str], path: str) -> tuple[list[str], dict[st
     if len(masters) != 1:
         raise ValueError("DUT netlist binding is missing or ambiguous")
     matches = [(index, line) for scope, index, line in instances if scope == masters[0]]
+    if registered is not None:
+        # A change to a shared subcircuit definition would edit multiple instances.
+        references = sum(
+            re.match(r"[^ ]+ \([^()]+\) " + re.escape(masters[0]) + r"(?: |$)", line) is not None
+            for line in statements
+        )
+        if references != 1:
+            raise ValueError("registered MOS requires a uniquely instantiated DUT")
+        return _registered_mos_options(statements, matches, registered)
     if len(matches) != 1:
         raise ValueError("MOS netlist instance is missing or ambiguous")
     return _split_mos_options(statements, *matches[0])
@@ -440,7 +545,7 @@ def _split_mos_options(
     return fixed, options
 
 
-def _amp_pm0_options(statements: list[str], *, baseline: bool) -> tuple[list[str], dict[str, str]]:
+def _top_level_mos(statements: list[str], name: str) -> list[tuple[int, str]]:
     depth = 0
     matches: list[tuple[int, str]] = []
     for index, line in enumerate(statements):
@@ -448,13 +553,34 @@ def _amp_pm0_options(statements: list[str], *, baseline: bool) -> tuple[list[str
             depth += 1
         elif line == "ends" or line.startswith("ends "):
             depth -= 1
-        elif line.split(" ", 1)[0] == "PM0":
-            if depth or not line.startswith("PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v "):
-                raise ValueError("unsupported amplifier PM0 netlist binding")
+        elif not depth and line.split(" ", 1)[0] == name:
             matches.append((index, line))
+    return matches
+
+
+def _registered_mos_options(
+    statements: list[str], matches: list[tuple[int, str]], target: RegisteredMosTarget
+) -> tuple[list[str], dict[str, str]]:
+    if len(matches) != 1:
+        raise ValueError("registered MOS instance is missing or ambiguous")
+    index, line = matches[0]
+    fixed, options = _split_mos_options(statements, index, line)
+    instance = target.netlist_path.rsplit("/", 1)[-1]
+    terminals = " ".join(target.netlist_terminals)
+    if fixed[index] != f"{instance} ({terminals}) {target.netlist_model}":
+        raise ValueError("registered MOS netlist binding mismatch")
+    return fixed, options
+
+
+def _amp_pm0_options(statements: list[str], *, baseline: bool) -> tuple[list[str], dict[str, str]]:
+    matches = _top_level_mos(statements, "PM0")
+    if len(matches) != sum(line.split(" ", 1)[0] == "PM0" for line in statements):
+        raise ValueError("unsupported amplifier PM0 netlist binding")
     if len(matches) != 1:
         raise ValueError("amplifier PM0 is missing or ambiguous")
     index, line = matches[0]
+    if not line.startswith("PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v "):
+        raise ValueError("unsupported amplifier PM0 netlist binding")
     if baseline and hashlib.sha256(line.encode("ascii")).hexdigest() != _AMP_PM0_STATEMENT_SHA256:
         raise ValueError("amplifier PM0 baseline statement mismatch")
     fixed, options = _split_mos_options(statements, index, line)
@@ -718,6 +844,20 @@ def project_netlist_change(
     elif isinstance(plan.target, CapacitorTarget):
         old_static, old = _load_capacitance(old_static)
         new_static, observed = _load_capacitance(new_static)
+    elif isinstance(plan.target, RegisteredMosTarget):
+        target = plan.target
+        old_static, old_options = _width_options(old_static, target.netlist_path, registered=target)
+        new_static, new_options = _width_options(new_static, target.netlist_path, registered=target)
+        old = target.parse_scalar(old_options.get(target.scalar_option, ""), baseline=True)
+        observed = target.parse_scalar(new_options.get(target.scalar_option, ""))
+        for option in target.options:
+            if (old_options.pop(option.name, None), new_options.pop(option.name, None)) != (
+                option.before,
+                option.after,
+            ):
+                raise ValueError("registered MOS option differs from evidence")
+        if old_options != new_options:
+            raise ValueError("fixed MOS netlist options changed")
     else:
         instance_path = plan.target.instance.instance_path
         if amplifier:
@@ -864,7 +1004,11 @@ def _check_readback(
         derived = {
             change.before.property_name: (change.before if is_baseline else change.after).value
             for change in plan.allowed_derived
-            if stage != "netlist" or change.before.property_name != "fw"
+            if stage != "netlist"
+            or (
+                not isinstance(plan.target, RegisteredMosTarget)
+                and change.before.property_name != "fw"
+            )
         }
         if {value.property_name: value.value for value in row.derived} != derived:
             return "CONFLICT", f"{stage}_derived_values_mismatch"
@@ -877,9 +1021,17 @@ def _check_readback(
         return "STALE", "reopened_and_netlist_revisions_differ"
     if (
         isinstance(plan.target, CapacitorTarget)
-        and reopened.testbench_revision_sha256 == reference.testbench_revision_sha256
-    ):
-        return "STALE", "capacitor_testbench_revision_reuses_baseline"
+        or (isinstance(plan.target, MosWidthTarget) and plan.target.instance.instance_path == "PM0")
+        or (isinstance(plan.target, RegisteredMosTarget) and "/" not in plan.target.netlist_path)
+    ) and reopened.testbench_revision_sha256 == reference.testbench_revision_sha256:
+        kind = (
+            "capacitor"
+            if isinstance(plan.target, CapacitorTarget)
+            else "registered_mos"
+            if isinstance(plan.target, RegisteredMosTarget)
+            else "amplifier_pm0"
+        )
+        return "STALE", f"{kind}_testbench_revision_reuses_baseline"
     if len({baseline.artifact_sha256, reopened.artifact_sha256, netlist.artifact_sha256}) != 3:
         return "CONFLICT", "independent_readback_artifacts_required"
     return "MATCHED", "local_projections_match"

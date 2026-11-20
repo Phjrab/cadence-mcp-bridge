@@ -215,10 +215,11 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
     source = job if source_operation_id is None else (
         path(job_root) + "/" + operation(source_operation_id) + "/work"
     )
+    version = registration.get("schema_version", 1)
     header = "|".join(
         (
             "MCP_GREL_FRAME",
-            "1",
+            str(version),
             operation_id,
             digest(plan_sha),
             digest(input_sha),
@@ -231,7 +232,15 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
     maximum = registration["maximum_samples"]
     if type(maximum) not in INTEGERS or not 2 <= maximum <= 256:
         raise ValueError("native_render_sample_bound")
-    if not 1 <= len(nodes) <= 8 or len(sources) > 8 or (analysis != "dc" and sources):
+    if (
+        not 1 <= len(nodes) <= 8 or len(sources) > 8 or version not in (1, 2)
+        or (version == 1 and analysis != "dc" and sources)
+        or (version == 2 and (
+            analysis != "tran" or not 1 <= len(sources) <= 6
+            or any(source["role"] != "supply" for source in sources)
+            or (len(nodes) + len(sources)) * maximum > 1536
+        ))
+    ):
         raise ValueError("native_render_signal_inventory")
     result = "dcOp" if analysis == "dc" else analysis
     lines = [
@@ -261,11 +270,18 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
                 '  fprintf(port "I|' + name + '|%.16g\\n" data)',
             ]
     else:
-        for node in nodes:
-            name = logical(node["logical_id"])
-            selected = selector(node["selector"])
+        signals = [
+            ("P", logical(node["logical_id"]), selector(node["selector"])) for node in nodes
+        ]
+        if version == 2:
+            signals.extend(
+                ("C", logical(source["source_id"]), selector(source["current_selector"], True))
+                for source in sources
+            )
+        for kind, name, selected in signals:
+            fallback = selected[1:] if kind == "P" else selected[1:-5] + ":p"
             lines += [
-                '  wave=mcpGenericData("' + selected + '" "' + selected[1:] + '")',
+                '  wave=mcpGenericData("' + selected + '" "' + fallback + '")',
                 "  unless(wave && drIsWaveform(wave) close(port) exit(1))",
                 "  xVec=drGetWaveformXVec(wave) yVec=drGetWaveformYVec(wave)",
                 "  count=drVectorLength(xVec)",
@@ -273,7 +289,7 @@ def reader(job_root, analysis, registration, operation_id, plan_sha, input_sha, 
                 "count==drVectorLength(yVec) close(port) exit(1))",
                 "  for(index 0 sub1(count)",
                 "    axis=drGetElem(xVec index) sample=drGetElem(yVec index)",
-                '    fprintf(port "P|' + name + '|%d|%.16g|%.16g|%.16g\\n" '
+                '    fprintf(port "' + kind + '|' + name + '|%d|%.16g|%.16g|%.16g\\n" '
                 "index axis real(sample) imag(sample)))",
             ]
     lines += ['  fprintf(port "END\\n")', "  close(port))", "exit(0)", ""]
