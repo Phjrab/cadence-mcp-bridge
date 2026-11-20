@@ -482,12 +482,18 @@ def capture_device_operating_points(
     store = native.lifecycle.store
     with store.connection(create=False, read_only=True) as connection:
         record = store._read_operation(connection, query.operation_id)
+    plan = record.plan
+    context = native.context
     if (
         record.operation_id != query.operation_id
-        or record.plan.plan_sha256 != evidence.plan_sha256
-        or record.plan.resource_domain_sha256 != native.context.resource_domain_sha256
-        or record.plan.ledger_ref != native.context.binding.ledger_ref
-        or record.plan.analysis != "dc"
+        or plan.plan_sha256 != evidence.plan_sha256
+        or plan.resource_domain_sha256 != context.resource_domain_sha256
+        or plan.ledger_ref != context.binding.ledger_ref
+        or plan.runner_sha256 != context.binding.runner_sha256
+        or plan.environment_sha256 != context.binding.environment_sha256
+        or plan.design_sha256 != context.binding.design_sha256
+        or plan.pdk_sha256 != context.binding.pdk_sha256
+        or plan.analysis != "dc"
         or record.progress.phase != "SUCCEEDED"
         or record.progress.provider_receipt_sha256 != evidence.terminal_sha256
     ):

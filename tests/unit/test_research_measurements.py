@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+from dataclasses import replace
 
 import pytest
 from test_result_reports import configured, operator, operator_base, seed
@@ -121,7 +122,9 @@ def test_static_power_preserves_absorption_and_missing_rail(configured):
     assert incomplete["missing_supply_ids"] == ["vss"]
 
 
-def test_operator_pinned_device_op_reads_numeric_and_missing_rows(configured, tmp_path):
+def test_operator_pinned_device_op_reads_numeric_and_missing_rows(
+    configured, tmp_path, monkeypatch
+):
     native, record, result = seed(configured)
     report = make_report(record, result)
     registration = DeviceOpRegistration(instance_paths=("PM0",))
@@ -181,6 +184,17 @@ def test_operator_pinned_device_op_reads_numeric_and_missing_rows(configured, tm
     assert capture_device_operating_points(native, query, source=binding) == result
     assert journal.read_bytes() == before
     native.provider.report_result.assert_not_called()
+
+    for field in ("runner_sha256", "environment_sha256", "design_sha256", "pdk_sha256"):
+        context = native.context
+        new_digest = "0" * 64 if getattr(context.binding, field) != "0" * 64 else "1" * 64
+        drifted = replace(context, binding=context.binding.model_copy(update={field: new_digest}))
+        with monkeypatch.context() as patch:
+            patch.setattr(native, "context", drifted)
+            with pytest.raises(OperationRejected) as mismatch:
+                capture_device_operating_points(native, query, source=binding)
+        assert mismatch.value.reason == "research_op_retained_terminal_mismatch"
+    assert journal.read_bytes() == before
 
     wrong = query.model_copy(update={"expected_plan_sha256": "0" * 64})
     with pytest.raises(OperationRejected) as stale:
