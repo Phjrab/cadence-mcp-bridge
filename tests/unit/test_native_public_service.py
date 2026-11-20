@@ -22,6 +22,7 @@ from cadence_mcp_bridge.service import CadenceService
 
 __all__ = ["operator", "operator_base"]
 NAMES = {
+    "cadence_verify_change_readback",
     "cadence_plan_operation",
     "cadence_submit_operation",
     "cadence_operation_status",
@@ -67,7 +68,7 @@ def configured(operator, tmp_path, monkeypatch):
 async def test_operator_only_conditional_schema_and_no_server_start_side_effects(configured):
     server, service, request, settings, grant_path = configured
     tools = {t.name: t for t in await server.list_tools()}
-    assert len(tools) == 103 and set(tools) >= NAMES
+    assert len(tools) == 104 and set(tools) >= NAMES
     snapshot = json.loads(
         (
             Path(__file__).resolve().parents[2]
@@ -103,6 +104,37 @@ async def test_operator_only_conditional_schema_and_no_server_start_side_effects
     )
     assert old.native_operations is None
     assert len(await create_server(cast(CadenceService, old)).list_tools()) == 92
+
+
+@pytest.mark.asyncio
+async def test_change_readback_tool_uses_closed_local_evidence(configured, monkeypatch):
+    from test_parameter_changes import _bias, _row
+
+    from cadence_mcp_bridge.parameter_changes import verify_change_readback
+
+    server, service, *_ = configured
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    plan = _bias()
+    stages = {stage: _row(plan, stage) for stage in ("baseline", "reopened", "netlist")}
+    request = {
+        "plan": plan.model_dump(mode="json"),
+        "expected_plan_sha256": plan.plan_sha256,
+        **{stage: row.model_dump(mode="json") for stage, row in stages.items()},
+    }
+    name = "cadence_verify_change_readback"
+    expected = verify_change_readback(plan, **stages).model_dump(mode="json")
+    for _ in range(2):
+        result = await server.call_tool(name, {"request": request})
+        assert not result.is_error and result.structured_content == expected
+    assert expected["status"] == "MATCHED" and not expected["execution_authorized"]
+    for bad in (
+        {**request, "expected_plan_sha256": "0" * 64},
+        {**request, "path": "forbidden"},
+    ):
+        with pytest.raises(ToolError):
+            await server.call_tool(name, {"request": bad})
+    assert not service.context.binding.analysis_journal.exists()
+    assert not service.context.lock_path.exists()
 
 
 @pytest.mark.asyncio

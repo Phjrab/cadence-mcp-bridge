@@ -1,9 +1,12 @@
 """Conditional fixed-operation tools for an explicitly configured operator service."""
 
+import json
 from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, ToolAnnotations
+from pydantic import ValidationInfo, field_validator
 
 from cadence_mcp_bridge.native_service import (
     NativeOperationPlan,
@@ -28,7 +31,31 @@ from cadence_mcp_bridge.native_sweeps import (
     NativeSweepSubmission,
     NativeSweepSupervisor,
 )
+from cadence_mcp_bridge.parameter_changes import (
+    ChangePlan,
+    ChangeReadback,
+    Readback,
+    verify_change_readback,
+)
 from cadence_mcp_bridge.server import _READ_ONLY, _stable_result
+from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
+
+
+class ChangeReadbackRequest(VariableModel):
+    plan: ChangePlan
+    expected_plan_sha256: Digest
+    baseline: Readback | None = None
+    reopened: Readback | None = None
+    netlist: Readback | None = None
+
+    @field_validator("plan", "baseline", "reopened", "netlist", mode="before")
+    @classmethod
+    def validate_wire_json(cls, value: Any, info: ValidationInfo) -> Any:
+        if not isinstance(value, dict):
+            return value
+        model = ChangePlan if info.field_name == "plan" else Readback
+        # Decode JSON arrays without loosening the strict model fields.
+        return model.model_validate_json(json.dumps(value, allow_nan=False))
 
 
 def register_native_tools(server: MCPServer, native: NativeOperationService) -> None:
@@ -65,6 +92,23 @@ def register_native_tools(server: MCPServer, native: NativeOperationService) -> 
             }
         except (OSError, ValueError, BridgeError, KeyError, TypeError):
             return {"status": "BLOCKED", "reason": "result_report_unavailable"}
+
+    @server.tool(
+        name="cadence_verify_change_readback",
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Compare typed parameter-change observations and an exact plan hash. "
+        "Local evidence comparison only; artifact provenance requires independent verification.",
+    )
+    def cadence_verify_change_readback(request: ChangeReadbackRequest) -> ChangeReadback:
+        if request.plan.plan_sha256 != request.expected_plan_sha256:
+            raise ToolError("change_plan_digest_mismatch")
+        return verify_change_readback(
+            request.plan,
+            baseline=request.baseline,
+            reopened=request.reopened,
+            netlist=request.netlist,
+        )
 
     @server.tool(
         name="cadence_plan_operation",

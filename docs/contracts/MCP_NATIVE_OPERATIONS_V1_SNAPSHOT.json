@@ -925,6 +925,918 @@
         "openWorldHint": false
       },
       "_meta": null
+    },
+    "cadence_verify_change_readback": {
+      "name": "cadence_verify_change_readback",
+      "title": null,
+      "description": "Compare typed parameter-change observations and an exact plan hash. Local evidence comparison only; artifact provenance requires independent verification.",
+      "inputSchema": {
+        "$defs": {
+          "AdeTarget": {
+            "additionalProperties": false,
+            "properties": {
+              "schematic_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Schematic Revision Sha256"
+              },
+              "kind": {
+                "const": "ade_variable",
+                "default": "ade_variable",
+                "title": "Kind",
+                "type": "string"
+              },
+              "binding": {
+                "$ref": "#/$defs/CandidateVariableBinding"
+              }
+            },
+            "required": [
+              "binding"
+            ],
+            "title": "AdeTarget",
+            "type": "object"
+          },
+          "CandidateSourceTarget": {
+            "additionalProperties": false,
+            "properties": {
+              "instance_path": {
+                "pattern": "^[A-Za-z][A-Za-z0-9_#/-]{0,255}$",
+                "title": "Instance Path",
+                "type": "string"
+              },
+              "master_library": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Master Library",
+                "type": "string"
+              },
+              "master_cell": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Master Cell",
+                "type": "string"
+              },
+              "master_view": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Master View",
+                "type": "string"
+              },
+              "property_name": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Property Name",
+                "type": "string"
+              }
+            },
+            "required": [
+              "instance_path",
+              "master_library",
+              "master_cell",
+              "master_view",
+              "property_name"
+            ],
+            "title": "CandidateSourceTarget",
+            "type": "object"
+          },
+          "CandidateVariableBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "logical_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Logical Id",
+                "type": "string"
+              },
+              "cadence_binding": {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_#-]{0,63}$",
+                "title": "Cadence Binding",
+                "type": "string"
+              },
+              "targets": {
+                "items": {
+                  "$ref": "#/$defs/CandidateSourceTarget"
+                },
+                "maxItems": 16,
+                "minItems": 1,
+                "title": "Targets",
+                "type": "array"
+              },
+              "binding_evidence_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Binding Evidence Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "logical_id",
+              "cadence_binding",
+              "targets",
+              "binding_evidence_sha256"
+            ],
+            "title": "CandidateVariableBinding",
+            "type": "object"
+          },
+          "CapacitorTarget": {
+            "additionalProperties": false,
+            "description": "The observed top-level load in the owned inverter testbench.",
+            "properties": {
+              "kind": {
+                "const": "schematic_load_capacitance",
+                "default": "schematic_load_capacitance",
+                "title": "Kind",
+                "type": "string"
+              },
+              "instance": {
+                "$ref": "#/$defs/CandidateSourceTarget"
+              }
+            },
+            "required": [
+              "instance"
+            ],
+            "title": "CapacitorTarget",
+            "type": "object"
+          },
+          "ChangeBaseline": {
+            "additionalProperties": false,
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Revision Sha256",
+                "type": "string"
+              },
+              "testbench_revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Testbench Revision Sha256",
+                "type": "string"
+              },
+              "fixed_conditions_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Fixed Conditions Sha256",
+                "type": "string"
+              },
+              "netlist_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Netlist Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "revision",
+              "revision_sha256",
+              "testbench_revision_sha256",
+              "fixed_conditions_sha256",
+              "netlist_sha256"
+            ],
+            "title": "ChangeBaseline",
+            "type": "object"
+          },
+          "ChangePlan": {
+            "additionalProperties": false,
+            "properties": {
+              "baseline": {
+                "$ref": "#/$defs/ChangeBaseline"
+              },
+              "candidate_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Candidate Id",
+                "type": "string"
+              },
+              "candidate_revision": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "target": {
+                "discriminator": {
+                  "mapping": {
+                    "ade_variable": "#/$defs/AdeTarget",
+                    "schematic_load_capacitance": "#/$defs/CapacitorTarget",
+                    "schematic_mos_width": "#/$defs/MosWidthTarget"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/AdeTarget"
+                  },
+                  {
+                    "$ref": "#/$defs/MosWidthTarget"
+                  },
+                  {
+                    "$ref": "#/$defs/CapacitorTarget"
+                  }
+                ],
+                "title": "Target"
+              },
+              "old": {
+                "$ref": "#/$defs/ChangeValue"
+              },
+              "requested": {
+                "$ref": "#/$defs/ChangeValue"
+              },
+              "expected": {
+                "$ref": "#/$defs/ChangeValue"
+              },
+              "qualification_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Qualification Sha256",
+                "type": "string"
+              },
+              "allowed_derived": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/DerivedChange"
+                },
+                "maxItems": 5,
+                "title": "Allowed Derived",
+                "type": "array"
+              }
+            },
+            "required": [
+              "baseline",
+              "candidate_id",
+              "candidate_revision",
+              "target",
+              "old",
+              "requested",
+              "expected",
+              "qualification_sha256"
+            ],
+            "title": "ChangePlan",
+            "type": "object"
+          },
+          "ChangeReadbackRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "plan": {
+                "$ref": "#/$defs/ChangePlan"
+              },
+              "expected_plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Expected Plan Sha256",
+                "type": "string"
+              },
+              "baseline": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Readback"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "reopened": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Readback"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "netlist": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Readback"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              }
+            },
+            "required": [
+              "plan",
+              "expected_plan_sha256"
+            ],
+            "title": "ChangeReadbackRequest",
+            "type": "object"
+          },
+          "ChangeValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "m",
+                  "um",
+                  "nm",
+                  "F",
+                  "pF"
+                ],
+                "title": "Unit",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "title": "ChangeValue",
+            "type": "object"
+          },
+          "DerivedChange": {
+            "additionalProperties": false,
+            "properties": {
+              "before": {
+                "$ref": "#/$defs/DerivedValue"
+              },
+              "after": {
+                "$ref": "#/$defs/DerivedValue"
+              }
+            },
+            "required": [
+              "before",
+              "after"
+            ],
+            "title": "DerivedChange",
+            "type": "object"
+          },
+          "DerivedValue": {
+            "additionalProperties": false,
+            "properties": {
+              "property_name": {
+                "enum": [
+                  "fw",
+                  "as",
+                  "ad",
+                  "ps",
+                  "pd"
+                ],
+                "title": "Property Name",
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 32,
+                "pattern": "^[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Value",
+                "type": "string"
+              }
+            },
+            "required": [
+              "property_name",
+              "value"
+            ],
+            "title": "DerivedValue",
+            "type": "object"
+          },
+          "MosWidthTarget": {
+            "additionalProperties": false,
+            "description": "One reviewed schematic master; the exact hierarchical target is registered.",
+            "properties": {
+              "kind": {
+                "const": "schematic_mos_width",
+                "default": "schematic_mos_width",
+                "title": "Kind",
+                "type": "string"
+              },
+              "instance": {
+                "$ref": "#/$defs/CandidateSourceTarget"
+              }
+            },
+            "required": [
+              "instance"
+            ],
+            "title": "MosWidthTarget",
+            "type": "object"
+          },
+          "Readback": {
+            "additionalProperties": false,
+            "description": "Value projected by an observer from its own artifact; hashes identify the capture.",
+            "properties": {
+              "schematic_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Schematic Revision Sha256"
+              },
+              "stage": {
+                "enum": [
+                  "baseline",
+                  "reopened",
+                  "netlist"
+                ],
+                "title": "Stage",
+                "type": "string"
+              },
+              "plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Sha256",
+                "type": "string"
+              },
+              "target_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Target Sha256",
+                "type": "string"
+              },
+              "revision": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Revision Sha256",
+                "type": "string"
+              },
+              "testbench_revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Testbench Revision Sha256",
+                "type": "string"
+              },
+              "fixed_conditions_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Fixed Conditions Sha256",
+                "type": "string"
+              },
+              "artifact_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Artifact Sha256",
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/$defs/ChangeValue"
+              },
+              "derived": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/DerivedValue"
+                },
+                "maxItems": 5,
+                "title": "Derived",
+                "type": "array"
+              },
+              "mos_fingers": {
+                "anyOf": [
+                  {
+                    "maximum": 1,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Mos Fingers"
+              },
+              "mos_multiplicity": {
+                "anyOf": [
+                  {
+                    "maximum": 1,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Mos Multiplicity"
+              }
+            },
+            "required": [
+              "stage",
+              "plan_sha256",
+              "target_sha256",
+              "revision",
+              "revision_sha256",
+              "testbench_revision_sha256",
+              "fixed_conditions_sha256",
+              "artifact_sha256",
+              "value"
+            ],
+            "title": "Readback",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/ChangeReadbackRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "cadence_verify_change_readbackArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "execution": null,
+      "outputSchema": {
+        "$defs": {
+          "ChangeValue": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "maxLength": 48,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "enum": [
+                  "V",
+                  "A",
+                  "m",
+                  "um",
+                  "nm",
+                  "F",
+                  "pF"
+                ],
+                "title": "Unit",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "title": "ChangeValue",
+            "type": "object"
+          },
+          "DerivedValue": {
+            "additionalProperties": false,
+            "properties": {
+              "property_name": {
+                "enum": [
+                  "fw",
+                  "as",
+                  "ad",
+                  "ps",
+                  "pd"
+                ],
+                "title": "Property Name",
+                "type": "string"
+              },
+              "value": {
+                "maxLength": 32,
+                "pattern": "^[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Value",
+                "type": "string"
+              }
+            },
+            "required": [
+              "property_name",
+              "value"
+            ],
+            "title": "DerivedValue",
+            "type": "object"
+          },
+          "Readback": {
+            "additionalProperties": false,
+            "description": "Value projected by an observer from its own artifact; hashes identify the capture.",
+            "properties": {
+              "schematic_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Schematic Revision Sha256"
+              },
+              "stage": {
+                "enum": [
+                  "baseline",
+                  "reopened",
+                  "netlist"
+                ],
+                "title": "Stage",
+                "type": "string"
+              },
+              "plan_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Plan Sha256",
+                "type": "string"
+              },
+              "target_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Target Sha256",
+                "type": "string"
+              },
+              "revision": {
+                "$ref": "#/$defs/RevisionBinding"
+              },
+              "revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Revision Sha256",
+                "type": "string"
+              },
+              "testbench_revision_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Testbench Revision Sha256",
+                "type": "string"
+              },
+              "fixed_conditions_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Fixed Conditions Sha256",
+                "type": "string"
+              },
+              "artifact_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Artifact Sha256",
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/$defs/ChangeValue"
+              },
+              "derived": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/DerivedValue"
+                },
+                "maxItems": 5,
+                "title": "Derived",
+                "type": "array"
+              },
+              "mos_fingers": {
+                "anyOf": [
+                  {
+                    "maximum": 1,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Mos Fingers"
+              },
+              "mos_multiplicity": {
+                "anyOf": [
+                  {
+                    "maximum": 1,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Mos Multiplicity"
+              }
+            },
+            "required": [
+              "stage",
+              "plan_sha256",
+              "target_sha256",
+              "revision",
+              "revision_sha256",
+              "testbench_revision_sha256",
+              "fixed_conditions_sha256",
+              "artifact_sha256",
+              "value"
+            ],
+            "title": "Readback",
+            "type": "object"
+          },
+          "RevisionBinding": {
+            "additionalProperties": false,
+            "properties": {
+              "workspace_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Workspace Id",
+                "type": "string"
+              },
+              "design_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Design Id",
+                "type": "string"
+              },
+              "revision_id": {
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                "title": "Revision Id",
+                "type": "string"
+              },
+              "parent_revision_id": {
+                "anyOf": [
+                  {
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Id"
+              },
+              "parent_revision_sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Parent Revision Sha256"
+              },
+              "source_baseline_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Source Baseline Sha256",
+                "type": "string"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "design_id",
+              "revision_id",
+              "source_baseline_sha256"
+            ],
+            "title": "RevisionBinding",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "plan_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "MISSING",
+              "STALE",
+              "CONFLICT",
+              "MATCHED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Readback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reopened": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Readback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "netlist": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Readback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "const": "LOCAL_EVIDENCE_COMPARISON",
+            "default": "LOCAL_EVIDENCE_COMPARISON",
+            "title": "Provenance",
+            "type": "string"
+          },
+          "execution_authorized": {
+            "const": false,
+            "default": false,
+            "title": "Execution Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan_sha256",
+          "status",
+          "reason",
+          "baseline",
+          "reopened",
+          "netlist"
+        ],
+        "title": "ChangeReadback",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": null
     }
   }
 }
