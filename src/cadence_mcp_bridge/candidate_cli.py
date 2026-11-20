@@ -258,6 +258,21 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     for stage in CHANGE_READBACK_STAGES:
         readback.add_argument(f"--{stage}", nargs=2, metavar=("FILE", "SHA256"))
     readback.add_argument("--output", type=Path, required=True)
+    for name, help_text, retained in (
+        ("validate-research-circuit", "Validate and digest a local circuit definition.", False),
+        ("plan-research-mos-block", "Prepare a local MOS block declaration.", False),
+        ("verify-research-mos-block", "Compare typed saved MOS block evidence.", False),
+        ("plan-registered-mos-change", "Plan a finite change from local MOS evidence.", False),
+        ("research-transient-result", "Measure an existing registered TRAN result.", True),
+        ("research-ac-gain-result", "Measure an existing registered AC gain result.", True),
+        ("research-supply-power-result", "Measure static power from registered DC results.", True),
+    ):
+        research = actions.add_parser(name, help=help_text)
+        research.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+        research.add_argument("--output", type=Path, required=True)
+        if retained:
+            research.add_argument("--settings", type=Path, required=True)
+            research.add_argument("--context", required=True)
     pmos = actions.add_parser("pmos-dc-compare", help="Compare two retained PMOS DC results.")
     pmos.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     pmos.add_argument("--output", type=Path, required=True)
@@ -404,6 +419,12 @@ def _export(path: Path, raw: bytes) -> str:
     # Complete-file publication is exclusive; retain interrupted candidates as evidence.
     _publish_report(Path(name), path)
     return hashlib.sha256(raw).hexdigest()
+
+
+def _export_research(path: Path, raw: bytes) -> str:
+    digest = _export(path, raw)
+    _read_candidate_bytes(path, expected_sha256=digest)
+    return digest
 
 
 def _reserved(settings: Path, contexts: tuple[ExecutionContext, ...]) -> set[Path]:
@@ -1356,6 +1377,44 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _amplifier_select(arguments)
         elif action == "verify-change-readback":
             result = _verify_change_readback(arguments)
+        elif action in (
+            "validate-research-circuit",
+            "plan-research-mos-block",
+            "verify-research-mos-block",
+            "plan-registered-mos-change",
+        ):
+            from cadence_mcp_bridge.research_adapters import (
+                RegisteredMosChangeRequest,
+                ResearchCircuitRequest,
+                ResearchMosBlockEvidenceRequest,
+                ResearchMosBlockRequest,
+                compare_mos_block,
+                plan_mos,
+                prepare_mos_block,
+                validate_circuit,
+            )
+            path, digest = arguments.request
+            document = read_candidate_document(Path(path), expected_sha256=digest)
+            output = _output(arguments.output, {_local_path(Path(path))})
+            local_result: VariableModel
+            if action == "validate-research-circuit":
+                definition_request = ResearchCircuitRequest.model_validate_json(document)
+                local_result = validate_circuit(definition_request)
+            elif action == "plan-research-mos-block":
+                block_request = ResearchMosBlockRequest.model_validate_json(document)
+                local_result = prepare_mos_block(block_request)
+            elif action == "verify-research-mos-block":
+                evidence_request = ResearchMosBlockEvidenceRequest.model_validate_json(document)
+                local_result = compare_mos_block(evidence_request)
+            else:
+                local_result = plan_mos(RegisteredMosChangeRequest.model_validate_json(document))
+            result = {
+                "status": "RESEARCH_LOCAL_DOCUMENT_EXPORTED",
+                "file_sha256": _export_research(
+                    output, local_result.model_dump_json().encode("utf-8")
+                ),
+                "execution_authorized": False,
+            }
         elif action == "pmos-dc-compare":
             result = _pmos_dc_compare(arguments)
         elif action == "amplifier-width-compare":
@@ -1379,6 +1438,51 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 receipt = dispatch_pmos_default_change(arguments.request, service)
                 remote_contact = receipt.dispatched_this_call
                 result = receipt.model_dump(mode="json")
+            elif action in (
+                "research-transient-result",
+                "research-ac-gain-result",
+                "research-supply-power-result",
+            ):
+                from cadence_mcp_bridge.native_service import NativeOperationService
+                from cadence_mcp_bridge.research_adapters import (
+                    ResearchAcGainRequest,
+                    ResearchSupplyPowerRequest,
+                    ResearchTransientRequest,
+                    RetainedResearchResult,
+                    ac_gain_result,
+                    supply_power_result,
+                    transient_result,
+                )
+
+                path, digest = arguments.request
+                document = read_candidate_document(Path(path), expected_sha256=digest)
+                output = _output(
+                    arguments.output,
+                    _reserved(arguments.settings, contexts) | {_local_path(Path(path))},
+                )
+                native = NativeOperationService(context)
+                retained_result: RetainedResearchResult
+                if action == "research-transient-result":
+                    transient = ResearchTransientRequest.model_validate_json(document)
+                    remote_contact = None
+                    retained_result = asyncio.run(transient_result(native, transient))
+                elif action == "research-ac-gain-result":
+                    gain = ResearchAcGainRequest.model_validate_json(document)
+                    remote_contact = None
+                    retained_result = asyncio.run(ac_gain_result(native, gain))
+                else:
+                    supplies = ResearchSupplyPowerRequest.model_validate_json(document)
+                    remote_contact = None
+                    retained_result = asyncio.run(supply_power_result(native, supplies))
+                remote_contact = retained_result.remote_contact
+                raw_result = retained_result.model_dump_json().encode("utf-8")
+                result = {
+                    "status": "RESEARCH_RETAINED_RESULT_EXPORTED",
+                    "file_sha256": _export_research(output, raw_result),
+                    "new_simulations": retained_result.new_simulations,
+                    "new_extractions": retained_result.new_extractions,
+                    "new_reservations": retained_result.new_reservations,
+                }
             elif action == "plan":
                 output = _output(
                     arguments.output,
@@ -1520,6 +1624,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "select",
             "amplifier-select",
             "verify-change-readback",
+            "validate-research-circuit",
+            "plan-research-mos-block",
+            "verify-research-mos-block",
+            "plan-registered-mos-change",
             "pmos-dc-compare",
             "amplifier-width-compare",
             "amplifier-fresh-width-compare",
@@ -1527,6 +1635,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "observe-amplifier-pm0",
         ):
             guidance = "Check pinned local documents and use a new output file."
+        elif action in (
+            "research-transient-result", "research-ac-gain-result", "research-supply-power-result"
+        ):
+            guidance = "Check the registered operation, exact plan digest and new output path."
         else:
             guidance = (
                 "Check complete registered V/A inputs, fixed evidence, IDs and grant. "

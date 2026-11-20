@@ -1,6 +1,7 @@
 """Conditional fixed-operation tools for an explicitly configured operator service."""
 
 import json
+from collections.abc import Awaitable
 from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
@@ -37,6 +38,30 @@ from cadence_mcp_bridge.parameter_changes import (
     Readback,
     verify_change_readback,
 )
+from cadence_mcp_bridge.research_adapters import (
+    RegisteredMosChangeRequest,
+    ResearchAcGainRequest,
+    ResearchAcGainResult,
+    ResearchCircuitRequest,
+    ResearchCircuitValidation,
+    ResearchMosBlockEvidenceRequest,
+    ResearchMosBlockPreparation,
+    ResearchMosBlockRequest,
+    ResearchMosBlockVerification,
+    ResearchMosPlan,
+    ResearchPowerResult,
+    ResearchSupplyPowerRequest,
+    ResearchTransientRequest,
+    ResearchTransientResult,
+    RetainedResearchResult,
+    ac_gain_result,
+    compare_mos_block,
+    plan_mos,
+    prepare_mos_block,
+    supply_power_result,
+    transient_result,
+    validate_circuit,
+)
 from cadence_mcp_bridge.server import _READ_ONLY, _stable_result
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
@@ -56,6 +81,17 @@ class ChangeReadbackRequest(VariableModel):
         model = ChangePlan if info.field_name == "plan" else Readback
         # Decode JSON arrays without loosening the strict model fields.
         return model.model_validate_json(json.dumps(value, allow_nan=False))
+
+
+async def _research_result[ResultT: RetainedResearchResult](
+    operation: Awaitable[ResultT],
+) -> ResultT:
+    from cadence_mcp_bridge.errors import BridgeError
+
+    try:
+        return await operation
+    except (BridgeError, OSError, ValueError, KeyError, TypeError) as exc:
+        raise ToolError("registered_research_result_unavailable") from exc
 
 
 def register_native_tools(server: MCPServer, native: NativeOperationService) -> None:
@@ -109,6 +145,90 @@ def register_native_tools(server: MCPServer, native: NativeOperationService) -> 
             reopened=request.reopened,
             netlist=request.netlist,
         )
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Validate an explicit circuit definition and compute its canonical digest. "
+        "Local only; unresolved inputs are retained and no native circuit is generated.",
+    )
+    def cadence_validate_research_circuit(
+        request: ResearchCircuitRequest,
+    ) -> ResearchCircuitValidation:
+        return validate_circuit(request)
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Prepare a bounded DUT hierarchy from a pinned circuit definition and "
+        "logical library name. Local declaration only; grants no generation authority.",
+    )
+    def cadence_plan_research_mos_block(
+        request: ResearchMosBlockRequest,
+    ) -> ResearchMosBlockPreparation:
+        try:
+            return prepare_mos_block(request)
+        except ValueError as exc:
+            raise ToolError("research_mos_block_plan_rejected") from exc
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Compare typed reopen and Spectre projections against an exact MOS-block "
+        "plan and artifact pins. Native artifact provenance requires independent verification.",
+    )
+    def cadence_verify_research_mos_block(
+        request: ResearchMosBlockEvidenceRequest,
+    ) -> ResearchMosBlockVerification:
+        try:
+            return compare_mos_block(request)
+        except ValueError as exc:
+            raise ToolError("research_mos_block_evidence_rejected") from exc
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Plan one finite MOS property change from supplied qualification evidence. "
+        "Local only; creates no native authority or artifact provenance.",
+    )
+    def cadence_plan_registered_mos_change(request: RegisteredMosChangeRequest) -> ResearchMosPlan:
+        try:
+            return plan_mos(request)
+        except ValueError as exc:
+            raise ToolError("registered_mos_change_rejected") from exc
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Measure a bounded saved waveform window from a retained registered TRAN "
+        "operation. No simulation or extraction replay; TRAN supply power is unavailable.",
+    )
+    async def cadence_research_transient_result(
+        request: ResearchTransientRequest,
+    ) -> ResearchTransientResult:
+        return await _research_result(transient_result(native, request))
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Read exact complex reference gain and sampled downward unity crossing "
+        "from a retained registered AC operation. Requests no new extraction or simulation.",
+    )
+    async def cadence_research_ac_gain_result(
+        request: ResearchAcGainRequest,
+    ) -> ResearchAcGainResult:
+        return await _research_result(ac_gain_result(native, request))
+
+    @server.tool(
+        annotations=_READ_ONLY,
+        structured_output=True,
+        description="Read signed static delivered supply power for registered supplies of "
+        "an exact retained DC operation. Requests no new extraction or simulation.",
+    )
+    async def cadence_research_supply_power_result(
+        request: ResearchSupplyPowerRequest,
+    ) -> ResearchPowerResult:
+        return await _research_result(supply_power_result(native, request))
 
     @server.tool(
         name="cadence_plan_operation",

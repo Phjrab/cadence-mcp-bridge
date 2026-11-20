@@ -736,8 +736,18 @@ def verify(workspace: Path, examples: Path) -> dict[str, object]:
                 assert catalog["remote_contact"] is False
                 tools = (await client.list_tools()).tools
                 names = {tool.name for tool in tools}
-                assert len(names) == 104
-                assert {"cadence_submit_operation", "cadence_verify_change_readback"} <= names
+                assert len(names) == 111
+                assert {
+                    "cadence_submit_operation",
+                    "cadence_verify_change_readback",
+                    "cadence_validate_research_circuit",
+                    "cadence_plan_research_mos_block",
+                    "cadence_verify_research_mos_block",
+                    "cadence_plan_registered_mos_change",
+                    "cadence_research_transient_result",
+                    "cadence_research_ac_gain_result",
+                    "cadence_research_supply_power_result",
+                } <= names
                 planned = await client.call_tool(
                     "cadence_plan_operation",
                     {"request": input_plan.request.model_dump(mode="json")},

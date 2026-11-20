@@ -294,6 +294,30 @@ def test_verify_change_readback_exports_typed_status(
     assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
 
 
+def test_research_circuit_export_is_exclusive_and_hash_checked(tmp_path, capsys):
+    from test_m2_inverter import fixture
+    from test_research_circuit import payload
+
+    from cadence_mcp_bridge.research_adapters import ResearchCircuitValidation
+
+    plan, _ = fixture()
+    request, destination = tmp_path / "definition.json", tmp_path / "checked.json"
+    document = json.dumps({"definition": payload(plan)}).encode()
+    request.write_bytes(document)
+    args = [
+        "operator-candidates", "validate-research-circuit",
+        "--request", str(request), hashlib.sha256(document).hexdigest(),
+        "--output", str(destination),
+    ]
+    assert main(args) == 0
+    summary = output(capsys)
+    saved = destination.read_bytes()
+    assert summary["file_sha256"] == hashlib.sha256(saved).hexdigest()
+    assert ResearchCircuitValidation.model_validate_json(saved).execution_authorized is False
+    assert main(args) == 2
+    assert destination.read_bytes() == saved and request.read_bytes() == document
+
+
 @pytest.mark.parametrize("failure", ["plan_pin", "stage_pin", "malformed", "extra", "collision"])
 def test_verify_change_readback_rejects_invalid_inputs_without_overwrite(
     change_readback_case, tmp_path, capsys, failure
