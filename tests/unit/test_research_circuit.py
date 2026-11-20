@@ -9,15 +9,22 @@ import pytest
 from pydantic import ValidationError
 from test_m2_inverter import fixture as inverter_fixture
 
+from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, DcInputs
 from cadence_mcp_bridge.m2_inverter import OwnedInverterPlan, render_generator
+from cadence_mcp_bridge.native_registration import RegistrationObservation
+from cadence_mcp_bridge.native_runtime import NativeLibrary
 from cadence_mcp_bridge.research_circuit import (
     MosBlockEvidence,
+    MosBlockHandoffPins,
+    MosBlockStageReceipt,
     OwnedMosBlockPlan,
     ResearchCircuit,
+    _verify_mos_block_handoff,
     adapt_owned_inverter,
     plan_owned_mos_block,
     project_mos_block_netlist,
     render_owned_mos_block,
+    verify_mos_block_registration_source,
     verify_owned_mos_block,
 )
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -445,3 +452,196 @@ def test_raw_projection_rejects_changed_spectre_body(old: bytes, new: bytes) -> 
             expected_plan_sha256=canonical_digest(plan),
             expected_netlist_artifact_sha256=sha256(raw).hexdigest(),
         )
+
+
+def handoff_fixture() -> tuple[OwnedMosBlockPlan, dict[str, Any]]:
+    plan, _ = mos_block_fixture()
+    inverter, frame = inverter_fixture()
+    frames = {inverter.cdf_frame_sha256: frame}
+    plan_sha = canonical_digest(plan)
+    library = NativeLibrary(name="OwnedBlock", path="/owned/block", tree_sha256="a" * 64)
+    scripts = render_owned_mos_block(
+        plan, frames, expected_plan_sha256=plan_sha, owned_library_path=library.path
+    )
+    save_stdout = f"Cadence fixture\nMOS_BLOCK_SAVED|{plan_sha}\n".encode("ascii")
+    reopen_stdout = f"Cadence fixture\nMOS_BLOCK_REOPENED_CHECKED|{plan_sha}\n".encode("ascii")
+    raw = raw_block_netlist()
+    full = raw + b'U (vin vout vdd vss) Dut\ndc dc write="spectre.dc" annotate=status\n'
+    common: dict[str, Any] = dict(
+        operation_id="11111111-2222-4333-8444-555555555555",
+        plan_sha256=plan_sha,
+        library=library,
+        source_cell="/owned/block/Dut",
+        source_tree_sha256="b" * 64,
+        bench_cell="/owned/block/Bench",
+        bench_tree_sha256="c" * 64,
+    )
+    saved = MosBlockStageReceipt(
+        phase="save",
+        artifact_sha256=sha256(save_stdout).hexdigest(),
+        script_sha256=sha256(scripts.generate.encode("ascii")).hexdigest(),
+        **common,
+    )
+    reopened = MosBlockStageReceipt(
+        phase="reopen",
+        artifact_sha256=sha256(reopen_stdout).hexdigest(),
+        script_sha256=sha256(scripts.reopen.encode("ascii")).hexdigest(),
+        **common,
+    )
+    netlisted = MosBlockStageReceipt(
+        phase="netlist",
+        artifact_sha256=sha256(full).hexdigest(),
+        **common,
+    )
+    return plan, dict(
+        scripts=scripts,
+        bench_name="Bench",
+        save_markers=(f"MOS_BLOCK_SAVED|{plan_sha}",),
+        reopen_markers=(f"MOS_BLOCK_REOPENED_CHECKED|{plan_sha}",),
+        saved=saved,
+        reopened=reopened,
+        netlisted=netlisted,
+        save_stdout=save_stdout,
+        reopen_stdout=reopen_stdout,
+        raw_netlist=raw,
+        full_netlist=full,
+        pins=MosBlockHandoffPins(
+            plan_sha256=plan_sha,
+            save_receipt_sha256=canonical_digest(saved),
+            reopen_receipt_sha256=canonical_digest(reopened),
+            netlist_receipt_sha256=canonical_digest(netlisted),
+            raw_netlist_sha256=sha256(raw).hexdigest(),
+            full_netlist_sha256=sha256(full).hexdigest(),
+        ),
+    )
+
+
+def test_mos_handoff_matches_existing_registration_source_contract() -> None:
+    plan, options = handoff_fixture()
+    handoff = _verify_mos_block_handoff(plan, **options)
+    assert handoff.binding == plan.binding
+    assert handoff.provenance == "OPERATOR_AUTHENTICATION_REQUIRED"
+    assert handoff.source_cell == "/owned/block/Dut"
+    assert handoff.handoff_sha256 == canonical_digest(_verify_mos_block_handoff(plan, **options))
+    observation = RegistrationObservation(
+        schema_version=1,
+        status="REGISTRATION_FINGERPRINTS_PREPARED_NOT_AUTHORIZED",
+        ade=AdeExecutionRegistration(
+            schema_version=1,
+            design_id=handoff.binding.design_id,
+            analysis_id="dc",
+            design_profile_sha256="1" * 64,
+            variable_set_sha256=None,
+            source_tree_sha256=handoff.bench_tree_sha256,
+            ade_state_tree_sha256="2" * 64,
+            static_statements_sha256="3" * 64,
+            model_includes=(),
+            inputs=DcInputs(analysis="dc", mode="saved_operating_point", statement_sha256="4" * 64),
+        ),
+        libraries=(handoff.library,),
+        model_files=(),
+        source_cell=handoff.bench_cell,
+        source_state="/owned/state",
+        baseline_input_sha256=handoff.pins.full_netlist_sha256,
+        operator_uid=500,
+        helper_sha256="6" * 64,
+        execution_authorized=False,
+        new_simulations=0,
+        new_reservations=0,
+    )
+    verify_mos_block_registration_source(
+        handoff,
+        observation,
+        expected_handoff_sha256=handoff.handoff_sha256,
+        expected_observation_sha256=canonical_digest(observation),
+    )
+    wrong_tree = observation.ade.model_copy(update={"source_tree_sha256": "9" * 64})
+    wrong_lib = handoff.library.model_copy(update={"tree_sha256": "9" * 64})
+    for change in (
+        {"source_cell": "/owned/block/Dut"},
+        {"ade": wrong_tree},
+        {"libraries": (wrong_lib,)},
+        {"baseline_input_sha256": "9" * 64},
+    ):
+        foreign = observation.model_copy(update=change)
+        with pytest.raises(ValueError, match="registration source or library"):
+            verify_mos_block_registration_source(
+                handoff,
+                foreign,
+                expected_handoff_sha256=handoff.handoff_sha256,
+                expected_observation_sha256=canonical_digest(foreign),
+            )
+
+
+@pytest.mark.parametrize(
+    ("stage", "field", "value"),
+    [
+        ("reopened", "operation_id", "22222222-2222-4333-8444-555555555555"),
+        ("reopened", "source_tree_sha256", "f" * 64),
+        ("saved", "script_sha256", "f" * 64),
+        ("netlisted", "source_cell", "/owned/block/Other"),
+        ("netlisted", "phase", "reopen"),
+    ],
+)
+def test_mos_handoff_rejects_independently_pinned_inconsistent_stages(
+    stage: str, field: str, value: str
+) -> None:
+    plan, options = handoff_fixture()
+    fields = {field: value}
+    if field == "phase":
+        fields["script_sha256"] = "f" * 64
+    receipt = options[stage].model_copy(update=fields)
+    options[stage] = receipt
+    pin = {"saved": "save", "reopened": "reopen", "netlisted": "netlist"}[stage]
+    options["pins"] = options["pins"].model_copy(
+        update={f"{pin}_receipt_sha256": canonical_digest(receipt)}
+    )
+    with pytest.raises(ValueError, match="binding|executed script"):
+        _verify_mos_block_handoff(plan, **options)
+
+
+@pytest.mark.parametrize(
+    "change", ["receipt", "stdout", "duplicate", "stale_netlist", "bulk", "full_digest", "full_dut"]
+)
+def test_mos_handoff_checks_exact_artifacts_and_dut_content(change: str) -> None:
+    plan, options = handoff_fixture()
+    if change == "receipt":
+        options["pins"] = options["pins"].model_copy(update={"reopen_receipt_sha256": "f" * 64})
+    elif change == "stdout":
+        options["save_stdout"] += b"unexpected"
+    elif change == "duplicate":
+        options["reopen_stdout"] *= 2
+        receipt = options["reopened"].model_copy(
+            update={"artifact_sha256": sha256(options["reopen_stdout"]).hexdigest()}
+        )
+        options["reopened"] = receipt
+        options["pins"] = options["pins"].model_copy(
+            update={"reopen_receipt_sha256": canonical_digest(receipt)}
+        )
+    elif change in {"full_digest", "full_dut"}:
+        raw = options["full_netlist"].replace(b"(vout vin vdd vdd)", b"(vout vin vdd vss)", 1)
+        options["full_netlist"] = raw
+        if change == "full_dut":
+            digest = sha256(raw).hexdigest()
+            receipt = options["netlisted"].model_copy(update={"artifact_sha256": digest})
+            options["netlisted"] = receipt
+            options["pins"] = options["pins"].model_copy(
+                update={
+                    "netlist_receipt_sha256": canonical_digest(receipt),
+                    "full_netlist_sha256": digest,
+                },
+            )
+    else:
+        raw = options["raw_netlist"].replace(b"(vout vin vdd vdd)", b"(vout vin vdd vss)", 1)
+        options["raw_netlist"] = raw
+        if change == "bulk":
+            digest = sha256(raw).hexdigest()
+            options["pins"] = options["pins"].model_copy(
+                update={
+                    "raw_netlist_sha256": digest,
+                }
+            )
+    with pytest.raises(
+        ValueError, match="binding|stdout|marker|digest|topology|projection differs"
+    ):
+        _verify_mos_block_handoff(plan, **options)

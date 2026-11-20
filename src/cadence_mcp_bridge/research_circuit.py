@@ -19,6 +19,9 @@ from cadence_mcp_bridge.m2_inverter import (
     _quote,
     observed_devices,
 )
+from cadence_mcp_bridge.native_diagnostics import OperationId
+from cadence_mcp_bridge.native_registration import RegistrationObservation
+from cadence_mcp_bridge.native_runtime import NativeLibrary, RemotePath
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
     BindingName,
@@ -1294,3 +1297,229 @@ def project_mos_block_netlist(
     ):
         raise ValueError("netlisted MOS block topology or effective values mismatch")
     return tuple(projected[name] for name in sorted(projected))
+
+
+class MosBlockStageReceipt(VariableModel):
+    """Operator-normalized receipt from one successful native phase.
+
+    The operator authenticates the original executor record and tree observation.
+    The handoff compares the fields against independent pins and actual bytes.
+    """
+
+    phase: Literal["save", "reopen", "netlist"]
+    operation_id: OperationId
+    plan_sha256: Digest
+    library: NativeLibrary
+    source_cell: RemotePath
+    source_tree_sha256: Digest
+    bench_cell: RemotePath
+    bench_tree_sha256: Digest
+    artifact_sha256: Digest
+    script_sha256: Digest | None = None
+
+    @model_validator(mode="after")
+    def script_scope(self) -> Self:
+        if (self.script_sha256 is None) != (self.phase == "netlist"):
+            raise ValueError("save and reopen receipts require their exact script digests")
+        return self
+
+
+class MosBlockHandoffPins(VariableModel):
+    """Pins independently obtained from the operator's reviewed operation records."""
+
+    plan_sha256: Digest
+    save_receipt_sha256: Digest
+    reopen_receipt_sha256: Digest
+    netlist_receipt_sha256: Digest
+    raw_netlist_sha256: Digest
+    full_netlist_sha256: Digest
+
+
+class MosBlockRegistrationHandoff(VariableModel):
+    """Local source candidate for native registration, with no admission authority."""
+
+    schema_version: Literal[1] = 1
+    status: Literal["LOCAL_SOURCE_EVIDENCE_MATCHED"] = "LOCAL_SOURCE_EVIDENCE_MATCHED"
+    provenance: Literal["OPERATOR_AUTHENTICATION_REQUIRED"] = "OPERATOR_AUTHENTICATION_REQUIRED"
+    execution_authorized: Literal[False] = False
+    operation_id: OperationId
+    binding: RevisionBinding
+    library: NativeLibrary
+    source_cell: RemotePath
+    source_tree_sha256: Digest
+    bench_cell: RemotePath
+    bench_tree_sha256: Digest
+    pins: MosBlockHandoffPins
+
+    @property
+    def handoff_sha256(self) -> Digest:
+        return canonical_digest(self)
+
+
+def _check_mos_phase_stdout(
+    raw: bytes,
+    markers: tuple[str, ...],
+    script: str,
+    receipt: MosBlockStageReceipt,
+) -> None:
+    if len(raw) > 65_536 or sha256(raw).hexdigest() != receipt.artifact_sha256:
+        raise ValueError("MOS phase stdout digest or size mismatch")
+    observed_markers = [
+        line
+        for line in raw.splitlines()
+        if line.startswith(
+            (b"MOS_BLOCK_SAVED|", b"MOS_BLOCK_REOPENED_CHECKED|", b"RESEARCH_BENCH_")
+        )
+    ]
+    expected = [marker.encode("ascii") for marker in markers]
+    if (
+        observed_markers != expected
+        or sha256(script.encode("ascii")).hexdigest() != receipt.script_sha256
+    ):
+        raise ValueError("MOS phase completion marker or executed script mismatch")
+
+
+def _dut_subcircuits(static: list[str], expected: set[str]) -> dict[str, tuple[str, ...]]:
+    """Retain exact normalized DUT definitions, including subcircuit port order."""
+    scopes: list[str] = []
+    block: list[str] = []
+    found: dict[str, tuple[str, ...]] = {}
+    for line in static:
+        words = line.split()
+        if words[0] == "subckt" or words[:2] == ["inline", "subckt"]:
+            name = words[1] if words[0] == "subckt" else words[2]
+            if name in expected and (scopes or name in found):
+                raise ValueError("duplicate or nested DUT definition in Spectre input")
+            scopes.append(name)
+            if len(scopes) == 1 and name in expected:
+                block = []
+        if scopes and scopes[0] in expected:
+            block.append(line)
+        if words[0] == "ends":
+            name = scopes.pop()
+            if not scopes and name in expected:
+                found[name] = tuple(block)
+    if found.keys() != expected:
+        raise ValueError("Spectre input does not contain the complete DUT closure")
+    return found
+
+
+def _check_full_bench_dut_identity(
+    plan: OwnedMosBlockPlan,
+    full_netlist: bytes,
+    raw_dut_netlist: bytes,
+    expected_full_netlist_sha256: Digest,
+) -> None:
+    if (
+        len(full_netlist) > 1_048_576
+        or sha256(full_netlist).hexdigest() != expected_full_netlist_sha256
+    ):
+        raise ValueError("full bench netlist digest or size mismatch")
+    expected = {cell.name for cell in plan.circuits}
+    _, _, analyses, full_static = partition_input(full_netlist)  # type: ignore[no-untyped-call]
+    _, _, _, dut_static = partition_input(raw_dut_netlist)  # type: ignore[no-untyped-call]
+    if not analyses or _dut_subcircuits(full_static, expected) != _dut_subcircuits(
+        dut_static, expected
+    ):
+        raise ValueError("DUT projection differs from the full bench netlist")
+
+
+def _verify_mos_block_handoff(
+    plan: OwnedMosBlockPlan,
+    scripts: MosBlockScripts,
+    *,
+    pins: MosBlockHandoffPins,
+    bench_name: str,
+    save_markers: tuple[str, ...],
+    reopen_markers: tuple[str, ...],
+    saved: MosBlockStageReceipt,
+    reopened: MosBlockStageReceipt,
+    netlisted: MosBlockStageReceipt,
+    save_stdout: bytes,
+    reopen_stdout: bytes,
+    raw_netlist: bytes,
+    full_netlist: bytes,
+) -> MosBlockRegistrationHandoff:
+    """Compare the exact generation, read-only reopen and DUT capture as one operation."""
+    pins = MosBlockHandoffPins.model_validate_json(pins.model_dump_json())
+    plan = _pinned_block(plan, pins.plan_sha256)
+    saved, reopened, netlisted = (
+        MosBlockStageReceipt.model_validate_json(receipt.model_dump_json())
+        for receipt in (saved, reopened, netlisted)
+    )
+    library = saved.library
+    source_cell = f"{library.path}/{plan.root}"
+    if (
+        library.name != plan.output_library
+        or scripts.plan_sha256 != pins.plan_sha256
+        or bench_name == plan.root
+        or saved.bench_cell != f"{library.path}/{bench_name}"
+    ):
+        raise ValueError("MOS handoff output library mismatch")
+    for phase, receipt, digest in (
+        ("save", saved, pins.save_receipt_sha256),
+        ("reopen", reopened, pins.reopen_receipt_sha256),
+        ("netlist", netlisted, pins.netlist_receipt_sha256),
+    ):
+        if (
+            receipt.phase != phase
+            or canonical_digest(receipt) != digest
+            or receipt.operation_id != saved.operation_id
+            or receipt.plan_sha256 != pins.plan_sha256
+            or receipt.library != library
+            or receipt.source_cell != source_cell
+            or receipt.source_tree_sha256 != saved.source_tree_sha256
+            or receipt.bench_cell != saved.bench_cell
+            or receipt.bench_tree_sha256 != saved.bench_tree_sha256
+        ):
+            raise ValueError("MOS handoff phase, operation, plan or source binding mismatch")
+    _check_mos_phase_stdout(save_stdout, save_markers, scripts.generate, saved)
+    _check_mos_phase_stdout(reopen_stdout, reopen_markers, scripts.reopen, reopened)
+    if netlisted.artifact_sha256 != pins.full_netlist_sha256:
+        raise ValueError("MOS handoff netlist receipt digest mismatch")
+    project_mos_block_netlist(
+        plan,
+        raw_netlist,
+        expected_plan_sha256=pins.plan_sha256,
+        expected_netlist_artifact_sha256=pins.raw_netlist_sha256,
+    )
+    _check_full_bench_dut_identity(plan, full_netlist, raw_netlist, pins.full_netlist_sha256)
+    return MosBlockRegistrationHandoff(
+        operation_id=saved.operation_id,
+        binding=plan.binding,
+        library=library,
+        source_cell=source_cell,
+        source_tree_sha256=saved.source_tree_sha256,
+        bench_cell=saved.bench_cell,
+        bench_tree_sha256=saved.bench_tree_sha256,
+        pins=pins,
+    )
+
+
+def verify_mos_block_registration_source(
+    handoff: MosBlockRegistrationHandoff,
+    observation: RegistrationObservation,
+    *,
+    expected_handoff_sha256: Digest,
+    expected_observation_sha256: Digest,
+) -> None:
+    """Check the bench registration source and the authenticated DUT library dependency.
+
+    The full baseline simulation netlist and ADE/model bindings have their own
+    existing registration checks. No comparison assumes a bench tree is the DUT.
+    """
+    handoff = MosBlockRegistrationHandoff.model_validate_json(handoff.model_dump_json())
+    observation = RegistrationObservation.model_validate_json(observation.model_dump_json())
+    libraries = [
+        library for library in observation.libraries if library.name == handoff.library.name
+    ]
+    if (
+        handoff.handoff_sha256 != expected_handoff_sha256
+        or canonical_digest(observation) != expected_observation_sha256
+        or observation.source_cell != handoff.bench_cell
+        or observation.ade.design_id != handoff.binding.design_id
+        or observation.ade.source_tree_sha256 != handoff.bench_tree_sha256
+        or observation.baseline_input_sha256 != handoff.pins.full_netlist_sha256
+        or libraries != [handoff.library]
+    ):
+        raise ValueError("MOS block registration source or library fingerprint mismatch")
