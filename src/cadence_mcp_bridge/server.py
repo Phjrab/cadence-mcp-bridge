@@ -1594,7 +1594,10 @@ def create_server(
 def create_default_server(
     *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
     retained_amp_pm0: tuple[Path, str] | None = None,
+    fixed_amp_pm0: bool = False,
 ) -> MCPServer:
+    if fixed_amp_pm0 and (not operator_mode or retained_amp_comparison or retained_amp_pm0):
+        raise ConfigurationError("Fixed AMP PM0 requires a dedicated operator launch")
     config = (
         BridgeConfig(runtime_mode="operator")
         if operator_mode
@@ -1603,6 +1606,13 @@ def create_default_server(
         )
     )
     if config.runtime_mode == "operator":
+        if fixed_amp_pm0:
+            from cadence_mcp_bridge.amplifier_pm0_execution_server import (
+                create_fixed_amp_pm0_server,
+            )
+
+            return create_fixed_amp_pm0_server(config)
+
         from cadence_mcp_bridge.runtime_context import create_operator_service
 
         server = create_server(
@@ -1657,6 +1667,7 @@ def create_default_server(
 def run_stdio_server(
     *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
     retained_amp_pm0: tuple[Path, str] | None = None,
+    fixed_amp_pm0: bool = False,
 ) -> None:
     """Run locally over stdio; all application logging is directed to stderr."""
 
@@ -1664,4 +1675,5 @@ def run_stdio_server(
     create_default_server(
         operator_mode=operator_mode, retained_amp_comparison=retained_amp_comparison,
         retained_amp_pm0=retained_amp_pm0,
+        fixed_amp_pm0=fixed_amp_pm0,
     ).run("stdio")

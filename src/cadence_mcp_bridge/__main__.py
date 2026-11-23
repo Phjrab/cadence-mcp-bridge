@@ -60,6 +60,10 @@ def build_parser() -> argparse.ArgumentParser:
         "serve-operator", help="Serve an explicit operator context; no legacy fallback."
     )
     operator_server.add_argument(
+        "--fixed-amp-pm0", action="store_true",
+        help="Serve only the exact registered amplifier PM0 apply and replay tool.",
+    )
+    operator_server.add_argument(
         "--retained-amp-comparison", nargs=2, metavar=("FILE", "SHA256"),
         help="Expose one host-pinned, already saved amplifier comparison.",
     )
@@ -1199,12 +1203,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     retained_amp_comparison = getattr(arguments, "retained_amp_comparison", None)
     retained_amp_pm0 = getattr(arguments, "retained_amp_pm0", None)
-    if retained_amp_comparison is None and retained_amp_pm0 is None:
+    fixed_amp_pm0 = getattr(arguments, "fixed_amp_pm0", False)
+    if retained_amp_comparison is None and retained_amp_pm0 is None and not fixed_amp_pm0:
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
         try:
             run_stdio_server(
                 operator_mode=True,
+                fixed_amp_pm0=fixed_amp_pm0,
                 retained_amp_comparison=(
                     (Path(retained_amp_comparison[0]), retained_amp_comparison[1])
                     if retained_amp_comparison else None
