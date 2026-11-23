@@ -203,6 +203,34 @@ async def test_same_id_reads_registered_result_without_reconcile_or_submit(conne
     assert error.value.reason == "research_transient_saved_vector_inventory_mismatch"
 
 
+@pytest.mark.asyncio
+async def test_retained_tran_summary_does_not_attest_missing_saved_vectors(connected):
+    _, native, original, record, _, data = connected
+    store = native.lifecycle.store = Mock()
+    store.connection.side_effect = lambda **_: nullcontext("read connection")
+    store._read_operation.return_value = record
+    data.pop("tran_waveforms")
+    result = await capture_research_transient(native, _query(
+        operation_id=original.operation_id,
+        expected_plan_sha256=original.expected_plan_sha256,
+    ))
+
+    assert result["source"]["frame_sha256"] == data["frame_sha256"]
+    assert result["source"]["metrics"]
+    assert result["waveforms_sha256"] is None
+    assert result["sample_kind"] == "UNVERIFIED"
+    for metric in ("delay", "slew", "settling"):
+        measurement = result["measurements"][metric]
+        assert measurement["value"] is None
+        assert measurement["reason"] == "saved_voltage_vectors_unavailable"
+    assert result["measurements"]["average_supply_power"]["reason"] == (
+        "registered_tran_supply_current_unavailable"
+    )
+    assert json.loads(research_transient_export_bytes(result)) == result
+    native.provider.analog_result.assert_awaited_once()
+    no_dispatch(native)
+
+
 @pytest.mark.parametrize("version", [1, 2])
 def test_compiled_tran_supply_frame_and_legacy_projection(operator, version):
     context, plan, ade, reader, operation, execution = reader_for(operator, "tran")
