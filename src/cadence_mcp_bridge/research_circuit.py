@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Annotated, Literal, Self
 from pydantic import BeforeValidator, Field, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
+from cadence_mcp_bridge.domain_provisioning import _closed_document
 from cadence_mcp_bridge.generic_ade import LIMIT as ADE_INPUT_LIMIT
 from cadence_mcp_bridge.m2_cdf import parse_frame
 from cadence_mcp_bridge.m2_inverter import (
@@ -1397,6 +1398,72 @@ class MosBlockRegistrationHandoff(VariableModel):
     @property
     def handoff_sha256(self) -> Digest:
         return canonical_digest(self)
+
+
+class ObservedSchematicPort(Port):
+    cell: Name
+
+
+class SchematicPortReadback(VariableModel):
+    """Coordinates captured from saved schematic pin instances by the operator."""
+
+    operation_id: OperationId
+    plan_sha256: Digest
+    output_library: BindingName
+    reopened_tree_sha256: Digest
+    library_tree_sha256: Digest
+    origin_basis: Literal["schematic_pin_instance_xy"]
+    ports: Annotated[tuple[ObservedSchematicPort, ...], Field(min_length=1, max_length=31 * 64)]
+
+
+def project_schematic_port_readback(
+    plan: OwnedMosBlockPlan,
+    handoff: MosBlockRegistrationHandoff,
+    raw: bytes,
+    *,
+    expected_handoff_sha256: Digest,
+    expected_observation_sha256: Digest,
+) -> dict[str, tuple[Port, ...]]:
+    """Check only the schematic ports of a pinned readback, without supplying missing geometry.
+
+    The caller authenticates the capture and confirms the unique native pin-to-terminal
+    association. This projection does not supply the other reopened evidence rows.
+    """
+    handoff = MosBlockRegistrationHandoff.model_validate_json(handoff.model_dump_json())
+    if handoff.handoff_sha256 != expected_handoff_sha256:
+        raise ValueError("schematic port handoff digest mismatch")
+    plan = _pinned_block(plan, handoff.pins.plan_sha256)
+    _closed_document(raw)
+    if sha256(raw).hexdigest() != expected_observation_sha256:
+        raise ValueError("schematic port observation digest mismatch")
+    captured = SchematicPortReadback.model_validate_json(raw)
+    if (
+        plan.binding != handoff.binding
+        or handoff.library.name != plan.output_library
+        or handoff.source_cell != f"{handoff.library.path}/{plan.root}"
+        or captured.operation_id != handoff.operation_id
+        or captured.plan_sha256 != handoff.pins.plan_sha256
+        or captured.output_library != plan.output_library
+        or captured.reopened_tree_sha256 != handoff.source_tree_sha256
+        or captured.library_tree_sha256 != handoff.library.tree_sha256
+    ):
+        raise ValueError("schematic port observation source binding mismatch")
+
+    observed: dict[str, list[Port]] = {}
+    for row in captured.ports:
+        observed.setdefault(row.cell, []).append(
+            Port.model_validate(row.model_dump(exclude={"cell"}))
+        )
+    projection = {
+        name: tuple(sorted(ports, key=lambda port: port.name)) for name, ports in observed.items()
+    }
+    expected = {
+        cell.name: tuple(sorted(cell.ports, key=lambda port: port.name))
+        for cell in _child_first(plan)
+    }
+    if projection != expected:
+        raise ValueError("schematic port inventory, association or origin mismatch")
+    return projection
 
 
 def _check_mos_phase_stdout(

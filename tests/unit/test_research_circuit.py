@@ -24,6 +24,7 @@ from cadence_mcp_bridge.research_circuit import (
     adapt_owned_inverter,
     plan_owned_mos_block,
     project_mos_block_netlist,
+    project_schematic_port_readback,
     render_owned_mos_block,
     verify_mos_block_handoff,
     verify_mos_block_registration_source,
@@ -787,3 +788,51 @@ def test_composite_handoff_requires_the_exact_top_level_bench() -> None:
     assert verify(full).bench_cell == "/owned/block/Bench"
     with pytest.raises(ValueError, match="bench device, model, terminals or effective values"):
         verify(full.replace(b"capacitor c=1p", b"capacitor c=2p"))
+
+
+@pytest.mark.parametrize(
+    "change",
+    ("none", "missing-origin", "wrong-origin", "wrong-net", "duplicate", "old-tree", "symbol"),
+)
+def test_schematic_port_readback_requires_real_coordinates_on_the_bound_tree(change: str) -> None:
+    plan, options = handoff_fixture()
+    handoff = _verify_mos_block_handoff(plan, **options)
+    rows = [
+        port.model_dump(mode="json") | {"cell": cell.name}
+        for cell in reversed(plan.circuits)
+        for port in reversed(cell.ports)
+    ]
+    data = dict(
+        operation_id=handoff.operation_id,
+        plan_sha256=handoff.pins.plan_sha256,
+        output_library=handoff.library.name,
+        reopened_tree_sha256=handoff.source_tree_sha256,
+        library_tree_sha256=handoff.library.tree_sha256,
+        origin_basis="schematic_pin_instance_xy",
+        ports=rows,
+    )
+    if change == "missing-origin":
+        rows[0].pop("origin")
+    elif change == "wrong-origin":
+        rows[0]["origin"]["y"] = "359"
+    elif change == "wrong-net":
+        rows[0]["net"] = "vin"
+    elif change == "duplicate":
+        rows.append(rows[0])
+    elif change == "old-tree":
+        data["library_tree_sha256"] = "f" * 64
+    elif change == "symbol":
+        data["origin_basis"] = "symbol_pin_xy"
+    raw = json.dumps(data).encode("ascii")
+    kwargs = dict(
+        expected_handoff_sha256=handoff.handoff_sha256,
+        expected_observation_sha256=sha256(raw).hexdigest(),
+    )
+    if change == "none":
+        assert project_schematic_port_readback(plan, handoff, raw, **kwargs) == {
+            cell.name: tuple(sorted(cell.ports, key=lambda port: port.name))
+            for cell in plan.circuits
+        }
+    else:
+        with pytest.raises(ValueError):
+            project_schematic_port_readback(plan, handoff, raw, **kwargs)
