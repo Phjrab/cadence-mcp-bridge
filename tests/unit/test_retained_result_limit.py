@@ -386,24 +386,24 @@ def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
         ledger.effective_policy(str(root), anchor)
 
 
-@pytest.mark.parametrize("version", [7, 8])
+@pytest.mark.parametrize("version", [7, 8, 9])
 def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch,
                                                       version):
     root, value, _, _, permit, _ = retained_v7_domain
-    if version == 8:
-        previous = migration.result_limit_v7_plan(value, "b" * 64)
-        migration.apply_result_limit_v7(
+    for prior_version in range(7, version):
+        previous = migration.retained_successor_plan(value, "b" * 64, prior_version)
+        migration.apply_retained_successor(
             dict(plan=previous["plan"], expected_plan_sha256=previous["plan_sha256"],
-                 operator_authority="SYNTHETIC V7"), "b" * 64,
+                 operator_authority="SYNTHETIC PRIOR"), "b" * 64, prior_version,
         )
-        grant = dict(permit, grant_sha256="7" * 64, max_attempts=2,
+        grant = dict(permit, grant_sha256=str(prior_version) * 64, max_attempts=2,
                      max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
         for _ in range(2):
             ledger.reserve(str(root), job(root), grant)
-        value["limits"]["result_reserved_bytes"] = ledger.RESULT_POLICY_V7_BYTES
+        value["limits"]["result_reserved_bytes"] = ledger.RETAINED_SUCCESSORS[prior_version][2]
     plan_action = f"plan-result-limit-v{version}"
     apply_action = f"apply-result-limit-v{version}"
-    flags = {"result_limit_v7": version == 7, "result_limit_v8": version == 8}
+    flags = {f"result_limit_v{version}": True}
     _, _, helper = domain_provisioning.contents()
     profile = tmp_path / "profile.json"
     profile.write_bytes(ledger.canonical(value))

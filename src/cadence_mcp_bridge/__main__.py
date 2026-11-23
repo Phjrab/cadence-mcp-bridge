@@ -109,7 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         "plan-existing",
         aliases=[
             "plan-legacy-seal", "plan-result-limit-v6",
-            "plan-result-limit-v7", "plan-result-limit-v8",
+            "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
         ],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
@@ -140,7 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
         "apply-existing",
         aliases=[
             "seal-existing", "apply-result-limit-v6",
-            "apply-result-limit-v7", "apply-result-limit-v8",
+            "apply-result-limit-v7", "apply-result-limit-v8", "apply-result-limit-v9",
         ],
     )
     for name in ("profile", "plan", "output"):
@@ -888,6 +888,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "apply-result-limit-v6",
                 "apply-result-limit-v7",
                 "apply-result-limit-v8",
+                "apply-result-limit-v9",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -900,6 +901,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "apply-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "apply-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "apply-result-limit-v8",
+                    result_limit_v9=arguments.domain_action == "apply-result-limit-v9",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -910,6 +912,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "plan-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "plan-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "plan-result-limit-v8",
+                    result_limit_v9=arguments.domain_action == "plan-result-limit-v9",
                 )
         except (OSError, ValueError):
             print(

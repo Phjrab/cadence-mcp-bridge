@@ -18,6 +18,8 @@ from cadence_mcp_bridge.resource_policy import (
     RetainedV7ResourcePolicy,
     RetainedV8ResourceCounter,
     RetainedV8ResourcePolicy,
+    RetainedV9ResourceCounter,
+    RetainedV9ResourcePolicy,
 )
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
 
@@ -79,7 +81,7 @@ class StorageArtifact(ContractModel):
 
 
 class StorageSnapshot(ContractModel):
-    contract_version: Literal[1, 2, 3, 4, 5] = 1
+    contract_version: Literal[1, 2, 3, 4, 5, 6] = 1
     snapshot_id: Digest
     artifacts: Annotated[tuple[StorageArtifact, ...], Field(max_length=64)]
     coverage_complete: bool
@@ -103,12 +105,12 @@ class StorageSnapshot(ContractModel):
     filesystem_free_bytes: Bytes
     filesystem_total_bytes: Bytes
     reserved_result_bytes: Bytes
-    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=17_632_854_016)] = (
+    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=17_767_071_744)] = (
         10_737_418_240
     )
     ledger_policy: (
         FreshResourcePolicy | RetainedResourcePolicy | RetainedV7ResourcePolicy
-        | RetainedV8ResourcePolicy | None
+        | RetainedV8ResourcePolicy | RetainedV9ResourcePolicy | None
     ) = None
     spectre_attempts: Annotated[int, Field(strict=True, ge=0, le=500)]
     active_eda: bool
@@ -129,7 +131,7 @@ class StorageSnapshot(ContractModel):
         if self.ledger_policy is not None:
             counter_type: type[
                 FreshResourceCounter | RetainedResourceCounter | RetainedV7ResourceCounter
-                | RetainedV8ResourceCounter
+                | RetainedV8ResourceCounter | RetainedV9ResourceCounter
             ]
             if self.contract_version == 2:
                 if not isinstance(self.ledger_policy, FreshResourcePolicy):
@@ -143,10 +145,14 @@ class StorageSnapshot(ContractModel):
                 if not isinstance(self.ledger_policy, RetainedV7ResourcePolicy):
                     raise ValueError("retained snapshot requires explicit v7 policy")
                 counter_type = RetainedV7ResourceCounter
-            else:
+            elif self.contract_version == 5:
                 if not isinstance(self.ledger_policy, RetainedV8ResourcePolicy):
                     raise ValueError("retained snapshot requires explicit v8 policy")
                 counter_type = RetainedV8ResourceCounter
+            else:
+                if not isinstance(self.ledger_policy, RetainedV9ResourcePolicy):
+                    raise ValueError("retained snapshot requires explicit v9 policy")
+                counter_type = RetainedV9ResourceCounter
             counter_type.model_validate(
                 dict(
                     campaign_id=self.ledger_policy.campaign_id,
@@ -285,7 +291,7 @@ class StorageSummary(ContractModel):
     )
     filesystem_free_bytes: Bytes
     reserved_result_bytes: Bytes
-    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=17_632_854_016)] = (
+    result_ceiling_bytes: Annotated[int, Field(strict=True, ge=1, le=17_767_071_744)] = (
         10_737_418_240
     )
     spectre_attempts: int

@@ -376,6 +376,7 @@ def reviewed_operator_assets(contents, action):
         if name == "reservations.py" and actual in (
             REVIEWED_RETAINED_RESERVATIONS_SHA256,
             "1d19e766bca5a62ce0e0063fc9bcb87e985dc876f8f0a2b173eca64346eff187",
+            "a0f12c64c221607b829cfb15ceb6cacaeb6895cb35eb63271bc1f8973da083de",
         ):
             continue
         raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
