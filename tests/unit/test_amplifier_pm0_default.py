@@ -1,16 +1,21 @@
 """Exercise the finite PM0 route without a native process or a writable journal."""
 
 import base64
+import io
 import json
 import shlex
+import subprocess
+import sys
 import time
 from dataclasses import replace
 from hashlib import sha256
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
 from test_runtime_context import make_settings
 
+from cadence_mcp_bridge import _amp_pm0_default_phase as guest
 from cadence_mcp_bridge import amplifier_pm0_default as amp
 from cadence_mcp_bridge import amplifier_pm0_service as amp_host
 from cadence_mcp_bridge import parameter_changes as changes
@@ -515,7 +520,11 @@ def _registered_provider_fixture(
         retained.plan.candidate_revision,
         retained.plan.requested,
     )
-    assets = (b"# synthetic fixed guest\n", b"; fixed edit fixture\n", b"; fixed verify fixture\n")
+    package = files("cadence_mcp_bridge")
+    guest_bytes, edit_bytes, verify_bytes = (
+        package.joinpath(name).read_bytes() for name in amp_host._ASSETS
+    )
+    assets = (guest_bytes, edit_bytes, verify_bytes)
     scope = amp_host._Scope(
         schema_version=1,
         route="amplifier_pm0_default",
@@ -536,6 +545,28 @@ def _registered_provider_fixture(
         edit_script_sha256=_sha(assets[1]),
         verify_script_sha256=_sha(assets[2]),
         valid_until_unix=int(time.time()) + 600,
+        native=amp_host._NativePins(
+            site_sha256="0" * 64,
+            layout_manifest_sha256="1" * 64,
+            layout_worker_sha256="2" * 64,
+            owned_copy_operation_id="1f9bc996-447f-40b3-b461-9ca968e2ed81",
+            owned_library_tree_sha256="3" * 64,
+            baseline_observation_operation_id="ec15b438-b656-499f-8f34-e5b614792ba8",
+            baseline_observation_receipt_sha256="4" * 64,
+            baseline_signature_sha256="5" * 64,
+            source_view_tree_sha256="6" * 64,
+            source_library_tree_sha256="7" * 64,
+            archive_cell_tree_sha256="8" * 64,
+            archive_library_tree_sha256="9" * 64,
+            archive_state_tree_sha256="a" * 64,
+            ade_tree_sha256="b" * 64,
+            technology_tree_sha256="c" * 64,
+            model_graph_sha256="d" * 64,
+            ledger_sha256="e" * 64,
+            retained_jobs_sha256="f" * 64,
+            supplemental_bytes=262_144,
+            job_limit_bytes=524_288,
+        ),
     )
     scope_raw = _json(scope.model_dump(mode="json"))
     scope_pin = _sha(scope_raw)
@@ -577,12 +608,12 @@ def _registered_provider_fixture(
     return settings, directory, request, scope, assets
 
 
-@pytest.mark.parametrize("transport_failure", [False, True])
+@pytest.mark.parametrize("failed_phase", [None, "edit", "readback-netlist"])
 def test_amp_registered_factory_dispatch_and_restart_replay(
     operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    transport_failure: bool,
+    failed_phase: str | None,
 ) -> None:
     settings, directory, request, scope, assets = _registered_provider_fixture(operation, tmp_path)
     installed = tmp_path / "package-fixture"
@@ -614,6 +645,18 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         simulations=0,
         reservations=0,
     )
+    edit = amp_host._EditReceipt(
+        status="SAVED",
+        operation_id=receipt.operation_id,
+        scope_sha256=receipt.scope_sha256,
+        saved_view_tree_sha256=receipt.saved_view_tree_sha256,
+        saved_library_tree_sha256="4" * 64,
+        presave_signature_sha256=receipt.presave_signature_sha256,
+        reopened_signature_sha256=receipt.reopened_signature_sha256,
+        edit_live_counter=receipt.edit_live_counter,
+        source_preservation_sha256=receipt.source_preservation_sha256,
+    )
+    edit_response = amp_host._EditResponse(receipt=edit, receipt_sha256=canonical_digest(edit))
     output = _json(
         amp_host._Response(
             receipt=receipt,
@@ -628,17 +671,25 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
     def fixed(
         argv: list[str], payload: bytes, *_: object, **kwargs: object
     ) -> tuple[int, bytes, bytes]:
-        assert argv[-2:] == [shlex.quote(assets[0].decode("ascii")), request.expected_scope_sha256]
-        packet = json.loads(payload)
+        assert argv[-4:-2] == [amp_host._fixed_guest(assets[0]), request.expected_scope_sha256]
+        phase, prior = argv[-2:]
+        assert prior == ("none" if phase == "edit" else edit_response.receipt_sha256)
+        assert payload.startswith(assets[0])
+        assert len(payload) <= amp_host._LIMIT
+        packet = json.loads(payload[len(assets[0]) :])
+        paths = load_runtime(settings)[0].contracts.environment.paths
+        assert packet["managed_root"] == paths.managed_root
         assert base64.b64decode(packet["edit_base64"]) == assets[1]
         assert base64.b64decode(packet["verify_base64"]) == assets[2]
         assert base64.b64decode(packet["baseline_base64"]) == operation[0].baseline_input
         assert kwargs["timeout"] == 60 and kwargs["limit"] == amp_host._LIMIT
         assert (directory / "amp-writer-intent.private.json").is_file()
-        assert (directory / "amp-dispatch-intent.private.json").is_file()
-        launched.append(payload)
-        if transport_failure:
+        assert (directory / f"amp-{phase}-intent.private.json").is_file()
+        launched.append(phase)
+        if phase == failed_phase:
             raise TimeoutError
+        if phase == "edit":
+            return 0, _json(edit_response.model_dump(mode="json")), b""
         return 0, output, b""
 
     monkeypatch.setattr(amp_host, "run_fixed", fixed)
@@ -656,9 +707,10 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
     replay = dispatch_pmos_default_change(
         apply_path, registered_pmos_default_change(load_runtime(settings)[0])
     )
-    expected = "OUTCOME_UNKNOWN" if transport_failure else "VERIFIED"
-    assert len(launched) == 1 and initial.outcome == replay.outcome == expected
-    assert initial.dispatched_this_call == (None if transport_failure else True)
+    expected = "OUTCOME_UNKNOWN" if failed_phase else "VERIFIED"
+    assert launched == (["edit"] if failed_phase == "edit" else ["edit", "readback-netlist"])
+    assert initial.outcome == replay.outcome == expected
+    assert initial.dispatched_this_call == (None if failed_phase else True)
     assert replay.replayed and not replay.dispatched_this_call
 
 
@@ -674,3 +726,72 @@ def test_amp_registration_without_packaged_assets_stops_before_claim(
         service.apply(request)
     assert failure.value.reason == "amp_pm0_reviewed_assets_missing"
     assert not list(directory.glob("amp-*.private.*"))
+
+
+def test_amp_installed_fixed_assets_have_closed_templates(monkeypatch: pytest.MonkeyPatch) -> None:
+    package = files("cadence_mcp_bridge")
+    native, edit, verify = [package.joinpath(name).read_bytes() for name in amp_host._ASSETS]
+    assert all(
+        0 < len(raw) <= limit
+        for raw, limit in zip((native, edit, verify), amp_host._ASSET_LIMITS, strict=True)
+    )
+    argv = ["ssh", "-c", amp_host._fixed_guest(native), "0" * 64, "readback-netlist", "1" * 64]
+    assert len(subprocess.list2cmdline(argv)) < 30_000
+    # The checked reader consumes only the exact installed asset before the request.
+    (launcher,) = shlex.split(argv[2])
+    init, receive, check, _ = launcher.splitlines()
+    followup = b'{"request":true}'
+    stream = io.BytesIO(native + followup)
+    monkeypatch.setattr(sys, "stdin", stream)
+    namespace: dict[str, object] = {}
+    reader = "\n".join((init, receive, check))
+    exec(reader, namespace)
+    assert namespace["fixed"] == native
+    assert stream.read() == followup
+    monkeypatch.setattr(sys, "stdin", io.BytesIO(b"X" + native[1:] + followup))
+    with pytest.raises(ValueError, match="AMP asset"):
+        exec(reader, {})
+    params = {
+        "@STAGE@": "/example/job/phase",
+        "@JOB@": "/example/job",
+        "@OWNED@": "/example/owned/AmpFresh",
+        "@LIB@": "AmpFresh",
+        "@OP@": _WRITER,
+        "@TECH@": "/example/tech/cdsDefTechLib",
+        "@SAVED_SIGNATURE@": "1" * 64,
+    }
+    edit_code = edit.decode("ascii")
+    (common, _) = edit_code.split(guest.COMMON_END)
+    writer = guest.render(edit_code, params)
+    observer = guest.render(common + verify.decode("ascii"), params)
+    assert writer.count("dbSave(") == 1
+    assert writer.count("dbDeletePropByName(") == 1
+    assert "sevNetlistFile(" in observer and 'ampTarget("AmpFresh" "r")' in observer
+    assert all(name not in observer for name in ("dbSave(", "schCheck(", "dbDeletePropByName("))
+    assert guest.pm0_frame() == amp._pm0_frame(baseline=False)[0]
+    with pytest.raises(AssertionError):
+        guest.render(edit_code, params | {"@LIB@": 'AmpFresh") malicious('})
+
+
+def test_native_netlist_projection_preserves_exact_device_and_static_input(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+) -> None:
+    plan = operation[0].plan.model_dump(mode="json")
+    prefix = "PM0 (drain gate supply bulk) gpdk090_pmos1v"
+    old = [
+        "global 0",
+        prefix + " w=(20u) l=1u as=5.6p ad=5.6p ps=40.56u pd=40.56u m=1",
+        "save output",
+    ]
+    assert guest.expected_netlist(old, plan) == [
+        old[0],
+        prefix + " w=(120n) l=1u as=69.6f ad=69.6f ps=1.16u pd=1.16u m=1",
+        old[2],
+    ]
+    for changed in (
+        [old[1], old[1]],
+        [old[1].replace("w=(20u)", "w=(19u)")],
+        [old[1] + " m=2"],
+    ):
+        with pytest.raises((AssertionError, ValueError)):
+            guest.expected_netlist(changed, plan)

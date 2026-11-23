@@ -25,7 +25,7 @@ from cadence_mcp_bridge.amplifier_pm0_default import (
     verify_amplifier_pm0_save_metadata,
 )
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeResult
-from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
+from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -48,6 +48,7 @@ _ASSETS = (
 )
 _LIMIT = 131_072
 _ACTIONS = ("edit", "readback-netlist")
+_ASSET_LIMITS = (49_152, 32_768, 32_768)
 
 
 class _Registration(VariableModel):
@@ -58,6 +59,29 @@ class _Registration(VariableModel):
     scope_sha256: Digest
     evidence_directory: Path
     authority_sha256: Digest
+
+
+class _NativePins(VariableModel):
+    site_sha256: Digest
+    layout_manifest_sha256: Digest
+    layout_worker_sha256: Digest
+    owned_copy_operation_id: OperationId
+    owned_library_tree_sha256: Digest
+    baseline_observation_operation_id: OperationId
+    baseline_observation_receipt_sha256: Digest
+    baseline_signature_sha256: Digest
+    source_view_tree_sha256: Digest
+    source_library_tree_sha256: Digest
+    archive_cell_tree_sha256: Digest
+    archive_library_tree_sha256: Digest
+    archive_state_tree_sha256: Digest
+    ade_tree_sha256: Digest
+    technology_tree_sha256: Digest
+    model_graph_sha256: Digest
+    ledger_sha256: Digest
+    retained_jobs_sha256: Digest
+    supplemental_bytes: Annotated[int, Field(ge=0, le=33_554_432)]
+    job_limit_bytes: Annotated[int, Field(ge=524_288, le=8_388_608)]
 
 
 class _Scope(VariableModel):
@@ -80,6 +104,7 @@ class _Scope(VariableModel):
     edit_script_sha256: Digest
     verify_script_sha256: Digest
     valid_until_unix: Annotated[int, Field(gt=0)]
+    native: _NativePins
 
 
 class _Authority(VariableModel):
@@ -120,6 +145,23 @@ class _Response(VariableModel):
     input_base64: str
 
 
+class _EditReceipt(VariableModel):
+    status: Literal["SAVED"]
+    operation_id: OperationId
+    scope_sha256: Digest
+    saved_view_tree_sha256: Digest
+    saved_library_tree_sha256: Digest
+    presave_signature_sha256: Digest
+    reopened_signature_sha256: Digest
+    edit_live_counter: Annotated[int, Field(ge=0)]
+    source_preservation_sha256: Digest
+
+
+class _EditResponse(VariableModel):
+    receipt: _EditReceipt
+    receipt_sha256: Digest
+
+
 def _decode(encoded: str, limit: int, expected: str | None = None) -> bytes:
     try:
         if len(encoded) > 4 * ((limit + 2) // 3):
@@ -140,12 +182,22 @@ def _asset_bytes(scope: _Scope) -> tuple[bytes, bytes, bytes]:
     expected = scope.guest_sha256, scope.edit_script_sha256, scope.verify_script_sha256
     _require(
         all(
-            0 < len(raw) <= 32_768 and _sha(raw) == pin
-            for raw, pin in zip(payloads, expected, strict=True)
+            0 < len(raw) <= limit and _sha(raw) == pin
+            for raw, pin, limit in zip(payloads, expected, _ASSET_LIMITS, strict=True)
         ),
         "amp_pm0_fixed_asset_digest",
     )
     return payloads[0], payloads[1], payloads[2]
+
+
+def _fixed_guest(guest: bytes) -> str:
+    """Read exactly the installed guest bytes preceding the canonical request."""
+    return shlex.quote(
+        "import hashlib,sys\n"
+        f"fixed=sys.stdin.read({len(guest)})\n"
+        f"if hashlib.sha256(fixed).hexdigest()!='{_sha(guest)}': raise ValueError('AMP asset')\n"
+        "eval(compile(fixed,'_amp_pm0_default_phase.py','exec'))"
+    )
 
 
 class _FixedAmplifierPm0Provider:
@@ -235,29 +287,37 @@ class _FixedAmplifierPm0Provider:
         baseline = self._baseline()
         argv = _ssh(self._context.contracts.environment) + [
             "-c",
-            shlex.quote(guest.decode("ascii")),
+            _fixed_guest(guest),
             binding.scope_sha256,
         ]
-        payload = _canonical(
+        payload = guest + _canonical(
             {
-                name: base64.b64encode(raw).decode("ascii")
-                for name, raw in (
-                    ("scope_base64", self._raw_scope),
-                    ("authority_base64", raw_ack),
-                    ("baseline_base64", baseline),
-                    ("edit_base64", edit),
-                    ("verify_base64", verify),
-                )
+                "managed_root": self._context.contracts.environment.paths.managed_root,
+                **{
+                    name: base64.b64encode(raw).decode("ascii")
+                    for name, raw in (
+                        ("scope_base64", self._raw_scope),
+                        ("authority_base64", raw_ack),
+                        ("baseline_base64", baseline),
+                        ("edit_base64", edit),
+                        ("verify_base64", verify),
+                    )
+                },
             }
         )
         _require(
-            len(subprocess.list2cmdline(argv)) < 30000 and len(payload) <= _LIMIT,
+            len(subprocess.list2cmdline(argv + ["readback-netlist", "0" * 64])) < 30000
+            and len(payload) <= _LIMIT,
             "amp_pm0_fixed_transport_bound",
         )
         return argv, payload, baseline
 
     def _receipt(
-        self, binding: AmplifierPm0DispatchBinding, output: bytes, baseline: bytes
+        self,
+        binding: AmplifierPm0DispatchBinding,
+        output: bytes,
+        baseline: bytes,
+        edit: _EditResponse,
     ) -> _Receipt:
         _document(output)
         response = _Response.model_validate_json(output)
@@ -268,6 +328,10 @@ class _FixedAmplifierPm0Provider:
             == (binding.operation_id, binding.plan_sha256, binding.scope_sha256)
             and receipt.owned_before_view_tree_sha256 == binding.owned_before_view_tree_sha256
             and receipt.source_preservation_sha256 == self._scope.source_preservation_sha256
+            and receipt.saved_view_tree_sha256 == edit.receipt.saved_view_tree_sha256
+            and receipt.presave_signature_sha256 == edit.receipt.presave_signature_sha256
+            and receipt.reopened_signature_sha256 == edit.receipt.reopened_signature_sha256
+            and receipt.edit_live_counter == edit.receipt.edit_live_counter
             and receipt.saved_view_tree_sha256
             == receipt.reopened_view_tree_sha256
             == receipt.netlisted_view_tree_sha256
@@ -288,14 +352,30 @@ class _FixedAmplifierPm0Provider:
         project_netlist_change(self._scope.plan, baseline, netlist)
         return receipt
 
+    def _edit_receipt(self, binding: AmplifierPm0DispatchBinding, output: bytes) -> _EditResponse:
+        _document(output)
+        response = _EditResponse.model_validate_json(output)
+        receipt = response.receipt
+        _require(
+            canonical_digest(receipt) == response.receipt_sha256
+            and (receipt.operation_id, receipt.scope_sha256)
+            == (binding.operation_id, binding.scope_sha256)
+            and receipt.source_preservation_sha256 == self._scope.source_preservation_sha256
+            and receipt.saved_view_tree_sha256
+            not in (
+                binding.owned_before_view_tree_sha256,
+                self._scope.plan.baseline.revision_sha256,
+            ),
+            "amp_pm0_saved_receipt_binding",
+        )
+        return response
+
     def lookup(self, binding: AmplifierPm0DispatchBinding) -> PmosDefaultChangeResult | None:
         claimed = self._directory / "amp-writer-intent.private.json"
-        dispatch = self._directory / "amp-dispatch-intent.private.json"
-        out = self._directory / "amp-stdout.private.json"
-        err = self._directory / "amp-stderr.private.txt"
-        capture = self._directory / "amp-transport.private.json"
         if not os.path.lexists(claimed):
-            if any(os.path.lexists(leaf) for leaf in (dispatch, out, err, capture)):
+            if any(self._directory.glob("amp-edit-*")) or any(
+                self._directory.glob("amp-readback-netlist-*")
+            ):
                 return self._result(binding, replayed=True)
             return None
         try:
@@ -304,20 +384,10 @@ class _FixedAmplifierPm0Provider:
         except (OSError, ValueError):
             return self._result(binding, replayed=True)
         _require(claim == self._intent(binding), "amp_pm0_writer_intent_conflict")
-        if not os.path.lexists(capture):
-            return self._result(binding, replayed=True)
         try:
-            dispatch_record = _document(_read(dispatch, 4096))
-            output = _read(out, _LIMIT)
-            stderr = _read(err, _LIMIT)
-            record = _document(_read(capture, 4096))
-            _require(
-                dispatch_record.get("claim_sha256") == _sha(self._intent(binding))
-                and not stderr
-                and record == self._transport_record(0, output, stderr),
-                "amp_pm0_retained_transport",
-            )
-            receipt = self._receipt(binding, output, self._baseline())
+            edit = self._edit_receipt(binding, self._captured(binding, "edit", "none"))
+            output = self._captured(binding, "readback-netlist", edit.receipt_sha256)
+            receipt = self._receipt(binding, output, self._baseline(), edit)
         except (OSError, ValueError):
             return self._result(binding, replayed=True)
         return self._result(binding, replayed=True, receipt=receipt)
@@ -348,40 +418,76 @@ class _FixedAmplifierPm0Provider:
                 "amp_pm0_writer_intent_conflict",
             )
             argv, payload, baseline = self._prepare(binding)
+            edit = self._edit_receipt(
+                binding, self._run_phase(binding, argv, payload, "edit", "none")
+            )
+            output = self._run_phase(
+                binding, argv, payload, "readback-netlist", edit.receipt_sha256
+            )
+            receipt = self._receipt(binding, output, baseline, edit)
+        return self._result(binding, replayed=False, receipt=receipt)
+
+    def _captured(self, binding: AmplifierPm0DispatchBinding, phase: str, prior: str) -> bytes:
+        prefix = self._directory / f"amp-{phase}"
+        intent = _document(_read(prefix.with_name(prefix.name + "-intent.private.json"), 4096))
+        out = _read(prefix.with_name(prefix.name + "-stdout.private.json"), _LIMIT)
+        err = _read(prefix.with_name(prefix.name + "-stderr.private.txt"), _LIMIT)
+        capture = _document(_read(prefix.with_name(prefix.name + "-transport.private.json"), 4096))
+        _require(
+            intent.get("claim_sha256") == _sha(self._intent(binding))
+            and intent.get("prior_receipt_sha256") == prior
+            and intent.get("retry") is False
+            and not err
+            and capture == self._transport_record(0, out, err),
+            "amp_pm0_retained_transport",
+        )
+        return out
+
+    def _run_phase(
+        self,
+        binding: AmplifierPm0DispatchBinding,
+        argv: list[str],
+        payload: bytes,
+        phase: str,
+        prior: str,
+    ) -> bytes:
+        base = f"amp-{phase}"
+        _retain(
+            self._directory / f"{base}-intent.private.json",
+            _canonical(
+                {
+                    "claim_sha256": _sha(self._intent(binding)),
+                    "request_sha256": _sha(payload),
+                    "prior_receipt_sha256": prior,
+                    "retry": False,
+                }
+            ),
+        )
+        capture = self._directory / f"{base}-transport.private.json"
+        try:
+            code, out, err = run_fixed(
+                argv + [phase, prior],
+                payload,
+                OpenSshBackend._ssh_environment(),
+                timeout=60,
+                limit=_LIMIT,
+            )
+        except (OSError, ValueError) as exc:
             _retain(
-                self._directory / "amp-dispatch-intent.private.json",
+                capture,
                 _canonical(
                     {
-                        "claim_sha256": _sha(intent),
-                        "request_sha256": _sha(payload),
-                        "retry": False,
+                        "status": "TRANSPORT_FAILED_RETAINED",
+                        "error_type": type(exc).__name__,
                     }
                 ),
             )
-            try:
-                code, out, err = run_fixed(
-                    argv, payload, OpenSshBackend._ssh_environment(), timeout=60, limit=_LIMIT
-                )
-            except (OSError, ValueError) as exc:
-                _retain(
-                    self._directory / "amp-transport.private.json",
-                    _canonical(
-                        {
-                            "status": "TRANSPORT_FAILED_RETAINED",
-                            "error_type": type(exc).__name__,
-                        }
-                    ),
-                )
-                raise
-            _retain(self._directory / "amp-stdout.private.json", out)
-            _retain(self._directory / "amp-stderr.private.txt", err)
-            _retain(
-                self._directory / "amp-transport.private.json",
-                _canonical(self._transport_record(code, out, err)),
-            )
-            _require(code == 0 and not err, "amp_pm0_native_dispatch_unverified")
-            receipt = self._receipt(binding, out, baseline)
-        return self._result(binding, replayed=False, receipt=receipt)
+            raise
+        _retain(self._directory / f"{base}-stdout.private.json", out)
+        _retain(self._directory / f"{base}-stderr.private.txt", err)
+        _retain(capture, _canonical(self._transport_record(code, out, err)))
+        _require(code == 0 and not err, "amp_pm0_native_dispatch_unverified")
+        return out
 
 
 def registered_amplifier_pm0_default_change(
@@ -390,7 +496,7 @@ def registered_amplifier_pm0_default_change(
     """Resolve the AMP branch from the existing digest-pinned operator binding."""
     registration = _Registration.model_validate_json(raw)
     raw_scope = _read(directory / "execution-scope.private.json", 32768, registration.scope_sha256)
-    _closed_document(raw_scope)
+    _document(raw_scope)
     scope = _Scope.model_validate_json(raw_scope)
     _require(
         registration.context_id == scope.context_id == context.binding.context_id

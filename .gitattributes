@@ -95,3 +95,5 @@ remote/phase-campaign/offset-qual-v*/*.ocn text eol=lf
 remote/phase-campaign/bias-range-qual-v*/*.ocn text eol=lf
 remote/phase-campaign/amplifier-sweep-v*/*.ocn text eol=lf
 src/cadence_mcp_bridge/_pmos_default_reopen.ocn text eol=lf
+src/cadence_mcp_bridge/_amp_pm0_default_edit.ocn text eol=lf
+src/cadence_mcp_bridge/_amp_pm0_default_verify.ocn text eol=lf
