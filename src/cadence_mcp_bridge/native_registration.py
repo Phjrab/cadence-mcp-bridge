@@ -28,6 +28,7 @@ from cadence_mcp_bridge.generic_measurements import (
     TransferSignal,
 )
 from cadence_mcp_bridge.native_runtime import (
+    REGISTRATION_DOCUMENT_LIMIT,
     NativeLibrary,
     NativeModelFile,
     NativeRegistration,
@@ -408,7 +409,7 @@ def assemble(
     )
     projection(context, registration)
     raw = _canonical(registration.model_dump(mode="json"))
-    if len(raw) > 65536:
+    if len(raw) > REGISTRATION_DOCUMENT_LIMIT:
         raise OperationRejected("registration_assembly_document_bound")
     fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "wb") as stream:
