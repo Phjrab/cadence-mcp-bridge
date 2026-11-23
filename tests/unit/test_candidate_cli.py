@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -938,11 +939,13 @@ def test_amplifier_width_compare_retained_pair(
             assert path.exists() == (path in files)
 
 
+@pytest.mark.parametrize("case", ["not-run", "policy-successor"])
 def test_amplifier_fresh_width_compare_retains_registered_evidence(
     measurement_operator,
     tmp_path,
     monkeypatch,
     capsys,
+    case,
 ):
     import test_candidate_execution as execution_fixture
 
@@ -963,7 +966,7 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
             monkeypatch,
             measurement_operator,
-            "not-run",
+            case,
         )
 
     (plan, readback), evidence = calls.pop()
@@ -1013,6 +1016,17 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         },
         "ac": {"baseline": operation("ac-baseline", evidence["ac"].baseline)},
     }
+    successor = evidence["policy_successor"]
+    if successor is not None:
+        request["ac"]["candidate"] = operation("ac-candidate", evidence["ac"].candidate)
+        fields = (
+            "baseline_profile", "candidate_profile", "v7_apply_receipt",
+            "successor_apply_receipt", "successor_policy_record",
+        )
+        request["policy_successor"] = {
+            field: pin(tmp_path / f"{field}.json", getattr(successor, field))
+            for field in fields
+        }
 
     def compare(label, destination):
         ref = pin(tmp_path / f"{label}.json", json.dumps(request).encode())
@@ -1043,6 +1057,10 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     schema = output(capsys)["request_schema"]
     assert schema["additionalProperties"] is False
     assert schema["$defs"]["_FreshAmplifierWidthSide"]["additionalProperties"] is False
+    assert "policy_successor" not in schema["required"]
+    successor_schema = schema["$defs"]["_FreshAmplifierStorageSuccessorFiles"]
+    assert successor_schema["additionalProperties"] is False
+    assert len(successor_schema["required"]) == 5
     target = tmp_path / "comparison.json"
     assert compare("valid", target) == 0
     summary = output(capsys)
@@ -1058,8 +1076,31 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     assert pair.dc.candidate.operation.operation_id == request["dc"]["candidate"]["operation_id"]
     assert pair.dc.candidate.report.analysis_conditions is not None
     assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
-    assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
-    assert saved["deltas"]["ac"] == {"absolute_delta": None, "reason": "measurement_unavailable"}
+    if successor is None:
+        assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
+        assert saved["deltas"]["ac"] == {
+            "absolute_delta": None, "reason": "measurement_unavailable",
+        }
+    else:
+        candidate_ac_id = request["ac"]["candidate"]["operation_id"]
+        assert pair.ac.candidate.operation.operation_id == candidate_ac_id
+        assert saved["deltas"]["ac"] == {"absolute_delta": 0.0, "reason": "available"}
+        files = request.pop("policy_successor")
+        missing = tmp_path / "missing-successor-output.json"
+        assert compare("missing-successor", missing) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not missing.exists()
+        request["policy_successor"] = files
+        receipt = files["successor_apply_receipt"]
+        assert compare("receipt-collision", Path(receipt["path"])) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        receipt_hash = receipt["sha256"]
+        receipt["sha256"] = "0" * 64
+        bad = tmp_path / "wrong-receipt-output.json"
+        assert compare("wrong-receipt", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not bad.exists()
+        receipt["sha256"] = receipt_hash
 
     sidecar = tmp_path / "dc-candidate.sqlite3-wal"
     assert compare("sidecar-collision", sidecar) == 2

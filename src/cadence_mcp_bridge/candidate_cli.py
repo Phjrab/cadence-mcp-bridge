@@ -132,9 +132,18 @@ class _FreshAmplifierWidthSide(VariableModel):
     candidate: _AmplifierWidthChild | None = None
 
 
+class _FreshAmplifierStorageSuccessorFiles(VariableModel):
+    baseline_profile: _PinnedComparisonFile
+    candidate_profile: _PinnedComparisonFile
+    v7_apply_receipt: _PinnedComparisonFile
+    successor_apply_receipt: _PinnedComparisonFile
+    successor_policy_record: _PinnedComparisonFile
+
+
 class _FreshAmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
     dc: _FreshAmplifierWidthSide
     ac: _FreshAmplifierWidthSide
+    policy_successor: _FreshAmplifierStorageSuccessorFiles | None = None
 
 
 class _SavedWidthBiasSide(VariableModel):
@@ -894,6 +903,7 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
 def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     from cadence_mcp_bridge.candidate_execution import (
         FreshAmplifierOperation,
+        FreshAmplifierStorageSuccessorEvidence,
         FreshAmplifierWidthAnalysis,
         FreshAmplifierWidthPair,
         associate_fresh_amplifier_width_pair,
@@ -913,6 +923,15 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
         request.registration_evidence,
     )
     reserved = {request_path} | {_local_path(source.path) for source in common}
+    successor = request.policy_successor
+    if successor is not None:
+        reserved.update(
+            _local_path(ref.path) for ref in (
+                successor.baseline_profile, successor.candidate_profile,
+                successor.v7_apply_receipt, successor.successor_apply_receipt,
+                successor.successor_policy_record,
+            )
+        )
     for side in (request.dc, request.ac):
         for operation in (side.baseline, side.candidate):
             if operation is not None:
@@ -921,6 +940,15 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
                 if operation.execution_plan is not None:
                     reserved.add(_local_path(operation.execution_plan.path))
     output = _output(arguments.output, reserved)
+    policy_evidence = None if successor is None else FreshAmplifierStorageSuccessorEvidence(
+        baseline_profile=_comparison_document(successor.baseline_profile),
+        candidate_profile=_comparison_document(successor.candidate_profile),
+        v7_apply_receipt=_comparison_document(successor.v7_apply_receipt),
+        successor_apply_receipt=_comparison_document(successor.successor_apply_receipt),
+        successor_apply_receipt_sha256=successor.successor_apply_receipt.sha256,
+        successor_policy_record=_comparison_document(successor.successor_policy_record),
+        successor_policy_record_sha256=successor.successor_policy_record.sha256,
+    )
 
     def retained(operation: _AmplifierWidthChild | None) -> FreshAmplifierOperation | None:
         if operation is None:
@@ -945,6 +973,7 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
         ac=FreshAmplifierWidthAnalysis(
             retained(request.ac.baseline), retained(request.ac.candidate)
         ),
+        policy_successor=policy_evidence,
     )
     deltas = {}
     for row in (pair.dc, pair.ac):
