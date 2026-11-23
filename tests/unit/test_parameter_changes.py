@@ -275,6 +275,89 @@ def test_raw_ade_projection_and_fixed_source_binding() -> None:
         project_netlist_change(plan, changed, changed)
 
 
+def test_persisted_ade_checks_independent_values_and_keeps_physical_revision() -> None:
+    # Fixture: only the selected ADE variable changes on the saved schematic.
+    baseline = BASELINE.model_copy(update={"netlist_sha256": hashlib.sha256(_NETLIST).hexdigest()})
+    requested = ChangeValue(value="0.3", unit="V")
+    schematic_pin = "f" * 64
+    plan = plan_ade_change(
+        baseline,
+        "candidate",
+        CHILD,
+        BIAS,
+        VIN,
+        ChangeValue(value="0", unit="V"),
+        requested,
+        schematic_revision_sha256=schematic_pin,
+    )
+    original, reopened, netlist = (
+        _row(plan, stage).model_copy(
+            update={
+                "schematic_revision_sha256": schematic_pin,
+                "testbench_revision_sha256": baseline.testbench_revision_sha256,
+            }
+        )
+        for stage in _READBACK_STAGES
+    )
+    projection = project_netlist_change(
+        plan, _NETLIST, _NETLIST.replace(b"m2_vin=0", b"m2_vin=0.30")
+    )
+    netlist = netlist.model_copy(
+        update={"value": projection.value, "artifact_sha256": projection.artifact_sha256}
+    )
+    reopened = reopened.model_copy(update={"value": ChangeValue(value=".300", unit="V")})
+    result = verify_change_readback(plan, baseline=original, reopened=reopened, netlist=netlist)
+    assert result.status == "MATCHED"
+    assert not result.execution_authorized
+    assert result.reopened is not None
+    assert result.reopened == reopened and result.netlist == netlist
+    assert result.reopened.revision_sha256 != original.revision_sha256
+
+    for update, status, reason in (
+        ({"schematic_revision_sha256": None}, "MISSING", "reopened_schematic_revision_required"),
+        (
+            {"schematic_revision_sha256": "1" * 64},
+            "CONFLICT",
+            "reopened_schematic_revision_changed",
+        ),
+        (
+            {"testbench_revision_sha256": "7" * 64},
+            "CONFLICT",
+            "reopened_testbench_revision_changed",
+        ),
+        ({"revision_sha256": original.revision_sha256}, "STALE", "reopened_binding_mismatch"),
+        ({"value": plan.old}, "CONFLICT", "reopened_value_mismatch"),
+    ):
+        result = verify_change_readback(
+            plan, baseline=original, reopened=reopened.model_copy(update=update), netlist=netlist
+        )
+        assert (result.status, result.reason) == (status, reason)
+
+    assert verify_change_readback(plan, baseline=original, netlist=netlist).status == "MISSING"
+    unrelated_tb = {"testbench_revision_sha256": "7" * 64}
+    assert (
+        verify_change_readback(
+            plan,
+            baseline=original,
+            reopened=reopened.model_copy(update=unrelated_tb),
+            netlist=netlist.model_copy(update=unrelated_tb),
+        ).reason
+        == "reopened_testbench_revision_changed"
+    )
+    assert (
+        verify_change_readback(
+            plan,
+            baseline=original,
+            reopened=reopened.model_copy(update={"artifact_sha256": netlist.artifact_sha256}),
+            netlist=netlist,
+        ).reason
+        == "independent_readback_artifacts_required"
+    )
+    legacy = _bias()
+    assert "schematic_revision_sha256" not in legacy.target.model_dump()
+    assert "schematic_revision_sha256" not in _row(legacy, "reopened").model_dump()
+
+
 def test_planning_revalidates_nested_model_copy_values() -> None:
     qualification = _mos()
     forged_target = qualification.target.model_copy(

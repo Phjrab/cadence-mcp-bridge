@@ -15,7 +15,7 @@ from test_candidate_reports import succeeded
 from test_generic_measurements import operator as measurement_operator
 from test_generic_measurements import reader_for
 from test_operator_operations import operator as operator_base
-from test_parameter_changes import _NETLIST, BASELINE, CHILD, _mos, _row
+from test_parameter_changes import _NETLIST, BASELINE, BIAS, CHILD, VIN, _mos, _row
 
 from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
 from cadence_mcp_bridge.candidate_contracts import CandidateBatchRequest, prepare_candidate_plan
@@ -29,11 +29,13 @@ from cadence_mcp_bridge.candidate_execution import (
     FreshAmplifierRevisionBinding,
     FreshAmplifierWidthAnalysis,
     FreshAmplifierWidthBinding,
+    PersistedBiasExportEvidence,
     PmosDcOperation,
     PmosDefaultChangeRequest,
     PmosDefaultChangeResult,
     associate_amplifier_width_pair,
     associate_fresh_amplifier_width_pair,
+    associate_persisted_amplifier_bias,
     associate_pmos_dc_pair,
     associate_saved_width_bias_analysis,
     collect_candidate_analyses,
@@ -55,6 +57,7 @@ from cadence_mcp_bridge.parameter_changes import (
     ChangeValue,
     DerivedChange,
     DerivedValue,
+    plan_ade_change,
     plan_mos_width_change,
     verify_change_readback,
 )
@@ -65,7 +68,108 @@ __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_b
 
 
 @pytest.mark.parametrize(
-    "drift", [None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias"]
+    ("scenario", "status"),
+    [
+        ("matched", "MATCHED"),
+        ("missing-reopen", "MISSING"),
+        ("reused-ade", "STALE"),
+        ("different-ade", "STALE"),
+        ("wrong-observed-bias", "CONFLICT"),
+        ("reused-artifact", "CONFLICT"),
+        ("fabricated-status", None),
+        ("bad-width", None),
+        ("stale-parent", None),
+        ("bad-readback-pin", None),
+        ("different-netlist", None),
+        ("missing-raw", None),
+    ],
+)
+def test_persisted_amplifier_bias_requires_independent_saved_width_evidence(scenario, status):
+    center = (
+        b"simulator lang=spectre\n"
+        b"parameters VBIASN=0.320 VBIASP=0.702\n"
+        b"PM0 (d g s b) gpdk090_pmos1v w=120n l=1u\n"
+        b"analysis0 dc save=all\n"
+    )
+    changed = center.replace(b"0.320", b"0.321")
+    width = FreshAmplifierRevisionBinding(
+        revision_sha256="1" * 64,
+        testbench_revision_sha256=BASELINE.testbench_revision_sha256,
+        source_tree_sha256="2" * 64,
+        ade_state_sha256=BASELINE.revision_sha256,
+    )
+    target = VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"})
+    contract = BIAS.model_copy(
+        update={
+            "logical_id": "vbiasn", "cadence_binding": "VBIASN",
+            "default": "0.32", "minimum": "0.32", "maximum": "0.321", "step": "0.001",
+        }
+    )
+    plan = plan_ade_change(
+        BASELINE.model_copy(update={"netlist_sha256": hashlib.sha256(center).hexdigest()}),
+        "saved-bias",
+        CHILD,
+        contract,
+        target,
+        ChangeValue(value="0.32", unit="V"),
+        ChangeValue(value="0.321", unit="V"),
+        schematic_revision_sha256=width.revision_sha256,
+    )
+    baseline, reopened, netlist = (
+        _row(plan, stage).model_copy(
+            update={
+                "schematic_revision_sha256": width.revision_sha256,
+                "testbench_revision_sha256": width.testbench_revision_sha256,
+            }
+        )
+        for stage in ("baseline", "reopened", "netlist")
+    )
+    netlist = netlist.model_copy(update={"artifact_sha256": hashlib.sha256(changed).hexdigest()})
+    if scenario == "missing-reopen":
+        reopened = None
+    elif scenario == "reused-ade":
+        reopened = reopened.model_copy(update={"revision_sha256": width.ade_state_sha256})
+    elif scenario == "different-ade":
+        reopened = reopened.model_copy(update={"revision_sha256": "0" * 64})
+    elif scenario == "wrong-observed-bias":
+        reopened = reopened.model_copy(update={"value": plan.old})
+    elif scenario == "reused-artifact":
+        reopened = reopened.model_copy(update={"artifact_sha256": netlist.artifact_sha256})
+    elif scenario == "fabricated-status":
+        reopened = None
+    readback = verify_change_readback(plan, baseline=baseline, reopened=reopened, netlist=netlist)
+    if scenario == "fabricated-status":
+        readback = readback.model_copy(update={"status": "MATCHED"})
+    elif scenario == "bad-width":
+        width = width.model_copy(update={"revision_sha256": "5" * 64})
+    elif scenario == "stale-parent":
+        width = width.model_copy(update={"ade_state_sha256": "5" * 64})
+    elif scenario == "different-netlist":
+        changed = changed.replace(b"w=120n", b"w=130n")
+    kwargs = dict(
+        expected_plan_sha256=plan.plan_sha256,
+        expected_readback_sha256=(
+            "0" * 64 if scenario == "bad-readback-pin" else canonical_digest(readback)
+        ),
+        baseline_input=center,
+        candidate_input=None if scenario == "missing-raw" else changed,
+    )
+    if status is None:
+        with pytest.raises(OperationRejected) as rejected:
+            associate_persisted_amplifier_bias(width, plan, readback, **kwargs)
+        assert rejected.value.reason == "candidate_persisted_amplifier_bias_evidence_mismatch"
+    else:
+        result = associate_persisted_amplifier_bias(width, plan, readback, **kwargs)
+        assert result == readback and result.status == status and not result.execution_authorized
+
+
+@pytest.mark.parametrize(
+    "drift",
+    [
+        None, "bias", "fixed-bias", "model", "pm0", "source", "input-pin", "alias",
+        "export", "export-content", "export-profile", "export-pm0", "export-path",
+        "export-incomplete", "export-selector", "export-foreign-plan", "export-mode",
+    ],
 )
 def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
     measurement_operator, monkeypatch, drift
@@ -73,16 +177,24 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
     from cadence_mcp_bridge import candidate_execution
 
     _, plan, ade, reader, _, _ = reader_for(measurement_operator)
+    exported = (drift or "").startswith("export")
+    old_profile = _canonical({"limits": {"result_reserved_bytes": 17179869184}})
+    new_profile = _canonical({
+        "limits": {"result_reserved_bytes": 17381195776},
+        **({"host": "unexpected"} if drift == "export-profile" else {}),
+    })
+    library = {"name": "export", "path": "/export", "tree_sha256": "c" * 64}
+    technology = {"name": "cdsDefTechLib", "path": "/tech", "tree_sha256": "d" * 64}
     routes = {}
     monkeypatch.setattr(
         candidate_execution,
         "_width_route",
-        lambda op, raw, mode, *, varied_id: routes[op.query.operation_id],
+        lambda op, raw, mode, **kwargs: routes[op.query.operation_id],
     )
     monkeypatch.setattr(candidate_execution, "_fresh_amplifier_reader", lambda *args: None)
 
     def point(bias, design, runner, *, candidate=False):
-        pm0 = b"130n" if candidate and drift == "pm0" else b"120n"
+        pm0 = b"130n" if candidate and drift in ("pm0", "export-pm0") else b"120n"
         input_bias = b"0.322" if candidate and drift == "bias" else bias.encode()
         fixed_bias = b"0.703" if candidate and drift == "fixed-bias" else b"0.702"
         raw = (
@@ -95,7 +207,12 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
             "design_id": design,
             "values": (ExplicitValue(logical_id="vbiasn", value=bias, unit="V"),),
         })
-        child = plan.model_copy(update={"request": request, "runner_sha256": runner})
+        child = plan.model_copy(update={
+            "request": request, "runner_sha256": runner,
+            "environment_sha256": hashlib.sha256(
+                new_profile if candidate else old_profile
+            ).hexdigest(),
+        })
         query = NativeOperationQuery(
             operation_id=str(uuid4()), expected_plan_sha256=child.plan_sha256
         )
@@ -107,11 +224,11 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
                 phase="FAILED", remote_revision=5, provider_receipt_sha256="b" * 64
             ),
         )
-        source = "2" * 64 if candidate and drift == "source" else "3" * 64
+        source = "2" * 64 if candidate and (drift == "source" or exported) else "3" * 64
         conditions = ReportConditions(
             analysis_inputs=ade.inputs,
             source_tree_sha256=source,
-            ade_state_tree_sha256="4" * 64,
+            ade_state_tree_sha256=("e" if candidate and exported else "4") * 64,
             static_statements_sha256="5" * 64,
             model_file_sha256=("6" * 64,),
             transfer=None,
@@ -123,8 +240,17 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
             review_id=None,
         )
         routes[query.operation_id] = (
-            dict(variables=[variable], source_cell="/same/cell", libraries=[],
-                 ade=ade.model_dump(mode="json")),
+            dict(
+                variables=[variable],
+                source_cell="/export/cell" if candidate and exported else "/same/cell",
+                source_state="/wrong" if drift == "export-path" else "/export/state",
+                libraries=[library, technology] if candidate and exported else [],
+                profile={"binding": {"ade": {"state": (
+                    "Candidate321" if candidate else
+                    "other" if drift == "export-selector" else "state1"
+                )}}},
+                ade=ade.model_dump(mode="json"),
+            ),
             conditions,
             reader,
             ("model-drift",) if candidate and drift == "model" else (),
@@ -156,7 +282,90 @@ def test_saved_width_bias_reuses_center_across_runtime_and_design_ids(
         ),
         requested_bias=ChangeValue(value="0.321", unit="V"),
     )
-    if drift:
+    if exported:
+        baseline_input, candidate_input = center.effective_input, candidate.effective_input
+        if drift == "export-mode":
+            baseline_input = baseline_input.replace(b"analysis0 dc save=all", b"ac ac start=10")
+            candidate_input = candidate_input.replace(b"analysis0 dc save=all", b"ac ac start=10")
+        if drift == "export-pm0":
+            candidate_input = candidate_input.replace(b"w=130n", b"w=120n")
+        center_receipt = _canonical({
+            "phase": "center-reopen",
+            "center_ade_tree_sha256": BASELINE.revision_sha256,
+            "physical_oa_sha256": "9" * 64,
+            "rows": [
+                'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.32"',
+                'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"',
+            ],
+        })
+        reopen = _canonical({
+            "phase": "bias-reopen", "candidate_ade_tree_sha256": "f" * 64,
+            "candidate_ade_content_sha256": "a" * 64, "physical_oa_sha256": "9" * 64,
+            "rows": [
+                'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.321"',
+                'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"',
+            ],
+        })
+        persistence_baseline = saved_width.model_copy(update={
+            "ade_state_sha256": BASELINE.revision_sha256, "dc": None,
+        })
+        change_plan = plan_ade_change(
+            BASELINE.model_copy(update={
+                "testbench_revision_sha256": saved_width.testbench_revision_sha256,
+                "netlist_sha256": hashlib.sha256(baseline_input).hexdigest(),
+            }),
+            "candidate", CHILD,
+            BIAS.model_copy(update={
+                "logical_id": "vbiasn", "cadence_binding": "VBIASN", "default": "0.32",
+                "minimum": "0.32", "maximum": "0.321", "step": "0.001",
+            }),
+            VIN.model_copy(update={"logical_id": "vbiasn", "cadence_binding": "VBIASN"}),
+            ChangeValue(value="0.32", unit="V"), ChangeValue(value="0.321", unit="V"),
+            schematic_revision_sha256=saved_width.revision_sha256,
+        )
+        baseline_row, reopened_row, netlist_row = (
+            _row(change_plan, stage).model_copy(update={
+                "revision_sha256": BASELINE.revision_sha256 if stage == "baseline" else "f" * 64,
+                "schematic_revision_sha256": saved_width.revision_sha256,
+                "testbench_revision_sha256": saved_width.testbench_revision_sha256,
+                "artifact_sha256": hashlib.sha256(artifact).hexdigest(),
+            })
+            for stage, artifact in (
+                ("baseline", center_receipt), ("reopened", reopen), ("netlist", candidate_input)
+            )
+        )
+        readback = verify_change_readback(
+            change_plan, baseline=baseline_row, reopened=reopened_row, netlist=netlist_row
+        )
+        assert readback.status == "MATCHED"
+        if drift == "export-incomplete":
+            readback = readback.model_copy(update={"baseline": None, "netlist": None})
+        if drift == "export-foreign-plan":
+            change_plan = change_plan.model_copy(update={"candidate_id": "foreign"})
+        export = _canonical({
+            "status": "CANDIDATE321_EXTERNAL_INPUTS_VERIFIED",
+            "physical_oa_sha256": "9" * 64,
+            "source_owned_state_tree_sha256": "f" * 64, "state_tree_sha256": "e" * 64,
+            "state_content_sha256": ("b" if drift == "export-content" else "a") * 64,
+            "route_changes": 0, "simulations": 0, "reservations": 0,
+            "technology_path": technology["path"],
+            "technology_tree_sha256": technology["tree_sha256"],
+            "source_cell_tree_sha256": "2" * 64, "source_cell_path": "/export/cell",
+            "source_library_path": library["path"],
+            "source_library_tree_sha256": library["tree_sha256"],
+            "state_path": "/export/state",
+        })
+        policy = _canonical({
+            "status": "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE",
+            "ledger_modified": False, "result_ceiling_bytes": 17381195776,
+        })
+        kwargs["export_evidence"] = PersistedBiasExportEvidence(
+            readback, export, hashlib.sha256(export).hexdigest(),
+            policy, hashlib.sha256(policy).hexdigest(), old_profile, new_profile, reopen,
+            persistence_baseline, change_plan, change_plan.plan_sha256,
+            canonical_digest(readback), baseline_input, candidate_input, center_receipt,
+        )
+    if drift not in (None, "export"):
         with pytest.raises(OperationRejected) as rejected:
             associate_saved_width_bias_analysis("dc", center, candidate, **kwargs)
         assert rejected.value.reason == "candidate_saved_width_bias_evidence_mismatch"

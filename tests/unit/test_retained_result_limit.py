@@ -12,6 +12,8 @@ from test_shared_reservations import root as root
 from cadence_mcp_bridge import _domain_migration as migration
 from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge import _shared_reservations as ledger
+from cadence_mcp_bridge import domain_provisioning
+from cadence_mcp_bridge.environments import load_environment
 
 
 def upgrade(root):
@@ -256,3 +258,185 @@ def test_cross_directory_policy_publication_syncs_destination_before_source(doma
     migration.apply_result_limit(request, "a" * 64)
     assert calls[:2] == [root / ledger.REGISTRY, root]
     assert calls[-1] == root / ledger.REGISTRY
+
+
+@pytest.fixture
+def retained_v7_domain(domain, monkeypatch):
+    root, value = setup_registered(domain, monkeypatch)
+    upgrade(root)
+    value["limits"]["result_reserved_bytes"] = ledger.MAX_POLICY_BYTES
+    anchor = ledger.read(str(root / ledger.REGISTRY / "manifest.json"))
+    anchor_sha = ledger.digest(ledger.canonical(anchor))
+    pointer = "7" * 64
+    ledger.write_new(str(root / "active-native-provider.json"),
+                     dict(schema_version=1, manifest_sha256=pointer))
+    history = root / "native-provider-history"
+    history.mkdir(mode=0o700)
+    ledger.write_new(
+        str(history / (pointer + ".json")),
+        dict(schema_version=1, manifest_sha256=pointer, identity_manifest_sha256=anchor_sha,
+             operator_authority="SYNTHETIC FIXTURE ONLY"),
+    )
+    monkeypatch.setattr(migration, "profile", lambda _profile, _limit: str(root))
+    monkeypatch.setattr(migration, "retained_v7_quiet", lambda _: None)
+    monkeypatch.setattr(ledger, "free_bytes", lambda _: 64 * 1024**3)
+    permit = binding(
+        root, resource_domain_sha256=anchor["resource_domain_sha256"],
+        max_attempts=56, max_reserved_bytes=56 * ledger.LEGACY_RESERVATION,
+        reserve_bytes=ledger.LEGACY_RESERVATION,
+    )
+    last = dict(permit, reserve_bytes=8 * 1024**2)
+    counter = ledger.read(str(root / ledger.LEDGER))
+    for command in [permit] * 54 + [last, last]:
+        previous = job(root)
+        after = dict(
+            counter,
+            count=counter["count"] + 1,
+            result_reserved_bytes=counter["result_reserved_bytes"] + command["reserve_bytes"],
+        )
+        intent = dict(schema_version=1, operation_id=previous, binding=command,
+                      before=counter, after=after)
+        old_receipt = ledger.receipt_for(intent)
+        work = root / ledger.JOBS / previous / "work"
+        ledger.write_new(str(root / ledger.REGISTRY / (previous + ".json")), intent)
+        ledger.write_new(str(work / "reservation-intent.json"), intent)
+        ledger.write_new(str(work / "reservation-receipt.json"), old_receipt)
+        ledger.write_new(str(work / "attempt-reserved"), after)
+        counter = after
+    (root / ledger.LEDGER).write_bytes(ledger.canonical(counter))
+    assert counter == ledger.RESULT_POLICY_V7_BASELINE
+    return root, value, anchor, previous, last, old_receipt
+
+
+def test_v7_populated_audit_publish_recovery_admission_and_replay(retained_v7_domain, monkeypatch):
+    root, value, _, previous, permit, old_receipt = retained_v7_domain
+    request = dict(
+        plan=None, expected_plan_sha256=None, operator_authority="SYNTHETIC V7 TEST SCOPE",
+    )
+    successor = root / ledger.REGISTRY / ledger.RESULT_POLICY_V7_FILE
+    new_permit = dict(permit, grant_sha256="5" * 64, max_attempts=2,
+                      max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
+    first = job(root)
+    second = job(root)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="cumulative_capacity"):
+        ledger.reserve(str(root), first, new_permit)
+    proposal = migration.result_limit_v7_plan(value, "a" * 64)
+    assert proposal["plan"]["snapshot"]["transaction_count"] == 56
+    assert snapshot(root) == before
+    request.update(plan=proposal["plan"], expected_plan_sha256=proposal["plan_sha256"])
+
+    rename = migration.os.rename
+
+    def interrupted_after_rename(source, target):
+        rename(source, target)
+        if Path(target) == successor:
+            raise OSError("synthetic interruption after publishing v7")
+
+    monkeypatch.setattr(migration.os, "rename", interrupted_after_rename)
+    with pytest.raises(OSError, match="synthetic interruption"):
+        migration.apply_result_limit_v7(request, "a" * 64)
+    monkeypatch.setattr(migration.os, "rename", rename)
+    result = migration.apply_result_limit_v7(request, "a" * 64)
+    assert result["created"] is False
+    assert result["result_ceiling_bytes"] == ledger.RESULT_POLICY_V7_BYTES
+    assert result["reservation_cost"] == 0 and result["ledger_modified"] is False
+    assert result["policy_receipt_sha256"] == ledger.digest(successor.read_bytes())
+    assert migration.apply_result_limit_v7(request, "a" * 64) == result
+    for path, raw in before.items():
+        assert (root / path).read_bytes() == raw
+    assert ledger.lookup(str(root), previous, permit) == old_receipt
+    assert ledger.reserve(str(root), first, new_permit)["after"]["result_reserved_bytes"] > (
+        ledger.MAX_POLICY_BYTES
+    )
+    receipt = ledger.reserve(str(root), second, new_permit)
+    assert receipt["after"]["count"] == 140
+    assert receipt["after"]["result_reserved_bytes"] == 17331912704
+    after = snapshot(root)
+    assert ledger.reserve(str(root), second, new_permit) == receipt
+    assert ledger.lookup(str(root), previous, permit) == old_receipt
+    with pytest.raises(ValueError, match="baseline_drift"):
+        migration.apply_result_limit_v7(request, "a" * 64)
+    other = job(root)
+    with pytest.raises(ValueError, match="cumulative_capacity"):
+        ledger.reserve(str(root), other, dict(new_permit, grant_sha256="6" * 64))
+    assert snapshot(root) == after
+
+
+def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
+    root, value, anchor, _, _, _ = retained_v7_domain
+    proposal = migration.result_limit_v7_plan(value, "a" * 64)
+    request = dict(plan=proposal["plan"], expected_plan_sha256=proposal["plan_sha256"],
+                   operator_authority="SYNTHETIC V7 TEST SCOPE")
+    prior = root / ledger.REGISTRY / ledger.RESULT_POLICY_FILE
+    prior_record = ledger.read(str(prior))
+    prior_record["operator_authority"] = "different valid predecessor content"
+    prior.write_bytes(ledger.canonical(prior_record))
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="snapshot_drift"):
+        migration.apply_result_limit_v7(request, "a" * 64)
+    assert snapshot(root) == before
+
+    updated = migration.result_limit_v7_plan(value, "a" * 64)
+    request.update(plan=updated["plan"], expected_plan_sha256=updated["plan_sha256"])
+    assert migration.apply_result_limit_v7(request, "a" * 64)["created"]
+    prior_record["operator_authority"] = "newer conflicting predecessor content"
+    prior.write_bytes(ledger.canonical(prior_record))
+    with pytest.raises(ValueError, match="retained_v7_binding"):
+        ledger.effective_policy(str(root), anchor)
+
+
+def test_v7_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch):
+    root, value, _, _, _, _ = retained_v7_domain
+    _, _, helper = domain_provisioning.contents()
+    profile = tmp_path / "profile.json"
+    profile.write_bytes(ledger.canonical(value))
+    plan_path = tmp_path / "plan.json"
+    receipt_path = tmp_path / "receipt.json"
+    monkeypatch.setattr(domain_provisioning.shutil, "which", lambda _: "ssh.exe")
+    seen = []
+
+    def transport(argv, payload, environment, **bounds):
+        action = argv[-2]
+        seen.append(action)
+        assert argv[-1] == helper and "StrictHostKeyChecking=yes" in argv
+        assert "plan-result-limit-v7" in argv[-4]
+        assert bounds == {"timeout": 60, "limit": 262144}
+        request = json.loads(payload)
+        if action == "plan-result-limit-v7":
+            result = migration.result_limit_v7_plan(request, helper)
+        else:
+            assert action == "apply-result-limit-v7"
+            result = migration.apply_result_limit_v7(request, helper)
+        return 0, ledger.canonical(result), b""
+
+    before = snapshot(root)
+    monkeypatch.setattr(domain_provisioning, "run_fixed", transport)
+    environment, _ = load_environment(profile)
+    for action in ("plan-result-limit-v7", "apply-result-limit-v7"):
+        with pytest.raises(ValueError, match="fixed_domain_entry_not_bound"):
+            domain_provisioning._transport(environment, b"", helper, action, tmp_path / "no-entry")
+    assert not seen
+    plan = domain_provisioning.prepare(profile, plan_path, helper, result_limit_v7=True)
+    assert snapshot(root) == before
+    result = domain_provisioning.apply_existing(
+        profile, plan_path, receipt_path, plan["plan_sha256"], helper,
+        "SYNTHETIC FIXTURE ONLY", result_limit_v7=True,
+    )
+    assert result["created"] is True and result["ledger_modified"] is False
+    assert seen == ["plan-result-limit-v7", "apply-result-limit-v7"]
+    for name, raw in before.items():
+        assert (root / name).read_bytes() == raw
+
+    def tampered_transport(*args, **kwargs):
+        result = json.loads(receipt_path.read_bytes())
+        result["policy_receipt_sha256"] = "0" * 64
+        return 0, ledger.canonical(result), b""
+
+    monkeypatch.setattr(domain_provisioning, "run_fixed", tampered_transport)
+    with pytest.raises(ValueError, match="result_limit_apply_receipt_binding"):
+        domain_provisioning.apply_existing(
+            profile, plan_path, tmp_path / "bad-receipt.json", plan["plan_sha256"], helper,
+            "SYNTHETIC FIXTURE ONLY", result_limit_v7=True,
+        )
+    assert not (tmp_path / "bad-receipt.json").exists()

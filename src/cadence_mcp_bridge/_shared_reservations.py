@@ -32,6 +32,12 @@ CEILING_BYTES = 10737418240  # Historical retained default; not raised globally.
 MAX_POLICY_BYTES = 17179869184  # Supported explicit policy bound, not authority.
 RESULT_POLICY_FILE = "result-policy-v6.json"
 RESULT_POLICY_SHA = "1625e131118a0c0b4ff466c567d8a79bcb050dbf798505c23685e7b5604adac0"
+RESULT_POLICY_V7_FILE = "result-policy-v7.json"
+RESULT_POLICY_V7_BYTES = 17381195776
+RESULT_POLICY_V7_SHA = "fe0b7682fdc0fa97fd06baf18efcb74dafc8c3aa9e699ea2689ddd068c289a67"
+RESULT_POLICY_V7_BASELINE = {
+    "campaign_id": "AUTO-PHASE-01", "count": 138, "result_reserved_bytes": 17063477248,
+}
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
 LEGACY_RESERVATION = 134217728
@@ -112,7 +118,7 @@ def safe(path, directory=False):
     return info
 
 
-def read(path):
+def read_bytes(path):
     before = safe(path)
     fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     stream = os.fdopen(fd, "rb")
@@ -122,15 +128,19 @@ def read(path):
         raw = stream.read(LIMIT + 1)
         if len(raw) > LIMIT or identity(safe(path)) != identity(before):
             raise ValueError("reservation_file_drift")
-        value = json.loads(raw.decode("ascii"))
-        # Python2.6 lacks object_pairs_hook. Two exact legacy/new serializations
-        # reject duplicate keys and undocumented representations. Field validators
-        # independently reject nonfinite or coerced counter/binding values.
-        if raw not in (canonical(value), json.dumps(value, sort_keys=True).encode("ascii")):
-            raise ValueError("reservation_noncanonical")
-        return value
+        return raw
     finally:
         stream.close()
+
+
+def read(path):
+    raw = read_bytes(path)
+    value = json.loads(raw.decode("ascii"))
+    # Python2.6 lacks object_pairs_hook. Two exact legacy/new serializations
+    # reject duplicate keys and undocumented representations.
+    if raw not in (canonical(value), json.dumps(value, sort_keys=True).encode("ascii")):
+        raise ValueError("reservation_noncanonical")
+    return value
 
 
 def sync_directory(path):
@@ -156,7 +166,7 @@ def write_new(path, value):
     sync_directory(os.path.dirname(path))
 
 
-def shape(value, minimum_count, minimum_bytes):
+def shape(value, minimum_count, minimum_bytes, maximum_bytes=MAX_POLICY_BYTES):
     if (
         not isinstance(value, dict)
         or set(value) != set(("campaign_id", "count", "result_reserved_bytes"))
@@ -164,7 +174,7 @@ def shape(value, minimum_count, minimum_bytes):
         or type(value["count"]) not in INTEGER_TYPES
         or type(value["result_reserved_bytes"]) not in INTEGER_TYPES
         or not minimum_count <= value["count"] <= CEILING_COUNT
-        or not minimum_bytes <= value["result_reserved_bytes"] <= MAX_POLICY_BYTES
+        or not minimum_bytes <= value["result_reserved_bytes"] <= maximum_bytes
     ):
         raise ValueError("reservation_counter_integrity")
 
@@ -189,7 +199,10 @@ def counter_shape(value, manifest=None):
     if manifest is not None and manifest["schema_version"] == 2:
         return fresh_shape(value, manifest)
     # Current cumulative policy floor; never accept rollback to the old baseline.
-    shape(value, 32, 3088056320)
+    # A retained journal parses immutable historical counters without consulting
+    # today's policy. Live state separately enforces the effective ceiling.
+    shape(value, 32, 3088056320,
+          RESULT_POLICY_V7_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def marker_shape(value, manifest=None):
@@ -198,7 +211,8 @@ def marker_shape(value, manifest=None):
     # Retained native-v1 jobs predate the current policy. Preserve their markers
     # starting at the first post-reservation22 /1,745,879,040 values. The
     # unincremented policy baseline is never a valid attempt-reserved marker.
-    shape(value, 22, 1745879040)
+    shape(value, 22, 1745879040,
+          RESULT_POLICY_V7_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def open_lock(root):
@@ -361,7 +375,10 @@ def identity_manifest(root, binding):
             or value["legacy_operation_ids"] != []
         ):
             raise ValueError("reservation_fresh_policy_binding")
-    counter_shape(value["baseline"], value)
+    if value["schema_version"] == 1:
+        counter_shape(value["baseline"])
+    else:
+        counter_shape(value["baseline"], value)
     if value["baseline"]["result_reserved_bytes"] != expected_bytes(
         value["baseline"]["count"], [], value
     ):
@@ -385,12 +402,15 @@ def effective_policy(root, manifest):
     locked conservation/snapshot check. It does not grant EDA execution authority.
     """
     path = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
+    successor = os.path.join(root, REGISTRY, RESULT_POLICY_V7_FILE)
     if manifest["schema_version"] == 2:
-        if os.path.lexists(path):
+        if os.path.lexists(path) or os.path.lexists(successor):
             raise ValueError("reservation_retained_policy_on_fresh_domain")
         return manifest["policy"]
     policy = {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
     if not os.path.lexists(path):
+        if os.path.lexists(successor):
+            raise ValueError("reservation_retained_v7_predecessor")
         return policy
     value = read(path)
     if (
@@ -422,7 +442,7 @@ def effective_policy(root, manifest):
         or any(ord(c) < 32 for c in value["operator_authority"])
     ):
         raise ValueError("reservation_retained_policy_binding")
-    counter_shape(value["baseline"], manifest)
+    counter_shape(value["baseline"])
     if (
         value["baseline"]["count"] < manifest["baseline"]["count"]
         or value["baseline"]["result_reserved_bytes"]
@@ -433,7 +453,39 @@ def effective_policy(root, manifest):
     ):
         raise ValueError("reservation_retained_policy_baseline")
     policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
+    if os.path.lexists(successor):
+        retained_v7(root, manifest, path, successor)
+        policy["result_ceiling_bytes"] = RESULT_POLICY_V7_BYTES
     return policy
+
+
+def retained_v7(root, manifest, prior_path, path):
+    raw = read_bytes(path)
+    value = json.loads(raw.decode("ascii"))
+    if (
+        raw != canonical(value)
+        or not isinstance(value, dict)
+        or set(value) != set((
+            "schema_version", "kind", "root_sha256", "resource_domain_sha256",
+            "identity_manifest_sha256", "prior_receipt_sha256", "policy_sha256",
+            "baseline", "plan_sha256", "operator_authority",
+        ))
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 7
+        or value["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_V7"
+        or value["root_sha256"] != digest(root.encode("utf-8"))
+        or value["root_sha256"] != manifest["root_sha256"]
+        or value["resource_domain_sha256"] != manifest["resource_domain_sha256"]
+        or value["identity_manifest_sha256"] != digest(canonical(manifest))
+        or value["prior_receipt_sha256"] != digest(read_bytes(prior_path))
+        or value["policy_sha256"] != RESULT_POLICY_V7_SHA
+        or canonical(value["baseline"]) != canonical(RESULT_POLICY_V7_BASELINE)
+        or not matches(HASH, value["plan_sha256"])
+        or not isinstance(value["operator_authority"], STRING_TYPES)
+        or not 1 <= len(value["operator_authority"]) <= 512
+        or any(ord(c) < 32 for c in value["operator_authority"])
+    ):
+        raise ValueError("reservation_retained_v7_binding")
 
 
 def audit(root, counter, manifest, manifest_sha):
@@ -475,11 +527,14 @@ def audit(root, counter, manifest, manifest_sha):
             by_id[name] = item[0]
     registry = os.path.join(root, REGISTRY)
     entries = os.listdir(registry)
-    if len(entries) > 501:
+    maximum_entries = 502 if RESULT_POLICY_V7_FILE in entries else 501
+    if len(entries) > maximum_entries:
         raise ValueError("reservation_identity_inventory_limit")
     indexed = {}
     for entry in entries:
-        if entry in ("manifest.json", "legacy-seal.json", RESULT_POLICY_FILE):
+        if entry in (
+            "manifest.json", "legacy-seal.json", RESULT_POLICY_FILE, RESULT_POLICY_V7_FILE,
+        ):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
         if not matches(ID, op):
@@ -556,12 +611,23 @@ def state(root, binding):
             or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
         ):
             raise ValueError("reservation_policy_consumption_rollback")
+    if policy["result_ceiling_bytes"] == RESULT_POLICY_V7_BYTES:
+        baseline = RESULT_POLICY_V7_BASELINE
+        if counter["count"] < baseline["count"] or (
+            counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
+        ):
+            raise ValueError("reservation_policy_consumption_rollback")
     if (
         counter["count"] < manifest["baseline"]["count"]
         or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
     ):
         raise ValueError("reservation_migration_rollback")
-    return counter, audit(root, counter, manifest, binding["identity_manifest_sha256"])
+    records = audit(root, counter, manifest, binding["identity_manifest_sha256"])
+    if policy["result_ceiling_bytes"] == RESULT_POLICY_V7_BYTES and expected_bytes(
+        baseline["count"], records, manifest
+    ) != baseline["result_reserved_bytes"]:
+        raise ValueError("reservation_retained_v7_baseline")
+    return counter, records
 
 
 def lookup(root, operation_id, binding):

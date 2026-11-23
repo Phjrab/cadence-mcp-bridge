@@ -45,6 +45,7 @@ from cadence_mcp_bridge.operator_operations import (
     OperationRejected,
 )
 from cadence_mcp_bridge.parameter_changes import (
+    AdeTarget,
     ChangePlan,
     ChangeReadback,
     ChangeValue,
@@ -680,6 +681,8 @@ def _width_route(
     analysis_kind: Literal["dc", "ac"],
     *,
     varied_id: str | None = None,
+    exported_technology: dict[str, str] | None = None,
+    export_comparison: bool = False,
 ) -> tuple[dict[str, Any], ReportConditions, GenericReaderRegistration, tuple[object, ...]]:
     plan = OperationPlan.model_validate_json(operation.plan.model_dump_json())
     query = NativeOperationQuery.model_validate_json(operation.query.model_dump_json())
@@ -744,18 +747,21 @@ def _width_route(
     (library,) = (item for item in route["libraries"] if item["name"] == profile.binding.library)
     if route["source_cell"] != library["path"] + "/" + profile.binding.cell:
         raise ValueError("DC source cell is outside its registered library binding")
+    profile_fields = profile.model_dump(exclude={"design_id": True, "binding": {"library"}})
+    if export_comparison:
+        profile_fields["binding"]["ade"].pop("state")
     semantics = (
         plan.resource_domain_sha256,
         plan.ledger_ref,
-        plan.environment_sha256,
+        None if export_comparison else plan.environment_sha256,
         plan.pdk_sha256,
         tuple(value for value in plan.request.values if value.logical_id != varied_id),
         tuple(variable for variable in variables.variables if variable.logical_id != varied_id),
         ade.inputs,
         ade.model_includes,
         route["model_files"],
-        [item for item in route["libraries"] if item != library],
-        profile.model_dump(exclude={"design_id": True, "binding": {"library"}}),
+        [item for item in route["libraries"] if item not in (library, exported_technology)],
+        profile_fields,
         reader.model_dump(
             exclude={
                 "design_id",
@@ -1240,6 +1246,58 @@ class FreshAmplifierWidthBinding(VariableModel):
     candidate: FreshAmplifierRevisionBinding
 
 
+def associate_persisted_amplifier_bias(
+    saved_width: FreshAmplifierRevisionBinding,
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    *,
+    expected_plan_sha256: Digest,
+    expected_readback_sha256: Digest,
+    baseline_input: bytes | None = None,
+    candidate_input: bytes | None = None,
+) -> ChangeReadback:
+    """Bind independently captured ADE and Netlist observations to the saved width.
+
+    The caller authenticates the native observations before pinning their typed
+    readback. Their association does not change any retained operation's ADE state.
+    """
+    try:
+        checked = verify_change_readback(
+            plan, baseline=readback.baseline, reopened=readback.reopened, netlist=readback.netlist
+        )
+        if (
+            plan.plan_sha256 != expected_plan_sha256
+            or canonical_digest(readback) != expected_readback_sha256
+            or not isinstance(plan.target, AdeTarget)
+            or plan.target.schematic_revision_sha256 != saved_width.revision_sha256
+            or (plan.target.binding.logical_id, plan.target.binding.cadence_binding)
+            != ("vbiasn", "VBIASN")
+            or plan.baseline.testbench_revision_sha256 != saved_width.testbench_revision_sha256
+            or plan.baseline.revision_sha256 != saved_width.ade_state_sha256
+            or plan.old.normalized != ("0.32", "V")
+            or plan.requested.normalized != ("0.321", "V")
+            or plan.expected.normalized != ("0.321", "V")
+            or checked != readback
+        ):
+            raise ValueError("persisted Bias plan or readback differs from the saved width")
+        if checked.status == "MATCHED":
+            if baseline_input is None or candidate_input is None or checked.netlist is None:
+                raise ValueError("matched persisted Bias requires both observed Netlists")
+            projection = project_netlist_change(plan, baseline_input, candidate_input)
+            if (
+                projection.artifact_sha256 != checked.netlist.artifact_sha256
+                or projection.value.normalized != checked.netlist.value.normalized
+                or projection.derived != checked.netlist.derived
+            ):
+                raise ValueError("persisted Bias Netlist differs from readback")
+            parameters, _, _, _ = partition_input(baseline_input)  # type: ignore[no-untyped-call]
+            if parameters.get("VBIASP") != "0.702":
+                raise ValueError("persisted Bias fixed VBIASP differs")
+    except (TypeError, ValueError):
+        raise OperationRejected("candidate_persisted_amplifier_bias_evidence_mismatch") from None
+    return checked
+
+
 @dataclass(frozen=True)
 class FreshAmplifierOperation:
     operation: PmosDcOperation
@@ -1392,6 +1450,99 @@ def _fresh_amplifier_measurement(
     )
 
 
+@dataclass(frozen=True)
+class PersistedBiasExportEvidence:
+    """Independently pinned export and policy evidence for one retained comparison."""
+
+    readback: ChangeReadback
+    export: bytes
+    export_sha256: Digest
+    policy_receipt: bytes
+    policy_receipt_sha256: Digest
+    baseline_profile: bytes
+    candidate_profile: bytes
+    reopened_receipt: bytes
+    persistence_baseline: FreshAmplifierRevisionBinding
+    plan: ChangePlan
+    plan_sha256: Digest
+    readback_sha256: Digest
+    baseline_input: bytes
+    candidate_input: bytes
+    baseline_receipt: bytes
+
+
+def _persisted_bias_export(
+    evidence: PersistedBiasExportEvidence,
+    saved_width: FreshAmplifierRevisionBinding,
+    baseline: OperationPlan,
+    candidate: OperationPlan,
+    mode: Literal["dc", "ac"],
+) -> dict[str, Any]:
+    export = _pinned_json(evidence.export, evidence.export_sha256)
+    policy = _pinned_json(evidence.policy_receipt, evidence.policy_receipt_sha256)
+    old_profile = _pinned_json(evidence.baseline_profile, baseline.environment_sha256)
+    new_profile = _pinned_json(evidence.candidate_profile, candidate.environment_sha256)
+    old_ceiling = old_profile["limits"].pop("result_reserved_bytes")
+    new_ceiling = new_profile["limits"].pop("result_reserved_bytes")
+    persistence_baseline = evidence.persistence_baseline
+    if (
+        persistence_baseline.revision_sha256 != saved_width.revision_sha256
+        or persistence_baseline.testbench_revision_sha256 != saved_width.testbench_revision_sha256
+        or persistence_baseline.source_tree_sha256 != saved_width.source_tree_sha256
+        or persistence_baseline.ade_state_sha256 == saved_width.ade_state_sha256
+    ):
+        raise ValueError("persisted Bias baseline differs from the retained physical source")
+    readback = associate_persisted_amplifier_bias(
+        persistence_baseline,
+        evidence.plan,
+        evidence.readback,
+        expected_plan_sha256=evidence.plan_sha256,
+        expected_readback_sha256=evidence.readback_sha256,
+        baseline_input=evidence.baseline_input,
+        candidate_input=evidence.candidate_input,
+    )
+    if (
+        readback.status != "MATCHED"
+        or readback.baseline is None
+        or readback.reopened is None
+        or readback.reopened.value.normalized != ("0.321", "V")
+        or readback.reopened.schematic_revision_sha256 != saved_width.revision_sha256
+        or readback.reopened.testbench_revision_sha256 != saved_width.testbench_revision_sha256
+        or export["status"] != "CANDIDATE321_EXTERNAL_INPUTS_VERIFIED"
+        or export["physical_oa_sha256"] != saved_width.revision_sha256
+        or export["source_owned_state_tree_sha256"] != readback.reopened.revision_sha256
+        or export["state_tree_sha256"] == export["source_owned_state_tree_sha256"]
+        or any(export[key] != 0 for key in ("route_changes", "simulations", "reservations"))
+        or old_profile != new_profile
+        or (old_ceiling, new_ceiling) != (17179869184, 17381195776)
+        or policy["status"] != "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE"
+        or policy["result_ceiling_bytes"] != new_ceiling
+        or policy["ledger_modified"] is not False
+    ):
+        raise ValueError("persisted Bias export or policy successor differs")
+    for raw in (evidence.baseline_input, evidence.candidate_input):
+        _, _, analyses, _ = partition_input(raw)  # type: ignore[no-untyped-call]
+        if len(analyses) != 1 or analyses[0][0] != mode:
+            raise ValueError("persisted Bias Netlist analysis differs")
+    center = _pinned_json(evidence.baseline_receipt, readback.baseline.artifact_sha256)
+    reopened = _pinned_json(evidence.reopened_receipt, readback.reopened.artifact_sha256)
+    if (
+        center["phase"] != "center-reopen"
+        or center["center_ade_tree_sha256"] != persistence_baseline.ade_state_sha256
+        or center["physical_oa_sha256"] != saved_width.revision_sha256
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.32"' not in center["rows"]
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"' not in center["rows"]
+        or reopened["phase"] != "bias-reopen"
+        or reopened["candidate_ade_tree_sha256"] != readback.reopened.revision_sha256
+        or reopened["candidate_ade_content_sha256"] != export["state_content_sha256"]
+        or reopened["physical_oa_sha256"] != saved_width.revision_sha256
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASN"|"0.321"' not in reopened["rows"]
+        or 'C1_AMP_ADE_VAR|LOADED|"VBIASP"|"0.702"' not in reopened["rows"]
+    ):
+        raise ValueError("persisted Bias reopened content differs from the exported copy")
+    return export  # type: ignore[no-any-return]
+
+
 def associate_saved_width_bias_analysis(
     mode: Literal["dc", "ac"],
     baseline: FreshAmplifierOperation,
@@ -1402,6 +1553,7 @@ def associate_saved_width_bias_analysis(
     candidate_input_sha256: Digest,
     candidate_query: NativeOperationQuery,
     requested_bias: ChangeValue,
+    export_evidence: PersistedBiasExportEvidence | None = None,
 ) -> FreshAmplifierAnalysisPair:
     """Compare an existing saved-width center to one separately registered bias point.
 
@@ -1424,18 +1576,64 @@ def associate_saved_width_bias_analysis(
         ):
             raise ValueError("saved-width bias operation identity differs")
 
+        export = (
+            None if export_evidence is None
+            else _persisted_bias_export(
+                export_evidence, saved_width, center.plan, changed.plan, mode
+            )
+        )
         measurements = []
         fixed_conditions = []
-        for side, pin, bias in (
-            (baseline, baseline_input_sha256, "0.32"),
-            (candidate, candidate_input_sha256, requested_bias.normalized[0]),
+        for side, pin, bias, is_candidate in (
+            (baseline, baseline_input_sha256, "0.32", False),
+            (candidate, candidate_input_sha256, requested_bias.normalized[0], True),
         ):
             operation, raw = side.operation, side.effective_input
             if hashlib.sha256(raw).hexdigest() != pin:
                 raise ValueError("saved-width bias input digest differs")
-            route, conditions, reader, semantics = _width_route(
-                operation, raw, mode, varied_id="vbiasn"
-            )
+            technology = None
+            side_export = export if is_candidate else None
+            if side_export is not None:
+                technology = {
+                    "name": "cdsDefTechLib",
+                    "path": side_export["technology_path"],
+                    "tree_sha256": side_export["technology_tree_sha256"],
+                }
+            if export is None:
+                route, conditions, reader, semantics = _width_route(
+                    operation, raw, mode, varied_id="vbiasn"
+                )
+            else:
+                route, conditions, reader, semantics = _width_route(
+                    operation, raw, mode, varied_id="vbiasn",
+                    exported_technology=technology, export_comparison=True,
+                )
+            source_tree = saved_width.source_tree_sha256
+            ade_tree = saved_width.ade_state_sha256
+            if (
+                export is not None
+                and not is_candidate
+                and route["profile"]["binding"]["ade"]["state"] != "state1"
+            ):
+                raise ValueError("retained center ADE selector differs")
+            if side_export is not None:
+                source_tree = side_export["source_cell_tree_sha256"]
+                ade_tree = side_export["state_tree_sha256"]
+                source_library = side_export["source_library_path"]
+                expected_library = {
+                    "name": source_library.rsplit("/", 1)[-1],
+                    "path": source_library,
+                    "tree_sha256": side_export["source_library_tree_sha256"],
+                }
+                if (
+                    requested_bias.normalized != ("0.321", "V")
+                    or route["source_cell"] != side_export["source_cell_path"]
+                    or route["source_state"] != side_export["state_path"]
+                    or route["profile"]["binding"]["ade"]["state"] != "Candidate321"
+                    or route["libraries"].count(expected_library) != 1
+                    or route["libraries"].count(technology) != 1
+                ):
+                    raise ValueError("persisted Bias registered copy differs from the export")
             (variable,) = (
                 VariableContract.model_validate(row)
                 for row in route["variables"]
@@ -1445,8 +1643,8 @@ def associate_saved_width_bias_analysis(
             if (
                 (variable.cadence_binding, variable.unit, value.unit, value.value)
                 != ("VBIASN", "V", "V", bias)
-                or conditions.source_tree_sha256 != saved_width.source_tree_sha256
-                or conditions.ade_state_tree_sha256 != saved_width.ade_state_sha256
+                or conditions.source_tree_sha256 != source_tree
+                or conditions.ade_state_tree_sha256 != ade_tree
                 or variable.mutation_policy != "fixed"
                 or variable.fixed_value != bias
             ):
@@ -1459,10 +1657,11 @@ def associate_saved_width_bias_analysis(
                 _fresh_amplifier_measurement(mode, operation, conditions, reader, ade, static, pin)
             )
             fixed_conditions.append((
-                conditions,
+                conditions if export is None else conditions.model_dump(
+                    exclude={"source_tree_sha256", "ade_state_tree_sha256"}
+                ),
                 semantics,
-                route["source_cell"],
-                route["libraries"],
+                (route["source_cell"], route["libraries"]) if export is None else None,
                 parameters,
                 includes,
                 analyses,
@@ -1471,7 +1670,7 @@ def associate_saved_width_bias_analysis(
 
         if requested_bias.normalized[0] == "0.32" or fixed_conditions[0] != fixed_conditions[1]:
             raise ValueError("saved-width bias fixed conditions differ")
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OperationRejected):
         raise OperationRejected("candidate_saved_width_bias_evidence_mismatch") from None
     return FreshAmplifierAnalysisPair(
         analysis=mode,

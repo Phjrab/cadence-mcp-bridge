@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from cadence_mcp_bridge import _shared_reservations as ledger
 from cadence_mcp_bridge.power_measurements import RegisteredPowerCounter
 from cadence_mcp_bridge.resource_policy import FreshResourceCounter
 from cadence_mcp_bridge.storage import StorageSnapshot
@@ -63,3 +64,27 @@ def test_smaller_storage_ceiling_requires_v2_registered_policy():
     value["reserved_result_bytes"] = 131073
     with pytest.raises(ValidationError):
         StorageSnapshot.model_validate(value)
+
+
+def test_retained_v7_storage_is_distinct_from_fresh_and_v6():
+    policy = dict(
+        campaign_id="AUTO-PHASE-01",
+        attempt_ceiling=500,
+        result_ceiling_bytes=ledger.RESULT_POLICY_V7_BYTES,
+        policy_sha256=ledger.RESULT_POLICY_V7_SHA,
+    )
+    value = dict(
+        contract_version=4, snapshot_id="a" * 64, artifacts=[], coverage_complete=True,
+        group_coverage={}, filesystem_free_bytes=1000000, filesystem_total_bytes=10000000,
+        reserved_result_bytes=ledger.RESULT_POLICY_V7_BASELINE["result_reserved_bytes"],
+        result_ceiling_bytes=ledger.RESULT_POLICY_V7_BYTES, spectre_attempts=138,
+        active_eda=False, platform_delete_primitives=True, ledger_policy=policy,
+    )
+    assert StorageSnapshot.model_validate(value).model_dump()["ledger_policy"] == policy
+    for updates in (
+        dict(contract_version=2), dict(contract_version=3),
+        dict(ledger_policy=dict(policy, policy_sha256=ledger.RESULT_POLICY_SHA)),
+        dict(spectre_attempts=137),
+    ):
+        with pytest.raises(ValidationError):
+            StorageSnapshot.model_validate(dict(value, **updates))

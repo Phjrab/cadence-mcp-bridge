@@ -742,6 +742,56 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store, l
     assert a.read(str(path / a.LEDGER)) == baseline
 
 
+def test_retained_v7_capacity_appears_in_read_only_snapshot(fresh_store):
+    from cadence_mcp_bridge import _shared_reservations as a
+    from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
+
+    io, root, path = fresh_store
+    registry = path / a.REGISTRY
+    anchor_path = registry / "manifest.json"
+    anchor = a.read(str(anchor_path))
+    anchor.pop("policy")
+    prior_baseline = dict(campaign_id="AUTO-PHASE-01", count=82, result_reserved_bytes=9798942720)
+    anchor.update(schema_version=1, baseline=prior_baseline)
+    anchor_path.write_bytes(a.canonical(anchor))
+    index_path = path / ".cadence_mcp-domain" / "manifest.json"
+    index = a.read(str(index_path))
+    index["identity_manifest_sha256"] = a.digest(a.canonical(anchor))
+    index_path.write_bytes(a.canonical(index))
+    (path / a.LEDGER).write_bytes(a.canonical(a.RESULT_POLICY_V7_BASELINE))
+    prior = dict(
+        schema_version=6, kind="EXPLICIT_RETAINED_RESULT_LIMIT_16GIB",
+        root_sha256=anchor["root_sha256"], resource_domain_sha256=anchor["resource_domain_sha256"],
+        identity_manifest_sha256=index["identity_manifest_sha256"],
+        policy_sha256=a.RESULT_POLICY_SHA,
+        baseline=prior_baseline, plan_sha256="1" * 64, operator_authority="fixture only",
+    )
+    prior_path = registry / a.RESULT_POLICY_FILE
+    prior_path.write_bytes(a.canonical(prior))
+    successor = dict(
+        prior, schema_version=7, kind="EXPLICIT_RETAINED_RESULT_LIMIT_V7",
+        policy_sha256=a.RESULT_POLICY_V7_SHA, baseline=a.RESULT_POLICY_V7_BASELINE,
+        prior_receipt_sha256=a.digest(prior_path.read_bytes()),
+    )
+    successor_path = registry / a.RESULT_POLICY_V7_FILE
+    successor_path.write_bytes(a.canonical(successor))
+    # Lock-contended branch intentionally does not attest transaction history.
+    before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
+    snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False, lock_held=False))
+    assert not snapshot.coverage_complete and snapshot.active_eda
+    assert snapshot.contract_version == 4
+    assert snapshot.result_ceiling_bytes == a.RESULT_POLICY_V7_BYTES
+    assert snapshot.snapshot_id == snapshot_digest(snapshot)
+    assert snapshot.ledger_policy is not None
+    assert snapshot.ledger_policy.model_dump()["policy_sha256"] == a.RESULT_POLICY_V7_SHA
+    assert {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()} == before
+    with pytest.raises(ValueError, match="slot_missing"):
+        w.snapshot(io, root, False, lock_held=True)
+    prior_path.unlink()
+    with pytest.raises(ValueError, match="v7 predecessor"):
+        w.snapshot(io, root, False, lock_held=False)
+
+
 def fresh_binding(path: Path) -> dict[str, Any]:
     from cadence_mcp_bridge import _shared_reservations as accounting
 
