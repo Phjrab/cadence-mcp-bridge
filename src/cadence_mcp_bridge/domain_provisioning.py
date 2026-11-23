@@ -122,6 +122,7 @@ def prepare(
     *,
     result_limit_v7: bool = False,
     result_limit_v8: bool = False,
+    result_limit_v9: bool = False,
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     assets, _, expected = contents()
@@ -129,10 +130,11 @@ def prepare(
         raise ValueError("helper_package_binding_mismatch")
     raw_profile: bytes = _canonical(json.loads(data))
     action = "inventory-legacy-seal" if seal else "inventory-existing"
-    if result_limit_v7 or result_limit_v8:
-        if seal or result_limit or (result_limit_v7 and result_limit_v8):
+    successors = (result_limit_v7, result_limit_v8, result_limit_v9)
+    if any(successors):
+        if seal or result_limit or sum(successors) != 1:
             raise ValueError("conflicting_domain_action")
-        action = "plan-result-limit-v8" if result_limit_v8 else "plan-result-limit-v7"
+        action = f"plan-result-limit-v{7 + successors.index(True)}"
     elif result_limit:
         action = "plan-result-limit-v6"
     return _transport(
@@ -154,6 +156,7 @@ def _transport(
         "inventory-existing", "apply-existing", "inventory-legacy-seal", "seal-existing",
         "plan-result-limit-v7", "apply-result-limit-v7",
         "plan-result-limit-v8", "apply-result-limit-v8",
+        "plan-result-limit-v9", "apply-result-limit-v9",
     } and entry_source is None:
         raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
@@ -175,6 +178,8 @@ def _transport(
         "apply-result-limit-v7",
         "plan-result-limit-v8",
         "apply-result-limit-v8",
+        "plan-result-limit-v9",
+        "apply-result-limit-v9",
     }
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
@@ -192,6 +197,8 @@ def _transport(
             "apply-result-limit-v7",
             "plan-result-limit-v8",
             "apply-result-limit-v8",
+            "plan-result-limit-v9",
+            "apply-result-limit-v9",
         }
         else "setup.py"
     )
@@ -229,7 +236,10 @@ def _transport(
     receipt = json.loads(stdout)
     if action in {"apply-fresh", "register-existing"}:
         return _setup_receipt(receipt, stdout, output, json.loads(payload), action)
-    if action in {"apply-result-limit-v6", "apply-result-limit-v7", "apply-result-limit-v8"}:
+    if action in {
+        "apply-result-limit-v6", "apply-result-limit-v7", "apply-result-limit-v8",
+        "apply-result-limit-v9",
+    }:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
         request = json.loads(payload)
@@ -242,7 +252,7 @@ def _transport(
         }
         status_name = "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE"
         policy_sha, ceiling = accounting.RESULT_POLICY_SHA, accounting.MAX_POLICY_BYTES
-        if version in (7, 8):
+        if version in (7, 8, 9):
             required.add("policy_receipt_sha256")
             status_name = f"RETAINED_RESULT_LIMIT_V{version}_APPLIED_NO_LEDGER_CHANGE"
             _, policy_sha, ceiling, _, _, _ = accounting.RETAINED_SUCCESSORS[version]
@@ -264,7 +274,7 @@ def _transport(
             or receipt["reservation_cost"] != 0
         ):
             raise ValueError("result_limit_apply_receipt_binding")
-        if version in (7, 8):
+        if version in (7, 8, 9):
             binding = value["binding"]
             record = dict(
                 schema_version=version,
@@ -295,7 +305,7 @@ def _transport(
         or receipt["plan_sha256"] != hashlib.sha256(_canonical(receipt["plan"])).hexdigest()
     ):
         raise ValueError("existing_domain_receipt_binding")
-    if action in {"plan-result-limit-v7", "plan-result-limit-v8"}:
+    if action in {"plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9"}:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
         plan = receipt["plan"]
@@ -335,6 +345,7 @@ def apply_existing(
     *,
     result_limit_v7: bool = False,
     result_limit_v8: bool = False,
+    result_limit_v9: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
@@ -364,10 +375,11 @@ def apply_existing(
         "operator_authority": operator_authority,
     }
     action = "seal-existing" if seal else "apply-existing"
-    if result_limit_v7 or result_limit_v8:
-        if seal or result_limit or (result_limit_v7 and result_limit_v8):
+    successors = (result_limit_v7, result_limit_v8, result_limit_v9)
+    if any(successors):
+        if seal or result_limit or sum(successors) != 1:
             raise ValueError("conflicting_domain_action")
-        action = "apply-result-limit-v8" if result_limit_v8 else "apply-result-limit-v7"
+        action = f"apply-result-limit-v{7 + successors.index(True)}"
     elif result_limit:
         action = "apply-result-limit-v6"
     return _transport(

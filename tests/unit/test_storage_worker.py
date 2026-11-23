@@ -742,7 +742,7 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store, l
     assert a.read(str(path / a.LEDGER)) == baseline
 
 
-@pytest.mark.parametrize("version", [7, 8])
+@pytest.mark.parametrize("version", [7, 8, 9])
 def test_retained_successor_capacity_appears_in_read_only_snapshot(fresh_store, version):
     from cadence_mcp_bridge import _shared_reservations as a
     from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
@@ -777,12 +777,16 @@ def test_retained_successor_capacity_appears_in_read_only_snapshot(fresh_store, 
     successor_path = registry / a.RESULT_POLICY_V7_FILE
     successor_path.write_bytes(a.canonical(successor))
     _, policy_sha, ceiling, baseline, _, _ = a.RETAINED_SUCCESSORS[version]
-    if version == 8:
-        v8 = dict(successor, schema_version=8, kind="EXPLICIT_RETAINED_RESULT_LIMIT_V8",
-                  policy_sha256=policy_sha, baseline=baseline,
-                  prior_receipt_sha256=a.digest(successor_path.read_bytes()))
-        (registry / a.RESULT_POLICY_V8_FILE).write_bytes(a.canonical(v8))
-        (path / a.LEDGER).write_bytes(a.canonical(baseline))
+    path_from = successor_path
+    for successor_version in range(8, version + 1):
+        name, pin, _, opening, _, _ = a.RETAINED_SUCCESSORS[successor_version]
+        document = dict(successor, schema_version=successor_version,
+                        kind=f"EXPLICIT_RETAINED_RESULT_LIMIT_V{successor_version}",
+                        policy_sha256=pin, baseline=opening,
+                        prior_receipt_sha256=a.digest(path_from.read_bytes()))
+        path_from = registry / name
+        path_from.write_bytes(a.canonical(document))
+        (path / a.LEDGER).write_bytes(a.canonical(opening))
     # Lock-contended branch intentionally does not attest transaction history.
     before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
     snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False, lock_held=False))

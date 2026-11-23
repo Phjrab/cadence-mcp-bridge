@@ -56,8 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
         "serve",
         help="Run the explicit legacy compatibility stdio launch.",
     )
-    subparsers.add_parser(
+    operator_server = subparsers.add_parser(
         "serve-operator", help="Serve an explicit operator context; no legacy fallback."
+    )
+    operator_server.add_argument(
+        "--retained-amp-comparison", nargs=2, metavar=("FILE", "SHA256"),
+        help="Expose one host-pinned, already saved amplifier comparison.",
+    )
+    operator_server.add_argument(
+        "--retained-amp-pm0", nargs=2, metavar=("FILE", "SHA256"),
+        help="Expose one host-pinned historical PM0 plan, outcome and saved observation.",
     )
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
@@ -109,7 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
         "plan-existing",
         aliases=[
             "plan-legacy-seal", "plan-result-limit-v6",
-            "plan-result-limit-v7", "plan-result-limit-v8",
+            "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
         ],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
@@ -140,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
         "apply-existing",
         aliases=[
             "seal-existing", "apply-result-limit-v6",
-            "apply-result-limit-v7", "apply-result-limit-v8",
+            "apply-result-limit-v7", "apply-result-limit-v8", "apply-result-limit-v9",
         ],
     )
     for name in ("profile", "plan", "output"):
@@ -888,6 +896,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "apply-result-limit-v6",
                 "apply-result-limit-v7",
                 "apply-result-limit-v8",
+                "apply-result-limit-v9",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -900,6 +909,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "apply-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "apply-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "apply-result-limit-v8",
+                    result_limit_v9=arguments.domain_action == "apply-result-limit-v9",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -910,6 +920,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "plan-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "plan-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "plan-result-limit-v8",
+                    result_limit_v9=arguments.domain_action == "plan-result-limit-v9",
                 )
         except (OSError, ValueError):
             print(
@@ -1186,7 +1197,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("configuration: valid")
         return 0
 
-    run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
+    retained_amp_comparison = getattr(arguments, "retained_amp_comparison", None)
+    retained_amp_pm0 = getattr(arguments, "retained_amp_pm0", None)
+    if retained_amp_comparison is None and retained_amp_pm0 is None:
+        run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
+    else:
+        try:
+            run_stdio_server(
+                operator_mode=True,
+                retained_amp_comparison=(
+                    (Path(retained_amp_comparison[0]), retained_amp_comparison[1])
+                    if retained_amp_comparison else None
+                ),
+                retained_amp_pm0=(
+                    (Path(retained_amp_pm0[0]), retained_amp_pm0[1]) if retained_amp_pm0 else None
+                ),
+            )
+        except ConfigurationError:
+            print("configuration: invalid operator runtime or retained AMP setup", file=sys.stderr)
+            return 1
     return 0
 
 

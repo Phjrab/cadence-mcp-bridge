@@ -275,11 +275,16 @@ def evaluate_research_transient(
     window = query.window
     out: dict[str, Any] = {"signals": {}, "measurements": {}}
     series: dict[str, tuple[list[float], list[float], str | None]] = {}
+    missing_signal_reason = (
+        "saved_voltage_vectors_unavailable"
+        if not waves and sample_kind == "UNVERIFIED"
+        else "missing_registered_signal"
+    )
     for signal in query.signals:
         wave = waves.get(signal)
         if not wave:
             out["signals"][signal] = {
-                "status": "UNAVAILABLE", "reason": "missing_registered_signal",
+                "status": "UNAVAILABLE", "reason": missing_signal_reason,
             }
             continue
         axis = [p.time_s for p in wave]
@@ -318,7 +323,7 @@ def evaluate_research_transient(
         }
 
     def unavailable(signal: str) -> str | None:
-        return series[signal][2] if signal in series else "missing_registered_signal"
+        return series[signal][2] if signal in series else missing_signal_reason
 
     measurements = out["measurements"]
     if query.delay:
@@ -413,14 +418,14 @@ async def capture_research_transient(
         if "tran_supply_evidence" in data else None
     )
     result = evaluate_research_transient(
-        query, waves, sample_kind="NATIVE_SAVED_VECTOR", supply=supply,
+        query, waves, sample_kind="NATIVE_SAVED_VECTOR" if parsed else "UNVERIFIED", supply=supply,
     )
     if supply is not None:
         result["tran_supply_evidence_sha256"] = canonical_digest(supply)
     result.update(
         source=report.model_dump(mode="json"),
         declared_maxstep_s=inputs.maxstep_s,
-        waveforms_sha256=hashlib.sha256(_canonical(waves)).hexdigest(),
+        waveforms_sha256=hashlib.sha256(_canonical(waves)).hexdigest() if parsed else None,
         terminal_receipt_sha256=record.progress.provider_receipt_sha256,
         remote_contact=True, new_simulations=0, new_extractions=0, new_reservations=0,
     )

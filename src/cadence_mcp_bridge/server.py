@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Awaitable
+from pathlib import Path
 from typing import Annotated, Any, cast
 
 from mcp.server.mcpserver import MCPServer
@@ -1590,7 +1591,10 @@ def create_server(
     return server
 
 
-def create_default_server(*, operator_mode: bool = False) -> MCPServer:
+def create_default_server(
+    *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
+    retained_amp_pm0: tuple[Path, str] | None = None,
+) -> MCPServer:
     config = (
         BridgeConfig(runtime_mode="operator")
         if operator_mode
@@ -1601,9 +1605,23 @@ def create_default_server(*, operator_mode: bool = False) -> MCPServer:
     if config.runtime_mode == "operator":
         from cadence_mcp_bridge.runtime_context import create_operator_service
 
-        return create_server(
+        server = create_server(
             cast(CadenceService, create_operator_service(config)), layout_settings=config,
         )
+        if retained_amp_comparison is not None:
+            from cadence_mcp_bridge.amplifier_comparison_server import (
+                load_retained_amp_comparison,
+                register_retained_amp_comparison,
+            )
+
+            register_retained_amp_comparison(
+                server, load_retained_amp_comparison(*retained_amp_comparison),
+            )
+        if retained_amp_pm0 is not None:
+            from cadence_mcp_bridge.amplifier_pm0_server import register_retained_pm0
+
+            register_retained_pm0(server, *retained_amp_pm0)
+        return server
     designs = None
     pdks = None
     amplifier_specs = None
@@ -1636,8 +1654,14 @@ def create_default_server(*, operator_mode: bool = False) -> MCPServer:
     )
 
 
-def run_stdio_server(*, operator_mode: bool = False) -> None:
+def run_stdio_server(
+    *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
+    retained_amp_pm0: tuple[Path, str] | None = None,
+) -> None:
     """Run locally over stdio; all application logging is directed to stderr."""
 
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
-    create_default_server(operator_mode=operator_mode).run("stdio")
+    create_default_server(
+        operator_mode=operator_mode, retained_amp_comparison=retained_amp_comparison,
+        retained_amp_pm0=retained_amp_pm0,
+    ).run("stdio")

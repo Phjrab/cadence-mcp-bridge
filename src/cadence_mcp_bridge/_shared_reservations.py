@@ -44,11 +44,19 @@ RESULT_POLICY_V8_SHA = "939d57d3f038c90d3b3401315c15f8a76fb2c3c6b96410b4dfcf2db5
 RESULT_POLICY_V8_BASELINE = {
     "campaign_id": "AUTO-PHASE-01", "count": 140, "result_reserved_bytes": 17331912704,
 }
+RESULT_POLICY_V9_FILE = "result-policy-v9.json"
+RESULT_POLICY_V9_BYTES = 17767071744
+RESULT_POLICY_V9_SHA = "4325facb94d3d26982950ebecfa22eb2594270de1cd7168a923d0cf27553ad19"
+RESULT_POLICY_V9_BASELINE = {
+    "campaign_id": "AUTO-PHASE-01", "count": 142, "result_reserved_bytes": 17600348160,
+}
 RETAINED_SUCCESSORS = {
     7: (RESULT_POLICY_V7_FILE, RESULT_POLICY_V7_SHA, RESULT_POLICY_V7_BYTES,
         RESULT_POLICY_V7_BASELINE, RESULT_POLICY_FILE, MAX_POLICY_BYTES),
     8: (RESULT_POLICY_V8_FILE, RESULT_POLICY_V8_SHA, RESULT_POLICY_V8_BYTES,
         RESULT_POLICY_V8_BASELINE, RESULT_POLICY_V7_FILE, RESULT_POLICY_V7_BYTES),
+    9: (RESULT_POLICY_V9_FILE, RESULT_POLICY_V9_SHA, RESULT_POLICY_V9_BYTES,
+        RESULT_POLICY_V9_BASELINE, RESULT_POLICY_V8_FILE, RESULT_POLICY_V8_BYTES),
 }
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
@@ -214,7 +222,7 @@ def counter_shape(value, manifest=None):
     # A retained journal parses immutable historical counters without consulting
     # today's policy. Live state separately enforces the effective ceiling.
     shape(value, 32, 3088056320,
-          RESULT_POLICY_V8_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V9_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def marker_shape(value, manifest=None):
@@ -224,7 +232,7 @@ def marker_shape(value, manifest=None):
     # starting at the first post-reservation22 /1,745,879,040 values. The
     # unincremented policy baseline is never a valid attempt-reserved marker.
     shape(value, 22, 1745879040,
-          RESULT_POLICY_V8_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V9_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def open_lock(root):
@@ -416,10 +424,13 @@ def effective_policy(root, manifest):
     path = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
     v7 = os.path.join(root, REGISTRY, RESULT_POLICY_V7_FILE)
     v8 = os.path.join(root, REGISTRY, RESULT_POLICY_V8_FILE)
+    v9 = os.path.join(root, REGISTRY, RESULT_POLICY_V9_FILE)
     if manifest["schema_version"] == 2:
-        if any(os.path.lexists(p) for p in (path, v7, v8)):
+        if any(os.path.lexists(p) for p in (path, v7, v8, v9)):
             raise ValueError("reservation_retained_policy_on_fresh_domain")
         return manifest["policy"]
+    if os.path.lexists(v9) and not os.path.lexists(v8):
+        raise ValueError("reservation_retained_v9_predecessor")
     if os.path.lexists(v8) and not os.path.lexists(v7):
         raise ValueError("reservation_retained_v8_predecessor")
     policy = {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
@@ -468,7 +479,7 @@ def effective_policy(root, manifest):
     ):
         raise ValueError("reservation_retained_policy_baseline")
     policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
-    for version, prior, successor in ((7, path, v7), (8, v7, v8)):
+    for version, prior, successor in ((7, path, v7), (8, v7, v8), (9, v8, v9)):
         if os.path.lexists(successor):
             retained_successor(root, manifest, prior, successor, version)
             policy["result_ceiling_bytes"] = RETAINED_SUCCESSORS[version][2]
@@ -544,7 +555,7 @@ def audit(root, counter, manifest, manifest_sha):
             by_id[name] = item[0]
     registry = os.path.join(root, REGISTRY)
     entries = os.listdir(registry)
-    policy_files = (RESULT_POLICY_V7_FILE, RESULT_POLICY_V8_FILE)
+    policy_files = (RESULT_POLICY_V7_FILE, RESULT_POLICY_V8_FILE, RESULT_POLICY_V9_FILE)
     maximum_entries = 501 + sum(name in entries for name in policy_files)
     if len(entries) > maximum_entries:
         raise ValueError("reservation_identity_inventory_limit")
@@ -552,7 +563,7 @@ def audit(root, counter, manifest, manifest_sha):
     for entry in entries:
         if entry in (
             "manifest.json", "legacy-seal.json", RESULT_POLICY_FILE, RESULT_POLICY_V7_FILE,
-            RESULT_POLICY_V8_FILE,
+            RESULT_POLICY_V8_FILE, RESULT_POLICY_V9_FILE,
         ):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
@@ -636,7 +647,7 @@ def state(root, binding):
     ):
         raise ValueError("reservation_migration_rollback")
     records = audit(root, counter, manifest, binding["identity_manifest_sha256"])
-    for version in (7, 8):
+    for version in (7, 8, 9):
         _, _, ceiling, baseline, _, _ = RETAINED_SUCCESSORS[version]
         if policy["result_ceiling_bytes"] >= ceiling:
             if counter["count"] < baseline["count"] or (
