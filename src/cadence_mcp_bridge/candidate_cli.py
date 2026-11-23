@@ -140,10 +140,20 @@ class _FreshAmplifierStorageSuccessorFiles(VariableModel):
     successor_policy_record: _PinnedComparisonFile
 
 
+class _FreshAmplifierOwnedCopyFiles(VariableModel):
+    baseline_ade_state: str
+    candidate_ade_state: str
+    copy_receipt: _PinnedComparisonFile
+    preservation_receipt: _PinnedComparisonFile
+    technology_receipt: _PinnedComparisonFile
+    registration_receipt: _PinnedComparisonFile
+
+
 class _FreshAmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
     dc: _FreshAmplifierWidthSide
     ac: _FreshAmplifierWidthSide
     policy_successor: _FreshAmplifierStorageSuccessorFiles | None = None
+    owned_copy: _FreshAmplifierOwnedCopyFiles | None = None
 
 
 class _SavedWidthBiasSide(VariableModel):
@@ -903,6 +913,7 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
 def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     from cadence_mcp_bridge.candidate_execution import (
         FreshAmplifierOperation,
+        FreshAmplifierOwnedCopyEvidence,
         FreshAmplifierStorageSuccessorEvidence,
         FreshAmplifierWidthAnalysis,
         FreshAmplifierWidthPair,
@@ -932,6 +943,14 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
                 successor.successor_policy_record,
             )
         )
+    owned_copy = request.owned_copy
+    if owned_copy is not None:
+        reserved.update(
+            _local_path(ref.path) for ref in (
+                owned_copy.copy_receipt, owned_copy.preservation_receipt,
+                owned_copy.technology_receipt, owned_copy.registration_receipt,
+            )
+        )
     for side in (request.dc, request.ac):
         for operation in (side.baseline, side.candidate):
             if operation is not None:
@@ -948,6 +967,17 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
         successor_apply_receipt_sha256=successor.successor_apply_receipt.sha256,
         successor_policy_record=_comparison_document(successor.successor_policy_record),
         successor_policy_record_sha256=successor.successor_policy_record.sha256,
+    )
+    copy_evidence = None if owned_copy is None else FreshAmplifierOwnedCopyEvidence(
+        baseline_ade_state=owned_copy.baseline_ade_state,
+        candidate_ade_state=owned_copy.candidate_ade_state,
+        copy_receipt=_comparison_document(owned_copy.copy_receipt),
+        copy_receipt_sha256=owned_copy.copy_receipt.sha256,
+        preservation_receipt=_comparison_document(owned_copy.preservation_receipt),
+        technology_receipt=_comparison_document(owned_copy.technology_receipt),
+        technology_receipt_sha256=owned_copy.technology_receipt.sha256,
+        registration_receipt=_comparison_document(owned_copy.registration_receipt),
+        registration_receipt_sha256=owned_copy.registration_receipt.sha256,
     )
 
     def retained(operation: _AmplifierWidthChild | None) -> FreshAmplifierOperation | None:
@@ -974,6 +1004,7 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
             retained(request.ac.baseline), retained(request.ac.candidate)
         ),
         policy_successor=policy_evidence,
+        owned_copy=copy_evidence,
     )
     deltas = {}
     for row in (pair.dc, pair.ac):

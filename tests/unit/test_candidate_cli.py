@@ -1061,6 +1061,10 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     successor_schema = schema["$defs"]["_FreshAmplifierStorageSuccessorFiles"]
     assert successor_schema["additionalProperties"] is False
     assert len(successor_schema["required"]) == 5
+    assert "owned_copy" not in schema["required"]
+    owned_copy_schema = schema["$defs"]["_FreshAmplifierOwnedCopyFiles"]
+    assert owned_copy_schema["additionalProperties"] is False
+    assert len(owned_copy_schema["required"]) == 6
     target = tmp_path / "comparison.json"
     assert compare("valid", target) == 0
     summary = output(capsys)
@@ -1101,6 +1105,52 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
         assert not bad.exists()
         receipt["sha256"] = receipt_hash
+
+        copy_receipts = (
+            "copy_receipt", "preservation_receipt", "technology_receipt", "registration_receipt",
+        )
+        request["owned_copy"] = {
+            "baseline_ade_state": "original",
+            "candidate_ade_state": "copied",
+            **{
+                field: pin(tmp_path / f"{field}.json", f'{{"artifact":"{field}"}}\n'.encode())
+                for field in copy_receipts
+            },
+        }
+        forwarded = []
+
+        def record_copy(*args, owned_copy, **kwargs):
+            forwarded.append(owned_copy)
+            return associate(*args, **kwargs)
+
+        with monkeypatch.context() as adapter:
+            adapter.setattr(
+                candidate_execution, "associate_fresh_amplifier_width_pair", record_copy
+            )
+            copy_result = tmp_path / "owned-copy-result.json"
+            assert compare("owned-copy", copy_result) == 0
+            saved_copy_sha256 = hashlib.sha256(copy_result.read_bytes()).hexdigest()
+            assert output(capsys)["file_sha256"] == saved_copy_sha256
+            copy_evidence, = forwarded
+            assert isinstance(copy_evidence, candidate_execution.FreshAmplifierOwnedCopyEvidence)
+            assert (copy_evidence.baseline_ade_state, copy_evidence.candidate_ade_state) == (
+                "original", "copied",
+            )
+            for field in copy_receipts:
+                copy_ref = request["owned_copy"][field]
+                assert getattr(copy_evidence, field) == originals[Path(copy_ref["path"])]
+                if field != "preservation_receipt":
+                    assert getattr(copy_evidence, f"{field}_sha256") == copy_ref["sha256"]
+                assert compare(f"{field}-collision", Path(copy_ref["path"])) == 2
+                assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            tech_ref = request["owned_copy"]["technology_receipt"]
+            tech_ref["sha256"] = "0" * 64
+            wrong_tech = tmp_path / "wrong-technology-output.json"
+            assert compare("wrong-technology", wrong_tech) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert not wrong_tech.exists()
+            assert forwarded == [copy_evidence]
+        del request["owned_copy"]
 
     sidecar = tmp_path / "dc-candidate.sqlite3-wal"
     assert compare("sidecar-collision", sidecar) == 2
