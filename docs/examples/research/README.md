@@ -45,7 +45,21 @@
 
 ## Codex 앱 조회와 운영자 stdio
 
-재시작한 Codex 앱의 개발용 `2.2.0.dev0` 읽기 전용 연결에서 기존 AMP DC·AC 비교, PM0 계획·적용 기록 및 저장된 OA·Netlist 관측을 확인했습니다. 등록 인버터의 실제 DC 실행과 MOS 동작점 조회는 별도의 운영자 stdio 연결에서 확인했습니다. 각 연결의 도구와 입력은 `tools/list`에서 확인합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
+개발용 `2.2.0.dev0`의 실제 Codex 앱에서 등록된 AMP 사본의 정해진 PM0 작업과 별도 읽기 전용 연결을 확인했습니다. 읽기 전용 연결에서는 기존 AMP 비교·편집 기록과 정정 인버터(BBE3)의 보존 DC 동작점 14개를 조회했습니다. 인버터의 실제 DC 실행은 별도 운영자 stdio 연결에서 검증했습니다. 각 연결의 도구와 입력은 `tools/list`에서 확인합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
+
+고정 편집 도구 `cadence_apply_fixed_amp_pm0`의 MCP 인수 예제입니다. 세 문자열 자리에는 등록된 작업 UUID, 계획 SHA-256, 작업 범위 SHA-256을 사용합니다.
+
+```json
+{
+  "request": {
+    "operation_id": "<registered-operation-uuid>",
+    "expected_plan_sha256": "<registered-plan-sha256>",
+    "expected_scope_sha256": "<registered-scope-sha256>"
+  }
+}
+```
+
+실제 검증은 사본 한 개에서 저장과 독립 재개방·Netlist 확인에 OCEAN을 각각 한 번 사용했습니다. Spectre 실행은 0회였습니다. 같은 입력으로 앱과 새 stdio 프로세스에서 각각 재조회해 동일한 `VERIFIED` 결과를 받았고 두 조회 모두 추가 실행은 0건이었습니다. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175)
 
 ## 검증 가능한 synthetic 예제
 
@@ -136,7 +150,8 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 정정 2 MOS 인버터 | 실제 저장·독립 재개방·구조화 검증과 Netlist 확인. 운영자 stdio MCP를 거친 Spectre DC 한 점에서 VDD 1 V, Vin 0 V, Vout 약 1.000 V. 기존 DC에서 두 MOS의 OP 14개를 반복 조회 | DC 한 점이며 `region`은 모델 의미가 미확정인 원시 코드 |
 | 별도 Source9 인버터 TRAN | 기존 실측 원본으로 지연, 10–90% 출력 기울기, 입력 기준 안정화 시간 확인 | 저장 표본 기반 추정. 공급전류가 보존되지 않아 TRAN 평균 전력은 미평가 |
 | 기존 14 MOS AMP와 4497 사본 | 실제 기준·사본의 DC 정적 공급전력과 AC 10 Hz 차동 이득 비교. 설치 CLI에서 기존 결과 네 건을 대조하고 Codex 앱에서 저장 비교 조회. [PR #172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 성능 목표와 후보 선택은 미설정 |
-| 14 MOS AMP의 새 작업 사본 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 실제 저장, 독립 재개방 및 Netlist 확인. 최종 설치본이 보존 응답 재검증. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) · [CI](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/45136923307) | 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED`. 새 사본 Spectre 측정은 미실행 |
+| 14 MOS AMP의 이전 새 사본 검증 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 독립 재개방 및 Netlist 확인. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) | 당시 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED` |
+| 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 연결 확인. 최초 호출과 두 재조회에서 `VERIFIED`. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) | 정해진 PM0 작업 한 건이며 새 사본 성능은 미측정 |
 | 작업용 Layout | 실제 Cadence에서 instance 이동, 도형·연결 pin 추가, 저장·재개방 확인. [PR #167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 OTA Layout·DRC·LVS·PEX는 별도 단계 |
 
 ## 재개 프롬프트
