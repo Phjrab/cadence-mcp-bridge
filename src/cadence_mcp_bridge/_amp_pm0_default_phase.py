@@ -217,17 +217,20 @@ def expected_netlist(statements, plan):
 
 
 def pm0_frame():
-    values = dict(
-        w="120n",
-        fw="120n",
-        l="1u",
-        m="1",
-        fingers="1",
-        nf="-",
-        model="gpdk090_pmos1v",
-        dfm="Minimum",
-        **{"as": "69.6f", "ad": "69.6f", "ps": "1.16u", "pd": "1.16u"},
-    )
+    values = {
+        "w": "120n",
+        "fw": "120n",
+        "l": "1u",
+        "m": "1",
+        "fingers": "1",
+        "nf": "-",
+        "model": "gpdk090_pmos1v",
+        "dfm": "Minimum",
+        "as": "69.6f",
+        "ad": "69.6f",
+        "ps": "1.16u",
+        "pd": "1.16u",
+    }
     return sorted(
         ["AUTO120_MASTER|PM0|gpdk090|pmos1v|symbol"]
         + [
@@ -753,7 +756,7 @@ class AmplifierDefaultJob(object):
 
 
 def decode(packet, name, limit):
-    token = packet[name + "_base64"]
+    token = packet[name + "_base64"].encode("ascii")
     assert len(token) <= 4 * ((limit + 2) // 3)
     raw = base64.b64decode(token)
     assert 0 < len(raw) <= limit and base64.b64encode(raw) == token

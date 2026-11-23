@@ -1,5 +1,6 @@
 """Exercise the finite PM0 route without a native process or a writable journal."""
 
+import ast
 import base64
 import io
 import json
@@ -739,6 +740,15 @@ def test_amp_installed_fixed_assets_have_closed_templates(monkeypatch: pytest.Mo
     assert len(subprocess.list2cmdline(argv)) < 30_000
     # The checked reader consumes only the exact installed asset before the request.
     (launcher,) = shlex.split(argv[2])
+    # Python 2.6 rejects a trailing comma after argument expansion in a call.
+    # Keep argument expansion and modern collection syntax out of these fixed assets.
+    for source in (native, launcher.encode("ascii")):
+        for node in ast.walk(ast.parse(source)):
+            assert not isinstance(node, (ast.DictComp, ast.SetComp, ast.Set, ast.Starred))
+            if isinstance(node, ast.Dict):
+                assert None not in node.keys
+            if isinstance(node, ast.keyword):
+                assert node.arg is not None
     init, receive, check, _ = launcher.splitlines()
     followup = b'{"request":true}'
     stream = io.BytesIO(native + followup)
@@ -788,6 +798,9 @@ def test_native_netlist_projection_preserves_exact_device_and_static_input(
         prefix + " w=(120n) l=1u as=69.6f ad=69.6f ps=1.16u pd=1.16u m=1",
         old[2],
     ]
+    assert guest.expected_netlist(
+        old, {**plan, "requested": {"value": "0.12", "unit": "um"}}
+    ) == guest.expected_netlist(old, plan)
     for changed in (
         [old[1], old[1]],
         [old[1].replace("w=(20u)", "w=(19u)")],
@@ -795,3 +808,12 @@ def test_native_netlist_projection_preserves_exact_device_and_static_input(
     ):
         with pytest.raises((AssertionError, ValueError)):
             guest.expected_netlist(changed, plan)
+
+
+def test_native_base64_uses_canonical_ascii() -> None:
+    raw = bytes([0, 255])
+    doc = guest.parse(guest.canonical({"scope_base64": "AP8="}))
+    assert guest.decode(doc, "scope", 2) == raw
+    for invalid in ("AP9=", "AP8=\n", "AP8=\N{MICRO SIGN}"):
+        with pytest.raises((AssertionError, ValueError)):
+            guest.decode({"scope_base64": invalid}, "scope", 2)
