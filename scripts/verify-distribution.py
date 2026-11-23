@@ -78,7 +78,13 @@ def inspect_artifact(artifact: Path, project: Path) -> dict[str, object]:
         if p.is_file()
         and (
             p.suffix == ".py"
-            or p.name in {"py.typed", "_domain_operator.sh", "_pmos_default_reopen.ocn"}
+            or p.name in {
+                "py.typed",
+                "_domain_operator.sh",
+                "_pmos_default_reopen.ocn",
+                "_amp_pm0_default_edit.ocn",
+                "_amp_pm0_default_verify.ocn",
+            }
         )
     }
     starter_files = ("README.md", "environment.json", "designs.json", "pdks.json")
