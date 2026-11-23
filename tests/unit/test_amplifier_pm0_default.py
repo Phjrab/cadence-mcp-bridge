@@ -817,3 +817,35 @@ def test_native_base64_uses_canonical_ascii() -> None:
     for invalid in ("AP9=", "AP8=\n", "AP8=\N{MICRO SIGN}"):
         with pytest.raises((AssertionError, ValueError)):
             guest.decode({"scope_base64": invalid}, "scope", 2)
+
+
+def test_native_ocean_markers_match_bytes_with_non_ascii_banner() -> None:
+    operation_id = json.loads(json.dumps({"operation_id": _WRITER}))["operation_id"]
+    banner = b"Cadence copyright \xa9"
+    done = f"AUTO120_DONE|{operation_id}|edit".encode("ascii")
+    counter = b"AMP_SAVE_COUNTER|109570"
+    assert guest.edit_counter([banner, counter, done], operation_id) == 109570
+    for output in ([banner, counter], [counter, done, done], [counter + b"|extra", done]):
+        with pytest.raises(AssertionError):
+            guest.edit_counter(output, operation_id)
+
+    frame = guest.pm0_frame()
+    rows = [row.encode("ascii") for row in frame]
+    gates = [
+        f"AUTO120_DONE|{operation_id}|reopen".encode("ascii"),
+        b"C1_VERIFIED_INDEPENDENT_REOPEN",
+        b"C1_AMP_ADE_STAGE|START_SESSION",
+        b"C1_AMP_ADE_STAGE|LOAD_PINNED_STATE",
+        b"C1_AMP_ADE_STAGE|SELECT_ANALYSIS",
+        b"C1_AMP_ADE_STAGE|EMIT_NETLIST",
+        b"C1_AMP_ADE_STAGE|CLOSE_SESSION",
+        f"C1_AMP_ADE_COMPLETE|child-netlist|{operation_id}".encode("ascii"),
+    ]
+    guest.check_reopen_output([banner, *reversed(rows), *gates], operation_id, frame)
+    for output in (
+        [*rows, *reversed(gates)],
+        [*rows, *gates, gates[-1]],
+        [*rows[:-1], rows[-1] + b"\xa9", *gates],
+    ):
+        with pytest.raises(AssertionError):
+            guest.check_reopen_output(output, operation_id, frame)
