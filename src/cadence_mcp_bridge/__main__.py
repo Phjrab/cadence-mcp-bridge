@@ -56,8 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
         "serve",
         help="Run the explicit legacy compatibility stdio launch.",
     )
-    subparsers.add_parser(
+    operator_server = subparsers.add_parser(
         "serve-operator", help="Serve an explicit operator context; no legacy fallback."
+    )
+    operator_server.add_argument(
+        "--retained-amp-comparison", nargs=2, metavar=("FILE", "SHA256"),
+        help="Expose one host-pinned, already saved amplifier comparison.",
     )
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
@@ -1189,7 +1193,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("configuration: valid")
         return 0
 
-    run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
+    retained_amp_comparison = getattr(arguments, "retained_amp_comparison", None)
+    if retained_amp_comparison is None:
+        run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
+    else:
+        path, digest = retained_amp_comparison
+        try:
+            run_stdio_server(operator_mode=True, retained_amp_comparison=(Path(path), digest))
+        except ConfigurationError:
+            print("configuration: invalid operator runtime or retained comparison", file=sys.stderr)
+            return 1
     return 0
 
 
