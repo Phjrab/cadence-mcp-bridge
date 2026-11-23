@@ -22,6 +22,7 @@ from cadence_mcp_bridge.research_measurements import (
     static_supply_power,
 )
 from cadence_mcp_bridge.result_reports import make_report
+from cadence_mcp_bridge.retained_device_op import retained_device_op_result
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["configured", "operator", "operator_base"]
@@ -185,6 +186,30 @@ def test_operator_pinned_device_op_reads_numeric_and_missing_rows(
     assert journal.read_bytes() == before
     native.provider.report_result.assert_not_called()
 
+    with pytest.raises(OperationRejected) as privileged:
+        retained_device_op_result(native.context, query)
+    assert privileged.value.reason == "retained_op_context_has_native_authority"
+    retained_context = replace(
+        native.context,
+        binding=native.context.binding.model_copy(
+            update={
+                "native_provider_binding": None,
+                "native_provider_sha256": None,
+                "operator_grant": None,
+                "operator_grant_sha256": None,
+                "device_op_catalog_path": binding.catalog_path,
+                "device_op_catalog_sha256": binding.catalog_sha256,
+            }
+        ),
+    )
+    local = retained_device_op_result(retained_context, query)
+    assert local.status == "AVAILABLE" and local.source == report
+    assert local.model_dump(mode="json")["measurement"] == result["measurement"]
+    assert retained_device_op_result(retained_context, query) == local
+    unknown = query.model_copy(update={"registration_id": "unknown-op"})
+    assert retained_device_op_result(retained_context, unknown).status == "NOT_AVAILABLE"
+    assert journal.read_bytes() == before
+
     for field in ("runner_sha256", "environment_sha256", "design_sha256", "pdk_sha256"):
         context = native.context
         new_digest = "0" * 64 if getattr(context.binding, field) != "0" * 64 else "1" * 64
@@ -205,3 +230,6 @@ def test_operator_pinned_device_op_reads_numeric_and_missing_rows(
     with pytest.raises(OperationRejected) as tampered:
         capture_device_operating_points(native, query, source=binding)
     assert tampered.value.reason == "research_op_artifact_digest_or_size_mismatch"
+    with pytest.raises(OperationRejected) as local_tampered:
+        retained_device_op_result(retained_context, query)
+    assert local_tampered.value.reason == "research_op_artifact_digest_or_size_mismatch"

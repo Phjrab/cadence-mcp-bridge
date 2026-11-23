@@ -6,12 +6,14 @@ import hashlib
 import math
 import os
 import stat
+from collections.abc import Callable
 from itertools import pairwise
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import Field, TypeAdapter, model_validator
 
+from cadence_mcp_bridge.analysis_store import AnalysisStore
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.generic_analog import (
     Positive,
@@ -23,6 +25,7 @@ from cadence_mcp_bridge.native_service import NativeOperationQuery, NativeOperat
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.result_reports import REPORT_LIMIT, ResultReport, capture, conditions_digest
+from cadence_mcp_bridge.runtime_context import ExecutionContext
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
 Finite = Annotated[float, Field(allow_inf_nan=False)]
@@ -448,6 +451,30 @@ def capture_device_operating_points(
     source: DeviceOpSourceBinding | None,
 ) -> dict[str, Any]:
     """Validate retained DC operation identity and read an operator-pinned OP frame."""
+    return _read_device_operating_points(native.context, query, source, native.current)
+
+
+def read_retained_device_operating_points(
+    context: ExecutionContext,
+    query: DeviceOpQuery,
+    *,
+    source: DeviceOpSourceBinding | None,
+) -> dict[str, Any]:
+    """Read the same pinned evidence in a context with no native execution authority."""
+    if (
+        context.binding.native_provider_binding is not None
+        or context.binding.operator_grant is not None
+    ):
+        raise OperationRejected("retained_op_context_has_native_authority")
+    return _read_device_operating_points(context, query, source)
+
+
+def _read_device_operating_points(
+    context: ExecutionContext,
+    query: DeviceOpQuery,
+    source: DeviceOpSourceBinding | None,
+    check_native_binding: Callable[[], None] | None = None,
+) -> dict[str, Any]:
     effects = {
         "remote_contact": False,
         "new_simulations": 0,
@@ -478,12 +505,12 @@ def capture_device_operating_points(
     ):
         raise OperationRejected("research_op_registration_or_plan_mismatch")
 
-    native.current()
-    store = native.lifecycle.store
+    if check_native_binding is not None:
+        check_native_binding()
+    store = AnalysisStore(context.binding.analysis_journal)
     with store.connection(create=False, read_only=True) as connection:
         record = store._read_operation(connection, query.operation_id)
     plan = record.plan
-    context = native.context
     if (
         record.operation_id != query.operation_id
         or plan.plan_sha256 != evidence.plan_sha256
