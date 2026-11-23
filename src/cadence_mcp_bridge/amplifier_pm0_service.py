@@ -25,7 +25,7 @@ from cadence_mcp_bridge.amplifier_pm0_default import (
     verify_amplifier_pm0_save_metadata,
 )
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeResult
-from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -319,8 +319,13 @@ class _FixedAmplifierPm0Provider:
         baseline: bytes,
         edit: _EditResponse,
     ) -> _Receipt:
-        _document(output)
+        # The final AMP envelope holds two Base64-encoded OA signatures and the Netlist.
+        _closed_document(output, max_bytes=_LIMIT)
         response = _Response.model_validate_json(output)
+        _require(
+            _canonical(response.model_dump(mode="json")) == output,
+            "amp_pm0_native_response_shape",
+        )
         receipt = response.receipt
         _require(
             canonical_digest(receipt) == response.receipt_sha256

@@ -217,17 +217,20 @@ def expected_netlist(statements, plan):
 
 
 def pm0_frame():
-    values = dict(
-        w="120n",
-        fw="120n",
-        l="1u",
-        m="1",
-        fingers="1",
-        nf="-",
-        model="gpdk090_pmos1v",
-        dfm="Minimum",
-        **{"as": "69.6f", "ad": "69.6f", "ps": "1.16u", "pd": "1.16u"},
-    )
+    values = {
+        "w": "120n",
+        "fw": "120n",
+        "l": "1u",
+        "m": "1",
+        "fingers": "1",
+        "nf": "-",
+        "model": "gpdk090_pmos1v",
+        "dfm": "Minimum",
+        "as": "69.6f",
+        "ad": "69.6f",
+        "ps": "1.16u",
+        "pd": "1.16u",
+    }
     return sorted(
         ["AUTO120_MASTER|PM0|gpdk090|pmos1v|symbol"]
         + [
@@ -239,6 +242,42 @@ def pm0_frame():
             for name, value in values.items()
         ]
     )
+
+
+def edit_counter(output, operation_id):
+    # OCEAN stdout is bytes and may contain a non-ASCII banner.
+    done = ("AUTO120_DONE|%s|edit" % operation_id).encode("ascii")
+    assert output.count(done) == 1
+    (row,) = [row for row in output if row.startswith(b"AMP_SAVE_COUNTER|")]
+    counter = re.match(b"^AMP_SAVE_COUNTER[|]([0-9]{1,10})\\Z", row)
+    assert counter
+    return int(counter.group(1))
+
+
+def check_reopen_output(output, operation_id, frame):
+    fields = (b"AUTO120_PROP|", b"AUTO120_TERM|", b"AUTO120_MASTER|")
+    assert sorted(row for row in output if row.startswith(fields)) == [
+        row.encode("ascii") for row in frame
+    ]
+    prefixes = (
+        b"AUTO120_DONE|",
+        b"C1_VERIFIED_INDEPENDENT_REOPEN",
+        b"C1_AMP_ADE_STAGE|",
+        b"C1_AMP_ADE_COMPLETE|",
+    )
+    expected = [
+        "AUTO120_DONE|%s|reopen" % operation_id,
+        "C1_VERIFIED_INDEPENDENT_REOPEN",
+        "C1_AMP_ADE_STAGE|START_SESSION",
+        "C1_AMP_ADE_STAGE|LOAD_PINNED_STATE",
+        "C1_AMP_ADE_STAGE|SELECT_ANALYSIS",
+        "C1_AMP_ADE_STAGE|EMIT_NETLIST",
+        "C1_AMP_ADE_STAGE|CLOSE_SESSION",
+        "C1_AMP_ADE_COMPLETE|child-netlist|%s" % operation_id,
+    ]
+    assert [row for row in output if row.startswith(prefixes)] == [
+        row.encode("ascii") for row in expected
+    ]
 
 
 class AmplifierDefaultJob(object):
@@ -527,12 +566,7 @@ class AmplifierDefaultJob(object):
                     "@TECH@": self.tech,
                 },
             )
-            output = self.run(session, stage, program, edit=True)
-            assert output.count("AUTO120_DONE|%s|edit" % self.op) == 1
-            (counter,) = [
-                row.split("|")[1] for row in output if row.startswith("AMP_SAVE_COUNTER|")
-            ]
-            assert re.match(r"^[0-9]{1,10}\Z", counter)
+            counter = edit_counter(self.run(session, stage, program, edit=True), self.op)
             presave = read(stage + "/pre-save.txt", 65536)
             saved = read(stage + "/saved-full.txt", 65536)
             after, remainder = self.snapshot()
@@ -546,7 +580,7 @@ class AmplifierDefaultJob(object):
                 presave_signature_sha256=sha(presave),
                 saved_library_tree_sha256=rt.copying.snapshot(self.owned)["tree_sha256"],
                 reopened_signature_sha256=sha(saved),
-                edit_live_counter=int(counter),
+                edit_live_counter=counter,
                 source_preservation_sha256=self.scope["source_preservation_sha256"],
             )
             digest = self.record(stage + "/receipt.json", receipt)
@@ -636,9 +670,11 @@ class AmplifierDefaultJob(object):
             project, ade = self.copy_ade(stage)
             ade_before = rt.copying.snapshot(ade)
             frame = pm0_frame()
-            marker = "\n".join(["READ_ONLY_CLOSED|%s|%s" % (self.op, sha(frozen))] + frame) + "\n"
+            marker = (
+                "\n".join(["READ_ONLY_CLOSED|%s|%s" % (self.op, sha(frozen))] + frame) + "\n"
+            ).encode("ascii")
             rt.eda.write(stage + "/expected-footprint.txt", frozen)
-            rt.eda.write(stage + "/expected-frame.txt", marker.encode("ascii"))
+            rt.eda.write(stage + "/expected-frame.txt", marker)
             assert edit_template.count(COMMON_END) == 1
             program = render(
                 edit_template.split(COMMON_END, 1)[0] + verify_template,
@@ -651,40 +687,7 @@ class AmplifierDefaultJob(object):
                     "@TECH@": self.tech,
                 },
             )
-            output = self.run(session, stage, program)
-            assert (
-                sorted(
-                    row
-                    for row in output
-                    if row.startswith(("AUTO120_PROP|", "AUTO120_TERM|", "AUTO120_MASTER|"))
-                )
-                == frame
-            )
-            gates = [
-                row
-                for row in output
-                if row.startswith(
-                    (
-                        "AUTO120_DONE|",
-                        "C1_VERIFIED_INDEPENDENT_REOPEN",
-                        "C1_AMP_ADE_STAGE|",
-                        "C1_AMP_ADE_COMPLETE|",
-                    )
-                )
-            ]
-            assert gates == [
-                "AUTO120_DONE|%s|reopen" % self.op,
-                "C1_VERIFIED_INDEPENDENT_REOPEN",
-            ] + [
-                "C1_AMP_ADE_STAGE|" + step
-                for step in (
-                    "START_SESSION",
-                    "LOAD_PINNED_STATE",
-                    "SELECT_ANALYSIS",
-                    "EMIT_NETLIST",
-                    "CLOSE_SESSION",
-                )
-            ] + ["C1_AMP_ADE_COMPLETE|child-netlist|%s" % self.op]
+            check_reopen_output(self.run(session, stage, program), self.op, frame)
             reopened = read(stage + "/fixed-footprint.txt", 65536)
             assert reopened == frozen and read(stage + "/readback.txt", 8192) == marker
             assert self.snapshot() == before and rt.copying.snapshot(ade) == ade_before
@@ -692,7 +695,7 @@ class AmplifierDefaultJob(object):
             assert expected == normalized(rt.modules["rendering"], raw, self.model, self.model_path)
             headers = raw.splitlines()
             for line in ("// Design library name: " + self.library, "// Design cell name: " + CELL):
-                assert headers.count(line) == 1
+                assert headers.count(line.encode("ascii")) == 1
             rt.eda.write(stage + "/effective-input.scs", raw)
             self.protect(session)
             reopen_pin = self.record(
@@ -753,7 +756,7 @@ class AmplifierDefaultJob(object):
 
 
 def decode(packet, name, limit):
-    token = packet[name + "_base64"]
+    token = packet[name + "_base64"].encode("ascii")
     assert len(token) <= 4 * ((limit + 2) // 3)
     raw = base64.b64decode(token)
     assert 0 < len(raw) <= limit and base64.b64encode(raw) == token

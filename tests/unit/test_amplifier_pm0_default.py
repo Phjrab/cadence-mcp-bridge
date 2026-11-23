@@ -1,5 +1,6 @@
 """Exercise the finite PM0 route without a native process or a writable journal."""
 
+import ast
 import base64
 import io
 import json
@@ -608,12 +609,14 @@ def _registered_provider_fixture(
     return settings, directory, request, scope, assets
 
 
-@pytest.mark.parametrize("failed_phase", [None, "edit", "readback-netlist"])
+@pytest.mark.parametrize(
+    "failure", [None, "edit", "readback-netlist", "oversize", "duplicate", "noncanonical"]
+)
 def test_amp_registered_factory_dispatch_and_restart_replay(
     operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failed_phase: str | None,
+    failure: str | None,
 ) -> None:
     settings, directory, request, scope, assets = _registered_provider_fixture(operation, tmp_path)
     installed = tmp_path / "package-fixture"
@@ -624,6 +627,10 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
 
     evidence = operation[0].journal.reconciliation
     assert evidence is not None
+    design = "L3:mock-design"
+    figures = "L158:" + "f" * 38_000
+    presave = (_encode(design, _view_rows("I12"), figures) + "\n").encode("ascii")
+    reopened = (_encode(design, _view_rows("I35"), figures) + "\n").encode("ascii")
     receipt = amp_host._Receipt(
         status="VERIFIED",
         operation_id=_WRITER,
@@ -636,8 +643,8 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         source_preservation_sha256="1" * 64,
         reopen_receipt_sha256="2" * 64,
         netlist_receipt_sha256="3" * 64,
-        presave_signature_sha256=_sha(evidence.presave),
-        reopened_signature_sha256=_sha(evidence.reopened),
+        presave_signature_sha256=_sha(presave),
+        reopened_signature_sha256=_sha(reopened),
         netlist_sha256=_sha(evidence.netlist),
         edit_live_counter=35,
         reopen_frame=tuple(amp._pm0_frame(baseline=False)[0]),
@@ -661,11 +668,18 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         amp_host._Response(
             receipt=receipt,
             receipt_sha256=canonical_digest(receipt),
-            presave_base64=base64.b64encode(evidence.presave).decode("ascii"),
-            reopened_base64=base64.b64encode(evidence.reopened).decode("ascii"),
+            presave_base64=base64.b64encode(presave).decode("ascii"),
+            reopened_base64=base64.b64encode(reopened).decode("ascii"),
             input_base64=base64.b64encode(evidence.netlist).decode("ascii"),
         ).model_dump(mode="json")
     )
+    assert 65_536 < len(output) < amp_host._LIMIT
+    if failure == "oversize":
+        output = output.ljust(amp_host._LIMIT + 1)
+    elif failure == "duplicate":
+        output = b'{"input_base64":"AA==",' + output[1:]
+    elif failure == "noncanonical":
+        output = output.ljust(amp_host._LIMIT)
     launched = []
 
     def fixed(
@@ -686,7 +700,7 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         assert (directory / "amp-writer-intent.private.json").is_file()
         assert (directory / f"amp-{phase}-intent.private.json").is_file()
         launched.append(phase)
-        if phase == failed_phase:
+        if phase == failure:
             raise TimeoutError
         if phase == "edit":
             return 0, _json(edit_response.model_dump(mode="json")), b""
@@ -707,10 +721,10 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
     replay = dispatch_pmos_default_change(
         apply_path, registered_pmos_default_change(load_runtime(settings)[0])
     )
-    expected = "OUTCOME_UNKNOWN" if failed_phase else "VERIFIED"
-    assert launched == (["edit"] if failed_phase == "edit" else ["edit", "readback-netlist"])
+    expected = "OUTCOME_UNKNOWN" if failure else "VERIFIED"
+    assert launched == (["edit"] if failure == "edit" else ["edit", "readback-netlist"])
     assert initial.outcome == replay.outcome == expected
-    assert initial.dispatched_this_call == (None if failed_phase else True)
+    assert initial.dispatched_this_call == (None if failure else True)
     assert replay.replayed and not replay.dispatched_this_call
 
 
@@ -739,6 +753,15 @@ def test_amp_installed_fixed_assets_have_closed_templates(monkeypatch: pytest.Mo
     assert len(subprocess.list2cmdline(argv)) < 30_000
     # The checked reader consumes only the exact installed asset before the request.
     (launcher,) = shlex.split(argv[2])
+    # Python 2.6 rejects a trailing comma after argument expansion in a call.
+    # Keep argument expansion and modern collection syntax out of these fixed assets.
+    for source in (native, launcher.encode("ascii")):
+        for node in ast.walk(ast.parse(source)):
+            assert not isinstance(node, (ast.DictComp, ast.SetComp, ast.Set, ast.Starred))
+            if isinstance(node, ast.Dict):
+                assert None not in node.keys
+            if isinstance(node, ast.keyword):
+                assert node.arg is not None
     init, receive, check, _ = launcher.splitlines()
     followup = b'{"request":true}'
     stream = io.BytesIO(native + followup)
@@ -788,6 +811,9 @@ def test_native_netlist_projection_preserves_exact_device_and_static_input(
         prefix + " w=(120n) l=1u as=69.6f ad=69.6f ps=1.16u pd=1.16u m=1",
         old[2],
     ]
+    assert guest.expected_netlist(
+        old, {**plan, "requested": {"value": "0.12", "unit": "um"}}
+    ) == guest.expected_netlist(old, plan)
     for changed in (
         [old[1], old[1]],
         [old[1].replace("w=(20u)", "w=(19u)")],
@@ -795,3 +821,44 @@ def test_native_netlist_projection_preserves_exact_device_and_static_input(
     ):
         with pytest.raises((AssertionError, ValueError)):
             guest.expected_netlist(changed, plan)
+
+
+def test_native_base64_uses_canonical_ascii() -> None:
+    raw = bytes([0, 255])
+    doc = guest.parse(guest.canonical({"scope_base64": "AP8="}))
+    assert guest.decode(doc, "scope", 2) == raw
+    for invalid in ("AP9=", "AP8=\n", "AP8=\N{MICRO SIGN}"):
+        with pytest.raises((AssertionError, ValueError)):
+            guest.decode({"scope_base64": invalid}, "scope", 2)
+
+
+def test_native_ocean_markers_match_bytes_with_non_ascii_banner() -> None:
+    operation_id = json.loads(json.dumps({"operation_id": _WRITER}))["operation_id"]
+    banner = b"Cadence copyright \xa9"
+    done = f"AUTO120_DONE|{operation_id}|edit".encode("ascii")
+    counter = b"AMP_SAVE_COUNTER|109570"
+    assert guest.edit_counter([banner, counter, done], operation_id) == 109570
+    for output in ([banner, counter], [counter, done, done], [counter + b"|extra", done]):
+        with pytest.raises(AssertionError):
+            guest.edit_counter(output, operation_id)
+
+    frame = guest.pm0_frame()
+    rows = [row.encode("ascii") for row in frame]
+    gates = [
+        f"AUTO120_DONE|{operation_id}|reopen".encode("ascii"),
+        b"C1_VERIFIED_INDEPENDENT_REOPEN",
+        b"C1_AMP_ADE_STAGE|START_SESSION",
+        b"C1_AMP_ADE_STAGE|LOAD_PINNED_STATE",
+        b"C1_AMP_ADE_STAGE|SELECT_ANALYSIS",
+        b"C1_AMP_ADE_STAGE|EMIT_NETLIST",
+        b"C1_AMP_ADE_STAGE|CLOSE_SESSION",
+        f"C1_AMP_ADE_COMPLETE|child-netlist|{operation_id}".encode("ascii"),
+    ]
+    guest.check_reopen_output([banner, *reversed(rows), *gates], operation_id, frame)
+    for output in (
+        [*rows, *reversed(gates)],
+        [*rows, *gates, gates[-1]],
+        [*rows[:-1], rows[-1] + b"\xa9", *gates],
+    ):
+        with pytest.raises(AssertionError):
+            guest.check_reopen_output(output, operation_id, frame)
