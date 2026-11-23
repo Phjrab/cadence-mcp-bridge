@@ -90,7 +90,7 @@ def load_retained_amp_comparison(path: Path, expected_sha256: str) -> RetainedAm
 def register_retained_amp_comparison(server: MCPServer, summary: RetainedAmpComparison) -> None:
     @server.tool(
         name="cadence_retained_amplifier_comparison",
-        annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
         structured_output=True,
         description="Read the host-pinned amplifier comparison by exact report digest.",
     )
