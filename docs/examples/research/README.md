@@ -6,7 +6,7 @@
 
 ## 연구 인계
 
-- **준비된 경로** — 실제 GPDK090 인버터에서 저장, 독립 재개방, 전체 테스트벤치 Netlist와 등록 후보 조립까지 확인했습니다. 설치본 `0a84000`은 별도의 AMP 20 µm 기준본과 자동 120 nm 사본의 기존 Spectre DC·AC 결과 네 건을 비교 파일로 저장했고, 독립 QA와 Windows·POSIX CI를 통과했습니다. [PR 172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) · [CI 결과](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/45112099367)
+- **준비된 경로** — 실제 GPDK090 인버터를 저장하고 독립 재개방한 뒤 전체 테스트벤치 Netlist를 확인했습니다. 정정 인버터를 운영자 stdio MCP에 등록해 실제 Spectre DC 한 점을 실행하고 같은 작업 ID로 결과를 재조회했습니다. 별도의 AMP 비교 CLI도 기존 실제 Spectre DC·AC 결과 네 건을 비교 파일로 저장했고 독립 QA와 Windows·POSIX CI를 통과했습니다. [PR 172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) · [CI 결과](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/45112099367)
 - **OTA 미확정 입력** — 논문의 D/G/S/B 연결과 치수, 실제 GPDK090 셀·CDF·모델 매핑, 테스트벤치의 공급·입력·부하와 관측 경로를 확정해야 합니다. 성능 목표와 허용 오차도 미정입니다.
 - **호출 순서** — 설치 MCP에서 `tools/list` → 회로 정의 검증 → MOS 블록 계획 → 지원되는 Cadence 경로에서 작업 사본 생성·저장 → 독립 재개방 및 Netlist 대조 → 대상과 분석 reader 등록 순으로 진행합니다. 실행 범위가 확정되면 분석 계획 → 제출 → 상태 → 결과 → 같은 작업 ID로 재조회 순으로 확인합니다. 첫 OTA는 DC/OP와 AC부터 시작합니다.
 
@@ -49,6 +49,8 @@
 개발용 `serve-operator` 설치본은 `2.2.0.dev0`, 소스 커밋 `e5486215808ed02438f6b08e8e3fcee15ef2f9b3`, wheel SHA-256 `10ee8302cef94a8dced6b13b9bf07940ed0633bc5d14726c820e85802d2f2797`입니다. 설치 검증 환경의 운영자 프로필에서 도구 112개를 확인했습니다. 기준 설치본의 103개 도구 스키마를 유지하고 연구용 도구 9개를 추가했습니다. 같은 작업 ID로 상태·결과를 재조회하고 제출을 반복해도 합성 실행 수와 예약량이 유지됐습니다.
 
 이 설치본을 사용할 때는 운영자가 `operator-setup export-client --settings RUNTIME --context CONTEXT_ID --format codex --output NEW_CLIENT_FRAGMENT`으로 만든 클라이언트 설정의 Python 경로와 `serve-operator` 인수를 사용합니다. 연결 후 `tools/list`에서 아래 도구와 입력 스키마를 확인합니다. [운영자 연결 안내](../../POST_01_OPERATOR_SETUP.md)
+
+2026년 11월 23일 운영자 stdio MCP의 활성 등록에서 정정 인버터를 VDD 1 V, Vin 0 V로 실행했습니다. 실제 Spectre DC 결과는 Vout 약 1.000 V였고, 같은 ID로 재조회할 때 실행과 예약은 추가되지 않았습니다. 현재 사용자 앱 connector의 확인 범위는 읽기 전용 조회입니다.
 
 ## 검증 가능한 synthetic 예제
 
