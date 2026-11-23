@@ -1,0 +1,334 @@
+"""Exercise the finite PM0 route without a native process or a writable journal."""
+
+import json
+from dataclasses import replace
+from hashlib import sha256
+
+import pytest
+
+from cadence_mcp_bridge import amplifier_pm0_default as amp
+from cadence_mcp_bridge import parameter_changes as changes
+from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
+from cadence_mcp_bridge.schematic_plan import RevisionBinding
+
+_WRITER = "11111111-1111-4111-8111-111111111111"
+_OBSERVER = "22222222-2222-4222-8222-222222222222"
+_VIEW = "a" * 64
+_FAILURE = "b" * 64
+
+
+def _sha(raw: bytes) -> str:
+    return sha256(raw).hexdigest()
+
+
+def _json(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii")
+
+
+def _encode(*values: str) -> str:
+    return f"L{len(values)}:" + "".join(f"{len(value)}:{value}" for value in values)
+
+
+def _view_rows(geometry: str) -> str:
+    return _encode(
+        _encode("SconnectivityLastUpdated", "Sint", "I35"),
+        _encode("Sinstance#", "Sint", "I11"),
+        _encode("SlastSchematicExtraction", "Stime", "SNov 22 10:14:43 2026"),
+        _encode("Snet#", "Sint", "I39"),
+        _encode("Spin#", "Sint", "I36"),
+        _encode("SschGeometryLastUpdated", "Sint", geometry),
+        _encode("SschGeometryVersion", "Sstring", "Ssch.ds.gm.1.4"),
+        _encode("SschXtrVersion", "Sstring", "Ssch.10.0"),
+    )
+
+
+@pytest.fixture
+def operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest]:
+    pm0 = (
+        b"PM0 (net33 Vbiasp VDD VDD) gpdk090_pmos1v w=(20u) l=1u "
+        b"as=5.6p ad=5.6p ps=40.56u pd=40.56u m=(1)*(1) simM=(1)*(1)"
+    )
+    raw = b"simulator lang=spectre\nparameters VBIASN=0.320 VBIASP=0.702\n" + pm0 + b"\n"
+    candidate = raw.replace(b"20u", b"120n").replace(b"5.6p", b"69.6f").replace(b"40.56u", b"1.16u")
+    monkeypatch.setattr(amp, "_CENTER", _sha(raw))
+    monkeypatch.setattr(changes, "_AMP_CENTER_SHA256", _sha(raw))
+    monkeypatch.setattr(changes, "_AMP_PM0_STATEMENT_SHA256", _sha(pm0))
+    parent = RevisionBinding(
+        workspace_id="test-amp",
+        design_id="reference-differential-amplifier-tb2",
+        revision_id="reference-amplifier-bias-grid-v1",
+        source_baseline_sha256=amp._CENTER_VIEW,
+    )
+    child = parent.model_copy(
+        update={
+            "revision_id": "test-candidate",
+            "parent_revision_id": parent.revision_id,
+            "parent_revision_sha256": amp._CENTER_VIEW,
+        }
+    )
+    qualification = changes.MosWidthQualification(
+        baseline=changes.ChangeBaseline(
+            revision=parent,
+            revision_sha256=amp._CENTER_VIEW,
+            testbench_revision_sha256=amp._CENTER_VIEW,
+            netlist_sha256=_sha(raw),
+            fixed_conditions_sha256="1" * 64,
+        ),
+        target=changes.MosWidthTarget(
+            instance=changes.CandidateSourceTarget(
+                instance_path="PM0",
+                master_library="gpdk090",
+                master_cell="pmos1v",
+                master_view="symbol",
+                property_name="w",
+            )
+        ),
+        old=changes.ChangeValue(value="20", unit="um"),
+        expected=changes.ChangeValue(value="120", unit="nm"),
+        fingers=1,
+        multiplicity=1,
+        cdf_evidence_sha256="2" * 64,
+        legal_value_evidence_sha256="3" * 64,
+        update_route_evidence_sha256="4" * 64,
+        derived=tuple(
+            changes.DerivedChange(
+                before=changes.DerivedValue(property_name=k, value=old),
+                after=changes.DerivedValue(property_name=k, value=new),
+            )
+            for k, (old, new) in amp._GEOMETRY.items()
+        ),
+    )
+    plan = amp.plan_amplifier_pm0_default_change(
+        qualification, child.revision_id, child, changes.ChangeValue(value="0.12", unit="um")
+    )
+    base_frame, _ = amp._pm0_frame(baseline=True)
+    base_receipt = _json(
+        {
+            "status": "CLOSED_BASELINE_MATCHED",
+            "scope_sha256": "5" * 64,
+            "frame": base_frame,
+        }
+    )
+    scope = _json(
+        {
+            "operation_id": _WRITER,
+            "completed_baseline_receipt": _sha(base_receipt),
+            "completed_baseline_scope": "5" * 64,
+        }
+    )
+    intent = _json({"phase": "edit", "scope_sha256": _sha(scope), "prior": [_sha(base_receipt)]})
+    request = PmosDefaultChangeRequest(
+        operation_id=_WRITER,
+        expected_plan_sha256=plan.plan_sha256,
+        expected_scope_sha256=_sha(scope),
+    )
+    before, after = _view_rows("I12"), _view_rows("I35")
+    presave = (_encode("L3:mock-design", before, "L158:mock-figures") + "\n").encode("ascii")
+    reopened = (_encode("L3:mock-design", after, "L158:mock-figures") + "\n").encode("ascii")
+    frame, values = amp._pm0_frame(baseline=False)
+    diagnostics = []
+    for key, value in values.items():
+        oa = "t|string|1u" if key == "l" else "nil|-|-"
+        cdf = "nil|nil" if key == "nf" else "t|string"
+        diagnostics.append(f"AUTO120_DIAG_PROP|AFTER_REMOVE|{key}|{value}|{oa}|{cdf}|{value}")
+    diagnostics.extend(
+        [
+            f"C1_ROWS|EDIT_AFTER|{before}",
+            "C1_CHECK|EDIT|(0 0)|before|after|22|35|nil|t",
+            f"C1_ROWS|SAVED|{after}",
+            "AUTO120_FAIL|SAVE",
+        ]
+    )
+    capture = _json(
+        {
+            "scope": _sha(scope),
+            "stages": [
+                {
+                    "phase": "edit",
+                    "failure_sha256": _FAILURE,
+                    "detail": {
+                        "phase": "edit",
+                        "scope_sha256": _sha(scope),
+                        "status": "OUTCOME_UNKNOWN",
+                        "conservation": "MATCHED",
+                        "ocean_launched": 1,
+                        "program_issued": True,
+                        "program_failure": {"cleanup": "REAPED"},
+                        "logs": {"ocean.stdout": {"diagnostic": diagnostics}},
+                    },
+                }
+            ],
+        }
+    )
+    scope_observer = "6" * 64
+    physical = {"view_tree": _VIEW}
+    receipt = _json(
+        {
+            "operation_id": _OBSERVER,
+            "scope_sha256": scope_observer,
+            "failed_operation": _WRITER,
+            "failure": _FAILURE,
+            "status": "RECONCILED_READ_ONLY",
+            "phase": "child-netlist",
+            "before": physical,
+            "after": physical,
+            "input_sha256": _sha(candidate),
+            "frozen_sha256": _sha(reopened),
+            "readback_sha256": "7" * 64,
+            "gate_markers": [
+                f"AUTO120_DONE|{_OBSERVER}|reopen",
+                "C1_VERIFIED_INDEPENDENT_REOPEN",
+                f"C1_AMP_ADE_COMPLETE|child-netlist|{_OBSERVER}",
+            ],
+            "simulations": 0,
+            "reservations": 0,
+            "netlists": 1,
+            "ocean_calls": 1,
+            "counter": {"count": 140},
+            "reopen_frame": frame,
+        }
+    )
+    replay = _json(
+        {
+            "status": "RECONCILIATION_REPLAY",
+            "operation_id": _OBSERVER,
+            "scope": scope_observer,
+            "receipt_sha256": _sha(receipt),
+            "after": physical,
+            "counter": {"count": 140},
+            "writes": 0,
+            "ocean_calls": 0,
+            "simulations": 0,
+            "reservations": 0,
+        }
+    )
+    pins = amp.AmplifierPm0JournalPins(
+        plan_sha256=plan.plan_sha256,
+        writer_operation_id=_WRITER,
+        writer_scope_sha256=_sha(scope),
+        writer_intent_sha256=_sha(intent),
+        baseline_receipt_sha256=_sha(base_receipt),
+        writer_capture_sha256=_sha(capture),
+        reconciliation=amp.AmplifierPm0ReconciliationPins(
+            observation_operation_id=_OBSERVER,
+            observation_scope_sha256=scope_observer,
+            candidate_view_tree_sha256=_VIEW,
+            source_writer_failure_sha256=_FAILURE,
+            observer_receipt_sha256=_sha(receipt),
+            observer_replay_sha256=_sha(replay),
+            presave_sha256=_sha(presave),
+            reopened_sha256=_sha(reopened),
+            netlist_sha256=_sha(candidate),
+        ),
+    )
+    journal = amp.AmplifierPm0Journal(
+        scope,
+        intent,
+        base_receipt,
+        capture,
+        amp.AmplifierPm0Reconciliation(receipt, replay, presave, reopened, candidate),
+    )
+    return amp.RetainedAmplifierPm0DefaultChange(plan, journal, pins, raw), request
+
+
+def test_verified_saved_revision_does_not_promote_or_redispatch_writer(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+) -> None:
+    service, request = operation
+    result = service.observe(request)
+    assert result == service.observe(request)
+    assert result.writer == service.apply(request)
+    assert result.writer.outcome == "OUTCOME_UNKNOWN"
+    assert result.writer.replayed and not result.writer.dispatched_this_call
+    assert result.saved_revision is not None
+    assert result.saved_revision.schematic_revision_sha256 == _VIEW
+    assert result.saved_revision.testbench_revision_sha256 == _VIEW
+    assert result.saved_revision.oa_width == result.saved_revision.netlist.value
+    assert result.saved_revision.saved_geometry_counter_after == 35
+    assert not result.execution_authorized
+
+
+def test_partial_intent_reports_unknown_and_conflicting_request_rejects(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+) -> None:
+    service, request = operation
+    journal = replace(service.journal, writer_capture=None, reconciliation=None)
+    pins = service.pins.model_copy(update={"writer_capture_sha256": None, "reconciliation": None})
+    partial = replace(service, journal=journal, pins=pins)
+    assert partial.observe(request).saved_revision is None
+    assert partial.apply(request).outcome == "OUTCOME_UNKNOWN"
+    with pytest.raises(ValueError, match="conflict"):
+        partial.apply(request.model_copy(update={"expected_plan_sha256": "9" * 64}))
+    with pytest.raises(ValueError, match="digest"):
+        replace(partial, journal=replace(journal, intent=b"")).apply(request)
+
+
+@pytest.mark.parametrize(
+    ("field", "original", "changed", "reason"),
+    [
+        ("reopened", b"mock-design", b"fake-design", "circuit"),
+        ("replay", b'"writes":0', b'"writes":1', "replay"),
+        ("netlist", b"VBIASN=0.320", b"VBIASN=0.321", "fixed netlist"),
+    ],
+)
+def test_semantically_wrong_repinned_evidence_rejects(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    field: str,
+    original: bytes,
+    changed: bytes,
+    reason: str,
+) -> None:
+    service, request = operation
+    evidence, pins = service.journal.reconciliation, service.pins.reconciliation
+    assert evidence is not None and pins is not None
+    initial: bytes = getattr(evidence, field)
+    assert original in initial
+    modified = initial.replace(original, changed)
+    receipt = json.loads(evidence.receipt)
+    replay = json.loads(evidence.replay)
+    update: dict[str, str] = {}
+    if field in ("reopened", "netlist"):
+        receipt["frozen_sha256" if field == "reopened" else "input_sha256"] = _sha(modified)
+        update["reopened_sha256" if field == "reopened" else "netlist_sha256"] = _sha(modified)
+    else:
+        replay = json.loads(modified)
+    new_receipt = _json(receipt)
+    replay["receipt_sha256"] = _sha(new_receipt)
+    new_replay = _json(replay)
+    update |= {
+        "observer_receipt_sha256": _sha(new_receipt),
+        "observer_replay_sha256": _sha(new_replay),
+    }
+    evidence = replace(
+        evidence, **({field: modified} | {"receipt": new_receipt, "replay": new_replay})
+    )
+    updated_pins = service.pins.model_copy(
+        update={"reconciliation": pins.model_copy(update=update)}
+    )
+    with pytest.raises(ValueError, match=reason):
+        replace(
+            service, journal=replace(service.journal, reconciliation=evidence), pins=updated_pins
+        ).observe(request)
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [("22|35|nil|t", "22|36|nil|t"), ("22|35|nil|t", "22|35|nil|nil")],
+)
+def test_save_counter_requires_the_live_checker_witness(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    old: str,
+    new: str,
+) -> None:
+    service, request = operation
+    capture = service.journal.writer_capture
+    assert capture is not None and old.encode("ascii") in capture
+    modified = capture.replace(old.encode("ascii"), new.encode("ascii"))
+    with pytest.raises(ValueError, match="geometry counter"):
+        replace(
+            service,
+            journal=replace(service.journal, writer_capture=modified),
+            pins=service.pins.model_copy(update={"writer_capture_sha256": _sha(modified)}),
+        ).observe(request)
