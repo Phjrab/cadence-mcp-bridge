@@ -250,7 +250,7 @@ async def test_current_fresh_output_drift_and_historical_substitution_rejected(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("maximum", [17_381_195_776, 17_632_854_017])
+@pytest.mark.parametrize("maximum", [17_381_195_776, 17_632_854_016, 17_767_071_745])
 async def test_current_storage_ceiling_rejects_stale_and_unreviewed_maximum(maximum: int) -> None:
     schemas = await audit.inventory()
     storage_summary = schemas["cadence_storage_summary"]
