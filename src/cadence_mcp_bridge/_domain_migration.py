@@ -718,7 +718,7 @@ def retained_v7_quiet(root):
         raise ValueError("migration_active_or_unresolved")
 
 
-def retained_v7_snapshot(value, root, lock):
+def retained_successor_snapshot(value, root, lock, version):
     accounting, installer, _ = helpers()
     installer._operator_guard(root, lock)
     retained_v7_quiet(root)
@@ -754,13 +754,14 @@ def retained_v7_snapshot(value, root, lock):
     if anchor["schema_version"] != 1:
         raise ValueError("result_limit_retained_domain_only")
     state, records = accounting.state(root, binding)
-    if state != accounting.RESULT_POLICY_V7_BASELINE:
-        raise ValueError("result_limit_v7_baseline_drift")
+    _, _, _, baseline, prior_file, _ = accounting.RETAINED_SUCCESSORS[version]
+    if state != baseline:
+        raise ValueError("result_limit_v%d_baseline_drift" % version)
     if any(receipt is None for _, receipt in records):
         raise ValueError("migration_active_or_unresolved")
     registry = os.path.join(root, accounting.REGISTRY)
     accounting.safe(registry, True)
-    prior = os.path.join(registry, accounting.RESULT_POLICY_FILE)
+    prior = os.path.join(registry, prior_file)
     pointer_path = os.path.join(root, "active-native-provider.json")
     pointer = accounting.read(pointer_path)
     if (
@@ -798,6 +799,8 @@ def retained_v7_snapshot(value, root, lock):
     controls = [
         index_path, os.path.join(registry, "manifest.json"), prior, pointer_path, history,
     ]
+    if version == 8:
+        controls.append(os.path.join(registry, accounting.RESULT_POLICY_FILE))
     seal = os.path.join(registry, "legacy-seal.json")
     if os.path.lexists(seal):
         controls.append(seal)
@@ -838,24 +841,29 @@ def retained_v7_snapshot(value, root, lock):
 
 
 def result_limit_v7_plan(value, assets_sha256):
+    return retained_successor_plan(value, assets_sha256, 7)
+
+
+def retained_successor_plan(value, assets_sha256, version):
     accounting, installer, _ = helpers()
-    root = profile(value, accounting.MAX_POLICY_BYTES)
+    filename, policy_sha, _, _, _, previous_limit = accounting.RETAINED_SUCCESSORS[version]
+    root = profile(value, previous_limit)
     lock = installer._operator_lock(root)
     try:
-        successor = os.path.join(root, accounting.REGISTRY, accounting.RESULT_POLICY_V7_FILE)
+        successor = os.path.join(root, accounting.REGISTRY, filename)
         if os.path.lexists(successor):
-            raise ValueError("result_limit_v7_use_original_plan")
-        binding, current = retained_v7_snapshot(value, root, lock)
+            raise ValueError("result_limit_v%d_use_original_plan" % version)
+        binding, current = retained_successor_snapshot(value, root, lock, version)
         plan = {
-            "schema_version": 7,
-            "recipe_id": "retained-result-limit-v7",
+            "schema_version": version,
+            "recipe_id": "retained-result-limit-v%d" % version,
             "profile": value,
             "profile_sha256": digest(canonical(value)),
             "binding": binding,
             "snapshot": current,
             "authority": "PLAN_IS_NOT_OPERATOR_APPROVAL",
             "helper_manifest_sha256": assets_sha256,
-            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+            "policy_sha256": policy_sha,
         }
         return {
             "plan": plan,
@@ -869,6 +877,10 @@ def result_limit_v7_plan(value, assets_sha256):
 
 
 def apply_result_limit_v7(request, assets_sha256):
+    return apply_retained_successor(request, assets_sha256, 7)
+
+
+def apply_retained_successor(request, assets_sha256, version):
     accounting, installer, _ = helpers()
     if (
         not isinstance(request, dict)
@@ -878,6 +890,7 @@ def apply_result_limit_v7(request, assets_sha256):
         or any(ord(c) < 32 for c in request["operator_authority"])
     ):
         raise ValueError("result_limit_operator_authority")
+    filename, policy_sha, ceiling, _, _, previous_limit = accounting.RETAINED_SUCCESSORS[version]
     plan = request["plan"]
     if (
         not isinstance(plan, dict)
@@ -886,42 +899,42 @@ def apply_result_limit_v7(request, assets_sha256):
             "authority", "helper_manifest_sha256", "policy_sha256",
         ))
         or type(plan["schema_version"]) is not int
-        or plan["schema_version"] != 7
-        or plan["recipe_id"] != "retained-result-limit-v7"
+        or plan["schema_version"] != version
+        or plan["recipe_id"] != "retained-result-limit-v%d" % version
         or plan["helper_manifest_sha256"] != assets_sha256
-        or plan["policy_sha256"] != accounting.RESULT_POLICY_V7_SHA
+        or plan["policy_sha256"] != policy_sha
         or plan["authority"] != "PLAN_IS_NOT_OPERATOR_APPROVAL"
         or digest(canonical(plan)) != request["expected_plan_sha256"]
         or digest(canonical(plan["profile"])) != plan["profile_sha256"]
     ):
         raise ValueError("result_limit_plan_binding")
-    root = profile(plan["profile"], accounting.MAX_POLICY_BYTES)
+    root = profile(plan["profile"], previous_limit)
     lock = installer._operator_lock(root)
     try:
         def guard():
-            actual = retained_v7_snapshot(plan["profile"], root, lock)
+            actual = retained_successor_snapshot(plan["profile"], root, lock, version)
             if canonical(actual) != canonical((plan["binding"], plan["snapshot"])):
                 raise ValueError("result_limit_snapshot_drift")
 
         guard()
         binding, current = plan["binding"], plan["snapshot"]
         document = {
-            "schema_version": 7,
-            "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V7",
+            "schema_version": version,
+            "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V%d" % version,
             "root_sha256": binding["root_sha256"],
             "resource_domain_sha256": binding["resource_domain_sha256"],
             "identity_manifest_sha256": binding["identity_manifest_sha256"],
             "prior_receipt_sha256": current["prior_receipt_sha256"],
-            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+            "policy_sha256": policy_sha,
             "baseline": current["baseline"],
             "plan_sha256": request["expected_plan_sha256"],
             "operator_authority": request["operator_authority"],
         }
-        path = os.path.join(root, accounting.REGISTRY, accounting.RESULT_POLICY_V7_FILE)
+        path = os.path.join(root, accounting.REGISTRY, filename)
         raw = canonical(document)
         created = not os.path.lexists(path)
         if created:
-            candidate = os.path.join(root, ".result-policy-v7-" + digest(os.urandom(32)))
+            candidate = os.path.join(root, ".result-policy-v%d-" % version + digest(os.urandom(32)))
             installer.exclusive(candidate, raw)
             accounting.sync_directory(root)
             guard()
@@ -941,17 +954,17 @@ def apply_result_limit_v7(request, assets_sha256):
         guard()
         anchor = accounting.identity_manifest(root, binding)
         if accounting.effective_policy(root, anchor)["result_ceiling_bytes"] != (
-            accounting.RESULT_POLICY_V7_BYTES
+            ceiling
         ):
-            raise ValueError("result_limit_v7_post_policy")
+            raise ValueError("result_limit_v%d_post_policy" % version)
         return {
-            "status": "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE",
+            "status": "RETAINED_RESULT_LIMIT_V%d_APPLIED_NO_LEDGER_CHANGE" % version,
             "created": created,
-            "policy_sha256": accounting.RESULT_POLICY_V7_SHA,
+            "policy_sha256": policy_sha,
             "policy_receipt_sha256": digest(raw),
             "plan_sha256": request["expected_plan_sha256"],
             "ledger_sha256": current["ledger_sha256"],
-            "result_ceiling_bytes": accounting.RESULT_POLICY_V7_BYTES,
+            "result_ceiling_bytes": ceiling,
             "execution_authorized": False,
             "ledger_modified": False,
             "ledger_initialized": False,
@@ -972,6 +985,8 @@ def main():
         "apply-result-limit-v6",
         "plan-result-limit-v7",
         "apply-result-limit-v7",
+        "plan-result-limit-v8",
+        "apply-result-limit-v8",
     ):
         raise ValueError("fixed_existing_migration_command_required")
     if os.name != "posix":
@@ -986,6 +1001,10 @@ def main():
         result = result_limit_v7_plan(data, assets)
     elif sys.argv[1] == "apply-result-limit-v7":
         result = apply_result_limit_v7(data, assets)
+    elif sys.argv[1] == "plan-result-limit-v8":
+        result = retained_successor_plan(data, assets, 8)
+    elif sys.argv[1] == "apply-result-limit-v8":
+        result = apply_retained_successor(data, assets, 8)
     elif sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
         result = plan(data, assets, sys.argv[1] == "inventory-legacy-seal")
     else:

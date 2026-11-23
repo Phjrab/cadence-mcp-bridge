@@ -742,7 +742,8 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store, l
     assert a.read(str(path / a.LEDGER)) == baseline
 
 
-def test_retained_v7_capacity_appears_in_read_only_snapshot(fresh_store):
+@pytest.mark.parametrize("version", [7, 8])
+def test_retained_successor_capacity_appears_in_read_only_snapshot(fresh_store, version):
     from cadence_mcp_bridge import _shared_reservations as a
     from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
 
@@ -775,15 +776,22 @@ def test_retained_v7_capacity_appears_in_read_only_snapshot(fresh_store):
     )
     successor_path = registry / a.RESULT_POLICY_V7_FILE
     successor_path.write_bytes(a.canonical(successor))
+    _, policy_sha, ceiling, baseline, _, _ = a.RETAINED_SUCCESSORS[version]
+    if version == 8:
+        v8 = dict(successor, schema_version=8, kind="EXPLICIT_RETAINED_RESULT_LIMIT_V8",
+                  policy_sha256=policy_sha, baseline=baseline,
+                  prior_receipt_sha256=a.digest(successor_path.read_bytes()))
+        (registry / a.RESULT_POLICY_V8_FILE).write_bytes(a.canonical(v8))
+        (path / a.LEDGER).write_bytes(a.canonical(baseline))
     # Lock-contended branch intentionally does not attest transaction history.
     before = {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()}
     snapshot = StorageSnapshot.model_validate(w.snapshot(io, root, False, lock_held=False))
     assert not snapshot.coverage_complete and snapshot.active_eda
-    assert snapshot.contract_version == 4
-    assert snapshot.result_ceiling_bytes == a.RESULT_POLICY_V7_BYTES
+    assert snapshot.contract_version == version - 3
+    assert snapshot.result_ceiling_bytes == ceiling
     assert snapshot.snapshot_id == snapshot_digest(snapshot)
     assert snapshot.ledger_policy is not None
-    assert snapshot.ledger_policy.model_dump()["policy_sha256"] == a.RESULT_POLICY_V7_SHA
+    assert snapshot.ledger_policy.model_dump()["policy_sha256"] == policy_sha
     assert {leaf: leaf.read_bytes() for leaf in path.rglob("*") if leaf.is_file()} == before
     with pytest.raises(ValueError, match="slot_missing"):
         w.snapshot(io, root, False, lock_held=True)

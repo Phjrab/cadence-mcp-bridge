@@ -474,12 +474,16 @@ def fresh_ledger(io, root, counter, lock_held=True):
     if anchor["schema_version"] == 1:
         registry = private_directory(io, root, "reservation-identity")
         try:
-            try:
-                read_json(io, registry, "result-policy-v7.json", 8192, private=True)
-                successor = True
-            except OSError as failure:
-                if failure.errno != errno.ENOENT:
-                    raise
+            for version in (7, 8):
+                try:
+                    read_json(io, registry, "result-policy-v%d.json" % version, 8192, private=True)
+                except OSError as failure:
+                    if failure.errno != errno.ENOENT:
+                        raise
+                else:
+                    if version == 8 and successor != 7:
+                        raise ValueError("storage retained v8 predecessor required")
+                    successor = version
             try:
                 read_json(io, registry, "result-policy-v6.json", 8192, private=True)
             except OSError as failure:
@@ -624,15 +628,16 @@ def fresh_ledger(io, root, counter, lock_held=True):
     if anchor["schema_version"] == 1:
         policy_sha = accounting.RESULT_POLICY_SHA
         if successor:
-            baseline = getattr(accounting, "RESULT_POLICY_V7_BASELINE", None)
+            baseline = getattr(accounting, "RESULT_POLICY_V%d_BASELINE" % successor, None)
+            ceiling = getattr(accounting, "RESULT_POLICY_V%d_BYTES" % successor, None)
             if (
                 baseline is None
-                or policy["result_ceiling_bytes"] != accounting.RESULT_POLICY_V7_BYTES
+                or policy["result_ceiling_bytes"] != ceiling
                 or counter["count"] < baseline["count"]
                 or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
             ):
-                raise ValueError("storage retained v7 ledger binding")
-            policy_sha = accounting.RESULT_POLICY_V7_SHA
+                raise ValueError("storage retained v%d ledger binding" % successor)
+            policy_sha = getattr(accounting, "RESULT_POLICY_V%d_SHA" % successor)
         policy = dict(
             policy, campaign_id="AUTO-PHASE-01", policy_sha256=policy_sha
         )
@@ -843,7 +848,8 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
     if policy is not None:
         version = 2
         if "policy_sha256" in policy:
-            version = 4 if policy["result_ceiling_bytes"] == 17381195776 else 3
+            versions = {17179869184: 3, 17381195776: 4, 17632854016: 5}
+            version = versions[policy["result_ceiling_bytes"]]
     value = dict(
         contract_version=version,
         artifacts=sorted(artifacts, key=lambda a: a["artifact_id"]),

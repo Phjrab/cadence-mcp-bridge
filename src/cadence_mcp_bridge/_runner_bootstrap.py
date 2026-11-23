@@ -373,7 +373,10 @@ def reviewed_operator_assets(contents, action):
         actual = digest(contents[name].replace(b"\r\n", b"\n"))
         if actual == expected:
             continue
-        if name == "reservations.py" and actual == REVIEWED_RETAINED_RESERVATIONS_SHA256:
+        if name == "reservations.py" and actual in (
+            REVIEWED_RETAINED_RESERVATIONS_SHA256,
+            "1d19e766bca5a62ce0e0063fc9bcb87e985dc876f8f0a2b173eca64346eff187",
+        ):
             continue
         raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
 
