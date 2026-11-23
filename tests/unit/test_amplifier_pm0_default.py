@@ -3,13 +3,16 @@
 import json
 from dataclasses import replace
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 
 from cadence_mcp_bridge import amplifier_pm0_default as amp
 from cadence_mcp_bridge import parameter_changes as changes
+from cadence_mcp_bridge.candidate_cli import dispatch_pmos_default_change
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
+from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 _WRITER = "11111111-1111-4111-8111-111111111111"
 _OBSERVER = "22222222-2222-4222-8222-222222222222"
@@ -332,3 +335,147 @@ def test_save_counter_requires_the_live_checker_witness(
             journal=replace(service.journal, writer_capture=modified),
             pins=service.pins.model_copy(update={"writer_capture_sha256": _sha(modified)}),
         ).observe(request)
+
+
+class _NativeProvider:
+    def __init__(self, retained: amp.PmosDefaultChangeResult, *, timeout: bool) -> None:
+        self.retained = retained
+        self.timeout = timeout
+        self.claimed = False
+        self.claims = 0
+        self.launches = 0
+
+    def lookup(
+        self, binding: amp.AmplifierPm0DispatchBinding
+    ) -> amp.PmosDefaultChangeResult | None:
+        return self.retained if self.claimed else None
+
+    def claim(self, binding: amp.AmplifierPm0DispatchBinding) -> bool:
+        self.claims += 1
+        if self.claimed:
+            return False
+        self.claimed = True
+        return True
+
+    def dispatch(self, binding: amp.AmplifierPm0DispatchBinding) -> amp.PmosDefaultChangeResult:
+        assert self.claimed
+        self.launches += 1
+        if self.timeout:
+            raise TimeoutError
+        result = self.retained.model_copy(
+            update={
+                "outcome": "VERIFIED",
+                "replayed": False,
+                "dispatched_this_call": True,
+                "observed_revision_sha256": _VIEW,
+                "observed_testbench_revision_sha256": _VIEW,
+                "source_preservation_sha256": "8" * 64,
+                "reopen_receipt_sha256": "9" * 64,
+                "netlist_receipt_sha256": "a" * 64,
+                "netlist_sha256": "b" * 64,
+                "reason": None,
+            }
+        )
+        self.retained = result.model_copy(update={"replayed": True, "dispatched_this_call": False})
+        return result
+
+
+def _dispatch_registration(
+    plan: changes.ChangePlan,
+    request: PmosDefaultChangeRequest,
+) -> tuple[amp.AmplifierPm0DispatchBinding, changes.MosWidthQualification]:
+    assert isinstance(plan.target, changes.MosWidthTarget)
+    return (
+        amp.AmplifierPm0DispatchBinding(
+            operation_id=request.operation_id,
+            plan_sha256=plan.plan_sha256,
+            scope_sha256=request.expected_scope_sha256,
+            owned_library="AmpFresh",
+            owned_cell="Differential_Amplifier_TB2",
+            owned_view="schematic",
+            owned_before_view_tree_sha256="e" * 64,
+        ),
+        changes.MosWidthQualification(
+            baseline=plan.baseline,
+            target=plan.target,
+            old=plan.old,
+            expected=plan.expected,
+            fingers=1,
+            multiplicity=1,
+            cdf_evidence_sha256="2" * 64,
+            legal_value_evidence_sha256="3" * 64,
+            update_route_evidence_sha256="4" * 64,
+            derived=plan.allowed_derived,
+        ),
+    )
+
+
+@pytest.mark.parametrize("timeout", [False, True])
+def test_normal_apply_adapter_claims_and_dispatches_only_once(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    tmp_path: Path,
+    timeout: bool,
+) -> None:
+    retained_service, request = operation
+    binding, qualification = _dispatch_registration(retained_service.plan, request)
+    provider = _NativeProvider(retained_service.apply(request), timeout=timeout)
+    service = amp.RegisteredAmplifierPm0DefaultChange(
+        binding,
+        retained_service.plan,
+        qualification,
+        provider,
+        expected_binding_sha256=canonical_digest(binding),
+    )
+    bad = request.model_copy(update={"expected_scope_sha256": "0" * 64})
+    with pytest.raises(ValueError, match="conflicts"):
+        service.apply(bad)
+    assert provider.claims == provider.launches == 0
+    path = tmp_path / "request.json"
+    path.write_text(request.model_dump_json(), encoding="utf-8")
+    initial = dispatch_pmos_default_change(path, service)
+    again = dispatch_pmos_default_change(path, service)
+    assert provider.claims == provider.launches == 1
+    assert initial.outcome == again.outcome == ("OUTCOME_UNKNOWN" if timeout else "VERIFIED")
+    assert not initial.replayed and again.replayed and not again.dispatched_this_call
+
+
+def test_registered_dispatch_rejects_substituted_copy(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+) -> None:
+    service, request = operation
+    binding, qualification = _dispatch_registration(service.plan, request)
+    provider = _NativeProvider(service.apply(request), timeout=False)
+    substituted = binding.model_copy(update={"owned_library": "AmpSubstituted"})
+    with pytest.raises(ValueError, match="owned copy"):
+        amp.RegisteredAmplifierPm0DefaultChange(
+            substituted,
+            service.plan,
+            qualification,
+            provider,
+            expected_binding_sha256=canonical_digest(binding),
+        )
+    assert provider.claims == provider.launches == 0
+
+
+def test_lost_claim_without_readable_result_stays_unknown(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+) -> None:
+    class _InProgress(_NativeProvider):
+        def claim(self, binding: amp.AmplifierPm0DispatchBinding) -> bool:
+            self.claims += 1
+            return False
+
+    retained, request = operation
+    binding, qualification = _dispatch_registration(retained.plan, request)
+    provider = _InProgress(retained.apply(request), timeout=False)
+    service = amp.RegisteredAmplifierPm0DefaultChange(
+        binding,
+        retained.plan,
+        qualification,
+        provider,
+        expected_binding_sha256=canonical_digest(binding),
+    )
+    result = service.apply(request)
+    assert result.outcome == "OUTCOME_UNKNOWN"
+    assert result.replayed and not result.dispatched_this_call
+    assert provider.claims == 1 and provider.launches == 0

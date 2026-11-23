@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from cadence_mcp_bridge.candidate_execution import (
     PmosDefaultChangeRequest,
@@ -30,7 +30,12 @@ from cadence_mcp_bridge.parameter_changes import (
     project_netlist_change,
 )
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
-from cadence_mcp_bridge.variable_contracts import Digest, VariableModel
+from cadence_mcp_bridge.variable_contracts import (
+    BindingName,
+    Digest,
+    VariableModel,
+    canonical_digest,
+)
 
 _CENTER_VIEW = "046021f90f70d85d05d59e4f80842f0742d6ca38c186d42ba27106a89b81d714"
 _GEOMETRY: dict[GeometryProperty, tuple[str, str]] = {
@@ -491,3 +496,128 @@ class RetainedAmplifierPm0DefaultChange:
 
     def apply(self, request: PmosDefaultChangeRequest) -> PmosDefaultChangeResult:
         return self.observe(request).writer
+
+
+class AmplifierPm0DispatchBinding(VariableModel):
+    """Operator registration of one reviewed, isolated default-recovery operation."""
+
+    operation_id: OperationId
+    plan_sha256: Digest
+    scope_sha256: Digest
+    owned_library: BindingName
+    owned_cell: Literal["Differential_Amplifier_TB2"]
+    owned_view: Literal["schematic"]
+    owned_before_view_tree_sha256: Digest
+
+
+class AmplifierPm0NativeProvider(Protocol):
+    """C1-owned, fixed registered provider; never loaded from the public request."""
+
+    def lookup(self, binding: AmplifierPm0DispatchBinding) -> PmosDefaultChangeResult | None:
+        """Read the writer journal, including partial intent. None means unclaimed."""
+        ...
+
+    def claim(self, binding: AmplifierPm0DispatchBinding) -> bool:
+        """Admit the registered scope and exclusively claim its durable writer intent.
+
+        Use the existing resource lock and verify the current isolated source,
+        owned-before tree, authorization and fixed assets before returning true.
+        False means an existing claim; scope conflicts must reject.
+        """
+        ...
+
+    def dispatch(self, binding: AmplifierPm0DispatchBinding) -> PmosDefaultChangeResult:
+        """Run the sealed C1 writer under its claim and record its terminal outcome.
+
+        Recheck the durable claim and live guards in the native service. The
+        writer result can only be verified by its own saved/reopened/input
+        receipts. Independent reconciliation is exposed through observation.
+        """
+        ...
+
+
+class RegisteredAmplifierPm0DefaultChange:
+    """Use the common apply interface with a trusted C1 claim-and-dispatch provider."""
+
+    def __init__(
+        self,
+        binding: AmplifierPm0DispatchBinding,
+        plan: ChangePlan,
+        qualification: MosWidthQualification,
+        provider: AmplifierPm0NativeProvider,
+        *,
+        expected_binding_sha256: str,
+    ) -> None:
+        binding = AmplifierPm0DispatchBinding.model_validate_json(binding.model_dump_json())
+        checked = plan_amplifier_pm0_default_change(
+            qualification, plan.candidate_id, plan.candidate_revision, plan.requested
+        )
+        if (
+            canonical_digest(binding) != expected_binding_sha256
+            or checked != plan
+            or checked.plan_sha256 != binding.plan_sha256
+            or binding.owned_library == "MyDesignLib"
+            or binding.owned_before_view_tree_sha256 == checked.baseline.revision_sha256
+        ):
+            raise ValueError("AMP dispatch registration, plan or owned copy mismatch")
+        self._binding = binding
+        self._plan = checked
+        self._provider = provider
+
+    def apply(self, request: PmosDefaultChangeRequest) -> PmosDefaultChangeResult:
+        request = PmosDefaultChangeRequest.model_validate_json(request.model_dump_json())
+        binding = self._binding
+        if (request.operation_id, request.expected_plan_sha256, request.expected_scope_sha256) != (
+            binding.operation_id,
+            binding.plan_sha256,
+            binding.scope_sha256,
+        ):
+            raise ValueError("AMP dispatch request conflicts with the registered operation")
+        retained = self._provider.lookup(binding)
+        if retained is not None:
+            return self._checked_result(retained, request, replayed=True)
+        if not self._provider.claim(binding):
+            retained = self._provider.lookup(binding)
+            if retained is not None:
+                return self._checked_result(retained, request, replayed=True)
+            return self._unknown(replayed=True)
+        try:
+            result = self._provider.dispatch(binding)
+        except (OSError, ValueError):
+            return self._unknown(replayed=False)
+        return self._checked_result(result, request, replayed=False)
+
+    def _checked_result(
+        self, result: PmosDefaultChangeResult, request: PmosDefaultChangeRequest, *, replayed: bool
+    ) -> PmosDefaultChangeResult:
+        result = PmosDefaultChangeResult.model_validate_json(result.model_dump_json())
+        result.check_registered_scope(
+            request, registered_plan=self._plan, registered_scope_sha256=self._binding.scope_sha256
+        )
+        if result.replayed != replayed or (
+            result.outcome == "VERIFIED"
+            and (
+                (not replayed and result.dispatched_this_call is not True)
+                or result.observed_revision_sha256 != result.observed_testbench_revision_sha256
+                or result.observed_revision_sha256
+                in (
+                    self._plan.baseline.revision_sha256,
+                    self._binding.owned_before_view_tree_sha256,
+                )
+            )
+        ):
+            raise ValueError("AMP dispatch result replay or saved view mismatch")
+        return result
+
+    def _unknown(self, *, replayed: bool) -> PmosDefaultChangeResult:
+        binding = self._binding
+        return PmosDefaultChangeResult(
+            operation_id=binding.operation_id,
+            plan_sha256=binding.plan_sha256,
+            scope_sha256=binding.scope_sha256,
+            candidate_revision=self._plan.candidate_revision,
+            outcome="OUTCOME_UNKNOWN",
+            replayed=replayed,
+            dispatched_this_call=False if replayed else None,
+            reason="durable_writer_intent_without_verified_result",
+        )
