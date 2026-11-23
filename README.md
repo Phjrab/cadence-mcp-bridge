@@ -1,4 +1,4 @@
-## Published2.1.0 and separate candidate development, 2026-10-18
+## Published release and development build
 
 **[2.1.0 is published](https://github.com/Phjrab/cadence-mcp-bridge/releases/tag/v2.1.0)**
 at `36f75834b8556c9dd88761120a4442a25379d7ae`. Its approved nine attachments were
@@ -8,13 +8,16 @@ downloaded and checked against the frozen SHA256SUMS. See its
 their prepublication assessment. No fresh2.1.0 native activation or app upgrade
 is implied by publication.
 
-This separate checkout is **unreleased2.2.0.dev0**. Its explicit experimental
-operator candidate workflow plans complete registered V/A vectors, coordinates
-one child per advance and compares retained scalar reports/CSV. Source/installed
-software checks are separate from actual circuit qualification. No new native
-candidate experiment or W/L support is established. See
-[candidate workflow and remaining evidence](docs/EXPLICIT_CANDIDATES_01.md).
-This development work does not modify the published2.1.0 artifacts.
+| Build | Where to start |
+| --- | --- |
+| Published **2.1.0** | Use the release wheel and matching runtime files. [Installation guide](docs/releases/2.1.0/INSTALL.md) |
+| Development **2.2.0.dev0** on `main` | Check the evidence and supported scope for each experimental workflow. [Research guide](docs/examples/research/README.md) · [Candidate workflow](docs/EXPLICIT_CANDIDATES_01.md) |
+| Guided Windows EXE | Development only. Use the manual release installation below for 2.1.0. |
+
+The development build has a verified PM0 width change on one owned AMP copy:
+20 µm to 120 nm, with length held at 1 µm. Cadence save, independent reopen and
+Netlist checks passed. General W/L editing and a new performance measurement
+on that copy remain outside this result. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174)
 
 # Cadence MCP Bridge
 
@@ -57,9 +60,11 @@ circuit is bundled. Your existing software entitlement remains required.
 
 ## Install from release files
 
-Use the wheel, locked runtime file and SHA256SUMS from the same published release.
-Compare every file's hash before installation. The following commands install
-the stable2.1.0 release; the development checkout is a separate unreleased build.
+For the manual Windows installation, have Python 3.12 ready and enable the
+Windows OpenSSH Client for the VM connection. Download the wheel, locked runtime
+file and SHA256SUMS from the same published release. Compare every file's hash
+before installing. A checksum verifies file contents against the supplied list.
+The following commands install the stable 2.1.0 release.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 .\cadence_mcp_bridge-2.1.0-py3-none-any.whl
@@ -76,10 +81,9 @@ environment/design/PDK templates. It needs no developer checkout, private journa
 or past job. Keep setup and journals outside the package. Import, doctor and MCP
 startup do not initialize accounting, repair permissions or run EDA.
 
-## 2.1.0 candidate: guided local setup
+## First setup for 2.1.0
 
-`operator-setup` reduces manual context and client configuration. This command
-is included in the2.1.0 candidate and absent from the published2.0.0 wheel.
+`operator-setup` helps prepare local settings and the MCP client connection.
 Start with `operator-setup guide --mode fresh` for a genuinely new installation,
 or `--mode existing` when preserving an existing resource domain. The guide is
 local and does not inspect or initialize the VM.
@@ -90,6 +94,13 @@ existing explicit VM setup, registration and authority steps, `export-client`
 derives its paths from that selected context. Exports never overwrite an existing
 file or create journals. See the [step-by-step guide](docs/POST_01_OPERATOR_SETUP.md)
 for required inputs, retained-state handling and error recovery.
+
+For a first connection, follow this order: install and export the starter,
+choose fresh or existing setup, check and export your runtime settings,
+verify VM access and retain or initialize the job history as appropriate,
+register a circuit and complete preflight, then export and connect the Codex
+client. Review the registered analysis and its inputs before the first submission.
+Each stage has its own check. [VM setup](#set-up-your-vm-and-register-a-circuit) · [Client setup](#run-query-and-repeat)
 
 ## Experimental operator design and physical metadata
 
