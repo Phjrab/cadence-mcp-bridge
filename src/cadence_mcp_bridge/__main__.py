@@ -63,6 +63,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--retained-amp-comparison", nargs=2, metavar=("FILE", "SHA256"),
         help="Expose one host-pinned, already saved amplifier comparison.",
     )
+    operator_server.add_argument(
+        "--retained-amp-pm0", nargs=2, metavar=("FILE", "SHA256"),
+        help="Expose one host-pinned historical PM0 plan, outcome and saved observation.",
+    )
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
     )
@@ -1194,14 +1198,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     retained_amp_comparison = getattr(arguments, "retained_amp_comparison", None)
-    if retained_amp_comparison is None:
+    retained_amp_pm0 = getattr(arguments, "retained_amp_pm0", None)
+    if retained_amp_comparison is None and retained_amp_pm0 is None:
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
-        path, digest = retained_amp_comparison
         try:
-            run_stdio_server(operator_mode=True, retained_amp_comparison=(Path(path), digest))
+            run_stdio_server(
+                operator_mode=True,
+                retained_amp_comparison=(
+                    (Path(retained_amp_comparison[0]), retained_amp_comparison[1])
+                    if retained_amp_comparison else None
+                ),
+                retained_amp_pm0=(
+                    (Path(retained_amp_pm0[0]), retained_amp_pm0[1]) if retained_amp_pm0 else None
+                ),
+            )
         except ConfigurationError:
-            print("configuration: invalid operator runtime or retained comparison", file=sys.stderr)
+            print("configuration: invalid operator runtime or retained AMP setup", file=sys.stderr)
             return 1
     return 0
 

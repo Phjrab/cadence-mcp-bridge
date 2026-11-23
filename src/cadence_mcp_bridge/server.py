@@ -1593,6 +1593,7 @@ def create_server(
 
 def create_default_server(
     *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
+    retained_amp_pm0: tuple[Path, str] | None = None,
 ) -> MCPServer:
     config = (
         BridgeConfig(runtime_mode="operator")
@@ -1616,6 +1617,10 @@ def create_default_server(
             register_retained_amp_comparison(
                 server, load_retained_amp_comparison(*retained_amp_comparison),
             )
+        if retained_amp_pm0 is not None:
+            from cadence_mcp_bridge.amplifier_pm0_server import register_retained_pm0
+
+            register_retained_pm0(server, *retained_amp_pm0)
         return server
     designs = None
     pdks = None
@@ -1651,10 +1656,12 @@ def create_default_server(
 
 def run_stdio_server(
     *, operator_mode: bool = False, retained_amp_comparison: tuple[Path, str] | None = None,
+    retained_amp_pm0: tuple[Path, str] | None = None,
 ) -> None:
     """Run locally over stdio; all application logging is directed to stderr."""
 
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
     create_default_server(
         operator_mode=operator_mode, retained_amp_comparison=retained_amp_comparison,
+        retained_amp_pm0=retained_amp_pm0,
     ).run("stdio")
