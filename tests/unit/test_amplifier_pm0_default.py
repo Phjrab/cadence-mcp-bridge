@@ -609,12 +609,14 @@ def _registered_provider_fixture(
     return settings, directory, request, scope, assets
 
 
-@pytest.mark.parametrize("failed_phase", [None, "edit", "readback-netlist"])
+@pytest.mark.parametrize(
+    "failure", [None, "edit", "readback-netlist", "oversize", "duplicate", "noncanonical"]
+)
 def test_amp_registered_factory_dispatch_and_restart_replay(
     operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failed_phase: str | None,
+    failure: str | None,
 ) -> None:
     settings, directory, request, scope, assets = _registered_provider_fixture(operation, tmp_path)
     installed = tmp_path / "package-fixture"
@@ -625,6 +627,10 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
 
     evidence = operation[0].journal.reconciliation
     assert evidence is not None
+    design = "L3:mock-design"
+    figures = "L158:" + "f" * 38_000
+    presave = (_encode(design, _view_rows("I12"), figures) + "\n").encode("ascii")
+    reopened = (_encode(design, _view_rows("I35"), figures) + "\n").encode("ascii")
     receipt = amp_host._Receipt(
         status="VERIFIED",
         operation_id=_WRITER,
@@ -637,8 +643,8 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         source_preservation_sha256="1" * 64,
         reopen_receipt_sha256="2" * 64,
         netlist_receipt_sha256="3" * 64,
-        presave_signature_sha256=_sha(evidence.presave),
-        reopened_signature_sha256=_sha(evidence.reopened),
+        presave_signature_sha256=_sha(presave),
+        reopened_signature_sha256=_sha(reopened),
         netlist_sha256=_sha(evidence.netlist),
         edit_live_counter=35,
         reopen_frame=tuple(amp._pm0_frame(baseline=False)[0]),
@@ -662,11 +668,18 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         amp_host._Response(
             receipt=receipt,
             receipt_sha256=canonical_digest(receipt),
-            presave_base64=base64.b64encode(evidence.presave).decode("ascii"),
-            reopened_base64=base64.b64encode(evidence.reopened).decode("ascii"),
+            presave_base64=base64.b64encode(presave).decode("ascii"),
+            reopened_base64=base64.b64encode(reopened).decode("ascii"),
             input_base64=base64.b64encode(evidence.netlist).decode("ascii"),
         ).model_dump(mode="json")
     )
+    assert 65_536 < len(output) < amp_host._LIMIT
+    if failure == "oversize":
+        output = output.ljust(amp_host._LIMIT + 1)
+    elif failure == "duplicate":
+        output = b'{"input_base64":"AA==",' + output[1:]
+    elif failure == "noncanonical":
+        output = output.ljust(amp_host._LIMIT)
     launched = []
 
     def fixed(
@@ -687,7 +700,7 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
         assert (directory / "amp-writer-intent.private.json").is_file()
         assert (directory / f"amp-{phase}-intent.private.json").is_file()
         launched.append(phase)
-        if phase == failed_phase:
+        if phase == failure:
             raise TimeoutError
         if phase == "edit":
             return 0, _json(edit_response.model_dump(mode="json")), b""
@@ -708,10 +721,10 @@ def test_amp_registered_factory_dispatch_and_restart_replay(
     replay = dispatch_pmos_default_change(
         apply_path, registered_pmos_default_change(load_runtime(settings)[0])
     )
-    expected = "OUTCOME_UNKNOWN" if failed_phase else "VERIFIED"
-    assert launched == (["edit"] if failed_phase == "edit" else ["edit", "readback-netlist"])
+    expected = "OUTCOME_UNKNOWN" if failure else "VERIFIED"
+    assert launched == (["edit"] if failure == "edit" else ["edit", "readback-netlist"])
     assert initial.outcome == replay.outcome == expected
-    assert initial.dispatched_this_call == (None if failed_phase else True)
+    assert initial.dispatched_this_call == (None if failure else True)
     assert replay.replayed and not replay.dispatched_this_call
 
 
