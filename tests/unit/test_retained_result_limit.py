@@ -386,8 +386,24 @@ def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
         ledger.effective_policy(str(root), anchor)
 
 
-def test_v7_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch):
-    root, value, _, _, _, _ = retained_v7_domain
+@pytest.mark.parametrize("version", [7, 8])
+def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch,
+                                                      version):
+    root, value, _, _, permit, _ = retained_v7_domain
+    if version == 8:
+        previous = migration.result_limit_v7_plan(value, "b" * 64)
+        migration.apply_result_limit_v7(
+            dict(plan=previous["plan"], expected_plan_sha256=previous["plan_sha256"],
+                 operator_authority="SYNTHETIC V7"), "b" * 64,
+        )
+        grant = dict(permit, grant_sha256="7" * 64, max_attempts=2,
+                     max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
+        for _ in range(2):
+            ledger.reserve(str(root), job(root), grant)
+        value["limits"]["result_reserved_bytes"] = ledger.RESULT_POLICY_V7_BYTES
+    plan_action = f"plan-result-limit-v{version}"
+    apply_action = f"apply-result-limit-v{version}"
+    flags = {"result_limit_v7": version == 7, "result_limit_v8": version == 8}
     _, _, helper = domain_provisioning.contents()
     profile = tmp_path / "profile.json"
     profile.write_bytes(ledger.canonical(value))
@@ -400,31 +416,31 @@ def test_v7_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, mon
         action = argv[-2]
         seen.append(action)
         assert argv[-1] == helper and "StrictHostKeyChecking=yes" in argv
-        assert "plan-result-limit-v7" in argv[-4]
+        assert plan_action in argv[-4]
         assert bounds == {"timeout": 60, "limit": 262144}
         request = json.loads(payload)
-        if action == "plan-result-limit-v7":
-            result = migration.result_limit_v7_plan(request, helper)
+        if action == plan_action:
+            result = migration.retained_successor_plan(request, helper, version)
         else:
-            assert action == "apply-result-limit-v7"
-            result = migration.apply_result_limit_v7(request, helper)
+            assert action == apply_action
+            result = migration.apply_retained_successor(request, helper, version)
         return 0, ledger.canonical(result), b""
 
     before = snapshot(root)
     monkeypatch.setattr(domain_provisioning, "run_fixed", transport)
     environment, _ = load_environment(profile)
-    for action in ("plan-result-limit-v7", "apply-result-limit-v7"):
+    for action in (plan_action, apply_action):
         with pytest.raises(ValueError, match="fixed_domain_entry_not_bound"):
             domain_provisioning._transport(environment, b"", helper, action, tmp_path / "no-entry")
     assert not seen
-    plan = domain_provisioning.prepare(profile, plan_path, helper, result_limit_v7=True)
+    plan = domain_provisioning.prepare(profile, plan_path, helper, **flags)
     assert snapshot(root) == before
     result = domain_provisioning.apply_existing(
         profile, plan_path, receipt_path, plan["plan_sha256"], helper,
-        "SYNTHETIC FIXTURE ONLY", result_limit_v7=True,
+        "SYNTHETIC FIXTURE ONLY", **flags,
     )
     assert result["created"] is True and result["ledger_modified"] is False
-    assert seen == ["plan-result-limit-v7", "apply-result-limit-v7"]
+    assert seen == [plan_action, apply_action]
     for name, raw in before.items():
         assert (root / name).read_bytes() == raw
 
@@ -437,6 +453,56 @@ def test_v7_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, mon
     with pytest.raises(ValueError, match="result_limit_apply_receipt_binding"):
         domain_provisioning.apply_existing(
             profile, plan_path, tmp_path / "bad-receipt.json", plan["plan_sha256"], helper,
-            "SYNTHETIC FIXTURE ONLY", result_limit_v7=True,
+            "SYNTHETIC FIXTURE ONLY", **flags,
         )
     assert not (tmp_path / "bad-receipt.json").exists()
+
+
+def test_v8_successor_preserves_v7_replay_and_two_new_reservations(retained_v7_domain):
+    root, value, anchor, previous, permit, old_receipt = retained_v7_domain
+    helper = "a" * 64
+    with pytest.raises(ValueError, match="baseline_drift"):
+        migration.retained_successor_plan(value, helper, 8)
+    prior = migration.result_limit_v7_plan(value, helper)
+    prior_request = dict(plan=prior["plan"], expected_plan_sha256=prior["plan_sha256"],
+                         operator_authority="SYNTHETIC V7")
+    prior_receipt = migration.apply_result_limit_v7(prior_request, helper)
+    old_grant = dict(permit, grant_sha256="5" * 64, max_attempts=2,
+                     max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
+    for _ in range(2):
+        ledger.reserve(str(root), job(root), old_grant)
+    value["limits"]["result_reserved_bytes"] = ledger.RESULT_POLICY_V7_BYTES
+    new_grant = dict(old_grant, grant_sha256="6" * 64)
+    dc, ac, excess = job(root), job(root), job(root)
+    before = snapshot(root)
+    with pytest.raises(ValueError, match="cumulative_capacity"):
+        ledger.reserve(str(root), dc, new_grant)
+    proposal = migration.retained_successor_plan(value, helper, 8)
+    observed = proposal["plan"]["snapshot"]
+    assert observed["prior_receipt_sha256"] == prior_receipt["policy_receipt_sha256"]
+    assert observed["baseline"] == ledger.RESULT_POLICY_V8_BASELINE
+    request = dict(plan=proposal["plan"], expected_plan_sha256=proposal["plan_sha256"],
+                   operator_authority="SYNTHETIC V8")
+    with pytest.raises(ValueError, match="plan_binding"):
+        migration.apply_result_limit_v7(request, helper)
+    result = migration.apply_retained_successor(request, helper, 8)
+    assert result["created"] and not result["ledger_modified"]
+    assert result["result_ceiling_bytes"] == 17632854016
+    assert not migration.apply_retained_successor(request, helper, 8)["created"]
+    assert all((root / path).read_bytes() == raw for path, raw in before.items())
+    assert ledger.lookup(str(root), previous, permit) == old_receipt
+    for op in (dc, ac):
+        receipt = ledger.reserve(str(root), op, new_grant)
+        assert ledger.reserve(str(root), op, new_grant) == receipt
+    assert receipt["after"] == dict(campaign_id="AUTO-PHASE-01", count=142,
+                                    result_reserved_bytes=17600348160)
+    after = snapshot(root)
+    with pytest.raises(ValueError, match="capacity"):
+        ledger.reserve(str(root), excess, new_grant)
+    assert snapshot(root) == after
+    # Rebinding the predecessor to other valid-looking authority invalidates v8.
+    v7 = root / ledger.REGISTRY / ledger.RESULT_POLICY_V7_FILE
+    changed = dict(json.loads(v7.read_bytes()), operator_authority="another authority")
+    v7.write_bytes(ledger.canonical(changed))
+    with pytest.raises(ValueError, match="retained_v8_binding"):
+        ledger.effective_policy(str(root), anchor)

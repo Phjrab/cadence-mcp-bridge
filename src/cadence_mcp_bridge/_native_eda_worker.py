@@ -404,10 +404,21 @@ class EdaWorker(object):
 
     def frame(self, data, plan, route, input_sha):
         lines = data.decode("ascii").splitlines()
+        reader = route["reader"]
+        version = reader.get("schema_version", 1)
+        if version not in (1, 2) or (
+            version == 2 and (
+                plan["analysis"] != "tran" or not 1 <= len(reader["sources"]) <= 6
+                or any(source["role"] != "supply" for source in reader["sources"])
+                or (len(reader["nodes"]) + len(reader["sources"])) * reader["maximum_samples"]
+                > 1536
+            )
+        ):
+            raise ValueError("native_worker_frame_reader_inventory")
         expected = "|".join(
             (
                 "MCP_GREL_FRAME",
-                "1",
+                str(version),
                 self.operation_id,
                 self.operations.digest(self.operations.canonical(plan)),
                 input_sha,
@@ -417,30 +428,41 @@ class EdaWorker(object):
         if not lines or lines[0] != expected or lines[-1] != "END" or len(data) > FRAME_LIMIT:
             raise ValueError("native_worker_frame_binding")
         index = 1
-        for node in route["reader"]["nodes"]:
+        signals = [("P", node["logical_id"]) for node in reader["nodes"]]
+        if version == 2:
+            signals.extend(("C", source["source_id"]) for source in reader["sources"])
+        frame_axis = None
+        for kind, name in signals:
             if plan["analysis"] == "dc":
                 row = lines[index].split("|")
-                if len(row) != 3 or row[:2] != ["V", node["logical_id"]]:
+                if len(row) != 3 or row[:2] != ["V", name]:
                     raise ValueError("native_worker_frame_inventory")
                 self.finite(row[2])
                 index += 1
             else:
-                count, previous = 0, None
+                count, previous, axes = 0, None, []
                 while index < len(lines) - 1 and lines[index].startswith(
-                    "P|" + node["logical_id"] + "|"
+                    kind + "|" + name + "|"
                 ):
                     row = lines[index].split("|")
                     if len(row) != 6 or row[2] != str(count):
                         raise ValueError("native_worker_frame_inventory")
                     axis = self.finite(row[3])
                     self.finite(row[4])
-                    self.finite(row[5])
+                    imaginary = self.finite(row[5])
+                    if version == 2 and imaginary != 0:
+                        raise ValueError("native_worker_frame_tran_complex")
                     if previous is not None and axis <= previous:
                         raise ValueError("native_worker_frame_axis")
+                    axes.append(axis)
                     previous, count, index = axis, count + 1, index + 1
-                if not 2 <= count <= route["reader"]["maximum_samples"]:
+                if not 2 <= count <= reader["maximum_samples"]:
                     raise ValueError("native_worker_frame_count")
-        for source in route["reader"]["sources"]:
+                if version == 2:
+                    if frame_axis is not None and axes != frame_axis:
+                        raise ValueError("native_worker_frame_axis")
+                    frame_axis = axes
+        for source in reader["sources"] if version == 1 else ():
             row = lines[index].split("|")
             if len(row) != 3 or row[:2] != ["I", source["source_id"]]:
                 raise ValueError("native_worker_frame_inventory")

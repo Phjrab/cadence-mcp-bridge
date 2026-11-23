@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Callable
 from typing import Literal
 
@@ -19,10 +20,12 @@ from cadence_mcp_bridge.parameter_changes import (
     MosWidthQualification,
     MosWidthTarget,
     Readback,
+    RegisteredMosQualification,
     observe_amplifier_pm0_input,
     plan_ade_change,
     plan_capacitor_change,
     plan_mos_width_change,
+    plan_registered_mos_change,
     project_netlist_change,
     verify_change_readback,
 )
@@ -273,6 +276,103 @@ def test_raw_ade_projection_and_fixed_source_binding() -> None:
         project_netlist_change(plan, _NETLIST, changed.replace(b"dc=m2_vin", b"dc=0"))
     with pytest.raises(ValueError, match="baseline netlist digest"):
         project_netlist_change(plan, changed, changed)
+
+
+@pytest.mark.parametrize(
+    ("property_name", "quantity", "unit", "old", "new", "option", "before", "after"),
+    [
+        ("w", "length", "nm", "350", "120", "w", "(350n)", "(120n)"),
+        ("l", "length", "nm", "100", "120", "l", "100n", "120n"),
+        ("m", "count", "count", "1", "2", "m", "1", "2"),
+        ("fingers", "count", "count", "1", "2", "nf", "1", "2"),
+    ],
+)
+def test_registered_mos_uses_explicit_emitted_mapping(
+    property_name, quantity, unit, old, new, option, before, after
+) -> None:
+    # Fixture only. Each case explicitly registers its emitted scalar.
+    baseline_raw = _NETLIST.replace(b" m=(1)*(1) ", b" m=1 nf=1 ")
+    qualification = RegisteredMosQualification.model_validate_json(
+        json.dumps(
+            {
+                "baseline": BASELINE.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(baseline_raw).hexdigest()}
+                ).model_dump(),
+                "target": {
+                    "instance": MP.model_copy(update={"property_name": property_name}).model_dump(),
+                    "quantity": quantity,
+                    "scalar_option": option,
+                    "scalar_unit": unit,
+                    "netlist_path": "DUT/MP",
+                    "netlist_model": "pmos",
+                    "netlist_terminals": ["vout", "vin", "vdd", "vdd"],
+                    "options": [{"name": option, "before": before, "after": after}],
+                },
+                "old": {"value": old, "unit": unit},
+                "expected": {"value": new, "unit": unit},
+                "evidence_sha256": "1" * 64,
+            }
+        )
+    )
+    plan = plan_registered_mos_change(qualification, "candidate", CHILD, qualification.expected)
+    changed = baseline_raw.replace(f" {option}={before} ".encode(), f" {option}={after} ".encode())
+    projected = project_netlist_change(plan, baseline_raw, changed)
+    original, reopened, netlist = (_row(plan, stage) for stage in _READBACK_STAGES)
+    netlist = netlist.model_copy(
+        update={"artifact_sha256": projected.artifact_sha256, "value": projected.value}
+    )
+    assert (
+        verify_change_readback(plan, baseline=original, reopened=reopened, netlist=netlist).status
+        == "MATCHED"
+    )
+    if property_name == "w":
+        mixed_raw = baseline_raw.replace(b"w=(350n)", b"w=(0.35u)")
+        mixed_target = qualification.target.model_dump(mode="json")
+        mixed_target["baseline_scalar_unit"] = "um"
+        mixed_target["options"] = [{"name": "w", "before": "(0.35u)", "after": "(120n)"}]
+        mixed = plan.model_copy(
+            update={
+                "target": type(qualification.target).model_validate_json(json.dumps(mixed_target)),
+                "baseline": plan.baseline.model_copy(
+                    update={"netlist_sha256": hashlib.sha256(mixed_raw).hexdigest()}
+                ),
+            }
+        )
+        assert project_netlist_change(mixed, mixed_raw, changed).value == projected.value
+    assert verify_change_readback(plan, baseline=original, netlist=netlist).status == "MISSING"
+    with pytest.raises(ValueError, match="registered MOS option"):
+        project_netlist_change(plan, baseline_raw, baseline_raw)
+    with pytest.raises(ValueError, match="registered MOS netlist binding"):
+        project_netlist_change(plan, baseline_raw, changed.replace(b") pmos ", b") other_model "))
+    with pytest.raises(ValueError, match="fixed netlist"):
+        project_netlist_change(plan, baseline_raw, changed.replace(b"dc=m2_vin", b"dc=1"))
+
+    target_data = qualification.target.model_dump(mode="json")
+    if quantity == "length":
+        # Both registered token assertions match, but the actual child value does not.
+        target_data["scalar_unit"] = "um"
+        target_data["options"] = [{"name": option, "before": "19u", "after": "18u"}]
+        raw_old = baseline_raw.replace(f" {option}={before} ".encode(), f" {option}=19u ".encode())
+        raw_new = raw_old.replace(f" {option}=19u ".encode(), f" {option}=18u ".encode())
+        old_value = ChangeValue(value="19000", unit="nm")
+        message = "effective netlist value differs"
+    else:
+        target_data["options"] = [{"name": option, "before": before, "after": "(1)*(2)"}]
+        raw_old = baseline_raw
+        raw_new = raw_old.replace(f" {option}={before} ".encode(), f" {option}=(1)*(2) ".encode())
+        old_value = qualification.old
+        message = "scalar must be a literal"
+    poisoned = plan.model_copy(
+        update={
+            "target": type(qualification.target).model_validate_json(json.dumps(target_data)),
+            "baseline": plan.baseline.model_copy(
+                update={"netlist_sha256": hashlib.sha256(raw_old).hexdigest()}
+            ),
+            "old": old_value,
+        }
+    )
+    with pytest.raises(ValueError, match=message):
+        project_netlist_change(poisoned, raw_old, raw_new)
 
 
 def test_persisted_ade_checks_independent_values_and_keeps_physical_revision() -> None:
@@ -530,6 +630,30 @@ def test_amplifier_pm0_projection_is_exact_and_does_not_qualify_a_width(
     projected = project_netlist_change(plan, raw, candidate)
     assert projected.value == ChangeValue(value="19000", unit="nm")
     assert projected.value != plan.requested
+    original = _row(plan, "baseline").model_copy(update={"revision": revision})
+    reopened = _row(plan, "reopened").model_copy(update={"revision": child})
+    emitted = _row(plan, "netlist").model_copy(
+        update={
+            "revision": child,
+            "value": projected.value,
+            "artifact_sha256": projected.artifact_sha256,
+        }
+    )
+    assert (
+        verify_change_readback(plan, baseline=original, reopened=reopened, netlist=emitted).status
+        == "MATCHED"
+    )
+    stale_testbench = {"testbench_revision_sha256": baseline.testbench_revision_sha256}
+    stale = verify_change_readback(
+        plan,
+        baseline=original,
+        reopened=reopened.model_copy(update=stale_testbench),
+        netlist=emitted.model_copy(update=stale_testbench),
+    )
+    assert (stale.status, stale.reason) == (
+        "STALE",
+        "amplifier_pm0_testbench_revision_reuses_baseline",
+    )
     for invalid, reason in (
         (candidate.replace(b"l=1u", b"l=2u"), "length must remain"),
         (candidate.replace(b"net33 Vbiasp", b"net34 Vbiasp"), "PM0 netlist binding"),

@@ -38,6 +38,18 @@ RESULT_POLICY_V7_SHA = "fe0b7682fdc0fa97fd06baf18efcb74dafc8c3aa9e699ea2689ddd06
 RESULT_POLICY_V7_BASELINE = {
     "campaign_id": "AUTO-PHASE-01", "count": 138, "result_reserved_bytes": 17063477248,
 }
+RESULT_POLICY_V8_FILE = "result-policy-v8.json"
+RESULT_POLICY_V8_BYTES = 17632854016
+RESULT_POLICY_V8_SHA = "939d57d3f038c90d3b3401315c15f8a76fb2c3c6b96410b4dfcf2db5b67c9ad5"
+RESULT_POLICY_V8_BASELINE = {
+    "campaign_id": "AUTO-PHASE-01", "count": 140, "result_reserved_bytes": 17331912704,
+}
+RETAINED_SUCCESSORS = {
+    7: (RESULT_POLICY_V7_FILE, RESULT_POLICY_V7_SHA, RESULT_POLICY_V7_BYTES,
+        RESULT_POLICY_V7_BASELINE, RESULT_POLICY_FILE, MAX_POLICY_BYTES),
+    8: (RESULT_POLICY_V8_FILE, RESULT_POLICY_V8_SHA, RESULT_POLICY_V8_BYTES,
+        RESULT_POLICY_V8_BASELINE, RESULT_POLICY_V7_FILE, RESULT_POLICY_V7_BYTES),
+}
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
 LEGACY_RESERVATION = 134217728
@@ -202,7 +214,7 @@ def counter_shape(value, manifest=None):
     # A retained journal parses immutable historical counters without consulting
     # today's policy. Live state separately enforces the effective ceiling.
     shape(value, 32, 3088056320,
-          RESULT_POLICY_V7_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V8_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def marker_shape(value, manifest=None):
@@ -212,7 +224,7 @@ def marker_shape(value, manifest=None):
     # starting at the first post-reservation22 /1,745,879,040 values. The
     # unincremented policy baseline is never a valid attempt-reserved marker.
     shape(value, 22, 1745879040,
-          RESULT_POLICY_V7_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V8_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def open_lock(root):
@@ -402,14 +414,17 @@ def effective_policy(root, manifest):
     locked conservation/snapshot check. It does not grant EDA execution authority.
     """
     path = os.path.join(root, REGISTRY, RESULT_POLICY_FILE)
-    successor = os.path.join(root, REGISTRY, RESULT_POLICY_V7_FILE)
+    v7 = os.path.join(root, REGISTRY, RESULT_POLICY_V7_FILE)
+    v8 = os.path.join(root, REGISTRY, RESULT_POLICY_V8_FILE)
     if manifest["schema_version"] == 2:
-        if os.path.lexists(path) or os.path.lexists(successor):
+        if any(os.path.lexists(p) for p in (path, v7, v8)):
             raise ValueError("reservation_retained_policy_on_fresh_domain")
         return manifest["policy"]
+    if os.path.lexists(v8) and not os.path.lexists(v7):
+        raise ValueError("reservation_retained_v8_predecessor")
     policy = {"attempt_ceiling": CEILING_COUNT, "result_ceiling_bytes": CEILING_BYTES}
     if not os.path.lexists(path):
-        if os.path.lexists(successor):
+        if os.path.lexists(v7):
             raise ValueError("reservation_retained_v7_predecessor")
         return policy
     value = read(path)
@@ -453,13 +468,15 @@ def effective_policy(root, manifest):
     ):
         raise ValueError("reservation_retained_policy_baseline")
     policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
-    if os.path.lexists(successor):
-        retained_v7(root, manifest, path, successor)
-        policy["result_ceiling_bytes"] = RESULT_POLICY_V7_BYTES
+    for version, prior, successor in ((7, path, v7), (8, v7, v8)):
+        if os.path.lexists(successor):
+            retained_successor(root, manifest, prior, successor, version)
+            policy["result_ceiling_bytes"] = RETAINED_SUCCESSORS[version][2]
     return policy
 
 
-def retained_v7(root, manifest, prior_path, path):
+def retained_successor(root, manifest, prior_path, path, version):
+    _, policy_sha, _, baseline, _, _ = RETAINED_SUCCESSORS[version]
     raw = read_bytes(path)
     value = json.loads(raw.decode("ascii"))
     if (
@@ -471,21 +488,21 @@ def retained_v7(root, manifest, prior_path, path):
             "baseline", "plan_sha256", "operator_authority",
         ))
         or type(value["schema_version"]) is not int
-        or value["schema_version"] != 7
-        or value["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_V7"
+        or value["schema_version"] != version
+        or value["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_V%d" % version
         or value["root_sha256"] != digest(root.encode("utf-8"))
         or value["root_sha256"] != manifest["root_sha256"]
         or value["resource_domain_sha256"] != manifest["resource_domain_sha256"]
         or value["identity_manifest_sha256"] != digest(canonical(manifest))
         or value["prior_receipt_sha256"] != digest(read_bytes(prior_path))
-        or value["policy_sha256"] != RESULT_POLICY_V7_SHA
-        or canonical(value["baseline"]) != canonical(RESULT_POLICY_V7_BASELINE)
+        or value["policy_sha256"] != policy_sha
+        or canonical(value["baseline"]) != canonical(baseline)
         or not matches(HASH, value["plan_sha256"])
         or not isinstance(value["operator_authority"], STRING_TYPES)
         or not 1 <= len(value["operator_authority"]) <= 512
         or any(ord(c) < 32 for c in value["operator_authority"])
     ):
-        raise ValueError("reservation_retained_v7_binding")
+        raise ValueError("reservation_retained_v%d_binding" % version)
 
 
 def audit(root, counter, manifest, manifest_sha):
@@ -527,13 +544,15 @@ def audit(root, counter, manifest, manifest_sha):
             by_id[name] = item[0]
     registry = os.path.join(root, REGISTRY)
     entries = os.listdir(registry)
-    maximum_entries = 502 if RESULT_POLICY_V7_FILE in entries else 501
+    policy_files = (RESULT_POLICY_V7_FILE, RESULT_POLICY_V8_FILE)
+    maximum_entries = 501 + sum(name in entries for name in policy_files)
     if len(entries) > maximum_entries:
         raise ValueError("reservation_identity_inventory_limit")
     indexed = {}
     for entry in entries:
         if entry in (
             "manifest.json", "legacy-seal.json", RESULT_POLICY_FILE, RESULT_POLICY_V7_FILE,
+            RESULT_POLICY_V8_FILE,
         ):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""
@@ -611,22 +630,22 @@ def state(root, binding):
             or counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
         ):
             raise ValueError("reservation_policy_consumption_rollback")
-    if policy["result_ceiling_bytes"] == RESULT_POLICY_V7_BYTES:
-        baseline = RESULT_POLICY_V7_BASELINE
-        if counter["count"] < baseline["count"] or (
-            counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
-        ):
-            raise ValueError("reservation_policy_consumption_rollback")
     if (
         counter["count"] < manifest["baseline"]["count"]
         or counter["result_reserved_bytes"] < manifest["baseline"]["result_reserved_bytes"]
     ):
         raise ValueError("reservation_migration_rollback")
     records = audit(root, counter, manifest, binding["identity_manifest_sha256"])
-    if policy["result_ceiling_bytes"] == RESULT_POLICY_V7_BYTES and expected_bytes(
-        baseline["count"], records, manifest
-    ) != baseline["result_reserved_bytes"]:
-        raise ValueError("reservation_retained_v7_baseline")
+    for version in (7, 8):
+        _, _, ceiling, baseline, _, _ = RETAINED_SUCCESSORS[version]
+        if policy["result_ceiling_bytes"] >= ceiling:
+            if counter["count"] < baseline["count"] or (
+                counter["result_reserved_bytes"] < baseline["result_reserved_bytes"]
+            ):
+                raise ValueError("reservation_policy_consumption_rollback")
+            prefix_bytes = expected_bytes(baseline["count"], records, manifest)
+            if prefix_bytes != baseline["result_reserved_bytes"]:
+                raise ValueError("reservation_retained_v%d_baseline" % version)
     return counter, records
 
 

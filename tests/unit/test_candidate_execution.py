@@ -14,6 +14,7 @@ from test_candidate_contracts import candidate_operator, operator
 from test_candidate_reports import succeeded
 from test_generic_measurements import operator as measurement_operator
 from test_generic_measurements import reader_for
+from test_operator_operations import EXAMPLES
 from test_operator_operations import operator as operator_base
 from test_parameter_changes import _NETLIST, BASELINE, BIAS, CHILD, VIN, _mos, _row
 
@@ -27,6 +28,7 @@ from cadence_mcp_bridge.candidate_execution import (
     FreshAmplifierOperation,
     FreshAmplifierOperationBinding,
     FreshAmplifierRevisionBinding,
+    FreshAmplifierStorageSuccessorEvidence,
     FreshAmplifierWidthAnalysis,
     FreshAmplifierWidthBinding,
     PersistedBiasExportEvidence,
@@ -465,6 +467,12 @@ def test_amplifier_requires_pinned_historical_include_equivalence(monkeypatch, d
         "ac-missing",
         "dc-duplicate",
         "dc-missing",
+        "policy-successor",
+        "policy-absent",
+        "policy-profile-drift",
+        "policy-wrong-predecessor",
+        "policy-wrong-anchor",
+        "policy-ledger-modified",
     ],
 )
 def test_fresh_amplifier_associates_only_bound_native_reports(
@@ -475,6 +483,14 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
     def digest(raw):
         return hashlib.sha256(raw).hexdigest()
 
+    successor = (drift or "").startswith("policy-")
+    center_profile = json.loads((EXAMPLES / "environment.json").read_bytes())
+    center_profile["limits"].update(spectre_attempts=500, result_reserved_bytes=17179869184)
+    child_profile = json.loads(_canonical(center_profile))
+    child_profile["limits"]["result_reserved_bytes"] = 17632854016
+    if drift == "policy-profile-drift":
+        child_profile["limits"]["disk_floor_percent"] += 1
+    center_profile_raw, child_profile_raw = _canonical(center_profile), _canonical(child_profile)
     model = ModelInclude(path="/synthetic/amp.scs", section="NN", file_sha256="1" * 64)
     models = [dict(path=model.path, file_sha256=model.file_sha256)]
     pm0 = (
@@ -502,6 +518,8 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
             "parent_revision_id": original.revision_id,
         }
     )
+    if successor:
+        candidate = candidate.model_copy(update={"revision_id": "amp-pm0-auto-4497-r1"})
     qualification = _mos()
     qualification = qualification.model_copy(
         update={
@@ -533,7 +551,9 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
     readback = verify_change_readback(plan, baseline=old, reopened=reopened, netlist=netlist)
     routes = {}
     monkeypatch.setattr(
-        candidate_execution, "_width_route", lambda op, raw, mode: routes[op.query.operation_id]
+        candidate_execution,
+        "_width_route",
+        lambda op, raw, mode, **kwargs: routes[op.query.operation_id],
     )
 
     def side(is_baseline):
@@ -553,6 +573,9 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
                 raw = raw.replace(b"dec=10", b"dec=11")
             _, ap, ade, reader, _, _ = reader_for(measurement_operator, mode)
             ap = ap.model_copy(update={"runner_sha256": side_tree})
+            if successor:
+                profile_raw = center_profile_raw if is_baseline else child_profile_raw
+                ap = ap.model_copy(update={"environment_sha256": digest(profile_raw)})
             ade = ade.model_copy(update={"model_includes": (model,)})
             if mode == "ac":
                 ade = ade.model_copy(
@@ -705,6 +728,67 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
 
     baseline_ops, baseline_binding = side(True)
     candidate_ops, candidate_binding = side(False)
+    policy_successor = None
+    if successor and drift != "policy-absent":
+        v7_apply = {
+            "status": "RETAINED_RESULT_LIMIT_V7_APPLIED_NO_LEDGER_CHANGE",
+            "created": True,
+            "execution_authorized": False,
+            "ledger_initialized": False,
+            "ledger_modified": False,
+            "ledger_sha256": "d" * 64,
+            "plan_sha256": "e" * 64,
+            "policy_receipt_sha256": "7" * 64,
+            "policy_sha256": "f" * 64,
+            "reservation_cost": 0,
+            "result_ceiling_bytes": 17381195776,
+        }
+        v7_raw = _canonical(v7_apply)
+        monkeypatch.setattr(candidate_execution, "_AMP_V7_APPLY_SHA256", digest(v7_raw))
+        monkeypatch.setattr(
+            candidate_execution, "_AMP_CENTER_PROFILE_SHA256", digest(center_profile_raw)
+        )
+        monkeypatch.setattr(candidate_execution, "_AMP_V7_DOMAIN_ANCHOR_SHA256", "a" * 64)
+        record = _canonical(
+            {
+                "schema_version": 8,
+                "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V8",
+                "root_sha256": digest(center_profile["paths"]["managed_root"].encode()),
+                "resource_domain_sha256": baseline_ops["dc"].operation.plan.resource_domain_sha256,
+                "identity_manifest_sha256": "0" * 64
+                if drift == "policy-wrong-anchor"
+                else "a" * 64,
+                "prior_receipt_sha256": "0" * 64
+                if drift == "policy-wrong-predecessor"
+                else "7" * 64,
+                "policy_sha256": "939d57d3f038c90d3b3401315c15f8a76fb2c3c6b96410b4dfcf2db5b67c9ad5",
+                "baseline": dict(
+                    campaign_id="AUTO-PHASE-01", count=140, result_reserved_bytes=17331912704
+                ),
+                "plan_sha256": "2" * 64,
+                "operator_authority": "synthetic test",
+            }
+        )
+        apply = _canonical(
+            {
+                **v7_apply,
+                "status": "RETAINED_RESULT_LIMIT_V8_APPLIED_NO_LEDGER_CHANGE",
+                "result_ceiling_bytes": 17632854016,
+                "policy_receipt_sha256": digest(record),
+                "plan_sha256": "2" * 64,
+                "ledger_modified": drift == "policy-ledger-modified",
+                "policy_sha256": "939d57d3f038c90d3b3401315c15f8a76fb2c3c6b96410b4dfcf2db5b67c9ad5",
+            }
+        )
+        policy_successor = FreshAmplifierStorageSuccessorEvidence(
+            center_profile_raw,
+            child_profile_raw,
+            v7_raw,
+            apply,
+            digest(apply),
+            record,
+            digest(record),
+        )
     binding = FreshAmplifierWidthBinding(
         change_plan_sha256=plan.plan_sha256,
         readback_sha256=canonical_digest(readback),
@@ -727,9 +811,21 @@ def test_fresh_amplifier_associates_only_bound_native_reports(
             expected_registration_sha256=digest(raw),
             dc=FreshAmplifierWidthAnalysis(baseline_ops["dc"], candidate_ops["dc"]),
             ac=FreshAmplifierWidthAnalysis(baseline_ops["ac"], candidate_ops.get("ac")),
+            policy_successor=policy_successor,
         )
 
-    if drift in ("duplicate", "closure", "orientation", "ac-control", "dc-duplicate"):
+    if drift in (
+        "duplicate",
+        "closure",
+        "orientation",
+        "ac-control",
+        "dc-duplicate",
+        "policy-absent",
+        "policy-profile-drift",
+        "policy-wrong-predecessor",
+        "policy-wrong-anchor",
+        "policy-ledger-modified",
+    ):
         with pytest.raises(OperationRejected) as rejected:
             compare_pair()
         assert rejected.value.reason == "candidate_fresh_amplifier_width_evidence_mismatch"
@@ -860,20 +956,6 @@ def run_amplifier_pair(evidence, *, drift=None, child_fixture=None):
         )
     if drift == "wrong-child-revision":
         binding = binding.model_copy(update={"child_revision_sha256": "0" * 64})
-    if drift == "reused-baseline-testbench":
-        baseline_tb = readback.baseline.testbench_revision_sha256
-        reopened = readback.reopened.model_copy(update={"testbench_revision_sha256": baseline_tb})
-        netlist = readback.netlist.model_copy(update={"testbench_revision_sha256": baseline_tb})
-        readback = verify_change_readback(
-            plan, baseline=readback.baseline, reopened=reopened, netlist=netlist
-        )
-        assert readback.status == "MATCHED"
-        binding = binding.model_copy(
-            update={
-                "child_testbench_revision_sha256": baseline_tb,
-                "readback_sha256": canonical_digest(readback),
-            }
-        )
     if drift == "unauthorized-geometry":
         child_raw = child_raw.replace(b"as=5.6p", b"as=5.7p")
     if drift == "ac-circuit":
@@ -1116,12 +1198,41 @@ def test_amplifier_width_pair_rejects_ac_drift(
         "wrong-original-id",
         "wrong-child-revision",
         "unauthorized-geometry",
-        "reused-baseline-testbench",
     ],
 )
 def test_amplifier_width_pair_rejects_changed_evidence(amplifier_width_evidence, drift):
     with pytest.raises(OperationRejected) as rejected:
         run_amplifier_pair(amplifier_width_evidence, drift=drift)
+    assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
+
+
+@pytest.mark.parametrize("trust_forged_verifier", [False, True])
+def test_amplifier_width_pair_rejects_reused_baseline_testbench(
+    amplifier_width_evidence, monkeypatch, trust_forged_verifier,
+):
+    from cadence_mcp_bridge import candidate_execution
+
+    plan, readback, binding, dc, ac, child_raw = amplifier_width_evidence
+    baseline_tb = readback.baseline.testbench_revision_sha256
+    reopened = readback.reopened.model_copy(update={"testbench_revision_sha256": baseline_tb})
+    netlist = readback.netlist.model_copy(update={"testbench_revision_sha256": baseline_tb})
+    stale = verify_change_readback(
+        plan, baseline=readback.baseline, reopened=reopened, netlist=netlist
+    )
+    assert stale.status == "STALE"
+    assert stale.reason == "amplifier_pm0_testbench_revision_reuses_baseline"
+    forged = stale.model_copy(update={"status": readback.status, "reason": readback.reason})
+    binding = binding.model_copy(
+        update={
+            "child_testbench_revision_sha256": baseline_tb,
+            "readback_sha256": canonical_digest(forged),
+        }
+    )
+    if trust_forged_verifier:
+        # Exercise the association's own revision check after accepting every readback pin.
+        monkeypatch.setattr(candidate_execution, "verify_change_readback", lambda *a, **k: forged)
+    with pytest.raises(OperationRejected) as rejected:
+        run_amplifier_pair((plan, forged, binding, dc, ac, child_raw))
     assert rejected.value.reason == "candidate_amplifier_width_evidence_mismatch"
 
 

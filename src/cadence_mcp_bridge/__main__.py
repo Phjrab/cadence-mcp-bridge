@@ -107,7 +107,10 @@ def build_parser() -> argparse.ArgumentParser:
     domain_export.add_argument("--output", type=Path, required=True)
     domain_plan = domain_actions.add_parser(
         "plan-existing",
-        aliases=["plan-legacy-seal", "plan-result-limit-v6", "plan-result-limit-v7"],
+        aliases=[
+            "plan-legacy-seal", "plan-result-limit-v6",
+            "plan-result-limit-v7", "plan-result-limit-v8",
+        ],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
     domain_plan.add_argument("--output", type=Path, required=True)
@@ -135,7 +138,10 @@ def build_parser() -> argparse.ArgumentParser:
     setup_existing.add_argument("--operator-authority", required=True)
     domain_apply = domain_actions.add_parser(
         "apply-existing",
-        aliases=["seal-existing", "apply-result-limit-v6", "apply-result-limit-v7"],
+        aliases=[
+            "seal-existing", "apply-result-limit-v6",
+            "apply-result-limit-v7", "apply-result-limit-v8",
+        ],
     )
     for name in ("profile", "plan", "output"):
         domain_apply.add_argument("--" + name, type=Path, required=True)
@@ -881,6 +887,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "seal-existing",
                 "apply-result-limit-v6",
                 "apply-result-limit-v7",
+                "apply-result-limit-v8",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -892,6 +899,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "seal-existing",
                     arguments.domain_action == "apply-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "apply-result-limit-v7",
+                    result_limit_v8=arguments.domain_action == "apply-result-limit-v8",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -901,6 +909,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     arguments.domain_action == "plan-legacy-seal",
                     arguments.domain_action == "plan-result-limit-v6",
                     result_limit_v7=arguments.domain_action == "plan-result-limit-v7",
+                    result_limit_v8=arguments.domain_action == "plan-result-limit-v8",
                 )
         except (OSError, ValueError):
             print(

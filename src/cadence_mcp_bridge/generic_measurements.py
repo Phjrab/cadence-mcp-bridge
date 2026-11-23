@@ -105,7 +105,7 @@ class TransferSignal(VariableModel):
 
 
 class GenericReaderRegistration(VariableModel):
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     design_id: LogicalId
     analysis_id: LogicalId
     measurement_id: LogicalId
@@ -125,8 +125,14 @@ class GenericReaderRegistration(VariableModel):
 
     @model_validator(mode="after")
     def inventory(self) -> Self:
-        if len(self.nodes) * self.maximum_samples > 1536:
+        sampled_currents = len(self.sources) if self.schema_version == 2 else 0
+        if (len(self.nodes) + sampled_currents) * self.maximum_samples > 1536:
             raise ValueError("aggregate reader sample bound exceeded")
+        if self.schema_version == 2 and (
+            not 1 <= len(self.sources) <= 6 or self.transfer is not None
+            or any(source.role != "supply" for source in self.sources)
+        ):
+            raise ValueError("version 2 requires transient supply sources")
         ids = {node.logical_id for node in self.nodes}
         if len(ids) != len(self.nodes) or len({n.selector for n in self.nodes}) != len(self.nodes):
             raise ValueError("distinct signal identities required")
@@ -193,8 +199,10 @@ def bind_reader(
         raise OperationRejected("reader_measurement_analysis_binding_mismatch")
     if measurement.reader != "unqualified":
         raise OperationRejected("reader_legacy_definition_protected")
-    if (plan.analysis == "ac") != (reader.transfer is not None) or (
-        plan.analysis != "dc" and reader.sources
+    if (
+        (plan.analysis == "ac") != (reader.transfer is not None)
+        or (reader.schema_version == 2 and plan.analysis != "tran")
+        or (reader.schema_version == 1 and plan.analysis != "dc" and reader.sources)
     ):
         raise OperationRejected("reader_analysis_inventory_mismatch")
     if reader.transfer:
@@ -241,7 +249,7 @@ def _header(
     return "|".join(
         (
             "MCP_GREL_FRAME",
-            "1",
+            str(reader.schema_version),
             operation_id,
             plan.plan_sha256,
             execution_input_sha256,
@@ -326,6 +334,23 @@ def project_frame(
     scalar: dict[str, float] = {}
     waves: dict[str, tuple[tuple[float, complex], ...]] = {}
     currents: dict[str, float] = {}
+    current_waves: dict[str, tuple[tuple[float, complex], ...]] = {}
+
+    def sampled(kind: str, signal: str) -> tuple[tuple[float, complex], ...]:
+        samples: list[tuple[float, complex]] = []
+        while rows and rows[0].startswith(kind + "|" + signal + "|"):
+            row = rows.popleft().split("|")
+            if len(row) != 6 or row[2] != str(len(samples)):
+                raise ValueError
+            samples.append((_finite(row[3]), complex(_finite(row[4]), _finite(row[5]))))
+            if len(samples) > reader.maximum_samples:
+                raise ValueError
+        if len(samples) < 2 or any(
+            a[0] >= b[0] for a, b in zip(samples, samples[1:], strict=False)
+        ):
+            raise ValueError
+        return tuple(samples)
+
     try:
         for node in reader.nodes:
             if plan.analysis == "dc":
@@ -334,27 +359,11 @@ def project_frame(
                     raise ValueError
                 scalar[node.logical_id] = _finite(row[2])
             else:
-                samples: list[tuple[float, complex]] = []
-                # Read a contiguous block with explicit monotonically increasing indices.
-                while True:
-                    row = rows.popleft().split("|")
-                    if (
-                        len(row) != 6
-                        or row[:2] != ["P", node.logical_id]
-                        or row[2] != str(len(samples))
-                    ):
-                        raise ValueError
-                    samples.append((_finite(row[3]), complex(_finite(row[4]), _finite(row[5]))))
-                    if len(samples) > reader.maximum_samples:
-                        raise ValueError
-                    if not rows or not rows[0].startswith("P|" + node.logical_id + "|"):
-                        break
-                if len(samples) < 2 or any(
-                    a[0] >= b[0] for a, b in zip(samples, samples[1:], strict=False)
-                ):
-                    raise ValueError
-                waves[node.logical_id] = tuple(samples)
+                waves[node.logical_id] = sampled("P", node.logical_id)
         for source in reader.sources:
+            if reader.schema_version == 2:
+                current_waves[source.source_id] = sampled("C", source.source_id)
+                continue
             row = rows.popleft().split("|")
             if len(row) != 3 or row[:2] != ["I", source.source_id]:
                 raise ValueError
@@ -411,7 +420,9 @@ def project_frame(
             ]
     else:
         axes = tuple(x for x, _ in next(iter(waves.values())))
-        if any(tuple(x for x, _ in wave) != axes for wave in waves.values()):
+        if any(
+            tuple(x for x, _ in wave) != axes for wave in (*waves.values(), *current_waves.values())
+        ):
             raise OperationRejected("reader_frame_axes_mismatch")
         if plan.analysis == "ac":
             _validate_ac_axes(ade, axes)
@@ -427,11 +438,21 @@ def project_frame(
                 output["ac_node_mapping"] = [n.model_dump(mode="json") for n in reader.nodes]
         else:
             output["transient"] = _transient(ade, axes, waves)
+            if any(value.imag != 0 for wave in current_waves.values() for _, value in wave):
+                raise OperationRejected("reader_tran_complex_current_invalid")
             if include_tran_waveforms:
                 output["tran_waveforms"] = {
                     name: [{"time_s": time, "value_v": value.real} for time, value in wave]
                     for name, wave in waves.items()
                 }
+                if current_waves:
+                    output["tran_supply_evidence"] = {
+                        "sources": [source.model_dump(mode="json") for source in reader.sources],
+                        "currents": {
+                            name: [{"time_s": time, "value_a": value.real} for time, value in wave]
+                            for name, wave in current_waves.items()
+                        },
+                    }
     return output
 
 

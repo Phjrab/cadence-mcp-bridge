@@ -2,13 +2,16 @@
 
 import hashlib
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from typing import cast
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 from test_authenticated_provider import accounting, observation
+from test_cmos_delay_service import connected, no_dispatch
 from test_generic_measurements import operator, operator_base
 
 from cadence_mcp_bridge import authenticated_provider as wire
@@ -20,8 +23,17 @@ from cadence_mcp_bridge.runtime_context import create_operator_service, load_run
 from cadence_mcp_bridge.server import create_server
 from cadence_mcp_bridge.service import CadenceService
 
-__all__ = ["operator", "operator_base"]
+__all__ = ["connected", "operator", "operator_base"]
 NAMES = {
+    "cadence_verify_change_readback",
+    "cadence_validate_research_circuit",
+    "cadence_plan_research_mos_block",
+    "cadence_verify_research_mos_block",
+    "cadence_plan_registered_mos_change",
+    "cadence_research_transient_result",
+    "cadence_research_ac_gain_result",
+    "cadence_research_supply_power_result",
+    "cadence_research_device_op_result",
     "cadence_plan_operation",
     "cadence_submit_operation",
     "cadence_operation_status",
@@ -67,7 +79,7 @@ def configured(operator, tmp_path, monkeypatch):
 async def test_operator_only_conditional_schema_and_no_server_start_side_effects(configured):
     server, service, request, settings, grant_path = configured
     tools = {t.name: t for t in await server.list_tools()}
-    assert len(tools) == 103 and set(tools) >= NAMES
+    assert len(tools) == 112 and set(tools) >= NAMES
     snapshot = json.loads(
         (
             Path(__file__).resolve().parents[2]
@@ -103,6 +115,356 @@ async def test_operator_only_conditional_schema_and_no_server_start_side_effects
     )
     assert old.native_operations is None
     assert len(await create_server(cast(CadenceService, old)).list_tools()) == 92
+
+
+@pytest.mark.asyncio
+async def test_change_readback_tool_uses_closed_local_evidence(configured, monkeypatch):
+    from test_parameter_changes import _bias, _row
+
+    from cadence_mcp_bridge.parameter_changes import verify_change_readback
+
+    server, service, *_ = configured
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    plan = _bias()
+    stages = {stage: _row(plan, stage) for stage in ("baseline", "reopened", "netlist")}
+    request = {
+        "plan": plan.model_dump(mode="json"),
+        "expected_plan_sha256": plan.plan_sha256,
+        **{stage: row.model_dump(mode="json") for stage, row in stages.items()},
+    }
+    name = "cadence_verify_change_readback"
+    expected = verify_change_readback(plan, **stages).model_dump(mode="json")
+    for _ in range(2):
+        result = await server.call_tool(name, {"request": request})
+        assert not result.is_error and result.structured_content == expected
+    assert expected["status"] == "MATCHED" and not expected["execution_authorized"]
+    for bad in (
+        {**request, "expected_plan_sha256": "0" * 64},
+        {**request, "path": "forbidden"},
+    ):
+        with pytest.raises(ToolError):
+            await server.call_tool(name, {"request": bad})
+    assert not service.context.binding.analysis_journal.exists()
+    assert not service.context.lock_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_research_circuit_mcp_is_local_and_rejects_missing_bulk(configured, monkeypatch):
+    from test_m2_inverter import fixture
+    from test_research_circuit import payload
+
+    from cadence_mcp_bridge.research_adapters import ResearchCircuitValidation
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    server, service, *_ = configured
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    plan, _ = fixture()
+    definition = json.loads(json.dumps(payload(plan)))
+    name = "cadence_validate_research_circuit"
+    result = await server.call_tool(name, {"request": {"definition": definition}})
+    assert not result.is_error
+    validated = ResearchCircuitValidation.model_validate_json(json.dumps(result.structured_content))
+    assert validated.definition_sha256 == canonical_digest(validated.definition)
+    assert not validated.execution_authorized and not validated.remote_contact
+    definition["circuits"][0]["instances"][0]["links"].pop()
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {"definition": definition}})
+    assert not service.context.binding.analysis_journal.exists()
+    assert not service.context.lock_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_research_mos_block_mcp_plans_and_checks_pinned_projections(configured, monkeypatch):
+    from test_m2_inverter import fixture
+    from test_research_circuit import mos_block_fixture, payload
+
+    from cadence_mcp_bridge.research_circuit import ResearchCircuit
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    server, service, *_ = configured
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    inverter, _ = fixture()
+    data = payload(inverter)
+    for instance, model in zip(data["circuits"][0]["instances"], ("test_n", "test_p"), strict=True):
+        geometry = instance["geometry"]
+        instance["spectre"] = {
+            "model": model, "width": geometry["fw"], "length": geometry["length"],
+            "multiplier": geometry["multiplier"], "source": geometry["source"],
+        }
+    definition = ResearchCircuit.model_validate_json(json.dumps(data))
+    requested = {
+        "definition": definition.model_dump(mode="json"),
+        "expected_binding": definition.binding.model_dump(mode="json"),
+        "expected_definition_sha256": canonical_digest(definition),
+        "output_library": "OwnedBlock",
+    }
+    name = "cadence_plan_research_mos_block"
+    planned = await server.call_tool(name, {"request": requested})
+    assert not planned.is_error and planned.structured_content is not None
+    assert planned.structured_content["plan"]["root"] == definition.dut
+    assert planned.structured_content["execution_authorized"] is False
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**requested, "output_library": "/tmp/o"}})
+
+    plan, evidence = mos_block_fixture()
+    proof = {
+        "plan": plan.model_dump(mode="json"),
+        "evidence": evidence.model_dump(mode="json"),
+        "expected_plan_sha256": canonical_digest(plan),
+        "expected_reopened_tree_sha256": evidence.reopened_tree_sha256,
+        "expected_reopen_artifact_sha256": evidence.reopen_artifact_sha256,
+        "expected_netlist_artifact_sha256": evidence.netlist_artifact_sha256,
+    }
+    name = "cadence_verify_research_mos_block"
+    verified = await server.call_tool(name, {"request": proof})
+    assert not verified.is_error and verified.structured_content is not None
+    assert verified.structured_content["status"] == "MATCHED"
+    assert verified.structured_content["provenance"] == "LOCAL_EVIDENCE_COMPARISON"
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**proof, "expected_plan_sha256": "0" * 64}})
+    assert not service.context.binding.analysis_journal.exists()
+    assert not service.context.lock_path.exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("with_current", [False, True])
+async def test_research_transient_mcp_repeat_reads_only_retained_result(connected, with_current):
+    from test_research_transient import _supplies
+
+    from cadence_mcp_bridge.native_server import register_native_tools
+    from cadence_mcp_bridge.server import DesignContractServer
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    _, native, query, record, _, data = connected
+    store = native.lifecycle.store = Mock()
+    store.connection.side_effect = lambda **_: nullcontext()
+    store._read_operation.return_value = record
+    digest = None
+    if with_current:
+        waves = data["tran_waveforms"]
+        supply = _supplies({
+            key: [{"time_s": point["time_s"], "value_a": amps} for point in waves["vin"]]
+            for key, amps in (("supply", -0.002), ("absorb", 0.001))
+        })
+        waves["pos"] = waves["vdd"]
+        waves["neg"] = [{"time_s": point["time_s"], "value_v": 0} for point in waves["vin"]]
+        rail = next(row for row in data["transient"] if row["logical_id"] == "vdd")
+        data["transient"].extend([
+            {**rail, "logical_id": "pos"},
+            {**rail, "logical_id": "neg", "minimum": 0, "maximum": 0,
+             "first": 0, "last": 0, "time_weighted_mean": 0},
+        ])
+        data["tran_supply_evidence"] = supply.model_dump(mode="json")
+        digest = canonical_digest(supply)
+    server = DesignContractServer("research-fixture")
+    register_native_tools(server, native)
+    request = {
+        "operation_id": query.operation_id,
+        "expected_plan_sha256": query.expected_plan_sha256,
+        "window": {"start_s": 0, "stop_s": 2, "maximum_gap_s": 0.025},
+        "signals": ["vin", "vout"],
+        "maximum_display_points": 2,
+    }
+    name = "cadence_research_transient_result"
+    for _ in range(2):
+        response = await server.call_tool(name, {"request": request})
+        result = response.structured_content
+        assert not response.is_error and result is not None
+        assert result["source"]["operation_id"] == query.operation_id
+        assert len(result["signals"]["vout"]["points"]) == 2
+        power = result["measurements"]["average_supply_power"]
+        if with_current:
+            assert power["value"] == pytest.approx(0.002)
+        else:
+            assert power["reason"] == "registered_tran_supply_current_unavailable"
+            assert power["value"] is None
+        assert result["tran_supply_evidence_sha256"] == digest
+        assert [result[key] for key in (
+            "new_simulations", "new_extractions", "new_reservations",
+        )] == [0, 0, 0]
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**request, "waveforms": {}}})
+    assert native.provider.analog_result.await_count == 2
+    store.connection.assert_called_with(create=False, read_only=True)
+    native.lifecycle.reconcile.assert_not_called()
+    no_dispatch(native)
+
+
+@pytest.mark.asyncio
+async def test_research_supply_mcp_uses_signed_retained_dc(configured):
+    from test_result_reports import inventory, seed
+
+    server, *_ = configured
+    native, record, source = seed(configured)
+    source["sources"] = [
+        {"source_id": "rail", "role": "supply", "delivered_w": 4e-6},
+        {"source_id": "return", "role": "supply", "delivered_w": -1e-6},
+    ]
+    folder = native.context.binding.analysis_journal.parent
+    before = inventory(folder)
+    request = {
+        "operation_id": record.operation_id,
+        "expected_plan_sha256": record.plan.plan_sha256,
+        "supply_ids": ["rail", "return"],
+    }
+    name = "cadence_research_supply_power_result"
+    response = await server.call_tool(name, {"request": request})
+    assert not response.is_error and response.structured_content is not None
+    assert response.structured_content["measurement"]["value"] == pytest.approx(3e-6)
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**request, "supply_ids": ["rail", "rail"]}})
+    assert native.provider.report_result.await_count == 1
+    assert inventory(folder) == before
+
+
+@pytest.mark.asyncio
+async def test_research_device_op_reads_only_operator_pinned_artifacts(
+    configured, tmp_path, capsys, monkeypatch,
+):
+    from test_result_reports import seed
+
+    from cadence_mcp_bridge.__main__ import main
+    from cadence_mcp_bridge.research_measurements import DeviceOpRegistration
+    from cadence_mcp_bridge.result_reports import make_report
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    server, service, _, settings, _ = configured
+    native, record, data = seed(configured)
+    report = make_report(record, data)
+    registration = DeviceOpRegistration(instance_paths=("/DUT/PM0",))
+    name = "cadence_research_device_op_result"
+    request = {
+        "operation_id": record.operation_id,
+        "expected_plan_sha256": record.plan.plan_sha256,
+        "registration_id": "op",
+    }
+    unconfigured = await server.call_tool(name, {"request": request})
+    assert unconfigured.structured_content["reason"] == "device_op_source_not_configured"
+
+    def write(name, raw):
+        target = tmp_path / name
+        target.write_bytes(raw)
+        return {"path": str(target), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    frame = (
+        "BEGIN\nOP|registered|mos01|id|value|-3e-6\n"
+        + "".join(
+            f"OP|registered|mos01|{field}|missing|nil\n"
+            for field in ("gm", "gds", "vgs", "vds", "vdsat", "region")
+        )
+        + "END\n"
+    ).encode()
+    catalog = {
+        "schema_version": 1,
+        "records": [{
+            "registration_id": "op",
+            "operation_id": record.operation_id,
+            "plan_sha256": record.plan.plan_sha256,
+            "execution_input_sha256": report.execution_input_sha256,
+            "terminal_sha256": record.progress.provider_receipt_sha256,
+            "registration": registration.model_dump(mode="json"),
+            "registration_sha256": canonical_digest(registration),
+            "report": write("op-report.json", report.model_dump_json().encode()),
+            "frame": write("op-frame.txt", frame),
+        }],
+    }
+    catalog_ref = write("op-catalog.json", json.dumps(catalog).encode())
+    runtime = json.loads(settings.read_bytes())
+    runtime["contexts"][0]["device_op_catalog_path"] = catalog_ref["path"]
+    settings.write_text(json.dumps(runtime))
+    with pytest.raises(ConfigurationError):
+        load_runtime(settings)
+    runtime["contexts"][0]["device_op_catalog_sha256"] = catalog_ref["sha256"]
+    settings.write_text(json.dumps(runtime))
+    context = load_runtime(settings)[0]
+    assert context.context_sha256 != service.context.context_sha256
+    assert context.resource_domain_sha256 == service.context.resource_domain_sha256
+    monkeypatch.setattr(wire, "run_fixed", lambda *a, **kw: pytest.fail("unexpected provider call"))
+    operator = create_operator_service(
+        BridgeConfig(runtime_mode="operator", runtime_settings_path=settings,
+                     runtime_context_id=context.binding.context_id),
+        factory=lambda _: object(),
+    )
+    server = create_server(cast(CadenceService, operator))
+    journal = context.binding.analysis_journal
+    before = journal.read_bytes()
+    first = await server.call_tool(name, {"request": request})
+    second = await server.call_tool(name, {"request": request})
+    assert not first.is_error and first.structured_content == second.structured_content
+    result = first.structured_content
+    assert result["status"] == "AVAILABLE"
+    assert result["remote_contact"] is False and result["new_extractions"] == 0
+    row, missing, *_ = result["measurement"]["measurements"]
+    assert (row["field"], row["value"]) == ("id", -3e-6)
+    assert (missing["field"], missing["value"], missing["reason"]) == (
+        "gm", None, "field_not_available",
+    )
+    missing_result = await server.call_tool(
+        name, {"request": {**request, "registration_id": "unknown"}},
+    )
+    assert missing_result.structured_content["status"] == "NOT_AVAILABLE"
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": {**request, "catalog_path": catalog_ref["path"]}})
+
+    request_ref = write("op-request.json", json.dumps(request).encode())
+    saved = tmp_path / "op-result.json"
+    args = [
+        "operator-candidates", "research-device-op-result",
+        "--request", request_ref["path"], request_ref["sha256"],
+        "--settings", str(settings), "--context", context.binding.context_id,
+        "--output", str(saved),
+    ]
+    assert main(args) == 0
+    assert json.loads(saved.read_bytes()) == result
+    assert json.loads(capsys.readouterr().out)["status"] == "AVAILABLE"
+    (tmp_path / "op-frame.txt").write_bytes(frame.replace(b"-3e-6", b"-4e-6"))
+    with pytest.raises(ToolError):
+        await server.call_tool(name, {"request": request})
+    assert journal.read_bytes() == before
+
+
+@pytest.mark.asyncio
+async def test_research_ac_mcp_uses_registered_complex_transfer(configured, monkeypatch):
+    from test_research_measurements import sample
+    from test_result_reports import seed
+
+    from cadence_mcp_bridge import research_measurements
+    from cadence_mcp_bridge.result_reports import make_report
+
+    server, *_ = configured
+    native, record, source = seed(configured)
+    plan = record.plan.model_copy(update={"analysis": "ac"})
+    record = record.model_copy(update={"plan": plan})
+    source.update(analysis="ac", plan_sha256=plan.plan_sha256)
+    source["report_conditions"].update(
+        analysis_inputs={"analysis": "ac", "start_hz": "1", "stop_hz": "100",
+                         "points_per_decade": 1},
+        transfer={"positive_input": "input", "negative_input": None,
+                  "positive_output": "output", "negative_output": None,
+                  "gain_frequencies_hz": ["1"]},
+    )
+    source["transfer"] = [sample(1, 0, 2)]
+    report = make_report(record, source)
+
+    async def retained_transfer(service, operation_id, plan_sha256):
+        assert (service, operation_id, plan_sha256) == (
+            native, record.operation_id, plan.plan_sha256,
+        )
+        return report, [sample(1, 0, 2), sample(100, 0.5)]
+
+    monkeypatch.setattr(research_measurements, "_capture_retained_transfer", retained_transfer)
+    result = await server.call_tool(
+        "cadence_research_ac_gain_result",
+        {"request": {
+            "operation_id": record.operation_id,
+            "expected_plan_sha256": plan.plan_sha256,
+            "definition": {"reference_frequency_hz": 1.0},
+        }},
+    )
+    assert not result.is_error and result.structured_content is not None
+    measurement = result.structured_content["measurement"]
+    assert measurement["reference"]["imag_v_per_v"] == 2.0
+    assert measurement["unity_gain_frequency"]["value"] == pytest.approx(10.0)
 
 
 @pytest.mark.asyncio

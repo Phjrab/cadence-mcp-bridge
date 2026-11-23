@@ -21,7 +21,12 @@ from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationService
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationPlan, OperationRejected
-from cadence_mcp_bridge.result_reports import ReportConditions, conditions_digest, make_report
+from cadence_mcp_bridge.result_reports import (
+    ReportConditions,
+    ResultReport,
+    conditions_digest,
+    make_report,
+)
 from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.variable_contracts import Digest, LogicalId, VariableModel, canonical_digest
 
@@ -80,6 +85,20 @@ def requirements() -> dict[str, Any]:
     }
 
 
+def _interpolate_db_crossing(
+    left_hz: float, right_hz: float, left_db: float, right_db: float, threshold_db: float,
+) -> float:
+    if right_db == threshold_db:
+        return right_hz
+    fraction = (left_db - threshold_db) / (left_db - right_db)
+    estimate = 10 ** (
+        math.log10(left_hz) + fraction * (math.log10(right_hz) - math.log10(left_hz))
+    )
+    if not math.isfinite(estimate) or not left_hz <= estimate <= right_hz:
+        raise OperationRejected("analog_interpolation_invalid")
+    return estimate
+
+
 def sampled_crossing(
     spectrum: list[dict[str, Any]], definition: SampledBandwidthDefinition,
 ) -> dict[str, Any]:
@@ -118,16 +137,9 @@ def sampled_crossing(
     }
     for i in range(reference + 1, len(axes)):
         if gains[i - 1] > target >= gains[i]:
-            fraction = (gains[i - 1] - target) / (gains[i - 1] - gains[i])
-            estimate = 10 ** (
-                math.log10(axes[i - 1])
-                + fraction * (math.log10(axes[i]) - math.log10(axes[i - 1]))
+            estimate = _interpolate_db_crossing(
+                axes[i - 1], axes[i], gains[i - 1], gains[i], target,
             )
-            # Keep exact sampled crossings exact and reject arithmetic outside the bracket.
-            if gains[i] == target:
-                estimate = axes[i]
-            if not math.isfinite(estimate) or not axes[i - 1] <= estimate <= axes[i]:
-                raise OperationRejected("analog_interpolation_invalid")
             output.update(
                 status="OBSERVED_SAMPLED_CROSSING", value=estimate,
                 bracket_hz=[axes[i - 1], axes[i]],
@@ -137,10 +149,9 @@ def sampled_crossing(
     return output
 
 
-async def capture_bandwidth(
+async def _capture_retained_transfer(
     native: NativeOperationService, operation_id: str, plan_sha256: str,
-    definition: SampledBandwidthDefinition,
-) -> dict[str, Any]:
+) -> tuple[ResultReport, list[dict[str, Any]]]:
     TypeAdapter(OperationId).validate_python(operation_id)
     TypeAdapter(Digest).validate_python(plan_sha256)
     native.current()
@@ -160,6 +171,14 @@ async def capture_bandwidth(
         raise OperationRejected("analog_terminal_identity_mismatch")
     report = make_report(record, result)
     spectrum = TypeAdapter(list[dict[str, Any]]).validate_python(result["ac_spectrum"])
+    return report, spectrum
+
+
+async def capture_bandwidth(
+    native: NativeOperationService, operation_id: str, plan_sha256: str,
+    definition: SampledBandwidthDefinition,
+) -> dict[str, Any]:
+    report, spectrum = await _capture_retained_transfer(native, operation_id, plan_sha256)
     estimate = sampled_crossing(spectrum, definition)
     # Provenance is attached only after the provider and retained terminal checks.
     estimate["native_provenance"] = report.source_provenance

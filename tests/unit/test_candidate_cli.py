@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -292,6 +293,64 @@ def test_verify_change_readback_exports_typed_status(
     assert saved.provenance == "LOCAL_EVIDENCE_COMPARISON"
     assert summary["readback_status"] == status and summary["remote_contact"] is False
     assert summary["file_sha256"] == hashlib.sha256(raw).hexdigest()
+
+
+def test_research_circuit_export_is_exclusive_and_hash_checked(tmp_path, capsys):
+    from test_m2_inverter import fixture
+    from test_research_circuit import payload
+
+    from cadence_mcp_bridge.research_adapters import ResearchCircuitValidation
+
+    plan, _ = fixture()
+    request, destination = tmp_path / "definition.json", tmp_path / "checked.json"
+    document = json.dumps({"definition": payload(plan)}).encode()
+    request.write_bytes(document)
+    args = [
+        "operator-candidates", "validate-research-circuit",
+        "--request", str(request), hashlib.sha256(document).hexdigest(),
+        "--output", str(destination),
+    ]
+    assert main(args) == 0
+    summary = output(capsys)
+    saved = destination.read_bytes()
+    assert summary["file_sha256"] == hashlib.sha256(saved).hexdigest()
+    assert ResearchCircuitValidation.model_validate_json(saved).execution_authorized is False
+    assert main(args) == 2
+    assert destination.read_bytes() == saved and request.read_bytes() == document
+
+
+def test_research_raw_netlist_compares_pinned_local_dut_only(tmp_path, capsys):
+    from test_research_circuit import mos_block_fixture, raw_block_netlist
+
+    from cadence_mcp_bridge.research_adapters import (
+        ResearchMosBlockPreparation,
+        ResearchRawNetlistResult,
+    )
+    from cadence_mcp_bridge.variable_contracts import canonical_digest
+
+    plan, _ = mos_block_fixture()
+    prepared = ResearchMosBlockPreparation(plan=plan, plan_sha256=canonical_digest(plan))
+    plan_path, netlist, destination = (tmp_path / name for name in ("plan.json", "dut.scs", "out"))
+    plan_path.write_text(prepared.model_dump_json())
+    raw = raw_block_netlist()
+    netlist.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    args = [
+        "operator-candidates", "verify-research-raw-netlist",
+        "--plan", str(plan_path), "--expected-plan-sha256", prepared.plan_sha256,
+        "--netlist", str(netlist), digest, "--output", str(destination),
+    ]
+    assert main(args) == 0
+    body = destination.read_bytes()
+    result = ResearchRawNetlistResult.model_validate_json(body)
+    assert result.status == "MATCHED" and result.netlist_artifact_sha256 == digest
+    assert result.execution_authorized is False and len(result.netlisted) == 2
+    assert output(capsys)["file_sha256"] == hashlib.sha256(body).hexdigest()
+    assert main(args) == 2
+    assert netlist.read_bytes() == raw and destination.read_bytes() == body
+    wrong = [*args[:-3], "0" * 64, "--output", str(tmp_path / "wrong.json")]
+    assert main(wrong) == 2
+    assert not (tmp_path / "wrong.json").exists()
 
 
 @pytest.mark.parametrize("failure", ["plan_pin", "stage_pin", "malformed", "extra", "collision"])
@@ -880,11 +939,13 @@ def test_amplifier_width_compare_retained_pair(
             assert path.exists() == (path in files)
 
 
+@pytest.mark.parametrize("case", ["not-run", "policy-successor"])
 def test_amplifier_fresh_width_compare_retains_registered_evidence(
     measurement_operator,
     tmp_path,
     monkeypatch,
     capsys,
+    case,
 ):
     import test_candidate_execution as execution_fixture
 
@@ -905,7 +966,7 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         execution_fixture.test_fresh_amplifier_associates_only_bound_native_reports(
             monkeypatch,
             measurement_operator,
-            "not-run",
+            case,
         )
 
     (plan, readback), evidence = calls.pop()
@@ -955,6 +1016,17 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         },
         "ac": {"baseline": operation("ac-baseline", evidence["ac"].baseline)},
     }
+    successor = evidence["policy_successor"]
+    if successor is not None:
+        request["ac"]["candidate"] = operation("ac-candidate", evidence["ac"].candidate)
+        fields = (
+            "baseline_profile", "candidate_profile", "v7_apply_receipt",
+            "successor_apply_receipt", "successor_policy_record",
+        )
+        request["policy_successor"] = {
+            field: pin(tmp_path / f"{field}.json", getattr(successor, field))
+            for field in fields
+        }
 
     def compare(label, destination):
         ref = pin(tmp_path / f"{label}.json", json.dumps(request).encode())
@@ -985,6 +1057,14 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     schema = output(capsys)["request_schema"]
     assert schema["additionalProperties"] is False
     assert schema["$defs"]["_FreshAmplifierWidthSide"]["additionalProperties"] is False
+    assert "policy_successor" not in schema["required"]
+    successor_schema = schema["$defs"]["_FreshAmplifierStorageSuccessorFiles"]
+    assert successor_schema["additionalProperties"] is False
+    assert len(successor_schema["required"]) == 5
+    assert "owned_copy" not in schema["required"]
+    owned_copy_schema = schema["$defs"]["_FreshAmplifierOwnedCopyFiles"]
+    assert owned_copy_schema["additionalProperties"] is False
+    assert len(owned_copy_schema["required"]) == 6
     target = tmp_path / "comparison.json"
     assert compare("valid", target) == 0
     summary = output(capsys)
@@ -1000,8 +1080,77 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
     assert pair.dc.candidate.operation.operation_id == request["dc"]["candidate"]["operation_id"]
     assert pair.dc.candidate.report.analysis_conditions is not None
     assert saved["deltas"]["dc"] == {"absolute_delta": 0.0, "reason": "available"}
-    assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
-    assert saved["deltas"]["ac"] == {"absolute_delta": None, "reason": "measurement_unavailable"}
+    if successor is None:
+        assert pair.ac.candidate.status == "NOT_RUN" and pair.ac.candidate.value is None
+        assert saved["deltas"]["ac"] == {
+            "absolute_delta": None, "reason": "measurement_unavailable",
+        }
+    else:
+        candidate_ac_id = request["ac"]["candidate"]["operation_id"]
+        assert pair.ac.candidate.operation.operation_id == candidate_ac_id
+        assert saved["deltas"]["ac"] == {"absolute_delta": 0.0, "reason": "available"}
+        files = request.pop("policy_successor")
+        missing = tmp_path / "missing-successor-output.json"
+        assert compare("missing-successor", missing) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not missing.exists()
+        request["policy_successor"] = files
+        receipt = files["successor_apply_receipt"]
+        assert compare("receipt-collision", Path(receipt["path"])) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        receipt_hash = receipt["sha256"]
+        receipt["sha256"] = "0" * 64
+        bad = tmp_path / "wrong-receipt-output.json"
+        assert compare("wrong-receipt", bad) == 2
+        assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+        assert not bad.exists()
+        receipt["sha256"] = receipt_hash
+
+        copy_receipts = (
+            "copy_receipt", "preservation_receipt", "technology_receipt", "registration_receipt",
+        )
+        request["owned_copy"] = {
+            "baseline_ade_state": "original",
+            "candidate_ade_state": "copied",
+            **{
+                field: pin(tmp_path / f"{field}.json", f'{{"artifact":"{field}"}}\n'.encode())
+                for field in copy_receipts
+            },
+        }
+        forwarded = []
+
+        def record_copy(*args, owned_copy, **kwargs):
+            forwarded.append(owned_copy)
+            return associate(*args, **kwargs)
+
+        with monkeypatch.context() as adapter:
+            adapter.setattr(
+                candidate_execution, "associate_fresh_amplifier_width_pair", record_copy
+            )
+            copy_result = tmp_path / "owned-copy-result.json"
+            assert compare("owned-copy", copy_result) == 0
+            saved_copy_sha256 = hashlib.sha256(copy_result.read_bytes()).hexdigest()
+            assert output(capsys)["file_sha256"] == saved_copy_sha256
+            copy_evidence, = forwarded
+            assert isinstance(copy_evidence, candidate_execution.FreshAmplifierOwnedCopyEvidence)
+            assert (copy_evidence.baseline_ade_state, copy_evidence.candidate_ade_state) == (
+                "original", "copied",
+            )
+            for field in copy_receipts:
+                copy_ref = request["owned_copy"][field]
+                assert getattr(copy_evidence, field) == originals[Path(copy_ref["path"])]
+                if field != "preservation_receipt":
+                    assert getattr(copy_evidence, f"{field}_sha256") == copy_ref["sha256"]
+                assert compare(f"{field}-collision", Path(copy_ref["path"])) == 2
+                assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            tech_ref = request["owned_copy"]["technology_receipt"]
+            tech_ref["sha256"] = "0" * 64
+            wrong_tech = tmp_path / "wrong-technology-output.json"
+            assert compare("wrong-technology", wrong_tech) == 2
+            assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
+            assert not wrong_tech.exists()
+            assert forwarded == [copy_evidence]
+        del request["owned_copy"]
 
     sidecar = tmp_path / "dc-candidate.sqlite3-wal"
     assert compare("sidecar-collision", sidecar) == 2
