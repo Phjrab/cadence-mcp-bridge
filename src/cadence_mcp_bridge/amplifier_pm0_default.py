@@ -223,19 +223,35 @@ def _line(lines: tuple[str, ...], prefix: str) -> str:
 def _save_metadata(lines: tuple[str, ...], presave: bytes, reopened: bytes) -> tuple[int, int]:
     pre = _signature(presave)
     post = _signature(reopened)
+    check = _line(lines, "C1_CHECK|EDIT|").split("|")
     if (
         lines[-1:] != ("AUTO120_FAIL|SAVE",)
         or pre[1] != _line(lines, "C1_ROWS|EDIT_AFTER|")
         or post[1] != _line(lines, "C1_ROWS|SAVED|")
-        or pre[0] != post[0]
-        or pre[2] != post[2]
+        or len(check) != 7
+        or check[0] != "(0 0)"
+        or check[-1] != "t"
+        or not check[4].isascii()
+        or not check[4].isdecimal()
     ):
+        raise ValueError("AMP saved circuit or live geometry counter evidence mismatch")
+    return verify_amplifier_pm0_save_metadata(presave, reopened, live_counter=int(check[4]))
+
+
+def verify_amplifier_pm0_save_metadata(
+    presave: bytes, reopened: bytes, *, live_counter: int
+) -> tuple[int, int]:
+    """Compare full native signatures across one witnessed save-counter transition."""
+    if max(len(presave), len(reopened)) > _LIMIT:
+        raise ValueError("AMP save signatures exceed the evidence bound")
+    pre = _signature(presave)
+    post = _signature(reopened)
+    if pre[0] != post[0] or pre[2] != post[2]:
         raise ValueError("AMP saved circuit or save-stage evidence mismatch")
     before, after = _view_rows(pre[1]), _view_rows(post[1])
     name = "schGeometryLastUpdated"
     old_kind, old_value = before.get(name, ("", ""))
     new_kind, new_value = after.get(name, ("", ""))
-    check = _line(lines, "C1_CHECK|EDIT|").split("|")
     if (
         old_kind != "int"
         or new_kind != "int"
@@ -243,10 +259,8 @@ def _save_metadata(lines: tuple[str, ...], presave: bytes, reopened: bytes) -> t
         or not new_value.startswith("I")
         or not old_value[1:].isdecimal()
         or not new_value[1:].isdecimal()
-        or len(check) != 7
-        or check[0] != "(0 0)"
-        or check[-1] != "t"
-        or new_value != "I" + check[4]
+        or type(live_counter) is not int
+        or new_value != f"I{live_counter}"
         or after.get("connectivityLastUpdated") != ("int", new_value)
         or old_value == new_value
         or tuple(before) != tuple(after)

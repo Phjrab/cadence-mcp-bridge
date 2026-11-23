@@ -639,10 +639,17 @@ def registered_pmos_default_change(context: ExecutionContext) -> PmosDefaultChan
         raise OperationRejected("pmos_default_change_not_registered")
     try:
         raw = read_pmos_default_change_binding(path, expected)
-        registration = _Registration.model_validate_json(raw)
-        directory = _local_path(registration.evidence_directory)
+        _closed_document(raw)
+        document = json.loads(raw)
+        _require(isinstance(document, dict), "pmos_default_change_registration_invalid")
+        is_amplifier = document.get("schema_version") == 2
+        registration = None if is_amplifier else _Registration.model_validate_json(raw)
+        evidence_directory = document.get("evidence_directory")
+        _require(isinstance(evidence_directory, str), "pmos_default_change_evidence_directory")
+        evidence_path = Path(str(evidence_directory))
+        directory = _local_path(evidence_path)
         _require(
-            registration.evidence_directory.is_absolute() and directory.is_dir(),
+            evidence_path.is_absolute() and directory.is_dir(),
             "pmos_default_change_evidence_directory",
         )
         # Keep fixed evidence leaves and service output away from existing journals.
@@ -655,6 +662,13 @@ def registered_pmos_default_change(context: ExecutionContext) -> PmosDefaultChan
             _require(
                 not resolved.is_relative_to(directory), "pmos_default_change_journal_collision"
             )
+        if is_amplifier:
+            from cadence_mcp_bridge.amplifier_pm0_service import (
+                registered_amplifier_pm0_default_change,
+            )
+
+            return registered_amplifier_pm0_default_change(context, raw, directory)
+        assert registration is not None
         scope_raw = _read(
             directory / "execution-scope.private.json", 16384, registration.scope_sha256
         )

@@ -1,16 +1,24 @@
 """Exercise the finite PM0 route without a native process or a writable journal."""
 
+import base64
 import json
+import shlex
+import time
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
 import pytest
+from test_runtime_context import make_settings
 
 from cadence_mcp_bridge import amplifier_pm0_default as amp
+from cadence_mcp_bridge import amplifier_pm0_service as amp_host
 from cadence_mcp_bridge import parameter_changes as changes
 from cadence_mcp_bridge.candidate_cli import dispatch_pmos_default_change
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
+from cadence_mcp_bridge.operator_operations import OperationRejected
+from cadence_mcp_bridge.pmos_default_service import registered_pmos_default_change
+from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
@@ -479,3 +487,190 @@ def test_lost_claim_without_readable_result_stays_unknown(
     assert result.outcome == "OUTCOME_UNKNOWN"
     assert result.replayed and not result.dispatched_this_call
     assert provider.claims == 1 and provider.launches == 0
+
+
+def _registered_provider_fixture(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    tmp_path: Path,
+) -> tuple[Path, Path, PmosDefaultChangeRequest, amp_host._Scope, tuple[bytes, bytes, bytes]]:
+    retained, original_request = operation
+    _, qualification = _dispatch_registration(retained.plan, original_request)
+    settings = make_settings(tmp_path)
+    context = load_runtime(settings)[0]
+    directory = tmp_path / "amp-job"
+    directory.mkdir()
+    evidence = b"synthetic independently reviewed route evidence"
+    for name in ("cdf", "legal-value", "update-route"):
+        (directory / f"{name}-evidence.private").write_bytes(evidence)
+    qualification = qualification.model_copy(
+        update={
+            "cdf_evidence_sha256": _sha(evidence),
+            "legal_value_evidence_sha256": _sha(evidence),
+            "update_route_evidence_sha256": _sha(evidence),
+        }
+    )
+    plan = amp.plan_amplifier_pm0_default_change(
+        qualification,
+        retained.plan.candidate_id,
+        retained.plan.candidate_revision,
+        retained.plan.requested,
+    )
+    assets = (b"# synthetic fixed guest\n", b"; fixed edit fixture\n", b"; fixed verify fixture\n")
+    scope = amp_host._Scope(
+        schema_version=1,
+        route="amplifier_pm0_default",
+        context_id=context.binding.context_id,
+        resource_domain_sha256=context.resource_domain_sha256,
+        environment_sha256=context.binding.environment_sha256,
+        native_manifest_sha256="b" * 64,
+        operation_id=_WRITER,
+        owned_library="AmpFresh",
+        owned_cell="Differential_Amplifier_TB2",
+        owned_view="schematic",
+        owned_before_view_tree_sha256="e" * 64,
+        source_preservation_sha256="1" * 64,
+        qualification=qualification,
+        plan=plan,
+        plan_sha256=plan.plan_sha256,
+        guest_sha256=_sha(assets[0]),
+        edit_script_sha256=_sha(assets[1]),
+        verify_script_sha256=_sha(assets[2]),
+        valid_until_unix=int(time.time()) + 600,
+    )
+    scope_raw = _json(scope.model_dump(mode="json"))
+    scope_pin = _sha(scope_raw)
+    (directory / "execution-scope.private.json").write_bytes(scope_raw)
+    (directory / "baseline-input.private.scs").write_bytes(retained.baseline_input)
+    ack = _json(
+        {
+            "owner": "C0",
+            "operation_id": _WRITER,
+            "scope_sha256": scope_pin,
+            "approved_actions": ["edit", "readback-netlist"],
+            "valid_until_unix": scope.valid_until_unix,
+        }
+    )
+    (directory / "c0-exact-ack.private.json").write_bytes(ack)
+    registration = _json(
+        {
+            "schema_version": 2,
+            "route": "amplifier_pm0_default",
+            "context_id": context.binding.context_id,
+            "resource_domain_sha256": context.resource_domain_sha256,
+            "scope_sha256": scope_pin,
+            "evidence_directory": str(directory),
+            "authority_sha256": _sha(ack),
+        }
+    )
+    binding_path = tmp_path / "amp-registration.json"
+    binding_path.write_bytes(registration)
+    cfg = json.loads(settings.read_bytes())
+    cfg["contexts"][0].update(
+        pmos_default_change_binding=str(binding_path), pmos_default_change_sha256=_sha(registration)
+    )
+    settings.write_bytes(_json(cfg))
+    request = PmosDefaultChangeRequest(
+        operation_id=_WRITER,
+        expected_scope_sha256=scope_pin,
+        expected_plan_sha256=plan.plan_sha256,
+    )
+    return settings, directory, request, scope, assets
+
+
+@pytest.mark.parametrize("transport_failure", [False, True])
+def test_amp_registered_factory_dispatch_and_restart_replay(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    transport_failure: bool,
+) -> None:
+    settings, directory, request, scope, assets = _registered_provider_fixture(operation, tmp_path)
+    installed = tmp_path / "package-fixture"
+    installed.mkdir()
+    for name, data in zip(amp_host._ASSETS, assets, strict=True):
+        (installed / name).write_bytes(data)
+    monkeypatch.setattr(amp_host, "files", lambda _: installed)
+
+    evidence = operation[0].journal.reconciliation
+    assert evidence is not None
+    receipt = amp_host._Receipt(
+        status="VERIFIED",
+        operation_id=_WRITER,
+        scope_sha256=request.expected_scope_sha256,
+        plan_sha256=scope.plan_sha256,
+        owned_before_view_tree_sha256=scope.owned_before_view_tree_sha256,
+        saved_view_tree_sha256=_VIEW,
+        reopened_view_tree_sha256=_VIEW,
+        netlisted_view_tree_sha256=_VIEW,
+        source_preservation_sha256="1" * 64,
+        reopen_receipt_sha256="2" * 64,
+        netlist_receipt_sha256="3" * 64,
+        presave_signature_sha256=_sha(evidence.presave),
+        reopened_signature_sha256=_sha(evidence.reopened),
+        netlist_sha256=_sha(evidence.netlist),
+        edit_live_counter=35,
+        reopen_frame=tuple(amp._pm0_frame(baseline=False)[0]),
+        ocean_calls=2,
+        simulations=0,
+        reservations=0,
+    )
+    output = _json(
+        amp_host._Response(
+            receipt=receipt,
+            receipt_sha256=canonical_digest(receipt),
+            presave_base64=base64.b64encode(evidence.presave).decode("ascii"),
+            reopened_base64=base64.b64encode(evidence.reopened).decode("ascii"),
+            input_base64=base64.b64encode(evidence.netlist).decode("ascii"),
+        ).model_dump(mode="json")
+    )
+    launched = []
+
+    def fixed(
+        argv: list[str], payload: bytes, *_: object, **kwargs: object
+    ) -> tuple[int, bytes, bytes]:
+        assert argv[-2:] == [shlex.quote(assets[0].decode("ascii")), request.expected_scope_sha256]
+        packet = json.loads(payload)
+        assert base64.b64decode(packet["edit_base64"]) == assets[1]
+        assert base64.b64decode(packet["verify_base64"]) == assets[2]
+        assert base64.b64decode(packet["baseline_base64"]) == operation[0].baseline_input
+        assert kwargs["timeout"] == 60 and kwargs["limit"] == amp_host._LIMIT
+        assert (directory / "amp-writer-intent.private.json").is_file()
+        assert (directory / "amp-dispatch-intent.private.json").is_file()
+        launched.append(payload)
+        if transport_failure:
+            raise TimeoutError
+        return 0, output, b""
+
+    monkeypatch.setattr(amp_host, "run_fixed", fixed)
+    apply_path = tmp_path / "amp-request.json"
+    apply_path.write_text(request.model_dump_json(), encoding="utf-8")
+    initial = dispatch_pmos_default_change(
+        apply_path, registered_pmos_default_change(load_runtime(settings)[0])
+    )
+
+    # A restarted caller can verify its retained bytes without the launch assets.
+    def missing_asset(_: object) -> Path:
+        raise AssertionError("replay must not resolve launch assets")
+
+    monkeypatch.setattr(amp_host, "files", missing_asset)
+    replay = dispatch_pmos_default_change(
+        apply_path, registered_pmos_default_change(load_runtime(settings)[0])
+    )
+    expected = "OUTCOME_UNKNOWN" if transport_failure else "VERIFIED"
+    assert len(launched) == 1 and initial.outcome == replay.outcome == expected
+    assert initial.dispatched_this_call == (None if transport_failure else True)
+    assert replay.replayed and not replay.dispatched_this_call
+
+
+def test_amp_registration_without_packaged_assets_stops_before_claim(
+    operation: tuple[amp.RetainedAmplifierPm0DefaultChange, PmosDefaultChangeRequest],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings, directory, request, _, _ = _registered_provider_fixture(operation, tmp_path)
+    monkeypatch.setattr(amp_host, "files", lambda _: tmp_path / "missing-package")
+    service = registered_pmos_default_change(load_runtime(settings)[0])
+    with pytest.raises(OperationRejected) as failure:
+        service.apply(request)
+    assert failure.value.reason == "amp_pm0_reviewed_assets_missing"
+    assert not list(directory.glob("amp-*.private.*"))
