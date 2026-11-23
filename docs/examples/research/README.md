@@ -4,6 +4,12 @@
 
 논문 서지 정보는 Mario A. Jiménez-González, *Design of a 12-bit Sigma Delta ADC in 45 nm CMOS technology*, ITESO, 2024년 11월입니다. Fig. 2-12, Table 7, 단자 연결 및 수치는 원문 대조가 필요합니다. 초안의 W/L 단위는 µm이며 PM6의 배수는 6입니다. GPDK090으로 옮길 때 W/L과 배수는 CDF와 유효 Netlist에 맞춰 결정합니다. [ITESO 서지 기록](https://rei.iteso.mx/items/5b2a7fc8-347e-4113-9cfc-93c87913ab34)
 
+## 연구 인계
+
+- **준비된 경로** — 실제 GPDK090 인버터에서 저장, 독립 재개방, 전체 테스트벤치 Netlist와 등록 후보 조립까지 확인했습니다. 설치본 `0a84000`은 별도의 AMP 20 µm 기준본과 자동 120 nm 사본의 기존 Spectre DC·AC 결과 네 건을 비교 파일로 저장했고, 독립 QA와 Windows·POSIX CI를 통과했습니다. [PR 172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) · [CI 결과](https://github.com/Phjrab/cadence-mcp-bridge/actions/runs/45112099367)
+- **OTA 미확정 입력** — 논문의 D/G/S/B 연결과 치수, 실제 GPDK090 셀·CDF·모델 매핑, 테스트벤치의 공급·입력·부하와 관측 경로를 확정해야 합니다. 성능 목표와 허용 오차도 미정입니다.
+- **호출 순서** — 설치 MCP에서 `tools/list` → 회로 정의 검증 → MOS 블록 계획 → 지원되는 Cadence 경로에서 작업 사본 생성·저장 → 독립 재개방 및 Netlist 대조 → 대상과 분석 reader 등록 순으로 진행합니다. 실행 범위가 확정되면 분석 계획 → 제출 → 상태 → 결과 → 같은 작업 ID로 재조회 순으로 확인합니다. 첫 OTA는 DC/OP와 AC부터 시작합니다.
+
 ## 블록 순서와 진입 조건
 
 | 순서 | 필요한 입력 | 먼저 확인할 결과 |
