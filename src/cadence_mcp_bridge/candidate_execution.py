@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from math import isfinite
-from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self
+from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self, TypedDict
 
 from pydantic import Field, model_validator
 
@@ -50,7 +50,9 @@ from cadence_mcp_bridge.parameter_changes import (
     ChangePlan,
     ChangeReadback,
     ChangeValue,
+    DerivedValue,
     MosWidthTarget,
+    Readback,
     _amp_pm0_options,
     partition_amplifier_input,
     project_netlist_change,
@@ -1252,6 +1254,136 @@ class FreshAmplifierWidthBinding(VariableModel):
     diagnostic_model_receipt_sha256: Digest
     baseline: FreshAmplifierRevisionBinding
     candidate: FreshAmplifierRevisionBinding
+
+
+@dataclass(frozen=True)
+class VerifiedAmplifierCopyChangeEvidence:
+    """Host-pinned outputs of the stock fixed writer and its same-ID lookup."""
+
+    original: bytes
+    original_sha256: Digest
+    replay: bytes
+    replay_sha256: Digest
+    receipt: bytes
+    receipt_sha256: Digest
+
+
+class _ReadbackConditions(TypedDict):
+    plan_sha256: Digest
+    target_sha256: Digest
+    fixed_conditions_sha256: Digest
+
+
+def project_verified_amplifier_copy_change(
+    plan: ChangePlan,
+    request: PmosDefaultChangeRequest,
+    evidence: VerifiedAmplifierCopyChangeEvidence,
+    *,
+    baseline_input: bytes,
+    candidate_input: bytes,
+) -> ChangeReadback:
+    """Bind the stock VERIFIED change to a comparison without admitting analysis."""
+    from cadence_mcp_bridge.amplifier_pm0_default import _pm0_frame
+    from cadence_mcp_bridge.amplifier_pm0_service import _Receipt
+
+    try:
+        original = PmosDefaultChangeResult.model_validate_json(
+            _canonical(_pinned_json(evidence.original, evidence.original_sha256))
+        )
+        replay = PmosDefaultChangeResult.model_validate_json(
+            _canonical(_pinned_json(evidence.replay, evidence.replay_sha256))
+        )
+        for writer in (original, replay):
+            writer.check_registered_scope(
+                request, registered_plan=plan, registered_scope_sha256=request.expected_scope_sha256
+            )
+        receipt = _Receipt.model_validate_json(
+            _canonical(_pinned_json(evidence.receipt, evidence.receipt_sha256))
+        )
+        view = receipt.saved_view_tree_sha256
+        frame, reopened_properties = _pm0_frame(baseline=False)
+        if (
+            not isinstance(plan.target, MosWidthTarget)
+            or plan.target.instance.instance_path != "PM0"
+            or original.outcome != "VERIFIED"
+            or original.replayed
+            or original.dispatched_this_call is not True
+            or replay
+            != original.model_copy(update={"replayed": True, "dispatched_this_call": False})
+            or (receipt.operation_id, receipt.plan_sha256, receipt.scope_sha256)
+            != (original.operation_id, original.plan_sha256, original.scope_sha256)
+            or view != receipt.reopened_view_tree_sha256
+            or view != receipt.netlisted_view_tree_sha256
+            or view != original.observed_revision_sha256
+            or view != original.observed_testbench_revision_sha256
+            or view == receipt.owned_before_view_tree_sha256
+            or receipt.source_preservation_sha256 != original.source_preservation_sha256
+            or receipt.reopen_receipt_sha256 != original.reopen_receipt_sha256
+            or receipt.netlist_receipt_sha256 != original.netlist_receipt_sha256
+            or receipt.netlist_sha256 != original.netlist_sha256
+            or list(receipt.reopen_frame) != frame
+        ):
+            raise ValueError("verified fixed writer evidence differs")
+        projection = project_netlist_change(plan, baseline_input, candidate_input)
+        if projection.artifact_sha256 != receipt.netlist_sha256:
+            raise ValueError("verified fixed writer netlist differs")
+        reference = plan.baseline
+        _, _, _, baseline_statements = partition_amplifier_input(
+            baseline_input, expected_sha256=reference.netlist_sha256
+        )
+        _, baseline_properties = _amp_pm0_options(baseline_statements, baseline=True)
+        # Spectre emits the fixed single-finger width as w, not the OA fw field.
+        baseline_properties["fw"] = baseline_properties["w"].strip("()")
+        names = tuple(change.before.property_name for change in plan.allowed_derived)
+        common = _ReadbackConditions(
+            plan_sha256=plan.plan_sha256,
+            target_sha256=canonical_digest(plan.target),
+            fixed_conditions_sha256=reference.fixed_conditions_sha256,
+        )
+        baseline = Readback(
+            **common,
+            stage="baseline",
+            revision=reference.revision,
+            revision_sha256=reference.revision_sha256,
+            testbench_revision_sha256=reference.testbench_revision_sha256,
+            artifact_sha256=reference.netlist_sha256,
+            value=plan.old,
+            derived=tuple(
+                DerivedValue(property_name=name, value=baseline_properties[name]) for name in names
+            ),
+            mos_fingers=1,
+            mos_multiplicity=1,
+        )
+        reopened = Readback(
+            **common,
+            stage="reopened",
+            revision=plan.candidate_revision,
+            revision_sha256=view,
+            testbench_revision_sha256=view,
+            artifact_sha256=receipt.reopen_receipt_sha256,
+            value=plan.expected,
+            derived=tuple(
+                DerivedValue(property_name=name, value=reopened_properties[name]) for name in names
+            ),
+            mos_fingers=1,
+            mos_multiplicity=1,
+        )
+        netlist = Readback(
+            **common,
+            stage="netlist",
+            revision=plan.candidate_revision,
+            revision_sha256=view,
+            testbench_revision_sha256=view,
+            artifact_sha256=projection.artifact_sha256,
+            value=projection.value,
+            derived=projection.derived,
+        )
+        result = verify_change_readback(plan, baseline=baseline, reopened=reopened, netlist=netlist)
+        if result.status != "MATCHED":
+            raise ValueError("verified fixed writer projections do not match")
+        return result
+    except (KeyError, TypeError, ValueError):
+        raise OperationRejected("verified_amplifier_copy_change_evidence_mismatch") from None
 
 
 @dataclass(frozen=True)
