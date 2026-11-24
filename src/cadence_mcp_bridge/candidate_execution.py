@@ -1387,6 +1387,16 @@ def project_verified_amplifier_copy_change(
 
 
 @dataclass(frozen=True)
+class AmplifierRetainedPolicyStep:
+    """An independently pinned applied policy record and its host receipt."""
+
+    apply_receipt: bytes
+    apply_receipt_sha256: Digest
+    policy_record: bytes
+    policy_record_sha256: Digest
+
+
+@dataclass(frozen=True)
 class FreshAmplifierStorageSuccessorEvidence:
     """Raw profiles and independently pinned native storage migration artifacts."""
 
@@ -1397,6 +1407,7 @@ class FreshAmplifierStorageSuccessorEvidence:
     successor_apply_receipt_sha256: Digest
     successor_policy_record: bytes
     successor_policy_record_sha256: Digest
+    policy_steps: tuple[AmplifierRetainedPolicyStep, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1415,12 +1426,29 @@ class FreshAmplifierOwnedCopyEvidence:
 
 
 @dataclass(frozen=True)
+class SavedAmplifier5656Evidence:
+    """Original saved writer and the exact C1 export and compiled-revision pins."""
+
+    writer_request: bytes
+    writer_request_sha256: Digest
+    writer: VerifiedAmplifierCopyChangeEvidence
+    preflight: bytes
+    export_receipt: bytes
+    export_receipt_sha256: Digest
+    export_custody: bytes
+    export_custody_sha256: Digest
+    runtime_manifest_sha256: Digest
+    runtime_registration_sha256: Digest
+
+
+@dataclass(frozen=True)
 class _FreshAmplifierCopyRoute:
     ade_state: str
     baseline_ade_state: str
     technology: dict[str, str]
     export: dict[str, Any] | None = None
     registration: dict[str, Any] | None = None
+    saved_source: SavedAmplifier5656Evidence | None = None
 
 
 def _fresh_amplifier_owned_copy(
@@ -1503,6 +1531,26 @@ def _fresh_amplifier_copy_route(
         raise ValueError("fresh amplifier ADE state differs from the recorded mapping")
     technology = [item for item in libraries if item["name"] == proof.technology["name"]]
     export, registration = proof.export, proof.registration
+    if proof.saved_source is not None:
+        saved = proof.saved_source
+        plan = operation.plan
+        if (
+            export is None
+            or len(technology) != 1
+            or technology[0]["tree_sha256"] != proof.technology["tree_sha256"]
+            or hashlib.sha256(_canonical(technology[0])).hexdigest() != _AMP_5656_TECHNOLOGY_SHA256
+            or route["source_cell"] != export["library"] + "/Differential_Amplifier_TB2"
+            or route["source_state"] != export["ade"]
+            or library["path"] != export["library"]
+            or library["tree_sha256"] != export["library_tree"]
+            or (plan.request.design_id, plan.request.analysis_id)
+            != (_AMP_5656_DESIGN, f"matched-{mode}")
+            or plan.runner_sha256 != saved.runtime_manifest_sha256
+            or hashlib.sha256(operation.runtime_registration).hexdigest()
+            != saved.runtime_registration_sha256
+        ):
+            raise ValueError("5656 registered export differs from executed route")
+        return [item for item in libraries if item != technology[0]]
     if export is None or registration is None:
         if technology:
             raise ValueError("fresh amplifier Center already registers the added technology")
@@ -1539,13 +1587,154 @@ _AMP_4497_STORAGE_BASELINE = {
     "count": 140,
     "result_reserved_bytes": 17_331_912_704,
 }
+_AMP_5656_PREFLIGHT_SHA256 = "367a0dc7172680179a0a4f736bcb9402e1f81c77707d4ec1bfd1fb29402cd9e9"
+_AMP_5656_CLOSURE_SHA256 = "382c63b2bb6b444336801b21ac1667c36f681d706de52d871ba062706c6e7fd7"
+_AMP_5656_TECHNOLOGY_SHA256 = "363f7658940faded59bbddc3b0ef266c0995eb19e1e15e26568788fc09ad2561"
+_AMP_5656_WRITER = "5656c6fb-287c-41a6-b891-057f4ef4e0b2"
+_AMP_5656_EXPORT = "1221e5d5-0e11-4bc9-a0bf-592278573f7a"
+_AMP_5656_REVISION = "amp-pm0-user-mcp-1123-r1"
+_AMP_5656_DESIGN = "amp-pm0-auto120-5656"
+_AMP_5656_PRIOR_RECORDS = (
+    "b1133fb68b9fbe9a384294c5ae5862264d1766b60a9b9e479e9b5e325e002016",
+    "c32b0ff1bcc611cb5c6b3a4c10c053989f638c9ec31aeade9e7a12807c39f090",
+)
+_AMP_5656_CENTER_PINS = {
+    "dc": (
+        "a9a9d30d-b707-4f14-a5af-3470391282ba",
+        "1197a69afea69704f1da27bf1da8a4dd54f2c5a348f8263f29208467ad5cb6c7",
+        "e3a90d9c947e81d497b8c1fe973b0794d00cbaeef7b19bd031714b808bd984d8",
+        "d41f8f2951ac8f0513ea52d59d29340c1ec6484b53074eda0777b4aaf74512ef",
+        "ff29308606f87f12abeb4fd759bd0ad88dd2b3c6ecd427dd5aeb038d548daccf",
+    ),
+    "ac": (
+        "69c5f785-1539-4939-a18d-a1e3850e25f3",
+        "9f74f7b87b508489f97ce032dd29fb92e7416396fbf009f3821c48f1ec0c44f5",
+        "a50cd9548615d41cdf5bf5c24f1e654f9075b39ea73afe6e42b41ec8720f5c11",
+        "381871f210a04f8e2c34515b5ee321fb3b0e543a6e596c6aa216e6fca3cdf608",
+        "018eb36c36113cd145181fd53ba6710bbeec1b96ffe34314f08b9f09303c12f7",
+    ),
+}
+_AMP_5656_POLICY_STEPS = (
+    (
+        9,
+        17_767_071_744,
+        142,
+        17_600_348_160,
+        "4325facb94d3d26982950ebecfa22eb2594270de1cd7168a923d0cf27553ad19",
+    ),
+    (
+        10,
+        18_169_724_928,
+        143,
+        17_734_565_888,
+        "f2f546514a2b2986de399a22f4c18cf05600c4391473ff0fb5a4d481e696da66",
+    ),
+)
+
+
+def _fresh_amplifier_saved_source(
+    evidence: SavedAmplifier5656Evidence,
+    binding: FreshAmplifierWidthBinding,
+    plan: ChangePlan,
+    readback: ChangeReadback,
+    baseline_input: bytes,
+    candidate_input: bytes,
+) -> tuple[_FreshAmplifierCopyRoute, _FreshAmplifierCopyRoute]:
+    if (
+        binding.diagnostic_model_receipt_sha256 != _AMP_5656_PREFLIGHT_SHA256
+        or binding.diagnostic_model_closure_sha256 != _AMP_5656_CLOSURE_SHA256
+    ):
+        raise ValueError("5656 diagnostic model evidence differs")
+    observed = _pinned_json(evidence.preflight, _AMP_5656_PREFLIGHT_SHA256)
+    source = observed["source"]
+    request = PmosDefaultChangeRequest.model_validate_json(
+        _canonical(_pinned_json(evidence.writer_request, evidence.writer_request_sha256))
+    )
+    export = _pinned_json(evidence.export_receipt, evidence.export_receipt_sha256)
+    custody = _pinned_json(evidence.export_custody, evidence.export_custody_sha256)
+    copy = export["copy"]
+    parent = observed["candidate_external_parent"]
+    charged_bytes = export["charged_bytes_before_receipt"]
+    if (
+        request.operation_id != _AMP_5656_WRITER
+        or evidence.writer.receipt_sha256 != source["durable_receipt_sha256"]
+        or source["view_tree"] != binding.candidate.revision_sha256
+        or source["view_tree"] != binding.candidate.testbench_revision_sha256
+        or source["input_sha256"] != hashlib.sha256(candidate_input).hexdigest()
+        or observed["status"] != "RESEARCH_1124_LIVE_READ_ONLY"
+        or observed["candidate_parent_absent"] is not True
+        or project_verified_amplifier_copy_change(
+            plan,
+            request,
+            evidence.writer,
+            baseline_input=baseline_input,
+            candidate_input=candidate_input,
+        )
+        != readback
+        or export["status"] != "AMP_5656_OWNED_EXPORT_VERIFIED"
+        or export["operation"] != _AMP_5656_EXPORT
+        or export["originals_preserved"] is not True
+        or export["executed"] is not True
+        or export["replayed"] is not False
+        or type(charged_bytes) is not int
+        or not 0 < charged_bytes <= 3 * 1024**2 - 16384
+        or not re.fullmatch(r"[0-9a-f]{64}", export["scope"])
+        or any(
+            type(export[key]) is not int or export[key] != 0
+            for key in ("ocean", "spectre", "reservations")
+        )
+        or export["exact_saved_input_sha256"] != source["input_sha256"]
+        or copy["library"] != parent + "/" + source["library"].rsplit("/", 1)[-1]
+        or copy["ade"] != parent + "/Candidate5656_ADE"
+        or copy["library_content"] != source["library_content"]
+        or copy["view_content"] != source["view_content"]
+        or copy["cell_tree"] != binding.candidate.source_tree_sha256
+        or copy["ade_tree"] != binding.candidate.ade_state_sha256
+        or binding.baseline.source_tree_sha256 != observed["protected"]["archive_cell_tree_sha256"]
+        or binding.baseline.ade_state_sha256 != observed["protected"]["archive_state_tree_sha256"]
+        or _canonical(custody)
+        != _canonical(
+            {
+                "status": "RESEARCH_1124_INPUTS_EXPORTED",
+                "preflight_sha256": _AMP_5656_PREFLIGHT_SHA256,
+                "saved_view_tree_sha256": source["view_tree"],
+                "saved_view_content_sha256": source["view_content"],
+                "copied_view_content_sha256": copy["view_content"],
+                "source_library_content_sha256": source["library_content"],
+                "copied_library_content_sha256": copy["library_content"],
+                "source_cell": copy["library"] + "/Differential_Amplifier_TB2",
+                "source_cell_sha256": copy["cell_tree"],
+                "source_state": copy["ade"],
+                "source_state_sha256": copy["ade_tree"],
+                "ocean_calls": 0,
+                "simulations": 0,
+                "reservations": 0,
+                "raw_receipt_sha256": evidence.export_receipt_sha256,
+                "scope_sha256": export["scope"],
+            }
+        )
+    ):
+        raise ValueError("5656 saved writer or export evidence differs")
+    technology = {
+        "name": "cdsDefTechLib",
+        "tree_sha256": observed["protected"]["technology_tree_sha256"],
+    }
+    return (
+        _FreshAmplifierCopyRoute("state1", "state1", technology),
+        _FreshAmplifierCopyRoute(
+            "state1", "state1", technology, export=copy, saved_source=evidence
+        ),
+    )
 
 
 def _fresh_amplifier_storage_successor(
     evidence: FreshAmplifierStorageSuccessorEvidence,
     baseline: OperationPlan,
     candidate: OperationPlan,
+    *,
+    saved_source: bool = False,
 ) -> None:
+    end = _AMP_5656_POLICY_STEPS[-1][1] if saved_source else _AMP_4497_STORAGE_BYTES
     old = _pinned_json(evidence.baseline_profile, baseline.environment_sha256)
     new = _pinned_json(evidence.candidate_profile, candidate.environment_sha256)
     EnvironmentProfile.model_validate_json(_canonical(old))
@@ -1555,20 +1744,83 @@ def _fresh_amplifier_storage_successor(
     if (
         baseline.environment_sha256 != _AMP_CENTER_PROFILE_SHA256
         or _canonical(old) != _canonical(new)
-        or (old_ceiling, new_ceiling) != (_AMP_CENTER_STORAGE_BYTES, _AMP_4497_STORAGE_BYTES)
+        or (old_ceiling, new_ceiling) != (_AMP_CENTER_STORAGE_BYTES, end)
         or old["limits"]["spectre_attempts"] != 500
+        or len(evidence.policy_steps) != (2 if saved_source else 0)
+        or (
+            saved_source
+            and (
+                evidence.successor_policy_record_sha256,
+                evidence.policy_steps[0].policy_record_sha256,
+            )
+            != _AMP_5656_PRIOR_RECORDS
+        )
     ):
         raise ValueError("fresh amplifier profiles differ outside the approved storage ceiling")
 
     v7 = _pinned_json(evidence.v7_apply_receipt, _AMP_V7_APPLY_SHA256)
-    applied = _pinned_json(
-        evidence.successor_apply_receipt, evidence.successor_apply_receipt_sha256
+    v8 = AmplifierRetainedPolicyStep(
+        evidence.successor_apply_receipt,
+        evidence.successor_apply_receipt_sha256,
+        evidence.successor_policy_record,
+        evidence.successor_policy_record_sha256,
     )
-    record = _pinned_json(evidence.successor_policy_record, evidence.successor_policy_record_sha256)
+    steps = [
+        (
+            8,
+            _AMP_4497_STORAGE_BYTES,
+            _AMP_4497_STORAGE_BASELINE,
+            _AMP_4497_STORAGE_POLICY_SHA256,
+            v8,
+        )
+    ]
+    for (version, ceiling, count, reserved, policy), step in zip(
+        _AMP_5656_POLICY_STEPS, evidence.policy_steps, strict=saved_source
+    ):
+        steps.append(
+            (
+                version,
+                ceiling,
+                dict(campaign_id="AUTO-PHASE-01", count=count, result_reserved_bytes=reserved),
+                policy,
+                step,
+            )
+        )
+    prior = v7["policy_receipt_sha256"]
+    root_sha = hashlib.sha256(old["paths"]["managed_root"].encode()).hexdigest()
+    for version, ceiling, ledger, policy, step in steps:
+        _check_amplifier_policy_step(
+            step,
+            v7,
+            version=version,
+            ceiling=ceiling,
+            ledger=ledger,
+            policy=policy,
+            prior=prior,
+            root_sha=root_sha,
+            domain=baseline.resource_domain_sha256,
+        )
+        prior = step.policy_record_sha256
+
+
+def _check_amplifier_policy_step(
+    step: AmplifierRetainedPolicyStep,
+    v7: dict[str, Any],
+    *,
+    version: int,
+    ceiling: int,
+    ledger: dict[str, Any],
+    policy: str,
+    prior: str,
+    root_sha: str,
+    domain: str,
+) -> None:
+    applied = _pinned_json(step.apply_receipt, step.apply_receipt_sha256)
+    record = _pinned_json(step.policy_record, step.policy_record_sha256)
     if (
         not isinstance(applied, dict)
         or set(applied) != set(v7)
-        or applied["status"] != "RETAINED_RESULT_LIMIT_V8_APPLIED_NO_LEDGER_CHANGE"
+        or applied["status"] != f"RETAINED_RESULT_LIMIT_V{version}_APPLIED_NO_LEDGER_CHANGE"
         or type(applied["created"]) is not bool
         or any(
             applied[key] is not False
@@ -1577,8 +1829,8 @@ def _fresh_amplifier_storage_successor(
         or type(applied["reservation_cost"]) is not int
         or applied["reservation_cost"] != 0
         or type(applied["result_ceiling_bytes"]) is not int
-        or applied["result_ceiling_bytes"] != new_ceiling
-        or applied["policy_receipt_sha256"] != evidence.successor_policy_record_sha256
+        or applied["result_ceiling_bytes"] != ceiling
+        or applied["policy_receipt_sha256"] != step.policy_record_sha256
         or not isinstance(record, dict)
         or set(record)
         != {
@@ -1593,18 +1845,17 @@ def _fresh_amplifier_storage_successor(
             "plan_sha256",
             "operator_authority",
         }
-        or evidence.successor_policy_record != _canonical(record)
+        or step.policy_record != _canonical(record)
         or type(record["schema_version"]) is not int
-        or record["schema_version"] != 8
-        or record["kind"] != "EXPLICIT_RETAINED_RESULT_LIMIT_V8"
-        or record["prior_receipt_sha256"] != v7["policy_receipt_sha256"]
-        or record["resource_domain_sha256"] != baseline.resource_domain_sha256
-        or record["root_sha256"]
-        != hashlib.sha256(old["paths"]["managed_root"].encode()).hexdigest()
+        or record["schema_version"] != version
+        or record["kind"] != f"EXPLICIT_RETAINED_RESULT_LIMIT_V{version}"
+        or record["prior_receipt_sha256"] != prior
+        or record["resource_domain_sha256"] != domain
+        or record["root_sha256"] != root_sha
         or record["plan_sha256"] != applied["plan_sha256"]
         or record["policy_sha256"] != applied["policy_sha256"]
-        or record["policy_sha256"] != _AMP_4497_STORAGE_POLICY_SHA256
-        or _canonical(record["baseline"]) != _canonical(_AMP_4497_STORAGE_BASELINE)
+        or record["policy_sha256"] != policy
+        or _canonical(record["baseline"]) != _canonical(ledger)
         or not isinstance(record["operator_authority"], str)
         or not 1 <= len(record["operator_authority"]) <= 512
         or any(ord(char) < 32 for char in record["operator_authority"])
@@ -1812,7 +2063,9 @@ def _fresh_amplifier_measurement(
         value = _fresh_amplifier_metric(report, reader, ade)
         reason = "registered_measurement_unavailable" if value is None else None
     return FreshAmplifierMeasurement(
-        operation=operation.query, terminal_sha256=terminal, status=status,
+        operation=operation.query,
+        terminal_sha256=terminal,
+        status=status,
         report=report,
         value=value,
         reason=reason,
@@ -1938,15 +2191,15 @@ def associate_saved_width_bias_analysis(
             or (center.query.operation_id, center.query.expected_plan_sha256, baseline_input_sha256)
             != (center_pin.operation_id, center_pin.plan_sha256, center_pin.input_sha256)
             or center.query.operation_id == changed.query.operation_id
-            or changed.query != NativeOperationQuery.model_validate_json(
-                candidate_query.model_dump_json()
-            )
+            or changed.query
+            != NativeOperationQuery.model_validate_json(candidate_query.model_dump_json())
             or requested_bias.normalized[1] != "V"
         ):
             raise ValueError("saved-width bias operation identity differs")
 
         export = (
-            None if export_evidence is None
+            None
+            if export_evidence is None
             else _persisted_bias_export(
                 export_evidence, saved_width, center.plan, changed.plan, mode
             )
@@ -1974,8 +2227,12 @@ def associate_saved_width_bias_analysis(
                 )
             else:
                 route, conditions, reader, semantics = _width_route(
-                    operation, raw, mode, varied_id="vbiasn",
-                    exported_technology=technology, export_comparison=True,
+                    operation,
+                    raw,
+                    mode,
+                    varied_id="vbiasn",
+                    exported_technology=technology,
+                    export_comparison=True,
                 )
             source_tree = saved_width.source_tree_sha256
             ade_tree = saved_width.ade_state_sha256
@@ -2025,17 +2282,21 @@ def associate_saved_width_bias_analysis(
             measurements.append(
                 _fresh_amplifier_measurement(mode, operation, conditions, reader, ade, static, pin)
             )
-            fixed_conditions.append((
-                conditions if export is None else conditions.model_dump(
-                    exclude={"source_tree_sha256", "ade_state_tree_sha256"}
-                ),
-                semantics,
-                (route["source_cell"], route["libraries"]) if export is None else None,
-                parameters,
-                includes,
-                analyses,
-                static,
-            ))
+            fixed_conditions.append(
+                (
+                    conditions
+                    if export is None
+                    else conditions.model_dump(
+                        exclude={"source_tree_sha256", "ade_state_tree_sha256"}
+                    ),
+                    semantics,
+                    (route["source_cell"], route["libraries"]) if export is None else None,
+                    parameters,
+                    includes,
+                    analyses,
+                    static,
+                )
+            )
 
         if requested_bias.normalized[0] == "0.32" or fixed_conditions[0] != fixed_conditions[1]:
             raise ValueError("saved-width bias fixed conditions differ")
@@ -2135,15 +2396,14 @@ def associate_fresh_amplifier_width_pair(
     ac: FreshAmplifierWidthAnalysis,
     policy_successor: FreshAmplifierStorageSuccessorEvidence | None = None,
     owned_copy: FreshAmplifierOwnedCopyEvidence | None = None,
+    saved_source: SavedAmplifier5656Evidence | None = None,
 ) -> FreshAmplifierWidthPair:
     """Compare four retained native operations with independently authenticated bindings.
 
     The model receipt must attest current diagnostic-to-canonical resolution and
     the entire graph. No historical measurement or model equivalence is inferred.
-    Optional storage evidence only permits the recorded Center-to-4497 profile
-    transition. Each operation is still validated under its original profile.
-    The owned-copy receipts qualify only its explicit ADE name mapping and added
-    technology registration. Both actual circuits and both analyses still match.
+    The 4497 and 5656 sources require their own copy and policy evidence. Each
+    operation is validated under its original profile and measurement contract.
     """
     try:
         binding = FreshAmplifierWidthBinding.model_validate_json(
@@ -2166,6 +2426,8 @@ def associate_fresh_amplifier_width_pair(
             or netlist is None
             or old.testbench_revision_sha256 == reopened.testbench_revision_sha256
             or binding.baseline.source_tree_sha256 == binding.candidate.source_tree_sha256
+            or (saved_source is not None and (owned_copy is not None or policy_successor is None))
+            or (reopened.revision.revision_id == _AMP_5656_REVISION) != (saved_source is not None)
         ):
             raise ValueError("complete PM0 change and distinct revision evidence required")
         projection = project_netlist_change(plan, baseline_input, candidate_input)
@@ -2220,6 +2482,10 @@ def associate_fresh_amplifier_width_pair(
         operations = baseline_ops + candidate_ops
         if (
             len({op.query.operation_id for op in operations}) != len(operations)
+            or (
+                saved_source is None
+                and any(op.plan.request.design_id == _AMP_5656_DESIGN for op in operations)
+            )
             or len(
                 {
                     (
@@ -2239,16 +2505,22 @@ def associate_fresh_amplifier_width_pair(
             if len(baseline_profiles | candidate_profiles) > 1:
                 raise ValueError("fresh amplifier operation profiles differ")
         else:
+            child_revision = (
+                _AMP_5656_REVISION if saved_source is not None else "amp-pm0-auto-4497-r1"
+            )
             if (
                 len(baseline_profiles) != 1
                 or len(candidate_profiles) != 1
                 or baseline_profiles == candidate_profiles
                 or old.revision.revision_id != "reference-amplifier-bias-grid-v1"
-                or reopened.revision.revision_id != "amp-pm0-auto-4497-r1"
+                or reopened.revision.revision_id != child_revision
             ):
                 raise ValueError("fresh amplifier storage successor is outside its comparison")
             _fresh_amplifier_storage_successor(
-                policy_successor, baseline_ops[0].plan, candidate_ops[0].plan
+                policy_successor,
+                baseline_ops[0].plan,
+                candidate_ops[0].plan,
+                saved_source=saved_source is not None,
             )
         center_copy = child_copy = None
         if owned_copy is not None:
@@ -2256,6 +2528,28 @@ def associate_fresh_amplifier_width_pair(
                 raise ValueError("fresh amplifier copy comparison requires all four operations")
             center_copy, child_copy = _fresh_amplifier_owned_copy(
                 owned_copy, binding, netlist.artifact_sha256
+            )
+        if saved_source is not None:
+            if len(baseline_ops) != 2 or len(candidate_ops) != 2:
+                raise ValueError("5656 comparison requires all four retained operations")
+            for mode, op, center_pin in (
+                ("dc", baseline_ops[0], binding.baseline.dc),
+                ("ac", baseline_ops[1], binding.baseline.ac),
+            ):
+                if (
+                    center_pin is None
+                    or (
+                        center_pin.operation_id,
+                        center_pin.plan_sha256,
+                        center_pin.input_sha256,
+                        op.expected_terminal_sha256,
+                        op.expected_report_sha256,
+                    )
+                    != _AMP_5656_CENTER_PINS[mode]
+                ):
+                    raise ValueError("5656 Center operation pin differs")
+            center_copy, child_copy = _fresh_amplifier_saved_source(
+                saved_source, binding, plan, readback, baseline_input, candidate_input
             )
         rows = []
         analysis_pairs: tuple[tuple[Literal["dc", "ac"], FreshAmplifierWidthAnalysis], ...] = (
