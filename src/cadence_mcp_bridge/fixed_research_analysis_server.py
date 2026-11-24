@@ -291,7 +291,9 @@ def create_fixed_research_analysis_server(
                 raise ValueError("Fixed comparison terminal enrollment differs")
             _check_comparison(context, document, saved, enrolled, routes)
             if registration.comparison_request is not None:
-                verify_fresh_amplifier_comparison(registration.comparison_request, context, raw)
+                verify_fresh_amplifier_comparison(
+                    registration.comparison_request, config.runtime_settings_path, context, raw,
+                )
             comparison = project_retained_amp_comparison(document, comparison_ref.sha256)
         native = NativeOperationService(context)
     except (KeyError, OSError, TypeError, ValueError, ConfigurationError, InvalidInputError):

@@ -1028,7 +1028,7 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             for field in fields
         }
 
-    def compare(label, destination):
+    def compare(label, destination, *flags):
         ref = pin(tmp_path / f"{label}.json", json.dumps(request).encode())
         return main(
             [
@@ -1039,6 +1039,7 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
                 ref["sha256"],
                 "--output",
                 str(destination),
+                *flags,
             ]
         )
 
@@ -1230,26 +1231,67 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         def record_5656(*args, saved_source, policy_successor, trusted_context, **kwargs):
             assert trusted_context is execution_context
             forwarded_5656.append((saved_source, policy_successor))
+            if saved_source.ac_native_result is None:
+                assert kwargs["ac"].candidate.operation.record.progress.phase == "UNKNOWN_OUTCOME"
+                partial = pair.ac.candidate.model_copy(
+                    update={"status": "UNKNOWN_OUTCOME", "report": None, "value": None,
+                            "terminal_sha256": None, "reason": "retained_operation_not_succeeded"},
+                )
+                return pair.model_copy(
+                    update={"ac": pair.ac.model_copy(update={"candidate": partial})},
+                )
             return pair  # Adapter plumbing only. C7 tests the producer conditions.
 
         class CustodyBinding(SimpleNamespace):
             model_fields = {}
 
+        trusted_journal = tmp_path / "trusted.sqlite3"
+        trusted_store = AnalysisStore(trusted_journal)
+        for run in (evidence["dc"].candidate, evidence["ac"].candidate):
+            op = run.operation
+            op_id = op.query.operation_id
+            assert trusted_store.admit_operation(op_id, op.plan)
+            pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+            trusted_store.advance_operation(op_id, OperationProgress(phase="ADMITTED"), pending)
+            trusted_store.advance_operation(op_id, pending, op.record.progress)
+        originals[trusted_journal] = trusted_journal.read_bytes()
         execution_context = SimpleNamespace(
             context_sha256="8" * 64,
             lock_path=tmp_path / "resource.lock",
             binding=CustodyBinding(
-                analysis_journal=tmp_path / "dc-candidate.sqlite3",
+                context_id="trusted-5656",
+                analysis_journal=trusted_journal,
                 sweep_journal=tmp_path / "sweep.sqlite3",
             ),
         )
+        settings_path = Path(runtime_settings["path"])
+        trusted_flags = ("--settings", str(settings_path), "--context", "trusted-5656")
+
+        def compare_5656(label, destination):
+            return compare(label, destination, *trusted_flags)
+
+        validated = []
+
+        def trusted_settings(path, raw):
+            validated.append(path)
+            assert path == settings_path and raw == originals[settings_path]
+            return (execution_context,)
+
         with monkeypatch.context() as adapter:
-            adapter.setattr(cli, "load_runtime", lambda _: (execution_context,))
+            adapter.setattr(cli, "validate_runtime_document", trusted_settings)
             adapter.setattr(
                 candidate_execution, "associate_fresh_amplifier_width_pair", record_5656
             )
+            denied = tmp_path / "denied.json"
+            assert compare("json-only-custody", denied) == 2
+            foreign = pin(tmp_path / "foreign-settings.json", b'{"foreign":true}')
+            custody["settings"] = foreign
+            assert compare_5656("foreign-custody", denied) == 2
+            custody["settings"] = runtime_settings
+            assert validated == [] and forwarded_5656 == [] and not denied.exists()
+            capsys.readouterr()
             v10_output = tmp_path / "v10-output.json"
-            assert compare("saved-source", v10_output) == 0
+            assert compare_5656("saved-source", v10_output) == 0
             v10_summary = output(capsys)
             assert load_retained_amp_comparison(v10_output, v10_summary["file_sha256"]).dc == (
                 retained.dc
@@ -1269,13 +1311,16 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
                 }
             )
             raw_v10 = v10_output.read_bytes()
-            cli.verify_fresh_amplifier_comparison(comparison_request, execution_context, raw_v10)
+            cli.verify_fresh_amplifier_comparison(
+                comparison_request, settings_path, execution_context, raw_v10,
+            )
             forged = json.loads(raw_v10)
             forged["association"]["dc"]["baseline"]["value"] += 1
             forged["deltas"]["dc"]["absolute_delta"] -= 1
             with pytest.raises(cli.OperationRejected) as rejected:
                 cli.verify_fresh_amplifier_comparison(
-                    comparison_request, execution_context, json.dumps(forged).encode(),
+                    comparison_request, settings_path, execution_context,
+                    json.dumps(forged).encode(),
                 )
             assert rejected.value.reason == "amplifier_comparison_report_not_reproduced"
             assert len(forwarded_5656) == 3
@@ -1301,24 +1346,60 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
                     assert getattr(step, f"{field}_sha256") == ref["sha256"]
 
             request["owned_copy"] = old_copy
-            assert compare("mixed-source", tmp_path / "mixed.json") == 2
+            assert compare_5656("mixed-source", tmp_path / "mixed.json") == 2
             del request["owned_copy"]
             bad_ref = source_refs["export_custody"]
-            assert compare("custody-collision", Path(bad_ref["path"])) == 2
+            assert compare_5656("custody-collision", Path(bad_ref["path"])) == 2
             good_pin = bad_ref["sha256"]
             bad_ref["sha256"] = "0" * 64
-            assert compare("wrong-custody-pin", tmp_path / "bad-custody.json") == 2
+            assert compare_5656("wrong-custody-pin", tmp_path / "bad-custody.json") == 2
             bad_ref["sha256"] = good_pin
             missing_custody = request["saved_source"].pop("terminal_custody")
-            assert compare("no-terminal-custody", tmp_path / "no-terminal-custody.json") == 2
+            assert compare_5656("no-terminal-custody", tmp_path / "no-terminal-custody.json") == 2
             request["saved_source"]["terminal_custody"] = missing_custody
+            native_ac = custody.pop("ac")
+            assert compare_5656("succeeded-missing-raw", tmp_path / "missing-raw.json") == 2
+            custody["ac"] = native_ac
+            assert not (tmp_path / "missing-raw.json").exists()
             ac_pin = terminal_refs["ac"]["sha256"]
             terminal_refs["ac"]["sha256"] = "0" * 64
-            assert compare("wrong-ac-native-pin", tmp_path / "wrong-ac-native-pin.json") == 2
+            assert compare_5656("wrong-ac-native-pin", tmp_path / "wrong-ac-native-pin.json") == 2
             terminal_refs["ac"]["sha256"] = ac_pin
+            partial_journal = tmp_path / "partial.sqlite3"
+            partial_store = AnalysisStore(partial_journal)
+            for mode in ("dc", "ac"):
+                op = evidence[mode].candidate.operation
+                op_id = op.query.operation_id
+                assert partial_store.admit_operation(op_id, op.plan)
+                pending = OperationProgress(phase="UNKNOWN_OUTCOME")
+                partial_store.advance_operation(op_id, OperationProgress(phase="ADMITTED"), pending)
+                if mode == "dc":
+                    partial_store.advance_operation(op_id, pending, op.record.progress)
+            partial_raw = partial_journal.read_bytes()
+            originals[partial_journal] = partial_raw
+            execution_context.binding.analysis_journal = partial_journal
+            changed = request["ac"]["candidate"]
+            original_ac = changed.copy()
+            changed["journal"] = {
+                "path": str(partial_journal), "sha256": hashlib.sha256(partial_raw).hexdigest(),
+            }
+            del changed["terminal_sha256"], changed["report"], custody["ac"]
+            partial_output = tmp_path / "honest-partial.json"
+            capsys.readouterr()
+            assert compare_5656("terminal-unknown", partial_output) == 0
+            assert output(capsys)["status"] == "AMPLIFIER_FRESH_WIDTH_COMPARISON_EXPORTED"
+            partial = json.loads(partial_output.read_bytes())
+            assert partial["association"]["ac"]["candidate"]["status"] == "UNKNOWN_OUTCOME"
+            assert partial["deltas"]["ac"]["absolute_delta"] is None
+            assert forwarded_5656[-1][0].dc_native_result is not None
+            assert forwarded_5656[-1][0].ac_native_result is None
+            changed.clear()
+            changed.update(original_ac)
+            custody["ac"] = native_ac
+            execution_context.binding.analysis_journal = trusted_journal
             request.pop("saved_source")
-            assert compare("v10-without-writer", tmp_path / "missing-writer.json") == 2
-            assert len(forwarded_5656) == 3
+            assert compare_5656("v10-without-writer", tmp_path / "missing-writer.json") == 2
+            assert len(forwarded_5656) == 4
             capsys.readouterr()
         del files["policy_steps"]
 
@@ -2303,3 +2384,17 @@ def test_submit_advance_capture_compare_chain_without_retry(
     ]
     assert rows[0].reason == ("retained_report_read_failed" if read_fails else None)
     assert len(provider.calls) == 1
+
+
+def test_5656_unrun_custody_leaves_the_journal_absent(tmp_path):
+    from cadence_mcp_bridge.candidate_execution import FreshAmplifierWidthAnalysis
+
+    journal = tmp_path / "absent.sqlite3"
+    context = SimpleNamespace(binding=SimpleNamespace(analysis_journal=journal))
+    evidence = cli._AmpTerminalCustodyFiles(
+        settings=cli._PinnedComparisonFile(path=tmp_path / "settings.json", sha256="1" * 64),
+        context_sha256="2" * 64,
+    )
+    unresolved = FreshAmplifierWidthAnalysis()
+    assert cli._retained_5656_payloads(context, evidence, unresolved, unresolved) == (None, None)
+    assert not any(tmp_path.iterdir())

@@ -29,7 +29,7 @@ from cadence_mcp_bridge.candidate_reports import (
     render_candidate_csv,
 )
 from cadence_mcp_bridge.domain_provisioning import _closed_document
-from cadence_mcp_bridge.errors import BridgeError
+from cadence_mcp_bridge.errors import BridgeError, InvalidInputError
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_service import NativeOperationQuery
 from cadence_mcp_bridge.onboarding import _local_path
@@ -37,11 +37,16 @@ from cadence_mcp_bridge.operator_operations import OperationRejected, load_grant
 from cadence_mcp_bridge.parameter_changes import AmplifierPm0InputEvidence, ChangeValue
 from cadence_mcp_bridge.result_reports import _publish_report
 from cadence_mcp_bridge.result_reports import capture as capture_report
-from cadence_mcp_bridge.runtime_context import ExecutionContext, load_runtime
+from cadence_mcp_bridge.runtime_context import (
+    ExecutionContext,
+    load_runtime,
+    validate_runtime_document,
+)
 from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonical_digest
 
 if TYPE_CHECKING:
     from cadence_mcp_bridge.candidate_execution import (
+        FreshAmplifierWidthAnalysis,
         FreshAmplifierWidthPair,
         PmosDcOperation,
         PmosDefaultChangeResult,
@@ -157,16 +162,18 @@ class _FreshAmplifierOwnedCopyFiles(VariableModel):
 
 
 class _AmpTerminalCustodyFiles(VariableModel):
-    dc: _PinnedComparisonFile
-    ac: _PinnedComparisonFile
+    dc: _PinnedComparisonFile | None = None
+    ac: _PinnedComparisonFile | None = None
     settings: _PinnedComparisonFile
     context_sha256: Digest
 
     @model_validator(mode="after")
     def distinct_absolute_payloads(self) -> _AmpTerminalCustodyFiles:
-        if (
-            not all(ref.path.is_absolute() for ref in (self.dc, self.ac, self.settings))
-            or self.dc.path == self.ac.path or self.dc.sha256 == self.ac.sha256
+        if not all(
+            ref.path.is_absolute() for ref in (self.dc, self.ac, self.settings) if ref is not None
+        ) or (
+            self.dc is not None and self.ac is not None
+            and (self.dc.path == self.ac.path or self.dc.sha256 == self.ac.sha256)
         ):
             raise ValueError("Distinct absolute DC and AC payload pins are required")
         return self
@@ -188,7 +195,11 @@ class _SavedAmplifier5656Files(VariableModel):
         return (
             self.writer_request, self.writer_original, self.writer_replay, self.writer_receipt,
             self.preflight, self.export_receipt, self.export_custody,
-            self.terminal_custody.settings, self.terminal_custody.dc, self.terminal_custody.ac,
+            self.terminal_custody.settings,
+            *(
+                ref for ref in (self.terminal_custody.dc, self.terminal_custody.ac)
+                if ref is not None
+            ),
         )
 
 
@@ -385,6 +396,8 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     )
     fresh_width.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     fresh_width.add_argument("--output", type=Path, required=True)
+    fresh_width.add_argument("--settings", type=Path, help="Trusted operator settings for 5656.")
+    fresh_width.add_argument("--context", help="Selected operator context for 5656.")
     saved_width_bias = actions.add_parser(
         "amplifier-saved-width-bias-compare",
         help="Compare retained VBIASN results for the same saved amplifier width revision.",
@@ -971,10 +984,48 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _retained_5656_payloads(
+    context: ExecutionContext,
+    custody: _AmpTerminalCustodyFiles,
+    dc: FreshAmplifierWidthAnalysis,
+    ac: FreshAmplifierWidthAnalysis,
+) -> tuple[bytes | None, bytes | None]:
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+
+    path = _local_path(context.binding.analysis_journal)
+    records = {}
+    if os.path.lexists(path):
+        with AnalysisStore(path).connection(create=False, read_only=True) as connection:
+            for side in (dc, ac):
+                if side.candidate is None:
+                    continue
+                operation_id = side.candidate.operation.query.operation_id
+                try:
+                    records[operation_id] = AnalysisStore._read_operation(connection, operation_id)
+                except InvalidInputError:
+                    continue
+
+    payloads: list[bytes | None] = []
+    for side, reference in ((dc, custody.dc), (ac, custody.ac)):
+        operation = side.candidate.operation if side.candidate is not None else None
+        record = records.get(operation.query.operation_id) if operation is not None else None
+        if operation is not None and record != operation.record:
+            raise OperationRejected("amplifier_custody_journal_record_differs")
+        succeeded = record is not None and record.progress.phase == "SUCCEEDED"
+        if succeeded != (reference is not None) or succeeded != (
+            operation is not None and operation.report is not None
+        ):
+            raise OperationRejected("amplifier_custody_payload_requires_succeeded_record")
+        payloads.append(None if reference is None else _comparison_document(reference))
+    return payloads[0], payloads[1]
+
+
 def _build_fresh_amplifier_comparison(
     reference: _PinnedComparisonFile,
     destination: Path | None,
     *,
+    settings: Path | None = None,
+    context_id: str | None = None,
     enrolled_context: ExecutionContext | None = None,
 ) -> tuple[bytes, FreshAmplifierWidthPair, Path | None]:
     from cadence_mcp_bridge.candidate_execution import (
@@ -1036,20 +1087,26 @@ def _build_fresh_amplifier_comparison(
     custody_context = None
     if source is not None:
         custody = source.terminal_custody
-        _comparison_document(custody.settings)
+        if settings is None or not settings.is_absolute() or (
+            enrolled_context is None and context_id is None
+        ):
+            raise OperationRejected("amplifier_external_settings_and_context_required")
+        if _local_path(settings) != _local_path(custody.settings.path):
+            raise OperationRejected("amplifier_custody_settings_path_differs")
+        raw_settings = _read_candidate_bytes(
+            settings, expected_sha256=custody.settings.sha256, limit=65_536,
+        )
         if enrolled_context is None:
-            contexts = load_runtime(custody.settings.path)
-            _comparison_document(custody.settings)
-            matches = [item for item in contexts if item.context_sha256 == custody.context_sha256]
-            if len(matches) != 1:
-                raise OperationRejected("amplifier_custody_context_differs")
-            custody_context = matches[0]
-            reserved.update(_reserved(custody.settings.path, contexts))
-        elif enrolled_context.context_sha256 == custody.context_sha256:
-            custody_context = enrolled_context
+            contexts = validate_runtime_document(settings, raw_settings)
+            custody_context = next(
+                (item for item in contexts if item.binding.context_id == context_id), None,
+            )
+            reserved.update(_reserved(settings, contexts))
         else:
+            custody_context = enrolled_context
+        if custody_context is None or custody_context.context_sha256 != custody.context_sha256:
             raise OperationRejected("amplifier_custody_context_differs")
-    elif enrolled_context is not None:
+    elif settings is not None or context_id is not None or enrolled_context is not None:
         raise OperationRejected("amplifier_custody_requires_saved_source")
     output = _output(destination, reserved) if destination is not None else None
     policy_evidence = None if successor is None else FreshAmplifierStorageSuccessorEvidence(
@@ -1069,27 +1126,6 @@ def _build_fresh_amplifier_comparison(
             )
             for step in successor.policy_steps
         ),
-    )
-    saved_source = None if source is None else SavedAmplifier5656Evidence(
-        writer_request=_comparison_document(source.writer_request),
-        writer_request_sha256=source.writer_request.sha256,
-        writer=VerifiedAmplifierCopyChangeEvidence(
-            original=_comparison_document(source.writer_original),
-            original_sha256=source.writer_original.sha256,
-            replay=_comparison_document(source.writer_replay),
-            replay_sha256=source.writer_replay.sha256,
-            receipt=_comparison_document(source.writer_receipt),
-            receipt_sha256=source.writer_receipt.sha256,
-        ),
-        preflight=_comparison_document(source.preflight),
-        export_receipt=_comparison_document(source.export_receipt),
-        export_receipt_sha256=source.export_receipt.sha256,
-        export_custody=_comparison_document(source.export_custody),
-        export_custody_sha256=source.export_custody.sha256,
-        runtime_manifest_sha256=source.runtime_manifest_sha256,
-        runtime_registration_sha256=source.runtime_registration_sha256,
-        dc_native_result=_comparison_document(source.terminal_custody.dc),
-        ac_native_result=_comparison_document(source.terminal_custody.ac),
     )
     copy_evidence = None if owned_copy is None else FreshAmplifierOwnedCopyEvidence(
         baseline_ade_state=owned_copy.baseline_ade_state,
@@ -1114,6 +1150,30 @@ def _build_fresh_amplifier_comparison(
     plan = ChangePlan.model_validate_json(_comparison_document(request.change_plan))
     dc = FreshAmplifierWidthAnalysis(retained(request.dc.baseline), retained(request.dc.candidate))
     ac = FreshAmplifierWidthAnalysis(retained(request.ac.baseline), retained(request.ac.candidate))
+    saved_source = None
+    if source is not None and custody_context is not None:
+        dc_raw, ac_raw = _retained_5656_payloads(custody_context, source.terminal_custody, dc, ac)
+        saved_source = SavedAmplifier5656Evidence(
+            writer_request=_comparison_document(source.writer_request),
+            writer_request_sha256=source.writer_request.sha256,
+            writer=VerifiedAmplifierCopyChangeEvidence(
+                original=_comparison_document(source.writer_original),
+                original_sha256=source.writer_original.sha256,
+                replay=_comparison_document(source.writer_replay),
+                replay_sha256=source.writer_replay.sha256,
+                receipt=_comparison_document(source.writer_receipt),
+                receipt_sha256=source.writer_receipt.sha256,
+            ),
+            preflight=_comparison_document(source.preflight),
+            export_receipt=_comparison_document(source.export_receipt),
+            export_receipt_sha256=source.export_receipt.sha256,
+            export_custody=_comparison_document(source.export_custody),
+            export_custody_sha256=source.export_custody.sha256,
+            runtime_manifest_sha256=source.runtime_manifest_sha256,
+            runtime_registration_sha256=source.runtime_registration_sha256,
+            dc_native_result=dc_raw,
+            ac_native_result=ac_raw,
+        )
     pair = associate_fresh_amplifier_width_pair(
         plan,
         ChangeReadback.model_validate_json(_comparison_document(request.readback)),
@@ -1156,12 +1216,15 @@ def _build_fresh_amplifier_comparison(
 
 def verify_fresh_amplifier_comparison(
     reference: _PinnedComparisonFile,
+    settings: Path | None,
     context: ExecutionContext,
     raw: bytes,
 ) -> None:
     if not reference.path.is_absolute():
         raise OperationRejected("amplifier_comparison_request_must_be_absolute")
-    rebuilt, _, _ = _build_fresh_amplifier_comparison(reference, None, enrolled_context=context)
+    rebuilt, _, _ = _build_fresh_amplifier_comparison(
+        reference, None, settings=settings, enrolled_context=context,
+    )
     if rebuilt != raw:
         raise OperationRejected("amplifier_comparison_report_not_reproduced")
 
@@ -1172,6 +1235,7 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
     path, digest = arguments.request
     raw, pair, output = _build_fresh_amplifier_comparison(
         _PinnedComparisonFile(path=Path(path), sha256=digest), arguments.output,
+        settings=arguments.settings, context_id=arguments.context,
     )
     assert output is not None
     file_sha256 = _export(output, raw)
