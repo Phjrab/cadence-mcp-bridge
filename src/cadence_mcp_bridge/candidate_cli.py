@@ -229,6 +229,7 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
             "amplifier-fresh-width-compare",
             "amplifier-saved-width-bias-compare",
             "observe-amplifier-pm0",
+            "compile-research-draft",
         ),
         dest="schema_action",
     )
@@ -1391,6 +1392,10 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
                 result = {"request_schema": _SavedWidthBiasRequest.model_json_schema()}
             elif arguments.schema_action == "observe-amplifier-pm0":
                 result = {"request_schema": _AmplifierPm0ObservationRequest.model_json_schema()}
+            elif arguments.schema_action == "compile-research-draft":
+                from cadence_mcp_bridge.research_draft import DraftPort
+
+                result = {"request_schema": DraftPort.model_json_schema()}
         elif action in ("compare", "csv"):
             inputs = {
                 _local_path(getattr(arguments, name))
