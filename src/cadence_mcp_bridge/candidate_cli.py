@@ -293,6 +293,12 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
         if retained:
             research.add_argument("--settings", type=Path, required=True)
             research.add_argument("--context", required=True)
+    draft = actions.add_parser(
+        "compile-research-draft", help="Compile pinned study topology and explicit PDK choices."
+    )
+    draft.add_argument("--draft", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    draft.add_argument("--port", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    draft.add_argument("--output", type=Path, required=True)
     raw_netlist = actions.add_parser(
         "verify-research-raw-netlist", help="Compare a local pinned DUT-only Spectre netlist."
     )
@@ -1455,6 +1461,27 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             result = _amplifier_select(arguments)
         elif action == "verify-change-readback":
             result = _verify_change_readback(arguments)
+        elif action == "compile-research-draft":
+            from cadence_mcp_bridge.research_adapters import ResearchCircuitRequest
+            from cadence_mcp_bridge.research_draft import compile_research_draft
+
+            draft_path, draft_sha = arguments.draft
+            port_path, port_sha = arguments.port
+            source_paths = {_local_path(Path(p)) for p in (draft_path, port_path)}
+            output = _output(arguments.output, source_paths)
+            definition = compile_research_draft(
+                _read_candidate_bytes(Path(draft_path), expected_sha256=draft_sha),
+                _read_candidate_bytes(Path(port_path), expected_sha256=port_sha),
+            )
+            request_bytes = ResearchCircuitRequest(definition=definition).model_dump_json().encode()
+            result = {
+                "status": "RESEARCH_CIRCUIT_REQUEST_EXPORTED",
+                "file_sha256": _export_research(output, request_bytes),
+                "definition_sha256": canonical_digest(definition),
+                "draft_sha256": draft_sha,
+                "port_sha256": port_sha,
+                "execution_authorized": False,
+            }
         elif action == "verify-research-raw-netlist":
             from cadence_mcp_bridge.research_adapters import (
                 ResearchMosBlockPreparation,
@@ -1756,6 +1783,7 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             "select",
             "amplifier-select",
             "verify-change-readback",
+            "compile-research-draft",
             "validate-research-circuit",
             "plan-research-mos-block",
             "verify-research-mos-block",
