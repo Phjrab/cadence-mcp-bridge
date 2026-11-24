@@ -11,6 +11,8 @@ from test_research_circuit import mos_block_fixture, payload, raw_block_netlist
 from cadence_mcp_bridge.research_bench import (
     BenchNetlistConditions,
     ResearchBenchPlan,
+    SignedAcSourceEvidence,
+    SignedAcSourceObservation,
     plan_research_bench,
     render_research_bench,
     verify_research_bench_netlist,
@@ -387,3 +389,91 @@ def test_declarative_bench_renders_17_mos_and_compares_differential_input() -> N
                 expected_plan_sha256=canonical_digest(changed_plan),
                 owned_library_path="/owned/block",
             )
+
+
+def test_signed_ac_uses_same_master_evidence_and_checks_emitted_sign() -> None:
+    plan, dut, frames, conditions, raw, full = _declarative_fixture()
+    assert plan.primitive_cdf_sha256 is not None
+    primitive = frames[plan.primitive_cdf_sha256].replace(
+        b'"acp"|"baseCellData"|"angle"', b'"acp"|"baseCellData"|nil'
+    )
+    primitive_pin = sha256(primitive).hexdigest()
+    plan = plan.model_copy(update={"primitive_cdf_sha256": primitive_pin})
+    frames[primitive_pin] = primitive
+    sources = (
+        SignedAcSourceObservation(
+            instance="V1",
+            master="analogLib/vdc/symbol",
+            plus="vp",
+            minus="0",
+            dc_string="500m",
+            acm_string="500m",
+            acp_absent=True,
+            statement="V1 (vp 0) vsource dc=500m mag=500m type=dc",
+        ),
+        SignedAcSourceObservation(
+            instance="V2",
+            master="analogLib/vdc/symbol",
+            plus="vm",
+            minus="0",
+            dc_string="500m",
+            acm_string="-500m",
+            acp_absent=True,
+            statement="V2 (vm 0) vsource dc=500m mag=-500m type=dc",
+        ),
+    )
+    effective = ("simulator lang=spectre\n" + "\n".join(row.statement for row in sources)).encode()
+    effective_pin = sha256(effective).hexdigest()
+    frames[effective_pin] = effective
+    evidence = SignedAcSourceEvidence(
+        primitive_cdf_sha256=primitive_pin,
+        native_manifest_sha256="1" * 64,
+        saved_tree_sha256="2" * 64,
+        reopen_artifact_sha256="3" * 64,
+        effective_netlist_sha256=effective_pin,
+        sources=sources,
+    )
+
+    def render(witness: bytes, *, retained: bool = True) -> ResearchBenchPlan:
+        pin = sha256(witness).hexdigest()
+        signed = plan.model_copy(update={"signed_ac_evidence_sha256": pin})
+        scripts = render_research_bench(
+            signed,
+            dut,
+            {**frames, pin: witness} if retained else frames,
+            expected_plan_sha256=canonical_digest(signed),
+            owned_library_path="/owned/block",
+        )
+        assert 'm2Param(inst "acm" "-0.5")' in scripts.generate
+        assert 'm2Property(cv "VNEG" "acm" "-0.5")' in scripts.reopen
+        assert 'm2Param(inst "acp"' not in scripts.generate
+        assert 'm2Require(dbFindProp(inst "acp")==nil)' in scripts.reopen
+        return signed
+
+    witness = evidence.model_dump_json().encode()
+    signed = render(witness)
+    with pytest.raises(ValueError, match="signed AC evidence"):
+        render(witness, retained=False)
+    with pytest.raises(ValueError, match="signed AC evidence"):
+        render(witness.replace(b"mag=-500m", b"mag=500m"))
+    with pytest.raises(ValueError, match="Input should be 'analogLib/vdc/symbol'"):
+        render(witness.replace(b"analogLib/vdc/symbol", b"analogLib/vsin/symbol"))
+
+    def compare(candidate: bytes) -> None:
+        verify_research_bench_netlist(
+            signed,
+            dut,
+            candidate,
+            raw,
+            expected_plan_sha256=canonical_digest(signed),
+            expected_netlist_sha256=sha256(candidate).hexdigest(),
+            expected_dut_netlist_sha256=sha256(raw).hexdigest(),
+            conditions=conditions,
+            expected_conditions_sha256=canonical_digest(conditions),
+        )
+
+    opposite = full.replace(b"mag=500m phase=180", b"mag=-500m")
+    compare(opposite)
+    for wrong in (b"mag=500m", b"mag=-500m phase=180"):
+        with pytest.raises(ValueError, match="bench device"):
+            compare(opposite.replace(b"mag=-500m", wrong))
