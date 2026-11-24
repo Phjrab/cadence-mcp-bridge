@@ -25,7 +25,7 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 class Worker:
     available: dict[Phase, ResearchGenerationCapture]
     failed_phase: Phase | None = None
-    retain_netlist: bool = True
+    unretained_phase: Phase | None = None
     progress: ResearchGenerationProgress | None = None
     phases: list[Phase] = field(default_factory=list)
     claims: int = 0
@@ -53,7 +53,7 @@ class Worker:
             raise OSError("worker failed after the durable intent")
         capture = self.available[phase]
         assert capture.previous_receipt_sha256 == previous_receipt_sha256
-        if phase != "netlist" or self.retain_netlist:
+        if phase != self.unretained_phase:
             self.progress = replace(self.progress, captures=(*self.progress.captures, capture))
         return capture
 
@@ -187,11 +187,14 @@ def test_research_generation_wrong_registration_never_claims() -> None:
     assert not worker.phases and worker.claims == 0
 
 
-def test_research_generation_requires_durable_evidence_before_verified() -> None:
+@pytest.mark.parametrize("phase", ["save", "reopen", "netlist"])
+def test_research_generation_requires_durable_evidence_before_proceeding(phase: Phase) -> None:
     service, query, worker = _fixture()
-    worker.retain_netlist = False
+    worker.unretained_phase = phase
+    ordered = ("save", "reopen", "netlist")
+    successful = ordered[: ordered.index(phase)]
     result = service.submit(query)
     assert result.status == "OUTCOME_UNKNOWN"
-    assert result.completed_phases == ("save", "reopen") and result.handoff_sha256 is None
+    assert result.completed_phases == successful and result.handoff_sha256 is None
     assert service.submit(query).status == "OUTCOME_UNKNOWN"
-    assert worker.phases == ["save", "reopen", "netlist"] and worker.claims == 1
+    assert tuple(worker.phases) == (*successful, phase) and worker.claims == 1

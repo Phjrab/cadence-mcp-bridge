@@ -86,7 +86,8 @@ class ResearchGenerationProvider(Protocol):
     Lookup reads only retained data. Claim is exclusive and must atomically
     enforce the current scope, admission and resource protections. run_phase
     reuses that claim and must bind execution, preservation and receipts to the
-    registered program, phase and predecessor. It must reject phase redispatch.
+    registered program, phase and predecessor. It must durably retain the
+    capture before returning, and reject phase redispatch.
     """
 
     def lookup(self, binding: ResearchGenerationBinding) -> ResearchGenerationProgress | None: ...
@@ -303,7 +304,7 @@ class RegisteredResearchGeneration:
             if status.status == "NOT_SUBMITTED":
                 return self._status("OUTCOME_UNKNOWN", replayed=True)
             return status
-        captures: list[ResearchGenerationCapture] = []
+        captures: tuple[ResearchGenerationCapture, ...] = ()
         rows: list[MosBlockStageReceipt] = []
         try:
             for phase in _PHASES:
@@ -311,14 +312,13 @@ class RegisteredResearchGeneration:
                 capture = self._provider.run_phase(
                     self._binding, phase, canonical_digest(predecessor) if predecessor else None
                 )
-                rows.append(self._validate_phase(capture, phase, predecessor))
-                captures.append(capture)
-            handoff = self._handoff(captures, rows)
+                row = self._validate_phase(capture, phase, predecessor)
+                captures = (*captures, capture)
+                retained = self._provider.lookup(self._binding)
+                if retained != ResearchGenerationProgress(self._binding_sha256, captures):
+                    raise ValueError("research generation phase evidence not retained")
+                rows.append(row)
+            handoff = self._handoff(list(captures), rows)
         except (OSError, ValueError):
             return self._status("OUTCOME_UNKNOWN", count=len(rows), replayed=False)
-        retained, _ = self._observe()
-        if retained.handoff_sha256 != handoff.handoff_sha256:
-            return self._status(
-                "OUTCOME_UNKNOWN", count=len(retained.completed_phases), replayed=False
-            )
         return self._status("VERIFIED", count=len(rows), replayed=False, handoff=handoff)
