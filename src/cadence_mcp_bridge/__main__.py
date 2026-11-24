@@ -61,6 +61,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dedicated_server = operator_server.add_mutually_exclusive_group()
     dedicated_server.add_argument(
+        "--fixed-research-analysis", nargs=2, metavar=("FILE", "SHA256"),
+        help="Serve host-enrolled analyses of one verified saved revision.",
+    )
+    dedicated_server.add_argument(
         "--fixed-amp-pm0", action="store_true",
         help="Serve only the exact registered amplifier PM0 apply and replay tool.",
     )
@@ -1210,7 +1214,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     retained_amp_pm0 = getattr(arguments, "retained_amp_pm0", None)
     fixed_amp_pm0 = getattr(arguments, "fixed_amp_pm0", False)
     retained_device_op = getattr(arguments, "retained_device_op", False)
-    if not (retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op):
+    fixed_research = getattr(arguments, "fixed_research_analysis", None)
+    if not (
+        retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op
+        or fixed_research
+    ):
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
         try:
@@ -1218,6 +1226,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 operator_mode=True,
                 fixed_amp_pm0=fixed_amp_pm0,
                 retained_device_op=retained_device_op,
+                fixed_research_analysis=(
+                    (Path(fixed_research[0]), fixed_research[1]) if fixed_research else None
+                ),
                 retained_amp_comparison=(
                     (Path(retained_amp_comparison[0]), retained_amp_comparison[1])
                     if retained_amp_comparison else None
