@@ -69,6 +69,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Serve host-enrolled analyses of one verified saved revision.",
     )
     dedicated_server.add_argument(
+        "--registered-mos-edit", action="store_true",
+        help="Serve the exact MOS edit selected in the operator context.",
+    )
+    dedicated_server.add_argument(
         "--fixed-amp-pm0", action="store_true",
         help="Serve only the exact registered amplifier PM0 apply and replay tool.",
     )
@@ -1234,15 +1238,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     retained_device_op = getattr(arguments, "retained_device_op", False)
     fixed_research = getattr(arguments, "fixed_research_analysis", None)
     registered_generation = getattr(arguments, "registered_research_generation", None)
+    registered_mos_edit = getattr(arguments, "registered_mos_edit", False)
     if not (
         retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op
-        or fixed_research or registered_generation
+        or fixed_research or registered_generation or registered_mos_edit
     ):
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
         try:
             run_stdio_server(
                 operator_mode=True,
+                registered_mos_edit=registered_mos_edit,
                 fixed_amp_pm0=fixed_amp_pm0,
                 retained_device_op=retained_device_op,
                 fixed_research_analysis=(
