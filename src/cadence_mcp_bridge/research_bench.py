@@ -213,11 +213,13 @@ def _check_primitive_cdf(
         ):
             raise ValueError("bench primitive terminal order or Spectre model mismatch")
         rows = device["parameters"]
-        if not isinstance(rows, tuple) or any(
-            sum(row[:2] == ("base", key) and row[3] == unit for row in rows) != 1
+        parameter_types = {row[:4] for row in rows} if isinstance(rows, tuple) else set()
+        if any(
+            (scope, key, "baseCellData", unit) not in parameter_types
+            for scope in ("base", "effective")
             for key, unit in units.items()
         ):
-            raise ValueError("bench primitive CDF parameter or unit mismatch")
+            raise ValueError("bench primitive CDF parameter, type or unit mismatch")
 
 
 def plan_research_bench(

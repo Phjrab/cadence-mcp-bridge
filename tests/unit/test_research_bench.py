@@ -277,12 +277,15 @@ def _declarative_fixture() -> tuple[
     )
     inverter, frame = inverter_fixture()
     # These added AC CDF property rows are synthetic and qualify only the Python path.
-    old = b'PARAM|"base"|"vdc"|"instData"|"voltage"|""|""\n'
-    new = (
-        old + b'PARAM|"base"|"acm"|"instData"|"voltage"|"0"|"0"\n'
-        b'PARAM|"base"|"acp"|"instData"|"angle"|"0"|"0"\n'
-    )
-    primitive = frame.replace(old, new)
+    primitive = frame.replace(b'|"vdc"|"instData"|', b'|"vdc"|"baseCellData"|')
+    primitive = primitive.replace(b'|"c"|"instData"|', b'|"c"|"baseCellData"|')
+    for scope in ("base", "effective"):
+        old = f'PARAM|"{scope}"|"vdc"|"baseCellData"|"voltage"|""|""\n'.encode()
+        new = (
+            f'PARAM|"{scope}"|"acm"|"baseCellData"|"voltage"|"0"|"0"\n'
+            f'PARAM|"{scope}"|"acp"|"baseCellData"|"angle"|"0"|"0"\n'
+        ).encode()
+        primitive = primitive.replace(old, old + new)
     assert primitive != frame
     primitive_pin = sha256(primitive).hexdigest()
     plan = plan_research_bench(
@@ -368,3 +371,19 @@ def test_declarative_bench_renders_17_mos_and_compares_differential_input() -> N
             expected_plan_sha256=plan_pin,
             owned_library_path="/owned/block",
         )
+
+    primitive = frames[plan.primitive_cdf_sha256]
+    for changed in (
+        primitive.replace(b'"acp"|"baseCellData"|"angle"', b'"acp"|"baseCellData"|nil'),
+        primitive.replace(b'"acp"|"baseCellData"|"angle"', b'"acp"|"instData"|"angle"'),
+    ):
+        changed_pin = sha256(changed).hexdigest()
+        changed_plan = plan.model_copy(update={"primitive_cdf_sha256": changed_pin})
+        with pytest.raises(ValueError, match="bench primitive CDF parameter, type or unit"):
+            render_research_bench(
+                changed_plan,
+                dut,
+                {**frames, changed_pin: changed},
+                expected_plan_sha256=canonical_digest(changed_plan),
+                owned_library_path="/owned/block",
+            )
