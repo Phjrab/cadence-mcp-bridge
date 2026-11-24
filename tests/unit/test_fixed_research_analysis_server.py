@@ -29,6 +29,30 @@ _PIN = "1" * 64
 _SOURCE = "2" * 64
 
 
+def test_partial_projection_keeps_failed_power_empty_and_reports_measured_gain():
+    query = NativeOperationQuery(
+        operation_id="97e9eef0-b49a-4113-9ebf-8ddcbd09438a", expected_plan_sha256=_PIN,
+    )
+    reference = SimpleNamespace(status="SUCCEEDED", value=25.0, operation=query)
+    failed = SimpleNamespace(status="FAILED", value=None, operation=query)
+    gain = SimpleNamespace(status="SUCCEEDED", value=23.5, operation=query)
+    pair = SimpleNamespace(
+        dc=SimpleNamespace(analysis="dc", unit="W", baseline=reference, candidate=failed),
+        ac=SimpleNamespace(analysis="ac", unit="dB", baseline=reference, candidate=gain),
+    )
+    document = SimpleNamespace(association=pair, deltas={
+        "dc": {"absolute_delta": None, "reason": "measurement_unavailable"},
+        "ac": {"absolute_delta": -1.5, "reason": "available"},
+    })
+    result = adapter._partial_projection(document, _PIN)
+    assert result.dc.candidate_status == "FAILED"
+    assert result.dc.candidate_value is result.dc.absolute_delta is None
+    assert result.ac.candidate_value == 23.5 and result.ac.absolute_delta == -1.5
+    document.deltas["dc"]["absolute_delta"] = 0.0
+    with pytest.raises(ValueError, match="delta mismatch"):
+        adapter._partial_projection(document, _PIN)
+
+
 @pytest.fixture
 def enrolled(tmp_path, monkeypatch):
     def save(name, value):

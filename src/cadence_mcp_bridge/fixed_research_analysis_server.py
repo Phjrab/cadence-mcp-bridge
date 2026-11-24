@@ -13,6 +13,7 @@ from pydantic import Field, model_validator
 
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.amplifier_comparison_server import (
+    RetainedAmpComparisonQuery,
     _RetainedReport,
     project_retained_amp_comparison,
     register_retained_amp_comparison,
@@ -29,6 +30,7 @@ from cadence_mcp_bridge.candidate_execution import (
     _fresh_amplifier_metric,
     _runtime_routes,
 )
+from cadence_mcp_bridge.candidate_reports import candidate_metric_delta
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration
@@ -102,6 +104,52 @@ class FixedResearchAnalysisPlan(ContractModel):
 class FixedResearchAnalysisResult(ContractModel):
     revision: SavedAnalysisRevision
     result: NativeOperationResult
+
+
+class _ComparisonRow(VariableModel):
+    unit: Literal["W", "dB"]
+    baseline_operation: NativeOperationQuery
+    baseline_value: float
+    candidate_operation: NativeOperationQuery
+    candidate_status: Literal["FAILED", "SUCCEEDED"]
+    candidate_value: float | None
+    absolute_delta: float | None
+
+
+class _PartialComparison(VariableModel):
+    report_sha256: Digest
+    dc: _ComparisonRow
+    ac: _ComparisonRow
+    selected_candidate_id: Literal[None] = None
+    execution_authorized: Literal[False] = False
+    remote_contact: Literal[False] = False
+
+
+def _partial_projection(report: _RetainedReport, digest: str) -> _PartialComparison:
+    rows = {}
+    for row in (report.association.dc, report.association.ac):
+        baseline, candidate = row.baseline, row.candidate
+        if (
+            baseline.status != "SUCCEEDED" or baseline.value is None
+            or baseline.operation is None or candidate.operation is None
+            or candidate.status not in ("SUCCEEDED", "FAILED")
+            or (candidate.value is None) != (candidate.status == "FAILED")
+        ):
+            raise ValueError("partial comparison requires terminal rows")
+        delta, _, reason = candidate_metric_delta(
+            candidate.value, baseline.value, baseline_present=True,
+        )
+        if report.deltas.get(row.analysis) != {
+            "absolute_delta": delta,
+            "reason": reason,
+        }:
+            raise ValueError("partial comparison delta mismatch")
+        rows[row.analysis] = _ComparisonRow(
+            unit=row.unit, baseline_operation=baseline.operation, baseline_value=baseline.value,
+            candidate_operation=candidate.operation, candidate_status=candidate.status,
+            candidate_value=candidate.value, absolute_delta=delta,
+        )
+    return _PartialComparison(report_sha256=digest, dc=rows["dc"], ac=rows["ac"])
 
 
 def _verified_runtime(
@@ -228,8 +276,27 @@ def _check_comparison(
             candidate = row.candidate
             identity = candidate.operation
             report = candidate.report
-            if identity is None or report is None:
+            if identity is None:
                 raise ValueError("comparison candidate evidence missing")
+            # A failed predecessor DC has no input or result to publish. The
+            # enrolled comparison request must also rederive this exact record.
+            if (
+                row.analysis == "dc" and candidate.status == "FAILED"
+                and saved.candidate_revision.revision_id == "amp-pm0-user-mcp-1123-r1"
+            ):
+                record = AnalysisStore._read_operation(connection, identity.operation_id)
+                if (
+                    record.progress.phase != "FAILED" or record.plan.analysis != "dc"
+                    or record.plan.request.design_id != "amp-pm0-auto120-5656"
+                    or record.plan.plan_sha256 != identity.expected_plan_sha256
+                    or candidate.terminal_sha256 is None or report is not None
+                    or candidate.value is not None
+                    or record.progress.provider_receipt_sha256 != candidate.terminal_sha256
+                ):
+                    raise ValueError("failed DC evidence differs")
+                continue
+            if report is None:
+                raise ValueError("comparison candidate report missing")
             entry = enrolled.get(identity.operation_id)
             if entry is None or entry.identity != identity or entry.plan.analysis != row.analysis:
                 raise ValueError("comparison candidate analysis differs")
@@ -277,6 +344,7 @@ def create_fixed_research_analysis_server(
         saved, routes = _verified_runtime(context, registration)
         comparison_ref = registration.comparison
         comparison = None
+        partial = None
         enrolled = {item.identity.operation_id: item for item in registration.analyses}
         if comparison_ref is not None:
             raw = read_candidate_document(
@@ -294,7 +362,13 @@ def create_fixed_research_analysis_server(
                 verify_fresh_amplifier_comparison(
                     registration.comparison_request, config.runtime_settings_path, context, raw,
                 )
-            comparison = project_retained_amp_comparison(document, comparison_ref.sha256)
+            if (
+                registration.comparison_request is not None
+                and document.association.dc.candidate.status == "FAILED"
+            ):
+                partial = _partial_projection(document, comparison_ref.sha256)
+            else:
+                comparison = project_retained_amp_comparison(document, comparison_ref.sha256)
         native = NativeOperationService(context)
     except (KeyError, OSError, TypeError, ValueError, ConfigurationError, InvalidInputError):
         raise ConfigurationError("Fixed research analysis registration rejected") from None
@@ -302,6 +376,19 @@ def create_fixed_research_analysis_server(
     server = MCPServer(
         name="cadence-fixed-research-analysis", version=__version__, log_level="WARNING"
     )
+    if partial is not None:
+        summary = partial
+
+        @server.tool(
+            name="cadence_retained_amplifier_comparison", annotations=_READ, structured_output=True,
+            description="Read the enrolled AMP comparison including the retained failed DC.",
+        )
+        def retained_partial(request: RetainedAmpComparisonQuery) -> _PartialComparison:
+            if request.expected_report_sha256 != summary.report_sha256:
+                raise ToolError("Retained amplifier comparison digest differs")
+            return summary
+
+        return server
     if comparison is not None:
         register_retained_amp_comparison(server, comparison)
 
