@@ -19,6 +19,7 @@ from cadence_mcp_bridge.research_bench import (
     verify_research_bench_netlist,
 )
 from cadence_mcp_bridge.research_circuit import (
+    Circuit,
     OwnedMosBlockPlan,
     ResearchCircuit,
     plan_owned_mos_block,
@@ -572,8 +573,10 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
             {**frames, pin: cdf, witness_pin: witness},
         )
 
-    def render(cdf: bytes) -> ResearchBenchPlan:
+    def render(cdf: bytes, bench: Circuit | None = None) -> ResearchBenchPlan:
         signed, captures = prepare(cdf)
+        if bench is not None:
+            signed = signed.model_copy(update={"bench": bench})
         scripts = render_research_bench(
             signed,
             dut,
@@ -590,6 +593,31 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
         return signed
 
     signed = render(primitive)
+
+    def remap_negative(source_net: str, dut_net: str = "inn") -> Circuit:
+        bench = signed.bench.model_dump(mode="json")
+        targets = {"DUT": ("inn", dut_net), "VNEG": ("PLUS", source_net)}
+        for inst in bench["instances"]:
+            if inst["name"] in targets:
+                terminal, net = targets[inst["name"]]
+                next(link for link in inst["links"] if link["terminal"] == terminal)["net"] = net
+        bench["nets"] = list(
+            dict.fromkeys(link["net"] for inst in bench["instances"] for link in inst["links"])
+        )
+        return Circuit.model_validate_json(json.dumps(bench))
+
+    alias = render(primitive, remap_negative("negative_drive", "negative_drive"))
+    assert alias.bench != signed.bench
+    for source_net, dut_net in (
+        ("vout", "inn"),  # output
+        ("vdd", "inn"),  # supply
+        ("vdd", "vdd"),  # input tied to a supply port
+        ("vin", "vin"),  # shorted differential inputs
+        ("inn", "negative_drive"),  # port label differs from its mapped net
+    ):
+        with pytest.raises(ValueError, match="distinct, unshared DUT inputs"):
+            render(primitive, remap_negative(source_net, dut_net))
+
     changed = primitive.replace(b'|"va"|"baseCellData"|', b'|"vo"|"baseCellData"|')
     with pytest.raises(ValueError, match="vsin CDF parameter metadata"):
         render(changed)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from collections.abc import Mapping
 from decimal import Decimal, localcontext
 from hashlib import sha256
@@ -101,10 +102,8 @@ class ResearchBenchPlan(VariableModel):
     def signed_ac_requires_primitive_cdf(self) -> ResearchBenchPlan:
         if self.signed_ac_evidence_sha256 is not None and self.primitive_cdf_sha256 is None:
             raise ValueError("signed AC requires a verified primitive CDF")
-        if self.signed_ac_vsin_pair:
-            if self.signed_ac_evidence_sha256 is None:
-                raise ValueError("vsin pair requires signed AC evidence")
-            _check_vsin_pair(self.bench)
+        if self.signed_ac_vsin_pair and self.signed_ac_evidence_sha256 is None:
+            raise ValueError("vsin pair requires signed AC evidence")
         return self
 
     @model_serializer(mode="wrap")
@@ -182,7 +181,11 @@ def _check_bench(bench: Circuit, dut: str) -> None:
 
 
 def _check_profile(
-    bench: Circuit, dut_plan: OwnedMosBlockPlan, primitive_cdf_sha256: Digest | None
+    bench: Circuit,
+    dut_plan: OwnedMosBlockPlan,
+    primitive_cdf_sha256: Digest | None,
+    *,
+    signed_ac_vsin_pair: bool,
 ) -> None:
     if primitive_cdf_sha256 is None:
         _check_bench(bench, dut_plan.root)
@@ -208,6 +211,8 @@ def _check_profile(
         or set(refs[0].connections) != {port.name for port in root.ports}
     ):
         raise ValueError("declarative bench requires exactly one fully connected DUT")
+    if signed_ac_vsin_pair:
+        _check_vsin_pair(bench, root, refs[0])
     if not any(isinstance(inst, VoltageSource) for inst in bench.instances):
         raise ValueError("declarative bench requires an explicit voltage source")
     for inst in bench.instances:
@@ -263,18 +268,19 @@ def _vsin_oa_properties(negative: bool) -> dict[str, str]:
     return props
 
 
-def _check_vsin_pair(bench: Circuit) -> None:
+def _check_vsin_pair(bench: Circuit, root: Circuit, dut: Child) -> None:
     sources = [
         inst
         for inst in bench.instances
         if isinstance(inst, VoltageSource)
         and (inst.ac_magnitude_v != "0" or inst.ac_phase_deg != "0")
     ]
-    dut_nets = {
-        net
-        for inst in bench.instances
-        if isinstance(inst, Child)
-        for net in inst.connections.values()
+    connections = dut.connections
+    port_counts = Counter(connections.values())
+    input_nets = {
+        connections[port.name]
+        for port in root.ports
+        if port.direction == "input" and port_counts[connections[port.name]] == 1
     }
     if (
         len(sources) != 2
@@ -284,12 +290,14 @@ def _check_vsin_pair(bench: Circuit) -> None:
             inst.dc_v != "0.5"
             or inst.ac_magnitude_v != "0.5"
             or inst.connections["PLUS"] == "gnd!"
-            or inst.connections["PLUS"] not in dut_nets
+            or inst.connections["PLUS"] not in input_nets
             or inst.connections["MINUS"] != "gnd!"
             for inst in sources
         )
     ):
-        raise ValueError("vsin pair must match the reviewed differential AC stimulus")
+        raise ValueError(
+            "vsin pair must drive distinct, unshared DUT inputs at the reviewed stimulus"
+        )
 
 
 def _check_bench_conditions(plan: ResearchBenchPlan, conditions: BenchNetlistConditions) -> None:
@@ -379,7 +387,7 @@ def plan_research_bench(
         cell.name for cell in definition.circuits
     }:
         raise ValueError("research definition contains cells outside the DUT and bench")
-    _check_profile(bench, rebuilt, primitive_cdf_sha256)
+    _check_profile(bench, rebuilt, primitive_cdf_sha256, signed_ac_vsin_pair=signed_ac_vsin_pair)
     return ResearchBenchPlan(
         definition_sha256=expected_definition_sha256,
         dut_plan_sha256=expected_dut_plan_sha256,
@@ -401,7 +409,12 @@ def _pinned_bench(
         or plan.bench.name in {cell.name for cell in dut_plan.circuits}
     ):
         raise ValueError("bench plan or DUT plan identity mismatch")
-    _check_profile(plan.bench, dut_plan, plan.primitive_cdf_sha256)
+    _check_profile(
+        plan.bench,
+        dut_plan,
+        plan.primitive_cdf_sha256,
+        signed_ac_vsin_pair=plan.signed_ac_vsin_pair,
+    )
     return plan
 
 
