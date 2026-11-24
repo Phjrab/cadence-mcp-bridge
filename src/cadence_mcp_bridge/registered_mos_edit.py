@@ -271,6 +271,17 @@ class NativeMosEditSave(VariableModel):
     source_preservation_sha256: Digest
 
 
+def same_saved_testbench(
+    target: RegisteredMosTarget, before: MosEditSnapshot, saved: MosEditSnapshot
+) -> bool:
+    if "/" in target.netlist_path:
+        return before.testbench_revision_sha256 == saved.testbench_revision_sha256
+    return (
+        before.revision_sha256 == before.testbench_revision_sha256
+        and saved.revision_sha256 == saved.testbench_revision_sha256
+    )
+
+
 class NativeMosEditReadback(NativeMosEditSave):
     reopened: MosEditSnapshot
     netlisted_revision_sha256: Digest
@@ -468,7 +479,7 @@ class RegisteredMosEditService:
         observed = _checked(capture.readback)
         binding, route = self._binding, self._route
         baseline, saved, reopened = observed.baseline, observed.saved, observed.reopened
-        top_level = "/" not in route.qualification.target.netlist_path
+        target = route.qualification.target
         if (
             (observed.operation_id, observed.plan_sha256, observed.scope_sha256)
             != (binding.operation_id, binding.plan_sha256, binding.scope_sha256)
@@ -482,14 +493,7 @@ class RegisteredMosEditService:
             or reopened.revision_sha256 != observed.netlisted_revision_sha256
             or saved.testbench_revision_sha256 != reopened.testbench_revision_sha256
             or reopened.testbench_revision_sha256 != observed.netlisted_testbench_revision_sha256
-            or (
-                (
-                    baseline.revision_sha256 != baseline.testbench_revision_sha256
-                    or saved.revision_sha256 != saved.testbench_revision_sha256
-                )
-                if top_level
-                else saved.testbench_revision_sha256 != baseline.testbench_revision_sha256
-            )
+            or not same_saved_testbench(target, baseline, saved)
             or baseline.footprint_sha256 != saved.footprint_sha256
             or saved.footprint_sha256 != reopened.footprint_sha256
             or baseline.properties != route.before
@@ -510,7 +514,6 @@ class RegisteredMosEditService:
             or hashlib.sha256(capture.cdf_frame).hexdigest() != observed.cdf_frame_sha256
         ):
             raise ValueError("native MOS edit receipts, properties or footprint differ")
-        target = route.qualification.target
         _verify_reopened_cdf(capture.cdf_frame, target, reopened.properties)
         options = _verify_effective_options(capture.netlist, target, reopened.properties)
         return RegisteredMosEditResult(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import time
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,7 @@ from typing import Literal
 import pytest
 from test_runtime_context import make_settings
 
+from cadence_mcp_bridge import _registered_mos_edit_phase as guest_source
 from cadence_mcp_bridge import registered_mos_transport as host
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget
 from cadence_mcp_bridge.domain_provisioning import _canonical
@@ -405,17 +407,16 @@ def test_multiplier_preserves_factors_and_rejects_equal_product() -> None:
             mos_multiplicity_factors(token)
 
 
-@pytest.mark.parametrize("complete", [True, False])
+@pytest.mark.parametrize("capture_state", ["complete", "lost-terminal", "tampered-save"])
 def test_pinned_host_factory_calls_two_phases_once(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, complete: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capture_state: str
 ) -> None:
     settings = make_settings(tmp_path)
     context, _ = load_runtime(settings)
     evidence = tmp_path / "mos-evidence"
     evidence.mkdir()
-    guest = b"pass\n"
-    (evidence / host._ASSET).write_bytes(guest)
-    monkeypatch.setattr(host, "files", lambda _: evidence)
+    guest, support, collector = b"pass\n", b"reviewed support\n", b"reviewed collector\n"
+    monkeypatch.setattr(host, "_fixed_assets", lambda _: (guest, support, collector))
     monkeypatch.setattr(host, "_ssh", lambda _: ["fixed-ssh", "python"])
     safety, cdf, update = b'{"fixture":true}', b"observed cdf", b"reviewed route"
     route, child, baseline, _, request = _fixture()
@@ -500,9 +501,10 @@ def test_pinned_host_factory_calls_two_phases_once(
     observed = observed.model_copy(
         update={"scope_sha256": scope_sha, "plan_sha256": plan.plan_sha256}
     )
-    saved = _canonical(
-        observed.model_dump(mode="json", include=set(NativeMosEditSave.model_fields))
-    )
+    save_record = observed.model_dump(mode="json", include=set(NativeMosEditSave.model_fields))
+    if capture_state == "tampered-save":
+        save_record["saved"]["testbench_revision_sha256"] = "0" * 64
+    saved = _canonical(save_record)
     terminal = _canonical(
         {
             "readback": observed.model_dump(mode="json"),
@@ -519,11 +521,13 @@ def test_pinned_host_factory_calls_two_phases_once(
         envelope = json.loads(request[len(guest) :])
         assert base64.b64decode(envelope["authority_base64"]) == ack
         assert base64.b64decode(envelope["native_safety_base64"]) == safety
+        assert base64.b64decode(envelope["support_base64"]) == support
+        assert base64.b64decode(envelope["cdf_collector_base64"]) == collector
         if phase == host._EDIT:
             assert envelope["previous_receipt_sha256"] is None
             return 0, saved, b""
         assert envelope["previous_receipt_sha256"] == _sha(saved)
-        return (0, terminal, b"") if complete else (1, b"", b"unverified")
+        return (0, terminal, b"") if capture_state == "complete" else (1, b"", b"unverified")
 
     monkeypatch.setattr(host, "run_fixed", transport)
     service = host.registered_mos_edit(context)
@@ -533,9 +537,111 @@ def test_pinned_host_factory_calls_two_phases_once(
         service.apply(service.identity)
     assert calls == [] and service.lookup(service.identity).outcome == "NOT_FOUND"
     (evidence / "native-safety.private.json").write_bytes(safety)
-    expected = "VERIFIED" if complete else "OUTCOME_UNKNOWN"
+    expected = "VERIFIED" if capture_state == "complete" else "OUTCOME_UNKNOWN"
     assert service.apply(service.identity).outcome == expected
     restarted = host.registered_mos_edit(context)
     assert restarted.lookup(service.identity).outcome == expected
     assert restarted.apply(service.identity).outcome == expected
-    assert calls == [host._EDIT, host._REOPEN]
+    assert calls == (
+        [host._EDIT] if capture_state == "tampered-save" else [host._EDIT, host._REOPEN]
+    )
+
+
+def _guest_tuple(before: bool) -> dict[str, dict[str, str | None]]:
+    result = {
+        key: {
+            field: None for field in ("oa_type", "oa_value", "cdf_type", "cdf_units", "cdf_value")
+        }
+        for key in guest_source.PROPERTIES
+    }
+    for key, units, old, new in guest_source.ROWS:
+        value = old if before else new
+        explicit = before or key not in guest_source.OVERRIDES
+        result[key] = dict(
+            oa_type="string" if explicit else None,
+            oa_value=value if explicit else None,
+            cdf_type="instData",
+            cdf_units=units,
+            cdf_value=value,
+        )
+    return result
+
+
+def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
+    scope = {
+        "subject": {
+            "owned_cell": "InvLong",
+            "owned_view": "schematic",
+            "owned_library": "CmosLongMosTest1",
+        },
+        "route_qualification": {
+            "before": _guest_tuple(True),
+            "after": _guest_tuple(False),
+            "qualification": {
+                "old": {"unit": "nm", "value": "350"},
+                "expected": {"unit": "nm", "value": "120"},
+                "target": {
+                    "instance": {
+                        "instance_path": "DUT/MP",
+                        "master_library": "gpdk090",
+                        "master_cell": "pmos1v",
+                        "master_view": "symbol",
+                        "property_name": "w",
+                    },
+                    "quantity": "length",
+                    "scalar_option": "w",
+                    "scalar_unit": "nm",
+                    "netlist_path": "DUT/MP",
+                    "netlist_model": "gpdk090_pmos1v",
+                    "netlist_terminals": ["vout", "vin", "vdd", "vdd"],
+                },
+                "baseline": {
+                    "netlist_sha256": guest_source.SOURCE_NETLIST,
+                    "revision": {"design_id": "cmos-long-inverter", "revision_id": "long-r1"},
+                },
+            },
+        },
+    }
+    route = scope["route_qualification"]
+    q = route["qualification"]
+    scope["plan"] = {
+        "old": q["old"],
+        "requested": q["expected"],
+        "expected": q["expected"],
+        "target": q["target"],
+        "baseline": q["baseline"],
+    }
+    assert guest_source.exact_route(scope) == route
+    for template in (guest_source.EDIT, guest_source.REOPEN):
+        script = guest_source.COMMON + template
+        values = dict.fromkeys(set(re.findall(r"@[A-Z]+@", script)), "fixed")
+        values["@BEFORE@"] = guest_source.skill_check(route["before"])
+        values["@AFTER@"] = guest_source.skill_check(route["after"])
+        rendered = guest_source.render(script, values).decode("ascii")
+        depth = 0
+        syntax = re.sub(r'"(?:[^"\\]|\\.)*"', '""', rendered)
+        for ch in syntax:
+            depth += (ch == "(") - (ch == ")")
+            assert depth >= 0
+        assert depth == 0 and "evalstring" not in rendered and "dbReplaceProp" not in rendered
+    assert "dbDeletePropByName" in guest_source.EDIT and "dbSave" in guest_source.EDIT
+    assert "dbSave" not in guest_source.REOPEN and "m2ReopenedMosFrame" in guest_source.REOPEN
+    route["after"]["m"]["cdf_value"] = "6"
+    with pytest.raises(ValueError, match="source9_tuple"):
+        guest_source.exact_route(scope)
+
+
+def test_native_property_rows_are_observed_and_complete() -> None:
+    rows = _guest_tuple(False)
+    raw = (
+        "\n".join(
+            "|".join(
+                [key, *("nil" if value is None else json.dumps(value) for value in row.values())]
+            )
+            for key, row in rows.items()
+        )
+        + "\nCOMPLETE\n"
+    ).encode("ascii")
+    assert guest_source.read_properties(raw) == rows
+    with pytest.raises(ValueError, match="property_name"):
+        guest_source.read_properties(raw.replace(b"fw|", b"w|"))

@@ -14,6 +14,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
+from cadence_mcp_bridge import m2_cdf
 from cadence_mcp_bridge.amplifier_pm0_service import _FixedAmplifierPm0Provider
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -40,6 +42,7 @@ from cadence_mcp_bridge.registered_mos_edit import (
     RegisteredMosEditRoute,
     RegisteredMosEditService,
     RetainedMosEdit,
+    same_saved_testbench,
 )
 from cadence_mcp_bridge.runtime_context import (
     ExecutionContext,
@@ -100,6 +103,27 @@ class _Terminal(VariableModel):
 
 def _encode(raw: bytes) -> str:
     return base64.b64encode(raw).decode("ascii")
+
+
+def _fixed_assets(scope: _Scope) -> tuple[bytes, bytes, bytes]:
+    guest_contract.exact_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
+    package = files("cadence_mcp_bridge")
+    try:
+        collect = m2_cdf.render_reopened_mos_cdf  # type: ignore[attr-defined]
+        guest = package.joinpath(_ASSET).read_bytes()
+        support = package.joinpath("_amp_pm0_default_phase.py").read_bytes()
+        collector = collect()
+    except (AttributeError, FileNotFoundError):
+        raise OperationRejected("registered_mos_fixed_package_incomplete") from None
+    digest_pins = (scope.guest_sha256, guest_contract.SUPPORT_SHA256, guest_contract.CDF_SHA256)
+    _require(
+        all(
+            0 < len(raw) <= 65_536 and _sha(raw) == digest and raw.isascii()
+            for raw, digest in zip((guest, support, collector), digest_pins, strict=True)
+        ),
+        "registered_mos_fixed_assets",
+    )
+    return guest, support, collector
 
 
 class _FixedRegisteredMosProvider:
@@ -194,11 +218,7 @@ class _FixedRegisteredMosProvider:
         )
         safety = _read(directory / "native-safety.private.json", 65_536, scope.native_safety_sha256)
         _document(safety)
-        guest = files("cadence_mcp_bridge").joinpath(_ASSET).read_bytes()
-        _require(
-            0 < len(guest) <= 65_536 and _sha(guest) == scope.guest_sha256 and guest.isascii(),
-            "registered_mos_fixed_guest",
-        )
+        guest, support, collector = _fixed_assets(scope)
         bootstrap = shlex.quote(
             "import hashlib,sys\n"
             f"fixed=sys.stdin.read({len(guest)})\n"
@@ -217,6 +237,8 @@ class _FixedRegisteredMosProvider:
                     "authority_base64": _encode(authority),
                     "baseline_base64": _encode(self._baseline),
                     "native_safety_base64": _encode(safety),
+                    "support_base64": _encode(support),
+                    "cdf_collector_base64": _encode(collector),
                     "previous_receipt_sha256": previous,
                 }
             ),
@@ -296,6 +318,7 @@ class _FixedRegisteredMosProvider:
             == (binding.owned_before_view_tree_sha256, binding.owned_before_testbench_tree_sha256)
             and after.revision_sha256
             not in (before.revision_sha256, self._scope.plan.baseline.revision_sha256)
+            and same_saved_testbench(route.qualification.target, before, after)
             and before.footprint_sha256 == after.footprint_sha256
             and before.properties == route.before
             and after.properties == route.after
