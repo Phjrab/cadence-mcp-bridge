@@ -1089,6 +1089,45 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         candidate_ac_id = request["ac"]["candidate"]["operation_id"]
         assert pair.ac.candidate.operation.operation_id == candidate_ac_id
         assert saved["deltas"]["ac"] == {"absolute_delta": 0.0, "reason": "available"}
+
+        from mcp.server.mcpserver import MCPServer
+        from mcp.server.mcpserver.exceptions import ToolError
+
+        from cadence_mcp_bridge.amplifier_comparison_server import (
+            load_retained_amp_comparison,
+            register_retained_amp_comparison,
+        )
+        from cadence_mcp_bridge.errors import ConfigurationError
+
+        retained = load_retained_amp_comparison(target, summary["file_sha256"])
+        server = MCPServer(name="retained-comparison-fixture")
+        register_retained_amp_comparison(server, retained)
+        response = asyncio.run(
+            server.call_tool(
+                "cadence_retained_amplifier_comparison",
+                {"request": {"expected_report_sha256": summary["file_sha256"]}},
+            )
+        )
+        assert response.structured_content == retained.model_dump(mode="json")
+        assert response.structured_content["report_sha256"] == summary["file_sha256"]
+        assert response.structured_content["ac"]["candidate"]["operation"]["operation_id"] == (
+            candidate_ac_id
+        )
+        assert response.structured_content["dc"]["absolute_delta"] == saved["deltas"]["dc"][
+            "absolute_delta"
+        ]
+        with pytest.raises(ToolError):
+            asyncio.run(
+                server.call_tool(
+                    "cadence_retained_amplifier_comparison",
+                    {"request": {"expected_report_sha256": "0" * 64}},
+                )
+            )
+        saved["association"]["dc"]["metric_id"] = "gain-10hz-grid-v1"
+        wrong_metric = pin(tmp_path / "wrong-metric.json", json.dumps(saved).encode())
+        with pytest.raises(ConfigurationError):
+            load_retained_amp_comparison(Path(wrong_metric["path"]), wrong_metric["sha256"])
+
         files = request.pop("policy_successor")
         missing = tmp_path / "missing-successor-output.json"
         assert compare("missing-successor", missing) == 2

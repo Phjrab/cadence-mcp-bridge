@@ -65,6 +65,14 @@ def load_retained_amp_comparison(path: Path, expected_sha256: str) -> RetainedAm
     try:
         raw = read_candidate_document(path, expected_sha256=expected_sha256)
         report = _RetainedReport.model_validate_json(raw)
+        if (
+            (report.association.dc.analysis, report.association.dc.metric_id,
+             report.association.dc.unit) != ("dc", "dc-supply-power-grid-v2", "W")
+            or (report.association.ac.analysis, report.association.ac.metric_id,
+                report.association.ac.unit) != ("ac", "gain-10hz-grid-v1", "dB")
+            or set(report.deltas) != {"dc", "ac"}
+        ):
+            raise ValueError("retained comparison metric definitions differ")
         metrics = {}
         for row in (report.association.dc, report.association.ac):
             baseline, candidate = _measurement(row.baseline), _measurement(row.candidate)
@@ -78,8 +86,6 @@ def load_retained_amp_comparison(path: Path, expected_sha256: str) -> RetainedAm
             metrics[row.analysis] = _Comparison(
                 unit=row.unit, baseline=baseline, candidate=candidate, absolute_delta=delta,
             )
-        if report.association.dc.unit != "W" or report.association.ac.unit != "dB":
-            raise ValueError("retained comparison units differ")
         return RetainedAmpComparison(
             report_sha256=expected_sha256, dc=metrics["dc"], ac=metrics["ac"],
         )

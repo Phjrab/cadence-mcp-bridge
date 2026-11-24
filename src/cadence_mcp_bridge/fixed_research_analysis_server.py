@@ -202,11 +202,17 @@ def _check_comparison(
     readback = pair.readback
     if (
         readback.status != "MATCHED"
+        or pair.change_plan_sha256 != saved.plan_sha256
         or readback.plan_sha256 != saved.plan_sha256
         or readback.reopened is None
         or readback.netlist is None
+        or readback.reopened.revision != saved.candidate_revision
+        or readback.netlist.revision != saved.candidate_revision
         or readback.reopened.revision_sha256 != saved.observed_revision_sha256
         or readback.reopened.testbench_revision_sha256 != saved.observed_testbench_revision_sha256
+        or readback.reopened.artifact_sha256 != saved.reopen_receipt_sha256
+        or readback.netlist.revision_sha256 != saved.observed_revision_sha256
+        or readback.netlist.testbench_revision_sha256 != saved.observed_testbench_revision_sha256
         or readback.netlist.artifact_sha256 != saved.netlist_sha256
     ):
         raise ValueError("comparison readback does not match the saved revision")
