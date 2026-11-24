@@ -48,6 +48,19 @@ _OP_FRAME_LIMIT = 64 * 1024
 
 class AcGainDefinition(VariableModel):
     reference_frequency_hz: Positive
+    bandwidth_drop_db: Positive | None = None
+    minimum_search_stop_hz: Positive | None = None
+    maximum_adjacent_frequency_ratio: (
+        Annotated[float, Field(gt=1, allow_inf_nan=False)] | None
+    ) = None
+
+    @model_validator(mode="after")
+    def ordered_search(self) -> Self:
+        if self.minimum_search_stop_hz is not None and (
+            self.minimum_search_stop_hz <= self.reference_frequency_hz
+        ):
+            raise ValueError("minimum search stop must exceed the reference frequency")
+        return self
 
 
 class _TransferSample(VariableModel):
@@ -62,11 +75,62 @@ class _TransferSample(VariableModel):
     method: Literal["exact_sample_complex_output_over_measured_input"]
 
 
+def _research_crossing(
+    axes: list[float],
+    db: list[float | None],
+    reference: int | None,
+    threshold_db: float | None,
+    definition: AcGainDefinition,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "value": None,
+        "unit": "Hz",
+        "threshold_gain_db": threshold_db,
+        "bracket_hz": None,
+        "bracket_gain_db": None,
+        "method": "first_downward_crossing_db_linear_log_frequency_no_extrapolation",
+        "status": "NOT_EVALUATED",
+        "reason": "reference_sample_unavailable",
+    }
+    if reference is None:
+        return result
+    if threshold_db is None:
+        return {**result, "reason": "reference_gain_db_unavailable"}
+    if reference == len(axes) - 1:
+        return {**result, "reason": "samples_after_reference_unavailable"}
+    ratio_limit = definition.maximum_adjacent_frequency_ratio
+    for i in range(reference + 1, len(axes)):
+        left, right = db[i - 1], db[i]
+        if ratio_limit is not None and axes[i] / axes[i - 1] > ratio_limit:
+            return {
+                **result,
+                "reason": "insufficient_frequency_resolution",
+                "gap_hz": axes[i - 1 : i + 1],
+            }
+        if left is None or left <= threshold_db or (right is not None and right > threshold_db):
+            continue
+        result.update(bracket_hz=axes[i - 1 : i + 1], bracket_gain_db=[left, right])
+        if right is None:
+            return {**result, "reason": "zero_transfer_at_crossing_bracket"}
+        return {
+            **result,
+            "status": "OBSERVED_SAMPLED_CROSSING",
+            "reason": None,
+            "value": _interpolate_db_crossing(axes[i - 1], axes[i], left, right, threshold_db),
+        }
+    minimum_stop = definition.minimum_search_stop_hz
+    if minimum_stop is not None and axes[-1] < minimum_stop:
+        return {**result, "reason": "insufficient_frequency_range"}
+    return {
+        **result, "status": "NOT_OBSERVED_IN_SAMPLED_RANGE", "reason": "downward_crossing_absent"
+    }
+
+
 def sampled_ac_gain(
     spectrum: list[dict[str, Any]],
     definition: AcGainDefinition,
 ) -> dict[str, Any]:
-    """Estimate the first sampled downward unity crossing at or after the reference."""
+    """Estimate sampled unity and optional relative-bandwidth crossings."""
     if not 1 <= len(spectrum) <= 256:
         raise OperationRejected("research_ac_bounded_spectrum_required")
     samples = TypeAdapter(list[_TransferSample]).validate_python(spectrum)
@@ -105,43 +169,25 @@ def sampled_ac_gain(
             ),
         }
 
-    crossing: dict[str, Any] = {
-        "value": None,
-        "unit": "Hz",
-        "bracket_hz": None,
-        "bracket_gain_db": None,
-        "method": "first_downward_crossing_db_linear_log_frequency_no_extrapolation",
-        "status": "NOT_EVALUATED",
-        "reason": "reference_sample_unavailable",
-    }
-    if reference_index is not None and reference_index == len(samples) - 1:
-        crossing["reason"] = "samples_after_reference_unavailable"
-    elif reference_index is not None:
-        crossing.update(status="NOT_OBSERVED_IN_SAMPLED_RANGE", reason="downward_crossing_absent")
-        for i in range(reference_index + 1, len(samples)):
-            left, right = db[i - 1], db[i]
-            if left is None or left <= 0 or (right is not None and right > 0):
-                continue
-            crossing.update(bracket_hz=axes[i - 1 : i + 1], bracket_gain_db=[left, right])
-            if right is None:
-                crossing.update(status="NOT_EVALUATED", reason="zero_transfer_at_crossing_bracket")
-            else:
-                crossing.update(
-                    status="OBSERVED_SAMPLED_CROSSING",
-                    reason=None,
-                    value=_interpolate_db_crossing(axes[i - 1], axes[i], left, right, 0),
-                )
-            break
-    return {
-        "definition": definition.model_dump(mode="json"),
-        "definition_sha256": canonical_digest(definition),
+    definition_data = definition.model_dump(mode="json", exclude_none=True)
+    result = {
+        "definition": definition_data,
+        "definition_sha256": hashlib.sha256(_canonical(definition_data)).hexdigest(),
         "reference": reference,
         "reference_reason": "reference_sample_unavailable" if reference is None else None,
-        "unity_gain_frequency": crossing,
+        "unity_gain_frequency": _research_crossing(axes, db, reference_index, 0, definition),
         "sample_count": len(samples),
         "start_hz": axes[0],
         "stop_hz": axes[-1],
+        "qualification": "SAMPLED_REFERENCE_ESTIMATE_NO_CONTINUOUS_OR_GRID_CONVERGENCE_CLAIM",
     }
+    if definition.bandwidth_drop_db is not None:
+        reference_db = db[reference_index] if reference_index is not None else None
+        threshold = (
+            reference_db - definition.bandwidth_drop_db if reference_db is not None else None
+        )
+        result["bandwidth"] = _research_crossing(axes, db, reference_index, threshold, definition)
+    return result
 
 
 async def capture_ac_gain(
@@ -347,13 +393,15 @@ def parse_device_op_frame(
             if len(parts) != 6 or parts[:4] != ["OP", "registered", alias, field]:
                 raise ValueError("OP frame identity")
             kind, raw = parts[4:]
-            if kind == "missing" and raw == "nil":
+            if kind == "missing" and raw in ("nil", "instance"):
                 rows.append(
                     DeviceOpRow(
                         instance_path=path,
                         field=field,
                         value=None,
-                        reason="field_not_available",
+                        reason=(
+                            "instance_not_available" if raw == "instance" else "field_not_available"
+                        ),
                     )
                 )
             elif kind == "value" and len(raw) <= 48:
@@ -363,6 +411,12 @@ def parse_device_op_frame(
                 rows.append(DeviceOpRow(instance_path=path, field=field, value=value))
             else:
                 raise ValueError("OP frame value")
+        absent_paths = {row.instance_path for row in rows if row.reason == "instance_not_available"}
+        if any(
+            row.instance_path in absent_paths and row.reason != "instance_not_available"
+            for row in rows
+        ):
+            raise ValueError("OP instance availability changed within its rows")
     except ValueError:
         raise OperationRejected("research_op_frame_invalid") from None
     return DeviceOpPayload(

@@ -265,10 +265,10 @@ class ResearchTransientResult(RetainedResearchResult):
     definition: ResearchTransientQuery
     signals: dict[LogicalId, dict[str, Any]]
     measurements: TransientMeasurements
-    sample_kind: Literal["NATIVE_SAVED_VECTOR"]
+    sample_kind: Literal["NATIVE_SAVED_VECTOR", "UNVERIFIED"]
     qualification: Literal["SAVED_SAMPLE_ESTIMATES_NO_SOLVER_GRID_CONVERGENCE"]
     declared_maxstep_s: NumberText
-    waveforms_sha256: Digest
+    waveforms_sha256: Digest | None
     terminal_receipt_sha256: Digest
     tran_supply_evidence_sha256: Digest | None = None
 

@@ -220,6 +220,31 @@ def test_ac_uses_measured_complex_stimulus_and_selected_frequency(operator, ampl
     assert value["gain_db"] == (pytest.approx(6.020599913) if amplitude else None)
 
 
+@pytest.mark.parametrize("negative_output", [None, "output-minus"])
+def test_ac_compound_complex_ratio_with_single_or_differential_output(operator, negative_output):
+    context, plan, ade, reader, operation, execution = reader_for(operator, "ac")
+    registered = reader.model_dump(mode="json")
+    registered["nodes"].append({"logical_id": "input-minus", "selector": "/inn"})
+    registered["transfer"].update(negative_input="input-minus", negative_output=negative_output)
+    phasors = {"input": 3 + 4j, "output": 7 + 9j, "input-minus": 1 + 2j}
+    if negative_output is not None:
+        registered["nodes"].append({"logical_id": negative_output, "selector": "/outn"})
+        phasors[negative_output] = 1 + 3j
+    reader = GenericReaderRegistration.model_validate_json(json.dumps(registered))
+    args = context, plan, ade, reader, operation, execution
+    lines = [
+        f"P|{node.logical_id}|{index}|{frequency}|{phasor.real}|{phasor.imag}"
+        for node in reader.nodes
+        for phasor in (phasors[node.logical_id],)
+        for index, frequency in enumerate((1000, 2000))
+    ]
+    result = project_frame(*args, frame_for(args, "\n".join(lines)), include_ac_spectrum=True)
+    expected = (phasors["output"] - phasors.get(negative_output, 0j)) / (2 + 2j)
+    for value in result["ac_spectrum"]:
+        assert complex(value["input_real_v"], value["input_imag_v"]) == 2 + 2j
+        assert complex(value["real_v_per_v"], value["imag_v_per_v"]) == expected
+
+
 def test_transient_uses_all_samples_time_weighted_mean(operator):
     args = reader_for(operator, "tran")
     body = (

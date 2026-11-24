@@ -73,6 +73,30 @@ def test_ac_does_not_invent_crossing(reference, end, reason):
     assert result["unity_gain_frequency"]["reason"] == reason
 
 
+def test_ac_bandwidth_uses_reference_drop_and_reports_search_coverage():
+    samples = [sample(1, 2), sample(2, 1.75), sample(4, 1.25)]
+    definition = AcGainDefinition(
+        reference_frequency_hz=1.0,
+        bandwidth_drop_db=3.0,
+        minimum_search_stop_hz=8.0,
+        maximum_adjacent_frequency_ratio=2.0,
+    )
+    measurement = sampled_ac_gain(samples, definition)
+    assert measurement["bandwidth"]["status"] == "OBSERVED_SAMPLED_CROSSING"
+    assert measurement["bandwidth"]["bracket_hz"] == [2.0, 4.0]
+    assert measurement["bandwidth"]["threshold_gain_db"] == pytest.approx(3.0206)
+    assert measurement["unity_gain_frequency"]["reason"] == "insufficient_frequency_range"
+    assert measurement["unity_gain_frequency"]["value"] is None
+
+    complete = sampled_ac_gain([*samples, sample(8, 1.1)], definition)
+    assert complete["unity_gain_frequency"]["status"] == "NOT_OBSERVED_IN_SAMPLED_RANGE"
+    coarse = sampled_ac_gain([samples[0], samples[-1], sample(8, 0.8)], definition)
+    for name in ("bandwidth", "unity_gain_frequency"):
+        assert coarse[name]["reason"] == "insufficient_frequency_resolution"
+        assert coarse[name]["gap_hz"] == [1.0, 4.0]
+        assert coarse[name]["value"] is None
+
+
 def test_registered_op_reads_and_missing_signed_region_values(configured):
     _, record, result = seed(configured)
     report = make_report(record, result)
@@ -84,7 +108,8 @@ def test_registered_op_reads_and_missing_signed_region_values(configured):
     values = {"id": "value|-3e-6", "region": "value|2"}
     for index in range(1, 18):
         for field in ("id", "gm", "gds", "vgs", "vds", "vdsat", "region"):
-            lines.append(f"OP|registered|mos{index:02d}|{field}|{values.get(field, 'missing|nil')}")
+            value = "missing|instance" if index == 17 else values.get(field, "missing|nil")
+            lines.append(f"OP|registered|mos{index:02d}|{field}|{value}")
     frame = ("\n".join([*lines, "END"]) + "\n").encode()
     digest = hashlib.sha256(frame).hexdigest()
     payload = parse_device_op_frame(report, registry, frame, expected_frame_sha256=digest)
@@ -96,6 +121,7 @@ def test_registered_op_reads_and_missing_signed_region_values(configured):
     assert (first[1]["value"], first[1]["reason"]) == (None, "field_not_available")
     assert first[6]["value"] == 2
     assert first[6]["interpretation_reason"] == "registered_model_region_meaning_unavailable"
+    assert all(row["reason"] == "instance_not_available" for row in measured["measurements"][-7:])
     with pytest.raises(OperationRejected) as mismatched_digest:
         parse_device_op_frame(report, registry, frame + b"invalid", expected_frame_sha256=digest)
     assert mismatched_digest.value.reason == "research_op_frame_size_or_digest_mismatch"

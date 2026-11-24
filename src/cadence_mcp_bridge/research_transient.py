@@ -46,8 +46,21 @@ class TransientDelay(VariableModel):
     response: TransientEdge
 
 
+class TransientSlewThresholds(VariableModel):
+    lower_v: Finite
+    upper_v: Finite
+    direction: Literal["rising", "falling"]
+
+    @model_validator(mode="after")
+    def ordered(self) -> Self:
+        if self.lower_v >= self.upper_v:
+            raise ValueError("slew thresholds must be strictly increasing")
+        return self
+
+
 class TransientSlew(VariableModel):
     signal: LogicalId
+    thresholds: TransientSlewThresholds | None = None
 
 
 class TransientSettling(VariableModel):
@@ -156,6 +169,37 @@ def _delay(
     )
 
 
+def _threshold_slew(
+    axis: list[float], values: list[float], window: TransientWindow, spec: TransientSlewThresholds,
+) -> dict[str, Any]:
+    selected = []
+    levels = (spec.lower_v, spec.upper_v)
+    if spec.direction == "falling":
+        levels = levels[::-1]
+    for threshold in levels:
+        try:
+            eligible = [point for point in _crossings(axis, values, threshold)
+                        if window.start_s <= point.time_s <= window.stop_s]
+        except ValueError:
+            return _metric("V/s", "ambiguous_threshold_contact")
+        if not eligible:
+            return _metric("V/s", "edge_missing")
+        if len(eligible) != 1 or eligible[0].direction != spec.direction:
+            return _metric("V/s", "ambiguous_edges")
+        selected.append(eligible[0])
+    start, stop = selected
+    elapsed = stop.time_s - start.time_s
+    if elapsed <= 0:
+        return _metric("V/s", "invalid_threshold_crossing_order")
+    if start.bracket_s == stop.bracket_s:
+        return _metric("V/s", "insufficient_threshold_resolution")
+    return _metric(
+        "V/s", None, (levels[1] - levels[0]) / elapsed,
+        method="signed_slope_between_threshold_crossings",
+        start=start.model_dump(mode="json"), stop=stop.model_dump(mode="json"),
+    )
+
+
 def _settling(
     axis: list[float], series: list[float], window: TransientWindow, spec: TransientSettling,
 ) -> dict[str, Any]:
@@ -166,15 +210,20 @@ def _settling(
     if outside and outside[-1] == len(times) - 1:
         return _metric("s", "outside_tolerance_at_window_end")
     entry = times[0]
+    entry_bracket = None
     if outside:
         i = outside[-1]
         boundary = spec.target_v + math.copysign(spec.tolerance_v, values[i] - spec.target_v)
         weight = (boundary - values[i]) / (values[i + 1] - values[i])
         entry = times[i] + weight * (times[i + 1] - times[i])
+        entry_bracket = [
+            axis[bisect_right(axis, times[i]) - 1], axis[bisect_left(axis, times[i + 1])]
+        ]
     hold = times[-1] - entry
     if hold < spec.minimum_hold_s:
         return _metric("s", "insufficient_hold_duration", observed_hold_s=hold)
-    return _metric("s", None, entry - window.start_s, entry_s=entry, observed_hold_s=hold,
+    return _metric("s", None, entry - window.start_s, entry_s=entry, entry_bracket_s=entry_bracket,
+                   observed_hold_s=hold,
                    method="last_band_entry_held_through_window_end_piecewise_linear")
 
 
@@ -342,9 +391,14 @@ def evaluate_research_transient(
             measurements["slew"] = _metric("V/s", reason)
         else:
             axis, values, _ = series[signal]
-            slope = (_linear_at(axis, values, window.stop_s)
-                     - _linear_at(axis, values, window.start_s)) / (window.stop_s - window.start_s)
-            measurements["slew"] = _metric("V/s", None, slope, method="signed_window_secant")
+            if query.slew.thresholds is not None:
+                measurements["slew"] = _threshold_slew(axis, values, window, query.slew.thresholds)
+            else:
+                change = _linear_at(axis, values, window.stop_s) - _linear_at(
+                    axis, values, window.start_s,
+                )
+                slope = change / (window.stop_s - window.start_s)
+                measurements["slew"] = _metric("V/s", None, slope, method="signed_window_secant")
     if query.settling:
         signal = query.settling.signal
         reason = unavailable(signal)
