@@ -188,6 +188,10 @@ cadence-mcp-bridge operator-research-generation prepare `
 
 준비는 원격 접속과 실행 권한 없이 수행됩니다. 실제 Netlist 프로그램, 작업 범위와 권한, 운영자 등록은 이후 단계에서 연결합니다. 다음 명령의 등록 파일은 이 준비 결과를 검토해 별도로 만든 입력입니다.
 
+**선택 입력 `signed_ac_vsin_pair`** — 기본값은 `false`입니다. 이 옵션을 제공하는 개발 소스에서 `true`는 보존 증거와 일치하는 접지 기준 `analogLib/vsin/symbol` 두 개에만 적용합니다. 두 소스의 DC는 각각 0.5 V, AC 진폭은 각각 +0.5 V와 −0.5 V입니다. 저장된 사인 설정 `va=50m`, `freq=1K`, `filenums=none` 및 두 번째 소스의 `sinephase=180`을 보존합니다. 이 경로의 Netlist 조건은 AC 전용입니다.
+
+옵션을 사용하려면 `signed_ac_evidence_sha256`으로 검토한 저장·독립 재개방 관측을, 그 관측의 `effective_netlist_sha256`으로 실제 원본 Netlist를, `primitive_cdf_sha256`으로 일치하는 CDF를 연결합니다. 준비 명령에 해당 증거 파일을 각각 전달합니다. 기존 회로의 OA와 Netlist에서는 위 설정을 확인했고, 해당 두 인스턴스의 실제 base/effective CDF는 아직 확보하지 못했습니다. 필요한 기록은 `vdc/acm/va/freq/sinephase/acp`의 메타데이터·값, `PLUS/MINUS`와 Spectre `vsource` 매핑입니다. `acp`의 단위를 가정하지 않습니다. 이 옵션의 검증은 현재 로컬 검증이며 실제 Cadence 적용은 대기 중입니다.
+
 #### 등록형 생성의 CLI와 MCP 요청
 
 `serve-operator --registered-research-generation FILE SHA256`은 한 생성 등록을 선택합니다. `FILE SHA256`은 등록 파일과 원본 바이트의 해시입니다. 네 MCP 도구에는 아래 객체를 `request`로 감싸 전달합니다. CLI의 요청 파일에는 내부 객체만 저장합니다.
