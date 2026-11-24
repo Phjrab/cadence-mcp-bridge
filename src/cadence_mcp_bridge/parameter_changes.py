@@ -213,6 +213,14 @@ class MosOptionTransition(VariableModel):
     after: Annotated[str, Field(pattern=r"^[A-Za-z0-9_.()+*/-]{1,64}$")]
 
 
+def mos_multiplicity_factors(token: str) -> tuple[str, str]:
+    """Parse the observed Spectre (m)*(fingers) form as two bounded integers."""
+    match = re.fullmatch(r"\(([1-9][0-9]{0,5})\)\*\(([1-9][0-9]{0,5})\)", token)
+    if match is None:
+        raise ValueError("Spectre MOS multiplicity needs two explicit positive integer factors")
+    return match[1], match[2]
+
+
 class RegisteredMosTarget(VariableModel):
     """One registered OA property and its exact observed Spectre option mapping."""
 
@@ -244,6 +252,19 @@ class RegisteredMosTarget(VariableModel):
 
     def parse_scalar(self, token: str, *, baseline: bool = False) -> ChangeValue:
         unit = (self.baseline_scalar_unit or self.scalar_unit) if baseline else self.scalar_unit
+        if (
+            unit == "count"
+            and self.scalar_option == self.instance.property_name == "m"
+            and self.instance.master_library == "gpdk090"
+            and self.instance.master_cell in ("nmos1v", "pmos1v")
+            and self.instance.master_view == "symbol"
+            and self.netlist_model == f"gpdk090_{self.instance.master_cell}"
+            and "*" in token
+        ):
+            multiplier, fingers = mos_multiplicity_factors(token)
+            if fingers != "1":
+                raise ValueError("registered multiplier projection requires one observed finger")
+            return ChangeValue(value=multiplier, unit="count")
         suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[unit]
         if token.startswith("(") and token.endswith(")"):
             token = token[1:-1]
@@ -876,11 +897,29 @@ def project_netlist_change(
         old, observed, derived = _compare_mos_options(
             old_options, new_options, plan.allowed_derived, amplifier=amplifier
         )
+    # Source9's reviewed HNL variation moves only the four top-level bench
+    # instances. Keep the same narrow exception for the registered MP width.
+    source9_width = (
+        isinstance(plan.target, RegisteredMosTarget)
+        and plan.target.netlist_path == "DUT/MP"
+        and plan.target.instance.master_library == "gpdk090"
+        and plan.target.instance.master_cell == "pmos1v"
+        and plan.target.instance.master_view == "symbol"
+        and plan.target.instance.property_name in ("w", "fw")
+        and plan.target.scalar_option == "w"
+        and plan.baseline.revision.design_id == "cmos-long-inverter"
+        and plan.baseline.revision.revision_id == "long-r1"
+    )
     if old_params != new_params or (
         old_static != new_static
         and not (
-            isinstance(plan.target, MosWidthTarget)
-            and plan.target.instance.instance_path != "PM0"
+            (
+                (
+                    isinstance(plan.target, MosWidthTarget)
+                    and plan.target.instance.instance_path != "PM0"
+                )
+                or source9_width
+            )
             and _same_inverter_bench_with_reordered_instances(
                 old_static, new_static, baseline_input, candidate_input
             )
