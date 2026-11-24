@@ -1042,8 +1042,27 @@ def render_research_positioned_instance(
     )
 
 
+_SCHEMATIC_PORT_CHECK = r"""
+procedure(m2BlockSchematicPort(cv name direction net x y)
+ let((term pin fig)
+  term=m2BlockTerminal(cv name direction net)
+  m2Require(length(term~>pins)==1)
+  pin=car(term~>pins)
+  m2Require(and(pin~>term==term length(pin~>figs)==1))
+  fig=car(pin~>figs)
+  m2Require(and(fig~>cellView==cv fig~>objType=="inst"
+                fig~>libName=="basic" fig~>cellName=="iopin" fig~>viewName=="symbol"
+                fig~>pin==pin))
+  m2BlockPoint(fig~>xy x y)))
+"""
+
+
 def _block_generation_parts(
-    plan: OwnedMosBlockPlan, ordered: list[Circuit], cdf_frames: Mapping[str, bytes]
+    plan: OwnedMosBlockPlan,
+    ordered: list[Circuit],
+    cdf_frames: Mapping[str, bytes],
+    *,
+    verify_schematic_port_positions: bool,
 ) -> tuple[list[str], list[str]]:
     devices: dict[str, tuple[dict[str, object], ...]] = {}
     create: list[str] = []
@@ -1079,7 +1098,14 @@ def _block_generation_parts(
         for port in cell.ports:
             args = f"{q(port.name)} {q(port.direction)}"
             create.append(f"m2Port(cv {args} {port.origin.x} {port.origin.y})")
-            reopen.append(f"m2BlockTerminal(cv {args} {q(port.net)})")
+            if verify_schematic_port_positions:
+                check = (
+                    f"m2BlockSchematicPort(cv {args} {q(port.net)} {port.origin.x} {port.origin.y})"
+                )
+                initial_checks.append(check)
+                reopen.append(check)
+            else:
+                reopen.append(f"m2BlockTerminal(cv {args} {q(port.net)})")
         for inst in cell.instances:
             props: dict[str, str] = {}
             if isinstance(inst, Child):
@@ -1175,6 +1201,7 @@ def render_owned_mos_block(
     *,
     expected_plan_sha256: Digest,
     owned_library_path: str,
+    verify_schematic_port_positions: bool = False,
 ) -> MosBlockScripts:
     """Render a fresh-library writer and separate read-only saved-view checker."""
     plan = _pinned_block(plan, expected_plan_sha256)
@@ -1184,13 +1211,19 @@ def render_owned_mos_block(
         or plan.output_library in {"basic", "analogLib"}
     ):
         raise ValueError("invalid operator-bound owned block destination")
-    create, reopen = _block_generation_parts(plan, _child_first(plan), cdf_frames)
+    create, reopen = _block_generation_parts(
+        plan,
+        _child_first(plan),
+        cdf_frames,
+        verify_schematic_port_positions=verify_schematic_port_positions,
+    )
 
     def script(body: list[str]) -> str:
         text = "\n".join(
             (
                 _PRELUDE,
                 _BLOCK_PRELUDE,
+                *([_SCHEMATIC_PORT_CHECK] if verify_schematic_port_positions else []),
                 "procedure(m2BlockRun() let((cv inst net fig master)",
                 *body,
                 "t))",

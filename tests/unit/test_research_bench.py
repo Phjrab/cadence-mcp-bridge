@@ -1,6 +1,7 @@
 """Focused local checks for the composite Source9 writer and input guard."""
 
 import json
+from copy import deepcopy
 from hashlib import sha256
 
 import pytest
@@ -217,4 +218,153 @@ def test_pinned_controls_cannot_admit_extra_topology(additional: str, reason: st
         _verify(
             raw + (additional + "\n").encode("ascii"),
             additional_fixed=tuple(additional.splitlines()),
+        )
+
+
+def _declarative_fixture() -> tuple[
+    ResearchBenchPlan, OwnedMosBlockPlan, dict[str, bytes], BenchNetlistConditions, bytes, bytes
+]:
+    definition = _definition().model_dump(mode="json")
+    root = next(cell for cell in definition["circuits"] if cell["name"] == definition["dut"])
+    template = root["instances"][:2]
+    root["nets"].append("inn")
+    root["ports"].append(
+        {
+            "name": "inn",
+            "net": "inn",
+            "direction": "input",
+            "origin": {"x": "108", "y": "100"},
+        }
+    )
+    root["symbol"]["pins"].append({"port": "inn", "origin": {"x": "-1", "y": "-0.5"}})
+    instances = []
+    statements = []
+    for index in range(17):
+        device = deepcopy(template[index % 2])
+        name = f"M{index}"
+        gate = "vin" if index % 2 == 0 else "inn"
+        rail = "vss" if index % 2 == 0 else "vdd"
+        device["name"] = name
+        device["placement"]["origin"] = {"x": str(index * 4), "y": "0"}
+        next(link for link in device["links"] if link["terminal"] == "G")["net"] = gate
+        instances.append(device)
+        statements.append(
+            f"{name} (vout {gate} {rail} {rail}) {device['spectre']['model']}"
+            f" w=({device['geometry']['w']['value']}n) l=100n m=1 as=1f ad=1f ps=1u pd=1u"
+        )
+    root["instances"] = instances
+    bench = next(cell for cell in definition["circuits"] if cell["name"] == definition["bench"])
+    bench["nets"].append("inn")
+    ref, _, vin, _ = bench["instances"]
+    ref["links"].append({"terminal": "inn", "net": "inn"})
+    vin.update(pulse=None, dc_variable=None, dc_v="0.5", ac_magnitude_v="0.5", ac_phase_deg="0")
+    inn = deepcopy(vin)
+    inn.update(name="VNEG", ac_phase_deg="180")
+    inn["placement"]["origin"]["x"] = "16"
+    next(link for link in inn["links"] if link["terminal"] == "PLUS")["net"] = "inn"
+    bench["instances"].append(inn)
+    definition["circuits"] = [root, bench]
+    definition["observations"] = [
+        {"kind": "device", "path": ["DUT", device["name"]], "quantity": "gm"}
+        for device in instances
+    ]
+    model = ResearchCircuit.model_validate_json(json.dumps(definition))
+    dut = plan_owned_mos_block(
+        model,
+        expected_binding=model.binding,
+        expected_definition_sha256=canonical_digest(model),
+        output_library="OwnedBlock",
+    )
+    inverter, frame = inverter_fixture()
+    # These added AC CDF property rows are synthetic and qualify only the Python path.
+    old = b'PARAM|"base"|"vdc"|"instData"|"voltage"|""|""\n'
+    new = (
+        old + b'PARAM|"base"|"acm"|"instData"|"voltage"|"0"|"0"\n'
+        b'PARAM|"base"|"acp"|"instData"|"angle"|"0"|"0"\n'
+    )
+    primitive = frame.replace(old, new)
+    assert primitive != frame
+    primitive_pin = sha256(primitive).hexdigest()
+    plan = plan_research_bench(
+        model,
+        dut,
+        expected_definition_sha256=canonical_digest(model),
+        expected_dut_plan_sha256=canonical_digest(dut),
+        primitive_cdf_sha256=primitive_pin,
+    )
+    raw = (
+        "simulator lang=spectre\nglobal 0\nsubckt Dut vin vout vdd vss inn\n"
+        + "\n".join(statements)
+        + "\nends Dut\n"
+    ).encode()
+    full = raw + (
+        b"DUT (vin vout vdd 0 inn) Dut\nVDD (vdd 0) vsource dc=1 type=dc\n"
+        b"VIN (vin 0) vsource dc=500m mag=500m phase=0 type=dc\n"
+        b"VNEG (inn 0) vsource dc=500m mag=500m phase=180 type=dc\n"
+        b"CL (vout 0) capacitor c=1p\nac ac start=1 stop=1e9 dec=16\n"
+    )
+    conditions = BenchNetlistConditions(
+        parameters={},
+        includes=(),
+        analyses=(("ac", "start=1 stop=1e9 dec=16"),),
+        fixed_top_level=("global 0",),
+    )
+    return (
+        plan,
+        dut,
+        {inverter.cdf_frame_sha256: frame, primitive_pin: primitive},
+        conditions,
+        raw,
+        full,
+    )
+
+
+def test_declarative_bench_renders_17_mos_and_compares_differential_input() -> None:
+    plan, dut, frames, conditions, raw, full = _declarative_fixture()
+    plan_pin = canonical_digest(plan)
+    scripts = render_research_bench(
+        plan,
+        dut,
+        frames,
+        expected_plan_sha256=plan_pin,
+        owned_library_path="/owned/block",
+    )
+    assert scripts.generate.count('dbCreateInst(cv master "M') == 17
+    assert 'm2Net(cv "DUT" "inn" "inn")' in scripts.reopen
+    assert 'm2BlockSchematicPort(cv "inn" "input" "inn" 108 100)' in scripts.reopen
+    assert 'm2Param(inst "acp" "180")' in scripts.generate
+    assert 'm2Property(cv "VNEG" "acp" "180")' in scripts.reopen
+    assert "dbSave(" not in scripts.reopen
+    assert "primitive_cdf_sha256" not in _plans(_definition())[0].model_dump()
+
+    def check(candidate: bytes) -> None:
+        verify_research_bench_netlist(
+            plan,
+            dut,
+            candidate,
+            raw,
+            expected_plan_sha256=plan_pin,
+            expected_netlist_sha256=sha256(candidate).hexdigest(),
+            expected_dut_netlist_sha256=sha256(raw).hexdigest(),
+            conditions=conditions,
+            expected_conditions_sha256=canonical_digest(conditions),
+        )
+
+    check(full)
+    for bad in (
+        full.replace(b"vdd 0 inn", b"vdd inn 0"),
+        full.replace(b"phase=180", b"phase=0"),
+        full.replace(b"capacitor c=1p", b"capacitor c=2p"),
+    ):
+        with pytest.raises(ValueError, match="bench device"):
+            check(bad)
+    assert plan.primitive_cdf_sha256 is not None
+    untrusted = {key: frame for key, frame in frames.items() if key != plan.primitive_cdf_sha256}
+    with pytest.raises(ValueError, match="bench primitive CDF"):
+        render_research_bench(
+            plan,
+            dut,
+            untrusted,
+            expected_plan_sha256=plan_pin,
+            owned_library_path="/owned/block",
         )
