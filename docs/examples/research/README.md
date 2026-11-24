@@ -173,6 +173,21 @@ cadence_operation_result({"request": key})
 
 연구 재개에는 검증된 개발 wheel과 해당 운영자 연결을 사용합니다. 설치본에서 사용할 도구와 요청 형식을 확인하고, 당시 승인·자원 상태를 기존 절차로 확인합니다.
 
+#### 오프라인 생성 준비
+
+검증한 회로 정의와 계획, 테스트벤치 조건을 `ResearchGenerationPreparationRequest`에 담습니다. 요청에서 참조하는 CDF 등 각 증거 파일은 원본 바이트 SHA-256으로 지정합니다. `--evidence FILE SHA256`은 요청의 증거 파일마다 한 번씩 전달합니다.
+
+```powershell
+cadence-mcp-bridge operator-research-generation prepare `
+  --request $prepareRequest $prepareRequestSha `
+  --evidence $cdfFile $cdfFileSha `
+  --output-directory $newPreparationDirectory
+```
+
+출력 디렉터리의 부모는 존재해야 하며, 출력 디렉터리 자체는 새 경로여야 합니다. `LOCAL_GENERATION_PREPARED`는 정규화된 정의·계획·bench·조건, CDF 증거, 저장 및 독립 재개방 프로그램이 로컬로 준비됐다는 뜻입니다. 출력의 `preparation.private.json`과 명령이 반환한 파일 SHA를 함께 보관합니다. 기록이 중간에 끊겼다면 기존 폴더를 보존하고 새 폴더에서 오프라인 준비를 다시 합니다.
+
+준비는 원격 접속과 실행 권한 없이 수행됩니다. 실제 Netlist 프로그램, 작업 범위와 권한, 운영자 등록은 이후 단계에서 연결합니다. 다음 명령의 등록 파일은 이 준비 결과를 검토해 별도로 만든 입력입니다.
+
 #### 등록형 생성의 CLI와 MCP 요청
 
 `serve-operator --registered-research-generation FILE SHA256`은 한 생성 등록을 선택합니다. `FILE SHA256`은 등록 파일과 원본 바이트의 해시입니다. 네 MCP 도구에는 아래 객체를 `request`로 감싸 전달합니다. CLI의 요청 파일에는 내부 객체만 저장합니다.
