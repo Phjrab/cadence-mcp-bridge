@@ -1194,7 +1194,7 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
 
         source_files = (
             "writer_request", "writer_original", "writer_replay", "writer_receipt",
-            "preflight", "export_receipt", "export_custody",
+            "preflight", "export_receipt", "export_custody", "export_dependency_observation",
         )
         source_refs = {
             field: pin(tmp_path / f"{field}.json", f'{{"artifact":"{field}"}}\n'.encode())
@@ -1354,6 +1354,14 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             bad_ref["sha256"] = "0" * 64
             assert compare_5656("wrong-custody-pin", tmp_path / "bad-custody.json") == 2
             bad_ref["sha256"] = good_pin
+            witness = source_refs["export_dependency_observation"]
+            assert compare_5656("dependency-collision", Path(witness["path"])) == 2
+            good_witness_pin = witness["sha256"]
+            witness["sha256"] = "0" * 64
+            wrong_witness_output = tmp_path / "wrong-dependency.json"
+            assert compare_5656("wrong-dependency-pin", wrong_witness_output) == 2
+            assert not wrong_witness_output.exists() and len(forwarded_5656) == 3
+            witness["sha256"] = good_witness_pin
             missing_custody = request["saved_source"].pop("terminal_custody")
             assert compare_5656("no-terminal-custody", tmp_path / "no-terminal-custody.json") == 2
             request["saved_source"]["terminal_custody"] = missing_custody
@@ -1397,9 +1405,12 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             changed.update(original_ac)
             custody["ac"] = native_ac
             execution_context.binding.analysis_journal = trusted_journal
+            del request["saved_source"]["export_dependency_observation"]
+            assert compare_5656("no-dependency-witness", tmp_path / "no-dependency.json") == 0
+            assert forwarded_5656[-1][0].export_dependency_observation is None
             request.pop("saved_source")
             assert compare_5656("v10-without-writer", tmp_path / "missing-writer.json") == 2
-            assert len(forwarded_5656) == 4
+            assert len(forwarded_5656) == 5
             capsys.readouterr()
         del files["policy_steps"]
 

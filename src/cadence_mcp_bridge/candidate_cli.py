@@ -190,6 +190,7 @@ class _SavedAmplifier5656Files(VariableModel):
     runtime_manifest_sha256: Digest
     runtime_registration_sha256: Digest
     terminal_custody: _AmpTerminalCustodyFiles
+    export_dependency_observation: _PinnedComparisonFile | None = None
 
     def files(self) -> tuple[_PinnedComparisonFile, ...]:
         return (
@@ -197,7 +198,10 @@ class _SavedAmplifier5656Files(VariableModel):
             self.preflight, self.export_receipt, self.export_custody,
             self.terminal_custody.settings,
             *(
-                ref for ref in (self.terminal_custody.dc, self.terminal_custody.ac)
+                ref for ref in (
+                    self.terminal_custody.dc, self.terminal_custody.ac,
+                    self.export_dependency_observation,
+                )
                 if ref is not None
             ),
         )
@@ -1173,6 +1177,10 @@ def _build_fresh_amplifier_comparison(
             runtime_registration_sha256=source.runtime_registration_sha256,
             dc_native_result=dc_raw,
             ac_native_result=ac_raw,
+            export_dependency_observation=(
+                _comparison_document(source.export_dependency_observation)
+                if source.export_dependency_observation is not None else None
+            ),
         )
     pair = associate_fresh_amplifier_width_pair(
         plan,
