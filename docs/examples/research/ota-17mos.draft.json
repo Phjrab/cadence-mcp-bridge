@@ -501,69 +501,125 @@
     }
   },
   "pdk_mapping": {
-    "model_section": null,
-    "technology_library": null,
+    "model_section": "NN",
+    "technology_library": "gpdk090",
     "model_dependency_evidence": null,
     "device_mappings": {
       "nmos": {
-        "library": null,
-        "cell": null,
-        "view": null,
+        "library": "gpdk090",
+        "cell": "nmos1v",
+        "view": "symbol",
         "terminal_map": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "D",
+          "G": "G",
+          "S": "S",
+          "B": "B"
         },
         "cdf": {
-          "w": null,
-          "fw": null,
-          "l": null,
-          "m": null,
-          "fingers": null,
-          "width_semantics": null,
-          "unit_conversion": null,
+          "w": "w",
+          "fw": "fw",
+          "l": "l",
+          "m": "m",
+          "fingers": "fingers",
+          "width_semantics": {
+            "observed_simulator_projection": "simW follows fw; simM follows m times fingers",
+            "observed_relation": "w=fw for one finger",
+            "port_specific_w_fw_relationship": null
+          },
+          "unit_conversion": "lengthMetric; observed Spectre n suffix is 1e-9 m. Confirm target parameter types and write path per selected tuple.",
           "allowed_ranges": null
         },
-        "model": null,
-        "source_evidence": null,
-        "prior_non_ota_observation": {
-          "master_candidate": "gpdk090/nmos1v/symbol",
-          "model_candidate": "gpdk090_nmos1v",
-          "observed_cells_only": "Source9 inverter and previously qualified AMP PM0 for PMOS",
-          "constraint": "m=fingers=1 in the cited inverter. OTA width/length/fingers and PM6 m=6 remain unverified"
+        "model": "gpdk090_nmos1v",
+        "source_evidence": {
+          "symbol_and_cdf": "C1 retained Source9 M2_CDF_V2; actual symbol terminals D/G/S/B",
+          "spectre": "C1 retained BBE3 DUT and testbench, NN, D/G/S/B positional order",
+          "operating_point": "C8 retained BBE3 DC audit, Vin 0 V, VDD 1 V"
+        },
+        "spectre_terminal_order": [
+          "D",
+          "G",
+          "S",
+          "B"
+        ],
+        "observed_points": [
+          {
+            "case": "Source9 saved and netlisted",
+            "w_nm": 120,
+            "fw_nm": 120,
+            "l_nm": 100,
+            "m": 1,
+            "fingers": 1
+          }
+        ],
+        "raw_region_reference": {
+          "bbe3_Vin_V": 0,
+          "raw_code": 3,
+          "model_interpretation": null
         }
       },
       "pmos": {
-        "library": null,
-        "cell": null,
-        "view": null,
+        "library": "gpdk090",
+        "cell": "pmos1v",
+        "view": "symbol",
         "terminal_map": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "D",
+          "G": "G",
+          "S": "S",
+          "B": "B"
         },
         "cdf": {
-          "w": null,
-          "fw": null,
-          "l": null,
-          "m": null,
-          "fingers": null,
-          "width_semantics": null,
-          "unit_conversion": null,
+          "w": "w",
+          "fw": "fw",
+          "l": "l",
+          "m": "m",
+          "fingers": "fingers",
+          "width_semantics": {
+            "observed_simulator_projection": "simW follows fw; simM follows m times fingers",
+            "observed_relation": "w=fw for one finger",
+            "port_specific_w_fw_relationship": null
+          },
+          "unit_conversion": "lengthMetric; observed Spectre n suffix is 1e-9 m. Confirm target parameter types and write path per selected tuple.",
           "allowed_ranges": null
         },
-        "model": null,
-        "source_evidence": null,
-        "prior_non_ota_observation": {
-          "master_candidate": "gpdk090/pmos1v/symbol",
-          "model_candidate": "gpdk090_pmos1v",
-          "observed_cells_only": "Source9 inverter and previously qualified AMP PM0 for PMOS",
-          "constraint": "m=fingers=1 in the cited inverter. OTA width/length/fingers and PM6 m=6 remain unverified"
+        "model": "gpdk090_pmos1v",
+        "source_evidence": {
+          "symbol_and_cdf": "C1 retained Source9 M2_CDF_V2; actual symbol terminals D/G/S/B",
+          "spectre": "C1 retained BBE3 DUT and testbench, NN, D/G/S/B positional order",
+          "operating_point": "C8 retained BBE3 DC audit, Vin 0 V, VDD 1 V"
+        },
+        "spectre_terminal_order": [
+          "D",
+          "G",
+          "S",
+          "B"
+        ],
+        "observed_points": [
+          {
+            "case": "Source9 saved and netlisted",
+            "w_nm": 350,
+            "fw_nm": 350,
+            "l_nm": 100,
+            "m": 1,
+            "fingers": 1
+          },
+          {
+            "case": "AMP PM0 saved and independently netlisted",
+            "w_nm": 120,
+            "fw_nm": 120,
+            "l_nm": 1000,
+            "m": 1,
+            "fingers": 1
+          }
+        ],
+        "raw_region_reference": {
+          "bbe3_Vin_V": 0,
+          "raw_code": 1,
+          "model_interpretation": null
         }
       }
-    }
+    },
+    "model_section_scope": "Observed in the retained BBE3 DUT and testbench Spectre inputs; bind the actual OTA registration to its own model dependency before use.",
+    "bulk_mapping_scope": "Observed nmos1v B to VSS and pmos1v B to VDD in Source9 and BBE3. The thesis specifies the same rail choices; per-device port signoff remains required."
   },
   "bench_candidates": {
     "VDD_V": 1,

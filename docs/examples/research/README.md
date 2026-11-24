@@ -9,13 +9,14 @@ Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인�
 - 외부 연결은 `inp`, `inn`, `out`, `VDD`, `VSS`입니다. 그림에는 OTA 내부 자식 블록이 없습니다. `Vx`와 `Vy`는 그림의 라벨이고, 나머지 내부 이름은 보이는 배선을 구분하기 위해 붙였습니다. D/S 명칭은 심볼 방향과 레일에서 읽었으므로 목표 셀의 단자 순서를 다시 대조해야 합니다. B 배선은 논문 그림에서 PMOS가 VDD, NMOS가 VSS에 연결됩니다. 목표 PDK에서 이 벌크 연결을 지원하는지는 별도 확인 사항입니다.
 - NM0/NM8과 NM1/NM9는 차동 입력의 두 self-cascode 가지입니다. PM2/PM4와 PM3/PM5는 미러 부하이고, 오른쪽 가지가 PM7/PM6의 공통 게이트를 구동합니다. PM8은 바이어스 공급의 다이오드 연결이며, NM6/NM2는 기준 가지, NM7/NM3은 꼬리 전류 가지, NM11/NM10은 출력 전류 싱크입니다. Fig. 2-2와 §2.3.3은 카스코드의 출력저항 역할과 공통 소스 두 번째 단을 설명합니다.
 - 같은 게이트를 공유하는 쌍에서 소스 쪽 선형 동작과 드레인 쪽 포화 동작은 동작점에서 확인할 가설입니다. 다이오드 연결 소자는 정상적으로 켜져 있는지 확인합니다. 모델에 맞는 전압 부호와 여유, 실제 `id/gm/gds/vgs/vds/vdsat` 및 모델의 `region` 정의를 함께 봅니다.
-- 이전 GPDK090 인버터에서 `nmos1v`와 `pmos1v` 및 D/G/S/B가 확인됐고, 이전 AMP PM0도 `pmos1v`에서 W/FW와 Netlist를 대조했습니다. 해당 증거는 배수·finger가 각각 1인 사례입니다. OTA의 CDF 허용 범위, W/FW와 finger 관계, 길이, PM6의 배수 6 및 유효 Netlist 표현은 아직 확인이 필요합니다.
+- Source9와 BBE3에서 `gpdk090/nmos1v/symbol`과 `gpdk090/pmos1v/symbol`의 D/G/S/B 이름과 실제 Spectre 단자 순서를 확인했습니다. 모델은 각각 `gpdk090_nmos1v`와 `gpdk090_pmos1v`이며 BBE3 Netlist의 모델 section은 `NN`입니다. Source9의 확인된 W/FW·L은 NMOS 120/120·100 nm, PMOS 350/350·100 nm였습니다. 별도 AMP PM0에서는 120/120·1000 nm를 확인했습니다. 이 세 점의 배수와 finger는 모두 1입니다. CDF에서 `simW`는 `fw`, `simM`은 `m × fingers`에 대응했습니다. OTA 치수별 허용 범위, 다중 finger의 W/FW 관계, PM6 배수 6 및 해당 Netlist 값은 별도 확인이 필요합니다.
+- BBE3의 VDD 1 V, Vin 0 V에서 NMOS·PMOS의 원시 `region`은 각각 3·1이었습니다. 각 코드의 모델별 의미는 미확정입니다.
 
 ## 연구 인계
 
 - **준비된 경로** — 검증 표는 실제 Cadence에서 확인한 2 MOS 인버터와 14 MOS AMP의 결과를 다룹니다. 17 MOS OTA는 논문과 PDK 매핑을 대조하는 준비 단계입니다.
 
-- **OTA 미확정 입력** — 대상 셀의 단자 및 벌크 정책, GPDK090 CDF·모델 매핑과 치수, 배치·심볼·테스트벤치, 실제 관측 선택자, 성능 목표와 허용 오차를 확정해야 합니다.
+- **OTA 미확정 입력** — 관측된 GPDK090 매핑을 바탕으로 17개 소자의 치수·벌크와 Netlist 대응, 배치·심볼·테스트벤치, 실제 관측 선택자, 성능 목표와 허용 오차를 확정해야 합니다.
 - **호출 순서** — 설치 MCP에서 `tools/list` → 회로 정의 검증 → MOS 블록 계획 → 지원되는 Cadence 경로에서 작업 사본 생성·저장 → 독립 재개방 및 Netlist 대조 → 대상과 분석 reader 등록 순으로 진행합니다. 실행 범위가 확정되면 분석 계획 → 제출 → 상태 → 결과 → 같은 작업 ID로 재조회 순으로 확인합니다. 첫 OTA는 DC/OP와 AC부터 시작합니다.
 
 ## 블록 순서와 진입 조건
@@ -96,7 +97,39 @@ uv run --locked python -c "from pathlib import Path; from cadence_mcp_bridge.res
 
 ## 설치 MCP에서 시작하는 순서
 
-연결한 stdio 클라이언트에서 `tools/list`로 도구를 확인합니다. 아래는 `tools/call`의 도구와 인수를 나타낸 의사 코드입니다. 반환값은 MCP 응답의 `structuredContent`를 뜻합니다. `definition`에는 예제 파일을 파싱한 JSON 객체를 사용합니다. `output_library`에는 계획할 새 작업용 라이브러리 이름을 넣습니다.
+### 논문 초안을 실행 입력으로 변환
+
+논문 초안은 `research-draft-v1`이고 직접 제출하는 입력은 `ResearchCircuit`입니다. `compile-research-draft`를 제공하는 개발 설치본에서 아래 절차를 사용합니다. 먼저 대상 포팅 문서(`DraftPort`)에 다음 값을 확정합니다.
+
+| 입력 | 값의 출처 |
+| --- | --- |
+| 초안과 토폴로지 | `draft_sha256`은 초안 파일 바이트의 SHA-256, `source_design`은 `self_cascode_ota_17mos`. `topology_source`는 검토한 회로도와 실제 증거 해시 |
+| `binding`, DUT, 포트와 심볼 | 작업 공간의 실제 식별자와 원본 지문, 5개 DUT 포트의 순서·넷·방향·좌표, 심볼 경계와 핀 좌표. 아직 생성하지 않은 결과 revision의 지문을 입력에 사용하지 않음 |
+| 소자 17개 | 초안과 동일한 이름·종류, 관측 자료로 확인한 master와 모델, 실제 R0 배치 및 각 소자의 W/FW/L·m·finger·폭 의미와 예상 Spectre W/L/m. `master_source`, `geometry.source`, `spectre.source`는 각각 검토한 증거에 연결 |
+| `resolved_terminals` | 초안에서 해당 단자가 `null`인 경우에만 사용. 현재 초안은 논문 연결 전체를 기록했으므로 `{}`. 실제 벌크가 도식과 다르면 토폴로지를 먼저 재검토 |
+| `bench`와 측정 | 5개 포트와 실제로 연결되는 DUT 인스턴스, 전원·입력·부하, 분석 및 관측 정의. reader의 실제 경로와 등록은 저장한 revision 확인 뒤 확정 |
+
+파일명은 예시입니다. `ota-port.reviewed.json`에는 위 입력을 모두 확정한 실제 포팅 문서를 둡니다. 기본 렌더러의 배치는 R0와 단자 라벨 연결을 기준으로 검토합니다.
+
+```powershell
+$draft = 'docs/examples/research/ota-17mos.draft.json'
+$port = 'ota-port.reviewed.json'
+$draftSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $draft).Hash.ToLowerInvariant()
+$portSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $port).Hash.ToLowerInvariant()
+cadence-mcp-bridge operator-candidates compile-research-draft `
+  --draft $draft $draftSha --port $port $portSha --output ota-request.json
+if ($LASTEXITCODE -ne 0) { throw 'Draft compilation failed' }
+$requestSha = (Get-FileHash -Algorithm SHA256 -LiteralPath ota-request.json).Hash.ToLowerInvariant()
+cadence-mcp-bridge operator-candidates validate-research-circuit `
+  --request ota-request.json $requestSha --output ota-validated.json
+if ($LASTEXITCODE -ne 0) { throw 'Circuit validation failed' }
+```
+
+컴파일 출력은 `{"definition": {...}}` 형태의 검증 요청 파일입니다. 원본 파일 SHA와 검증 결과의 정규화된 `definition_sha256`을 구분합니다. 검증 결과의 `definition`과 `definition_sha256`을 아래 MOS 블록 계획에 전달합니다.
+
+### 회로 계획부터 분석 결과 조회까지
+
+연결한 stdio 클라이언트에서 `tools/list`로 도구를 확인합니다. 아래는 `tools/call`의 도구와 인수를 나타낸 의사 코드입니다. 반환값은 MCP 응답의 `structuredContent`를 뜻합니다. `definition`은 컴파일된 검증 요청의 `definition` 객체 또는 로컬 합성 예제의 객체입니다. `output_library`에는 계획할 새 작업용 라이브러리 이름을 넣습니다.
 
 ```text
 validation = cadence_validate_research_circuit({"request": {"definition": definition}})
