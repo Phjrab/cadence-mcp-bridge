@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import time
+from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
@@ -554,9 +555,21 @@ def _guest_tuple(before: bool) -> dict[str, dict[str, str | None]]:
         }
         for key in guest_source.PROPERTIES
     }
-    for key, units, old, new in guest_source.ROWS:
+    rows = (
+        ("w", "lengthMetric", "350n", "120n"),
+        ("fw", "lengthMetric", "350n", "120n"),
+        ("l", "lengthMetric", "100n", "100n"),
+        ("m", None, "1", "1"),
+        ("fingers", None, "1", "1"),
+        ("as", None, "98f", "69.6f"),
+        ("ad", None, "98f", "69.6f"),
+        ("ps", "lengthMetric", "1.26u", "1.16u"),
+        ("pd", "lengthMetric", "1.26u", "1.16u"),
+        ("model", None, "gpdk090_pmos1v", "gpdk090_pmos1v"),
+    )
+    for key, units, old, new in rows:
         value = old if before else new
-        explicit = before or key not in guest_source.OVERRIDES
+        explicit = before or old == new
         result[key] = dict(
             oa_type="string" if explicit else None,
             oa_value=value if explicit else None,
@@ -596,7 +609,7 @@ def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
                     "netlist_terminals": ["vout", "vin", "vdd", "vdd"],
                 },
                 "baseline": {
-                    "netlist_sha256": guest_source.SOURCE_NETLIST,
+                    "netlist_sha256": "5" * 64,
                     "revision": {"design_id": "cmos-long-inverter", "revision_id": "long-r1"},
                 },
             },
@@ -617,6 +630,7 @@ def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
         values = dict.fromkeys(set(re.findall(r"@[A-Z]+@", script)), "fixed")
         values["@BEFORE@"] = guest_source.skill_check(route["before"])
         values["@AFTER@"] = guest_source.skill_check(route["after"])
+        values["@OVERRIDES@"], values["@DEFAULTS@"] = guest_source.skill_restore(route)
         rendered = guest_source.render(script, values).decode("ascii")
         depth = 0
         syntax = re.sub(r'"(?:[^"\\]|\\.)*"', '""', rendered)
@@ -627,7 +641,23 @@ def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
     assert "dbDeletePropByName" in guest_source.EDIT and "dbSave" in guest_source.EDIT
     assert "dbSave" not in guest_source.REOPEN and "m2ReopenedMosFrame" in guest_source.REOPEN
     route["after"]["m"]["cdf_value"] = "6"
-    with pytest.raises(ValueError, match="source9_tuple"):
+    with pytest.raises(ValueError, match="registered_cdf_tuple"):
+        guest_source.exact_route(scope)
+
+    route["after"] = deepcopy(route["before"])
+    route["before"]["l"].update(oa_value="150n", cdf_value="150n")
+    route["after"]["l"].update(oa_type=None, oa_value=None)
+    q["baseline"]["revision"]["revision_id"] = "registered-length-reference"
+    q["target"]["instance"]["property_name"] = q["target"]["scalar_option"] = "l"
+    scope["plan"]["old"] = q["old"] = {"value": "0.15", "unit": "um"}
+    scope["plan"]["requested"] = scope["plan"]["expected"] = q["expected"] = {
+        "value": "100",
+        "unit": "nm",
+    }
+    assert guest_source.exact_route(scope) == route
+    assert guest_source.skill_restore(route) == ('\'("l")', '\'(("l" "150n" "100n"))')
+    route["after"]["l"].update(oa_type="string", oa_value="100n")
+    with pytest.raises(ValueError, match="observed_override_to_default"):
         guest_source.exact_route(scope)
 
 

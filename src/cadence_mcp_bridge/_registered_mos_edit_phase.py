@@ -1,4 +1,4 @@
-"""Fixed Source9 PMOS default restore and independent readback/Netlist (Python 2.6)."""
+"""Fixed registered inverter PMOS default restore and independent verification (Python 2.6)."""
 
 # mypy: ignore-errors
 # ruff: noqa: B905, UP004, UP010, UP030, UP031, UP032
@@ -19,29 +19,22 @@ import json
 import re
 import time
 import types
+from decimal import Decimal, localcontext
+
+try:
+    STRING_TYPES = (basestring,)
+except NameError:
+    STRING_TYPES = (str,)
 
 SUPPORT_SHA256 = "71de4c49873c8c40b04c6482432390daa7a6aa4ef9092d2a762f4657a9d68d61"
 CDF_SHA256 = "2563fca0a14f557317e69ec31a326642ee00c4f1dfd7af29ee08683542a25372"
-SOURCE_NETLIST = "5d4134980c80d6cff72e6c1adb0d5957e7871c7b52fa89d5482dfedf113c7f0a"
 SOURCE = "CmosLong20261111"
 DUT, TB = "InvLong", "InvLongTb"
 PHASES = ("EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST")
 CONFIRMATIONS = "registered-mos-confirmations"
 LIMIT = 524288
-OVERRIDES = ("w", "fw", "as", "ad", "ps", "pd")
+OVERRIDES = ("w", "fw", "l", "as", "ad", "ps", "pd")
 PROPERTIES = ("w", "fw", "l", "m", "fingers", "as", "ad", "ps", "pd", "nf", "model", "dfm")
-ROWS = (
-    ("w", "lengthMetric", "350n", "120n"),
-    ("fw", "lengthMetric", "350n", "120n"),
-    ("l", "lengthMetric", "100n", "100n"),
-    ("m", None, "1", "1"),
-    ("fingers", None, "1", "1"),
-    ("as", None, "98f", "69.6f"),
-    ("ad", None, "98f", "69.6f"),
-    ("ps", "lengthMetric", "1.26u", "1.16u"),
-    ("pd", "lengthMetric", "1.26u", "1.16u"),
-    ("model", None, "gpdk090_pmos1v", "gpdk090_pmos1v"),
-)
 SAFETY_FIELDS = (
     "schema_version",
     "layout_manifest_sha256",
@@ -65,11 +58,12 @@ SAFETY_FIELDS = (
 COMMON = r"""
 procedure(mosRequire(ok) unless(ok error("C6_MOS_QUALIFICATION")) ok)
 procedure(mosByName(a b) alphalessp(car(a) car(b)))
-procedure(mosOpen(lib cell mode)
+procedure(mosView(lib cell view mode)
  let((cv)
-  cv=dbOpenCellViewByType(lib cell "schematic" "" mode)
+  cv=dbOpenCellViewByType(lib cell view "" mode)
   mosRequire(and(cv cv~>libName==lib cv~>cellName==cell
-                 cv~>viewName=="schematic" cv~>mode==mode)) cv))
+                 cv~>viewName==view cv~>mode==mode)) cv))
+procedure(mosOpen(lib cell mode) mosView(lib cell "schematic" mode))
 procedure(mosTarget(cv)
  let((matches inst)
   matches=setof(item cv~>instances item~>name=="MP")
@@ -82,14 +76,20 @@ procedure(mosTarget(cv)
 procedure(mosLinks(terms)
  sort(foreach(mapcar term terms
       list(term~>name if(term~>net then term~>net~>name else nil))) 'mosByName))
-procedure(mosTb(lib)
- let((cv targets inst)
-  cv=mosOpen(lib "InvLongTb" "r")
+procedure(mosTbMaster(cv lib)
+ let((targets inst symbol)
   targets=setof(item cv~>instances item~>name=="DUT")
   mosRequire(and(length(cv~>instances)==4 length(targets)==1))
   inst=car(targets)
+  symbol=mosView(lib "InvLong" "symbol" "r")
   mosRequire(and(inst~>libName==lib inst~>cellName=="InvLong"
-                 inst~>viewName=="symbol" length(inst~>instTerms)==4))
+                 inst~>viewName=="symbol" length(inst~>instTerms)==4
+                 eq(inst~>master symbol)))
+  mosRequire(dbClose(symbol))))
+procedure(mosTb(lib)
+ let((cv)
+  cv=mosOpen(lib "InvLongTb" "r")
+  mosRequire(mosTbMaster(cv lib))
   mosRequire(dbClose(cv))))
 procedure(mosEncode(value depth)
  let((encoded item)
@@ -155,10 +155,11 @@ EDIT = r"""
 procedure(mosEdit()
  let((source child inst original stable omit expected)
   mosRequire(and(ddGetObj("@LIB@")~>readPath=="@OWNED@"
-                 ddGetObj("CmosLong20261111")~>readPath=="@SOURCE@"))
+                 ddGetObj("@SOURCEALIAS@")~>readPath=="@SOURCE@"))
+  mosTb("@SOURCEALIAS@")
   mosTb("@LIB@")
-  omit='("w" "fw" "as" "ad" "ps" "pd")
-  source=mosOpen("CmosLong20261111" "InvLong" "r")
+  omit=@OVERRIDES@
+  source=mosOpen("@SOURCEALIAS@" "InvLong" "r")
   child=mosOpen("@LIB@" "InvLong" "r")
   inst=mosTarget(child)
   mosRequire(dbIsConnCurrent(child))
@@ -172,8 +173,7 @@ procedure(mosEdit()
   mosRequire(equal(original mosFoot(child nil)))
   inst=mosTarget(child)
   expected=cdfGetInstCDF(inst)
-  foreach(row '(("w" "350n" "120n") ("fw" "350n" "120n") ("as" "98f" "69.6f")
-                ("ad" "98f" "69.6f") ("ps" "1.26u" "1.16u") ("pd" "1.26u" "1.16u"))
+  foreach(row @DEFAULTS@
    let((prop param)
     prop=dbFindProp(inst car(row))
     param=cdfFindParamByName(expected car(row))
@@ -203,12 +203,11 @@ procedure(mosReopen()
   mosRequire(dbIsConnCurrent(child))
   @AFTER@
   mosTuple("@WORK@/reopened.properties" inst)
-  mosText("@WORK@/footprint.txt" mosFoot(child '("w" "fw" "as" "ad" "ps" "pd")))
+  mosText("@WORK@/footprint.txt" mosFoot(child @OVERRIDES@))
   mosRequire(m2ReopenedMosFrame(inst))
   mosRequire(dbClose(child))
   copied=mosOpen("MCP_GREL_Work" "@NETLISTCELL@" "r")
-  mosRequire(length(setof(dut copied~>instances and(dut~>name=="DUT" dut~>libName=="@LIB@"
-             dut~>cellName=="InvLong" dut~>viewName=="symbol")))==1)
+  mosRequire(mosTbMaster(copied "@LIB@"))
   mosRequire(dbClose(copied))
   printf("C6_MOS_READ_ONLY_CLOSED|@OP@\n")
   drain(poport) t))
@@ -247,81 +246,161 @@ def read_properties(raw):
     return result
 
 
+def finite_length(value, unit):
+    require(
+        unit in ("nm", "um") and len(value) <= 48 and re.match(r"^[0-9]+(?:\.[0-9]+)?\Z", value),
+        "registered_length",
+    )
+    number = Decimal(value)
+    require(number > 0, "registered_length")
+    with localcontext() as context:
+        context.prec = 64
+        return number * Decimal("1e-9" if unit == "nm" else "1e-6")
+
+
+def cdf_length(row):
+    value = row["cdf_value"]
+    require(
+        row["cdf_type"] == "instData"
+        and row["cdf_units"] == "lengthMetric"
+        and isinstance(value, STRING_TYPES)
+        and value.endswith(("u", "n")),
+        "cdf_length",
+    )
+    return finite_length(value[:-1], "nm" if value[-1] == "n" else "um")
+
+
+def cdf_geometry(row, name):
+    value = row["cdf_value"]
+    units = "lengthMetric" if name in ("ps", "pd") else None
+    require(
+        row["cdf_type"] == "instData"
+        and row["cdf_units"] == units
+        and isinstance(value, STRING_TYPES)
+        and len(value) <= 32
+        and re.match(r"^[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?\Z", value)
+        and Decimal(value.rstrip("afpnum")) > 0,
+        "registered_cdf_geometry",
+    )
+
+
 def exact_route(scope):
     route = scope["route_qualification"]
     q = route["qualification"]
     plan, target = scope["plan"], q["target"]
     subject = scope["subject"]
-    scalar = dict(unit="nm", value="120")
+    instance = target["instance"]
+    prop = instance["property_name"]
+    scalar = "w" if prop == "fw" else prop
     require(
-        target["instance"]
-        == dict(
-            instance_path="DUT/MP",
-            master_library="gpdk090",
-            master_cell="pmos1v",
-            master_view="symbol",
-            property_name="w",
+        prop in ("w", "fw", "l")
+        and (
+            instance["instance_path"],
+            instance["master_library"],
+            instance["master_cell"],
+            instance["master_view"],
         )
+        == ("DUT/MP", "gpdk090", "pmos1v", "symbol")
         and (
             target["quantity"],
             target["scalar_option"],
-            target["scalar_unit"],
             target["netlist_path"],
             target["netlist_model"],
             target["netlist_terminals"],
         )
-        == ("length", "w", "nm", "DUT/MP", "gpdk090_pmos1v", ["vout", "vin", "vdd", "vdd"])
-        and q["old"] == dict(unit="nm", value="350")
-        and q["expected"] == scalar
+        == ("length", scalar, "DUT/MP", "gpdk090_pmos1v", ["vout", "vin", "vdd", "vdd"])
+        and target["scalar_unit"] in ("nm", "um")
         and plan["old"] == q["old"]
-        and plan["requested"] == plan["expected"] == scalar
+        and plan["requested"] == plan["expected"] == q["expected"]
         and plan["target"] == target
         and plan["baseline"] == q["baseline"]
-        and q["baseline"]["netlist_sha256"] == SOURCE_NETLIST
-        and (q["baseline"]["revision"]["design_id"], q["baseline"]["revision"]["revision_id"])
-        == ("cmos-long-inverter", "long-r1")
+        and q["baseline"]["revision"]["design_id"] == "cmos-long-inverter"
         and subject["owned_cell"] == DUT
         and subject["owned_view"] == "schematic"
         and re.match(r"^CmosLongMos[A-Za-z0-9]{3,40}\Z", subject["owned_library"]),
-        "exact_source9_route",
+        "registered_inverter_route",
     )
-    for before, name in ((True, "before"), (False, "after")):
-        props = route[name]
-        require(set(props) == set(PROPERTIES), "enrollment_properties")
-        for key, units, old, new in ROWS:
-            explicit = before or key not in OVERRIDES
-            row = props[key]
-            val = old if before else new
-            require(
-                row
-                == dict(
-                    oa_type="string" if explicit else None,
-                    oa_value=val if explicit else None,
-                    cdf_type="instData",
-                    cdf_units=units,
-                    cdf_value=val,
-                ),
-                "source9_tuple",
-            )
-        require(all(val is None for val in props["nf"].values()), "source9_nf")
-    require(route["before"]["dfm"] == route["after"]["dfm"], "source9_dfm")
+    before, after = route["before"], route["after"]
+    for field, value in ((before, q["old"]), (after, q["expected"])):
+        require(
+            set(field) == set(PROPERTIES)
+            and cdf_length(field["w"]) == cdf_length(field["fw"])
+            and field["w"]["cdf_value"] == field["fw"]["cdf_value"]
+            and cdf_length(field["l"]) > 0
+            and field["model"]["cdf_value"] == "gpdk090_pmos1v"
+            and field["m"]["cdf_value"] == field["fingers"]["cdf_value"] == "1"
+            and all(val is None for val in field["nf"].values())
+            and cdf_length(field[scalar]) == finite_length(value["value"], value["unit"]),
+            "registered_cdf_tuple",
+        )
+        for name in ("as", "ad", "ps", "pd"):
+            cdf_geometry(field[name], name)
+    keys = restoration_keys(route)
+    require(
+        scalar in keys and before[scalar]["cdf_value"] != after[scalar]["cdf_value"],
+        "registered_cdf_scalar_change",
+    )
     return route
 
 
-def skill_check(rows):
-    def token(value):
-        if value is None:
-            return "nil"
-        require(re.match(r"^[A-Za-z0-9_. +-]{1,128}\Z", value), "skill_tuple_literal")
-        return '"' + value + '"'
+def restoration_keys(route):
+    before, after = route["before"], route["after"]
+    keys = tuple(name for name in PROPERTIES if before[name] != after[name])
+    require(set(keys).issubset(OVERRIDES), "restore_only_width_length_geometry")
+    for name in keys:
+        old, new = before[name], after[name]
+        require(
+            old["oa_type"] == "string"
+            and old["oa_value"] == old["cdf_value"]
+            and new["oa_type"] is None
+            and new["oa_value"] is None
+            and old["cdf_type"] == new["cdf_type"] == "instData"
+            and old["cdf_units"] == new["cdf_units"]
+            and old["cdf_value"] is not None
+            and new["cdf_value"] is not None,
+            "observed_override_to_default",
+        )
+    return keys
 
+
+def skill_token(value):
+    if value is None:
+        return "nil"
+    require(re.match(r"^[A-Za-z0-9_. +-]{1,128}\Z", value), "skill_tuple_literal")
+    return '"' + value + '"'
+
+
+def skill_restore(route):
+    keys = restoration_keys(route)
+    omit = "'(" + " ".join(skill_token(key) for key in keys) + ")"
+    table = (
+        "'("
+        + " ".join(
+            "("
+            + " ".join(
+                skill_token(value)
+                for value in (
+                    key,
+                    route["before"][key]["cdf_value"],
+                    route["after"][key]["cdf_value"],
+                )
+            )
+            + ")"
+            for key in keys
+        )
+        + ")"
+    )
+    return omit, table
+
+
+def skill_check(rows):
     result = []
     for key in PROPERTIES:
         row = rows[key]
         result.append(
             "("
             + " ".join(
-                token(value)
+                skill_token(value)
                 for value in (
                     key,
                     row["oa_type"],
@@ -363,10 +442,18 @@ class Source9MosJob(object):
             "operation_identity",
         )
         self.library = self.subject["owned_library"]
+        self.source_alias = pin.get("source_library", SOURCE)
+        require(
+            re.match(r"^CmosLong[A-Za-z0-9]{3,40}\Z", self.source_alias)
+            and self.source_alias != self.library,
+            "distinct_original_and_owned_aliases",
+        )
         self.jobs = rt.root + "/" + rt.accounting.JOBS
         self.job, self.copy = self.jobs + "/" + self.operation, self.jobs + "/" + copy_id
         self.owned = self.copy + "/" + self.library
-        self.source = rt.root + "/layout-owned-20261111/" + SOURCE
+        self.source = helper.private_path(
+            rt.root + "/layout-owned-20261111/" + self.source_alias, rt.root
+        )
         self.confirmations = rt.root + "/" + CONFIRMATIONS
         self.copy_claim = self.copy + "/registered-mos-edit-intent.json"
         self.limit = pin["job_limit_bytes"]
@@ -434,6 +521,12 @@ class Source9MosJob(object):
         rt.gate.library_binding({"libraries": rt.registration["libraries"]})
         rt.gate.model_binding(self.analysis)
         source = self.views(self.source)
+        baseline = self.scope["plan"]["baseline"]
+        require(
+            self.tree(self.source) == baseline["revision_sha256"]
+            and source["tb"] == baseline["testbench_revision_sha256"],
+            "registered_physical_baseline",
+        )
         original = dict(
             library=rt.copying.dependency_snapshot(self.source)["tree_sha256"],
             dut=source["dut"],
@@ -518,7 +611,7 @@ class Source9MosJob(object):
         libs = [(row["name"], row["path"]) for row in rt.registration["libraries"]]
         require(
             len(libs) == 6
-            and not set((SOURCE, self.library, "MCP_GREL_Work")).intersection(
+            and not set((self.source_alias, self.library, "MCP_GREL_Work")).intersection(
                 name for name, _ in libs
             ),
             "fixed_libraries",
@@ -565,14 +658,18 @@ class Source9MosJob(object):
             )
 
     def values(self, work):
+        omit, defaults = skill_restore(self.route)
         return {
             "@LIB@": self.library,
             "@OWNED@": self.owned,
             "@SOURCE@": self.source,
+            "@SOURCEALIAS@": self.source_alias,
             "@WORK@": work,
             "@OP@": self.operation,
             "@BEFORE@": skill_check(self.route["before"]),
             "@AFTER@": skill_check(self.route["after"]),
+            "@OVERRIDES@": omit,
+            "@DEFAULTS@": defaults,
             "@NETLISTCELL@": "Grel_" + self.operation.replace("-", "_"),
         }
 
@@ -672,7 +769,7 @@ class Source9MosJob(object):
             session,
             work,
             program,
-            self.library_lines((SOURCE, self.source)),
+            self.library_lines((self.source_alias, self.source)),
             "edit",
             ["C6_MOS_EDIT_SAVED|" + self.operation],
         )
@@ -851,11 +948,17 @@ def main():
         and time.time() < scope["valid_until_unix"],
         "authority_binding",
     )
-    helper.pinned(read_encoded(packet, "baseline", 32768), SOURCE_NETLIST)
+    helper.pinned(
+        read_encoded(packet, "baseline", 32768), scope["plan"]["baseline"]["netlist_sha256"]
+    )
     pin = helper.parse(
         helper.pinned(read_encoded(packet, "native_safety", 65536), scope["native_safety_sha256"])
     )
-    require(set(pin) == set(SAFETY_FIELDS) and pin["schema_version"] == 1, "native_safety_fields")
+    require(
+        set(pin).difference(("source_library",)) == set(SAFETY_FIELDS)
+        and pin["schema_version"] == 1,
+        "native_safety_fields",
+    )
     collector = helper.pinned(read_encoded(packet, "cdf_collector", 32768), CDF_SHA256)
     prior = packet["previous_receipt_sha256"]
     require(prior is None if phase == PHASES[0] else helper.hex_digest(prior), "prior")
