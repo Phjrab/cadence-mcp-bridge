@@ -1454,6 +1454,7 @@ class SavedAmplifier5656Evidence:
     runtime_registration_sha256: Digest
     dc_native_result: bytes | None = None
     ac_native_result: bytes | None = None
+    export_dependency_observation: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -1464,6 +1465,7 @@ class _FreshAmplifierCopyRoute:
     export: dict[str, Any] | None = None
     registration: dict[str, Any] | None = None
     saved_source: SavedAmplifier5656Evidence | None = None
+    registered_library_tree_sha256: Digest | None = None
 
 
 def _fresh_amplifier_owned_copy(
@@ -1557,7 +1559,7 @@ def _fresh_amplifier_copy_route(
             or route["source_cell"] != export["library"] + "/Differential_Amplifier_TB2"
             or route["source_state"] != export["ade"]
             or library["path"] != export["library"]
-            or library["tree_sha256"] != export["library_tree"]
+            or library["tree_sha256"] != proof.registered_library_tree_sha256
             or (plan.request.design_id, plan.request.analysis_id)
             != (_AMP_5656_DESIGN, f"matched-{mode}")
             or plan.runner_sha256 != saved.runtime_manifest_sha256
@@ -1607,6 +1609,9 @@ _AMP_5656_CLOSURE_SHA256 = "382c63b2bb6b444336801b21ac1667c36f681d706de52d871ba0
 _AMP_5656_TECHNOLOGY_SHA256 = "363f7658940faded59bbddc3b0ef266c0995eb19e1e15e26568788fc09ad2561"
 _AMP_5656_WRITER = "5656c6fb-287c-41a6-b891-057f4ef4e0b2"
 _AMP_5656_EXPORT = "1221e5d5-0e11-4bc9-a0bf-592278573f7a"
+_AMP_5656_DEPENDENCY_OBSERVATION_SHA256 = (
+    "59d926ffa9721c4780e3c5c6e6e164d8867f70a6f2fa6515277b63c733f99b2f"
+)
 _AMP_5656_REVISION = "amp-pm0-user-mcp-1123-r1"
 _AMP_5656_DESIGN = "amp-pm0-auto120-5656"
 _AMP_5656_PRIOR_RECORDS = (
@@ -1734,12 +1739,70 @@ def _fresh_amplifier_saved_source(
         "name": "cdsDefTechLib",
         "tree_sha256": observed["protected"]["technology_tree_sha256"],
     }
+    registered_tree = _5656_export_library_tree(evidence.export_dependency_observation, copy)
     return (
         _FreshAmplifierCopyRoute("state1", "state1", technology),
         _FreshAmplifierCopyRoute(
-            "state1", "state1", technology, export=copy, saved_source=evidence
+            "state1",
+            "state1",
+            technology,
+            export=copy,
+            saved_source=evidence,
+            registered_library_tree_sha256=registered_tree,
         ),
     )
+
+
+def _5656_export_library_tree(raw: bytes | None, exported: dict[str, Any]) -> str:
+    strict = exported["library_tree"]
+    if not isinstance(strict, str) or re.fullmatch(r"[0-9a-f]{64}", strict) is None:
+        raise ValueError("5656 original export library digest invalid")
+    if raw is None:
+        return strict
+    observed = _pinned_json(raw, _AMP_5656_DEPENDENCY_OBSERVATION_SHA256)
+    dependency = observed["dependency_tree_sha256"]
+    mismatches = [row for row in observed["libraries"] if row["matches"] is not True]
+    observation_scope = {
+        **{key: observed[key] for key in ("operation_id", "plan_sha256", "counter")},
+        **{
+            key: exported[key]
+            for key in (
+                "library",
+                "library_tree",
+                "library_content",
+                "cell_tree",
+                "ade",
+                "ade_tree",
+            )
+        },
+    }
+    if (
+        observed["status"] != "EXPORT_DEPENDENCY_PIN_VERIFIED"
+        or observed["scope_sha256"] != hashlib.sha256(_canonical(observation_scope)).hexdigest()
+        or observed["strict_tree_sha256"] != strict
+        or observed["content_sha256"] != exported["library_content"]
+        or not isinstance(dependency, str)
+        or dependency == strict
+        or re.fullmatch(r"[0-9a-f]{64}", dependency) is None
+        or observed["native_job_exists"] is not False
+        or any(
+            type(observed[key]) is not int or observed[key] != 0
+            for key in ("ocean_calls", "simulations", "reservations", "vm_writes")
+        )
+        or _canonical(mismatches)
+        != _canonical(
+            [
+                {
+                    "name": exported["library"].rsplit("/", 1)[-1],
+                    "registered_tree_sha256": strict,
+                    "observed_tree_sha256": dependency,
+                    "matches": False,
+                }
+            ]
+        )
+    ):
+        raise ValueError("5656 export dependency observation differs")
+    return dependency
 
 
 def _fresh_amplifier_storage_successor(

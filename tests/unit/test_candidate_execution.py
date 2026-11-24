@@ -69,6 +69,62 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
 
 
+def test_5656_successor_library_pin_requires_separately_pinned_dual_observation(monkeypatch):
+    from cadence_mcp_bridge import candidate_execution
+
+    export = {
+        "library": "/fixture/copied",
+        "library_tree": "a" * 64,
+        "library_content": "b" * 64,
+        "cell_tree": "e" * 64,
+        "ade": "/fixture/ade",
+        "ade_tree": "f" * 64,
+    }
+    dependency = "c" * 64
+    identity = {
+        "operation_id": str(uuid4()),
+        "plan_sha256": "5" * 64,
+        "counter": {"count": 1, "result_reserved_bytes": 1024},
+    }
+    scope = hashlib.sha256(_canonical({**export, **identity})).hexdigest()
+    proof = _canonical(
+        {
+            "status": "EXPORT_DEPENDENCY_PIN_VERIFIED",
+            **identity,
+            "scope_sha256": scope,
+            "strict_tree_sha256": export["library_tree"],
+            "dependency_tree_sha256": dependency,
+            "content_sha256": export["library_content"],
+            "native_job_exists": False,
+            "libraries": [
+                {
+                    "name": "copied",
+                    "registered_tree_sha256": export["library_tree"],
+                    "observed_tree_sha256": dependency,
+                    "matches": False,
+                }
+            ],
+            "ocean_calls": 0,
+            "simulations": 0,
+            "reservations": 0,
+            "vm_writes": 0,
+        }
+    )
+    monkeypatch.setattr(
+        candidate_execution,
+        "_AMP_5656_DEPENDENCY_OBSERVATION_SHA256",
+        hashlib.sha256(proof).hexdigest(),
+    )
+    assert candidate_execution._5656_export_library_tree(None, export) == export["library_tree"]
+    assert candidate_execution._5656_export_library_tree(proof, export) == dependency
+    with pytest.raises(ValueError):
+        candidate_execution._5656_export_library_tree(proof.replace(b"copied", b"foreign"), export)
+    with pytest.raises(ValueError, match="dependency observation differs"):
+        candidate_execution._5656_export_library_tree(
+            proof, {**export, "library_content": "d" * 64}
+        )
+
+
 def test_5656_summary_must_match_native_frame_and_trusted_journal(measurement_operator):
     from cadence_mcp_bridge.analysis_store import AnalysisStore
     from cadence_mcp_bridge.authenticated_provider import (
