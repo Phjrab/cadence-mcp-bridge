@@ -109,7 +109,7 @@ def _fixed_assets(scope: _Scope) -> tuple[bytes, bytes, bytes]:
     guest_contract.exact_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
     package = files("cadence_mcp_bridge")
     try:
-        collect = m2_cdf.render_reopened_mos_cdf  # type: ignore[attr-defined]
+        collect = m2_cdf.render_reopened_mos_cdf
         guest = package.joinpath(_ASSET).read_bytes()
         support = package.joinpath("_amp_pm0_default_phase.py").read_bytes()
         collector = collect()
