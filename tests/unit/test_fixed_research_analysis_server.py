@@ -49,6 +49,8 @@ def enrolled(tmp_path, monkeypatch):
                     "design_id": "amp",
                     "analysis_id": "dc-transistor",
                     "analysis": "dc",
+                    "source_cell": "/workspace/export/cell",
+                    "source_state": "/workspace/export/ade",
                     "ade": {"source_tree_sha256": _SOURCE, "ade_state_tree_sha256": _PIN},
                 }
             ],
@@ -113,10 +115,43 @@ def enrolled(tmp_path, monkeypatch):
             },
         },
     )
+    observed = save(
+        "observed.json",
+        {
+            "status": "RESEARCH_1124_LIVE_READ_ONLY",
+            "source": {
+                "view_tree": _PIN,
+                "input_sha256": _PIN,
+                "view_content": "3" * 64,
+                "library_content": "4" * 64,
+            },
+        },
+    )
+    export = save(
+        "export.json",
+        {
+            "status": "RESEARCH_1124_INPUTS_EXPORTED",
+            "preflight_sha256": observed["sha256"],
+            "saved_view_tree_sha256": _PIN,
+            "saved_view_content_sha256": "3" * 64,
+            "copied_view_content_sha256": "3" * 64,
+            "source_library_content_sha256": "4" * 64,
+            "copied_library_content_sha256": "4" * 64,
+            "source_cell": "/workspace/export/cell",
+            "source_state": "/workspace/export/ade",
+            "source_cell_sha256": _SOURCE,
+            "source_state_sha256": _PIN,
+            "ocean_calls": 0,
+            "simulations": 0,
+            "reservations": 0,
+        },
+    )
     document = {
         "schema_version": 1,
         "context_sha256": _PIN,
         "saved_apply": receipt,
+        "source_observation": observed,
+        "export_receipt": export,
         "revision": {
             "revision_sha256": _PIN,
             "testbench_revision_sha256": _PIN,
@@ -192,6 +227,7 @@ async def test_fixed_analysis_tools_accept_only_enrolled_query(enrolled):
     assert response.structured_content["revision"]["revision_sha256"] == _PIN
     await server.call_tool(submit, args)
     native.observe.assert_awaited_once_with(query, plan.request)
+    native.plan.assert_awaited_once_with(plan.request)
     await server.call_tool("cadence_fixed_research_analysis_status", args)
     native.observe.assert_awaited_with(query)
     result = await server.call_tool("cadence_fixed_research_analysis_result", args)
@@ -202,6 +238,31 @@ async def test_fixed_analysis_tools_accept_only_enrolled_query(enrolled):
 def test_fixed_analysis_rejects_inconsistent_saved_bindings(enrolled, key):
     draft, save, *_ = enrolled
     draft["revision"][key] = "f" * 64
+    ref = save("invalid.json", draft)
+    with pytest.raises(ConfigurationError, match="registration rejected"):
+        adapter.create_fixed_research_analysis_server(
+            BridgeConfig(runtime_mode="operator"),
+            Path(ref["path"]),
+            ref["sha256"],
+        )
+    adapter.NativeOperationService.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "saved_view_tree_sha256",
+        "preflight_sha256",
+        "copied_library_content_sha256",
+        "copied_view_content_sha256",
+        "source_state_sha256",
+    ],
+)
+def test_fixed_analysis_rejects_repinned_foreign_export(enrolled, key):
+    draft, save, *_ = enrolled
+    export = json.loads(Path(draft["export_receipt"]["path"]).read_bytes())
+    export[key] = "f" * 64
+    draft["export_receipt"] = save("foreign-export.json", export)
     ref = save("invalid.json", draft)
     with pytest.raises(ConfigurationError, match="registration rejected"):
         adapter.create_fixed_research_analysis_server(
