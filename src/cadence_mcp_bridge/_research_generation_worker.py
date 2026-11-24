@@ -21,6 +21,7 @@ PHASES = ("save", "reopen", "netlist")
 LIMIT = 262144
 WIRE_LIMIT = 1048576
 MARKER_LIMIT = 65536
+MARKER_PREFIXES = (b"RESEARCH_BENCH_", b"MOS_BLOCK_", b"MCP_GENERIC_ADE_NETLIST|")
 try:
     TEXT = basestring
 except NameError:
@@ -147,7 +148,7 @@ def parse_request(argv, raw):
             "additional_protected",
             "counter",
             "ledger_records_sha256",
-            "jobs_sha256",
+            "retained_jobs_sha256",
             "prior_supplemental_bytes",
             "external_bytes",
             "job_bytes",
@@ -192,7 +193,7 @@ def parse_request(argv, raw):
         "netlist_statements_sha256",
         "protected_sha256",
         "ledger_records_sha256",
-        "jobs_sha256",
+        "retained_jobs_sha256",
     ):
         digest(scope[key])
     markers = scope["markers"]
@@ -413,7 +414,11 @@ class GenerationPhase(object):
     def original_jobs(self):
         jobs = os.listdir(self.jobs)
         require(len(jobs) <= 4096, "research_generation_job_inventory_cap")
-        return sorted(name_ for name_ in jobs if name_ != self.op)
+        return [
+            (name_, self.eda.size(self.jobs + "/" + name_))
+            for name_ in sorted(jobs)
+            if name_ != self.op
+        ]
 
     def size(self, path):
         return max(self.eda.size(path)[:2]) if os.path.lexists(path) else 0
@@ -425,6 +430,20 @@ class GenerationPhase(object):
         r.read_check({})
         r.modules["confirmation"].authority_reference(s["operator_authority"])
         require(not r.gate.storage.active_eda(self.root, True), "research_generation_eda_busy")
+        workspace = self.copy.directory(self.workspace)
+        device = self.copy.directory(self.root).st_dev
+        require(
+            workspace.st_uid == os.getuid() and not workspace.st_mode & 18,
+            "research_generation_workspace_trust",
+        )
+        require(
+            all(
+                self.copy.directory(path).st_dev == device
+                for path in (self.workspace, self.jobs, self.parent, self.job)
+                if os.path.lexists(path)
+            ),
+            "research_generation_filesystem_mismatch",
+        )
         r.gate.library_binding(self.route)
         r.gate.model_binding(self.route)
         self.maps()
@@ -445,7 +464,7 @@ class GenerationPhase(object):
             source == ade["source_tree_sha256"]
             and state == ade["ade_state_tree_sha256"]
             and protected == s["protected_sha256"]
-            and sha(canonical(jobs)) == s["jobs_sha256"]
+            and sha(canonical(jobs)) == s["retained_jobs_sha256"]
             and counter == s["counter"]
             and sha(canonical(records)) == s["ledger_records_sha256"],
             "research_generation_originals_or_ledger_drift",
@@ -476,17 +495,12 @@ class GenerationPhase(object):
             and fs.f_bavail * block >= floor + pending + cap - current - external,
             "research_generation_capacity",
         )
-        workspace = self.copy.directory(self.workspace)
-        require(
-            workspace.st_uid == os.getuid() and not workspace.st_mode & 18,
-            "research_generation_workspace_trust",
-        )
         session.check()
         return dict(
             source=source,
             state=state,
             protected=protected,
-            jobs_sha256=s["jobs_sha256"],
+            retained_jobs_sha256=s["retained_jobs_sha256"],
             counter=counter,
             ledger_records_sha256=s["ledger_records_sha256"],
         )
@@ -738,14 +752,9 @@ class GenerationPhase(object):
                 not read_regular(work + "/ocean.stderr", 8192), "research_generation_ocean_stderr"
             )
             stdout = read_regular(work + "/ocean.stdout", MARKER_LIMIT)
-            markers = [
-                line
-                for line in stdout.decode("ascii").splitlines()
-                if line.startswith(("RESEARCH_BENCH_", "MOS_BLOCK_", "MCP_GENERIC_ADE_NETLIST|"))
-            ]
-            require(
-                markers and markers == self.scope["markers"][phase], "research_generation_markers"
-            )
+            markers = [line for line in stdout.splitlines() if line.startswith(MARKER_PREFIXES)]
+            expected_markers = [marker.encode("ascii") for marker in self.scope["markers"][phase]]
+            require(markers and markers == expected_markers, "research_generation_markers")
             after = self.trees()
             require(
                 previous is None or after == previous["trees"],

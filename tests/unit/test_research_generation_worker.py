@@ -55,7 +55,7 @@ def wire(monkeypatch):
         additional_protected=[],
         counter={},
         ledger_records_sha256="d" * 64,
-        jobs_sha256="e" * 64,
+        retained_jobs_sha256="e" * 64,
         prior_supplemental_bytes=0,
         external_bytes=2097152,
         job_bytes=4194304,
@@ -176,7 +176,10 @@ def stage(tmp_path, monkeypatch):
         assert argv[0] == "/fixed/ocean" and label == "ocean" and timeout == 45
         phase = Path(journal.work).parent.name
         calls.append(phase)
-        write(Path(journal.work) / "ocean.stdout", (phase_markers[phase][0] + "\n").encode())
+        write(
+            Path(journal.work) / "ocean.stdout",
+            b"Cadence banner \xc2\xa9\n" + (phase_markers[phase][0] + "\n").encode(),
+        )
         write(Path(journal.work) / "ocean.stderr", b"")
 
     instance.eda = SimpleNamespace(write=write, program=ocean)
@@ -187,6 +190,9 @@ def test_guest_durable_predecessor_and_same_phase_refusal(stage):
     instance, program, calls = stage
     save = json.loads(instance.run(object(), "save", None, program))
     assert save["receipt"]["phase"] == "save"
+    raw_stdout = base64.b64decode(save["stdout_base64"])
+    assert raw_stdout.startswith(b"Cadence banner \xc2\xa9\n")
+    assert save["receipt"]["artifact_sha256"] == guest.sha(raw_stdout)
     prior = guest.sha(guest.canonical(save["receipt"]))
     with pytest.raises(ValueError, match="research_generation_phase_already_started"):
         instance.run(object(), "save", None, program)
@@ -195,6 +201,63 @@ def test_guest_durable_predecessor_and_same_phase_refusal(stage):
     reopened = json.loads(instance.run(object(), "reopen", prior, program))
     assert reopened["previous_receipt_sha256"] == prior
     assert calls == ["save", "reopen"]
+
+
+def test_non_ascii_marker_is_rejected_without_publishing_completion(stage):
+    instance, program, calls = stage
+    run_ocean = instance.eda.program
+
+    def malformed_marker(guard, journal, *args):
+        run_ocean(guard, journal, *args)
+        stdout = Path(journal.work) / "ocean.stdout"
+        stdout.write_bytes(stdout.read_bytes().rstrip() + b"\xff\n")
+
+    instance.eda.program = malformed_marker
+    with pytest.raises(ValueError, match="research_generation_markers"):
+        instance.run(object(), "save", None, program)
+    folder = Path(instance.store) / "save"
+    assert not (folder / "complete.json").exists()
+    assert json.loads((folder / "failure.json").read_bytes())["status"] == "OUTCOME_UNKNOWN"
+    assert calls == ["save"]
+
+
+def test_retained_inventory_pins_sizes_and_fingerprints_excluding_only_current_job(stage):
+    instance, _, _ = stage
+    instance.jobs = (Path(instance.job).parent / "retained").as_posix()
+    for name in ("b-failure", instance.op, "a-complete"):
+        Path(instance.jobs, name).mkdir(parents=True)
+    observed = {
+        "a-complete": (4, 4096, "a" * 64),
+        "b-failure": (5, 4096, "b" * 64),
+    }
+    instance.eda.size = lambda path: observed[Path(path).name]
+    initial = instance.original_jobs()
+    assert initial == sorted(observed.items())
+    observed["b-failure"] = (5, 4096, "c" * 64)
+    assert instance.original_jobs() != initial
+
+
+def test_guard_rejects_workspace_on_another_device_before_accounting(stage, monkeypatch):
+    instance, _, _ = stage
+    instance.root = "/fixture/.cadence_mcp"
+    instance.workspace = "/fixture"
+    instance.jobs = instance.root + "/jobs"
+    instance.scope["operator_authority"] = "fixture"
+    instance.r.read_check = lambda request: None
+    instance.r.modules = {"confirmation": SimpleNamespace(authority_reference=lambda value: None)}
+    instance.r.gate = SimpleNamespace(
+        storage=SimpleNamespace(active_eda=lambda root, native: False)
+    )
+    instance.copy.directory = lambda path: SimpleNamespace(
+        st_uid=500, st_mode=0o700, st_dev=2 if path == instance.workspace else 1
+    )
+    monkeypatch.setattr(
+        guest,
+        "os",
+        SimpleNamespace(getuid=lambda: 500, path=SimpleNamespace(lexists=lambda path: True)),
+    )
+    with pytest.raises(ValueError, match="research_generation_filesystem_mismatch"):
+        guest.GenerationPhase.guard(instance, SimpleNamespace(check=lambda: None))
 
 
 def test_partial_guest_claim_never_relaunches_or_advances(stage):
