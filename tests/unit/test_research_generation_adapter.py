@@ -6,7 +6,6 @@ from types import SimpleNamespace
 
 import pytest
 import test_research_generation_provider
-from cadence_mcp_bridge.research_generation_service import RegisteredResearchGeneration
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from test_research_generation_service import _fixture
@@ -16,6 +15,7 @@ from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.errors import ConfigurationError
 from cadence_mcp_bridge.research_circuit import MosBlockRegistrationHandoff
 from cadence_mcp_bridge.research_generation_adapter import register_research_generation_tools
+from cadence_mcp_bridge.research_generation_service import RegisteredResearchGeneration
 from cadence_mcp_bridge.server import create_default_server
 
 generation_packet = test_research_generation_provider.packet
