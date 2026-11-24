@@ -167,11 +167,40 @@ cadence_operation_result({"request": key})
 | 단계 | 호출 또는 재개 기준 |
 | --- | --- |
 | 초안과 계획 | 스키마 조회 → 컴파일 → 검증 → `cadence_plan_research_mos_block`. 입력이 미확정이면 포팅 문서를 고치고 그 파일의 새 SHA로 다시 검증합니다. 계획이 있으면 검증 정의와 계획 해시를 함께 보관합니다. |
-| 등록형 생성과 저장 확인 | C2 생성 서비스의 제출·상태·등록 인계는 같은 작업과 계획을 사용합니다. 저장 이후 중단되면 기존 ID의 상태와 보존 단계 증거를 확인합니다. `OUTCOME_UNKNOWN`은 기존 사본의 확인 단계에서 멈춥니다. 독립 재개방과 Netlist 증거를 `cadence_verify_research_mos_block`에 대조하고, 검증된 인계로 등록합니다. 생성 서비스의 MCP 노출은 사용하는 휠의 `tools/list`에서 확인합니다. |
-| 등록 소자 편집 | `cadence_plan_registered_mos_change`는 등록된 소자 변경을 계획합니다. 실제 적용·재조회는 해당 소자와 속성 조합을 지원하는 프로필에서 확인합니다. 이전에 검증한 `cadence_apply_fixed_amp_pm0`의 적용 범위는 별도의 고정 AMP 작업입니다. |
+| 등록형 생성과 저장 확인 | `cadence_plan_registered_research_generation` → `cadence_apply_registered_research_generation` → `cadence_registered_research_generation_status` → `cadence_registered_research_generation_handoff`. 중단되면 같은 ID의 상태와 단계별 보존 증거를 확인합니다. `OUTCOME_UNKNOWN`은 기존 사본을 확인하는 단계에서 멈춥니다. |
+| 등록 소자 편집 | `cadence_plan_registered_mos_change`로 변경 계획을 준비합니다. 등록 후 `cadence_plan_registered_mos_edit` → `cadence_apply_registered_mos_edit` → `cadence_lookup_registered_mos_edit`를 사용합니다. 응답이 끊기면 같은 ID와 해시로 lookup부터 합니다. |
 | 고정 저장본 분석 | 고정 분석 프로필에는 `cadence_plan_fixed_research_analysis`, `cadence_submit_fixed_research_analysis`, `cadence_fixed_research_analysis_status`, `cadence_fixed_research_analysis_result`가 있습니다. 네 호출은 등록된 동일 `operation_id`와 `expected_plan_sha256`을 받습니다. 응답이 끊기면 상태부터 재조회합니다. 성공 결과와 등록된 저장 revision을 대조하고, 비교 등록에 연결된 결과는 `cadence_retained_amplifier_comparison`으로 조회합니다. |
 
 연구 재개에는 검증된 개발 wheel과 해당 운영자 연결을 사용합니다. 설치본에서 사용할 도구와 요청 형식을 확인하고, 당시 승인·자원 상태를 기존 절차로 확인합니다.
+
+#### 등록형 생성의 CLI와 MCP 요청
+
+`serve-operator --registered-research-generation FILE SHA256`은 한 생성 등록을 선택합니다. `FILE SHA256`은 등록 파일과 원본 바이트의 해시입니다. 네 MCP 도구에는 아래 객체를 `request`로 감싸 전달합니다. CLI의 요청 파일에는 내부 객체만 저장합니다.
+
+```json
+{
+  "operation_id": "<registered-generation-uuid>",
+  "expected_binding_sha256": "<canonical-generation-binding-sha256>"
+}
+```
+
+생성 작업 ID는 운영자가 등록할 때 얻습니다. `expected_binding_sha256`은 등록 안의 생성 binding을 정규화한 해시입니다. 이 binding은 MOS 블록 계획·bench 계획·조건·scope의 해시에 연결됩니다. CLI는 동일한 등록·요청으로 다음처럼 호출합니다. 해시는 검토한 각 파일에 대해 앞의 PowerShell 예제와 같은 방식으로 계산합니다.
+
+```powershell
+cadence-mcp-bridge operator-research-generation --registration $registration $registrationSha plan --request $request $requestSha
+cadence-mcp-bridge operator-research-generation --registration $registration $registrationSha apply --request $request $requestSha
+cadence-mcp-bridge operator-research-generation --registration $registration $registrationSha status --request $request $requestSha
+# VERIFIED 이후, 등록 증거 폴더 밖의 새 파일로 출력합니다.
+cadence-mcp-bridge operator-research-generation --registration $registration $registrationSha handoff --request $request $requestSha --output $handoff
+```
+
+저장·독립 재개방·Netlist의 단계별 증거가 검증되면 handoff의 DUT/bench 트리 지문, Netlist 관련 지문, handoff 해시를 다음 등록에 연결합니다. MCP handoff는 해시 요약을 반환합니다. 전체 등록 후보 조립에 쓸 인계 파일은 CLI에서 내보내고 반환된 파일 SHA를 함께 보관합니다.
+
+#### 등록 소자 편집 요청
+
+`serve-operator --registered-mos-edit`는 운영자 context에 선택된 편집을 사용합니다. 계획 조회·적용·재조회 도구의 `request`에는 등록된 `operation_id`, `expected_plan_sha256`, `expected_scope_sha256` 세 필드를 전달합니다. 적용 후 저장·재개방·Netlist 증거가 확인된 revision을 다음 분석 등록에 연결합니다. 생성의 binding SHA나 파일 SHA를 편집의 계획·scope SHA 대신 사용하지 않습니다.
+
+두 프로필의 명령과 스키마는 개발 소스 기준입니다. 새 생성·편집 경로의 실제 Cadence 적합성은 등록 대상과 지원 속성 조합별로 검증하며, 17 MOS OTA 실행 검증은 대기 중입니다.
 
 ## 결과 조회와 Netlist 확인 예
 
