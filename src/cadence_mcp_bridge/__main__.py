@@ -89,10 +89,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Expose one host-pinned historical PM0 plan, outcome and saved observation.",
     )
     generation = subparsers.add_parser(
-        "operator-research-generation", help="Use one host-registered research generation.",
+        "operator-research-generation", help="Prepare or use a research generation.",
     )
-    generation.add_argument("--registration", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    generation.add_argument("--registration", nargs=2, metavar=("FILE", "SHA256"))
     generation_actions = generation.add_subparsers(dest="generation_action", required=True)
+    prepare = generation_actions.add_parser(
+        "prepare",
+        help="Prepare canonical generation inputs offline without authorizing execution.",
+    )
+    prepare.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    prepare.add_argument(
+        "--evidence", action="append", nargs=2, metavar=("FILE", "SHA256"), required=True,
+        help="Supply one trusted raw evidence file and its digest; repeat for each evidence pin.",
+    )
+    prepare.add_argument("--output-directory", type=Path, required=True)
     for action in ("plan", "apply", "status", "handoff"):
         command = generation_actions.add_parser(action)
         command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
@@ -423,6 +433,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
     if arguments.command == "operator-research-generation":
+        if arguments.generation_action == "prepare":
+            if arguments.registration is not None:
+                parser.error("research generation prepare does not accept --registration")
+            from cadence_mcp_bridge.research_generation_prepare_cli import (
+                run_prepare_research_generation,
+            )
+
+            return run_prepare_research_generation(arguments)
+        if arguments.registration is None:
+            parser.error("registered generation actions require --registration FILE SHA256")
         from cadence_mcp_bridge.research_generation_adapter import run_registered_generation
 
         return run_registered_generation(arguments)
