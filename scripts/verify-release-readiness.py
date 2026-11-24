@@ -43,6 +43,9 @@ RETAINED_V8_STORAGE_SUMMARY_SHA256 = (
 RETAINED_V9_STORAGE_SUMMARY_SHA256 = (
     "b501c3a4ef76272bb91b9d79f5f70774dd84f71f2e5ade79c0e4907f7468d5ac"
 )
+RETAINED_V10_STORAGE_SUMMARY_SHA256 = (
+    "647a55be8534fb191986c887e2d66fc008067bc9f74b40d010c91f55a13e81c0"
+)
 FRESH_CONSUMER_TOOLS = {
     "cadence_amplifier_sweep_result",
     "cadence_bandwidth_study_result",
@@ -179,9 +182,13 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
     # The reviewed v9 source (02ea8b8969c4) changes the same bound.
     ceiling["maximum"] = 17767071744
+    if schema_digest(storage_summary) != RETAINED_V9_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    # v10 extends the accepted output range. The active VM policy is set separately.
+    ceiling["maximum"] = 18169724928
     current_tools["cadence_storage_summary"] = storage_summary
     if (
-        schema_digest(storage_summary) != RETAINED_V9_STORAGE_SUMMARY_SHA256
+        schema_digest(storage_summary) != RETAINED_V10_STORAGE_SUMMARY_SHA256
         or any(schemas.get(name) != current_tools[name] for name in FRESH_CONSUMER_TOOLS)
     ):
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
