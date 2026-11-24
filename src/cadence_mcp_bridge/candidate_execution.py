@@ -14,6 +14,12 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge._native_rendering import effective_input, partition_input
 from cadence_mcp_bridge.amplifier_specifications import AmplifierFactProvenance, provenance
 from cadence_mcp_bridge.amplifier_sweeps import AmplifierSweepResult
+from cadence_mcp_bridge.analysis_store import AnalysisStore
+from cadence_mcp_bridge.authenticated_provider import (
+    NATIVE_RESULT_LIMIT,
+    NativeResultPayload,
+    verify_native_result,
+)
 from cadence_mcp_bridge.candidate_contracts import (
     CandidateBatchPlan,
     CandidateFixedEvidence,
@@ -28,6 +34,7 @@ from cadence_mcp_bridge.candidate_reports import (
 from cadence_mcp_bridge.designs import DesignMeasurementRegistry
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.environments import EnvironmentProfile
+from cadence_mcp_bridge.errors import ConfigurationError, InvalidInputError
 from cadence_mcp_bridge.generic_ade import AdeExecutionRegistration, ModelInclude
 from cadence_mcp_bridge.generic_measurements import (
     GenericReaderRegistration,
@@ -59,7 +66,13 @@ from cadence_mcp_bridge.parameter_changes import (
     verify_change_readback,
 )
 from cadence_mcp_bridge.power_measurements import require_same_resource_policy
-from cadence_mcp_bridge.result_reports import ReportConditions, ReportMetric, ResultReport
+from cadence_mcp_bridge.result_reports import (
+    ReportConditions,
+    ReportMetric,
+    ResultReport,
+    make_report,
+)
+from cadence_mcp_bridge.runtime_context import ExecutionContext
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
     Digest,
@@ -611,7 +624,7 @@ def _amplifier_cross_analysis_body(statements: list[str]) -> list[str]:
 
 
 def _pinned_json(raw: bytes, digest: str) -> Any:
-    _closed_document(raw, max_bytes=1048576)
+    _closed_document(raw, max_bytes=NATIVE_RESULT_LIMIT)
     if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("evidence digest mismatch")
     return json.loads(raw)
@@ -1439,6 +1452,8 @@ class SavedAmplifier5656Evidence:
     export_custody_sha256: Digest
     runtime_manifest_sha256: Digest
     runtime_registration_sha256: Digest
+    dc_native_result: bytes | None = None
+    ac_native_result: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -2322,6 +2337,7 @@ def _fresh_amplifier_row(
     baseline: bool,
     storage_successor_verified: bool = False,
     owned_copy: _FreshAmplifierCopyRoute | None = None,
+    trusted_context: ExecutionContext | None = None,
 ) -> tuple[FreshAmplifierMeasurement, tuple[object, ...] | None]:
     identity = revision.dc if mode == "dc" else revision.ac
     if evidence is None and identity is None:
@@ -2380,7 +2396,59 @@ def _fresh_amplifier_row(
     measurement = _fresh_amplifier_measurement(
         mode, operation, conditions, reader, ade, static, identity.input_sha256
     )
+    if owned_copy is not None and owned_copy.saved_source is not None:
+        source = owned_copy.saved_source
+        native_result = source.dc_native_result if mode == "dc" else source.ac_native_result
+        _check_5656_native_result(
+            trusted_context,
+            operation,
+            native_result,
+            measurement.report,
+            identity.input_sha256,
+            ade,
+            reader,
+        )
     return measurement, (*semantics, analyses[0])
+
+
+def _check_5656_native_result(
+    context: ExecutionContext | None,
+    operation: PmosDcOperation,
+    raw: bytes | None,
+    report: ResultReport | None,
+    input_sha256: str,
+    ade: AdeExecutionRegistration,
+    reader: GenericReaderRegistration,
+) -> None:
+    if raw is None and report is None:
+        return
+    if context is None or raw is None or report is None or operation.record is None:
+        raise ValueError("5656 report requires the original native payload and trusted context")
+    store = AnalysisStore(context.binding.analysis_journal)
+    try:
+        with store.connection(create=False, read_only=True) as connection:
+            trusted = store._read_operation(connection, operation.query.operation_id)
+    except (ConfigurationError, InvalidInputError) as exc:
+        raise ValueError("5656 trusted operation journal unavailable") from exc
+    if trusted != operation.record or trusted.progress.phase != "SUCCEEDED":
+        raise ValueError("5656 terminal differs from the trusted operation journal")
+
+    _closed_document(raw, max_bytes=1048576)
+    data = NativeResultPayload.model_validate_json(raw)
+    data.observation.check(trusted)
+    if (
+        data.observation.progress != trusted.progress
+        or data.receipt.native_input_sha256 != input_sha256
+        or data.ade != ade
+        or data.reader != reader
+    ):
+        raise ValueError("5656 original reader result does not match the execution")
+    _, projected = verify_native_result(
+        context, trusted.plan, trusted.operation_id, data, include_report_conditions=True
+    )
+    expected = make_report(trusted, projected)
+    if report != expected.model_copy(update={"captured_at_utc": report.captured_at_utc}):
+        raise ValueError("5656 report does not match the native reader frame")
 
 
 def associate_fresh_amplifier_width_pair(
@@ -2397,6 +2465,7 @@ def associate_fresh_amplifier_width_pair(
     policy_successor: FreshAmplifierStorageSuccessorEvidence | None = None,
     owned_copy: FreshAmplifierOwnedCopyEvidence | None = None,
     saved_source: SavedAmplifier5656Evidence | None = None,
+    trusted_context: ExecutionContext | None = None,
 ) -> FreshAmplifierWidthPair:
     """Compare four retained native operations with independently authenticated bindings.
 
@@ -2578,6 +2647,7 @@ def associate_fresh_amplifier_width_pair(
                 baseline=False,
                 storage_successor_verified=policy_successor is not None,
                 owned_copy=child_copy,
+                trusted_context=trusted_context,
             )
             if (
                 old_semantics is not None
