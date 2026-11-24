@@ -53,6 +53,56 @@ def test_native_frame_has_bound_identity_inventory_and_finite_values(frame_worke
     worker.frame((header + "\nV|out|0.5\nEND\n").encode(), plan, route, "1" * 64)
 
 
+@pytest.fixture
+def hnl_include(frame_worker, monkeypatch):
+    worker, _, _, _ = frame_worker
+    libraries = [{"name": "gpdk090", "path": "/pdk/libs.oa22/gpdk090"}]
+    old = "/pdk/libs.oa22/gpdk090/../../models/spectre/gpdk090.scs"
+    new = "/pdk/models/spectre/gpdk090.scs"
+    regular = SimpleNamespace(st_mode=eda.stat.S_IFREG, st_dev=1, st_ino=4)
+    guest = SimpleNamespace(
+        path=SimpleNamespace(realpath=Mock(return_value=new)), stat=Mock(return_value=regular)
+    )
+    monkeypatch.setattr(eda, "os", guest)
+    raw = (
+        f'simulator lang=spectre\r\n// HNL\r\nglobal 0\r\n  include "{old}" section=NN\r\n'
+        "saveOptions options save=allpub\r\n"
+    ).encode("ascii")
+    return worker, libraries, guest, raw, old, new
+
+
+def test_hnl_include_normalizes_one_attested_file_and_preserves_other_bytes(hnl_include):
+    worker, libraries, guest, raw, old, new = hnl_include
+    expected = [(new, "NN")]
+    result = worker.normalize_model_includes(raw, expected, libraries)
+    assert result == raw.replace(old.encode("ascii"), new.encode("ascii"))
+    guest.path.realpath.assert_called_once_with(old)
+    assert [call.args for call in guest.stat.call_args_list] == [(old,), (new,)]
+    assert worker.normalize_model_includes(result, expected, libraries) is result
+    assert guest.stat.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "change", ["section", "unregistered_alias", "resolved_path", "inode", "duplicate"]
+)
+def test_hnl_include_rejects_mismatched_model_identity(hnl_include, change):
+    worker, libraries, guest, raw, old, new = hnl_include
+    if change == "section":
+        raw = raw.replace(b"section=NN", b"section=FF")
+    elif change == "unregistered_alias":
+        raw = raw.replace(b"libs.oa22/gpdk090", b"unknown/path")
+    elif change == "resolved_path":
+        guest.path.realpath.return_value = "/elsewhere/gpdk090.scs"
+    elif change == "inode":
+        guest.stat.side_effect = [
+            guest.stat.return_value, SimpleNamespace(st_mode=eda.stat.S_IFREG, st_dev=1, st_ino=5)
+        ]
+    else:
+        raw += f'include "{old}" section=NN\n'.encode("ascii")
+    with pytest.raises(ValueError, match="spectre_model_binding_mismatch"):
+        worker.normalize_model_includes(raw, [(new, "NN")], libraries)
+
+
 def supply_save_input():
     registration = {
         "schema_version": 2,

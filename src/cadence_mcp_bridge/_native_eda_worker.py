@@ -9,6 +9,7 @@ import errno
 import hashlib
 import math
 import os
+import re
 import signal
 import stat
 import subprocess
@@ -402,6 +403,50 @@ class EdaWorker(object):
             raise ValueError("native_worker_unique_effective_input_required")
         return selected[0]
 
+    def normalize_model_includes(self, data, expected, libraries):
+        """Rewrite the GPDK090 HNL model path only after proving file identity."""
+        if not expected:
+            return data
+        _, actual, _, _ = self.rendering.partition_input(data)
+        if actual == expected:
+            return data
+        anchors = [entry["path"] for entry in libraries if entry["name"] == "gpdk090"]
+        if len(actual) != len(expected) or len(anchors) != 1:
+            raise ValueError("spectre_model_binding_mismatch")
+        anchor = anchors[0]
+        if not anchor.endswith("/libs.oa22/gpdk090"):
+            raise ValueError("spectre_model_binding_mismatch")
+        pdk_root = anchor[:-len("/libs.oa22/gpdk090")]
+        model_root = pdk_root + "/models/"
+        output = data.decode("ascii")
+        for (observed, section), (registered, expected_section) in zip(actual, expected):
+            if (observed, section) == (registered, expected_section):
+                continue
+            if (
+                section != expected_section
+                or not registered.startswith(model_root)
+                or observed != anchor + "/../.." + registered[len(pdk_root):]
+                or os.path.realpath(observed) != registered
+            ):
+                raise ValueError("spectre_model_binding_mismatch")
+            # Both spellings must name the same regular file on the guest. The
+            # surrounding model guard attests its complete registered closure.
+            first, second = os.stat(observed), os.stat(registered)
+            if not stat.S_ISREG(first.st_mode) or (
+                first.st_dev, first.st_ino
+            ) != (second.st_dev, second.st_ino):
+                raise ValueError("spectre_model_binding_mismatch")
+            pattern = (
+                r'(?m)^([ \t]*include[ \t]+")' + re.escape(observed)
+                + r'("[ \t]+section=' + re.escape(section) + r'[ \t]*\r?)$'
+            )
+            output, count = re.subn(
+                pattern, lambda match: match.group(1) + registered + match.group(2), output
+            )
+            if count != 1:
+                raise ValueError("spectre_model_binding_mismatch")
+        return output.encode("ascii")
+
     def frame(self, data, plan, route, input_sha):
         lines = data.decode("ascii").splitlines()
         reader = route["reader"]
@@ -579,7 +624,9 @@ class EdaWorker(object):
         )
         self.protected(route, before)
         raw_netlist = self.installer.regular(self.find_input(root + "/project"))
-        native_input = self.rendering.tran_supply_saves(raw_netlist, route["reader"])
+        includes = [(model["path"], model["section"]) for model in route["ade"]["model_includes"]]
+        model_input = self.normalize_model_includes(raw_netlist, includes, route["libraries"])
+        native_input = self.rendering.tran_supply_saves(model_input, route["reader"])
         parameters = dict(
             (v["cadence_binding"], self.rendering.number_text(values[v["logical_id"]]))
             for v in route["variables"]
@@ -587,13 +634,15 @@ class EdaWorker(object):
         effective = self.rendering.effective_input(
             native_input,
             parameters,
-            [(m["path"], m["section"]) for m in route["ade"]["model_includes"]],
+            includes,
             route["ade"]["inputs"],
             route["ade"]["static_statements_sha256"],
         )
         input_sha = effective["input_sha256"]
-        if native_input != raw_netlist:
-            self.write(work + "/netlist-before-supply-save.scs", raw_netlist)
+        if model_input != raw_netlist:
+            self.write(work + "/netlist-before-model-normalization.scs", raw_netlist)
+        if native_input != model_input:
+            self.write(work + "/netlist-before-supply-save.scs", model_input)
         self.write(work + "/input.scs", native_input)
         self.gate.accounting.write_new(
             work + "/effective-input.json",
@@ -610,6 +659,8 @@ class EdaWorker(object):
             },
         )
         self.live(session, plan)
+        if model_input != raw_netlist:
+            self.gate.model_binding(route)
         self.program(
             session,
             journal,
