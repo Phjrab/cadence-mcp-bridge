@@ -271,3 +271,56 @@ def test_fixed_analysis_rejects_repinned_foreign_export(enrolled, key):
             ref["sha256"],
         )
     adapter.NativeOperationService.assert_not_called()
+
+
+def test_fixed_analysis_does_not_enroll_a_5656_summary_without_its_request(
+    enrolled, monkeypatch,
+):
+    draft, save, _, _, _ = enrolled
+    saved = json.loads(Path(draft["saved_apply"]["path"]).read_bytes())
+    saved["candidate_revision"]["revision_id"] = "amp-pm0-user-mcp-1123-r1"
+    draft["saved_apply"] = save("saved-5656.json", saved)
+    observation = {
+        "operation": None,
+        "terminal_sha256": None,
+        "status": "NOT_RUN",
+        "report": None,
+        "value": None,
+        "reason": None,
+    }
+    draft["comparison"] = save(
+        "self-pinned-comparison.json",
+        {
+            "association": {
+                "change_plan_sha256": _PIN,
+                "binding_sha256": _PIN,
+                "readback": {
+                    "plan_sha256": _PIN,
+                    "status": "MATCHED",
+                    "reason": "fixture",
+                    "baseline": None,
+                    "reopened": None,
+                    "netlist": None,
+                },
+                "dc": {"analysis": "dc", "metric_id": "dc-supply-power-grid-v2", "unit": "W",
+                       "baseline": observation, "candidate": observation},
+                "ac": {"analysis": "ac", "metric_id": "gain-10hz-grid-v1", "unit": "dB",
+                       "baseline": observation, "candidate": observation},
+            },
+            "requested_width": {"value": "120", "unit": "nm"},
+            "request_sha256": _PIN,
+            "deltas": {},
+            "selected_candidate_id": None,
+        },
+    )
+    ref = save("fixed-without-custody.json", draft)
+
+    def compare(*args):
+        pytest.fail("attempted to publish a 5656 summary without original custody")
+
+    monkeypatch.setattr(adapter, "_check_comparison", compare)
+    with pytest.raises(ConfigurationError):
+        adapter.create_fixed_research_analysis_server(
+            BridgeConfig(runtime_mode="operator"), Path(ref["path"]), ref["sha256"],
+        )
+    adapter.NativeOperationService.assert_not_called()

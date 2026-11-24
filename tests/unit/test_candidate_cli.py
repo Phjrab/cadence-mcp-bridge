@@ -1199,10 +1199,21 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             field: pin(tmp_path / f"{field}.json", f'{{"artifact":"{field}"}}\n'.encode())
             for field in source_files
         }
+        terminal_refs = {
+            mode: pin(tmp_path / f"{mode}-native.json", f'{{"native":"{mode}"}}\n'.encode())
+            for mode in ("dc", "ac")
+        }
+        runtime_settings = pin(tmp_path / "custody-settings.json", b"{}")
+        custody = {
+            **terminal_refs,
+            "settings": runtime_settings,
+            "context_sha256": "8" * 64,
+        }
         request["saved_source"] = {
             **source_refs,
             "runtime_manifest_sha256": "6" * 64,
             "runtime_registration_sha256": "7" * 64,
+            "terminal_custody": custody,
         }
         files["policy_steps"] = steps = [
             {
@@ -1216,11 +1227,24 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
         ]
         forwarded_5656 = []
 
-        def record_5656(*args, saved_source, policy_successor, **kwargs):
+        def record_5656(*args, saved_source, policy_successor, trusted_context, **kwargs):
+            assert trusted_context is execution_context
             forwarded_5656.append((saved_source, policy_successor))
             return pair  # Adapter plumbing only. C7 tests the producer conditions.
 
+        class CustodyBinding(SimpleNamespace):
+            model_fields = {}
+
+        execution_context = SimpleNamespace(
+            context_sha256="8" * 64,
+            lock_path=tmp_path / "resource.lock",
+            binding=CustodyBinding(
+                analysis_journal=tmp_path / "dc-candidate.sqlite3",
+                sweep_journal=tmp_path / "sweep.sqlite3",
+            ),
+        )
         with monkeypatch.context() as adapter:
+            adapter.setattr(cli, "load_runtime", lambda _: (execution_context,))
             adapter.setattr(
                 candidate_execution, "associate_fresh_amplifier_width_pair", record_5656
             )
@@ -1233,6 +1257,37 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             (source_evidence, policy), = forwarded_5656
             assert source_evidence.runtime_manifest_sha256 == "6" * 64
             assert source_evidence.runtime_registration_sha256 == "7" * 64
+            for mode, ref in terminal_refs.items():
+                assert getattr(source_evidence, f"{mode}_native_result") == (
+                    originals[Path(ref["path"])]
+                )
+
+            comparison_request = cli._PinnedComparisonFile.model_validate(
+                {
+                    "path": tmp_path / "saved-source.json",
+                    "sha256": hashlib.sha256(originals[tmp_path / "saved-source.json"]).hexdigest(),
+                }
+            )
+            raw_v10 = v10_output.read_bytes()
+            cli.verify_fresh_amplifier_comparison(comparison_request, execution_context, raw_v10)
+            forged = json.loads(raw_v10)
+            forged["association"]["dc"]["baseline"]["value"] += 1
+            forged["deltas"]["dc"]["absolute_delta"] -= 1
+            with pytest.raises(cli.OperationRejected) as rejected:
+                cli.verify_fresh_amplifier_comparison(
+                    comparison_request, execution_context, json.dumps(forged).encode(),
+                )
+            assert rejected.value.reason == "amplifier_comparison_report_not_reproduced"
+            assert len(forwarded_5656) == 3
+
+            fake_5656 = json.loads(raw_v10)
+            fake_5656["association"]["readback"]["reopened"]["revision"]["revision_id"] = (
+                "amp-pm0-user-mcp-1123-r1"
+            )
+            bypass = pin(tmp_path / "unenrolled-5656.json", json.dumps(fake_5656).encode())
+            with pytest.raises(ConfigurationError):
+                load_retained_amp_comparison(Path(bypass["path"]), bypass["sha256"])
+
             for field, ref in source_refs.items():
                 actual = (
                     getattr(source_evidence.writer, field.removeprefix("writer_"))
@@ -1254,9 +1309,16 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             bad_ref["sha256"] = "0" * 64
             assert compare("wrong-custody-pin", tmp_path / "bad-custody.json") == 2
             bad_ref["sha256"] = good_pin
+            missing_custody = request["saved_source"].pop("terminal_custody")
+            assert compare("no-terminal-custody", tmp_path / "no-terminal-custody.json") == 2
+            request["saved_source"]["terminal_custody"] = missing_custody
+            ac_pin = terminal_refs["ac"]["sha256"]
+            terminal_refs["ac"]["sha256"] = "0" * 64
+            assert compare("wrong-ac-native-pin", tmp_path / "wrong-ac-native-pin.json") == 2
+            terminal_refs["ac"]["sha256"] = ac_pin
             request.pop("saved_source")
             assert compare("v10-without-writer", tmp_path / "missing-writer.json") == 2
-            assert len(forwarded_5656) == 1
+            assert len(forwarded_5656) == 3
             capsys.readouterr()
         del files["policy_steps"]
 

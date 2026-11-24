@@ -14,11 +14,16 @@ from pydantic import Field, model_validator
 from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.amplifier_comparison_server import (
     _RetainedReport,
-    load_retained_amp_comparison,
+    project_retained_amp_comparison,
     register_retained_amp_comparison,
+    requires_amp_terminal_custody,
 )
 from cadence_mcp_bridge.analysis_store import AnalysisStore
-from cadence_mcp_bridge.candidate_cli import _PinnedComparisonFile, read_candidate_document
+from cadence_mcp_bridge.candidate_cli import (
+    _PinnedComparisonFile,
+    read_candidate_document,
+    verify_fresh_amplifier_comparison,
+)
 from cadence_mcp_bridge.candidate_execution import (
     PmosDefaultChangeResult,
     _fresh_amplifier_metric,
@@ -77,11 +82,14 @@ class FixedResearchAnalysisRegistration(VariableModel):
     runtime_registration: _PinnedComparisonFile
     analyses: Annotated[tuple[_FixedAnalysis, ...], Field(min_length=1, max_length=3)]
     comparison: _PinnedComparisonFile | None = None
+    comparison_request: _PinnedComparisonFile | None = None
 
     @model_validator(mode="after")
     def distinct(self) -> FixedResearchAnalysisRegistration:
         if len({entry.identity.operation_id for entry in self.analyses}) != len(self.analyses):
             raise ValueError("duplicate fixed operation")
+        if self.comparison is None and self.comparison_request is not None:
+            raise ValueError("comparison request requires an enrolled comparison")
         return self
 
 
@@ -191,14 +199,12 @@ def _verified_runtime(
 
 def _check_comparison(
     context: ExecutionContext,
-    reference: _PinnedComparisonFile,
+    document: _RetainedReport,
     saved: PmosDefaultChangeResult,
     enrolled: dict[str, _FixedAnalysis],
     routes: dict[tuple[str, str], dict[str, Any]],
 ) -> None:
-    pair = _RetainedReport.model_validate_json(
-        read_candidate_document(reference.path, expected_sha256=reference.sha256)
-    ).association
+    pair = document.association
     readback = pair.readback
     if (
         readback.status != "MATCHED"
@@ -269,16 +275,25 @@ def create_fixed_research_analysis_server(
             read_candidate_document(path, expected_sha256=expected_sha256)
         )
         saved, routes = _verified_runtime(context, registration)
-        native = NativeOperationService(context)
         comparison_ref = registration.comparison
-        comparison = (
-            load_retained_amp_comparison(comparison_ref.path, comparison_ref.sha256)
-            if comparison_ref is not None
-            else None
-        )
+        comparison = None
         enrolled = {item.identity.operation_id: item for item in registration.analyses}
         if comparison_ref is not None:
-            _check_comparison(context, comparison_ref, saved, enrolled, routes)
+            raw = read_candidate_document(
+                comparison_ref.path, expected_sha256=comparison_ref.sha256,
+            )
+            document = _RetainedReport.model_validate_json(raw)
+            needs_custody = (
+                saved.candidate_revision.revision_id == "amp-pm0-user-mcp-1123-r1"
+                or requires_amp_terminal_custody(document.association)
+            )
+            if needs_custody != (registration.comparison_request is not None):
+                raise ValueError("Fixed comparison terminal enrollment differs")
+            _check_comparison(context, document, saved, enrolled, routes)
+            if registration.comparison_request is not None:
+                verify_fresh_amplifier_comparison(registration.comparison_request, context, raw)
+            comparison = project_retained_amp_comparison(document, comparison_ref.sha256)
+        native = NativeOperationService(context)
     except (KeyError, OSError, TypeError, ValueError, ConfigurationError, InvalidInputError):
         raise ConfigurationError("Fixed research analysis registration rejected") from None
 
