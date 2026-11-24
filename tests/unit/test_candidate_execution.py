@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -67,6 +68,72 @@ from cadence_mcp_bridge.result_reports import ReportConditions, make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
+    monkeypatch,
+    tmp_path,
+):
+    from cadence_mcp_bridge import candidate_execution as execution
+
+    journal = tmp_path / "shared.sqlite3"
+    r2 = SimpleNamespace(
+        context_sha256=execution._AMP_5656_R2_CONTEXT_SHA256,
+        binding=SimpleNamespace(analysis_journal=journal, runner_sha256="2" * 64),
+    )
+    r3 = SimpleNamespace(
+        context_sha256=execution._AMP_5656_R3_CONTEXT_SHA256,
+        binding=SimpleNamespace(analysis_journal=journal, runner_sha256="3" * 64),
+    )
+    ac_id = str(uuid4())
+    scope = _canonical(
+        {
+            "previous_runtime": r2.binding.runner_sha256,
+            "successor": r3.binding.runner_sha256,
+            "compiled_registration_sha256": "c" * 64,
+            "dc_terminal": "d" * 64,
+            "operation_id": ac_id,
+            "plan_sha256": "a" * 64,
+        }
+    )
+    monkeypatch.setattr(execution, "_AMP_5656_R3_SCOPE_SHA256", hashlib.sha256(scope).hexdigest())
+    dc = FreshAmplifierOperation(
+        SimpleNamespace(
+            query=SimpleNamespace(operation_id=execution._AMP_5656_FAILED_DC_ID),
+            plan=SimpleNamespace(plan_sha256=execution._AMP_5656_FAILED_DC_PLAN),
+            expected_terminal_sha256="d" * 64,
+            record=SimpleNamespace(progress=SimpleNamespace(phase="FAILED")),
+        ),
+        None,
+    )
+    ac = FreshAmplifierOperation(
+        SimpleNamespace(
+            query=SimpleNamespace(operation_id=ac_id),
+            plan=SimpleNamespace(plan_sha256="a" * 64),
+            record=SimpleNamespace(progress=SimpleNamespace(phase="SUCCEEDED")),
+            report=b"fixture summary",
+        ),
+        b"fixture input",
+    )
+    source = SimpleNamespace(
+        ac_successor=execution.Amplifier5656AcSuccessorEvidence(scope, r2),
+        runtime_manifest_sha256=r3.binding.runner_sha256,
+        runtime_registration_sha256="c" * 64,
+        ac_native_result=b"fixture payload",
+    )
+    assert execution._check_5656_ac_successor(source, r3, dc, ac) is r2
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, replace(dc, effective_input=b"fake"), ac)
+    source.ac_native_result = None
+    with pytest.raises(ValueError, match="successful 5656 AC"):
+        execution._check_5656_ac_successor(source, r3, dc, ac)
+    ac.operation.record = None
+    assert (
+        execution._check_5656_ac_successor(source, r3, dc, replace(ac, effective_input=None)) is r2
+    )
+    r2.binding.analysis_journal = tmp_path / "foreign.sqlite3"
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, dc, replace(ac, effective_input=None))
 
 
 def test_5656_successor_library_pin_requires_separately_pinned_dual_observation(monkeypatch):

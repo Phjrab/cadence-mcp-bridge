@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 from typing import Annotated, Any, Literal, NamedTuple, Protocol, Self, TypedDict
 
@@ -41,6 +41,7 @@ from cadence_mcp_bridge.generic_measurements import (
     _ac_axis,
     _matches_ac_axis,
     _sample_indices,
+    bind_reader,
 )
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.native_runtime import KIND
@@ -693,7 +694,7 @@ def _amp_child_metric(
 
 def _width_route(
     operation: PmosDcOperation,
-    diagnostic: bytes,
+    diagnostic: bytes | None,
     analysis_kind: Literal["dc", "ac"],
     *,
     varied_id: str | None = None,
@@ -747,13 +748,14 @@ def _width_route(
         for var in variables.variables
     ):
         raise ValueError("DC variable binding mismatch")
-    effective_input(  # type: ignore[no-untyped-call]
-        diagnostic,
-        {var.cadence_binding: supplied[var.logical_id].value for var in variables.variables},
-        [(model.path, model.section) for model in ade.model_includes],
-        ade.inputs.model_dump(mode="json"),
-        ade.static_statements_sha256,
-    )
+    if diagnostic is not None:
+        effective_input(  # type: ignore[no-untyped-call]
+            diagnostic,
+            {var.cadence_binding: supplied[var.logical_id].value for var in variables.variables},
+            [(model.path, model.section) for model in ade.model_includes],
+            ade.inputs.model_dump(mode="json"),
+            ade.static_statements_sha256,
+        )
     conditions = ReportConditions(
         analysis_inputs=ade.inputs,
         source_tree_sha256=ade.source_tree_sha256,
@@ -1247,7 +1249,7 @@ def associate_amplifier_width_pair(
 class FreshAmplifierOperationBinding(VariableModel):
     operation_id: OperationId
     plan_sha256: Digest
-    input_sha256: Digest
+    input_sha256: Digest | None
 
 
 class FreshAmplifierRevisionBinding(VariableModel):
@@ -1439,6 +1441,12 @@ class FreshAmplifierOwnedCopyEvidence:
 
 
 @dataclass(frozen=True)
+class Amplifier5656AcSuccessorEvidence:
+    scope: bytes
+    dc_context: ExecutionContext
+
+
+@dataclass(frozen=True)
 class SavedAmplifier5656Evidence:
     """Original saved writer and the exact C1 export and compiled-revision pins."""
 
@@ -1455,6 +1463,7 @@ class SavedAmplifier5656Evidence:
     dc_native_result: bytes | None = None
     ac_native_result: bytes | None = None
     export_dependency_observation: bytes | None = None
+    ac_successor: Amplifier5656AcSuccessorEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -1612,6 +1621,12 @@ _AMP_5656_EXPORT = "1221e5d5-0e11-4bc9-a0bf-592278573f7a"
 _AMP_5656_DEPENDENCY_OBSERVATION_SHA256 = (
     "59d926ffa9721c4780e3c5c6e6e164d8867f70a6f2fa6515277b63c733f99b2f"
 )
+_AMP_5656_R2_SETTINGS_SHA256 = "08921dbdf92862b22b62842984459b79d739552ceab1f8d2312379208d655939"
+_AMP_5656_R2_CONTEXT_SHA256 = "3e373473f8445335c8437aa00e8b20317c3385a5e894dae668b0c6c0bebf3b7b"
+_AMP_5656_R3_CONTEXT_SHA256 = "d289b4fbba81e700c2486dfdbcf48dbd2942e9a513767b6b674df0b58ccfe6ca"
+_AMP_5656_R3_SCOPE_SHA256 = "0a56fbe11267c0f11d25bdf81405e7f3394c9ad767a1dc07e2101cd1a1eaf3f1"
+_AMP_5656_FAILED_DC_ID = "97e9eef0-b49a-4113-9ebf-8ddcbd09438a"
+_AMP_5656_FAILED_DC_PLAN = "4919b38c8e78fd7241541f0a3e4ee87c4440f7acf7ae87d4e270ee1b5cd4a991"
 _AMP_5656_REVISION = "amp-pm0-user-mcp-1123-r1"
 _AMP_5656_DESIGN = "amp-pm0-auto120-5656"
 _AMP_5656_PRIOR_RECORDS = (
@@ -1999,7 +2014,7 @@ def associate_persisted_amplifier_bias(
 @dataclass(frozen=True)
 class FreshAmplifierOperation:
     operation: PmosDcOperation
-    effective_input: bytes
+    effective_input: bytes | None
 
 
 @dataclass(frozen=True)
@@ -2289,7 +2304,7 @@ def associate_saved_width_bias_analysis(
             (candidate, candidate_input_sha256, requested_bias.normalized[0], True),
         ):
             operation, raw = side.operation, side.effective_input
-            if hashlib.sha256(raw).hexdigest() != pin:
+            if raw is None or hashlib.sha256(raw).hexdigest() != pin:
                 raise ValueError("saved-width bias input digest differs")
             technology = None
             side_export = export if is_candidate else None
@@ -2401,6 +2416,7 @@ def _fresh_amplifier_row(
     storage_successor_verified: bool = False,
     owned_copy: _FreshAmplifierCopyRoute | None = None,
     trusted_context: ExecutionContext | None = None,
+    allow_missing_execution: bool = False,
 ) -> tuple[FreshAmplifierMeasurement, tuple[object, ...] | None]:
     identity = revision.dc if mode == "dc" else revision.ac
     if evidence is None and identity is None:
@@ -2420,26 +2436,31 @@ def _fresh_amplifier_row(
         identity.plan_sha256,
     ):
         raise ValueError("fresh amplifier operation differs from registration")
-    params, includes, analyses, static = partition_amplifier_input(
-        raw, expected_sha256=identity.input_sha256
-    )
-    fixed, options = _amp_pm0_options(static, baseline=baseline)
-    model = binding.canonical_model_include
-    if (
-        params != diagnostic.parameters
-        or includes != [(model.path, model.section)]
-        or fixed
-        != (
-            diagnostic.fixed_statements
-            if mode == "dc"
-            else _amplifier_cross_analysis_body(diagnostic.fixed_statements)
+    if raw is None or identity.input_sha256 is None:
+        if not allow_missing_execution or raw is not None or identity.input_sha256 is not None:
+            raise ValueError("fresh amplifier executed input evidence is incomplete")
+    else:
+        params, includes, analyses, static = partition_amplifier_input(
+            raw, expected_sha256=identity.input_sha256
         )
-        or options != diagnostic.pm0_options
-        or len(analyses) != 1
-        or analyses[0][0] != mode
-        or (mode == "dc" and analyses[0] != diagnostic_dc)
-    ):
-        raise ValueError("fresh amplifier input differs from qualified circuit")
+        fixed, options = _amp_pm0_options(static, baseline=baseline)
+        if (
+            params != diagnostic.parameters
+            or includes
+            != [(binding.canonical_model_include.path, binding.canonical_model_include.section)]
+            or fixed
+            != (
+                diagnostic.fixed_statements
+                if mode == "dc"
+                else _amplifier_cross_analysis_body(diagnostic.fixed_statements)
+            )
+            or options != diagnostic.pm0_options
+            or len(analyses) != 1
+            or analyses[0][0] != mode
+            or (mode == "dc" and analyses[0] != diagnostic_dc)
+        ):
+            raise ValueError("fresh amplifier input differs from qualified circuit")
+    model = binding.canonical_model_include
     route, conditions, reader, semantics = _width_route(
         operation,
         raw,
@@ -2456,12 +2477,35 @@ def _fresh_amplifier_row(
         != binding.diagnostic_model_closure_sha256
     ):
         raise ValueError("fresh amplifier route differs from registered revision or model closure")
+    source = None if owned_copy is None else owned_copy.saved_source
+    native_result = None
+    if source is not None:
+        native_result = source.dc_native_result if mode == "dc" else source.ac_native_result
+    if raw is None:
+        if trusted_context is None or native_result is not None or operation.report is not None:
+            raise ValueError("unmeasured 5656 row has measurement evidence or no context")
+        bind_reader(trusted_context, operation.plan, ade, reader)
+        original = _read_5656_original(trusted_context, operation.query.operation_id)
+        status, terminal, _ = _width_report(operation, conditions, reader)
+        if (
+            original != operation.record
+            or status == "SUCCEEDED"
+            or (original is not None and terminal != original.progress.provider_receipt_sha256)
+        ):
+            raise ValueError("unmeasured 5656 row differs from the original journal")
+        return FreshAmplifierMeasurement(
+            operation=operation.query,
+            terminal_sha256=terminal,
+            status="NOT_RUN" if original is None else status,
+            report=None,
+            value=None,
+            reason="retained_execution_input_unavailable",
+        ), (*semantics, None)
+    assert identity.input_sha256 is not None
     measurement = _fresh_amplifier_measurement(
         mode, operation, conditions, reader, ade, static, identity.input_sha256
     )
-    if owned_copy is not None and owned_copy.saved_source is not None:
-        source = owned_copy.saved_source
-        native_result = source.dc_native_result if mode == "dc" else source.ac_native_result
+    if source is not None:
         _check_5656_native_result(
             trusted_context,
             operation,
@@ -2472,6 +2516,17 @@ def _fresh_amplifier_row(
             reader,
         )
     return measurement, (*semantics, analyses[0])
+
+
+def _read_5656_original(context: ExecutionContext, operation_id: str) -> DurableOperation | None:
+    store = AnalysisStore(context.binding.analysis_journal)
+    try:
+        with store.connection(create=False, read_only=True) as connection:
+            return store._read_operation(connection, operation_id)
+    except InvalidInputError:
+        return None
+    except ConfigurationError as exc:
+        raise ValueError("5656 trusted operation journal unavailable") from exc
 
 
 def _check_5656_native_result(
@@ -2487,13 +2542,8 @@ def _check_5656_native_result(
         return
     if context is None or raw is None or report is None or operation.record is None:
         raise ValueError("5656 report requires the original native payload and trusted context")
-    store = AnalysisStore(context.binding.analysis_journal)
-    try:
-        with store.connection(create=False, read_only=True) as connection:
-            trusted = store._read_operation(connection, operation.query.operation_id)
-    except (ConfigurationError, InvalidInputError) as exc:
-        raise ValueError("5656 trusted operation journal unavailable") from exc
-    if trusted != operation.record or trusted.progress.phase != "SUCCEEDED":
+    trusted = _read_5656_original(context, operation.query.operation_id)
+    if trusted is None or trusted != operation.record or trusted.progress.phase != "SUCCEEDED":
         raise ValueError("5656 terminal differs from the trusted operation journal")
 
     _closed_document(raw, max_bytes=1048576)
@@ -2512,6 +2562,44 @@ def _check_5656_native_result(
     expected = make_report(trusted, projected)
     if report != expected.model_copy(update={"captured_at_utc": report.captured_at_utc}):
         raise ValueError("5656 report does not match the native reader frame")
+
+
+def _check_5656_ac_successor(
+    source: SavedAmplifier5656Evidence,
+    context: ExecutionContext | None,
+    dc: FreshAmplifierOperation | None,
+    ac: FreshAmplifierOperation | None,
+) -> ExecutionContext:
+    successor = source.ac_successor
+    if successor is None or context is None or dc is None or ac is None:
+        raise ValueError("5656 successor requires both original operations and contexts")
+    scope = _pinned_json(successor.scope, _AMP_5656_R3_SCOPE_SHA256)
+    prior = successor.dc_context
+    failed, selected = dc.operation, ac.operation
+    if (
+        prior.context_sha256 != _AMP_5656_R2_CONTEXT_SHA256
+        or context.context_sha256 != _AMP_5656_R3_CONTEXT_SHA256
+        or prior.binding.analysis_journal != context.binding.analysis_journal
+        or prior.binding.runner_sha256 != scope["previous_runtime"]
+        or context.binding.runner_sha256 != source.runtime_manifest_sha256
+        or source.runtime_manifest_sha256 != scope["successor"]
+        or source.runtime_registration_sha256 != scope["compiled_registration_sha256"]
+        or failed.query.operation_id != _AMP_5656_FAILED_DC_ID
+        or failed.plan.plan_sha256 != _AMP_5656_FAILED_DC_PLAN
+        or failed.expected_terminal_sha256 != scope["dc_terminal"]
+        or failed.record is None
+        or failed.record.progress.phase != "FAILED"
+        or dc.effective_input is not None
+        or (selected.query.operation_id, selected.plan.plan_sha256)
+        != (scope["operation_id"], scope["plan_sha256"])
+    ):
+        raise ValueError("5656 successor does not bind the R2 failed DC and R3 AC")
+    if selected.record is not None and selected.record.progress.phase == "SUCCEEDED":
+        if ac.effective_input is None or selected.report is None or source.ac_native_result is None:
+            raise ValueError("successful 5656 AC requires its original input and result")
+    elif ac.effective_input is not None:
+        raise ValueError("unmeasured 5656 AC cannot use an executed input")
+    return prior
 
 
 def associate_fresh_amplifier_width_pair(
@@ -2654,7 +2742,8 @@ def associate_fresh_amplifier_width_pair(
                 candidate_ops[0].plan,
                 saved_source=saved_source is not None,
             )
-        center_copy = child_copy = None
+        center_copy = child_copy = dc_copy = None
+        dc_context = None
         if owned_copy is not None:
             if policy_successor is None or len(baseline_ops) != 2 or len(candidate_ops) != 2:
                 raise ValueError("fresh amplifier copy comparison requires all four operations")
@@ -2683,6 +2772,16 @@ def associate_fresh_amplifier_width_pair(
             center_copy, child_copy = _fresh_amplifier_saved_source(
                 saved_source, binding, plan, readback, baseline_input, candidate_input
             )
+            if saved_source.ac_successor is not None:
+                dc_context = _check_5656_ac_successor(
+                    saved_source, trusted_context, dc.candidate, ac.candidate
+                )
+                dc_copy = replace(
+                    child_copy,
+                    saved_source=replace(
+                        saved_source, runtime_manifest_sha256=dc_context.binding.runner_sha256
+                    ),
+                )
         rows = []
         analysis_pairs: tuple[tuple[Literal["dc", "ac"], FreshAmplifierWidthAnalysis], ...] = (
             ("dc", dc),
@@ -2709,9 +2808,19 @@ def associate_fresh_amplifier_width_pair(
                 controls[1],
                 baseline=False,
                 storage_successor_verified=policy_successor is not None,
-                owned_copy=child_copy,
-                trusted_context=trusted_context,
+                owned_copy=(dc_copy or child_copy) if mode == "dc" else child_copy,
+                trusted_context=(dc_context or trusted_context)
+                if mode == "dc"
+                else trusted_context,
+                allow_missing_execution=dc_context is not None,
             )
+            # An absent executed input leaves the registered controls comparable.
+            if (
+                old_semantics is not None
+                and child_semantics is not None
+                and child_semantics[-1] is None
+            ):
+                old_semantics, child_semantics = old_semantics[:-1], child_semantics[:-1]
             if (
                 old_semantics is not None
                 and child_semantics is not None
