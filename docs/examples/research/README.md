@@ -99,7 +99,13 @@ uv run --locked python -c "from pathlib import Path; from cadence_mcp_bridge.res
 
 ### 논문 초안을 실행 입력으로 변환
 
-논문 초안은 `research-draft-v1`이고 직접 제출하는 입력은 `ResearchCircuit`입니다. `compile-research-draft`를 제공하는 개발 설치본에서 아래 절차를 사용합니다. 먼저 대상 포팅 문서(`DraftPort`)에 다음 값을 확정합니다.
+논문 초안은 `research-draft-v1`이고 도구가 검증하는 회로 정의는 `ResearchCircuit`입니다. 개발 설치본에서 아래 명령을 실행하면 포팅 문서의 JSON Schema가 `request_schema`에 반환됩니다. 스키마 제목은 `DraftPort`입니다.
+
+```powershell
+cadence-mcp-bridge operator-candidates schema --action compile-research-draft
+```
+
+포팅 문서에 다음 값을 확정합니다.
 
 | 입력 | 값의 출처 |
 | --- | --- |
@@ -155,6 +161,17 @@ cadence_operation_result({"request": key})
 ```
 
 작업마다 UUID와 계획 해시를 함께 보관합니다. 같은 결과를 확인할 때는 보관한 두 값으로 상태와 결과를 다시 조회합니다. 보존 AC에는 `cadence_research_ac_gain_result`, DC 공급전력에는 `cadence_research_supply_power_result`, TRAN 구간에는 `cadence_research_transient_result`를 사용합니다.
+
+### 개발 경로별 도구와 재개 지점
+
+| 단계 | 호출 또는 재개 기준 |
+| --- | --- |
+| 초안과 계획 | 스키마 조회 → 컴파일 → 검증 → `cadence_plan_research_mos_block`. 입력이 미확정이면 포팅 문서를 고치고 그 파일의 새 SHA로 다시 검증합니다. 계획이 있으면 검증 정의와 계획 해시를 함께 보관합니다. |
+| 등록형 생성과 저장 확인 | C2 생성 서비스의 제출·상태·등록 인계는 같은 작업과 계획을 사용합니다. 저장 이후 중단되면 기존 ID의 상태와 보존 단계 증거를 확인합니다. `OUTCOME_UNKNOWN`은 기존 사본의 확인 단계에서 멈춥니다. 독립 재개방과 Netlist 증거를 `cadence_verify_research_mos_block`에 대조하고, 검증된 인계로 등록합니다. 생성 서비스의 MCP 노출은 사용하는 휠의 `tools/list`에서 확인합니다. |
+| 등록 소자 편집 | `cadence_plan_registered_mos_change`는 등록된 소자 변경을 계획합니다. 실제 적용·재조회는 해당 소자와 속성 조합을 지원하는 프로필에서 확인합니다. 이전에 검증한 `cadence_apply_fixed_amp_pm0`의 적용 범위는 별도의 고정 AMP 작업입니다. |
+| 고정 저장본 분석 | 고정 분석 프로필에는 `cadence_plan_fixed_research_analysis`, `cadence_submit_fixed_research_analysis`, `cadence_fixed_research_analysis_status`, `cadence_fixed_research_analysis_result`가 있습니다. 네 호출은 등록된 동일 `operation_id`와 `expected_plan_sha256`을 받습니다. 응답이 끊기면 상태부터 재조회합니다. 성공 결과와 등록된 저장 revision을 대조하고, 비교 등록에 연결된 결과는 `cadence_retained_amplifier_comparison`으로 조회합니다. |
+
+연구 재개에는 검증된 개발 wheel과 해당 운영자 연결을 사용합니다. 설치본에서 사용할 도구와 요청 형식을 확인하고, 당시 승인·자원 상태를 기존 절차로 확인합니다.
 
 ## 결과 조회와 Netlist 확인 예
 
