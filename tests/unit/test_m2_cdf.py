@@ -1,6 +1,12 @@
 import pytest
 
-from cadence_mcp_bridge.m2_cdf import CdfSource, parse_frame, render_collector
+from cadence_mcp_bridge.m2_cdf import (
+    CdfSource,
+    parse_frame,
+    render_collector,
+    render_reopened_mos_cdf,
+    render_research_cdf_facts,
+)
 
 
 def frame() -> bytes:
@@ -53,6 +59,43 @@ def test_fixed_readonly_script() -> None:
     assert 'member(inst~>cellName list("ipin" "opin" "iopin"))' in program
     # Only known port markers are omitted; every other instance still needs CDF.
     assert 'unless(base error("M2_CDF_MISSING"))' in program
+
+
+def test_research_probe_limits_reads_and_omits_callback_bodies() -> None:
+    source = render_research_cdf_facts()
+    for library, device in (
+        (b"gpdk090", b"nmos1v"), (b"gpdk090", b"pmos1v"),
+        (b"analogLib", b"vdc"), (b"analogLib", b"vsource"), (b"analogLib", b"cap"),
+    ):
+        assert source.count(b'm2CdfDump(port "%s" "%s" nil list(' % (library, device)) == 1
+    assert b'member(candidate~>name names)' in source
+    assert b'm2CdfDump(port "analogLib" "vdc" nil list("vdc" ' in source
+    assert b'"acm" "acp"' in source
+    assert b"field!='callback" in source
+    assert b'outfile("cdf-constraints.txt")' in source
+    assert b"dbSave" not in source and b"eval(" not in source
+
+
+def test_reopen_cdf_dumps_only_the_checked_instance_in_the_existing_process() -> None:
+    source = render_reopened_mos_cdf()
+    assert b'inst~>libName=="gpdk090" inst~>viewName=="symbol"' in source
+    assert source.count(b"m2CdfDump(port inst~>libName inst~>cellName inst list(") == 1
+    assert b'"simW" "simM"' in source
+    assert b"cdfGetInstCDF(inst)" in source
+    assert b"exit(" not in source and b"dbSave" not in source
+
+
+def test_research_probe_adds_only_explicit_registered_view_reads():
+    source = render_research_cdf_facts(
+        amp_source=CdfSource("AmpCopy", "AmpTB"),
+        mos_source=CdfSource("InverterCopy", "DUT"),
+    )
+    assert b'm2ResearchInstances(port bindings "AmpCopy" "AmpTB" "amp")' in source
+    assert b'm2ResearchInstances(port bindings "InverterCopy" "DUT" "mos")' in source
+    assert b'list("V1" "V2")' in source and b'list("MN" "MP")' in source
+    assert b'cv~>mode=="r"' in source
+    assert b"dbFindProp(inst field)" in source and b"term~>net~>name" in source
+    assert b"dbSave" not in source and b"dbReplaceProp" not in source
 
 
 def v2_frame(*, unknown: bool = False) -> bytes:

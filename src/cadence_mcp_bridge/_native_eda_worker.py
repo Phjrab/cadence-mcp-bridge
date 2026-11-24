@@ -578,7 +578,8 @@ class EdaWorker(object):
             execution_limit,
         )
         self.protected(route, before)
-        native_input = self.installer.regular(self.find_input(root + "/project"))
+        raw_netlist = self.installer.regular(self.find_input(root + "/project"))
+        native_input = self.rendering.tran_supply_saves(raw_netlist, route["reader"])
         parameters = dict(
             (v["cadence_binding"], self.rendering.number_text(values[v["logical_id"]]))
             for v in route["variables"]
@@ -591,6 +592,8 @@ class EdaWorker(object):
             route["ade"]["static_statements_sha256"],
         )
         input_sha = effective["input_sha256"]
+        if native_input != raw_netlist:
+            self.write(work + "/netlist-before-supply-save.scs", raw_netlist)
         self.write(work + "/input.scs", native_input)
         self.gate.accounting.write_new(
             work + "/effective-input.json",

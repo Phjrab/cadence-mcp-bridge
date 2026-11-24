@@ -84,7 +84,7 @@ def test_registration_document_limit_is_independent_of_default(registered, tmp_p
         context, registration
     )
 
-    path.write_bytes(original.ljust(77_825))
+    path.write_bytes(original.ljust(90_113))
     rejected = tmp_path / "oversize"
     with pytest.raises(ValueError, match="environment document too large"):
         bundle(context, path, rejected)

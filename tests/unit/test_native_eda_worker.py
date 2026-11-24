@@ -53,6 +53,57 @@ def test_native_frame_has_bound_identity_inventory_and_finite_values(frame_worke
     worker.frame((header + "\nV|out|0.5\nEND\n").encode(), plan, route, "1" * 64)
 
 
+def supply_save_input():
+    registration = {
+        "schema_version": 2,
+        "nodes": [{"logical_id": "supply", "selector": "/vdd"}],
+        "sources": [{
+            "role": "supply", "positive_node": "supply", "negative_node": None,
+            "current_selector": "/VDD/PLUS",
+            "current_convention": "positive_into_source_positive_terminal_A",
+        }],
+    }
+    original = (
+        b"simulator lang=spectre\nglobal 0\nVDD (vdd 0) vsource dc=1 type=dc\n"
+        b"tran tran stop=0.00000015 maxstep=0.000000001 method=trap\n"
+        b"saveOptions options save=allpub\n"
+    )
+    return original, registration
+
+
+def test_transient_input_adds_only_bound_supply_save_once():
+    original, registration = supply_save_input()
+    augmented = original + b"save VDD:p\n"
+    assert rendering.tran_supply_saves(original, registration) == augmented
+    assert rendering.tran_supply_saves(augmented, registration) == augmented
+    assert rendering.tran_supply_saves(original, {"schema_version": 1}) == original
+    _, _, _, static = rendering.partition_input(augmented)
+    checked = rendering.effective_input(
+        augmented, {}, [],
+        {"analysis": "tran", "stop_s": "0.00000015", "maxstep_s": "0.000000001", "method": "trap"},
+        rendering.static_fingerprint(static),
+    )
+    assert checked["input_sha256"] == operations.digest(augmented)
+
+
+@pytest.mark.parametrize(
+    "before,after",
+    [
+        (b"(vdd 0)", b"(0 vdd)"),
+        (b"type=dc", b"type=sine"),
+        (b"vsource dc=1 type=dc", b"isource dc=1 type=dc"),
+        (b"VDD (vdd 0) vsource dc=1 type=dc\n",
+         b"subckt DUT vdd\nVDD (vdd 0) vsource dc=1 type=dc\nends DUT\n"),
+        (b"tran tran stop=0.00000015 maxstep=0.000000001 method=trap",
+         b"dc dc annotate=status"),
+    ],
+)
+def test_transient_supply_save_refuses_changed_source_or_analysis(before, after):
+    original, registration = supply_save_input()
+    with pytest.raises(ValueError, match="spectre_supply_save_"):
+        rendering.tran_supply_saves(original.replace(before, after), registration)
+
+
 def test_small_file_copy_allocation_rejects_before_materialization(
     frame_worker, tmp_path, monkeypatch
 ):

@@ -386,7 +386,7 @@ def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
         ledger.effective_policy(str(root), anchor)
 
 
-@pytest.mark.parametrize("version", [7, 8, 9])
+@pytest.mark.parametrize("version", [7, 8, 9, 10])
 def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch,
                                                       version):
     root, value, _, _, permit, _ = retained_v7_domain
@@ -398,7 +398,9 @@ def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_pa
         )
         grant = dict(permit, grant_sha256=str(prior_version) * 64, max_attempts=2,
                      max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
-        for _ in range(2):
+        next_count = ledger.RETAINED_SUCCESSORS[prior_version + 1][3]["count"]
+        current_count = ledger.RETAINED_SUCCESSORS[prior_version][3]["count"]
+        for _ in range(next_count - current_count):
             ledger.reserve(str(root), job(root), grant)
         value["limits"]["result_reserved_bytes"] = ledger.RETAINED_SUCCESSORS[prior_version][2]
     plan_action = f"plan-result-limit-v{version}"
