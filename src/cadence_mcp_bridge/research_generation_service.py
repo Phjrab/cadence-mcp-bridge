@@ -14,6 +14,7 @@ from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.research_bench import (
     BenchNetlistConditions,
     ResearchBenchPlan,
+    _check_bench_conditions,
     render_research_bench,
 )
 from cadence_mcp_bridge.research_circuit import (
@@ -129,6 +130,7 @@ class RegisteredResearchGeneration:
         self._plan = OwnedMosBlockPlan.model_validate_json(plan.model_dump_json())
         self._bench = ResearchBenchPlan.model_validate_json(bench.model_dump_json())
         self._conditions = BenchNetlistConditions.model_validate_json(conditions.model_dump_json())
+        _check_bench_conditions(self._bench, self._conditions)
         self._cdf_frames = dict(cdf_frames)
         self._provider = provider
         self._binding_sha256 = canonical_digest(self._binding)

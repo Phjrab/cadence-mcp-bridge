@@ -13,6 +13,7 @@ from cadence_mcp_bridge.native_runtime import RemotePath
 from cadence_mcp_bridge.research_adapters import ResearchMosBlockRequest
 from cadence_mcp_bridge.research_bench import (
     BenchNetlistConditions,
+    _check_bench_conditions,
     plan_research_bench,
     render_research_bench,
 )
@@ -37,6 +38,7 @@ class ResearchGenerationPreparationRequest(ResearchMosBlockRequest):
     expected_plan_sha256: Digest | None = None
     primitive_cdf_sha256: Digest | None = None
     signed_ac_evidence_sha256: Digest | None = None
+    signed_ac_vsin_pair: bool = False
 
 
 class ResearchGenerationPreparationManifest(VariableModel):
@@ -98,7 +100,9 @@ def prepare_research_generation(
         expected_dut_plan_sha256=plan_pin,
         primitive_cdf_sha256=request.primitive_cdf_sha256,
         signed_ac_evidence_sha256=request.signed_ac_evidence_sha256,
+        signed_ac_vsin_pair=request.signed_ac_vsin_pair,
     )
+    _check_bench_conditions(bench, request.conditions)
     bench_pin = canonical_digest(bench)
     scripts = render_research_bench(
         bench,

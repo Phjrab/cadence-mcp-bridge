@@ -3,6 +3,7 @@
 import json
 from copy import deepcopy
 from hashlib import sha256
+from typing import Literal
 
 import pytest
 from test_m2_inverter import fixture as inverter_fixture
@@ -456,7 +457,7 @@ def test_signed_ac_uses_same_master_evidence_and_checks_emitted_sign() -> None:
         render(witness, retained=False)
     with pytest.raises(ValueError, match="signed AC evidence"):
         render(witness.replace(b"mag=-500m", b"mag=500m"))
-    with pytest.raises(ValueError, match="Input should be 'analogLib/vdc/symbol'"):
+    with pytest.raises(ValueError, match="requires analogLib/vdc/symbol"):
         render(witness.replace(b"analogLib/vdc/symbol", b"analogLib/vsin/symbol"))
 
     def compare(candidate: bytes) -> None:
@@ -477,3 +478,146 @@ def test_signed_ac_uses_same_master_evidence_and_checks_emitted_sign() -> None:
     for wrong in (b"mag=500m", b"mag=-500m phase=180"):
         with pytest.raises(ValueError, match="bench device"):
             compare(opposite.replace(b"mag=-500m", wrong))
+
+
+def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
+    plan, dut, frames, conditions, raw, full = _declarative_fixture()
+    assert plan.primitive_cdf_sha256 is not None
+    primitive = frames[plan.primitive_cdf_sha256]
+    start = primitive.index(b'DEVICE|"analogLib"|"vdc"|nil\n')
+    end = primitive.index(b"END\n", start)
+    master = primitive[start:end]
+    effective_rows = {
+        "vdc": ("voltage", "500m"),
+        "acm": ("voltage", "500m"),
+        "va": ("voltage", "50m"),
+        "freq": ("frequency", "1K"),
+        "acp": (None, ""),
+        "sinephase": (None, ""),
+    }
+    sources = []
+    for index, node in enumerate(("pos", "neg")):
+        name = f"V{index + 1}"
+        fields: dict[Literal["va", "freq", "filenums", "sinephase"], str] = {
+            "va": "50m",
+            "freq": "1K",
+            "filenums": "none",
+        }
+        magnitude = "-500m" if index else "500m"
+        options = f"dc=500m mag={magnitude} type=sine ampl=50m freq=1K"
+        if index:
+            fields["sinephase"] = "180"
+            options += " sinephase=180"
+        sources.append(
+            SignedAcSourceObservation(
+                instance=name,
+                master="analogLib/vsin/symbol",
+                plus=node,
+                minus="0",
+                dc_string="500m",
+                acm_string=magnitude,
+                acp_absent=True,
+                statement=f"{name} ({node} 0) vsource {options}",
+                sine_string_properties=fields,
+            )
+        )
+        rows = [f'DEVICE|"analogLib"|"vsin"|"{name}"']
+        rows.extend(
+            line.decode()
+            for line in master.splitlines()
+            if line.startswith((b"SIM|", b"META|", b"TERM|"))
+        )
+        for scope in ("base", "effective"):
+            for field, (unit, value) in effective_rows.items():
+                unit_token = f'"{unit}"' if unit else "nil"
+                default = ""
+                if scope == "base":
+                    value = default
+                elif field == "acm":
+                    value = magnitude
+                elif field == "sinephase" and index:
+                    value = "180"
+                rows.append(
+                    f'PARAM|"{scope}"|"{field}"|"baseCellData"|{unit_token}|"{default}"|"{value}"'
+                )
+        primitive = primitive.removesuffix(b"COMPLETE\n")
+        primitive += ("\n".join([*rows, "END", "COMPLETE", ""])).encode()
+    native = ("simulator lang=spectre\n" + "\n".join(row.statement for row in sources)).encode()
+    native_pin = sha256(native).hexdigest()
+    frames[native_pin] = native
+
+    def prepare(cdf: bytes) -> tuple[ResearchBenchPlan, dict[str, bytes]]:
+        pin = sha256(cdf).hexdigest()
+        witness = (
+            SignedAcSourceEvidence(
+                primitive_cdf_sha256=pin,
+                native_manifest_sha256="1" * 64,
+                saved_tree_sha256="2" * 64,
+                reopen_artifact_sha256="3" * 64,
+                effective_netlist_sha256=native_pin,
+                sources=(sources[0], sources[1]),
+            )
+            .model_dump_json()
+            .encode()
+        )
+        witness_pin = sha256(witness).hexdigest()
+        return (
+            plan.model_copy(
+                update={
+                    "primitive_cdf_sha256": pin,
+                    "signed_ac_evidence_sha256": witness_pin,
+                    "signed_ac_vsin_pair": True,
+                }
+            ),
+            {**frames, pin: cdf, witness_pin: witness},
+        )
+
+    def render(cdf: bytes) -> ResearchBenchPlan:
+        signed, captures = prepare(cdf)
+        scripts = render_research_bench(
+            signed,
+            dut,
+            captures,
+            expected_plan_sha256=canonical_digest(signed),
+            owned_library_path="/owned/block",
+        )
+        assert scripts.generate.count('"analogLib" "vsin"') == 2
+        assert 'm2Param(inst "va" "50m")' in scripts.generate
+        assert 'm2Param(inst "acm" "-500m")' in scripts.generate
+        assert 'm2Property(cv "VNEG" "sinephase" "180")' in scripts.reopen
+        assert 'm2Require(dbFindProp(inst "acp")==nil)' in scripts.reopen
+        assert 'm2Require(dbFindProp(inst "sinephase")==nil)' in scripts.reopen
+        return signed
+
+    signed = render(primitive)
+    changed = primitive.replace(b'|"va"|"baseCellData"|', b'|"vo"|"baseCellData"|')
+    with pytest.raises(ValueError, match="vsin CDF parameter metadata"):
+        render(changed)
+    changed = primitive.replace(b'|"voltage"|""|"50m"', b'|"voltage"|""|"60m"')
+    with pytest.raises(ValueError, match="effective CDF value disagrees"):
+        render(changed)
+    candidate = full.replace(
+        b"mag=500m phase=0 type=dc", b"mag=500m type=sine ampl=50m freq=1K"
+    ).replace(
+        b"mag=500m phase=180 type=dc",
+        b"mag=-500m type=sine ampl=50m freq=1K sinephase=180",
+    )
+
+    def verify(netlist: bytes, case: BenchNetlistConditions = conditions) -> None:
+        verify_research_bench_netlist(
+            signed,
+            dut,
+            netlist,
+            raw,
+            expected_plan_sha256=canonical_digest(signed),
+            expected_netlist_sha256=sha256(netlist).hexdigest(),
+            expected_dut_netlist_sha256=sha256(raw).hexdigest(),
+            conditions=case,
+            expected_conditions_sha256=canonical_digest(case),
+        )
+
+    verify(candidate)
+    with pytest.raises(ValueError, match="bench device"):
+        verify(candidate.replace(b"sinephase=180", b"phase=180"))
+    with pytest.raises(ValueError, match="registered for AC only"):
+        verify(candidate, conditions.model_copy(update={"analyses": (("tran", "stop=1n"),)}))

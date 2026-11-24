@@ -95,11 +95,16 @@ class ResearchBenchPlan(VariableModel):
     bench: Circuit
     primitive_cdf_sha256: Digest | None = None
     signed_ac_evidence_sha256: Digest | None = None
+    signed_ac_vsin_pair: bool = False
 
     @model_validator(mode="after")
     def signed_ac_requires_primitive_cdf(self) -> ResearchBenchPlan:
         if self.signed_ac_evidence_sha256 is not None and self.primitive_cdf_sha256 is None:
             raise ValueError("signed AC requires a verified primitive CDF")
+        if self.signed_ac_vsin_pair:
+            if self.signed_ac_evidence_sha256 is None:
+                raise ValueError("vsin pair requires signed AC evidence")
+            _check_vsin_pair(self.bench)
         return self
 
     @model_serializer(mode="wrap")
@@ -109,6 +114,8 @@ class ResearchBenchPlan(VariableModel):
             data.pop("primitive_cdf_sha256", None)
         if self.signed_ac_evidence_sha256 is None:
             data.pop("signed_ac_evidence_sha256", None)
+        if not self.signed_ac_vsin_pair:
+            data.pop("signed_ac_vsin_pair", None)
         return data
 
 
@@ -117,16 +124,19 @@ _ObservedNode = Annotated[str, Field(pattern=r"^(?:0|[A-Za-z][A-Za-z0-9_#-]{0,63
 
 
 class SignedAcSourceObservation(VariableModel):
-    """Normalized exact saved vdc properties and the matching Spectre statement."""
+    """Normalized saved voltage source properties and their Spectre statement."""
 
     instance: BindingName
-    master: Literal["analogLib/vdc/symbol"]
+    master: Literal["analogLib/vdc/symbol", "analogLib/vsin/symbol"]
     plus: _ObservedNode
     minus: _ObservedNode
     dc_string: _ObservedScalar
     acm_string: _ObservedScalar
     acp_absent: Literal[True]
     statement: Annotated[str, Field(min_length=1, max_length=512)]
+    sine_string_properties: (
+        dict[Literal["va", "freq", "filenums", "sinephase"], _ObservedScalar] | None
+    ) = None
 
 
 class SignedAcSourceEvidence(VariableModel):
@@ -212,6 +222,7 @@ def _primitive_setup(
     inst: VoltageSource | Capacitor,
     *,
     signed_ac: bool,
+    vsin_pair: bool = False,
 ) -> tuple[str, str, dict[str, str], dict[str, str | None]]:
     if isinstance(inst, Capacitor):
         return "cap", "capacitor", {"c": inst.capacitance_f}, {"c": "capacitance"}
@@ -220,6 +231,8 @@ def _primitive_setup(
     props = {"vdc": inst.dc_v}
     units: dict[str, str | None] = {"vdc": "voltage"}
     if inst.ac_magnitude_v != "0" or inst.ac_phase_deg != "0":
+        if vsin_pair:
+            return "vsin", "vsource", _vsin_oa_properties(Decimal(inst.ac_phase_deg) == 180), {}
         if signed_ac:
             props["acm"] = _signed_ac_magnitude(inst)
             units.update(acm="voltage", acp=None)
@@ -237,21 +250,72 @@ def _signed_ac_magnitude(inst: VoltageSource) -> str:
     return number_text(str(magnitude if phase == 0 else magnitude.copy_negate()))
 
 
+def _vsin_oa_properties(negative: bool) -> dict[str, str]:
+    props = {
+        "vdc": "500m",
+        "acm": "-500m" if negative else "500m",
+        "va": "50m",
+        "freq": "1K",
+        "filenums": "none",
+    }
+    if negative:
+        props["sinephase"] = "180"
+    return props
+
+
+def _check_vsin_pair(bench: Circuit) -> None:
+    sources = [
+        inst
+        for inst in bench.instances
+        if isinstance(inst, VoltageSource)
+        and (inst.ac_magnitude_v != "0" or inst.ac_phase_deg != "0")
+    ]
+    dut_nets = {
+        net
+        for inst in bench.instances
+        if isinstance(inst, Child)
+        for net in inst.connections.values()
+    }
+    if (
+        len(sources) != 2
+        or {inst.ac_phase_deg for inst in sources} != {"0", "180"}
+        or len({inst.connections["PLUS"] for inst in sources}) != 2
+        or any(
+            inst.dc_v != "0.5"
+            or inst.ac_magnitude_v != "0.5"
+            or inst.connections["PLUS"] == "gnd!"
+            or inst.connections["PLUS"] not in dut_nets
+            or inst.connections["MINUS"] != "gnd!"
+            for inst in sources
+        )
+    ):
+        raise ValueError("vsin pair must match the reviewed differential AC stimulus")
+
+
+def _check_bench_conditions(plan: ResearchBenchPlan, conditions: BenchNetlistConditions) -> None:
+    if plan.signed_ac_vsin_pair and tuple(kind for kind, _ in conditions.analyses) != ("ac",):
+        raise ValueError("vsin differential stimulus is registered for AC only")
+
+
 def _check_primitive_cdf(
     cdf_frames: Mapping[str, bytes],
     pin: Digest,
     bench: Circuit,
     *,
     signed_ac: bool,
-) -> None:
+    vsin_pair: bool,
+) -> tuple[dict[str, object], ...]:
     frame = cdf_frames.get(pin)
     if frame is None or not frame.startswith(b"M2_CDF_V2\n") or sha256(frame).hexdigest() != pin:
         raise ValueError("missing or stale bench primitive CDF frame")
     requirements: dict[tuple[str, str], dict[str, str | None]] = {}
     for inst in bench.instances:
         if isinstance(inst, (VoltageSource, Capacitor)):
-            cell, component, _, units = _primitive_setup(inst, signed_ac=signed_ac)
-            requirements.setdefault((cell, component), {}).update(units)
+            cell, component, _, units = _primitive_setup(
+                inst, signed_ac=signed_ac, vsin_pair=vsin_pair
+            )
+            if units:
+                requirements.setdefault((cell, component), {}).update(units)
     observed = parse_frame(frame)
     terms = ("PLUS", "MINUS")
     for (cell, component), units in requirements.items():
@@ -287,6 +351,7 @@ def _check_primitive_cdf(
             )
         ):
             raise ValueError("bench primitive AC phase default is not zero or absent")
+    return observed
 
 
 def plan_research_bench(
@@ -297,6 +362,7 @@ def plan_research_bench(
     expected_dut_plan_sha256: Digest,
     primitive_cdf_sha256: Digest | None = None,
     signed_ac_evidence_sha256: Digest | None = None,
+    signed_ac_vsin_pair: bool = False,
 ) -> ResearchBenchPlan:
     """Bind a supported bench to the DUT closure of the exact definition."""
     definition = ResearchCircuit.model_validate_json(definition.model_dump_json())
@@ -320,6 +386,7 @@ def plan_research_bench(
         bench=bench,
         primitive_cdf_sha256=primitive_cdf_sha256,
         signed_ac_evidence_sha256=signed_ac_evidence_sha256,
+        signed_ac_vsin_pair=signed_ac_vsin_pair,
     )
 
 
@@ -370,10 +437,16 @@ def render_research_bench(
     )
     declarative = plan.primitive_cdf_sha256 is not None
     signed_ac = plan.signed_ac_evidence_sha256 is not None
-    if plan.signed_ac_evidence_sha256 is not None:
-        _check_signed_ac_evidence(cdf_frames, plan)
     if plan.primitive_cdf_sha256 is not None:
-        _check_primitive_cdf(cdf_frames, plan.primitive_cdf_sha256, plan.bench, signed_ac=signed_ac)
+        cdf = _check_primitive_cdf(
+            cdf_frames,
+            plan.primitive_cdf_sha256,
+            plan.bench,
+            signed_ac=signed_ac,
+            vsin_pair=plan.signed_ac_vsin_pair,
+        )
+        if signed_ac:
+            _check_signed_ac_evidence(cdf_frames, plan, cdf)
     q = _quote
     library, bench = q(dut_plan.output_library), q(plan.bench.name)
     create = [
@@ -399,7 +472,9 @@ def render_research_bench(
             if declarative:
                 if not isinstance(device, (VoltageSource, Capacitor)):
                     raise ValueError("unsupported declarative bench primitive")
-                primitive, _, props, _ = _primitive_setup(device, signed_ac=signed_ac)
+                primitive, _, props, _ = _primitive_setup(
+                    device, signed_ac=signed_ac, vsin_pair=plan.signed_ac_vsin_pair
+                )
             else:
                 primitive, props = _PRIMITIVES[name]
             master = Master(library="analogLib", cell=primitive, view="symbol")
@@ -421,13 +496,15 @@ def render_research_bench(
         prop_checks = [f"m2Property(cv {q(name)} {q(key)} {q(v)})" for key, v in props.items()]
         reopen.extend(prop_checks)
         if signed_ac and "acm" in props:
-            no_phase = 'm2Require(dbFindProp(inst "acp")==nil)'
-            reopen.append(no_phase)
+            absent = ['m2Require(dbFindProp(inst "acp")==nil)']
+            if plan.signed_ac_vsin_pair and "sinephase" not in props:
+                absent.append('m2Require(dbFindProp(inst "sinephase")==nil)')
+            reopen.extend(absent)
             connection_checks.extend(prop_checks)
             connection_checks.extend(
                 (
                     f"inst=m2Require(car(setof(entry cv~>instances entry~>name=={q(name)})))",
-                    no_phase,
+                    *absent,
                 )
             )
     saved = f"RESEARCH_BENCH_SAVED|{expected_plan_sha256}|{plan.bench.name}"
@@ -474,7 +551,74 @@ def _spectre_scalar(value: str) -> Decimal:
         return scalar.scaleb(scale)
 
 
-def _check_signed_ac_evidence(cdf_frames: Mapping[str, bytes], plan: ResearchBenchPlan) -> None:
+def _vsin_netlist_options(negative: bool) -> dict[str, str]:
+    options = {
+        "type": "sine",
+        "dc": "0.5",
+        "mag": "-0.5" if negative else "0.5",
+        "ampl": "0.05",
+        "freq": "1000",
+    }
+    if negative:
+        options["sinephase"] = "180"
+    return options
+
+
+def _check_vsin_source_cdf(
+    devices: tuple[dict[str, object], ...],
+    source: SignedAcSourceObservation,
+    *,
+    negative: bool,
+) -> None:
+    matches = [
+        row
+        for row in devices
+        if (row["library"], row["cell"], row["instance"]) == ("analogLib", "vsin", source.instance)
+    ]
+    if len(matches) != 1:
+        raise ValueError("missing or ambiguous observed vsin instance CDF")
+    device = matches[0]
+    terminals = device["terminals"]
+    order = ("PLUS", "MINUS")
+    if (
+        not isinstance(terminals, tuple)
+        or len(terminals) != 2
+        or set(terminals) != set(order)
+        or device["spectre"] != (("base", "vsource", order), ("effective", "vsource", order))
+    ):
+        raise ValueError("observed vsin CDF terminal order or Spectre mapping mismatch")
+    rows = device["parameters"]
+    if not isinstance(rows, tuple):
+        raise ValueError("observed vsin CDF parameters missing")
+    parameters = {(row[0], row[1]): row for row in rows}
+    props = _vsin_oa_properties(negative)
+    phase_default = (None, "", "0")
+    for name in ("vdc", "acm", "va", "freq", "sinephase", "acp"):
+        base = parameters.get(("base", name))
+        effective = parameters.get(("effective", name))
+        if (
+            base is None
+            or effective is None
+            or not isinstance(base[2], str)
+            or not base[2]
+            or effective[2:4] != base[2:4]
+        ):
+            raise ValueError("observed vsin CDF parameter metadata missing or inconsistent")
+        value = effective[5]
+        if name in ("acp", "sinephase") and base[4] not in phase_default:
+            raise ValueError("observed vsin phase default is not zero or absent")
+        if name in props:
+            if not isinstance(value, str) or _spectre_scalar(value) != _spectre_scalar(props[name]):
+                raise ValueError("observed vsin effective CDF value disagrees with saved OA")
+        elif value not in phase_default:
+            raise ValueError("observed vsin phase disagrees with saved OA")
+
+
+def _check_signed_ac_evidence(
+    cdf_frames: Mapping[str, bytes],
+    plan: ResearchBenchPlan,
+    cdf: tuple[dict[str, object], ...],
+) -> None:
     pin = plan.signed_ac_evidence_sha256
     raw = cdf_frames.get(pin) if pin is not None else None
     if raw is None or len(raw) > 4096 or sha256(raw).hexdigest() != pin:
@@ -504,19 +648,37 @@ def _check_signed_ac_evidence(cdf_frames: Mapping[str, bytes], plan: ResearchBen
         or plus.minus in (plus.plus, minus.plus)
     ):
         raise ValueError("signed AC evidence requires opposite magnitudes at equal DC bias")
-    for source in evidence.sources:
+    for source, negative in ((plus, False), (minus, True)):
+        if plan.signed_ac_vsin_pair:
+            props: dict[str, str] = {
+                "vdc": source.dc_string,
+                "acm": source.acm_string,
+            }
+            props.update((source.sine_string_properties or {}).items())
+            if (
+                source.master != "analogLib/vsin/symbol"
+                or source.minus != "0"
+                or props != _vsin_oa_properties(negative)
+            ):
+                raise ValueError("signed AC evidence disagrees with the observed vsin pair")
+            _check_vsin_source_cdf(cdf, source, negative=negative)
+            options = _vsin_netlist_options(negative)
+        else:
+            if source.master != "analogLib/vdc/symbol" or source.sine_string_properties is not None:
+                raise ValueError("signed AC evidence requires analogLib/vdc/symbol")
+            options = {
+                "type": "dc",
+                "dc": str(dc),
+                "mag": str(_spectre_scalar(source.acm_string)),
+            }
         words = source.statement.split()
         if (
             " ".join(words[:4]) != f"{source.instance} ({source.plus} {source.minus}) vsource"
             or [row for row in top if row.partition(" ")[0] == source.instance] != [" ".join(words)]
             or not _declarative_options_match(
                 words[4:],
-                {
-                    "type": "dc",
-                    "dc": str(dc),
-                    "mag": str(_spectre_scalar(source.acm_string)),
-                },
-                allow_zero_phase=True,
+                options,
+                allow_zero_phase=not plan.signed_ac_vsin_pair,
             )
         ):
             raise ValueError("signed AC evidence disagrees with its observed Spectre statement")
@@ -532,6 +694,7 @@ def _declarative_top_level(
     root: Circuit,
     *,
     signed_ac: bool,
+    vsin_pair: bool,
 ) -> dict[str, tuple[str, dict[str, str]]]:
     expected = {}
     for inst in bench.instances:
@@ -542,7 +705,9 @@ def _declarative_top_level(
             connections = [inst.connections[key] for key in ("PLUS", "MINUS")]
             model, options = "vsource", {"type": "dc", "dc": inst.dc_v}
             if inst.ac_magnitude_v != "0" or inst.ac_phase_deg != "0":
-                if signed_ac:
+                if vsin_pair:
+                    options = _vsin_netlist_options(Decimal(inst.ac_phase_deg) == 180)
+                elif signed_ac:
                     options["mag"] = _signed_ac_magnitude(inst)
                 else:
                     options.update(mag=inst.ac_magnitude_v, phase=inst.ac_phase_deg)
@@ -595,6 +760,7 @@ def verify_research_bench_netlist(
     """Compare the exact bench devices, DUT body and registered fixed inputs."""
     plan = _pinned_bench(plan, dut_plan, expected_plan_sha256)
     conditions = BenchNetlistConditions.model_validate_json(conditions.model_dump_json())
+    _check_bench_conditions(plan, conditions)
     if canonical_digest(conditions) != expected_conditions_sha256:
         raise ValueError("bench conditions digest mismatch")
     if len(raw) > _BENCH_SIZE_LIMIT or sha256(raw).hexdigest() != expected_netlist_sha256:
@@ -645,7 +811,11 @@ def verify_research_bench_netlist(
     }
     signed_ac = plan.signed_ac_evidence_sha256 is not None
     typed_expected = (
-        _declarative_top_level(plan.bench, root, signed_ac=signed_ac) if declarative else {}
+        _declarative_top_level(
+            plan.bench, root, signed_ac=signed_ac, vsin_pair=plan.signed_ac_vsin_pair
+        )
+        if declarative
+        else {}
     )
     expected_names = typed_expected.keys() if declarative else legacy_expected.keys()
     remaining = []
@@ -672,7 +842,11 @@ def verify_research_bench_netlist(
         words = (match.group(1) or "").split() if match else []
         matches = (
             _declarative_options_match(
-                words, typed_options, allow_zero_phase=signed_ac and "mag" in typed_options
+                words,
+                typed_options,
+                allow_zero_phase=signed_ac
+                and not plan.signed_ac_vsin_pair
+                and "mag" in typed_options,
             )
             if declarative
             else set(words) == legacy_options and len(words) == len(legacy_options)
