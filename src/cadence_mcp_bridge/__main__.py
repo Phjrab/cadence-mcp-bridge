@@ -61,6 +61,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dedicated_server = operator_server.add_mutually_exclusive_group()
     dedicated_server.add_argument(
+        "--registered-research-generation", nargs=2, metavar=("FILE", "SHA256"),
+        help="Serve one host-registered research generation.",
+    )
+    dedicated_server.add_argument(
         "--fixed-research-analysis", nargs=2, metavar=("FILE", "SHA256"),
         help="Serve host-enrolled analyses of one verified saved revision.",
     )
@@ -80,6 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--retained-amp-pm0", nargs=2, metavar=("FILE", "SHA256"),
         help="Expose one host-pinned historical PM0 plan, outcome and saved observation.",
     )
+    generation = subparsers.add_parser(
+        "operator-research-generation", help="Use one host-registered research generation.",
+    )
+    generation.add_argument("--registration", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    generation_actions = generation.add_subparsers(dest="generation_action", required=True)
+    for action in ("plan", "apply", "status", "handoff"):
+        command = generation_actions.add_parser(action)
+        command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+        if action == "handoff":
+            command.add_argument("--output", type=Path, required=True)
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
     )
@@ -402,6 +416,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-research-generation":
+        from cadence_mcp_bridge.research_generation_adapter import run_registered_generation
+
+        return run_registered_generation(arguments)
     if arguments.command == "cmos-delay":
         from cadence_mcp_bridge.cmos_delay_adapters import cmos_delay_cli
 
@@ -1215,9 +1233,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     fixed_amp_pm0 = getattr(arguments, "fixed_amp_pm0", False)
     retained_device_op = getattr(arguments, "retained_device_op", False)
     fixed_research = getattr(arguments, "fixed_research_analysis", None)
+    registered_generation = getattr(arguments, "registered_research_generation", None)
     if not (
         retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op
-        or fixed_research
+        or fixed_research or registered_generation
     ):
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
@@ -1228,6 +1247,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 retained_device_op=retained_device_op,
                 fixed_research_analysis=(
                     (Path(fixed_research[0]), fixed_research[1]) if fixed_research else None
+                ),
+                registered_research_generation=(
+                    (Path(registered_generation[0]), registered_generation[1])
+                    if registered_generation else None
                 ),
                 retained_amp_comparison=(
                     (Path(retained_amp_comparison[0]), retained_amp_comparison[1])

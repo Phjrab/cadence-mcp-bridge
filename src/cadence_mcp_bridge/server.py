@@ -1597,8 +1597,12 @@ def create_default_server(
     fixed_amp_pm0: bool = False,
     retained_device_op: bool = False,
     fixed_research_analysis: tuple[Path, str] | None = None,
+    registered_research_generation: tuple[Path, str] | None = None,
 ) -> MCPServer:
-    dedicated = sum((fixed_amp_pm0, retained_device_op, fixed_research_analysis is not None))
+    dedicated = sum((
+        fixed_amp_pm0, retained_device_op, fixed_research_analysis is not None,
+        registered_research_generation is not None,
+    ))
     if dedicated and (
         not operator_mode or retained_amp_comparison or retained_amp_pm0
         or dedicated != 1
@@ -1612,6 +1616,13 @@ def create_default_server(
         )
     )
     if config.runtime_mode == "operator":
+        if registered_research_generation is not None:
+            from cadence_mcp_bridge.research_generation_adapter import (
+                create_research_generation_server,
+            )
+
+            return create_research_generation_server(config, *registered_research_generation)
+
         if fixed_research_analysis is not None:
             from cadence_mcp_bridge.fixed_research_analysis_server import (
                 create_fixed_research_analysis_server,
@@ -1690,6 +1701,7 @@ def run_stdio_server(
     fixed_amp_pm0: bool = False,
     retained_device_op: bool = False,
     fixed_research_analysis: tuple[Path, str] | None = None,
+    registered_research_generation: tuple[Path, str] | None = None,
 ) -> None:
     """Run locally over stdio; all application logging is directed to stderr."""
 
@@ -1700,4 +1712,5 @@ def run_stdio_server(
         fixed_amp_pm0=fixed_amp_pm0,
         retained_device_op=retained_device_op,
         fixed_research_analysis=fixed_research_analysis,
+        registered_research_generation=registered_research_generation,
     ).run("stdio")
