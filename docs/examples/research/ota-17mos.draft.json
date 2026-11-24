@@ -6,15 +6,76 @@
     "repository_record": "https://hdl.handle.net/11117/11332",
     "figure": "2-12",
     "table": "7",
-    "values_source": "user-provided secondary notes",
-    "primary_circuit_verified": false
+    "values_source": "ITESO Fig. 2-12 and Table 7, visually checked",
+    "primary_circuit_verified": true,
+    "pdf_sha256": "a094128c8ec9ea1b58d1a90176c778e971f91555a3113be0eec134e04bb0fa25",
+    "figure_printed_page": 47,
+    "figure_pdf_page": 57,
+    "table_printed_page": 48,
+    "table_pdf_page": 58
   },
   "design": {
     "name": "self_cascode_ota_17mos",
     "symbol": null,
     "testbench": null,
-    "internal_nets": null,
-    "hierarchy_connections": null,
+    "internal_nets": [
+      {
+        "name": "Vx",
+        "kind": "figure_label"
+      },
+      {
+        "name": "Vy",
+        "kind": "figure_label"
+      },
+      {
+        "name": "n_bias",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_bias_ref_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_inn_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_inp_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_sink_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_stage1_out",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "n_tail_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "p_load_out_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "p_load_ref_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      },
+      {
+        "name": "p_stage2_stack",
+        "kind": "assigned_to_visible_unlabelled_wire"
+      }
+    ],
+    "hierarchy_connections": {
+      "paper": "one flat OTA DUT; inp/inn/out and vdd/vss are visible; no child instance in Fig. 2-12",
+      "port_aliases": {
+        "VDD": "vdd",
+        "VSS": "vss"
+      },
+      "testbench_binding": "separate proposal; confirm pin order and coordinates before generation"
+    },
     "pins_candidates": [
       {
         "name": "VDD",
@@ -44,10 +105,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_inp_stack",
+          "G": "inp",
+          "S": "Vx",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 1.5,
@@ -57,8 +118,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "input_pair_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "NM1",
@@ -66,10 +128,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_inn_stack",
+          "G": "inn",
+          "S": "Vx",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 1.5,
@@ -79,8 +141,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "input_pair_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "NM8",
@@ -88,10 +151,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "Vy",
+          "G": "inp",
+          "S": "n_inp_stack",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 15,
@@ -101,8 +164,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "input_pair_drain_side_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       },
       {
         "name": "NM9",
@@ -110,10 +174,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_stage1_out",
+          "G": "inn",
+          "S": "n_inn_stack",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 15,
@@ -123,8 +187,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "input_pair_drain_side_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       },
       {
         "name": "PM2",
@@ -132,10 +197,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "p_load_ref_stack",
+          "G": "Vy",
+          "S": "VDD",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 3,
@@ -145,8 +210,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "load_mirror_reference_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "PM3",
@@ -154,10 +220,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "p_load_out_stack",
+          "G": "Vy",
+          "S": "VDD",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 3,
@@ -167,8 +233,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "load_mirror_output_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "PM8",
@@ -176,10 +243,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_bias",
+          "G": "n_bias",
+          "S": "VDD",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 3,
@@ -189,8 +256,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "diode_connected_bias_feed",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "diode_on_check_model"
       },
       {
         "name": "PM4",
@@ -198,10 +266,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "Vy",
+          "G": "Vy",
+          "S": "p_load_ref_stack",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 30,
@@ -211,8 +279,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "load_mirror_reference_cascode_diode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "diode_on_check_model"
       },
       {
         "name": "PM5",
@@ -220,10 +289,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_stage1_out",
+          "G": "Vy",
+          "S": "p_load_out_stack",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 30,
@@ -233,8 +302,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "load_mirror_output_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       },
       {
         "name": "PM7",
@@ -242,10 +312,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "p_stage2_stack",
+          "G": "n_stage1_out",
+          "S": "VDD",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 10,
@@ -255,8 +325,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "second_stage_pmos_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "PM6",
@@ -264,10 +335,10 @@
         "device_kind_candidate": "pmos",
         "pdk_mapping_key": "pmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "out",
+          "G": "n_stage1_out",
+          "S": "p_stage2_stack",
+          "B": "VDD"
         },
         "dimensions_candidate": {
           "W": 16,
@@ -277,8 +348,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "second_stage_pmos_drain_side_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       },
       {
         "name": "NM2",
@@ -286,10 +358,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_bias_ref_stack",
+          "G": "n_bias",
+          "S": "VSS",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 1,
@@ -299,8 +371,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "bias_reference_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "NM3",
@@ -308,10 +381,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_tail_stack",
+          "G": "n_bias",
+          "S": "VSS",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 1,
@@ -321,8 +394,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "tail_mirror_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "NM10",
@@ -330,10 +404,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_sink_stack",
+          "G": "n_bias",
+          "S": "VSS",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 1,
@@ -343,8 +417,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "output_sink_mirror_source_side",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "linear_candidate_when_on_check_headroom"
       },
       {
         "name": "NM6",
@@ -352,10 +427,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "n_bias",
+          "G": "n_bias",
+          "S": "n_bias_ref_stack",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 10,
@@ -365,8 +440,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "bias_reference_cascode_diode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "diode_on_check_model"
       },
       {
         "name": "NM7",
@@ -374,10 +450,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "Vx",
+          "G": "n_bias",
+          "S": "n_tail_stack",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 10,
@@ -387,8 +463,9 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "tail_mirror_drain_side_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       },
       {
         "name": "NM11",
@@ -396,10 +473,10 @@
         "device_kind_candidate": "nmos",
         "pdk_mapping_key": "nmos",
         "terminals": {
-          "D": null,
-          "G": null,
-          "S": null,
-          "B": null
+          "D": "out",
+          "G": "n_bias",
+          "S": "n_sink_stack",
+          "B": "VSS"
         },
         "dimensions_candidate": {
           "W": 10,
@@ -409,12 +486,19 @@
           "fingers": null
         },
         "placement": null,
-        "role": null,
-        "verification": "unverified"
+        "role": "output_sink_drain_side_cascode",
+        "verification": "paper_trace_only",
+        "intended_region_hypothesis": "saturation_candidate_when_on_check_headroom"
       }
     ],
     "wiring": null,
-    "pdk_target": "GPDK090"
+    "pdk_target": "GPDK090",
+    "terminal_trace": {
+      "wire_membership": "visually traced from Fig. 2-12",
+      "D_S_identity": "inferred from symbol orientation, arrows and rails; confirm master terminal mapping",
+      "B": "visible fourth terminal tied to rail, confirm target master and body policy",
+      "role_and_region": "topology-based hypotheses; not measured"
+    }
   },
   "pdk_mapping": {
     "model_section": null,
@@ -442,7 +526,13 @@
           "allowed_ranges": null
         },
         "model": null,
-        "source_evidence": null
+        "source_evidence": null,
+        "prior_non_ota_observation": {
+          "master_candidate": "gpdk090/nmos1v/symbol",
+          "model_candidate": "gpdk090_nmos1v",
+          "observed_cells_only": "Source9 inverter and previously qualified AMP PM0 for PMOS",
+          "constraint": "m=fingers=1 in the cited inverter. OTA width/length/fingers and PM6 m=6 remain unverified"
+        }
       },
       "pmos": {
         "library": null,
@@ -465,7 +555,13 @@
           "allowed_ranges": null
         },
         "model": null,
-        "source_evidence": null
+        "source_evidence": null,
+        "prior_non_ota_observation": {
+          "master_candidate": "gpdk090/pmos1v/symbol",
+          "model_candidate": "gpdk090_pmos1v",
+          "observed_cells_only": "Source9 inverter and previously qualified AMP PM0 for PMOS",
+          "constraint": "m=fingers=1 in the cited inverter. OTA width/length/fingers and PM6 m=6 remain unverified"
+        }
       }
     }
   },
@@ -515,17 +611,32 @@
       "differential_gain": {
         "output": "out",
         "input_positive": "inp",
-        "input_negative": "inn"
+        "input_negative": "inn",
+        "expression": "V(out)/(V(inp)-V(inn))"
       },
-      "supply_sources": null,
+      "supply_sources": {
+        "proposed_supply": "VDD relative to VSS; confirm actual voltage and current selectors",
+        "power_sign": "delivered power = -(VDD-VSS)*I_into_positive_terminal"
+      },
       "loop_gain_fixture": null
     },
-    "targets": null
+    "targets": null,
+    "assumption_status": "proposed; no GPDK090 OTA run or accepted target"
   },
   "reference_only": {
     "gain_dB": 63.91,
     "unity_gain_Hz": 20210000,
     "whole_modulator_power_uW": 38.8,
-    "circuit_values_verified": false
+    "circuit_values_verified": true,
+    "scope": "paper 45 nm simulation only; power is whole modulator",
+    "gain_marker_Hz": 933.254,
+    "plot_unity_Hz": 20211500,
+    "design_estimate_two_stage_gain_dB": 60,
+    "first_stage_130nm_example": {
+      "VDD_V": 1.2,
+      "gain_dB": 40,
+      "GBW_Hz": 10000000,
+      "load_pF": 1
+    }
   }
 }
