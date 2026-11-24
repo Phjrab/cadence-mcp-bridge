@@ -116,7 +116,9 @@ def test_cli_result_can_be_passed_to_existing_validator(tmp_path: Path) -> None:
     assert request.read_bytes() == request_bytes
 
 
-@pytest.mark.parametrize("problem", ["fingerprint", "evidence", "body", "replace", "pin", "type"])
+@pytest.mark.parametrize(
+    "problem", ["fingerprint", "evidence", "body", "replace", "pin", "pin_net", "type"]
+)
 def test_compile_rejects_incomplete_or_conflicting_port(problem: str) -> None:
     draft, port = study(2)
     device = port["devices"][0]
@@ -130,6 +132,8 @@ def test_compile_rejects_incomplete_or_conflicting_port(problem: str) -> None:
         device["resolved_terminals"]["D"] = "vss"
     elif problem == "pin":
         port["ports"].pop()
+    elif problem == "pin_net":
+        port["ports"][0]["net"] = port["ports"][1]["net"]
     else:
         device["kind"] = "pmos"
     with pytest.raises(ValueError):

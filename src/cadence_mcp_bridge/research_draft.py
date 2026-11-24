@@ -86,6 +86,9 @@ def compile_research_draft(draft_bytes: bytes, port_bytes: bytes) -> ResearchCir
     pin_names = [pin["name"] for pin in pins]
     if len(set(pin_names)) != len(pin_names) or set(pin_names) != {p.name for p in port.ports}:
         raise ValueError("source and target DUT pins differ")
+    source_pin_nets = {pin["name"]: pin.get("net", pin["name"]) for pin in pins}
+    if any(source_pin_nets[p.name] != p.net for p in port.ports):
+        raise ValueError("target DUT pin is connected to a different source net")
     rows = design.get("devices")
     if not isinstance(rows, list) or len(rows) != len(port.devices):
         raise ValueError("source and target device populations differ")
