@@ -1150,7 +1150,76 @@ def test_amplifier_fresh_width_compare_retains_registered_evidence(
             assert output(capsys)["status"] == "CANDIDATE_WORKFLOW_REJECTED"
             assert not wrong_tech.exists()
             assert forwarded == [copy_evidence]
-        del request["owned_copy"]
+        old_copy = request.pop("owned_copy")
+
+        source_files = (
+            "writer_request", "writer_original", "writer_replay", "writer_receipt",
+            "preflight", "export_receipt", "export_custody",
+        )
+        source_refs = {
+            field: pin(tmp_path / f"{field}.json", f'{{"artifact":"{field}"}}\n'.encode())
+            for field in source_files
+        }
+        request["saved_source"] = {
+            **source_refs,
+            "runtime_manifest_sha256": "6" * 64,
+            "runtime_registration_sha256": "7" * 64,
+        }
+        files["policy_steps"] = steps = [
+            {
+                field: pin(
+                    tmp_path / f"v{version}-{field}.json",
+                    f'{{"version":{version},"artifact":"{field}"}}\n'.encode(),
+                )
+                for field in ("apply_receipt", "policy_record")
+            }
+            for version in (9, 10)
+        ]
+        forwarded_5656 = []
+
+        def record_5656(*args, saved_source, policy_successor, **kwargs):
+            forwarded_5656.append((saved_source, policy_successor))
+            return pair  # Adapter plumbing only. C7 tests the producer conditions.
+
+        with monkeypatch.context() as adapter:
+            adapter.setattr(
+                candidate_execution, "associate_fresh_amplifier_width_pair", record_5656
+            )
+            v10_output = tmp_path / "v10-output.json"
+            assert compare("saved-source", v10_output) == 0
+            v10_summary = output(capsys)
+            assert load_retained_amp_comparison(v10_output, v10_summary["file_sha256"]).dc == (
+                retained.dc
+            )
+            (source_evidence, policy), = forwarded_5656
+            assert source_evidence.runtime_manifest_sha256 == "6" * 64
+            assert source_evidence.runtime_registration_sha256 == "7" * 64
+            for field, ref in source_refs.items():
+                actual = (
+                    getattr(source_evidence.writer, field.removeprefix("writer_"))
+                    if field in {"writer_original", "writer_replay", "writer_receipt"}
+                    else getattr(source_evidence, field)
+                )
+                assert actual == originals[Path(ref["path"])]
+            for step, refs in zip(policy.policy_steps, steps, strict=True):
+                for field, ref in refs.items():
+                    assert getattr(step, field) == originals[Path(ref["path"])]
+                    assert getattr(step, f"{field}_sha256") == ref["sha256"]
+
+            request["owned_copy"] = old_copy
+            assert compare("mixed-source", tmp_path / "mixed.json") == 2
+            del request["owned_copy"]
+            bad_ref = source_refs["export_custody"]
+            assert compare("custody-collision", Path(bad_ref["path"])) == 2
+            good_pin = bad_ref["sha256"]
+            bad_ref["sha256"] = "0" * 64
+            assert compare("wrong-custody-pin", tmp_path / "bad-custody.json") == 2
+            bad_ref["sha256"] = good_pin
+            request.pop("saved_source")
+            assert compare("v10-without-writer", tmp_path / "missing-writer.json") == 2
+            assert len(forwarded_5656) == 1
+            capsys.readouterr()
+        del files["policy_steps"]
 
     sidecar = tmp_path / "dc-candidate.sqlite3-wal"
     assert compare("sidecar-collision", sidecar) == 2

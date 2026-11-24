@@ -132,12 +132,18 @@ class _FreshAmplifierWidthSide(VariableModel):
     candidate: _AmplifierWidthChild | None = None
 
 
+class _AmplifierRetainedPolicyFiles(VariableModel):
+    apply_receipt: _PinnedComparisonFile
+    policy_record: _PinnedComparisonFile
+
+
 class _FreshAmplifierStorageSuccessorFiles(VariableModel):
     baseline_profile: _PinnedComparisonFile
     candidate_profile: _PinnedComparisonFile
     v7_apply_receipt: _PinnedComparisonFile
     successor_apply_receipt: _PinnedComparisonFile
     successor_policy_record: _PinnedComparisonFile
+    policy_steps: Annotated[tuple[_AmplifierRetainedPolicyFiles, ...], Field(max_length=2)] = ()
 
 
 class _FreshAmplifierOwnedCopyFiles(VariableModel):
@@ -149,11 +155,40 @@ class _FreshAmplifierOwnedCopyFiles(VariableModel):
     registration_receipt: _PinnedComparisonFile
 
 
+class _SavedAmplifier5656Files(VariableModel):
+    writer_request: _PinnedComparisonFile
+    writer_original: _PinnedComparisonFile
+    writer_replay: _PinnedComparisonFile
+    writer_receipt: _PinnedComparisonFile
+    preflight: _PinnedComparisonFile
+    export_receipt: _PinnedComparisonFile
+    export_custody: _PinnedComparisonFile
+    runtime_manifest_sha256: Digest
+    runtime_registration_sha256: Digest
+
+    def files(self) -> tuple[_PinnedComparisonFile, ...]:
+        return (
+            self.writer_request, self.writer_original, self.writer_replay, self.writer_receipt,
+            self.preflight, self.export_receipt, self.export_custody,
+        )
+
+
 class _FreshAmplifierWidthComparisonRequest(_AmplifierWidthComparisonEvidence):
     dc: _FreshAmplifierWidthSide
     ac: _FreshAmplifierWidthSide
     policy_successor: _FreshAmplifierStorageSuccessorFiles | None = None
     owned_copy: _FreshAmplifierOwnedCopyFiles | None = None
+    saved_source: _SavedAmplifier5656Files | None = None
+
+    @model_validator(mode="after")
+    def comparison_scope(self) -> _FreshAmplifierWidthComparisonRequest:
+        steps = self.policy_successor.policy_steps if self.policy_successor is not None else ()
+        if self.saved_source is None:
+            if steps:
+                raise ValueError("Extended policy steps require saved 5656 source evidence")
+        elif self.owned_copy is not None or len(steps) != 2:
+            raise ValueError("Saved 5656 source requires the v9/v10 steps and its own export proof")
+        return self
 
 
 class _SavedWidthBiasSide(VariableModel):
@@ -919,11 +954,14 @@ def _amplifier_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
 
 def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, Any]:
     from cadence_mcp_bridge.candidate_execution import (
+        AmplifierRetainedPolicyStep,
         FreshAmplifierOperation,
         FreshAmplifierOwnedCopyEvidence,
         FreshAmplifierStorageSuccessorEvidence,
         FreshAmplifierWidthAnalysis,
         FreshAmplifierWidthPair,
+        SavedAmplifier5656Evidence,
+        VerifiedAmplifierCopyChangeEvidence,
         associate_fresh_amplifier_width_pair,
     )
     from cadence_mcp_bridge.parameter_changes import ChangePlan, ChangeReadback
@@ -950,6 +988,13 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
                 successor.successor_policy_record,
             )
         )
+        for step in successor.policy_steps:
+            reserved.update(
+                _local_path(ref.path) for ref in (step.apply_receipt, step.policy_record)
+            )
+    source = request.saved_source
+    if source is not None:
+        reserved.update(_local_path(ref.path) for ref in source.files())
     owned_copy = request.owned_copy
     if owned_copy is not None:
         reserved.update(
@@ -974,6 +1019,34 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
         successor_apply_receipt_sha256=successor.successor_apply_receipt.sha256,
         successor_policy_record=_comparison_document(successor.successor_policy_record),
         successor_policy_record_sha256=successor.successor_policy_record.sha256,
+        policy_steps=tuple(
+            AmplifierRetainedPolicyStep(
+                apply_receipt=_comparison_document(step.apply_receipt),
+                apply_receipt_sha256=step.apply_receipt.sha256,
+                policy_record=_comparison_document(step.policy_record),
+                policy_record_sha256=step.policy_record.sha256,
+            )
+            for step in successor.policy_steps
+        ),
+    )
+    saved_source = None if source is None else SavedAmplifier5656Evidence(
+        writer_request=_comparison_document(source.writer_request),
+        writer_request_sha256=source.writer_request.sha256,
+        writer=VerifiedAmplifierCopyChangeEvidence(
+            original=_comparison_document(source.writer_original),
+            original_sha256=source.writer_original.sha256,
+            replay=_comparison_document(source.writer_replay),
+            replay_sha256=source.writer_replay.sha256,
+            receipt=_comparison_document(source.writer_receipt),
+            receipt_sha256=source.writer_receipt.sha256,
+        ),
+        preflight=_comparison_document(source.preflight),
+        export_receipt=_comparison_document(source.export_receipt),
+        export_receipt_sha256=source.export_receipt.sha256,
+        export_custody=_comparison_document(source.export_custody),
+        export_custody_sha256=source.export_custody.sha256,
+        runtime_manifest_sha256=source.runtime_manifest_sha256,
+        runtime_registration_sha256=source.runtime_registration_sha256,
     )
     copy_evidence = None if owned_copy is None else FreshAmplifierOwnedCopyEvidence(
         baseline_ade_state=owned_copy.baseline_ade_state,
@@ -1012,6 +1085,7 @@ def _amplifier_fresh_width_compare(arguments: argparse.Namespace) -> dict[str, A
         ),
         policy_successor=policy_evidence,
         owned_copy=copy_evidence,
+        saved_source=saved_source,
     )
     deltas = {}
     for row in (pair.dc, pair.ac):
