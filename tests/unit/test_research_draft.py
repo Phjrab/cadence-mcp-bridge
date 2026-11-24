@@ -138,3 +138,19 @@ def test_compile_rejects_incomplete_or_conflicting_port(problem: str) -> None:
         device["kind"] = "pmos"
     with pytest.raises(ValueError):
         compile_research_draft(draft, json.dumps(port).encode())
+
+
+@pytest.mark.parametrize(
+    ("role", "wrong_direction"), [("single_output", "input"), ("input", "output")]
+)
+def test_draft_preserves_declared_signal_direction(role: str, wrong_direction: str) -> None:
+    raw, port = study(2)
+    source = json.loads(raw)
+    signal = source["design"]["pins_candidates"][0]
+    signal["role"] = role
+    raw = json.dumps(source).encode()
+    port["draft_sha256"] = sha256(raw).hexdigest()
+    pin = next(p for p in port["ports"] if p["name"] == signal["name"])
+    pin["direction"] = wrong_direction
+    with pytest.raises(ValueError, match="pin direction conflicts"):
+        compile_research_draft(raw, json.dumps(port).encode())
