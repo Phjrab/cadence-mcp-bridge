@@ -51,6 +51,11 @@ def test_partial_projection_keeps_failed_power_empty_and_reports_measured_gain()
     document.deltas["dc"]["absolute_delta"] = 0.0
     with pytest.raises(ValueError, match="delta mismatch"):
         adapter._partial_projection(document, _PIN)
+    document.deltas["dc"]["absolute_delta"] = None
+    gain.status, gain.value = "NOT_RUN", None
+    document.deltas["ac"] = {"absolute_delta": None, "reason": "measurement_unavailable"}
+    pending = adapter._partial_projection(document, _PIN)
+    assert pending.ac.candidate_status == "NOT_RUN" and pending.ac.absolute_delta is None
 
 
 @pytest.fixture

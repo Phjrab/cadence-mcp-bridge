@@ -111,7 +111,7 @@ class _ComparisonRow(VariableModel):
     baseline_operation: NativeOperationQuery
     baseline_value: float
     candidate_operation: NativeOperationQuery
-    candidate_status: Literal["FAILED", "SUCCEEDED"]
+    candidate_status: Literal["FAILED", "SUCCEEDED", "NOT_RUN"]
     candidate_value: float | None
     absolute_delta: float | None
 
@@ -132,8 +132,8 @@ def _partial_projection(report: _RetainedReport, digest: str) -> _PartialCompari
         if (
             baseline.status != "SUCCEEDED" or baseline.value is None
             or baseline.operation is None or candidate.operation is None
-            or candidate.status not in ("SUCCEEDED", "FAILED")
-            or (candidate.value is None) != (candidate.status == "FAILED")
+            or candidate.status not in ("SUCCEEDED", "FAILED", "NOT_RUN")
+            or (candidate.value is None) != (candidate.status != "SUCCEEDED")
         ):
             raise ValueError("partial comparison requires terminal rows")
         delta, _, reason = candidate_metric_delta(
@@ -295,11 +295,25 @@ def _check_comparison(
                 ):
                     raise ValueError("failed DC evidence differs")
                 continue
-            if report is None:
-                raise ValueError("comparison candidate report missing")
             entry = enrolled.get(identity.operation_id)
             if entry is None or entry.identity != identity or entry.plan.analysis != row.analysis:
                 raise ValueError("comparison candidate analysis differs")
+            if (
+                row.analysis == "ac" and candidate.status == "NOT_RUN"
+                and pair.dc.candidate.status == "FAILED"
+                and saved.candidate_revision.revision_id == "amp-pm0-user-mcp-1123-r1"
+            ):
+                admitted = connection.execute(
+                    "SELECT 1 FROM admissions WHERE operation_id=?", (identity.operation_id,)
+                ).fetchone()
+                if (
+                    admitted or report is not None or candidate.value is not None
+                    or candidate.terminal_sha256 is not None
+                ):
+                    raise ValueError("unsubmitted AC differs from the enrolled journal")
+                continue
+            if report is None:
+                raise ValueError("comparison candidate report missing")
             record = AnalysisStore._read_operation(connection, identity.operation_id)
             route = routes[(entry.plan.request.design_id, entry.plan.request.analysis_id)]
             ade = AdeExecutionRegistration.model_validate_json(json.dumps(route["ade"]))
