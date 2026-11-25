@@ -23,6 +23,7 @@ from cadence_mcp_bridge.parameter_changes import (
     RegisteredMosQualification,
     RegisteredMosTarget,
     _checked,
+    _MosNetlistBinding,
     _width_options,
     mos_multiplicity_factors,
     plan_registered_mos_change,
@@ -404,7 +405,7 @@ class NativeMosEditCapture:
 
 
 def _verify_reopened_cdf(
-    raw: bytes, target: RegisteredMosTarget, properties: dict[MosProperty, MosPropertyValue]
+    raw: bytes, target: _MosNetlistBinding, properties: dict[MosProperty, MosPropertyValue]
 ) -> None:
     (device,) = parse_frame(raw)
     instance = target.instance

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from decimal import Decimal, localcontext
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 
 from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
@@ -503,8 +503,22 @@ class AmplifierPm0InputObservation(VariableModel):
     netlist: NetlistProjection
 
 
+class _MosNetlistBinding(Protocol):
+    @property
+    def instance(self) -> CandidateSourceTarget: ...
+
+    @property
+    def netlist_path(self) -> str: ...
+
+    @property
+    def netlist_model(self) -> str: ...
+
+    @property
+    def netlist_terminals(self) -> tuple[str, str, str, str]: ...
+
+
 def _width_options(
-    statements: list[str], path: str, *, registered: RegisteredMosTarget | None = None
+    statements: list[str], path: str, *, registered: _MosNetlistBinding | None = None
 ) -> tuple[list[str], dict[str, str]]:
     parts = path.split("/")
     if registered is not None and len(parts) == 1:
@@ -580,7 +594,7 @@ def _top_level_mos(statements: list[str], name: str) -> list[tuple[int, str]]:
 
 
 def _registered_mos_options(
-    statements: list[str], matches: list[tuple[int, str]], target: RegisteredMosTarget
+    statements: list[str], matches: list[tuple[int, str]], target: _MosNetlistBinding
 ) -> tuple[list[str], dict[str, str]]:
     if len(matches) != 1:
         raise ValueError("registered MOS instance is missing or ambiguous")
