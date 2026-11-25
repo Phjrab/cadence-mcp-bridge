@@ -389,6 +389,11 @@ def add_candidates_parser(subparsers: argparse._SubParsersAction[Any]) -> None:
     draft.add_argument("--draft", nargs=2, metavar=("FILE", "SHA256"), required=True)
     draft.add_argument("--port", nargs=2, metavar=("FILE", "SHA256"), required=True)
     draft.add_argument("--output", type=Path, required=True)
+    draft.add_argument(
+        "--static-preview",
+        action="store_true",
+        help="Export an offline, unplannable circuit preview with unresolved evidence.",
+    )
     raw_netlist = actions.add_parser(
         "verify-research-raw-netlist", help="Compare a local pinned DUT-only Spectre netlist."
     )
@@ -1736,11 +1741,19 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             definition = compile_research_draft(
                 _read_candidate_bytes(Path(draft_path), expected_sha256=draft_sha),
                 _read_candidate_bytes(Path(port_path), expected_sha256=port_sha),
+                static_preview=arguments.static_preview,
             )
-            request_bytes = ResearchCircuitRequest(definition=definition).model_dump_json().encode()
+            if arguments.static_preview:
+                if "static_preview" not in definition.unresolved:
+                    raise ValueError("Static preview lacks its unresolved marker")
+                status = "RESEARCH_CIRCUIT_STATIC_PREVIEW_EXPORTED"
+                payload = definition.model_dump_json()
+            else:
+                status = "RESEARCH_CIRCUIT_REQUEST_EXPORTED"
+                payload = ResearchCircuitRequest(definition=definition).model_dump_json()
             result = {
-                "status": "RESEARCH_CIRCUIT_REQUEST_EXPORTED",
-                "file_sha256": _export_research(output, request_bytes),
+                "status": status,
+                "file_sha256": _export_research(output, payload.encode()),
                 "definition_sha256": canonical_digest(definition),
                 "draft_sha256": draft_sha,
                 "port_sha256": port_sha,
