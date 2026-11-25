@@ -109,14 +109,12 @@ class MosEditValues(VariableModel):
 
 
 class MosCdfWriteField(VariableModel):
-    param_type: Literal["string", "int"]
+    param_type: Literal["string"]
     minimum: ObservedLiteral | None
     maximum: ObservedLiteral | None
     callback_present: bool
 
     def check_value(self, name: MosSetParameter, value: ChangeValue) -> None:
-        if self.param_type == "int" and name != "m":
-            raise ValueError("integer storage is restricted to the multiplier")
         for edge, upper in ((self.minimum, False), (self.maximum, True)):
             if edge is None:
                 continue

@@ -683,11 +683,9 @@ def test_native_property_rows_are_observed_and_complete() -> None:
         guest_source.read_properties(raw.replace(b"fw|", b"w|"))
 
 
-@pytest.mark.parametrize(
-    ("master", "count_storage"), [("nmos1v", None), ("pmos1v", "int"), ("pmos1v", "string")]
-)
+@pytest.mark.parametrize(("master", "set_multiplier"), [("nmos1v", False), ("pmos1v", True)])
 def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
-    master, count_storage
+    master, set_multiplier
 ) -> None:
     base, child, _, _, _ = _fixture(master)
     model = f"gpdk090_{master}"
@@ -697,12 +695,11 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
     before["model"] = before["model"].model_copy(update={"oa_value": model, "cdf_value": model})
     after = before.copy()
     replacements = {"w": "16u", "fw": "16u", "l": "1u", "as": "4p"}
-    if count_storage:
+    if set_multiplier:
         replacements["m"] = "6"
     for name, value in replacements.items():
-        storage = count_storage if name == "m" else "string"
         after[name] = after[name].model_copy(
-            update={"oa_type": storage, "oa_value": value, "cdf_value": value}
+            update={"oa_type": "string", "oa_value": value, "cdf_value": value}
         )
 
     def netlist(properties):
@@ -727,7 +724,7 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
         MosOptionTransition(name="l", before="100n", after="1u"),
         MosOptionTransition(name="as", before="98f", after="4p"),
     ]
-    if count_storage:
+    if set_multiplier:
         options += [
             MosOptionTransition(name="m", before="(1)*(1)", after="(6)*(1)"),
             MosOptionTransition(name="simM", before="(1)*(1)", after="(6)*(1)"),
@@ -769,12 +766,12 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
         )
         for name in ("w", "fw", "l")
     }
-    if count_storage:
+    if set_multiplier:
         fields["m"] = MosCdfWriteField(
-            param_type=count_storage, minimum="1", maximum=None, callback_present=False
+            param_type="string", minimum=None, maximum=None, callback_present=True
         )
     frame = _cdf_frame(master, after, slot)
-    cal_slot = "CalPmos6" if count_storage else "CalNmos"
+    cal_slot = "CalPmos6" if set_multiplier else "CalNmos"
     cal_frame = _cdf_frame(master, after, cal_slot)
     cal_input = new.replace(f"{slot} (".encode("ascii"), f"{cal_slot} (".encode("ascii"))
     lines = ["M2_CDF_CONSTRAINTS_V1"]
@@ -825,7 +822,7 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
     requested = MosEditValues(
         w=ChangeValue(value="16000", unit="nm"),
         l=ChangeValue(value="1", unit="um"),
-        m=ChangeValue(value="6", unit="count") if count_storage else None,
+        m=ChangeValue(value="6", unit="count") if set_multiplier else None,
     )
     plan = plan_registered_mos_edit(route, child, requested)
     verify_explicit_set_evidence(route, constraints, witness_raw, cal_frame, cal_input)
@@ -888,7 +885,7 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
     )
     result = service.apply(service.identity)
     assert result.outcome == "VERIFIED" and result.effective_mos_options is not None
-    assert result.effective_mos_options["m"] == ("(6)*(1)" if count_storage else "(1)*(1)")
+    assert result.effective_mos_options["m"] == ("(6)*(1)" if set_multiplier else "(1)*(1)")
     assert service.lookup(service.identity).replayed and provider.dispatches == 1
     scope = {
         "plan": plan.model_dump(mode="json"),
@@ -918,9 +915,13 @@ def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
         < edit.index("dbSave(child)")
     )
     assert "dbDeletePropByName" not in mutation and "evalstring" not in edit
-    assert "@MUTATION@" not in edit and ("m" in omit) == bool(count_storage)
-    if count_storage:
-        assert ('("m" "int" 6)' if count_storage == "int" else '("m" "string" "6")') in mutation
+    assert "@MUTATION@" not in edit and ("m" in omit) == set_multiplier
+    if set_multiplier:
+        assert '("m" "string" "6")' in mutation
+        with pytest.raises(ValueError, match="registered_mos_reviewed_explicit_property"):
+            modified = deepcopy(scope)
+            modified["route_qualification"]["after"]["m"]["oa_type"] = "int"
+            guest_source.exact_route(modified)
         with pytest.raises(ValueError, match="explicitly requested"):
             plan_registered_mos_edit(route, child, requested.model_copy(update={"m": None}))
     with pytest.raises(ValueError, match="digest changed"):

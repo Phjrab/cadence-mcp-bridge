@@ -128,7 +128,7 @@ procedure(mosFoot(cv omit)
      if(term~>net then term~>net~>name else nil))) 'mosByName)
    sort(foreach(mapcar net cv~>nets net~>name) 'alphalessp)
    sort(figures 'alphalessp)) 0)))
-procedure(mosLiteralValue(key value)
+procedure(mosBoundValue(key value)
  if(member(key '("m" "fingers")) && fixp(value) then sprintf(nil "%d" value) else value))
 procedure(mosTuple(path inst)
  let((port cdf prop param raw value)
@@ -139,8 +139,8 @@ procedure(mosTuple(path inst)
   foreach(key '("w" "fw" "l" "m" "fingers" "as" "ad" "ps" "pd" "nf" "model" "dfm")
    prop=dbFindProp(inst key)
    param=cdfFindParamByName(cdf key)
-   raw=if(prop then mosLiteralValue(key prop~>value) else nil)
-   value=if(param then mosLiteralValue(key param~>value) else nil)
+   raw=if(prop then prop~>value else nil)
+   value=if(param then param~>value else nil)
    when(prop mosRequire(and(stringp(prop~>valueType) stringp(raw))))
    when(param mosRequire(and(stringp(param~>type) stringp(value)
                              (null(param~>units) || stringp(param~>units)))))
@@ -208,8 +208,8 @@ SET_EXPLICIT = r"""
   foreach(row @CDFWRITE@
    param=cdfFindParamByName(base car(row))
    mosRequire(and(param param~>paramType==cadr(row)
-    equal(mosLiteralValue(car(row) param~>minVal) nth(2 row))
-    equal(mosLiteralValue(car(row) param~>maxVal) nth(3 row))
+    equal(mosBoundValue(car(row) param~>minVal) nth(2 row))
+    equal(mosBoundValue(car(row) param~>maxVal) nth(3 row))
     equal(if(param~>callback then "present" else "absent") nth(4 row)))))
   foreach(row @WRITES@
    mosRequire(dbReplaceProp(inst car(row) cadr(row) caddr(row))))
@@ -405,8 +405,7 @@ def explicit_keys(route):
         spec = fields.get(key, {})
         storage = spec.get("param_type", "string")
         require(
-            (storage == "string" or (storage == "int" and key == "m"))
-            and new["oa_type"] == storage
+            storage == new["oa_type"] == "string"
             and new["oa_value"] == new["cdf_value"]
             and old["cdf_type"] == new["cdf_type"] == "instData"
             and old["cdf_units"] == new["cdf_units"]
@@ -439,9 +438,6 @@ def restoration_keys(route):
 def skill_token(value):
     if value is None:
         return "nil"
-    if type(value) is int:
-        require(1 <= value <= 999999, "skill_count")
-        return str(value)
     require(re.match(r"^[A-Za-z0-9_. +-]{1,128}\Z", value), "skill_tuple_literal")
     return '"' + value + '"'
 
@@ -480,7 +476,7 @@ def skill_mutation(route, master):
     for key in keys:
         row = route["after"][key]
         storage, value = row["oa_type"], row["oa_value"]
-        writes.append((key, storage, int(value) if storage == "int" else value))
+        writes.append((key, storage, value))
         spec = setter["fields"].get(key)
         if spec is not None:
             proof.append(
@@ -534,9 +530,9 @@ def skill_check(rows):
         " let((prop param)\n"
         "  prop=dbFindProp(inst car(row)) param=cdfFindParamByName(cdfGetInstCDF(inst) car(row))\n"
         "  mosRequire(equal(list(if(prop then prop~>valueType else nil)\n"
-        "     if(prop then mosLiteralValue(car(row) prop~>value) else nil)\n"
+        "     if(prop then prop~>value else nil)\n"
         "     if(param then param~>type else nil) if(param then param~>units else nil)\n"
-        "     if(param then mosLiteralValue(car(row) param~>value) else nil)) cdr(row)))))"
+        "     if(param then param~>value else nil)) cdr(row)))))"
     )
 
 
