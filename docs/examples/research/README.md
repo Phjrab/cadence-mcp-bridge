@@ -327,13 +327,15 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 후보 | 확인된 상태 |
 | --- | --- |
-| L 250 nm | 실제 등록을 읽은 개발 설치본에서 시작값 조회와 변경 계획을 확인했습니다. 실제 적용은 Cadence 시작 전 검사 코드 오류로 멈췄고, 같은 ID의 설치 stdio 조회는 `OUTCOME_UNKNOWN`을 반환했습니다. 추가 실행·치수 변경·측정은 0건입니다. 오류 수정은 로컬에서 검증했습니다. |
+| L 250 nm | 실제 등록을 읽은 개발 설치본에서 시작값 조회와 변경 계획을 확인했습니다. 실제 적용은 Cadence 시작 전 검사 코드 오류로 멈췄습니다. 설치 stdio와 실제 사용자 Codex에서 같은 ID를 조회해 `OUTCOME_UNKNOWN`을 확인했습니다. 관측 치수와 Netlist는 없으며 추가 실행·치수 변경·측정은 0건입니다. 오류 수정은 로컬에서 검증했습니다. |
 | L 200 nm | 같은 기준 회로의 새 사본에서 개발 설치본 `c2858c9`의 실제 MCP 적용이 `VERIFIED`를 반환했습니다. 요청, 저장 OA, 유효 CDF, 독립 재개방 및 실제 Spectre Netlist에서 L 200 nm가 일치했습니다. W/FW 120 nm와 `m=fingers=1`이 유지됐고, Spectre 접합값은 `as=ad=69.6f`, `ps=pd=1.16u`입니다. 새 연결에서 같은 작업 ID를 조회해 같은 결과를 받았으며 추가 실행은 0건입니다. 후보 측정은 대기 중입니다. |
 | PMOS W 3000 nm, L 100 nm | 별도 후보 준비 단계입니다. 편집·독립 재개방·Netlist·측정은 확인 대기입니다. |
 
 L200 편집 작업 ID는 `53cbd04e-0106-48c6-be9a-560622bce48f`, 실제 Netlist SHA-256은 `25c25e5a49f54932456bea607f4c02fcf18e97b19d2945b481814a8d7fee3610`입니다.
 
-아래 예시는 설치 MCP의 읽기 전용 호출입니다. 계획에 사용할 등록·기준 해시는 inspect에서, 재조회에 사용할 계획·범위 해시는 plan에서 받습니다. L250과 L200의 사용자 프로필 설정을 확인했으며, 실제 적용·동일 ID 재조회 증거는 개발 설치본의 MCP stdio에서 확보했습니다. 사용자 Codex 앱에서의 호출은 확인 대기입니다.
+아래는 L200 프로필의 읽기 전용 MCP 호출 예시입니다. 계획에 사용할 등록·기준 해시는 inspect에서, 재조회에 사용할 계획·범위 해시는 plan에서 받습니다. 실제 사용자 Codex에서 `cadence_lookup_registered_mos_sizing`으로 같은 작업 ID를 조회해 W 120 nm·L 200 nm의 `VERIFIED` 결과를 확인했습니다. 설치 MCP stdio의 응답과 일치했고 추가 적용·시뮬레이션·예약은 0건이었습니다.
+
+같은 Codex 프로필에서 inspect는 `DUT/MN`의 시작값 W 120 nm·L 100 nm와 등록 구간 L 200–250 nm를 반환했습니다. `0.2 um` 계획은 200 nm로 정규화됐고 기존 계획·범위 해시와 일치했습니다. compare는 L200 편집을 `VERIFIED`, DC 비교를 `NOT_RUN`으로 반환했습니다. 분석 ID·보고서·후보 측정값은 아직 없습니다. 등록 구간에서 실제 편집을 검증한 값은 L 200 nm입니다.
 
 ```text
 cadence_inspect_registered_mos_sizing({})
@@ -341,13 +343,18 @@ cadence_plan_registered_mos_sizing({"request": {
   "operation_id": "ENROLLED_L200_EDIT_UUID",
   "expected_enrollment_sha256": "ENROLLMENT_SHA256",
   "expected_baseline_sha256": "BASELINE_SHA256",
-  "values": {"l": {"value": "200", "unit": "nm"}}
+  "values": {"l": {"value": "0.2", "unit": "um"}}
 }})
 cadence_lookup_registered_mos_sizing({"request": {
   "operation_id": "ENROLLED_L200_EDIT_UUID",
   "expected_plan_sha256": "EDIT_PLAN_SHA256",
   "expected_scope_sha256": "EDIT_SCOPE_SHA256"
 }})
+cadence_compare_registered_mos_sizing({"request": {"edits": [{
+  "operation_id": "ENROLLED_L200_EDIT_UUID",
+  "expected_plan_sha256": "EDIT_PLAN_SHA256",
+  "expected_scope_sha256": "EDIT_SCOPE_SHA256"
+}]}})
 ```
 
 보존된 Source9 기준 DC0은 입력 0 V, 전원 1 V, 부하 1 pF, NN, 27 °C에서 출력 **0.9999258823 V**, 부호를 유지한 공급 전달 전력 **25.36609145 nW**였습니다. L200의 DC/OP·AC 측정값과 기준 대비 차이는 대기 중입니다. 기준값을 비교에 쓰려면 새 revision의 분석 조건과 reader가 일치하는지 확인합니다.
