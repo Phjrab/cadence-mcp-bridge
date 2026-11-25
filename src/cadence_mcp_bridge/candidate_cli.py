@@ -1738,23 +1738,22 @@ def candidates_cli(arguments: argparse.Namespace) -> int:
             port_path, port_sha = arguments.port
             source_paths = {_local_path(Path(p)) for p in (draft_path, port_path)}
             output = _output(arguments.output, source_paths)
-            definition = compile_research_draft(
-                _read_candidate_bytes(Path(draft_path), expected_sha256=draft_sha),
-                _read_candidate_bytes(Path(port_path), expected_sha256=port_sha),
-                static_preview=arguments.static_preview,
-            )
+            draft_raw = _read_candidate_bytes(Path(draft_path), expected_sha256=draft_sha)
+            port_raw = _read_candidate_bytes(Path(port_path), expected_sha256=port_sha)
             if arguments.static_preview:
-                if "static_preview" not in definition.unresolved:
-                    raise ValueError("Static preview lacks its unresolved marker")
+                preview = compile_research_draft(draft_raw, port_raw, static_preview=True)
                 status = "RESEARCH_CIRCUIT_STATIC_PREVIEW_EXPORTED"
-                payload = definition.model_dump_json()
+                payload = preview.model_dump_json()
+                definition_sha = canonical_digest(preview)
             else:
+                definition = compile_research_draft(draft_raw, port_raw)
                 status = "RESEARCH_CIRCUIT_REQUEST_EXPORTED"
                 payload = ResearchCircuitRequest(definition=definition).model_dump_json()
+                definition_sha = canonical_digest(definition)
             result = {
                 "status": status,
                 "file_sha256": _export_research(output, payload.encode()),
-                "definition_sha256": canonical_digest(definition),
+                "definition_sha256": definition_sha,
                 "draft_sha256": draft_sha,
                 "port_sha256": port_sha,
                 "execution_authorized": False,
