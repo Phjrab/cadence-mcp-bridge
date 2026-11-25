@@ -7,9 +7,9 @@ import shlex
 import time
 from importlib.resources import files
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
 from cadence_mcp_bridge import m2_cdf
@@ -80,6 +80,7 @@ class _Slot(VariableModel):
     owned_before_testbench_tree_sha256: Digest
     source_preservation_sha256: Digest
     native_safety_sha256: Digest
+    slot_manifest_sha256: Digest | None = None
 
 
 class _SizingEnrollment(VariableModel):
@@ -140,6 +141,14 @@ class _SizingScope(VariableModel):
     native_safety_sha256: Digest
     sizing_sha256: Digest
     valid_until_unix: Annotated[int, Field(gt=0)]
+    slot_manifest_sha256: Digest | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_exact_mode_slot(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.slot_manifest_sha256 is None:
+            del document["slot_manifest_sha256"]
+        return document
 
 
 class MosSizingRegistrationInfo(VariableModel):
@@ -417,6 +426,7 @@ class RegisteredMosSizing:
             native_safety_sha256=slot.native_safety_sha256,
             sizing_sha256=_sha(sizing),
             valid_until_unix=reg.valid_until_unix,
+            slot_manifest_sha256=slot.slot_manifest_sha256,
         )
         guest_contract.sizing_route(scope.model_dump(mode="json"))  # type: ignore[no-untyped-call]
         binding = RegisteredMosEditBinding(

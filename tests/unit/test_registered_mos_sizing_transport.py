@@ -16,8 +16,13 @@ from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
 from cadence_mcp_bridge import m2_cdf, registered_mos_edit_server, registered_mos_transport
 from cadence_mcp_bridge import registered_mos_sizing_transport as sizing
 from cadence_mcp_bridge.__main__ import main
+from cadence_mcp_bridge._mos_sizing_slot import (
+    sizing_scope_template_sha256,
+    verify_sizing_slot,
+)
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.errors import ConfigurationError
+from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
 from cadence_mcp_bridge.registered_mos_edit import NativeMosEditSave
 from cadence_mcp_bridge.server import create_default_server
 
@@ -45,6 +50,7 @@ def enrolled(tmp_path, monkeypatch):
     (directory / "cdf-constraints.private.txt").write_bytes(constraints)
     policy = route.model_dump(mode="json")
     policy["support"]["adapter_sha256"] = _sha(renderer)
+    policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
     policy["support"]["cdf_constraints_sha256"] = _sha(constraints)
     policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
     enrollment = _canonical(
@@ -125,6 +131,7 @@ def enrolled(tmp_path, monkeypatch):
         assert b'"250n"' in rendered and child_asset == hash_child
         assert _sha(rendered) == program["adapter_sha256"] != _sha(renderer)
         assert scope["route_qualification"]["support"]["adapter_sha256"] == _sha(renderer)
+        assert "slot_manifest_sha256" not in scope
         assert _sha(scope_raw) == argv[-2] == ack["scope_sha256"]
         assert scope["candidate_request"] == {"l": {"value": "250", "unit": "nm"}, "w": None}
         assert ack["owner"] == "C0" and ack["operation_id"] == binding.operation_id
@@ -242,6 +249,60 @@ async def test_enrolled_sizing_previews_then_dispatches_once_and_reads_after_res
         )
     assert phases == ["EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST"]
     assert {path: path.read_bytes() for path in slots.iterdir()} == after
+
+
+def test_host_envelope_matches_one_immutable_native_slot_for_two_lengths(enrolled):
+    context, candidate, directory, phases = enrolled
+    registration_path = context.binding.pmos_default_change_binding
+    original = json.loads(registration_path.read_bytes())
+
+    def packet(values):
+        service = sizing.selected_mos_sizing(context)
+        request = sizing.MosSizingCandidate.model_validate({**candidate, "values": values})
+        exact = service._service(request)
+        _, payload = exact._provider._prepare(exact._binding, "EDIT_SAVE", None)
+        guest = files("cadence_mcp_bridge").joinpath("_registered_mos_edit_phase.py").read_bytes()
+        envelope = json.loads(payload[len(guest) :])
+        scope = json.loads(base64.b64decode(envelope["scope_base64"], validate=True))
+        assets = base64.b64decode(envelope["sizing_base64"], validate=True)
+        return scope, assets
+
+    scope, _ = packet({"l": {"unit": "nm", "value": "250"}})
+    assert "slot_manifest_sha256" not in scope
+    template = render_mos_wl_skill("nmos1v", length_nm="250").replace(
+        b'"250n"', b'"@LENGTH_NM@"'
+    )
+    manifest = _canonical(
+        {
+            "schema_version": 1,
+            "owner": "C0",
+            "route": "registered_mos_sizing",
+            "operation_id": candidate["operation_id"],
+            "valid_until_unix": original["valid_until_unix"],
+            "scope_template_sha256": sizing_scope_template_sha256(scope),
+            "length_nm_min": "200",
+            "length_nm_max": "250",
+            "renderer_template_sha256": _sha(template),
+            "adapter_template": template.decode("ascii"),
+            "hash_child_sha256": original["hash_child_sha256"],
+        }
+    )
+    original["slots"][0]["slot_manifest_sha256"] = _sha(manifest)
+    updated = _canonical(original)
+    registration_path.write_bytes(updated)
+    context.binding.pmos_default_change_sha256 = _sha(updated)
+    candidate["expected_enrollment_sha256"] = _sha(updated)
+    scope200, assets200 = packet({"l": {"unit": "nm", "value": "200"}})
+    scope250, assets250 = packet({"l": {"unit": "um", "value": "0.25"}})
+    assert _sha(manifest) == scope200["slot_manifest_sha256"] == scope250["slot_manifest_sha256"]
+    assert scope200["subject"]["plan_sha256"] != scope250["subject"]["plan_sha256"]
+    assert assets200 != assets250
+    for scope, assets in ((scope200, assets200), (scope250, assets250)):
+        length = scope["candidate_request"]["l"]["value"]
+        assert verify_sizing_slot(manifest, scope, assets, time.time()) == length
+    with pytest.raises(ValueError):
+        verify_sizing_slot(manifest, scope250, assets200, time.time())
+    assert not phases and not (directory / "registered-mos-intent.private.json").exists()
 
 
 def test_sizing_cli_uses_same_enrollment_and_fails_closed(enrolled, capsys, tmp_path):
