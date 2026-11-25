@@ -20,6 +20,7 @@ from cadence_mcp_bridge.candidate_cli import (
 )
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
+from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.research_circuit import MosBlockHandoffPins, MosBlockRegistrationHandoff
 from cadence_mcp_bridge.research_generation_service import (
@@ -63,6 +64,23 @@ class RegisteredGenerationHandoff(VariableModel):
     execution_authorized: Literal[False] = False
 
 
+def _registered_context(config: BridgeConfig, path: Path) -> tuple[ExecutionContext, Path]:
+    context = select_context(config) if config.runtime_mode == "operator" else None
+    if context is None:
+        raise ValueError("a selected operator context is required")
+    directory = _local_path(path).parent
+    if any(
+        protected.resolve().is_relative_to(directory)
+        for protected in (
+            context.binding.analysis_journal,
+            context.binding.sweep_journal,
+            context.lock_path,
+        )
+    ):
+        raise ValueError("registered generation evidence directory collides with operator state")
+    return context, directory
+
+
 def _load(
     config: BridgeConfig,
     path: Path,
@@ -71,25 +89,11 @@ def _load(
     from cadence_mcp_bridge.research_generation_provider import registered_research_generation
 
     try:
-        context = select_context(config) if config.runtime_mode == "operator" else None
-        if context is None:
-            raise ValueError("a selected operator context is required")
+        context, directory = _registered_context(config, path)
         raw = read_candidate_document(path, expected_sha256=digest)
         binding = ResearchGenerationBinding.model_validate_json(
             json.dumps(json.loads(raw)["binding"])
         )
-        directory = path.resolve(strict=True).parent
-        if any(
-            protected.resolve().is_relative_to(directory)
-            for protected in (
-                context.binding.analysis_journal,
-                context.binding.sweep_journal,
-                context.lock_path,
-            )
-        ):
-            raise ValueError(
-                "registered generation evidence directory collides with operator state"
-            )
         return context, binding, registered_research_generation(context, raw, directory)
     except (OSError, KeyError, TypeError, ValueError, BridgeError):
         raise ConfigurationError("Registered research generation is unavailable") from None
@@ -199,14 +203,99 @@ def create_research_generation_server(config: BridgeConfig, path: Path, digest: 
     return server
 
 
+def _export_analysis_source(
+    arguments: argparse.Namespace,
+    registered: Path,
+    registration_sha: Digest,
+    request: ResearchGenerationQuery,
+) -> dict[str, str | bool]:
+    from cadence_mcp_bridge.research_generation_provider import (
+        registered_generation_analysis_source,
+    )
+
+    evidence = (
+        arguments.phase_record,
+        arguments.completion,
+        arguments.runtime_manifest,
+        arguments.runtime_registration,
+    )
+    settings = arguments.settings
+    if settings is None or arguments.context is None or any(item is None for item in evidence):
+        raise ValueError("analysis source export requires explicit operator settings and custody")
+    paths = [Path(item[0]) for item in evidence]
+    if any(
+        path.drive.startswith(("\\\\", "//"))
+        for path in (settings, registered, arguments.output, *paths)
+    ):
+        raise ValueError("analysis source export requires local files")
+    config = BridgeConfig(
+        runtime_mode="operator",
+        runtime_settings_path=settings,
+        runtime_context_id=arguments.context,
+    )
+    context, directory = _registered_context(config, registered)
+    protected = _reserved(settings, (context,))
+    protected.update(_local_path(path) for path in (*paths, Path(arguments.request[0])))
+    output = _output(arguments.output, protected)
+    if output.is_relative_to(directory):
+        raise ValueError("analysis source export must be outside the evidence directory")
+    phase, complete, manifest, compiled = (
+        read_candidate_document(Path(path), expected_sha256=sha) for path, sha in evidence
+    )
+    source = registered_generation_analysis_source(
+        context,
+        read_candidate_document(registered, expected_sha256=registration_sha),
+        directory,
+        request,
+        phase,
+        complete,
+        runtime_manifest=manifest,
+        runtime_registration=compiled,
+        expected_registration_file_sha256=registration_sha,
+        expected_phase_record_sha256=arguments.phase_record[1],
+        expected_completion_sha256=arguments.completion[1],
+    )
+    digest = _export_research(output, source.model_dump_json().encode())
+    return {
+        "status": "RESEARCH_GENERATION_ANALYSIS_SOURCE_EXPORTED",
+        "file_sha256": digest,
+        "execution_authorized": source.execution_authorized,
+    }
+
+
 def run_registered_generation(arguments: argparse.Namespace) -> int:
     try:
         registered_path, registered_digest = arguments.registration
         request_path, request_digest = arguments.request
         action = arguments.generation_action
+        if (
+            action == "handoff"
+            and arguments.analysis_source
+            and Path(request_path).drive.startswith(("\\\\", "//"))
+        ):
+            raise ValueError("analysis source export requires local files")
         request = ResearchGenerationQuery.model_validate_json(
             read_candidate_document(Path(request_path), expected_sha256=request_digest)
         )
+        if action == "handoff":
+            if arguments.analysis_source:
+                result = _export_analysis_source(
+                    arguments, Path(registered_path), registered_digest, request
+                )
+                print(json.dumps(result, sort_keys=True))
+                return 0
+            if any(
+                option is not None
+                for option in (
+                    arguments.settings,
+                    arguments.context,
+                    arguments.phase_record,
+                    arguments.completion,
+                    arguments.runtime_manifest,
+                    arguments.runtime_registration,
+                )
+            ):
+                raise ValueError("analysis source options require --analysis-source")
         config = BridgeConfig(runtime_mode="operator")
         context, binding, service = _load(config, Path(registered_path), registered_digest)
         if action == "plan":
@@ -227,7 +316,7 @@ def run_registered_generation(arguments: argparse.Namespace) -> int:
             digest = _export_research(arguments.output, handoff.model_dump_json().encode())
             result = _handoff_summary(request, handoff).model_dump(mode="json")
             result["file_sha256"] = digest
-    except (OSError, ValueError, BridgeError):
+    except (OSError, KeyError, TypeError, ValueError, BridgeError):
         print(json.dumps({"status": "RESEARCH_GENERATION_REJECTED"}))
         return 2
     print(json.dumps(result, sort_keys=True))
