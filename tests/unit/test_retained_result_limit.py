@@ -13,6 +13,7 @@ from cadence_mcp_bridge import _domain_migration as migration
 from cadence_mcp_bridge import _runner_bootstrap as installer
 from cadence_mcp_bridge import _shared_reservations as ledger
 from cadence_mcp_bridge import domain_provisioning
+from cadence_mcp_bridge.__main__ import build_parser
 from cadence_mcp_bridge.environments import load_environment
 
 
@@ -386,22 +387,25 @@ def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
         ledger.effective_policy(str(root), anchor)
 
 
-@pytest.mark.parametrize("version", [7, 8, 9, 10])
+@pytest.mark.parametrize("version", [7, 8, 9, 10, 11])
 def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch,
                                                       version):
-    root, value, _, _, permit, _ = retained_v7_domain
+    root, value, anchor, previous_operation, permit, old_receipt = retained_v7_domain
     for prior_version in range(7, version):
         previous = migration.retained_successor_plan(value, "b" * 64, prior_version)
         migration.apply_retained_successor(
             dict(plan=previous["plan"], expected_plan_sha256=previous["plan_sha256"],
                  operator_authority="SYNTHETIC PRIOR"), "b" * 64, prior_version,
         )
-        grant = dict(permit, grant_sha256=str(prior_version) * 64, max_attempts=2,
-                     max_reserved_bytes=256 * 1024**2, reserve_bytes=128 * 1024**2)
         next_count = ledger.RETAINED_SUCCESSORS[prior_version + 1][3]["count"]
         current_count = ledger.RETAINED_SUCCESSORS[prior_version][3]["count"]
-        for _ in range(next_count - current_count):
-            ledger.reserve(str(root), job(root), grant)
+        amounts = [128 * 1024**2] * (next_count - current_count)
+        if prior_version == 10:
+            amounts[-1] = 4 * 1024**2  # Retained v10 includes the separate 4 MiB retry.
+        grant = dict(permit, grant_sha256=f"{prior_version:x}" * 64,
+                     max_attempts=len(amounts), max_reserved_bytes=sum(amounts))
+        for amount in amounts:
+            ledger.reserve(str(root), job(root), dict(grant, reserve_bytes=amount))
         value["limits"]["result_reserved_bytes"] = ledger.RETAINED_SUCCESSORS[prior_version][2]
     plan_action = f"plan-result-limit-v{version}"
     apply_action = f"apply-result-limit-v{version}"
@@ -458,6 +462,42 @@ def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_pa
             "SYNTHETIC FIXTURE ONLY", **flags,
         )
     assert not (tmp_path / "bad-receipt.json").exists()
+    if version == 11:
+        assert result["result_ceiling_bytes"] == 18_183_356_416
+        assert result["reservation_cost"] == 0 and result["execution_authorized"] is False
+        assert ledger.lookup(str(root), previous_operation, permit) == old_receipt
+        assert ledger.read(str(root / ledger.LEDGER)) == ledger.RESULT_POLICY_V11_BASELINE
+        wire_plan = json.loads(plan_path.read_bytes())["plan"]
+        request = dict(plan=wire_plan, expected_plan_sha256=plan["plan_sha256"],
+                       operator_authority="SYNTHETIC FIXTURE ONLY")
+        after = snapshot(root)
+        replay = migration.apply_retained_successor(request, helper, 11)
+        assert replay == {k: v for k, v in result.items() if k != "remote_contact"} | {
+            "created": False,
+        }
+        assert snapshot(root) == after
+        prior = root / ledger.REGISTRY / ledger.RESULT_POLICY_V10_FILE
+        prior.rename(tmp_path / "unavailable-v10.json")
+        with pytest.raises(ValueError, match="retained_v11_predecessor"):
+            ledger.effective_policy(str(root), anchor)
+
+
+def test_v11_policy_identity_and_cli_action_choices():
+    proposal = {
+        "schema_version": 11,
+        "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V11",
+        "attempt_ceiling": 500,
+        "previous_policy_sha256": ledger.RESULT_POLICY_V10_SHA,
+        "baseline": ledger.RESULT_POLICY_V11_BASELINE,
+        "result_ceiling_bytes": ledger.RESULT_POLICY_V11_BYTES,
+    }
+    assert ledger.digest(ledger.canonical(proposal)) == ledger.RESULT_POLICY_V11_SHA
+    assert ledger.RESULT_POLICY_V11_BYTES - ledger.RESULT_POLICY_V10_BYTES == 13 * 1024**2
+    parser = build_parser()
+    for action in ("plan-result-limit-v11", "apply-result-limit-v11"):
+        with pytest.raises(SystemExit) as exc:
+            parser.parse_args(["domain", action, "--help"])
+        assert exc.value.code == 0
 
 
 def test_v8_successor_preserves_v7_replay_and_two_new_reservations(retained_v7_domain):

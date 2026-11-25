@@ -805,6 +805,8 @@ def retained_successor_snapshot(value, root, lock, version):
         controls.append(os.path.join(registry, accounting.RESULT_POLICY_V7_FILE))
     if version >= 10:
         controls.append(os.path.join(registry, accounting.RESULT_POLICY_V8_FILE))
+    if version >= 11:
+        controls.append(os.path.join(registry, accounting.RESULT_POLICY_V9_FILE))
     seal = os.path.join(registry, "legacy-seal.json")
     if os.path.lexists(seal):
         controls.append(seal)
@@ -995,6 +997,8 @@ def main():
         "apply-result-limit-v9",
         "plan-result-limit-v10",
         "apply-result-limit-v10",
+        "plan-result-limit-v11",
+        "apply-result-limit-v11",
     ):
         raise ValueError("fixed_existing_migration_command_required")
     if os.name != "posix":
@@ -1021,6 +1025,10 @@ def main():
         result = retained_successor_plan(data, assets, 10)
     elif sys.argv[1] == "apply-result-limit-v10":
         result = apply_retained_successor(data, assets, 10)
+    elif sys.argv[1] == "plan-result-limit-v11":
+        result = retained_successor_plan(data, assets, 11)
+    elif sys.argv[1] == "apply-result-limit-v11":
+        result = apply_retained_successor(data, assets, 11)
     elif sys.argv[1] in ("inventory-existing", "inventory-legacy-seal"):
         result = plan(data, assets, sys.argv[1] == "inventory-legacy-seal")
     else:

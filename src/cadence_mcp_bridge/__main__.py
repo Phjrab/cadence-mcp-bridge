@@ -187,6 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
             "plan-legacy-seal", "plan-result-limit-v6",
             "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
             "plan-result-limit-v10",
+            "plan-result-limit-v11",
         ],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
@@ -219,6 +220,7 @@ def build_parser() -> argparse.ArgumentParser:
             "seal-existing", "apply-result-limit-v6",
             "apply-result-limit-v7", "apply-result-limit-v8", "apply-result-limit-v9",
             "apply-result-limit-v10",
+            "apply-result-limit-v11",
         ],
     )
     for name in ("profile", "plan", "output"):
@@ -986,6 +988,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "apply-result-limit-v8",
                 "apply-result-limit-v9",
                 "apply-result-limit-v10",
+                "apply-result-limit-v11",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -1000,6 +1003,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     result_limit_v8=arguments.domain_action == "apply-result-limit-v8",
                     result_limit_v9=arguments.domain_action == "apply-result-limit-v9",
                     result_limit_v10=arguments.domain_action == "apply-result-limit-v10",
+                    result_limit_v11=arguments.domain_action == "apply-result-limit-v11",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -1012,6 +1016,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     result_limit_v8=arguments.domain_action == "plan-result-limit-v8",
                     result_limit_v9=arguments.domain_action == "plan-result-limit-v9",
                     result_limit_v10=arguments.domain_action == "plan-result-limit-v10",
+                    result_limit_v11=arguments.domain_action == "plan-result-limit-v11",
                 )
         except (OSError, ValueError):
             print(
