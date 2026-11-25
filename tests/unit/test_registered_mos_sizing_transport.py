@@ -44,7 +44,6 @@ def enrolled(tmp_path, monkeypatch):
     (directory / "baseline-input.private.scs").write_bytes(before)
     (directory / "cdf-constraints.private.txt").write_bytes(constraints)
     policy = route.model_dump(mode="json")
-    policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
     policy["support"]["adapter_sha256"] = _sha(renderer)
     policy["support"]["cdf_constraints_sha256"] = _sha(constraints)
     policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
