@@ -16,7 +16,7 @@ Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인�
 
 - **준비된 경로** — 검증 표는 실제 Cadence에서 확인한 2 MOS 인버터와 14 MOS AMP의 결과를 다룹니다. 17 MOS OTA는 논문과 PDK 매핑을 대조하는 준비 단계입니다.
 
-- **OTA 미확정 입력** — 관측된 GPDK090 매핑을 바탕으로 17개 소자의 치수·벌크와 Netlist 대응, 배치·심볼·테스트벤치, 실제 관측 선택자, 성능 목표와 허용 오차를 확정해야 합니다.
+- **OTA 정적 선택** — 17개 R0 소자 위치, 포트 다섯 개, 심볼, 고정 소스와 부하의 bench 구성을 정했습니다. 첫 DC/AC 후보는 VDD 1 V, 입력 공통모드 0.5 V, 부하 1 pF, 27 °C이며 AC는 1 Hz–1 GHz, decade당 16점입니다. 대상 소자의 GPDK090 치수·벌크·Netlist 대응과 bench primitive 증거는 확인이 남았습니다.
 - **호출 순서** — 설치 MCP에서 `tools/list` → 회로 정의 검증 → MOS 블록 계획 → 지원되는 Cadence 경로에서 작업 사본 생성·저장 → 독립 재개방 및 Netlist 대조 → 대상과 분석 reader 등록 순으로 진행합니다. 실행 범위가 확정되면 분석 계획 → 제출 → 상태 → 결과 → 같은 작업 ID로 재조회 순으로 확인합니다. 첫 OTA는 DC/OP와 AC부터 시작합니다.
 
 ## 블록 순서와 진입 조건
@@ -173,6 +173,8 @@ cadence_operation_result({"request": key})
 
 연구 재개에는 검증된 개발 wheel과 해당 운영자 연결을 사용합니다. 설치본에서 사용할 도구와 요청 형식을 확인하고, 당시 승인·자원 상태를 기존 절차로 확인합니다.
 
+생성 전에 회로 배치·핀·심볼·bench와 소자별 목표 값을 확정합니다. 새 사본이 실제로 생성되면 저장·독립 재개방에서 DUT와 bench의 revision 및 원본 지문을 얻고, Netlist와 대조해 인계합니다. 분석 등록에서 실제 전압·공급전류·소자 selector를 확인한 뒤 계획 SHA와 작업 ID를 후속 조회에 사용합니다. 성능 목표·허용 오차는 합격 판정에, 클록·장시간 TRAN 정의는 후속 분석에 사용합니다.
+
 #### 오프라인 생성 준비
 
 검증한 회로 정의와 계획, 테스트벤치 조건을 `ResearchGenerationPreparationRequest`에 담습니다. 요청에서 참조하는 CDF 등 각 증거 파일은 원본 바이트 SHA-256으로 지정합니다. `--evidence FILE SHA256`은 요청의 증거 파일마다 한 번씩 전달합니다.
@@ -265,13 +267,40 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 대상 | 확인한 결과 | 범위 |
 | --- | --- | --- |
-| 17 MOS 논문 OTA | 회로·PDK 매핑 초안과 DC/OP·AC·TRAN 측정 계획 | 연결·치수·테스트벤치와 목표 확정 필요. 실제 생성과 분석은 미실행 |
+| 17 MOS 논문 OTA | 원문 연결·치수 대조와 17개 R0 배치, 포트·심볼·고정 DC/AC bench 선택 | 목표 소자 튜플과 bench primitive 증거를 묶은 `DraftPort`의 로컬 변환·검증이 남았습니다. 실제 생성·등록·분석은 미실행 |
 | 정정 2 MOS 인버터 | 실제 저장·독립 재개방·구조화 검증과 Netlist 확인. 운영자 stdio MCP를 거친 Spectre DC 한 점에서 VDD 1 V, Vin 0 V, Vout 약 1.000 V. 기존 DC에서 두 MOS의 OP 14개를 반복 조회 | DC 한 점이며 `region`은 모델 의미가 미확정인 원시 코드 |
-| 별도 Source9 인버터 TRAN | 기존 실측 원본으로 지연, 10–90% 출력 기울기, 입력 기준 안정화 시간 확인 | 저장 표본 기반 추정. 공급전류가 보존되지 않아 TRAN 평균 전력은 미평가 |
+| Source9 인버터 TRAN | 이전 전압 표본에서 지연·기울기·안정화 시간 확인. 이후 공급전류를 저장한 실제 실행의 179점(0–150 ns)에서 평균 전달전력 6.6847 µW 및 에너지 1.0027 pJ 확인. 실제 앱에서도 저장 전력 조회 | 앞선 전압 전용 실행의 평균 전력은 미평가. 후속 실행은 NN·27 °C·VDD 1 V·부하 1 pF |
 | 기존 14 MOS AMP와 4497 사본 | 실제 기준·사본의 DC 정적 공급전력과 AC 10 Hz 차동 이득 비교. 설치 CLI에서 기존 결과 네 건을 대조하고 Codex 앱에서 저장 비교 조회. [PR #172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 성능 목표와 후보 선택은 미설정 |
 | 14 MOS AMP의 이전 새 사본 검증 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 독립 재개방 및 Netlist 확인. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) | 당시 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED` |
-| 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 연결 확인. 최초 호출과 두 재조회에서 `VERIFIED`. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) | 정해진 PM0 작업 한 건이며 새 사본 성능은 미측정 |
+| 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 보존. 실제 Spectre DC·AC와 원본 프레임 대조 후, 재시작한 실제 앱에서 Center와 사본의 비교를 조회. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) · [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 이전 DC 실패 이력은 보존했습니다. 최종 비교는 성공한 별도 DC와 원래 AC를 사용합니다. 성능 합격 기준은 미설정 |
+| 범용 생성 준비와 재조회 | 개발 wheel에서 기존 두 MOS 준비 파일 8개를 바이트 단위로 재현했고, 실제 BBE3의 보존 인계를 새 프로세스에서 읽었습니다. 합성 17 MOS에서도 렌더러를 검증했습니다. [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 새 등록형 프로필의 최초 native 생성 검증은 별도입니다. |
 | 작업용 Layout | 실제 Cadence에서 instance 이동, 도형·연결 pin 추가, 저장·재개방 확인. [PR #167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 OTA Layout·DRC·LVS·PEX는 별도 단계 |
+
+앱에서 조회한 AMP 비교는 NN, 27 °C, VDD 1 V, VBIASN 0.320 V, VBIASP 0.702 V 조건입니다.
+
+| 지표 | Center 20 µm | 새 사본 120 nm | 사본 − 기준 |
+| --- | ---: | ---: | ---: |
+| 정적 공급전력 | 0.08243 mW | 1.57187 mW | +1.48944 mW |
+| 10 Hz 차동 이득 | +78.952 dB | −23.724 dB | −102.676 dB |
+
+### 소자 편집 범위
+
+| 조합 | 호스트·MCP | 패키지 guest | 실제 Cadence 근거 |
+| --- | --- | --- | --- |
+| 등록 `pmos1v` W/FW 기본값 복원 | 정확한 등록 튜플의 계획·적용·재조회 | 단일 finger의 등록된 Source9 계열 사본에서 검토된 override 제거 | 별도 AMP 고정 writer에서 20 µm → 120 nm·L 1 µm. 과거 Source9 A02에서 350 → 120 nm·L 100 nm 확인 |
+| 등록 `pmos1v` L 또는 W/FW+L 기본값 복원 | 유한 튜플과 동일 revision의 대조 경로 | 검토된 등록 차이에 해당하는 override 제거 | L 또는 동시 변경의 새 실제 쓰기 증거는 대기 중 |
+| `nmos1v` 또는 새 W/L 값 지정 | 타입과 계획·검증 경로에 유한 입력을 표현 | 위 복원 경로에서 실제 값 직접 설정이나 NMOS 적용을 지원하지 않음 | 기존 NMOS 치수는 관측값이며 새 편집은 미검증 |
+| `m`·finger | 단일 finger의 m 변경을 합성 검증. Spectre `simM`은 m과 fingers를 구분해 대조 | 실제 배수 변경 및 다중 finger 쓰기 경로 미검증 | 기존 m=fingers=1만 검증. PM6의 m=6 목표 조합은 대기 중 |
+
+### 측정 범위
+
+| 항목 | 범위와 남은 확인 |
+| --- | --- |
+| OP | BBE3 DC에서 2 MOS × 7개 값의 설치 MCP 조회를 확인했습니다. 인스턴스·항목별 단위와 부호를 보존하며 누락값은 상태로 표시합니다. 64개 인스턴스와 64 KiB 원본 프레임 한도 안에 17 × 7개 선언이 들어가지만, OTA의 실제 selector와 프레임 크기는 생성 후 확인합니다. 모델 근거가 없는 `region`은 원시 코드로 유지합니다. |
+| AC | 실제 AMP 차동 입력과 출력의 복소 전달비를 확인했습니다. 별도 과거 후보의 71점에서는 약 487.7 kHz의 −3 dB 대역폭과 100 MHz까지 0 dB 교차 미관측을 확인했습니다. Center의 확인값은 10 Hz 이득이며 풀 스펙트럼이 없어 두 교차는 미평가입니다. 단일 출력 OTA의 실제 복소 데이터와 위상여유용 loop-gain은 별도입니다. |
+| TRAN | 실제 Source9는 top-level 공급원의 `PLUS` 전류와 검증된 0 V 기준을 사용했습니다. 평균 전달전력은 `−(V+−V−)×I(+)`를 시간 적분한 뒤 관측 시간으로 나눕니다. 등록 전압은 최대 8개, v2 공급전류는 최대 6개, 벡터는 채널당 256점 및 전체 1536점까지입니다. 긴 원본 벡터는 상한을 넘으면 거부합니다. 표시용 축소는 측정 구간 추출과 구분합니다. |
+
+**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** GPDK090의 소자별 목표 W/FW/L/m/finger와 유효 Netlist 대응, 특히 PM6 배수 6을 확인해야 합니다. 선택한 고정 소스·부하의 실제 CDF를 결속하고 로컬 변환을 검증합니다. 선택형 `vsin` 경로의 CDF 공백은 그 AC 경로에만 해당합니다.
 
 ## 재개 프롬프트
 
