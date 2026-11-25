@@ -30,8 +30,11 @@ SUPPORT_SHA256 = "71de4c49873c8c40b04c6482432390daa7a6aa4ef9092d2a762f4657a9d68d
 CDF_SHA256 = "2563fca0a14f557317e69ec31a326642ee00c4f1dfd7af29ee08683542a25372"
 SIZING_ROUTE = "registered_mos_sizing"
 SIZING_OVERRIDES = ("l", "as", "ad", "ps", "pd")
+WIDTH_SIZING_OVERRIDES = ("w", "fw", "as", "ad", "ps", "pd")
 SIZING_RENDERER_SHA256 = "ac0b45c26c0b76ce593bea1d3621788ab4d94f165854530cb811ed8c915518a2"
 SIZING_HASH_CHILD_SHA256 = "deacdd769ca0bbcb6d2035450eb6ff511298a00cbb636630e46d3109a884d9f6"
+SIZING_WIDTH_HASH_CHILD_SHA256 = "12fa3fe0b4449a66aa33895d9f680aeef5b4921f9fdfd4252b6f482ffd8d3061"
+SIZING_WIDTH_ADAPTER_SHA256 = "832b0128002048d2b6754116a20cbe7dfeb503df3a30bb21c0fba937326dfb23"
 SIZING_SLOT_VERIFIER_SHA256 = "ee8b999a9cb95a3b8bcba2bc559931e1172713d65de51b7b4d397e37628e801d"
 SYSTEM_PYTHON_SHA256 = "388c3856ebba74fa1818478de7f19aa8b7ab3eb7a157f77d31adcc67229499e6"
 SIZING_PDK_TREE_SHA256 = "14976652b9e37c801b1d662fd02aa9cc3b612dfa6d467f9932b6795b10f01b9f"
@@ -259,6 +262,25 @@ procedure(mcpMosVerifyCallbacks(inst rows)
   t))
 """
 
+VERIFY_WIDTH_CALLBACK = r"""
+procedure(mcpMosVerifyCallbacks(inst rows)
+ let((field body base param child)
+  mosRequire(and(inst~>name=="MP" inst~>libName=="gpdk090"
+                 inst~>cellName=="pmos1v" inst~>viewName=="symbol" length(rows)==1))
+  field=caar(rows) body=cadar(rows)
+  mosRequire(and(field=="w" stringp(body) 0<strlen(body) strlen(body)<=4096))
+  base=cdfGetBaseCellCDF(ddGetObj("gpdk090" "pmos1v"))
+  param=base && cdfFindParamByName(base "w")
+  mosRequire(and(param param~>callback==body))
+  child=ipcBeginProcess("/usr/bin/python -E -s -B @WORK@/verify-pmos-width-callback.py")
+  mosRequire(child)
+  ipcWriteProcess(child strcat(sprintf(nil "pmos1v|w|%d\n" strlen(body)) body "\nEND\n"))
+  ipcWait(child)
+  mosRequire(and(!ipcIsAliveProcess(child) ipcGetExitStatus(child)==0
+                 ipcReadProcess(child 1)=="C1_PMOS_WIDTH_CALLBACK_VERIFIED\n"))
+  t))
+"""
+
 
 def require(condition, stage):
     if not condition:
@@ -333,6 +355,11 @@ def sizing_route(scope):
     route, plan, subject = scope["route_qualification"], scope["plan"], scope["subject"]
     target = route["target"]
     support = route["support"]
+    axis = sizing_axis(plan)
+    held = "w" if axis == "l" else "l"
+    master = "nmos1v" if axis == "l" else "pmos1v"
+    slot, rail = SLOTS[master]
+    path = "DUT/" + slot
     require(
         (
             route["source_library"],
@@ -348,24 +375,23 @@ def sizing_route(scope):
             DUT,
             TB,
             dict(
-                instance_path="DUT/MN",
+                instance_path=path,
                 master_library="gpdk090",
-                master_cell="nmos1v",
+                master_cell=master,
                 master_view="symbol",
-                property_name="l",
+                property_name=axis,
             ),
-            "DUT/MN",
-            "gpdk090_nmos1v",
-            ["vout", "vin", "vss", "vss"],
+            path,
+            "gpdk090_" + master,
+            ["vout", "vin", rail, rail],
         )
         and (support["cadence_version"], support["pdk_release"]) == ("6.1.5.500.15", "4.6")
         and support["pdk_identity_sha256"] == SIZING_PDK_TREE_SHA256
-        and support.get("w") is None
-        and isinstance(support["l"], dict)
-        and plan["changed"] == ["l"]
-        and plan["requested"].get("w") is None
-        and plan["expected"]["l"] == plan["requested"]["l"]
-        and plan["expected"]["w"] == plan["current"]["w"]
+        and support.get(held) is None
+        and isinstance(support[axis], dict)
+        and plan["requested"].get(held) is None
+        and plan["expected"][axis] == plan["requested"][axis]
+        and plan["expected"][held] == plan["current"][held]
         and plan["baseline"] == route["baseline"]
         and plan["target"] == target
         and plan["route_sha256"] == subject["route_sha256"]
@@ -377,20 +403,35 @@ def sizing_route(scope):
     before = route["before"]
     require(set(before) == set(PROPERTIES), "sizing_baseline_fields")
     for name in ("w", "fw", "l"):
-        axis = "w" if name == "fw" else name
-        sizing_dimension(before[name], plan["current"][axis])
-    length = plan["expected"]["l"]
+        current_axis = "w" if name == "fw" else name
+        sizing_dimension(before[name], plan["current"][current_axis])
+    expected = plan["expected"][axis]
     require(
-        length["unit"] == "nm"
-        and finite_length(length["value"], length["unit"]) != cdf_length(before["l"])
+        expected["unit"] == "nm"
+        and finite_length(expected["value"], expected["unit"])
+        != sizing_length_literal(before[axis]["cdf_value"])
         and before["model"]["cdf_value"] == target["netlist_model"]
         and before["m"]["cdf_value"] == before["fingers"]["cdf_value"] == "1"
         and all(value is None for value in before["nf"].values()),
         "sizing_baseline",
     )
+    if axis == "w":
+        require(
+            expected == {"value": "3000", "unit": "nm"}
+            and plan["current"]
+            == {"w": {"value": "350", "unit": "nm"}, "l": {"value": "100", "unit": "nm"}}
+            and plan["allowed_derived"] == list(WIDTH_SIZING_OVERRIDES[1:])
+            and before["dfm"]["cdf_value"] == "Minimum",
+            "sizing_width_scope",
+        )
     for name in SIZING_OVERRIDES[1:]:
         cdf_geometry(before[name], name)
     return route
+
+
+def sizing_axis(plan):
+    require(plan["changed"] in (["l"], ["w"]), "sizing_single_axis")
+    return plan["changed"][0]
 
 
 def sizing_dimension(row, dimension):
@@ -416,13 +457,14 @@ def sizing_length_literal(value):
         return Decimal(number + (exponent or "")) * Decimal("1e" + str(scales[suffix]))
 
 
-def sizing_readback(before, actual, expected):
+def sizing_readback(before, actual, expected, axis="l"):
+    overrides = SIZING_OVERRIDES if axis == "l" else WIDTH_SIZING_OVERRIDES
     for name in PROPERTIES:
         row = actual[name]
         old = before[name]
         require(
             (row["cdf_type"], row["cdf_units"]) == (old["cdf_type"], old["cdf_units"])
-            and (name in SIZING_OVERRIDES or row == old),
+            and (name in overrides or row == old),
             "sizing_property_conservation",
         )
         if name in SIZING_OVERRIDES[1:]:
@@ -432,7 +474,9 @@ def sizing_readback(before, actual, expected):
                     row["oa_type"] == "string" and row["oa_value"] == row["cdf_value"],
                     "sizing_geometry_persistence",
                 )
-    sizing_dimension(actual["l"], expected["l"])
+    sizing_dimension(actual[axis], expected[axis])
+    if axis == "w":
+        sizing_dimension(actual["fw"], expected["w"])
 
 
 def read_sizing_assets(helper, packet, scope):
@@ -442,11 +486,15 @@ def read_sizing_assets(helper, packet, scope):
         set(assets) == set(("adapter", "adapter_sha256", "hash_child", "hash_child_sha256")),
         "sizing_asset_fields",
     )
+    axis = sizing_axis(scope["plan"])
+    expected_child = SIZING_HASH_CHILD_SHA256 if axis == "l" else SIZING_WIDTH_HASH_CHILD_SHA256
     require(
         scope["route_qualification"]["support"]["adapter_sha256"] == SIZING_RENDERER_SHA256
-        and assets["hash_child_sha256"] == SIZING_HASH_CHILD_SHA256,
+        and assets["hash_child_sha256"] == expected_child,
         "sizing_asset_identity",
     )
+    if axis == "w":
+        require(assets["adapter_sha256"] == SIZING_WIDTH_ADAPTER_SHA256, "sizing_width_adapter")
     adapter = helper.pinned(assets["adapter"].encode("ascii"), assets["adapter_sha256"])
     child = helper.pinned(assets["hash_child"].encode("ascii"), assets["hash_child_sha256"])
     require(0 < len(adapter) <= 12288 and 0 < len(child) <= 8192, "sizing_asset_bounds")
@@ -691,6 +739,7 @@ def render(template, values):
 
 class Source9MosJob(object):
     sizing = None
+    axis = "l"
 
     def __init__(
         self, rt, helper, operator, scope, pin, digest, approval, collector, sizing=None, slot=None
@@ -701,6 +750,8 @@ class Source9MosJob(object):
         self.sizing = sizing
         self.slot = slot
         self.route = sizing_route(scope) if sizing is not None else exact_route(scope)
+        if sizing is not None:
+            self.axis = sizing_axis(scope["plan"])
         self.operation = self.subject["operation_id"]
         copy_id = self.subject["owned_copy_operation_id"]
         require(
@@ -720,7 +771,8 @@ class Source9MosJob(object):
         self.source_alias = pin.get("source_library", SOURCE)
         require(
             re.match(r"^CmosLong[A-Za-z0-9]{3,40}\Z", self.source_alias)
-            and self.source_alias != self.library,
+            and self.source_alias != self.library
+            and (self.sizing is None or self.axis != "w" or self.source_alias == SOURCE),
             "distinct_original_and_owned_aliases",
         )
         self.jobs = rt.root + "/" + rt.accounting.JOBS
@@ -944,11 +996,12 @@ class Source9MosJob(object):
             after = self.route["after"]
             after_fields = PROPERTIES
         else:
-            master = "nmos1v"
-            omit = "'(" + " ".join(skill_token(name) for name in SIZING_OVERRIDES) + ")"
+            master = "nmos1v" if self.axis == "l" else "pmos1v"
+            overrides = SIZING_OVERRIDES if self.axis == "l" else WIDTH_SIZING_OVERRIDES
+            omit = "'(" + " ".join(skill_token(name) for name in overrides) + ")"
             mutation = "mosRequire(mcpMosApplyWL(inst)==t)"
             after = self.route["before"]
-            after_fields = tuple(name for name in PROPERTIES if name not in SIZING_OVERRIDES)
+            after_fields = tuple(name for name in PROPERTIES if name not in overrides)
         slot, rail = SLOTS[master]
         return {
             "@LIB@": self.library,
@@ -978,7 +1031,10 @@ class Source9MosJob(object):
         )
         if self.sizing is not None and expected == "after":
             sizing_readback(
-                self.route["before"], result["properties"], self.scope["plan"]["expected"]
+                self.route["before"],
+                result["properties"],
+                self.scope["plan"]["expected"],
+                self.axis,
             )
         else:
             require(result["properties"] == self.route[expected], "physical_property_readback")
@@ -1077,14 +1133,19 @@ class Source9MosJob(object):
                 and self.rt.modules["probe"].digest_file(interpreter) == SYSTEM_PYTHON_SHA256,
                 "sizing_hash_interpreter",
             )
-            child_path = work + "/verify-nmos-length-callback.py"
+            if self.axis == "l":
+                callback_program = VERIFY_LENGTH_CALLBACK
+                child_path = work + "/verify-nmos-length-callback.py"
+            else:
+                callback_program = VERIFY_WIDTH_CALLBACK
+                child_path = work + "/verify-pmos-width-callback.py"
             self.rt.eda.write(child_path, child)
             require(self.h.read(child_path, 8192) == child, "sizing_child_readback")
-            prefix += VERIFY_LENGTH_CALLBACK + adapter.decode("ascii")
+            prefix += callback_program + adapter.decode("ascii")
             markers.extend(
                 (
                     "MCP_MOS_WL_STAGE|INIT",
-                    "MCP_MOS_WL_STAGE|FIELD|l",
+                    "MCP_MOS_WL_STAGE|FIELD|" + self.axis,
                     "MCP_MOS_WL_STAGE|COMMIT",
                     "MCP_MOS_WL_STAGE|DONE",
                     "MCP_MOS_WL_READY_FOR_SAVE_CHECK",
@@ -1264,7 +1325,14 @@ def main():
     uses_slot = scope.get("slot_manifest_sha256") is not None
     require(
         uses_slot == ("slot_verifier_base64" in packet)
-        and (not uses_slot or (calculated and helper.hex_digest(scope["slot_manifest_sha256"]))),
+        and (
+            not uses_slot
+            or (
+                calculated
+                and sizing_axis(scope["plan"]) == "l"
+                and helper.hex_digest(scope["slot_manifest_sha256"])
+            )
+        ),
         "sizing_slot_mode",
     )
     subject = scope["subject"]

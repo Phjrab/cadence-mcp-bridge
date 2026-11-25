@@ -1,21 +1,30 @@
+# The guest modules also run under Python 2.6 and expose unannotated entry points.
+# mypy: disable-error-code="no-untyped-call"
+
+import base64
 import hashlib
 import io
 import re
+from inspect import getfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from cadence_mcp_bridge import _amp_pm0_default_phase as support
 from cadence_mcp_bridge import _mos_cdf_call_contract as callback
+from cadence_mcp_bridge import _mos_pmos_width_callback as width_callback
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest
+from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
 
 
-def _row(value, units=None):
+def _row(value: str, units: str | None = None) -> dict[str, str | None]:
     return dict(
         oa_type="string", oa_value=value, cdf_type="instData", cdf_units=units, cdf_value=value
     )
 
 
-def _before():
+def _before() -> dict[str, dict[str, str | None]]:
     return {
         "w": _row("120n", "lengthMetric"),
         "fw": _row("120n", "lengthMetric"),
@@ -32,7 +41,7 @@ def _before():
     }
 
 
-def test_native_sizing_checks_actual_new_length_and_fixed_properties():
+def test_native_sizing_checks_actual_new_length_and_fixed_properties() -> None:
     before = _before()
     expected = {"w": {"value": "120", "unit": "nm"}, "l": {"value": "250", "unit": "nm"}}
     observed = dict(before, l=_row("0.25u", "lengthMetric"))
@@ -49,7 +58,9 @@ def test_native_sizing_checks_actual_new_length_and_fixed_properties():
         )
 
 
-def test_callback_child_uses_fixed_digest_and_strict_frames(monkeypatch):
+def test_callback_child_uses_fixed_digest_and_strict_frames(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     raw = b"fixture()"
     pin = hashlib.sha256(raw).hexdigest().encode("ascii")
     monkeypatch.setattr(callback, "NMOS_LENGTH_CALLBACK_SHA256", pin)
@@ -60,7 +71,7 @@ def test_callback_child_uses_fixed_digest_and_strict_frames(monkeypatch):
     assert not callback.check_length_callback(io.BytesIO(b"nmos1v|l|9\nother()x!\nEND\n"))
 
 
-def test_callback_child_uses_verified_phase_path_and_source_pin():
+def test_callback_child_uses_verified_phase_path_and_source_pin() -> None:
     work = "/home/buet/native-jobs/copy-1/edit/work"
     rendered = guest.render(guest.VERIFY_LENGTH_CALLBACK, {"@WORK@": work})
     assert b"@WORK@" not in rendered
@@ -69,12 +80,12 @@ def test_callback_child_uses_verified_phase_path_and_source_pin():
     )
     assert command in rendered
     assert (
-        hashlib.sha256(Path(callback.__file__).read_bytes()).hexdigest()
+        hashlib.sha256(Path(getfile(callback)).read_bytes()).hexdigest()
         == guest.SIZING_HASH_CHILD_SHA256
     )
 
 
-def test_length_job_renders_complete_baseline_and_only_held_fields_afterward():
+def test_length_job_renders_complete_baseline_and_only_held_fields_afterward() -> None:
     job = guest.Source9MosJob.__new__(guest.Source9MosJob)
     job.sizing = (b"fixed adapter", b"fixed verifier")
     job.route = {"before": _before()}
@@ -97,3 +108,151 @@ def test_length_job_renders_complete_baseline_and_only_held_fields_afterward():
     assert values["@AFTER@"].encode("ascii") in reopen
     assert b"mcpMosApplyWL(inst)==t" in edit
     assert b"mcpMosApplyWL(" not in reopen
+
+
+def _width_scope() -> dict[str, Any]:
+    target = dict(
+        instance=dict(
+            instance_path="DUT/MP",
+            master_library="gpdk090",
+            master_cell="pmos1v",
+            master_view="symbol",
+            property_name="w",
+        ),
+        netlist_path="DUT/MP",
+        netlist_model="gpdk090_pmos1v",
+        netlist_terminals=["vout", "vin", "vdd", "vdd"],
+    )
+    before = dict(
+        _before(),
+        w=_row("350n", "lengthMetric"),
+        fw=_row("350n", "lengthMetric"),
+        model=_row("gpdk090_pmos1v"),
+        ad=_row("98f"),
+        ps=_row("1.26u", "lengthMetric"),
+        pd=_row("1.26u", "lengthMetric"),
+        dfm=dict(_row("Minimum"), oa_type=None, oa_value=None),
+    )
+    before["as"] = _row("98f")
+    baseline = {"fixture": "common original"}
+    qualification = dict(
+        source_library=guest.SOURCE,
+        source_cell=guest.DUT,
+        testbench_cell=guest.TB,
+        target=target,
+        before=before,
+        baseline=baseline,
+        support={
+            "cadence_version": "6.1.5.500.15",
+            "pdk_release": "4.6",
+            "pdk_identity_sha256": guest.SIZING_PDK_TREE_SHA256,
+            "adapter_sha256": guest.SIZING_RENDERER_SHA256,
+            "w": {},
+            "l": None,
+        },
+    )
+    current = {"w": {"value": "350", "unit": "nm"}, "l": {"value": "100", "unit": "nm"}}
+    width = {"value": "3000", "unit": "nm"}
+    return dict(
+        route_qualification=qualification,
+        plan=dict(
+            baseline=baseline,
+            target=target,
+            route_sha256="route",
+            changed=["w"],
+            current=current,
+            requested={"w": width, "l": None},
+            expected={"w": width, "l": current["l"]},
+            allowed_derived=["fw", "as", "ad", "ps", "pd"],
+        ),
+        subject=dict(
+            owned_cell=guest.DUT,
+            owned_view="schematic",
+            owned_library="CmosLongMosWidthFixture",
+            route_sha256="route",
+        ),
+    )
+
+
+def test_width_scope_selects_exact_pmos_total_width_candidate() -> None:
+    scope = _width_scope()
+    assert guest.sizing_route(scope) == scope["route_qualification"]
+    scope["plan"]["expected"]["w"]["value"] = "3001"
+    with pytest.raises(ValueError, match="sizing_width_scope"):
+        guest.sizing_route(scope)
+    scope = _width_scope()
+    scope["plan"]["expected"]["l"] = {"value": "250", "unit": "nm"}
+    with pytest.raises(ValueError, match="sizing_route"):
+        guest.sizing_route(scope)
+    scope = _width_scope()
+    scope["plan"]["target"]["instance"]["master_cell"] = "nmos1v"
+    with pytest.raises(ValueError, match="sizing_route"):
+        guest.sizing_route(scope)
+
+
+def test_width_readback_accepts_numeric_equivalence_and_protects_held_rows() -> None:
+    scope = _width_scope()
+    before = scope["route_qualification"]["before"]
+    expected = scope["plan"]["expected"]
+    observed = dict(before, w=_row("3u", "lengthMetric"), fw=_row("3000n", "lengthMetric"))
+    observed["as"] = _row("720f")
+    guest.sizing_readback(before, observed, expected, "w")
+    with pytest.raises(ValueError, match="sizing_dimension"):
+        guest.sizing_readback(before, dict(observed, fw=before["fw"]), expected, "w")
+    with pytest.raises(ValueError, match="sizing_property_conservation"):
+        guest.sizing_readback(before, dict(observed, l=_row("250n", "lengthMetric")), expected, "w")
+    with pytest.raises(ValueError, match="sizing_geometry_persistence"):
+        guest.sizing_readback(
+            before, dict(observed, ad=dict(_row("720f"), oa_value="98f")), expected, "w"
+        )
+
+
+def test_width_assets_require_exact_width_child_and_bound_adapter() -> None:
+    scope = _width_scope()
+    program = render_mos_wl_skill("pmos1v", width_nm="3000", width_field="w")
+    child = Path(getfile(width_callback)).read_bytes()
+
+    def dispatch(adapter: bytes, verifier: bytes) -> Any:
+        payload = support.canonical(
+            dict(
+                adapter=adapter.decode("ascii"),
+                adapter_sha256=support.sha(adapter),
+                hash_child=verifier.decode("ascii"),
+                hash_child_sha256=support.sha(verifier),
+            )
+        )
+        scope["sizing_sha256"] = support.sha(payload)
+        packet = {"sizing_base64": base64.b64encode(payload).decode("ascii")}
+        return guest.read_sizing_assets(support, packet, scope)
+
+    assert dispatch(program, child) == (program, child)
+    with pytest.raises(ValueError, match="sizing_asset_identity"):
+        dispatch(program, Path(getfile(callback)).read_bytes())
+    with pytest.raises(ValueError, match="sizing_width_adapter"):
+        dispatch(render_mos_wl_skill("pmos1v", width_nm="3000", width_field="fw"), child)
+
+
+def test_width_edit_and_detached_reopen_select_mp_and_hold_length() -> None:
+    scope = _width_scope()
+    job = guest.Source9MosJob.__new__(guest.Source9MosJob)
+    job.sizing = (b"fixed adapter", b"fixed verifier")
+    job.axis = guest.sizing_axis(scope["plan"])
+    job.route = scope["route_qualification"]
+    job.library = scope["subject"]["owned_library"]
+    job.owned = "/home/buet/owned"
+    job.source = "/home/buet/source"
+    job.source_alias = guest.SOURCE
+    job.operation = "00e78318-9c30-4064-9233-5d7d9827ff70"
+    values = job.values("/home/buet/job/edit/work")
+    assert (values["@TARGET@"], values["@MASTER@"], values["@RAIL@"]) == ("MP", "pmos1v", "vdd")
+    held = set(re.findall(r'\("([a-z]+)"', values["@AFTER@"]))
+    assert held == set(guest.PROPERTIES).difference(guest.WIDTH_SIZING_OVERRIDES)
+    assert "l" in held
+    edit = guest.render(guest.COMMON + guest.VERIFY_WIDTH_CALLBACK + guest.EDIT, values)
+    reopen = guest.render(guest.COMMON + guest.REOPEN, values)
+    assert b'cdfFindParamByName(base "w")' in edit
+    assert b"param~>callback==body" in edit
+    assert b"verify-pmos-width-callback.py" in edit
+    assert b"verify-nmos-length-callback.py" not in edit
+    assert b"mcpMosApplyWL(" not in reopen
+    assert b"dbSave(" not in reopen
