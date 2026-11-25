@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import time
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from cadence_mcp_bridge.amplifier_pm0_service import _fixed_guest
 from cadence_mcp_bridge.domain_provisioning import _canonical, _closed_document
 from cadence_mcp_bridge.generic_ade import LIMIT as ADE_INPUT_LIMIT
 from cadence_mcp_bridge.native_diagnostics import OperationId
+from cadence_mcp_bridge.native_runtime import KIND, NativeLibrary, RemotePath
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_confirmation import _ssh
 from cadence_mcp_bridge.operator_operations import OperationRejected
@@ -28,6 +30,7 @@ from cadence_mcp_bridge.research_generation_service import (
     ResearchGenerationBinding,
     ResearchGenerationCapture,
     ResearchGenerationProgress,
+    ResearchGenerationQuery,
 )
 from cadence_mcp_bridge.runtime_context import ExecutionContext, resource_lock
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
@@ -73,6 +76,59 @@ class _Capture(VariableModel):
     stdout_base64: str
     dut_netlist_base64: str
     full_netlist_base64: str
+
+
+class _GenerationTrees(VariableModel):
+    library: Digest
+    strict_library: Digest
+    dut: Digest
+    bench: Digest
+    state: Digest
+
+
+class _GenerationProtection(VariableModel):
+    source: Digest
+    state: Digest
+    protected: Digest
+    retained_jobs_sha256: Digest
+    counter: dict[str, JsonValue]
+    ledger_records_sha256: Digest
+
+
+class _NetlistPhaseEvidence(VariableModel):
+    receipt: MosBlockStageReceipt
+    scope_sha256: Digest
+    previous_receipt_sha256: Digest
+    protected: _GenerationProtection
+    trees: _GenerationTrees
+    ocean_calls: Literal[1]
+    simulations: Literal[0]
+    reservations: Literal[0]
+    output_sha256: Digest
+    dut_sha256: Digest
+
+
+class ResearchGenerationAnalysisSource(VariableModel):
+    """Verified source identities for a separately authorized analysis registration."""
+
+    operation_id: OperationId
+    registration_file_sha256: Digest
+    binding_sha256: Digest
+    handoff_sha256: Digest
+    netlist_receipt_sha256: Digest
+    native_phase_record_sha256: Digest
+    native_completion_sha256: Digest
+    native_manifest_sha256: Digest
+    conditions_sha256: Digest
+    library: NativeLibrary
+    strict_library_tree_sha256: Digest
+    source_cell: RemotePath
+    source_tree_sha256: Digest
+    ade_state: RemotePath
+    ade_state_tree_sha256: Digest
+    full_netlist_sha256: Digest
+    static_statements_sha256: Digest
+    execution_authorized: Literal[False] = False
 
 
 def _artifact(encoded: str, limit: int) -> bytes:
@@ -384,4 +440,123 @@ def registered_research_generation(
         cdf,
         _FixedResearchGenerationProvider(context, directory, registration),
         expected_binding_sha256=registration.binding_sha256,
+    )
+
+
+def registered_generation_analysis_source(
+    context: ExecutionContext,
+    registration_raw: bytes,
+    directory: Path,
+    query: ResearchGenerationQuery,
+    phase_record: bytes,
+    completion: bytes,
+    *,
+    runtime_manifest: bytes,
+    runtime_registration: bytes,
+    expected_registration_file_sha256: Digest,
+    expected_phase_record_sha256: Digest,
+    expected_completion_sha256: Digest,
+) -> ResearchGenerationAnalysisSource:
+    """Join independently pinned guest custody to the host's retained handoff, locally."""
+    if (
+        _sha(registration_raw) != expected_registration_file_sha256
+        or _sha(phase_record) != expected_phase_record_sha256
+        or _sha(completion) != expected_completion_sha256
+    ):
+        raise OperationRejected("research_generation_native_custody_digest")
+    service = registered_research_generation(context, registration_raw, directory)
+    handoff = service.registration_handoff(query)
+    registration = _Registration.model_validate_json(registration_raw)
+    binding = registration.binding
+    directory = _local_path(directory)
+    provider = _FixedResearchGenerationProvider(context, directory, registration)
+    _closed_document(phase_record, max_bytes=8192)
+    record = _NetlistPhaseEvidence.model_validate_json(phase_record)
+    scope_raw = _read(
+        directory / "execution-scope.private.json",
+        _DOCUMENT_LIMIT,
+        binding.scope_sha256,
+    )
+    _closed_document(scope_raw, max_bytes=_DOCUMENT_LIMIT)
+    scope = json.loads(scope_raw)
+    _closed_document(runtime_manifest, max_bytes=_DOCUMENT_LIMIT)
+    _closed_document(runtime_registration, max_bytes=_DOCUMENT_LIMIT)
+    manifest = json.loads(runtime_manifest)
+    compiled = json.loads(runtime_registration)
+    compiled_sha = _sha(runtime_registration)
+    if (
+        _sha(runtime_manifest) != binding.native_manifest_sha256
+        or manifest["schema_version"] != 3
+        or manifest["kind"] != KIND
+        or manifest["profile_sha256"] != context.binding.environment_sha256
+        or manifest["registration_sha256"] != compiled_sha
+        or manifest["files"]["registration.json"]
+        != {"sha256": compiled_sha, "bytes": len(runtime_registration)}
+        or compiled["schema_version"] != 1
+        or compiled["identity_manifest_sha256"] != scope.get("identity_manifest_sha256")
+        or (compiled["environment_sha256"], compiled["design_sha256"], compiled["pdk_sha256"])
+        != (
+            context.binding.environment_sha256,
+            context.binding.design_sha256,
+            context.binding.pdk_sha256,
+        )
+    ):
+        raise OperationRejected("research_generation_seed_runtime_mismatch")
+    route_id = scope["source_route"]
+    seeds = [
+        route
+        for route in compiled["routes"]
+        if (route["design_id"], route["analysis_id"])
+        == (route_id["design_id"], route_id["analysis_id"])
+    ]
+    if len(seeds) != 1:
+        raise OperationRejected("research_generation_seed_route_mismatch")
+    seed = seeds[0]["ade"]
+    pins = handoff.pins
+    intent = provider._phase_intent(binding, "netlist", pins.reopen_receipt_sha256)
+    protection = record.protected
+    if (
+        completion
+        != _canonical(
+            {
+                "intent_sha256": _sha(intent),
+                "receipt_sha256": expected_phase_record_sha256,
+            }
+        )
+        or phase_record != _canonical(record.model_dump(mode="json"))
+        or canonical_digest(record.receipt) != pins.netlist_receipt_sha256
+        or record.scope_sha256 != binding.scope_sha256
+        or record.previous_receipt_sha256 != pins.reopen_receipt_sha256
+        or record.dut_sha256 != pins.raw_netlist_sha256
+        or record.trees.library != handoff.library.tree_sha256
+        or record.trees.dut != handoff.source_tree_sha256
+        or record.trees.bench != handoff.bench_tree_sha256
+        or protection.source != seed["source_tree_sha256"]
+        or protection.state != seed["ade_state_tree_sha256"]
+        or protection.protected != scope.get("protected_sha256")
+        or protection.retained_jobs_sha256 != scope.get("retained_jobs_sha256")
+        or _canonical(protection.counter) != _canonical(scope.get("counter"))
+        or protection.ledger_records_sha256 != scope.get("ledger_records_sha256")
+    ):
+        raise OperationRejected("research_generation_native_custody_mismatch")
+    library = PurePosixPath(handoff.library.path)
+    ade_state = library.parent / (PurePosixPath(handoff.bench_cell).name + "_ADE")
+    return ResearchGenerationAnalysisSource(
+        operation_id=binding.operation_id,
+        registration_file_sha256=expected_registration_file_sha256,
+        binding_sha256=registration.binding_sha256,
+        handoff_sha256=handoff.handoff_sha256,
+        netlist_receipt_sha256=pins.netlist_receipt_sha256,
+        native_phase_record_sha256=expected_phase_record_sha256,
+        native_completion_sha256=expected_completion_sha256,
+        native_manifest_sha256=binding.native_manifest_sha256,
+        conditions_sha256=binding.conditions_sha256,
+        library=handoff.library,
+        strict_library_tree_sha256=record.trees.strict_library,
+        source_cell=handoff.bench_cell,
+        source_tree_sha256=handoff.bench_tree_sha256,
+        ade_state=str(ade_state),
+        ade_state_tree_sha256=record.trees.state,
+        full_netlist_sha256=pins.full_netlist_sha256,
+        static_statements_sha256=handoff.static_statements_sha256,
     )

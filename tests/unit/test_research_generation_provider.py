@@ -43,12 +43,57 @@ def packet(tmp_path, monkeypatch):
     guest = b"reviewed fixed guest fixture\n"
     (tmp_path / host._GUEST_ASSET).write_bytes(guest)
     monkeypatch.setattr(host, "files", lambda name: tmp_path)
-    scope = b'{"kind":"generation-fixture"}'
+    route = {"design_id": "seed", "analysis_id": "seed-dc"}
+    runtime_registration = _canonical(
+        {
+            "schema_version": 1,
+            "identity_manifest_sha256": "1" * 64,
+            "environment_sha256": "a" * 64,
+            "design_sha256": "b" * 64,
+            "pdk_sha256": "c" * 64,
+            "routes": [
+                {
+                    **route,
+                    "ade": {
+                        "source_tree_sha256": "4" * 64,
+                        "ade_state_tree_sha256": "5" * 64,
+                    },
+                }
+            ],
+        }
+    )
+    registration_sha = host._sha(runtime_registration)
+    runtime_manifest = _canonical(
+        {
+            "schema_version": 3,
+            "kind": host.KIND,
+            "profile_sha256": "a" * 64,
+            "registration_sha256": registration_sha,
+            "files": {
+                "registration.json": {
+                    "sha256": registration_sha,
+                    "bytes": len(runtime_registration),
+                }
+            },
+        }
+    )
+    (tmp_path / "runtime-manifest.json").write_bytes(runtime_manifest)
+    (tmp_path / "runtime-registration.json").write_bytes(runtime_registration)
+    scope = _canonical(
+        {
+            "protected_sha256": "a" * 64,
+            "retained_jobs_sha256": "2" * 64,
+            "counter": {"count": 1, "result_reserved_bytes": 128 * 1024 * 1024},
+            "ledger_records_sha256": "3" * 64,
+            "source_route": route,
+            "identity_manifest_sha256": "1" * 64,
+        }
+    )
     binding = ResearchGenerationBinding(
         operation_id="11111111-2222-4333-8444-555555555555",
         context_id="registered-research",
         resource_domain_sha256="e" * 64,
-        native_manifest_sha256="d" * 64,
+        native_manifest_sha256=host._sha(runtime_manifest),
         scope_sha256=host._sha(scope),
         plan_sha256=canonical_digest(plan),
         bench_plan_sha256=canonical_digest(bench),
@@ -95,7 +140,11 @@ def packet(tmp_path, monkeypatch):
     ctx = SimpleNamespace(
         contracts=SimpleNamespace(environment=env),
         binding=SimpleNamespace(
-            context_id=binding.context_id, runner_sha256=binding.native_manifest_sha256
+            context_id=binding.context_id,
+            runner_sha256=binding.native_manifest_sha256,
+            environment_sha256="a" * 64,
+            design_sha256="b" * 64,
+            pdk_sha256="c" * 64,
         ),
         resource_domain_sha256=binding.resource_domain_sha256,
     )
@@ -223,3 +272,93 @@ def test_concrete_host_never_claims_stale_program_or_orphaned_phase(packet):
         service.submit(query)
     assert error.value.reason == "research_generation_orphan_capture"
     assert calls == []
+
+
+def test_analysis_source_joins_original_completion_to_the_host_handoff(packet):
+    ctx, registration, evidence, query, calls, clock, _ = packet
+    service = host.registered_research_generation(ctx, registration, evidence)
+    assert service.submit(query).status == "VERIFIED"
+    handoff = service.registration_handoff(query)
+    capture = json.loads((evidence / "generation-netlist-stdout.private.json").read_bytes())
+    scope = json.loads((evidence / "execution-scope.private.json").read_bytes())
+    record = {
+        "receipt": capture["receipt"],
+        "scope_sha256": capture["scope_sha256"],
+        "previous_receipt_sha256": capture["previous_receipt_sha256"],
+        "protected": {
+            "source": "4" * 64,
+            "state": "5" * 64,
+            "protected": scope["protected_sha256"],
+            "retained_jobs_sha256": scope["retained_jobs_sha256"],
+            "counter": scope["counter"],
+            "ledger_records_sha256": scope["ledger_records_sha256"],
+        },
+        "trees": {
+            "library": handoff.library.tree_sha256,
+            "strict_library": "6" * 64,
+            "dut": handoff.source_tree_sha256,
+            "bench": handoff.bench_tree_sha256,
+            "state": "7" * 64,
+        },
+        "ocean_calls": 1,
+        "simulations": 0,
+        "reservations": 0,
+        "output_sha256": "8" * 64,
+        "dut_sha256": handoff.pins.raw_netlist_sha256,
+    }
+    phase = _canonical(record)
+    phase_sha = host._sha(phase)
+    intent = (evidence / "generation-netlist-intent.private.json").read_bytes()
+    complete = _canonical({"intent_sha256": host._sha(intent), "receipt_sha256": phase_sha})
+    complete_sha = host._sha(complete)
+
+    def verify(phase, complete, phase_sha=phase_sha, complete_sha=complete_sha):
+        return host.registered_generation_analysis_source(
+            ctx,
+            registration,
+            evidence,
+            query,
+            phase,
+            complete,
+            runtime_manifest=(evidence.parent / "runtime-manifest.json").read_bytes(),
+            runtime_registration=(evidence.parent / "runtime-registration.json").read_bytes(),
+            expected_registration_file_sha256=host._sha(registration),
+            expected_phase_record_sha256=phase_sha,
+            expected_completion_sha256=complete_sha,
+        )
+
+    before = {p.name: p.read_bytes() for p in evidence.iterdir()}
+    clock[0] = 101
+    source = verify(phase, complete)
+    assert source.handoff_sha256 == handoff.handoff_sha256
+    assert source.native_phase_record_sha256 == phase_sha
+    assert source.netlist_receipt_sha256 == handoff.pins.netlist_receipt_sha256
+    assert source.source_cell == handoff.bench_cell
+    assert source.source_tree_sha256 == handoff.bench_tree_sha256
+    assert source.ade_state == "/owned/" + handoff.bench_cell.split("/")[-1] + "_ADE"
+    assert source.ade_state_tree_sha256 == "7" * 64
+    assert source.execution_authorized is False
+    with pytest.raises(OperationRejected) as wrong_digest:
+        verify(phase + b"\n", complete)
+    assert wrong_digest.value.reason == "research_generation_native_custody_digest"
+    with pytest.raises(OperationRejected) as wrong_intent:
+        foreign = _canonical({"intent_sha256": "0" * 64, "receipt_sha256": phase_sha})
+        verify(phase, foreign, complete_sha=host._sha(foreign))
+    assert wrong_intent.value.reason == "research_generation_native_custody_mismatch"
+    record["trees"]["bench"] = "0" * 64
+    wrong_phase = _canonical(record)
+    wrong_sha = host._sha(wrong_phase)
+    wrong_done = _canonical({"intent_sha256": host._sha(intent), "receipt_sha256": wrong_sha})
+    with pytest.raises(OperationRejected) as wrong_bench:
+        verify(wrong_phase, wrong_done, wrong_sha, host._sha(wrong_done))
+    assert wrong_bench.value.reason == "research_generation_native_custody_mismatch"
+    record["trees"]["bench"] = handoff.bench_tree_sha256
+    record["protected"]["state"] = "0" * 64
+    wrong_phase = _canonical(record)
+    wrong_sha = host._sha(wrong_phase)
+    wrong_done = _canonical({"intent_sha256": host._sha(intent), "receipt_sha256": wrong_sha})
+    with pytest.raises(OperationRejected) as wrong_seed:
+        verify(wrong_phase, wrong_done, wrong_sha, host._sha(wrong_done))
+    assert wrong_seed.value.reason == "research_generation_native_custody_mismatch"
+    assert calls == ["save", "reopen", "netlist"]
+    assert before == {p.name: p.read_bytes() for p in evidence.iterdir()}
