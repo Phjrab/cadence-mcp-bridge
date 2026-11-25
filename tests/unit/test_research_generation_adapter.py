@@ -253,6 +253,7 @@ def test_generation_cli_exports_only_verified_analysis_source(
     assert main([*request, "--runtime-manifest", manifest_args[0], "0" * 64]) == 2
     assert not output.exists()
     custody = ["--runtime-manifest", *manifest_args]
+    assert main([*request, *custody, "--recovery-enrollment", *manifest_args]) == 2
     foreign = pair(
         "foreign-completion.json",
         _canonical(

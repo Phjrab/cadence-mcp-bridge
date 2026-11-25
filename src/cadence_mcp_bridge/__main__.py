@@ -109,13 +109,22 @@ def build_parser() -> argparse.ArgumentParser:
         if action == "handoff":
             command.add_argument("--output", type=Path, required=True)
             source = command.add_argument_group("verified analysis source export")
-            source.add_argument(
+            mode = source.add_mutually_exclusive_group()
+            mode.add_argument(
                 "--analysis-source", action="store_true",
                 help="Export the verified generated bench/ADE source to --output.",
+            )
+            mode.add_argument(
+                "--recover-retained-source", action="store_true",
+                help="Export independently pinned retained source evidence for an UNKNOWN run.",
             )
             source.add_argument("--settings", type=Path)
             source.add_argument("--context")
             for name in ("phase-record", "completion", "runtime-manifest", "runtime-registration"):
+                source.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"))
+            for name in (
+                "recovery-enrollment", "locked-witness", "nominal-input", "retained-input",
+            ):
                 source.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"))
     mos_edit = subparsers.add_parser(
         "operator-mos-edit", help="Use one host-registered MOS edit.",

@@ -15,6 +15,7 @@ from cadence_mcp_bridge import __version__
 from cadence_mcp_bridge.candidate_cli import (
     _export_research,
     _output,
+    _read_candidate_bytes,
     _reserved,
     read_candidate_document,
 )
@@ -40,6 +41,9 @@ from cadence_mcp_bridge.variable_contracts import (
 
 _READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 _REJECTED = "registered_research_generation_rejected"
+_RECOVERY_FILES = ("recovery_enrollment", "locked_witness", "nominal_input", "retained_input")
+_COMPLETION_FILES = ("phase_record", "completion")
+_RUNTIME_FILES = ("runtime_manifest", "runtime_registration")
 
 
 class RegisteredGenerationPlan(VariableModel):
@@ -213,16 +217,20 @@ def _export_analysis_source(
         registered_generation_analysis_source,
     )
 
-    evidence = (
-        arguments.phase_record,
-        arguments.completion,
-        arguments.runtime_manifest,
-        arguments.runtime_registration,
+    recovery = arguments.recover_retained_source
+    required, excluded = (
+        (_RECOVERY_FILES, _COMPLETION_FILES) if recovery else (_COMPLETION_FILES, _RECOVERY_FILES)
     )
+    evidence = {field: getattr(arguments, field) for field in (*_RUNTIME_FILES, *required)}
     settings = arguments.settings
-    if settings is None or arguments.context is None or any(item is None for item in evidence):
+    if (
+        settings is None
+        or arguments.context is None
+        or any(item is None for item in evidence.values())
+        or any(getattr(arguments, name) is not None for name in excluded)
+    ):
         raise ValueError("analysis source export requires explicit operator settings and custody")
-    paths = [Path(item[0]) for item in evidence]
+    paths = [Path(item[0]) for item in evidence.values()]
     if any(
         path.drive.startswith(("\\\\", "//"))
         for path in (settings, registered, arguments.output, *paths)
@@ -239,21 +247,48 @@ def _export_analysis_source(
     output = _output(arguments.output, protected)
     if output.is_relative_to(directory):
         raise ValueError("analysis source export must be outside the evidence directory")
-    phase, complete, manifest, compiled = (
-        read_candidate_document(Path(path), expected_sha256=sha) for path, sha in evidence
-    )
+    documents = {
+        key: _read_candidate_bytes(Path(path), expected_sha256=sha)
+        for key, (path, sha) in evidence.items()
+    }
+    registration_raw = read_candidate_document(registered, expected_sha256=registration_sha)
+    if recovery:
+        from cadence_mcp_bridge.research_generation_recovery import (
+            recover_retained_generation_source,
+        )
+
+        recovered = recover_retained_generation_source(
+            context,
+            registration_raw,
+            directory,
+            request,
+            recovery_enrollment=documents["recovery_enrollment"],
+            expected_recovery_enrollment_sha256=evidence["recovery_enrollment"][1],
+            locked_witness=documents["locked_witness"],
+            runtime_manifest=documents["runtime_manifest"],
+            runtime_registration=documents["runtime_registration"],
+            nominal_input=documents["nominal_input"],
+            retained_input=documents["retained_input"],
+        )
+        digest = _export_research(output, recovered.model_dump_json().encode())
+        return {
+            "status": recovered.status,
+            "generation_status": recovered.generation_status,
+            "file_sha256": digest,
+            "execution_authorized": recovered.execution_authorized,
+        }
     source = registered_generation_analysis_source(
         context,
-        read_candidate_document(registered, expected_sha256=registration_sha),
+        registration_raw,
         directory,
         request,
-        phase,
-        complete,
-        runtime_manifest=manifest,
-        runtime_registration=compiled,
+        documents["phase_record"],
+        documents["completion"],
+        runtime_manifest=documents["runtime_manifest"],
+        runtime_registration=documents["runtime_registration"],
         expected_registration_file_sha256=registration_sha,
-        expected_phase_record_sha256=arguments.phase_record[1],
-        expected_completion_sha256=arguments.completion[1],
+        expected_phase_record_sha256=evidence["phase_record"][1],
+        expected_completion_sha256=evidence["completion"][1],
     )
     digest = _export_research(output, source.model_dump_json().encode())
     return {
@@ -270,7 +305,7 @@ def run_registered_generation(arguments: argparse.Namespace) -> int:
         action = arguments.generation_action
         if (
             action == "handoff"
-            and arguments.analysis_source
+            and (arguments.analysis_source or arguments.recover_retained_source)
             and Path(request_path).drive.startswith(("\\\\", "//"))
         ):
             raise ValueError("analysis source export requires local files")
@@ -278,24 +313,23 @@ def run_registered_generation(arguments: argparse.Namespace) -> int:
             read_candidate_document(Path(request_path), expected_sha256=request_digest)
         )
         if action == "handoff":
-            if arguments.analysis_source:
+            if arguments.analysis_source or arguments.recover_retained_source:
                 result = _export_analysis_source(
                     arguments, Path(registered_path), registered_digest, request
                 )
                 print(json.dumps(result, sort_keys=True))
                 return 0
             if any(
-                option is not None
-                for option in (
-                    arguments.settings,
-                    arguments.context,
-                    arguments.phase_record,
-                    arguments.completion,
-                    arguments.runtime_manifest,
-                    arguments.runtime_registration,
+                getattr(arguments, name) is not None
+                for name in (
+                    "settings",
+                    "context",
+                    *_COMPLETION_FILES,
+                    *_RUNTIME_FILES,
+                    *_RECOVERY_FILES,
                 )
             ):
-                raise ValueError("analysis source options require --analysis-source")
+                raise ValueError("analysis source options require an explicit source mode")
         config = BridgeConfig(runtime_mode="operator")
         context, binding, service = _load(config, Path(registered_path), registered_digest)
         if action == "plan":
