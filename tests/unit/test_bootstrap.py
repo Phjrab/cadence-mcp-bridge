@@ -1203,7 +1203,13 @@ def test_reviewed_operator_pins_match_exact_package_assets(prepared_bound):
 
 
 @pytest.mark.parametrize("action", ["activation", "update"])
-def test_retained_operator_pin_applies_only_to_reservations(prepared_bound, monkeypatch, action):
+@pytest.mark.parametrize("retained_sha", [
+    "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372",
+    "07d6c5383beca4cf6d477c92212dada163adf27656eeebb0f3855c871c730bf4",
+])
+def test_retained_operator_pin_applies_only_to_reservations(
+    prepared_bound, monkeypatch, action, retained_sha
+):
     source, _, digest = prepared_bound
     _, contents, _ = installer.validate(str(source), digest)
     current = contents["reservations.py"]
@@ -1215,7 +1221,7 @@ def test_retained_operator_pin_applies_only_to_reservations(prepared_bound, monk
     def retained_digest(raw):
         match = original_digest(raw)
         if match == current_sha:
-            return "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372"
+            return retained_sha
         return match
 
     monkeypatch.setattr(installer, "digest", retained_digest)
