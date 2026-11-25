@@ -133,6 +133,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Circuit validation failed' }
 
 컴파일 출력은 `{"definition": {...}}` 형태의 검증 요청 파일입니다. 원본 파일 SHA와 검증 결과의 정규화된 `definition_sha256`을 구분합니다. 검증 결과의 `definition`과 `definition_sha256`을 아래 MOS 블록 계획에 전달합니다.
 
+실행 연결 정보가 아직 없는 포팅 입력은 Python API `compile_research_draft(draft_bytes, port_bytes, static_preview=True)`로 회로 구조를 먼저 확인할 수 있습니다. 이 경로는 `StaticDraftPort`를 받아 `ResearchCircuitStaticPreview`를 반환합니다. 17 MOS 초안으로 DC 전용과 DC+AC 두 미리보기를 검증했습니다. 미리보기에는 미확정 소자 값이 그대로 남으며, 실행용 검증·계획 스키마는 이 형식을 받지 않습니다.
+
 ### 회로 계획부터 분석 결과 조회까지
 
 연결한 stdio 클라이언트에서 `tools/list`로 도구를 확인합니다. 아래는 `tools/call`의 도구와 인수를 나타낸 의사 코드입니다. 반환값은 MCP 응답의 `structuredContent`를 뜻합니다. `definition`은 컴파일된 검증 요청의 `definition` 객체 또는 로컬 합성 예제의 객체입니다. `output_library`에는 계획할 새 작업용 라이브러리 이름을 넣습니다.
@@ -267,7 +269,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 대상 | 확인한 결과 | 범위 |
 | --- | --- | --- |
-| 17 MOS 논문 OTA | 원문 연결·치수 대조와 17개 R0 배치, 포트·심볼·고정 DC/AC bench 선택 | 목표 소자 튜플과 bench primitive 증거를 묶은 `DraftPort`의 로컬 변환·검증이 남았습니다. 실제 생성·등록·분석은 미실행 |
+| 17 MOS 논문 OTA | 원문 연결·치수 대조, R0 배치와 포트·심볼, DC 및 DC+AC 정적 미리보기 검증. 17개 소자·68개 단자·5개 포트 | 미리보기에서 119개 OP 항목과 145개 AC 표본 규모를 계획했습니다. 검증된 목표 소자 튜플과 bench 증거를 결속한 실행용 `DraftPort`는 미완성입니다. 실제 생성·등록·분석은 미실행 |
 | 정정 2 MOS 인버터 | 실제 저장·독립 재개방·구조화 검증과 Netlist 확인. 운영자 stdio MCP를 거친 Spectre DC 한 점에서 VDD 1 V, Vin 0 V, Vout 약 1.000 V. 기존 DC에서 두 MOS의 OP 14개를 반복 조회 | DC 한 점이며 `region`은 모델 의미가 미확정인 원시 코드 |
 | Source9 인버터 TRAN | 이전 전압 표본에서 지연·기울기·안정화 시간 확인. 이후 공급전류를 저장한 실제 실행의 179점(0–150 ns)에서 평균 전달전력 6.6847 µW 및 에너지 1.0027 pJ 확인. 실제 앱에서도 저장 전력 조회 | 앞선 전압 전용 실행의 평균 전력은 미평가. 후속 실행은 NN·27 °C·VDD 1 V·부하 1 pF |
 | 기존 14 MOS AMP와 4497 사본 | 실제 기준·사본의 DC 정적 공급전력과 AC 10 Hz 차동 이득 비교. 설치 CLI에서 기존 결과 네 건을 대조하고 Codex 앱에서 저장 비교 조회. [PR #172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 성능 목표와 후보 선택은 미설정 |
