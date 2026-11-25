@@ -256,3 +256,67 @@ def test_width_edit_and_detached_reopen_select_mp_and_hold_length() -> None:
     assert b"verify-nmos-length-callback.py" not in edit
     assert b"mcpMosApplyWL(" not in reopen
     assert b"dbSave(" not in reopen
+
+
+def test_sizing_trace_surrounds_the_existing_checks_and_save() -> None:
+    work = "/home/buet/job/edit/work"
+    tokens = {name: name for name in set(re.findall(r"@[A-Z]+@", guest.SIZING_EDIT))}
+    tokens.update({"@WORK@": work, "@AFTER@": "heldPropertyCheck()"})
+    rendered = guest.render(guest.SIZING_EDIT, tokens)
+    legacy = guest.render(guest.EDIT, tokens)
+    assert b"MCP_MOS_WL_EDIT|" not in legacy
+    assert b"drain(poport)" in rendered
+    assert b'printf("MCP_MOS_WL_EDIT|%s|%s\\n" step state)\n drain(poport)' in rendered
+    calls = (
+        b'mosSizingTrace("SCH_CHECK" "STARTED")',
+        b'mosSizingCheck("SCH_CHECK" schCheck(child))',
+        b'mosSizingTrace("FOOTPRINT" "STARTED")',
+        b'mosSizingCheck("FOOTPRINT" equal(stable mosFoot(child omit)))',
+        b'mosSizingTrace("HELD_PROPERTIES" "STARTED")',
+        b"heldPropertyCheck()",
+        b'mosSizingTrace("HELD_PROPERTIES" "RETURNED_OK")',
+        b'mosSizingTrace("EVIDENCE" "STARTED")',
+        b'/saved.properties" inst)',
+        b'mosSizingTrace("EVIDENCE" "RETURNED_OK")',
+        b'mosSizingTrace("DB_SAVE" "STARTED")',
+        b'mosSizingCheck("DB_SAVE" dbSave(child))',
+        b'mosSizingTrace("DB_CLOSE" "STARTED")',
+        b'mosSizingCheck("DB_CLOSE" dbClose(child))',
+        b"C6_MOS_EDIT_SAVED|",
+    )
+    offsets = [rendered.index(call) for call in calls]
+    assert offsets == sorted(offsets)
+    for held_call in (b"schCheck(child)", b"dbSave(child)", b"dbClose(child)"):
+        assert rendered.count(held_call) == legacy.count(held_call)
+
+
+def test_sizing_trace_records_only_complete_ordered_steps() -> None:
+    # The retained W3000 job ended at this last callback marker. It cannot
+    # establish a post-callback step, even if the supervisor killed the child.
+    retained_prefix = (
+        b"MCP_MOS_WL_STAGE|INIT\nMCP_MOS_WL_STAGE|FIELD|w\n"
+        b"MCP_MOS_WL_STAGE|COMMIT\nMCP_MOS_WL_STAGE|DONE\n"
+        b"MCP_MOS_WL_READY_FOR_SAVE_CHECK\n"
+    )
+    assert guest.sizing_edit_trace(retained_prefix) is None
+    first = retained_prefix + b"MCP_MOS_WL_EDIT|SCH_CHECK|STARTED\n"
+    assert guest.sizing_edit_trace(first) == dict(step="SCH_CHECK", state="STARTED")
+    assert guest.sizing_edit_trace(first + b"MCP_MOS_WL_EDIT|SCH_CHECK|RETURNED_NIL\n") == dict(
+        step="SCH_CHECK", state="RETURNED_NIL"
+    )
+    assert guest.sizing_edit_trace(first + b"MCP_MOS_WL_EDIT|FOOTPRINT|STARTED\n") is None
+    assert guest.sizing_edit_trace(first + b"MCP_MOS_WL_EDIT|SCH_CHECK|RETURNED_OK") == dict(
+        step="SCH_CHECK", state="STARTED"
+    )
+    earlier = b"".join(
+        f"MCP_MOS_WL_EDIT|{step}|{state}\n".encode("ascii")
+        for step in ("SCH_CHECK", "FOOTPRINT", "HELD_PROPERTIES", "EVIDENCE")
+        for state in ("STARTED", "RETURNED_OK")
+    )
+    saving = earlier + b"MCP_MOS_WL_EDIT|DB_SAVE|STARTED\n"
+    assert guest.sizing_edit_trace(saving) == dict(step="DB_SAVE", state="STARTED")
+    saved = saving + b"MCP_MOS_WL_EDIT|DB_SAVE|RETURNED_OK\n"
+    assert guest.sizing_edit_trace(saved) == dict(step="DB_SAVE", state="RETURNED_OK")
+    assert guest.sizing_edit_trace(saved + b"MCP_MOS_WL_EDIT|DB_CLOSE|STARTED\n") == dict(
+        step="DB_CLOSE", state="STARTED"
+    )

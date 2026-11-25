@@ -166,7 +166,7 @@ procedure(mosText(path text)
   fprintf(port "%s\n" text) mosRequire(close(port))))
 """
 
-EDIT = r"""
+EDIT_BEGIN = r"""
 procedure(mosEdit()
  let((source child inst original stable omit expected base param)
   mosRequire(and(ddGetObj("@LIB@")~>readPath=="@OWNED@"
@@ -189,15 +189,61 @@ procedure(mosEdit()
   inst=mosTarget(child)
   @BEFORE@
   @MUTATION@
-  mosRequire(and(schCheck(child) equal(stable mosFoot(child omit))))
+"""
+
+EDIT_CHECKS = r"""  mosRequire(and(schCheck(child) equal(stable mosFoot(child omit))))
   @AFTER@
   mosTuple("@WORK@/saved.properties" inst)
   mosText("@WORK@/footprint.txt" stable)
   mosRequire(and(dbSave(child) dbClose(child)))
-  printf("C6_MOS_EDIT_SAVED|@OP@\n")
+"""
+
+EDIT_END = r"""  printf("C6_MOS_EDIT_SAVED|@OP@\n")
   drain(poport) t))
 if(errset(mosEdit() t) then exit(0) else exit(1))
 """
+
+EDIT = EDIT_BEGIN + EDIT_CHECKS + EDIT_END
+
+SIZING_TRACE_PREFIX = b"MCP_MOS_WL_EDIT|"
+SIZING_TRACE_STEPS = (
+    "SCH_CHECK",
+    "FOOTPRINT",
+    "HELD_PROPERTIES",
+    "EVIDENCE",
+    "DB_SAVE",
+    "DB_CLOSE",
+)
+SIZING_TRACE_BOOLEAN_STEPS = ("SCH_CHECK", "FOOTPRINT", "DB_SAVE", "DB_CLOSE")
+
+SIZING_TRACE_SKILL = r"""
+procedure(mosSizingTrace(step state)
+ printf("MCP_MOS_WL_EDIT|%s|%s\n" step state)
+ drain(poport))
+
+procedure(mosSizingCheck(step passed)
+ mosSizingTrace(step if(passed then "RETURNED_OK" else "RETURNED_NIL"))
+ mosRequire(passed))
+"""
+
+SIZING_EDIT_CHECKS = r"""  mosSizingTrace("SCH_CHECK" "STARTED")
+  mosSizingCheck("SCH_CHECK" schCheck(child))
+  mosSizingTrace("FOOTPRINT" "STARTED")
+  mosSizingCheck("FOOTPRINT" equal(stable mosFoot(child omit)))
+  mosSizingTrace("HELD_PROPERTIES" "STARTED")
+  @AFTER@
+  mosSizingTrace("HELD_PROPERTIES" "RETURNED_OK")
+  mosSizingTrace("EVIDENCE" "STARTED")
+  mosTuple("@WORK@/saved.properties" inst)
+  mosText("@WORK@/footprint.txt" stable)
+  mosSizingTrace("EVIDENCE" "RETURNED_OK")
+  mosSizingTrace("DB_SAVE" "STARTED")
+  mosSizingCheck("DB_SAVE" dbSave(child))
+  mosSizingTrace("DB_CLOSE" "STARTED")
+  mosSizingCheck("DB_CLOSE" dbClose(child))
+"""
+
+SIZING_EDIT = SIZING_TRACE_SKILL + EDIT_BEGIN + SIZING_EDIT_CHECKS + EDIT_END
 
 RESTORE = r"""
   expected=cdfGetInstCDF(inst)
@@ -737,6 +783,30 @@ def render(template, values):
     return re.sub(r"@[A-Z]+@", lambda match: values[match.group(0)], template).encode("ascii")
 
 
+def sizing_edit_trace(raw):
+    """Return only the last complete event of a valid, ordered diagnostic prefix."""
+    lines = raw[: raw.rfind(b"\n") + 1].splitlines()
+    events = [line for line in lines if line.startswith(SIZING_TRACE_PREFIX)]
+    if not events or len(events) > 2 * len(SIZING_TRACE_STEPS):
+        return None
+    for index, event in enumerate(events):
+        step = SIZING_TRACE_STEPS[index // 2]
+        state = "RETURNED_OK" if index % 2 else "STARTED"
+        prefix = SIZING_TRACE_PREFIX + step.encode("ascii") + b"|"
+        if event == prefix + state.encode("ascii"):
+            continue
+        if (
+            index % 2
+            and index == len(events) - 1
+            and step in SIZING_TRACE_BOOLEAN_STEPS
+            and event == prefix + b"RETURNED_NIL"
+        ):
+            state = "RETURNED_NIL"
+            break
+        return None
+    return dict(step=step, state=state)
+
+
 class Source9MosJob(object):
     sizing = None
     axis = "l"
@@ -1115,6 +1185,12 @@ class Source9MosJob(object):
             )
             if self.sizing is not None:
                 failure["subprocess"] = getattr(exc, "native_program_failure", None)
+                if phase == PHASES[0]:
+                    try:
+                        output = self.h.read(work + "/edit.stdout", 65536)
+                        failure["edit_trace"] = sizing_edit_trace(output)
+                    except (AssertionError, IOError, OSError, ValueError):  # noqa: UP024
+                        failure["edit_trace"] = None
             self.save_document(
                 selected + "/failure.json",
                 failure,
@@ -1151,7 +1227,9 @@ class Source9MosJob(object):
                     "MCP_MOS_WL_READY_FOR_SAVE_CHECK",
                 )
             )
-        program = render(prefix + EDIT, self.values(work))
+        program = render(
+            prefix + (SIZING_EDIT if self.sizing is not None else EDIT), self.values(work)
+        )
         markers.append("C6_MOS_EDIT_SAVED|" + self.operation)
         self.run(
             session,
