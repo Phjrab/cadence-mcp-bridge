@@ -1,5 +1,6 @@
 import hashlib
 import io
+import re
 from pathlib import Path
 
 import pytest
@@ -71,3 +72,28 @@ def test_callback_child_uses_verified_phase_path_and_source_pin():
         hashlib.sha256(Path(callback.__file__).read_bytes()).hexdigest()
         == guest.SIZING_HASH_CHILD_SHA256
     )
+
+
+def test_length_job_renders_complete_baseline_and_only_held_fields_afterward():
+    job = guest.Source9MosJob.__new__(guest.Source9MosJob)
+    job.sizing = (b"fixed adapter", b"fixed verifier")
+    job.route = {"before": _before()}
+    job.library = "CmosLongMosFixture"
+    job.owned = "/home/buet/owned"
+    job.source = "/home/buet/source"
+    job.source_alias = guest.SOURCE
+    job.operation = "00e78318-9c30-4064-9233-5d7d9827ff70"
+
+    values = job.values("/home/buet/job/edit/work")
+    before = set(re.findall(r'\("([a-z]+)"', values["@BEFORE@"]))
+    after = set(re.findall(r'\("([a-z]+)"', values["@AFTER@"]))
+    assert before == set(guest.PROPERTIES)
+    assert after == before.difference(guest.SIZING_OVERRIDES)
+
+    edit = guest.render(guest.COMMON + guest.EDIT, values)
+    reopen = guest.render(guest.COMMON + guest.REOPEN, values)
+    assert values["@BEFORE@"].encode("ascii") in edit
+    assert values["@AFTER@"].encode("ascii") in edit
+    assert values["@AFTER@"].encode("ascii") in reopen
+    assert b"mcpMosApplyWL(inst)==t" in edit
+    assert b"mcpMosApplyWL(" not in reopen

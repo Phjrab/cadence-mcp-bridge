@@ -32,6 +32,7 @@ SIZING_ROUTE = "registered_mos_sizing"
 SIZING_OVERRIDES = ("l", "as", "ad", "ps", "pd")
 SIZING_RENDERER_SHA256 = "ac0b45c26c0b76ce593bea1d3621788ab4d94f165854530cb811ed8c915518a2"
 SIZING_HASH_CHILD_SHA256 = "deacdd769ca0bbcb6d2035450eb6ff511298a00cbb636630e46d3109a884d9f6"
+SIZING_SLOT_VERIFIER_SHA256 = "ee8b999a9cb95a3b8bcba2bc559931e1172713d65de51b7b4d397e37628e801d"
 SYSTEM_PYTHON_SHA256 = "388c3856ebba74fa1818478de7f19aa8b7ab3eb7a157f77d31adcc67229499e6"
 SIZING_PDK_TREE_SHA256 = "14976652b9e37c801b1d662fd02aa9cc3b612dfa6d467f9932b6795b10f01b9f"
 SOURCE = "CmosLong20261111"
@@ -652,9 +653,9 @@ def skill_mutation(route, master):
     ).decode("ascii")
 
 
-def skill_check(rows):
+def skill_check(rows, fields=PROPERTIES):
     result = []
-    for key in PROPERTIES:
+    for key in fields:
         row = rows[key]
         result.append(
             "("
@@ -691,11 +692,14 @@ def render(template, values):
 class Source9MosJob(object):
     sizing = None
 
-    def __init__(self, rt, helper, operator, scope, pin, digest, approval, collector, sizing=None):
+    def __init__(
+        self, rt, helper, operator, scope, pin, digest, approval, collector, sizing=None, slot=None
+    ):
         self.rt, self.h, self.scope, self.pin, self.digest = rt, helper, scope, pin, digest
         self.operator, self.approval, self.collector = operator, approval, collector
         self.subject = scope["subject"]
         self.sizing = sizing
+        self.slot = slot
         self.route = sizing_route(scope) if sizing is not None else exact_route(scope)
         self.operation = self.subject["operation_id"]
         copy_id = self.subject["owned_copy_operation_id"]
@@ -765,10 +769,15 @@ class Source9MosJob(object):
         rt.copying.owned_parent(self.copy)
         rt.copying.owned_parent(self.owned)
         rt.copying.owned_parent(self.confirmations)
-        require(
-            h.read(self.confirmations + "/" + self.digest + ".json", 4096) == self.approval,
-            "native_approval",
-        )
+        if self.slot is None:
+            require(
+                h.read(self.confirmations + "/" + self.digest + ".json", 4096) == self.approval,
+                "native_approval",
+            )
+        else:
+            verifier, sizing_raw = self.slot
+            manifest = h.read(self.confirmations + "/" + self.operation + ".slot.json", 16384)
+            verifier.verify_sizing_slot(manifest, self.scope, sizing_raw, int(time.time()))
         copy_receipt = h.parse(
             h.pinned(
                 h.read(self.copy + "/registered-mos-copy-receipt.json", 4096),
@@ -933,15 +942,13 @@ class Source9MosJob(object):
             master = self.route["qualification"]["target"]["instance"]["master_cell"]
             omit, mutation = skill_mutation(self.route, master)
             after = self.route["after"]
+            after_fields = PROPERTIES
         else:
             master = "nmos1v"
             omit = "'(" + " ".join(skill_token(name) for name in SIZING_OVERRIDES) + ")"
             mutation = "mosRequire(mcpMosApplyWL(inst)==t)"
-            after = dict(
-                (name, self.route["before"][name])
-                for name in PROPERTIES
-                if name not in SIZING_OVERRIDES
-            )
+            after = self.route["before"]
+            after_fields = tuple(name for name in PROPERTIES if name not in SIZING_OVERRIDES)
         slot, rail = SLOTS[master]
         return {
             "@LIB@": self.library,
@@ -951,7 +958,7 @@ class Source9MosJob(object):
             "@WORK@": work,
             "@OP@": self.operation,
             "@BEFORE@": skill_check(self.route["before"]),
-            "@AFTER@": skill_check(after),
+            "@AFTER@": skill_check(after, after_fields),
             "@OVERRIDES@": omit,
             "@MUTATION@": mutation,
             "@TARGET@": slot,
@@ -1239,9 +1246,9 @@ def main():
             "cdf_collector_base64",
         )
     )
-    require(
-        set(packet) in (allowed_fields, allowed_fields | set(("sizing_base64",))), "request_fields"
-    )
+    sizing_fields = allowed_fields | set(("sizing_base64",))
+    slot_fields = sizing_fields | set(("slot_verifier_base64",))
+    require(set(packet) in (allowed_fields, sizing_fields, slot_fields), "request_fields")
     support = read_encoded(packet, "support", 65536)
     require(hashlib.sha256(support).hexdigest() == SUPPORT_SHA256, "support_digest")
     helper = types.ModuleType("registered_mos_fixed_support")
@@ -1254,6 +1261,12 @@ def main():
     )
     calculated = scope["route"] == SIZING_ROUTE
     require(calculated == ("sizing_base64" in packet), "sizing_mode")
+    uses_slot = scope.get("slot_manifest_sha256") is not None
+    require(
+        uses_slot == ("slot_verifier_base64" in packet)
+        and (not uses_slot or (calculated and helper.hex_digest(scope["slot_manifest_sha256"]))),
+        "sizing_slot_mode",
+    )
     subject = scope["subject"]
     require(
         helper.sha(helper.canonical(scope["plan"])) == subject["plan_sha256"]
@@ -1278,6 +1291,14 @@ def main():
         read_encoded(packet, "baseline", 32768), scope["plan"]["baseline"]["netlist_sha256"]
     )
     sizing = read_sizing_assets(helper, packet, scope) if calculated else None
+    slot = None
+    if uses_slot:
+        verifier_source = helper.pinned(
+            read_encoded(packet, "slot_verifier", 16384), SIZING_SLOT_VERIFIER_SHA256
+        )
+        verifier = types.ModuleType("registered_mos_sizing_slot")
+        eval(compile(verifier_source, "_mos_sizing_slot.py", "exec"), verifier.__dict__)
+        slot = (verifier, read_encoded(packet, "sizing", 32768))
     pin = helper.parse(
         helper.pinned(read_encoded(packet, "native_safety", 65536), scope["native_safety_sha256"])
     )
@@ -1302,7 +1323,7 @@ def main():
     os.umask(63)
     with runtime.accounting.ReservationSession(root) as session:
         job = Source9MosJob(
-            runtime, helper, operator, scope, pin, digest, approval, collector, sizing
+            runtime, helper, operator, scope, pin, digest, approval, collector, sizing, slot
         )
         output = helper.canonical(job.phase(session, phase, prior))
         require(len(output) <= LIMIT, "response_bound")
