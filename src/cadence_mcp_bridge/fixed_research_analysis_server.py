@@ -359,6 +359,7 @@ def create_fixed_research_analysis_server(
         comparison_ref = registration.comparison
         comparison = None
         partial = None
+        retained_pair_only = False
         enrolled = {item.identity.operation_id: item for item in registration.analyses}
         if comparison_ref is not None:
             raw = read_candidate_document(
@@ -371,11 +372,31 @@ def create_fixed_research_analysis_server(
             )
             if needs_custody != (registration.comparison_request is not None):
                 raise ValueError("Fixed comparison terminal enrollment differs")
-            _check_comparison(context, document, saved, enrolled, routes)
+            comparison_plans = enrolled
             if registration.comparison_request is not None:
                 verify_fresh_amplifier_comparison(
                     registration.comparison_request, config.runtime_settings_path, context, raw,
                 )
+                # A separately granted measurement can appear in the verified
+                # report without becoming a submission target of this server.
+                measured = (document.association.dc.candidate, document.association.ac.candidate)
+                if all(item.status == "SUCCEEDED" for item in measured):
+                    comparison_plans = dict(enrolled)
+                    for item in measured:
+                        if (
+                            item.operation is not None and item.report is not None
+                            and item.operation.operation_id not in enrolled
+                        ):
+                            comparison_plans[item.operation.operation_id] = _FixedAnalysis(
+                                identity=item.operation, plan=item.report.plan,
+                            )
+                    retained_pair_only = comparison_plans.keys() != enrolled.keys()
+                    if retained_pair_only and not any(
+                        item.operation is not None and item.operation.operation_id in enrolled
+                        for item in measured
+                    ):
+                        raise ValueError("comparison requires a current enrolled analysis")
+            _check_comparison(context, document, saved, comparison_plans, routes)
             if (
                 registration.comparison_request is not None
                 and document.association.dc.candidate.status == "FAILED"
@@ -405,6 +426,8 @@ def create_fixed_research_analysis_server(
         return server
     if comparison is not None:
         register_retained_amp_comparison(server, comparison)
+        if retained_pair_only:
+            return server
 
     def select(request: NativeOperationQuery) -> _FixedAnalysis:
         entry = enrolled.get(request.operation_id)
