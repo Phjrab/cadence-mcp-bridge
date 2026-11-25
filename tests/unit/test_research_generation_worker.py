@@ -2,8 +2,9 @@
 
 import base64
 import json
+import weakref
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -86,6 +87,55 @@ def test_fixed_guest_accepts_concrete_host_wire(wire):
     assert result[0] == body["managed_root"]
     assert result[2] == body["binding"]
     assert result[4:] == ("save", None, program)
+
+
+def test_layout_module_stays_alive_for_runtime_guard(monkeypatch):
+    root = "/workspace/.cadence_mcp"
+    layout = "1" * 64
+    binding = {"native_manifest_sha256": "2" * 64, "resource_domain_sha256": "3" * 64}
+    identity = "4" * 64
+    manifest = {
+        "native_runtime_manifest_sha256": binding["native_manifest_sha256"],
+        "resource_domain_sha256": binding["resource_domain_sha256"],
+        "identity_manifest_sha256": identity,
+    }
+    worker = (
+        "def private_bytes():\n"
+        "    return 'fixture manifest'\n"
+        "class Runtime(object):\n"
+        "    def read_check(self):\n"
+        "        return private_bytes()\n"
+        "def load_runtime(expected):\n"
+        f"    assert expected == {layout!r}\n"
+        "    runtime = Runtime()\n"
+        f"    runtime.root = {root!r}\n"
+        f"    runtime.manifest = {manifest!r}\n"
+        "    return runtime\n"
+    ).encode("ascii")
+    scope = {
+        "layout_manifest_sha256": layout,
+        "layout_worker_sha256": guest.sha(worker),
+        "identity_manifest_sha256": identity,
+    }
+    loaded = []
+
+    def track(name):
+        module = ModuleType(name)
+        loaded.append(weakref.ref(module))
+        return module
+
+    def read(path, limit):
+        assert path == f"{root}/layout-runtime/{layout}/worker.py"
+        assert limit == guest.LIMIT
+        return worker
+
+    monkeypatch.setattr(guest, "types", SimpleNamespace(ModuleType=track))
+    monkeypatch.setattr(guest.os.path, "realpath", lambda value: value)
+    monkeypatch.setattr(guest, "read_regular", read)
+
+    runtime = guest.load_runtime(root, scope, binding)
+    assert loaded[0]() is not None
+    assert runtime.read_check() == "fixture manifest"
 
 
 @pytest.mark.parametrize("fault", ["program", "scope", "prior", "authority", "extra"])

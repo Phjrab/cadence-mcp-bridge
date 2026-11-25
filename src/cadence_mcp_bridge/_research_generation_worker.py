@@ -267,6 +267,8 @@ def load_runtime(root, scope, binding):
     module.__file__ = path
     eval(compile(raw, path, "exec"), module.__dict__)
     runtime = module.load_runtime(layout)
+    # Python 2.6 clears a module's globals when the module is collected.
+    runtime._research_generation_layout_module = module
     require(
         runtime.root == root
         and runtime.manifest["native_runtime_manifest_sha256"] == binding["native_manifest_sha256"]
