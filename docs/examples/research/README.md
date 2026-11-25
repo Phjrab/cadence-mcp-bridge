@@ -238,7 +238,7 @@ cadence-mcp-bridge operator-research-generation --registration $registration $re
 
 ## 결과 조회와 Netlist 확인 예
 
-등록된 DC operation에서 OP 읽기는 아래 입력만 받습니다. 등록된 OP 카탈로그를 사용하며 요청에는 등록 ID와 작업 식별자만 전달합니다. 이 도구는 보존 결과를 읽기만 합니다.
+등록된 DC 동작점(OP)은 읽기 전용 `cadence_research_device_op_result`로 조회합니다. 실제 Codex 데스크톱에서 `cadence-amp-5656-op-retained` 프로필로 조회한 결과는 `AVAILABLE`이었으며, MOS 14개에서 각각 7개씩 총 98개의 유한값을 반환했습니다. 설치본에서 독립 확인한 응답과 일치했고, 원격 접속과 새 시뮬레이션·추출·예약은 모두 0건이었습니다. 아래 MCP 호출에는 등록 카탈로그의 식별자와 성공한 DC 작업의 ID·계획 해시를 사용합니다.
 
 ```text
 cadence_research_device_op_result({
@@ -309,11 +309,13 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 설치된 IC6.1.5의 CDF 갱신 함수는 기존 유효값을 저장하거나 복사합니다. 새 치수의 접합 면적·둘레를 계산하려면 설치 버전과 해당 master를 지원하는 문서화된 비대화형 PDK 함수가 필요합니다. 또는 정확한 목표 조합의 저장 OA 값, 유효 CDF 값, 같은 revision의 독립 재개방 및 Spectre Netlist 증거를 확보해야 합니다. 검토한 범위에서 해당 비대화형 함수는 확인되지 않았습니다.
 
+별도 읽기 전용 점검에서 CDF 메타데이터 60행을 독립 검증했습니다. NMOS와 PMOS 모두 기본·유효 CDF에 `formInitProc`와 `doneProc`가 있으며 각각의 식별자가 일치했습니다. 검토한 공개 v1.16 보조 도구에는 `doneProc` 실행 경로가 없어 실제 쓰기 호환성은 미확인입니다. 이 점검에서 콜백 실행·치수 변경·시뮬레이션은 0건이며, 목표 치수 검증은 **0/8**입니다.
+
 ### 측정 범위
 
 | 항목 | 범위와 남은 확인 |
 | --- | --- |
-| OP | BBE3 DC의 2 MOS × 7개 값을 설치 stdio와 실제 Codex 데스크톱의 읽기 전용 MCP에서 확인했습니다. 별도 AMP DC의 원본 자료를 복구해 14 MOS × 7개, 총 98개 값을 로컬에서 검증했습니다. AMP OP의 앱 조회는 미검증입니다. 인스턴스·항목별 단위와 부호가 유지되며 모델 근거가 없는 `region`은 원시 코드로 남습니다. 17 × 7개 선언은 64개 인스턴스 한도 안에 들며 실제 OTA selector와 64 KiB 프레임 한도는 생성 후 확인합니다. |
+| OP | 실제 Codex 데스크톱의 읽기 전용 MCP에서 BBE3 DC의 2 MOS × 7개와 AMP5656 DC의 14 MOS × 7개를 확인했습니다. 인스턴스·항목별 단위와 부호가 유지되며 모델 근거가 없는 `region`은 원시 코드로 남습니다. 17 × 7개 선언은 64개 인스턴스 한도 안에 들며 실제 OTA selector와 64 KiB 프레임 한도는 생성 후 확인합니다. |
 | AC | 실제 새 AMP 사본의 71점(10 Hz–100 MHz)에서 복소 전달비와 10 Hz 이득을 재현했습니다. 10 Hz 기준 −3 dB와 0 dB 하강 교차는 모두 표본 범위에서 미관측입니다. 약 487,663 Hz의 −3 dB 대역폭은 별도 과거 후보입니다. Center는 10 Hz 이득을 확인했고 전체 표본이 없어 교차는 미평가입니다. 단일 출력 OTA의 실제 복소 데이터와 위상여유용 loop-gain은 별도입니다. |
 | TRAN | 실제 Source9는 top-level 공급원의 `PLUS` 전류와 검증된 0 V 기준을 사용했습니다. 평균 전달전력은 `−(V+−V−)×I(+)`를 시간 적분한 뒤 관측 시간으로 나눕니다. 등록 전압은 최대 8개, v2 공급전류는 최대 6개, 벡터는 채널당 256점 및 전체 1536점까지입니다. 긴 원본 벡터는 상한을 넘으면 거부합니다. 표시용 축소는 측정 구간 추출과 구분합니다. |
 
