@@ -286,7 +286,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 기존 14 MOS AMP와 4497 사본 | 실제 기준·사본의 DC 정적 공급전력과 AC 10 Hz 차동 이득 비교. 설치 CLI에서 기존 결과 네 건을 대조하고 Codex 앱에서 저장 비교 조회. [PR #172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 성능 목표와 후보 선택은 미설정 |
 | 14 MOS AMP의 이전 새 사본 검증 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 독립 재개방 및 Netlist 확인. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) | 당시 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED` |
 | 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 보존. 실제 Spectre DC·AC와 원본 프레임 대조 후, 재시작한 실제 앱에서 Center와 사본의 비교를 조회. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) · [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 이전 DC 실패 이력은 보존했습니다. 최종 비교는 성공한 별도 DC와 원래 AC를 사용합니다. 성능 합격 기준은 미설정 |
-| 범용 생성 준비와 재조회 | 개발 wheel에서 기존 두 MOS 준비 파일 8개를 바이트 단위로 재현했고, 실제 BBE3의 보존 인계를 새 프로세스에서 읽었습니다. 합성 17 MOS에서도 렌더러를 검증했습니다. [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 새 등록형 프로필의 최초 native 생성 검증은 별도입니다. |
+| 범용 생성 준비와 실제 두 MOS 저장 | 기존 준비 파일 8개를 개발 wheel에서 재현했습니다. 새 비OTA 두 MOS 인버터에서 VIN 0.5 V·VDD 1 V·부하 1 pF를 저장하고 독립 재개방했으며 실제 진단 Netlist를 확보했습니다. [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 원래 작업은 문장 순서·숫자 표기 차이로 원본 Netlist 완료 검사를 통과하지 못해 같은 ID에서 `OUTCOME_UNKNOWN`입니다. 진단 입력은 오프라인 정합 검증을 통과했습니다. 일반 분석 제출과 실제 source 등록은 검증 대기입니다. |
 | 작업용 Layout | 실제 Cadence에서 instance 이동, 도형·연결 pin 추가, 저장·재개방 확인. [PR #167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 OTA Layout·DRC·LVS·PEX는 별도 단계 |
 
 앱에서 조회한 AMP 비교는 NN, 27 °C, VDD 1 V, VBIASN 0.320 V, VBIASP 0.702 V 조건입니다.
@@ -309,7 +309,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 항목 | 범위와 남은 확인 |
 | --- | --- |
-| OP | BBE3 DC의 2 MOS × 7개 값을 설치 stdio와 실제 Codex 데스크톱의 읽기 전용 MCP에서 확인했습니다. 실제 앱에서 같은 14개 값을 조회했으며 추가 시뮬레이션·추출·예약은 0건이었습니다. 인스턴스·항목별 단위와 부호를 보존하며 누락값은 상태로 표시합니다. 64개 인스턴스와 64 KiB 원본 프레임 한도 안에 17 × 7개 선언이 들어가지만, OTA의 실제 selector와 프레임 크기는 생성 후 확인합니다. 모델 근거가 없는 `region`은 원시 코드로 유지합니다. |
+| OP | BBE3 DC의 2 MOS × 7개 값을 설치 stdio와 실제 Codex 데스크톱의 읽기 전용 MCP에서 확인했습니다. 별도 AMP DC의 원본 자료를 복구해 14 MOS × 7개, 총 98개 값을 로컬에서 검증했습니다. AMP OP의 앱 조회는 미검증입니다. 인스턴스·항목별 단위와 부호가 유지되며 모델 근거가 없는 `region`은 원시 코드로 남습니다. 17 × 7개 선언은 64개 인스턴스 한도 안에 들며 실제 OTA selector와 64 KiB 프레임 한도는 생성 후 확인합니다. |
 | AC | 실제 새 AMP 사본의 71점(10 Hz–100 MHz)에서 복소 전달비와 10 Hz 이득을 재현했습니다. 10 Hz 기준 −3 dB와 0 dB 하강 교차는 모두 표본 범위에서 미관측입니다. 약 487,663 Hz의 −3 dB 대역폭은 별도 과거 후보입니다. Center는 10 Hz 이득을 확인했고 전체 표본이 없어 교차는 미평가입니다. 단일 출력 OTA의 실제 복소 데이터와 위상여유용 loop-gain은 별도입니다. |
 | TRAN | 실제 Source9는 top-level 공급원의 `PLUS` 전류와 검증된 0 V 기준을 사용했습니다. 평균 전달전력은 `−(V+−V−)×I(+)`를 시간 적분한 뒤 관측 시간으로 나눕니다. 등록 전압은 최대 8개, v2 공급전류는 최대 6개, 벡터는 채널당 256점 및 전체 1536점까지입니다. 긴 원본 벡터는 상한을 넘으면 거부합니다. 표시용 축소는 측정 구간 추출과 구분합니다. |
 
