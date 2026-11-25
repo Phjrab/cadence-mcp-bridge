@@ -234,6 +234,16 @@ cadence-mcp-bridge operator-research-generation --registration $registration $re
 
 `serve-operator --registered-mos-edit`는 운영자 context에 선택된 편집을 사용합니다. 계획 조회·적용·재조회 도구의 `request`에는 등록된 `operation_id`, `expected_plan_sha256`, `expected_scope_sha256` 세 필드를 전달합니다. 적용 후 저장·재개방·Netlist 증거가 확인된 revision을 다음 분석 등록에 연결합니다. 생성의 binding SHA나 파일 SHA를 편집의 계획·scope SHA 대신 사용하지 않습니다.
 
+```text
+cadence_lookup_registered_mos_edit({"request": {
+  "operation_id": "REGISTERED_EDIT_UUID",
+  "expected_plan_sha256": "EDIT_PLAN_SHA256",
+  "expected_scope_sha256": "EDIT_SCOPE_SHA256"
+}})
+```
+
+응답이 끊기거나 `OUTCOME_UNKNOWN`이면 같은 ID와 해시로 위 조회를 사용합니다. 조회는 보존 기록만 읽습니다. 확인되지 않은 작업은 원래 ID의 단계별 증거를 확인합니다.
+
 두 프로필의 명령과 스키마는 개발 소스 기준입니다. 새 생성·편집 경로의 실제 Cadence 적합성은 등록 대상과 지원 속성 조합별로 검증하며, 17 MOS OTA 실행 검증은 대기 중입니다.
 
 ## 결과 조회와 Netlist 확인 예
@@ -302,7 +312,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 조합 | 호스트·MCP | 패키지 guest | 실제 Cadence 근거 |
 | --- | --- | --- | --- |
 | 등록 `pmos1v` 기본값 복원 | 검토된 W/FW, L 또는 동시 변경의 계획·적용·재조회 | 등록된 단일 finger 사본에서 검토된 override 제거 | 실제 Source9에서 W/FW 350 → 120 nm, L 100 nm 유지, 저장·독립 재개방·Netlist 확인. 별도 AMP 고정 편집은 20 µm → 120 nm, L 1 µm 유지. L 복원과 동시 복원의 새 실제 증거는 대기 중입니다. |
-| 등록 `nmos1v`·`pmos1v`의 W/FW/L 명시 설정 | 같은 master의 목표 값에 대한 독립 OA·CDF·Spectre Netlist 증거를 등록한 뒤 계획·적용·재조회 | 개발 설치본에 포함된 전용 설정 경로가 단일 finger의 지정 치수와 검증된 종속 속성을 기록합니다. | 설치본의 로컬 검증을 통과했습니다. 새 목표 치수의 실제 설정·저장·독립 재개방은 미검증입니다. |
+| 등록 `nmos1v`·`pmos1v`의 `SET_EXPLICIT` | 같은 master의 목표 값에 대한 독립 OA·CDF·Spectre Netlist 증거를 등록한 뒤 계획·적용·재조회 | 개발 설치본의 단일 finger 경로가 증거에 있는 W/FW/L과 검증된 종속 속성을 기록합니다. | 설치본의 로컬 검증을 통과했습니다. 지원 대상과 기대값은 등록된 조합에 한정됩니다. |
 | 단일 finger의 `m` 명시 설정 | `m`과 `fingers`를 별도로 대조합니다. 치수와 `m`을 함께 바꿀 때 모든 변경을 한 작업으로 등록합니다. | 등록된 m 변경을 W/FW/L과 함께 한 작업으로 적용할 수 있습니다. `fingers`는 1로 유지하며 `nf` 편집은 지원하지 않습니다. | W/L과 m=6 동시 변경은 합성 입력에서 검증했습니다. 실제 PM6 목표 조합은 미검증입니다. |
 
 실제 Cadence에서 보정용 회로의 MOS 8개, 포트 도형 4개, 연결 및 DUT·테스트 회로의 기준 상태를 확인했습니다. 치수 변경은 0건이며 새 목표 조합은 **0/8 검증**입니다. 보존된 GPDK090 MOS 넷리스트 문장 438개 가운데 목표 master와 W/L이 일치하는 사례는 없었습니다.
@@ -310,6 +320,12 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 설치된 IC6.1.5의 CDF 갱신 함수는 기존 유효값을 저장하거나 복사합니다. 새 치수의 접합 면적·둘레를 계산하려면 설치 버전과 해당 master를 지원하는 문서화된 비대화형 PDK 함수가 필요합니다. 또는 정확한 목표 조합의 저장 OA 값, 유효 CDF 값, 같은 revision의 독립 재개방 및 Spectre Netlist 증거를 확보해야 합니다. 검토한 범위에서 해당 비대화형 함수는 확인되지 않았습니다.
 
 별도 읽기 전용 점검에서 CDF 메타데이터 60행을 독립 검증했습니다. NMOS와 PMOS 모두 기본·유효 CDF에 `formInitProc`와 `doneProc`가 있으며 각각의 식별자가 일치했습니다. 검토한 공개 v1.16 보조 도구에는 `doneProc` 실행 경로가 없어 실제 쓰기 호환성은 미확인입니다. 이 점검에서 콜백 실행·치수 변경·시뮬레이션은 0건이며, 목표 치수 검증은 **0/8**입니다.
+
+#### 신규 W/L 후보의 편집과 비교
+
+화면 없이 새 W/L 후보의 종속값을 PDK에서 계산하는 경로는 실제 검증 대기입니다. 이 경로의 목표는 지원 범위에서 새 후보를 받아 등록된 비OTA 사본에 적용하는 것입니다. 기존 `SET_EXPLICIT`의 증거 요건은 해당 경로에 적용됩니다. 외부 helper와 후보별 수동 보정 자료 확보는 신규 경로 개발의 선행 조건으로 두지 않습니다.
+
+후보마다 요청 치수·단위를 기록하고, 같은 기준 revision을 사용할지 직전 편집을 이어갈지 정합니다. 실제 편집의 확인 순서는 PDK 처리·회로 검사·저장 → 별도 세션 재개방 → 실제 Spectre Netlist에서 W/L/m과 종속 접합값 대조입니다. 비교에는 해당 revision의 편집 ID·분석 ID·Netlist SHA와 실제 적용값·측정 조건·결과 단위를 함께 기록합니다. 새 분석은 등록된 실행 범위와 남은 후보·분석·저장 한도를 확인한 뒤 제출합니다. 기존 설계 변수 sweep은 등록 변수의 값을 바꿔 분석하는 기능입니다. W/L 편집 결과로 집계하려면 후보별 PDK 처리와 새 Netlist 증거가 필요합니다.
 
 ### 측정 범위
 
@@ -323,9 +339,22 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 확인 시점 | 항목 | 상태 |
 | --- | --- | --- |
-| 생성 전 | GPDK090 소자별 치수 | 단일 finger, W=FW를 제안했습니다. 논문에서 옮긴 후보 `(W µm, L µm, m)`는 NMOS `(1, 0.25, 1)`, `(1.5, 0.25, 1)`, `(10, 0.25, 1)`, `(15, 0.25, 1)`과 PMOS `(3, 0.25, 1)`, `(30, 0.25, 1)`, `(10, 1, 1)`, `(16, 1, 6)`입니다. 8개 모두 선택한 master의 유효 CDF·Spectre W/L/m, D/S·벌크 및 종속 접합 항목을 확인해야 합니다. |
+| 생성 전 | GPDK090 소자별 치수 | 아래 8개 목표에서 선택한 master의 유효 CDF·Spectre W/L/m, D/S·벌크 및 종속 접합 항목을 확인해야 합니다. |
 | 생성 전 | 실제 ADE seed와 실행 계획 | 검토된 소유 대상과 ADE seed 상태를 확인한 뒤 물리 기준과 실행 범위를 결속합니다. 기존 두 MOS의 seed 재사용 계획과 로컬 Netlist 비교는 준비 증거입니다. 새 OTA에 적용할 seed 상태, 분석 조건, 의존 모델과 프로그램을 별도로 대조합니다. |
 | 생성 후 | 저장본과 측정 선택자 | 독립 재개방에서 DUT·심볼·bench 트리와 유효 Netlist를 연결합니다. 실제 등록에서 `out/inp/inn`, 전원 양단과 공급원의 `PLUS` 전류, DUT 아래 17개 MOS 경로를 확인한 뒤 reader와 분석 작업을 결속합니다. |
+
+연구용 목표값은 단일 finger, W=FW 기준입니다. 검증은 승인된 비OTA 보정 사본에서 진행합니다.
+
+| Master | 목표 `(W µm, L µm, m)` | 검증 |
+| --- | --- | --- |
+| `nmos1v` | `(1, 0.25, 1)` | 대기 |
+| `nmos1v` | `(1.5, 0.25, 1)` | 대기 |
+| `nmos1v` | `(10, 0.25, 1)` | 대기 |
+| `nmos1v` | `(15, 0.25, 1)` | 대기 |
+| `pmos1v` | `(3, 0.25, 1)` | 대기 |
+| `pmos1v` | `(30, 0.25, 1)` | 대기 |
+| `pmos1v` | `(10, 1, 1)` | 대기 |
+| `pmos1v` | `(16, 1, 6)` | 대기 |
 
 **첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** 목표 치수는 0/8 검증 상태입니다. 치수 검증 후 선택한 소스·부하 증거를 새 bench에 결속하고, 실행용 변환과 실제 ADE seed·작업 범위를 확인해야 합니다. 선택형 `vsin`의 기존 소스 증거는 오프라인 대조를 통과했습니다.
 
