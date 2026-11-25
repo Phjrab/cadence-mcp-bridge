@@ -1625,6 +1625,12 @@ _AMP_5656_R2_SETTINGS_SHA256 = "08921dbdf92862b22b62842984459b79d739552ceab1f8d2
 _AMP_5656_R2_CONTEXT_SHA256 = "3e373473f8445335c8437aa00e8b20317c3385a5e894dae668b0c6c0bebf3b7b"
 _AMP_5656_R3_CONTEXT_SHA256 = "d289b4fbba81e700c2486dfdbcf48dbd2942e9a513767b6b674df0b58ccfe6ca"
 _AMP_5656_R3_SCOPE_SHA256 = "0a56fbe11267c0f11d25bdf81405e7f3394c9ad767a1dc07e2101cd1a1eaf3f1"
+_AMP_5656_R3_RENEWED_CONTEXT_SHA256 = (
+    "282163bfde8f3a89e2b6943607bc232ec0530a0b4478a3c61425e41f7b2adc54"
+)
+_AMP_5656_R3_RENEWED_SCOPE_SHA256 = (
+    "f6d89e437ab453b8cf02da9c399cbe03b60a4e56b00dfc2e52e3f1226720516f"
+)
 _AMP_5656_FAILED_DC_ID = "97e9eef0-b49a-4113-9ebf-8ddcbd09438a"
 _AMP_5656_FAILED_DC_PLAN = "4919b38c8e78fd7241541f0a3e4ee87c4440f7acf7ae87d4e270ee1b5cd4a991"
 _AMP_5656_REVISION = "amp-pm0-user-mcp-1123-r1"
@@ -2573,12 +2579,17 @@ def _check_5656_ac_successor(
     successor = source.ac_successor
     if successor is None or context is None or dc is None or ac is None:
         raise ValueError("5656 successor requires both original operations and contexts")
-    scope = _pinned_json(successor.scope, _AMP_5656_R3_SCOPE_SHA256)
+    scope_sha256 = {
+        _AMP_5656_R3_CONTEXT_SHA256: _AMP_5656_R3_SCOPE_SHA256,
+        _AMP_5656_R3_RENEWED_CONTEXT_SHA256: _AMP_5656_R3_RENEWED_SCOPE_SHA256,
+    }.get(context.context_sha256)
+    if scope_sha256 is None:
+        raise ValueError("5656 successor AC context is not enrolled")
+    scope = _pinned_json(successor.scope, scope_sha256)
     prior = successor.dc_context
     failed, selected = dc.operation, ac.operation
     if (
         prior.context_sha256 != _AMP_5656_R2_CONTEXT_SHA256
-        or context.context_sha256 != _AMP_5656_R3_CONTEXT_SHA256
         or prior.binding.analysis_journal != context.binding.analysis_journal
         or prior.binding.runner_sha256 != scope["previous_runtime"]
         or context.binding.runner_sha256 != source.runtime_manifest_sha256

@@ -70,9 +70,11 @@ from cadence_mcp_bridge.variable_contracts import canonical_digest
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
 
 
+@pytest.mark.parametrize("renewed", [False, True])
 def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
     monkeypatch,
     tmp_path,
+    renewed,
 ):
     from cadence_mcp_bridge import candidate_execution as execution
 
@@ -81,8 +83,10 @@ def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
         context_sha256=execution._AMP_5656_R2_CONTEXT_SHA256,
         binding=SimpleNamespace(analysis_journal=journal, runner_sha256="2" * 64),
     )
+    original_context = execution._AMP_5656_R3_CONTEXT_SHA256
+    renewed_context = execution._AMP_5656_R3_RENEWED_CONTEXT_SHA256
     r3 = SimpleNamespace(
-        context_sha256=execution._AMP_5656_R3_CONTEXT_SHA256,
+        context_sha256=renewed_context if renewed else original_context,
         binding=SimpleNamespace(analysis_journal=journal, runner_sha256="3" * 64),
     )
     ac_id = str(uuid4())
@@ -96,7 +100,11 @@ def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
             "plan_sha256": "a" * 64,
         }
     )
-    monkeypatch.setattr(execution, "_AMP_5656_R3_SCOPE_SHA256", hashlib.sha256(scope).hexdigest())
+    monkeypatch.setattr(
+        execution,
+        "_AMP_5656_R3_RENEWED_SCOPE_SHA256" if renewed else "_AMP_5656_R3_SCOPE_SHA256",
+        hashlib.sha256(scope).hexdigest(),
+    )
     dc = FreshAmplifierOperation(
         SimpleNamespace(
             query=SimpleNamespace(operation_id=execution._AMP_5656_FAILED_DC_ID),
@@ -122,6 +130,16 @@ def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
         ac_native_result=b"fixture payload",
     )
     assert execution._check_5656_ac_successor(source, r3, dc, ac) is r2
+    other_r3 = SimpleNamespace(
+        context_sha256=original_context if renewed else renewed_context,
+        binding=r3.binding,
+    )
+    with pytest.raises(ValueError):
+        execution._check_5656_ac_successor(source, other_r3, dc, ac)
+    ac.operation.plan.plan_sha256 = "b" * 64
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, dc, ac)
+    ac.operation.plan.plan_sha256 = "a" * 64
     with pytest.raises(ValueError, match="R2 failed DC"):
         execution._check_5656_ac_successor(source, r3, replace(dc, effective_input=b"fake"), ac)
     source.ac_native_result = None
