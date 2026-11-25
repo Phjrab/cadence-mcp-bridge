@@ -495,6 +495,7 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
         "freq": ("frequency", "1K"),
         "acp": (None, ""),
         "sinephase": (None, ""),
+        "filenums": (None, "none"),
     }
     sources = []
     for index, node in enumerate(("pos", "neg")):
@@ -531,7 +532,8 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
         for scope in ("base", "effective"):
             for field, (unit, value) in effective_rows.items():
                 unit_token = f'"{unit}"' if unit else "nil"
-                default = ""
+                default = "none" if field == "filenums" else ""
+                cdf_type = "baseCellData" if scope == "base" else "instData"
                 if scope == "base":
                     value = default
                 elif field == "acm":
@@ -539,7 +541,7 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
                 elif field == "sinephase" and index:
                     value = "180"
                 rows.append(
-                    f'PARAM|"{scope}"|"{field}"|"baseCellData"|{unit_token}|"{default}"|"{value}"'
+                    f'PARAM|"{scope}"|"{field}"|"{cdf_type}"|{unit_token}|"{default}"|"{value}"'
                 )
         primitive = primitive.removesuffix(b"COMPLETE\n")
         primitive += ("\n".join([*rows, "END", "COMPLETE", ""])).encode()
@@ -620,6 +622,14 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
 
     changed = primitive.replace(b'|"va"|"baseCellData"|', b'|"vo"|"baseCellData"|')
     with pytest.raises(ValueError, match="vsin CDF parameter metadata"):
+        render(changed)
+    changed = primitive.replace(b'"effective"|"va"|"instData"', b'"effective"|"va"|"baseCellData"')
+    with pytest.raises(ValueError, match="vsin CDF parameter metadata"):
+        render(changed)
+    changed = primitive.replace(
+        b'|"filenums"|"instData"|nil|"none"|"none"', b'|"filenums"|"instData"|nil|"none"|"file"'
+    )
+    with pytest.raises(ValueError, match="CDF file selector disagrees"):
         render(changed)
     changed = primitive.replace(b'|"voltage"|""|"50m"', b'|"voltage"|""|"60m"')
     with pytest.raises(ValueError, match="effective CDF value disagrees"):

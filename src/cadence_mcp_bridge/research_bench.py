@@ -606,21 +606,24 @@ def _check_vsin_source_cdf(
     parameters = {(row[0], row[1]): row for row in rows}
     props = _vsin_oa_properties(negative)
     phase_default = (None, "", "0")
-    for name in ("vdc", "acm", "va", "freq", "sinephase", "acp"):
+    for name in ("vdc", "acm", "va", "freq", "sinephase", "acp", "filenums"):
         base = parameters.get(("base", name))
         effective = parameters.get(("effective", name))
         if (
             base is None
             or effective is None
-            or not isinstance(base[2], str)
-            or not base[2]
-            or effective[2:4] != base[2:4]
+            or base[2] != "baseCellData"
+            or effective[2] != "instData"
+            or effective[3] != base[3]
         ):
             raise ValueError("observed vsin CDF parameter metadata missing or inconsistent")
         value = effective[5]
         if name in ("acp", "sinephase") and base[4] not in phase_default:
             raise ValueError("observed vsin phase default is not zero or absent")
-        if name in props:
+        if name == "filenums":
+            if base[4] != props[name] or value != props[name]:
+                raise ValueError("observed vsin CDF file selector disagrees with saved OA")
+        elif name in props:
             if not isinstance(value, str) or _spectre_scalar(value) != _spectre_scalar(props[name]):
                 raise ValueError("observed vsin effective CDF value disagrees with saved OA")
         elif value not in phase_default:
