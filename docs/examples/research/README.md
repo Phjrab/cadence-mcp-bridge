@@ -317,7 +317,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 실제 Cadence에서 보정용 회로의 MOS 8개, 포트 도형 4개, 연결 및 DUT·테스트 회로의 기준 상태를 확인했습니다. 치수 변경은 0건이며 새 목표 조합은 **0/8 검증**입니다. 보존된 GPDK090 MOS 넷리스트 문장 438개 가운데 목표 master와 W/L이 일치하는 사례는 없었습니다.
 
-설치된 IC6.1.5의 CDF 갱신 함수는 기존 유효값을 저장하거나 복사합니다. 새 치수의 접합 면적·둘레를 계산하려면 설치 버전과 해당 master를 지원하는 문서화된 비대화형 PDK 함수가 필요합니다. 또는 정확한 목표 조합의 저장 OA 값, 유효 CDF 값, 같은 revision의 독립 재개방 및 Spectre Netlist 증거를 확보해야 합니다. 검토한 범위에서 해당 비대화형 함수는 확인되지 않았습니다.
+초기 `SET_EXPLICIT` 조사에서 설치된 IC6.1.5의 CDF 갱신 함수는 기존 유효값을 저장하거나 복사하는 용도로 확인됐습니다. 당시 검토한 기본 갱신 API에서는 새 치수의 접합 면적·둘레를 계산하는 비대화형 함수를 확인하지 못했습니다. 기존 `SET_EXPLICIT`는 정확한 목표 조합의 저장 OA 값, 유효 CDF 값과 같은 revision의 독립 재개방·Spectre Netlist 증거를 사용합니다. 이후 프로젝트의 자체 adapter가 아래 Source9 L200에서 설치 PDK의 계산 경로를 검증했습니다.
 
 별도 읽기 전용 점검에서 CDF 메타데이터 60행을 독립 검증했습니다. NMOS와 PMOS 모두 기본·유효 CDF에 `formInitProc`와 `doneProc`가 있으며 각각의 식별자가 일치했습니다. 검토한 공개 v1.16 보조 도구에는 `doneProc` 실행 경로가 없어 실제 쓰기 호환성은 미확인입니다. 이 점검에서 콜백 실행·치수 변경·시뮬레이션은 0건이며, 목표 치수 검증은 **0/8**입니다.
 
@@ -328,9 +328,29 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 후보 | 확인된 상태 |
 | --- | --- |
 | L 250 nm | 실제 등록을 읽은 개발 설치본에서 시작값 조회와 변경 계획을 확인했습니다. 실제 적용은 Cadence 시작 전 검사 코드 오류로 멈췄고, 같은 ID의 설치 stdio 조회는 `OUTCOME_UNKNOWN`을 반환했습니다. 추가 실행·치수 변경·측정은 0건입니다. 오류 수정은 로컬에서 검증했습니다. |
-| L 200 nm | 같은 기준 회로에서 별도 작업으로 준비 중입니다. 새 사본의 사전검증을 통과했습니다. 실제 적용·독립 재개방·Netlist·측정은 확인 대기입니다. |
+| L 200 nm | 같은 기준 회로의 새 사본에서 개발 설치본 `c2858c9`의 실제 MCP 적용이 `VERIFIED`를 반환했습니다. 요청, 저장 OA, 유효 CDF, 독립 재개방 및 실제 Spectre Netlist에서 L 200 nm가 일치했습니다. W/FW 120 nm와 `m=fingers=1`이 유지됐고, Spectre 접합값은 `as=ad=69.6f`, `ps=pd=1.16u`입니다. 새 연결에서 같은 작업 ID를 조회해 같은 결과를 받았으며 추가 실행은 0건입니다. 후보 측정은 대기 중입니다. |
+| PMOS W 3000 nm, L 100 nm | 별도 후보 준비 단계입니다. 편집·독립 재개방·Netlist·측정은 확인 대기입니다. |
 
-개발 설치본의 `cadence_inspect_registered_mos_sizing`은 시작값과 등록된 범위를 조회하고, `cadence_plan_registered_mos_sizing`은 요청을 미리 봅니다. `cadence_lookup_registered_mos_sizing`은 계획에서 받은 동일 작업 ID와 계획·범위 해시로 보존 상태를 읽습니다. L250 읽기 전용 사용자 프로필 설정은 확인됐으며, 사용자 Codex 앱에서의 실제 호출은 확인 대기입니다. 새 치수 검증과 DC/AC 측정 완료는 각각 별도로 기록합니다.
+L200 편집 작업 ID는 `53cbd04e-0106-48c6-be9a-560622bce48f`, 실제 Netlist SHA-256은 `25c25e5a49f54932456bea607f4c02fcf18e97b19d2945b481814a8d7fee3610`입니다.
+
+아래 예시는 설치 MCP의 읽기 전용 호출입니다. 계획에 사용할 등록·기준 해시는 inspect에서, 재조회에 사용할 계획·범위 해시는 plan에서 받습니다. L250과 L200의 사용자 프로필 설정을 확인했으며, 실제 적용·동일 ID 재조회 증거는 개발 설치본의 MCP stdio에서 확보했습니다. 사용자 Codex 앱에서의 호출은 확인 대기입니다.
+
+```text
+cadence_inspect_registered_mos_sizing({})
+cadence_plan_registered_mos_sizing({"request": {
+  "operation_id": "ENROLLED_L200_EDIT_UUID",
+  "expected_enrollment_sha256": "ENROLLMENT_SHA256",
+  "expected_baseline_sha256": "BASELINE_SHA256",
+  "values": {"l": {"value": "200", "unit": "nm"}}
+}})
+cadence_lookup_registered_mos_sizing({"request": {
+  "operation_id": "ENROLLED_L200_EDIT_UUID",
+  "expected_plan_sha256": "EDIT_PLAN_SHA256",
+  "expected_scope_sha256": "EDIT_SCOPE_SHA256"
+}})
+```
+
+보존된 Source9 기준 DC0은 입력 0 V, 전원 1 V, 부하 1 pF, NN, 27 °C에서 출력 **0.9999258823 V**, 부호를 유지한 공급 전달 전력 **25.36609145 nW**였습니다. L200의 DC/OP·AC 측정값과 기준 대비 차이는 대기 중입니다. 기준값을 비교에 쓰려면 새 revision의 분석 조건과 reader가 일치하는지 확인합니다.
 
 후보마다 요청 치수·단위를 기록하고, 같은 기준 revision을 사용할지 직전 편집을 이어갈지 정합니다. 실제 편집의 확인 순서는 PDK 처리·회로 검사·저장 → 별도 세션 재개방 → 실제 Spectre Netlist에서 W/L/m과 종속 접합값 대조입니다. 비교에는 해당 revision의 편집 ID·분석 ID·Netlist SHA와 실제 적용값·측정 조건·결과 단위를 함께 기록합니다. 새 분석은 등록된 실행 범위와 남은 후보·분석·저장 한도를 확인한 뒤 제출합니다. 기존 설계 변수 sweep은 등록 변수의 값을 바꿔 분석하는 기능입니다. W/L 편집 결과로 집계하려면 후보별 PDK 처리와 새 Netlist 증거가 필요합니다.
 
