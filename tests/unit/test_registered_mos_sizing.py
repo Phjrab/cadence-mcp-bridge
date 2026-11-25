@@ -64,19 +64,31 @@ class _Provider:
         return self.record
 
 
-def _input(length: str, area: str) -> bytes:
+def _input(length: str, area: str, *, width: str, slot: str, master: str, rail: str) -> bytes:
     return (
         "simulator lang=spectre\nparameters VDD=1\n"
         "subckt InvLong vdd vin vout vss\n"
-        f"MN (vout vin vss vss) gpdk090_nmos1v w=(120n) l={length} "
+        f"{slot} (vout vin {rail} {rail}) gpdk090_{master} w=({width}) l={length} "
         f"as={area} ad=98f ps=1.26u pd=1.26u m=(1)*(1) simM=(1)*(1)\n"
         "ends InvLong\nDUT (vdd vin vout 0) InvLong\n"
     ).encode("ascii")
 
 
-def _fixture():
-    baseline_input = _input("100n", "98f")
-    after_input = _input("2.5e-7", "1.04e-13")
+def _fixture(*, pmos_width: bool = False):
+    if pmos_width:
+        axis, slot, master, rail = "w", "MP", "pmos1v", "vdd"
+        old_width, new_width, new_length = "350n", "3e-6", "100n"
+        requested = MosSizingValues(w=_length("3000"))
+        changed_properties = {"w": "3u", "fw": "3000n", "as": "104f"}
+    else:
+        axis, slot, master, rail = "l", "MN", "nmos1v", "vss"
+        old_width, new_width, new_length = "120n", "120n", "2.5e-7"
+        requested = MosSizingValues(l=_length("250"))
+        changed_properties = {"l": "0.25u", "as": "104f"}
+    baseline_input = _input("100n", "98f", width=old_width, slot=slot, master=master, rail=rail)
+    after_input = _input(
+        new_length, "1.04e-13", width=new_width, slot=slot, master=master, rail=rail
+    )
     parent = RevisionBinding(
         workspace_id="research-workspace",
         design_id="cmos-long-inverter",
@@ -99,7 +111,7 @@ def _fixture():
         source_baseline_sha256=parent.source_baseline_sha256,
     )
     before = {key: MosPropertyValue.model_validate(row) for key, row in _guest_tuple(True).items()}
-    for key, value in {"w": "120n", "fw": "120n", "model": "gpdk090_nmos1v"}.items():
+    for key, value in {"w": old_width, "fw": old_width, "model": f"gpdk090_{master}"}.items():
         before[key] = before[key].model_copy(update={"oa_value": value, "cdf_value": value})
     before["dfm"] = MosPropertyValue(
         oa_type=None, oa_value=None, cdf_type="instData", cdf_units=None, cdf_value="Minimum"
@@ -110,7 +122,7 @@ def _fixture():
         pdk_identity_sha256="5" * 64,
         adapter_sha256="6" * 64,
         cdf_constraints_sha256="7" * 64,
-        l=MosSizingBounds(),
+        **{axis: MosSizingBounds()},
     )
     route = RegisteredMosSizingRoute(
         baseline=baseline,
@@ -119,20 +131,19 @@ def _fixture():
         testbench_cell="InvLongTb",
         target=MosSizingTarget(
             instance=CandidateSourceTarget(
-                instance_path="DUT/MN",
+                instance_path=f"DUT/{slot}",
                 master_library="gpdk090",
-                master_cell="nmos1v",
+                master_cell=master,
                 master_view="symbol",
-                property_name="l",
+                property_name=axis,
             ),
-            netlist_path="DUT/MN",
-            netlist_model="gpdk090_nmos1v",
-            netlist_terminals=("vout", "vin", "vss", "vss"),
+            netlist_path=f"DUT/{slot}",
+            netlist_model=f"gpdk090_{master}",
+            netlist_terminals=("vout", "vin", rail, rail),
         ),
         support=support,
         before=before,
     )
-    requested = MosSizingValues(l=_length("250"))
     plan = plan_registered_mos_sizing(route, child, requested)
     binding = RegisteredMosEditBinding(
         operation_id="11111111-1111-4111-8111-111111111111",
@@ -147,9 +158,9 @@ def _fixture():
         source_preservation_sha256="b" * 64,
     )
     after = before.copy()
-    for key, value in {"l": "0.25u", "as": "104f"}.items():
+    for key, value in changed_properties.items():
         after[key] = after[key].model_copy(update={"oa_value": value, "cdf_value": value})
-    frame = _cdf_frame("nmos1v", after, "MN")
+    frame = _cdf_frame(master, after, slot)
     start = MosEditSnapshot(
         stage="baseline",
         revision_sha256=binding.owned_before_view_tree_sha256,
@@ -234,6 +245,47 @@ def test_new_requested_value_without_candidate_witness_and_identical_replay() ->
     with pytest.raises(ValueError, match="approved operation"):
         service.apply(service.identity.model_copy(update={"expected_plan_sha256": "d" * 64}))
     assert (provider.claims, provider.dispatches) == (1, 1)
+
+
+def test_pmos_total_width_requires_matching_saved_fw_and_effective_netlist() -> None:
+    data = _fixture(pmos_width=True)
+    route, child, _, plan, binding, _, capture = data
+    assert plan == plan_registered_mos_sizing(route, child, MosSizingValues(w=_length("3", "um")))
+    assert plan.changed == ("w",) and plan.expected.l == _length("100")
+    assert plan.allowed_derived == ("fw", "as", "ad", "ps", "pd")
+    service = _service(data, _Provider(capture))
+    first = service.apply(service.identity)
+    assert first.outcome == "VERIFIED" and first.observed == plan.expected
+    assert first.effective_input is not None and first.effective_input.value == _length("3000")
+
+    readback = capture.readback
+    properties = readback.saved.properties.copy()
+    properties["fw"] = properties["fw"].model_copy(update={"oa_value": "350n"})
+    wrong_fw = readback.saved.model_copy(update={"properties": properties})
+    with pytest.raises(ValueError, match="saved OA property fw"):
+        verify_mos_sizing_save(
+            plan, route, binding, readback.model_copy(update={"saved": wrong_fw})
+        )
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        (b"w=(3e-6)", b"w=(350n)"),
+        (b"l=100n", b"l=120n"),
+        (b"(vout vin vdd vdd)", b"(vout vin vdd vss)"),
+    ],
+)
+def test_pmos_width_netlist_rejects_old_width_changed_length_or_changed_bulk(
+    old: bytes, new: bytes
+) -> None:
+    data = _fixture(pmos_width=True)
+    capture = data[-1]
+    netlist = capture.netlist.replace(old, new)
+    assert capture.netlist != netlist
+    readback = capture.readback.model_copy(update={"netlist_sha256": _sha(netlist)})
+    service = _service(data, _Provider(replace(capture, readback=readback, netlist=netlist)))
+    assert service.apply(service.identity).outcome == "OUTCOME_UNKNOWN"
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "NaN", "Infinity", "1e999"])

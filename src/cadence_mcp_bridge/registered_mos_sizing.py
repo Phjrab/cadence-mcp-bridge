@@ -506,7 +506,12 @@ class RegisteredMosSizingService:
             raise ValueError(
                 "independent sizing readback or netlisted revision differs from the save"
             )
-        _verify_reopened_cdf(capture.cdf_frame, plan.target, reopened.properties)
+        _verify_reopened_cdf(
+            capture.cdf_frame,
+            plan.target,
+            reopened.properties,
+            compare_widths=lambda total, finger: _engineering(total) == _engineering(finger),
+        )
         header, fixed, options = _check_input(plan.target, capture.netlist, reopened.properties)
         old_header, old_fixed, _ = self._before
         source9 = (

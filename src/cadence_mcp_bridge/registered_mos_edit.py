@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
+from operator import eq
 from typing import Annotated, Any, Literal, Protocol, Self, cast
 
 from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
@@ -405,7 +407,11 @@ class NativeMosEditCapture:
 
 
 def _verify_reopened_cdf(
-    raw: bytes, target: _MosNetlistBinding, properties: dict[MosProperty, MosPropertyValue]
+    raw: bytes,
+    target: _MosNetlistBinding,
+    properties: dict[MosProperty, MosPropertyValue],
+    *,
+    compare_widths: Callable[[str, str], bool] = eq,
 ) -> None:
     (device,) = parse_frame(raw)
     instance = target.instance
@@ -420,7 +426,7 @@ def _verify_reopened_cdf(
         )
         or set(device["terminals"]) != set(terminals)  # type: ignore[call-overload]
         or set(device["spectre"]) != {("base", None, terminals), ("effective", None, terminals)}  # type: ignore[call-overload]
-        or _mos_parameters(device)["model"] != target.netlist_model
+        or _mos_parameters(device, compare_widths=compare_widths)["model"] != target.netlist_model
     ):
         raise ValueError("reopened raw CDF has a different instance, master or Spectre mapping")
     rows = device["parameters"]
