@@ -28,6 +28,12 @@ except NameError:
 
 SUPPORT_SHA256 = "71de4c49873c8c40b04c6482432390daa7a6aa4ef9092d2a762f4657a9d68d61"
 CDF_SHA256 = "2563fca0a14f557317e69ec31a326642ee00c4f1dfd7af29ee08683542a25372"
+SIZING_ROUTE = "registered_mos_sizing"
+SIZING_OVERRIDES = ("l", "as", "ad", "ps", "pd")
+SIZING_RENDERER_SHA256 = "ac0b45c26c0b76ce593bea1d3621788ab4d94f165854530cb811ed8c915518a2"
+SIZING_HASH_CHILD_SHA256 = "deacdd769ca0bbcb6d2035450eb6ff511298a00cbb636630e46d3109a884d9f6"
+SYSTEM_PYTHON_SHA256 = "388c3856ebba74fa1818478de7f19aa8b7ab3eb7a157f77d31adcc67229499e6"
+SIZING_PDK_TREE_SHA256 = "14976652b9e37c801b1d662fd02aa9cc3b612dfa6d467f9932b6795b10f01b9f"
 SOURCE = "CmosLong20261111"
 DUT, TB = "InvLong", "InvLongTb"
 PHASES = ("EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST")
@@ -236,6 +242,22 @@ procedure(mosReopen()
 unless(errset(mosReopen() t) exit(1))
 """
 
+VERIFY_LENGTH_CALLBACK = r"""
+procedure(mcpMosVerifyCallbacks(inst rows)
+ let((field body child)
+  mosRequire(and(inst~>name=="MN" inst~>libName=="gpdk090"
+                 inst~>cellName=="nmos1v" inst~>viewName=="symbol" length(rows)==1))
+  field=caar(rows) body=cadar(rows)
+  mosRequire(and(field=="l" stringp(body) 0<strlen(body) strlen(body)<=4096))
+  child=ipcBeginProcess("/usr/bin/python -E -s -B @WORK@/verify-nmos-length-callback.py")
+  mosRequire(child)
+  ipcWriteProcess(child strcat(sprintf(nil "nmos1v|l|%d\n" strlen(body)) body "\nEND\n"))
+  ipcWait(child)
+  mosRequire(and(!ipcIsAliveProcess(child) ipcGetExitStatus(child)==0
+                 ipcReadProcess(child 1)=="C1_NMOS_LENGTH_CALLBACK_VERIFIED\n"))
+  t))
+"""
+
 
 def require(condition, stage):
     if not condition:
@@ -304,6 +326,130 @@ def cdf_geometry(row, name):
         and Decimal(value.rstrip("afpnum")) > 0,
         "registered_cdf_geometry",
     )
+
+
+def sizing_route(scope):
+    route, plan, subject = scope["route_qualification"], scope["plan"], scope["subject"]
+    target = route["target"]
+    support = route["support"]
+    require(
+        (
+            route["source_library"],
+            route["source_cell"],
+            route["testbench_cell"],
+            target["instance"],
+            target["netlist_path"],
+            target["netlist_model"],
+            target["netlist_terminals"],
+        )
+        == (
+            SOURCE,
+            DUT,
+            TB,
+            dict(
+                instance_path="DUT/MN",
+                master_library="gpdk090",
+                master_cell="nmos1v",
+                master_view="symbol",
+                property_name="l",
+            ),
+            "DUT/MN",
+            "gpdk090_nmos1v",
+            ["vout", "vin", "vss", "vss"],
+        )
+        and (support["cadence_version"], support["pdk_release"]) == ("6.1.5.500.15", "4.6")
+        and support["pdk_identity_sha256"] == SIZING_PDK_TREE_SHA256
+        and support.get("w") is None
+        and isinstance(support["l"], dict)
+        and plan["changed"] == ["l"]
+        and plan["requested"].get("w") is None
+        and plan["expected"]["l"] == plan["requested"]["l"]
+        and plan["expected"]["w"] == plan["current"]["w"]
+        and plan["baseline"] == route["baseline"]
+        and plan["target"] == target
+        and plan["route_sha256"] == subject["route_sha256"]
+        and subject["owned_cell"] == DUT
+        and subject["owned_view"] == "schematic"
+        and re.match(r"^CmosLongMos[A-Za-z0-9]{3,40}\Z", subject["owned_library"]),
+        "sizing_route",
+    )
+    before = route["before"]
+    require(set(before) == set(PROPERTIES), "sizing_baseline_fields")
+    for name in ("w", "fw", "l"):
+        axis = "w" if name == "fw" else name
+        sizing_dimension(before[name], plan["current"][axis])
+    length = plan["expected"]["l"]
+    require(
+        length["unit"] == "nm"
+        and finite_length(length["value"], length["unit"]) != cdf_length(before["l"])
+        and before["model"]["cdf_value"] == target["netlist_model"]
+        and before["m"]["cdf_value"] == before["fingers"]["cdf_value"] == "1"
+        and all(value is None for value in before["nf"].values()),
+        "sizing_baseline",
+    )
+    for name in SIZING_OVERRIDES[1:]:
+        cdf_geometry(before[name], name)
+    return route
+
+
+def sizing_dimension(row, dimension):
+    effective = sizing_length_literal(row["cdf_value"])
+    require(
+        (row["cdf_type"], row["cdf_units"], row["oa_type"])
+        == ("instData", "lengthMetric", "string")
+        and effective == finite_length(dimension["value"], dimension["unit"])
+        and effective == sizing_length_literal(row["oa_value"]),
+        "sizing_dimension",
+    )
+
+
+def sizing_length_literal(value):
+    require(isinstance(value, STRING_TYPES) and 0 < len(value) <= 48, "sizing_length_literal")
+    pattern = r"([0-9]+(?:\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]{1,2})?([num]?)\Z"
+    parsed = re.match(pattern, value)
+    require(parsed is not None, "sizing_length_literal")
+    number, exponent, suffix = parsed.groups()
+    scales = {"": 0, "n": -9, "u": -6, "m": -3}
+    with localcontext() as context:
+        context.prec = 64
+        return Decimal(number + (exponent or "")) * Decimal("1e" + str(scales[suffix]))
+
+
+def sizing_readback(before, actual, expected):
+    for name in PROPERTIES:
+        row = actual[name]
+        old = before[name]
+        require(
+            (row["cdf_type"], row["cdf_units"]) == (old["cdf_type"], old["cdf_units"])
+            and (name in SIZING_OVERRIDES or row == old),
+            "sizing_property_conservation",
+        )
+        if name in SIZING_OVERRIDES[1:]:
+            cdf_geometry(row, name)
+            if row != old:
+                require(
+                    row["oa_type"] == "string" and row["oa_value"] == row["cdf_value"],
+                    "sizing_geometry_persistence",
+                )
+    sizing_dimension(actual["l"], expected["l"])
+
+
+def read_sizing_assets(helper, packet, scope):
+    raw = read_encoded(packet, "sizing", 32768)
+    assets = helper.parse(helper.pinned(raw, scope["sizing_sha256"]))
+    require(
+        set(assets) == set(("adapter", "adapter_sha256", "hash_child", "hash_child_sha256")),
+        "sizing_asset_fields",
+    )
+    require(
+        scope["route_qualification"]["support"]["adapter_sha256"] == SIZING_RENDERER_SHA256
+        and assets["hash_child_sha256"] == SIZING_HASH_CHILD_SHA256,
+        "sizing_asset_identity",
+    )
+    adapter = helper.pinned(assets["adapter"].encode("ascii"), assets["adapter_sha256"])
+    child = helper.pinned(assets["hash_child"].encode("ascii"), assets["hash_child_sha256"])
+    require(0 < len(adapter) <= 12288 and 0 < len(child) <= 8192, "sizing_asset_bounds")
+    return adapter, child
 
 
 def exact_route(scope):
@@ -543,11 +689,14 @@ def render(template, values):
 
 
 class Source9MosJob(object):
-    def __init__(self, rt, helper, operator, scope, pin, digest, approval, collector):
+    sizing = None
+
+    def __init__(self, rt, helper, operator, scope, pin, digest, approval, collector, sizing=None):
         self.rt, self.h, self.scope, self.pin, self.digest = rt, helper, scope, pin, digest
         self.operator, self.approval, self.collector = operator, approval, collector
         self.subject = scope["subject"]
-        self.route = exact_route(scope)
+        self.sizing = sizing
+        self.route = sizing_route(scope) if sizing is not None else exact_route(scope)
         self.operation = self.subject["operation_id"]
         copy_id = self.subject["owned_copy_operation_id"]
         require(
@@ -641,6 +790,9 @@ class Source9MosJob(object):
             "copy_custody",
         )
         rt.gate.library_binding({"libraries": rt.registration["libraries"]})
+        if self.sizing is not None:
+            (pdk,) = [row for row in rt.registration["libraries"] if row["name"] == "gpdk090"]
+            require(pdk["tree_sha256"] == SIZING_PDK_TREE_SHA256, "sizing_pdk_binding")
         rt.gate.model_binding(self.analysis)
         source = self.views(self.source)
         baseline = self.scope["plan"]["baseline"]
@@ -773,16 +925,24 @@ class Source9MosJob(object):
         require(
             all(output.count(mark.encode("ascii")) == 1 for mark in markers), "ocean_phase_markers"
         )
-        if len(markers) == 2:
-            require(
-                output.index(markers[0].encode("ascii")) < output.index(markers[1].encode("ascii")),
-                "ocean_phase_order",
-            )
+        positions = [output.index(mark.encode("ascii")) for mark in markers]
+        require(positions == sorted(positions), "ocean_phase_order")
 
     def values(self, work):
-        master = self.route["qualification"]["target"]["instance"]["master_cell"]
+        if self.sizing is None:
+            master = self.route["qualification"]["target"]["instance"]["master_cell"]
+            omit, mutation = skill_mutation(self.route, master)
+            after = self.route["after"]
+        else:
+            master = "nmos1v"
+            omit = "'(" + " ".join(skill_token(name) for name in SIZING_OVERRIDES) + ")"
+            mutation = "mosRequire(mcpMosApplyWL(inst)==t)"
+            after = dict(
+                (name, self.route["before"][name])
+                for name in PROPERTIES
+                if name not in SIZING_OVERRIDES
+            )
         slot, rail = SLOTS[master]
-        omit, mutation = skill_mutation(self.route, master)
         return {
             "@LIB@": self.library,
             "@OWNED@": self.owned,
@@ -791,7 +951,7 @@ class Source9MosJob(object):
             "@WORK@": work,
             "@OP@": self.operation,
             "@BEFORE@": skill_check(self.route["before"]),
-            "@AFTER@": skill_check(self.route["after"]),
+            "@AFTER@": skill_check(after),
             "@OVERRIDES@": omit,
             "@MUTATION@": mutation,
             "@TARGET@": slot,
@@ -809,7 +969,12 @@ class Source9MosJob(object):
             footprint_sha256=self.h.sha(self.h.read(work + "/footprint.txt", 65536)),
             properties=read_properties(raw),
         )
-        require(result["properties"] == self.route[expected], "physical_property_readback")
+        if self.sizing is not None and expected == "after":
+            sizing_readback(
+                self.route["before"], result["properties"], self.scope["plan"]["expected"]
+            )
+        else:
+            require(result["properties"] == self.route[expected], "physical_property_readback")
         result["receipt_sha256"] = self.digest_doc(result)
         return result
 
@@ -879,26 +1044,54 @@ class Source9MosJob(object):
             self.save_document(selected + "/complete.json", dict(receipt_sha256=digest))
             return result
         except Exception as exc:
+            failure = dict(
+                status="OUTCOME_UNKNOWN",
+                phase=phase,
+                error_type=type(exc).__name__,
+                operation_id=self.operation,
+            )
+            if self.sizing is not None:
+                failure["subprocess"] = getattr(exc, "native_program_failure", None)
             self.save_document(
                 selected + "/failure.json",
-                dict(
-                    status="OUTCOME_UNKNOWN",
-                    phase=phase,
-                    error_type=type(exc).__name__,
-                    operation_id=self.operation,
-                ),
+                failure,
             )
             raise
 
     def edit(self, session, work, before):
-        program = render(COMMON + EDIT, self.values(work))
+        markers = []
+        prefix = COMMON
+        if self.sizing is not None:
+            adapter, child = self.sizing
+            interpreter = os.path.realpath("/usr/bin/python")
+            require(
+                interpreter.startswith("/usr/bin/")
+                and re.match(r"^/[A-Za-z0-9_./-]+\Z", work)
+                and self.rt.modules["probe"].digest_file(interpreter) == SYSTEM_PYTHON_SHA256,
+                "sizing_hash_interpreter",
+            )
+            child_path = work + "/verify-nmos-length-callback.py"
+            self.rt.eda.write(child_path, child)
+            require(self.h.read(child_path, 8192) == child, "sizing_child_readback")
+            prefix += VERIFY_LENGTH_CALLBACK + adapter.decode("ascii")
+            markers.extend(
+                (
+                    "MCP_MOS_WL_STAGE|INIT",
+                    "MCP_MOS_WL_STAGE|FIELD|l",
+                    "MCP_MOS_WL_STAGE|COMMIT",
+                    "MCP_MOS_WL_STAGE|DONE",
+                    "MCP_MOS_WL_READY_FOR_SAVE_CHECK",
+                )
+            )
+        program = render(prefix + EDIT, self.values(work))
+        markers.append("C6_MOS_EDIT_SAVED|" + self.operation)
         self.run(
             session,
             work,
             program,
             self.library_lines((self.source_alias, self.source)),
             "edit",
-            ["C6_MOS_EDIT_SAVED|" + self.operation],
+            markers,
         )
         saved = self.views(self.owned)
         require(
@@ -995,7 +1188,9 @@ class Source9MosJob(object):
         )
         reopened = self.snapshot(work, "reopened", before, "after")
         require(
-            reopened["footprint_sha256"] == saved["saved"]["footprint_sha256"], "reopened_footprint"
+            reopened["footprint_sha256"] == saved["saved"]["footprint_sha256"]
+            and (self.sizing is None or reopened["properties"] == saved["saved"]["properties"]),
+            "reopened_footprint",
         )
         cdf = h.read(work + "/cdf-frame.txt", 262144)
         raw = h.read(rt.eda.find_input(project), 32768, False)
@@ -1032,21 +1227,20 @@ def main():
     raw = sys.stdin.read(LIMIT + 1)
     require(0 < len(raw) <= LIMIT, "request_bound")
     packet = json.loads(raw)
+    allowed_fields = set(
+        (
+            "managed_root",
+            "scope_base64",
+            "authority_base64",
+            "baseline_base64",
+            "native_safety_base64",
+            "previous_receipt_sha256",
+            "support_base64",
+            "cdf_collector_base64",
+        )
+    )
     require(
-        set(packet)
-        == set(
-            (
-                "managed_root",
-                "scope_base64",
-                "authority_base64",
-                "baseline_base64",
-                "native_safety_base64",
-                "previous_receipt_sha256",
-                "support_base64",
-                "cdf_collector_base64",
-            )
-        ),
-        "request_fields",
+        set(packet) in (allowed_fields, allowed_fields | set(("sizing_base64",))), "request_fields"
     )
     support = read_encoded(packet, "support", 65536)
     require(hashlib.sha256(support).hexdigest() == SUPPORT_SHA256, "support_digest")
@@ -1054,7 +1248,12 @@ def main():
     eval(compile(support, "_amp_pm0_default_phase.py", "exec"), helper.__dict__)
     require(helper.parse(raw) == packet, "canonical_packet")
     scope = helper.parse(helper.pinned(read_encoded(packet, "scope", 32768), digest))
-    require(scope["schema_version"] == 1 and scope["route"] == "registered_mos_edit", "scope")
+    require(
+        scope["schema_version"] == 1 and scope["route"] in ("registered_mos_edit", SIZING_ROUTE),
+        "scope",
+    )
+    calculated = scope["route"] == SIZING_ROUTE
+    require(calculated == ("sizing_base64" in packet), "sizing_mode")
     subject = scope["subject"]
     require(
         helper.sha(helper.canonical(scope["plan"])) == subject["plan_sha256"]
@@ -1078,6 +1277,7 @@ def main():
     helper.pinned(
         read_encoded(packet, "baseline", 32768), scope["plan"]["baseline"]["netlist_sha256"]
     )
+    sizing = read_sizing_assets(helper, packet, scope) if calculated else None
     pin = helper.parse(
         helper.pinned(read_encoded(packet, "native_safety", 65536), scope["native_safety_sha256"])
     )
@@ -1101,7 +1301,9 @@ def main():
     _, runtime = helper.load_runtime(root, layout_scope)
     os.umask(63)
     with runtime.accounting.ReservationSession(root) as session:
-        job = Source9MosJob(runtime, helper, operator, scope, pin, digest, approval, collector)
+        job = Source9MosJob(
+            runtime, helper, operator, scope, pin, digest, approval, collector, sizing
+        )
         output = helper.canonical(job.phase(session, phase, prior))
         require(len(output) <= LIMIT, "response_bound")
         session.check()
