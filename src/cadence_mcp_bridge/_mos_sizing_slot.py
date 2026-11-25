@@ -122,13 +122,16 @@ def _length_from_plan(scope, subject):
         "plan",
     )
     target, support = route["target"], route["support"]
+    length_constraints = support["l"]
     _require(
         target["instance"]["master_library"] == "gpdk090"
         and target["instance"]["master_cell"] == "nmos1v"
         and target["instance"]["master_view"] == "symbol"
         and target["instance"]["property_name"] == "l"
         and support["w"] is None
-        and type(support["l"]) is dict
+        and type(length_constraints) is dict
+        and set(length_constraints).issubset(("minimum", "maximum", "grid_step", "grid_origin_nm"))
+        and all(value is None for value in length_constraints.values())
         and support["adapter_sha256"] == RENDERER_SHA256,
         "route",
     )

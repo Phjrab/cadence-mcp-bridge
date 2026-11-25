@@ -151,6 +151,34 @@ def test_finite_region_excludes_outside_values(value) -> None:
         _verify(_manifest(baseline), scope, assets)
 
 
+@pytest.mark.parametrize(
+    "constraints",
+    [
+        {"minimum": {"value": "260", "unit": "nm"}},
+        {"maximum": {"value": "0.18", "unit": "um"}},
+        {"grid_step": {"value": "3", "unit": "nm"}, "grid_origin_nm": "0"},
+        {"other": None},
+    ],
+)
+def test_initial_slot_rejects_unimplemented_cdf_bounds_even_with_matching_anchor(constraints):
+    scope, assets = _candidate("200")
+    route = scope["route_qualification"]
+    route["support"]["l"] = constraints
+    scope["subject"]["route_sha256"] = scope["plan"]["route_sha256"] = _sha(_wire(route))
+    scope["subject"]["plan_sha256"] = _sha(_wire(scope["plan"]))
+    with pytest.raises(ValueError, match="slot_route"):
+        _verify(_manifest(scope), scope, assets)
+
+
+def test_source9_null_constraints_keep_operator_region_available() -> None:
+    scope, assets = _candidate("200")
+    route = scope["route_qualification"]
+    route["support"]["l"] = dict.fromkeys(("minimum", "maximum", "grid_step", "grid_origin_nm"))
+    scope["subject"]["route_sha256"] = scope["plan"]["route_sha256"] = _sha(_wire(route))
+    scope["subject"]["plan_sha256"] = _sha(_wire(scope["plan"]))
+    assert _verify(_manifest(scope), scope, assets) == "200"
+
+
 @pytest.mark.parametrize("value", ["0", "0250", "+250", "250.0", "25e1", "250\n", "1" * 25])
 def test_declared_length_requires_positive_canonical_bounded_decimal(value) -> None:
     baseline, _ = _candidate("200")
