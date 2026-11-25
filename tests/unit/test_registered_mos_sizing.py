@@ -207,6 +207,7 @@ def test_new_requested_value_without_candidate_witness_and_identical_replay() ->
     equivalent = MosSizingValues(l=_length("0.25", "um"))
     assert plan_registered_mos_sizing(route, child, equivalent) == plan
     assert plan.changed == ("l",) and plan.expected.w == _length("120")
+    assert plan.allowed_derived == ("as", "ad", "ps", "pd")
     assert service.lookup(service.identity).outcome == "NOT_FOUND"
     first = service.apply(service.identity)
     assert first.outcome == "VERIFIED" and first.observed == plan.expected
@@ -273,6 +274,7 @@ def test_registration_limits_and_common_parent() -> None:
     )
     assert plan.changed == ("w", "l")
     assert plan.expected.w == _length("200") and plan.expected.l == _length("250")
+    assert plan.allowed_derived == ("fw", "as", "ad", "ps", "pd")
 
 
 def test_changed_oa_and_fixed_fields_fail_before_reopen() -> None:

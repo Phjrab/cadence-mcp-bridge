@@ -225,6 +225,7 @@ class MosSizingPlan(VariableModel):
     requested: MosSizingValues
     expected: MosSizingDimensions
     changed: Annotated[tuple[SizingAxis, ...], Field(min_length=1, max_length=2)]
+    allowed_derived: tuple[GeometryProperty, ...]
 
     @property
     def plan_sha256(self) -> str:
@@ -273,6 +274,7 @@ def plan_registered_mos_sizing(
             w=supplied.get("w", current.w), l=supplied.get("l", current.l)
         ),
         changed=tuple(changed),
+        allowed_derived=_PROJECTED_GEOMETRY if "w" in changed else _PROJECTED_GEOMETRY[1:],
     )
 
 
