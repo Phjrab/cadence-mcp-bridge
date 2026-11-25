@@ -284,7 +284,7 @@ def recover_retained_generation_source(
         _read(directory / "conditions.private.json", _DOCUMENT_LIMIT, binding.conditions_sha256)
     )
     _, _, _, static = partition_input(retained_input)  # type: ignore[no-untyped-call]
-    dut = dut_projection(static, scope["dut_subcircuits"])
+    dut: bytes = dut_projection(static, scope["dut_subcircuits"])  # type: ignore[no-untyped-call]
     dut_sha256 = _sha(dut)
     if dut_sha256 != enrollment.dut_input_sha256:
         raise OperationRejected("research_generation_recovery_dut_mismatch")
