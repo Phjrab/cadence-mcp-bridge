@@ -323,7 +323,14 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 #### 신규 W/L 후보의 편집과 비교
 
-화면 없이 새 W/L 후보의 종속값을 PDK에서 계산하는 경로는 실제 검증 대기입니다. 이 경로의 목표는 지원 범위에서 새 후보를 받아 등록된 비OTA 사본에 적용하는 것입니다. 기존 `SET_EXPLICIT`의 증거 요건은 해당 경로에 적용됩니다. 외부 helper와 후보별 수동 보정 자료 확보는 신규 경로 개발의 선행 조건으로 두지 않습니다.
+신규 개발 경로는 프로젝트의 비대화형 adapter로 등록된 PDK 콜백을 사용합니다. 호스트는 W/L을 표현할 수 있고, 현재 실제 검증 범위는 Source9 비OTA 사본의 `DUT/MN` (`gpdk090/nmos1v`)에서 L만 바꾸는 작업입니다. 확인된 시작값은 W/FW 120 nm, L 100 nm, `m=1`, `fingers=1`입니다. 폭 변경, PMOS, 배수 변경과 전체 PDK 허용 범위는 이 검증 범위 밖입니다.
+
+| 후보 | 확인된 상태 |
+| --- | --- |
+| L 250 nm | 실제 등록을 읽은 개발 설치본에서 시작값 조회와 변경 계획을 확인했습니다. 실제 적용은 Cadence 시작 전 검사 코드 오류로 멈췄고, 같은 ID의 설치 stdio 조회는 `OUTCOME_UNKNOWN`을 반환했습니다. 추가 실행·치수 변경·측정은 0건입니다. 오류 수정은 로컬에서 검증했습니다. |
+| L 200 nm | 같은 기준 회로에서 별도 작업으로 준비 중입니다. 새 사본의 사전검증을 통과했습니다. 실제 적용·독립 재개방·Netlist·측정은 확인 대기입니다. |
+
+개발 설치본의 `cadence_inspect_registered_mos_sizing`은 시작값과 등록된 범위를 조회하고, `cadence_plan_registered_mos_sizing`은 요청을 미리 봅니다. `cadence_lookup_registered_mos_sizing`은 계획에서 받은 동일 작업 ID와 계획·범위 해시로 보존 상태를 읽습니다. L250 읽기 전용 사용자 프로필 설정은 확인됐으며, 사용자 Codex 앱에서의 실제 호출은 확인 대기입니다. 새 치수 검증과 DC/AC 측정 완료는 각각 별도로 기록합니다.
 
 후보마다 요청 치수·단위를 기록하고, 같은 기준 revision을 사용할지 직전 편집을 이어갈지 정합니다. 실제 편집의 확인 순서는 PDK 처리·회로 검사·저장 → 별도 세션 재개방 → 실제 Spectre Netlist에서 W/L/m과 종속 접합값 대조입니다. 비교에는 해당 revision의 편집 ID·분석 ID·Netlist SHA와 실제 적용값·측정 조건·결과 단위를 함께 기록합니다. 새 분석은 등록된 실행 범위와 남은 후보·분석·저장 한도를 확인한 뒤 제출합니다. 기존 설계 변수 sweep은 등록 변수의 값을 바꿔 분석하는 기능입니다. W/L 편집 결과로 집계하려면 후보별 PDK 처리와 새 Netlist 증거가 필요합니다.
 
@@ -343,7 +350,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 생성 전 | 실제 ADE seed와 실행 계획 | 검토된 소유 대상과 ADE seed 상태를 확인한 뒤 물리 기준과 실행 범위를 결속합니다. 기존 두 MOS의 seed 재사용 계획과 로컬 Netlist 비교는 준비 증거입니다. 새 OTA에 적용할 seed 상태, 분석 조건, 의존 모델과 프로그램을 별도로 대조합니다. |
 | 생성 후 | 저장본과 측정 선택자 | 독립 재개방에서 DUT·심볼·bench 트리와 유효 Netlist를 연결합니다. 실제 등록에서 `out/inp/inn`, 전원 양단과 공급원의 `PLUS` 전류, DUT 아래 17개 MOS 경로를 확인한 뒤 reader와 분석 작업을 결속합니다. |
 
-연구용 목표값은 단일 finger, W=FW 기준입니다. 검증은 승인된 비OTA 보정 사본에서 진행합니다.
+연구용 목표값은 단일 finger, W=FW 기준입니다. 검증은 승인된 비OTA 보정 사본에서 진행합니다. 위 Source9 후보의 고정 W는 0.12 µm이며, 아래 목표 조합의 W와 다릅니다.
 
 | Master | 목표 `(W µm, L µm, m)` | 검증 |
 | --- | --- | --- |
