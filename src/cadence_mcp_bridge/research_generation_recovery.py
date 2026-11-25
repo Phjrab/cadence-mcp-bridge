@@ -187,6 +187,8 @@ def recover_retained_generation_source(
             "protected_sha256",
             "counter",
             "ledger_records_sha256",
+            "additional_protected",
+            "technology",
         )
     ):
         raise OperationRejected("research_generation_recovery_protection_mismatch")
