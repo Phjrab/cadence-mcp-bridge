@@ -448,6 +448,14 @@ def validate_mos_dc_batch(
     max_reservation_bytes: int,
 ) -> int:
     """Check the explicit set and declared cost before any individual submission."""
+    attempts, reserved_bytes = mos_dc_batch_cost(candidates)
+    if attempts > max_attempts or reserved_bytes > max_reservation_bytes:
+        raise ValueError("MOS candidates exceed the declared analysis budget")
+    return reserved_bytes
+
+
+def mos_dc_batch_cost(candidates: tuple[MosDcEvidence, ...]) -> tuple[int, int]:
+    """Check candidate identities and calculate the cost declared by their plans."""
     if not 1 <= len(candidates) <= 3:
         raise ValueError("one to three explicit MOS candidates required")
     baselines = set()
@@ -484,6 +492,4 @@ def validate_mos_dc_batch(
         or (len(set(operation_ids)) != len(operation_ids))
     ):
         raise ValueError("MOS candidates require one baseline and distinct identities")
-    if attempts > max_attempts or reserved_bytes > max_reservation_bytes:
-        raise ValueError("MOS candidates exceed the declared analysis budget")
-    return reserved_bytes
+    return attempts, reserved_bytes

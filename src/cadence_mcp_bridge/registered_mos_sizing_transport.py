@@ -35,6 +35,7 @@ from cadence_mcp_bridge.registered_mos_sizing import (
     RegisteredMosSizingResult,
     RegisteredMosSizingRoute,
     RegisteredMosSizingService,
+    RetainedMosSizingEvidence,
     _observed_dimensions,
     plan_registered_mos_sizing,
     verify_mos_sizing_save,
@@ -451,31 +452,37 @@ class RegisteredMosSizing:
         return self._service(request.candidate).apply(request.identity)
 
     def lookup(self, request: PmosDefaultChangeRequest) -> MosSizingLookup:
+        status, _ = self.lookup_evidence(request)
+        return status
+
+    def lookup_evidence(
+        self, request: PmosDefaultChangeRequest,
+    ) -> tuple[MosSizingLookup, RetainedMosSizingEvidence | None]:
         _, directory = self._slot(request.operation_id)
         claim = directory / _CLAIM
         if not os.path.lexists(claim):
             outcome: Literal["NOT_FOUND", "OUTCOME_UNKNOWN"] = (
                 "OUTCOME_UNKNOWN" if any(directory.glob("registered-mos-phase-*")) else "NOT_FOUND"
             )
-            return MosSizingLookup(identity=request, outcome=outcome)
+            return MosSizingLookup(identity=request, outcome=outcome), None
         try:
             intent = _document(_read(claim, 4096))
             values = MosSizingValues.model_validate(intent["candidate_request"])
         except (OSError, ValueError, KeyError):
-            return MosSizingLookup(identity=request, outcome="OUTCOME_UNKNOWN")
+            return MosSizingLookup(identity=request, outcome="OUTCOME_UNKNOWN"), None
         _require(
             intent.get("enrollment_sha256") == self.enrollment_sha256,
             "registered_mos_sizing_claim_enrollment",
         )
-        result = self._service(
+        result, evidence = self._service(
             MosSizingCandidate(
                 operation_id=request.operation_id,
                 expected_enrollment_sha256=self.enrollment_sha256,
                 expected_baseline_sha256=self._reg.route_qualification.baseline.revision_sha256,
                 values=values,
             )
-        ).lookup(request)
-        return MosSizingLookup(identity=request, outcome=result.outcome, result=result)
+        ).lookup_evidence(request)
+        return MosSizingLookup(identity=request, outcome=result.outcome, result=result), evidence
 
 
 def selected_mos_sizing(context: ExecutionContext) -> RegisteredMosSizing | None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 from pathlib import Path
 from typing import Literal
@@ -16,6 +17,11 @@ from cadence_mcp_bridge.candidate_cli import read_candidate_document
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
+from cadence_mcp_bridge.mos_dc_operator import (
+    MosDcCompareRequest,
+    MosDcComparison,
+    compare_registered_mos_dc,
+)
 from cadence_mcp_bridge.parameter_changes import ChangePlan
 from cadence_mcp_bridge.registered_mos_edit import RegisteredMosEditResult, RegisteredMosEditService
 from cadence_mcp_bridge.registered_mos_sizing import RegisteredMosSizingResult
@@ -29,7 +35,7 @@ from cadence_mcp_bridge.registered_mos_sizing_transport import (
     selected_mos_sizing,
 )
 from cadence_mcp_bridge.registered_mos_transport import registered_mos_edit
-from cadence_mcp_bridge.runtime_context import select_context
+from cadence_mcp_bridge.runtime_context import ExecutionContext, select_context
 from cadence_mcp_bridge.variable_contracts import VariableModel
 
 _READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
@@ -48,12 +54,14 @@ class RegisteredMosPlan(VariableModel):
     execution_authorized: Literal[False] = False
 
 
-def _resolve(config: BridgeConfig) -> tuple[str, RegisteredMosEditService | RegisteredMosSizing]:
+def _resolve(
+    config: BridgeConfig,
+) -> tuple[ExecutionContext, RegisteredMosEditService | RegisteredMosSizing]:
     context = select_context(config) if config.runtime_mode == "operator" else None
     if context is None:
         raise ConfigurationError("Registered MOS edit requires an operator context")
     sizing = selected_mos_sizing(context)
-    return context.context_sha256, sizing if sizing is not None else registered_mos_edit(context)
+    return context, sizing if sizing is not None else registered_mos_edit(context)
 
 
 def _plan(service: RegisteredMosEditService) -> RegisteredMosPlan:
@@ -67,7 +75,7 @@ def run_registered_mos_edit(arguments: argparse.Namespace) -> int:
         if action != "inspect-sizing":
             path, digest = arguments.request
             raw = read_candidate_document(Path(path), expected_sha256=digest)
-        _, service = _resolve(
+        context, service = _resolve(
             BridgeConfig(
                 runtime_mode="operator",
                 runtime_settings_path=arguments.settings,
@@ -84,6 +92,14 @@ def run_registered_mos_edit(arguments: argparse.Namespace) -> int:
                 result = service.apply(MosSizingApply.model_validate_json(raw))
             elif action == "lookup-sizing":
                 result = service.lookup(PmosDefaultChangeRequest.model_validate_json(raw))
+            elif action == "compare-sizing":
+                result = asyncio.run(
+                    compare_registered_mos_dc(
+                        context,
+                        service,
+                        MosDcCompareRequest.model_validate_json(raw),
+                    )
+                )
             else:
                 raise ValueError("Sizing actions require their own typed request")
         else:
@@ -107,11 +123,12 @@ def run_registered_mos_edit(arguments: argparse.Namespace) -> int:
 
 def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
     try:
-        context_pin, registered = _resolve(config)
+        context, registered = _resolve(config)
     except (OSError, ValueError, BridgeError):
         raise ConfigurationError("Registered MOS edit is unavailable") from None
 
     server = MCPServer(name="cadence-registered-mos-edit", version=__version__, log_level="WARNING")
+    context_pin = context.context_sha256
     if isinstance(registered, RegisteredMosSizing):
         _register_sizing_tools(server, config, context_pin, registered.enrollment_sha256)
         return server
@@ -119,10 +136,10 @@ def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
     identity = registered.identity
 
     def service_for(request: PmosDefaultChangeRequest) -> RegisteredMosEditService:
-        current_pin, service = _resolve(config)
+        selected, service = _resolve(config)
         if (
             isinstance(service, RegisteredMosSizing)
-            or current_pin != context_pin
+            or selected.context_sha256 != context_pin
             or request != identity
             or service.identity != identity
         ):
@@ -166,15 +183,18 @@ def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
 def _register_sizing_tools(
     server: MCPServer, config: BridgeConfig, context_pin: str, enrollment_sha: str
 ) -> None:
-    def current() -> RegisteredMosSizing:
-        pin, service = _resolve(config)
+    def resolved() -> tuple[ExecutionContext, RegisteredMosSizing]:
+        selected, service = _resolve(config)
         if (
-            pin != context_pin
+            selected.context_sha256 != context_pin
             or not isinstance(service, RegisteredMosSizing)
             or service.enrollment_sha256 != enrollment_sha
         ):
             raise ValueError("Registered MOS sizing enrollment changed")
-        return service
+        return selected, service
+
+    def current() -> RegisteredMosSizing:
+        return resolved()[1]
 
     @server.tool(annotations=_READ, structured_output=True)
     def cadence_inspect_registered_mos_sizing() -> MosSizingRegistrationInfo:
@@ -205,5 +225,19 @@ def _register_sizing_tools(
         """Read a retained W/L edit outcome without dispatching a writer."""
         try:
             return current().lookup(request)
+        except (OSError, ValueError, BridgeError):
+            raise ToolError(_REJECTED) from None
+
+    @server.tool(
+        annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True),
+        structured_output=True,
+    )
+    async def cadence_compare_registered_mos_sizing(
+        request: MosDcCompareRequest,
+    ) -> MosDcComparison:
+        """Compare retained fixed-DC measurements for up to three registered W/L edits."""
+        try:
+            context, service = resolved()
+            return await compare_registered_mos_dc(context, service, request)
         except (OSError, ValueError, BridgeError):
             raise ToolError(_REJECTED) from None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from decimal import Decimal, localcontext
-from typing import Annotated, Literal, Self, cast
+from typing import Annotated, Literal, NamedTuple, Self, cast
 
 from pydantic import Field, model_validator
 
@@ -372,6 +372,13 @@ class RegisteredMosSizingResult(RegisteredMosEditResult):
     observed: MosSizingDimensions | None = None
 
 
+class RetainedMosSizingEvidence(NamedTuple):
+    plan: MosSizingPlan
+    binding: RegisteredMosEditBinding
+    baseline_input: bytes
+    confirmed_input: bytes
+
+
 class RegisteredMosSizingService:
     """Reuse the existing exclusive claim and two native capture phases for W/L."""
 
@@ -414,11 +421,23 @@ class RegisteredMosSizingService:
             raise ValueError("MOS sizing request conflicts with the approved operation")
 
     def lookup(self, request: PmosDefaultChangeRequest) -> RegisteredMosSizingResult:
+        result, _ = self.lookup_evidence(request)
+        return result
+
+    def lookup_evidence(
+        self, request: PmosDefaultChangeRequest,
+    ) -> tuple[RegisteredMosSizingResult, RetainedMosSizingEvidence | None]:
+        """Return the verified original capture to trusted host consumers only."""
         self._check_request(request)
         retained = self._provider.lookup(self._binding)
         if retained is None:
-            return self._empty("NOT_FOUND", replayed=False)
-        return self._result(retained, replayed=True)
+            return self._empty("NOT_FOUND", replayed=False), None
+        result = self._result(retained, replayed=True)
+        if result.outcome != "VERIFIED" or retained.capture is None:
+            return result, None
+        return result, RetainedMosSizingEvidence(
+            self.plan, self._binding, self._baseline_input, retained.capture.netlist,
+        )
 
     def apply(self, request: PmosDefaultChangeRequest) -> RegisteredMosSizingResult:
         self._check_request(request)

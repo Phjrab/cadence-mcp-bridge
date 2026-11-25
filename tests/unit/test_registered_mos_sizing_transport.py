@@ -47,6 +47,7 @@ def enrolled(tmp_path, monkeypatch):
     policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
     policy["support"]["adapter_sha256"] = _sha(renderer)
     policy["support"]["cdf_constraints_sha256"] = _sha(constraints)
+    policy["support"]["pdk_identity_sha256"] = guest_contract.SIZING_PDK_TREE_SHA256
     enrollment = _canonical(
         {
             "schema_version": 4,
@@ -95,6 +96,8 @@ def enrolled(tmp_path, monkeypatch):
             runner_sha256="3" * 64,
             pmos_default_change_binding=path,
             pmos_default_change_sha256=_sha(enrollment),
+            mos_dc_evaluation_binding=None,
+            mos_dc_evaluation_sha256=None,
             analysis_journal=tmp_path / "analysis.db",
             sweep_journal=tmp_path / "sweep.db",
         ),
@@ -168,7 +171,9 @@ async def test_enrolled_sizing_previews_then_dispatches_once_and_reads_after_res
     plan = "cadence_plan_registered_mos_sizing"
     apply = "cadence_apply_registered_mos_sizing"
     lookup = "cadence_lookup_registered_mos_sizing"
-    assert {tool.name for tool in await server.list_tools()} == {inspect, plan, apply, lookup}
+    compare = "cadence_compare_registered_mos_sizing"
+    tool_names = {tool.name for tool in await server.list_tools()}
+    assert tool_names == {inspect, plan, apply, lookup, compare}
     info = (await server.call_tool(inspect, {})).structured_content
     assert info["current"]["l"] == {"unit": "nm", "value": "100"}
     assert info["support"]["l"]["maximum"] is None
@@ -184,6 +189,9 @@ async def test_enrolled_sizing_previews_then_dispatches_once_and_reads_after_res
     assert preview["execution_authorized"] is False
     assert preview["plan"]["expected"]["l"] == {"unit": "nm", "value": "250"}
     request = {"identity": preview["identity"], "candidate": candidate}
+    comparison = {"request": {"edits": [request["identity"]]}}
+    pending = (await server.call_tool(compare, comparison)).structured_content["rows"][0]
+    assert pending["edit_outcome"] == "NOT_FOUND" and pending["analysis_status"] == "NOT_RUN"
     assert (await server.call_tool(lookup, {"request": request["identity"]})).structured_content[
         "outcome"
     ] == "NOT_FOUND"
@@ -218,6 +226,16 @@ async def test_enrolled_sizing_previews_then_dispatches_once_and_reads_after_res
         await restarted.call_tool(lookup, {"request": request["identity"]})
     ).structured_content
     assert retained["result"] == replay
+    compared = (await restarted.call_tool(compare, comparison)).structured_content["rows"][0]
+    assert compared["edit_outcome"] == "VERIFIED" and compared["analysis_status"] == "NOT_RUN"
+    assert compared["evaluation"]["edit"] == replay and compared["evaluation"]["report"] is None
+    for bad_request in (
+        {"edits": [request["identity"]] * 2},
+        {**comparison["request"], "export": "caller-owned"},
+        {"edits": [{**request["identity"], "expected_plan_sha256": "0" * 64}]},
+    ):
+        with pytest.raises(ToolError):
+            await restarted.call_tool(compare, {"request": bad_request})
     with pytest.raises(ToolError):
         await restarted.call_tool(
             apply,
@@ -242,7 +260,14 @@ def test_sizing_cli_uses_same_enrollment_and_fails_closed(enrolled, capsys, tmp_
     raw = _canonical(candidate)
     query.write_bytes(raw)
     assert main([*base, "plan-sizing", "--request", str(query), _sha(raw)]) == 0
-    assert json.loads(capsys.readouterr().out)["plan"]["requested"]["l"]["value"] == "250"
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["plan"]["requested"]["l"]["value"] == "250"
+    compare = tmp_path / "compare-request.json"
+    comparison = _canonical({"edits": [preview["identity"]]})
+    compare.write_bytes(comparison)
+    assert main([*base, "compare-sizing", "--request", str(compare), _sha(comparison)]) == 0
+    retained = json.loads(capsys.readouterr().out)["rows"][0]
+    assert retained["edit_outcome"] == "NOT_FOUND" and retained["analysis_status"] == "NOT_RUN"
     assert main([*base, "plan-sizing", "--request", str(query), "0" * 64]) == 2
     assert not phases
     context.binding.pmos_default_change_sha256 = "0" * 64

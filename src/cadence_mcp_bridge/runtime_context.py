@@ -62,6 +62,8 @@ class ContextBinding(EnvironmentModel):
     pmos_default_change_sha256: Digest | None = None
     device_op_catalog_path: Path | None = None
     device_op_catalog_sha256: Digest | None = None
+    mos_dc_evaluation_binding: Path | None = None
+    mos_dc_evaluation_sha256: Digest | None = None
 
     @model_validator(mode="after")
     def native_binding_complete(self) -> ContextBinding:
@@ -81,6 +83,10 @@ class ContextBinding(EnvironmentModel):
             raise ValueError("complete PMOS default change binding required")
         if (self.device_op_catalog_path is None) != (self.device_op_catalog_sha256 is None):
             raise ValueError("complete device OP catalog binding required")
+        if (self.mos_dc_evaluation_binding is None) != (self.mos_dc_evaluation_sha256 is None):
+            raise ValueError("complete MOS DC evaluation binding required")
+        if self.mos_dc_evaluation_binding is not None and self.pmos_default_change_binding is None:
+            raise ValueError("MOS DC evaluation requires a registered sizing context")
         return self
 
 
@@ -266,6 +272,12 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
                     binding.pmos_default_change_binding, binding.pmos_default_change_sha256
                 )
                 inputs.add(_local_path(binding.pmos_default_change_binding))
+            if binding.mos_dc_evaluation_binding is not None:
+                assert binding.mos_dc_evaluation_sha256 is not None
+                read_pmos_default_change_binding(
+                    binding.mos_dc_evaluation_binding, binding.mos_dc_evaluation_sha256
+                )
+                inputs.add(_local_path(binding.mos_dc_evaluation_binding))
             snapshot = load_contracts(*paths)
             if (snapshot.environment_sha256, snapshot.design_sha256, snapshot.pdk_sha256) != (
                 binding.environment_sha256,
@@ -308,6 +320,9 @@ def validate_runtime_document(path: Path, data: bytes) -> tuple[ExecutionContext
             if binding.device_op_catalog_path is None:
                 del serialized["device_op_catalog_path"]
                 del serialized["device_op_catalog_sha256"]
+            if binding.mos_dc_evaluation_binding is None:
+                del serialized["mos_dc_evaluation_binding"]
+                del serialized["mos_dc_evaluation_sha256"]
             context_hash = _digest({"binding": serialized, "resource_domain": domain})
             contexts.append(
                 ExecutionContext(
