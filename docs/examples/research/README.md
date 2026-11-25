@@ -287,6 +287,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 14 MOS AMP의 이전 새 사본 검증 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 독립 재개방 및 Netlist 확인. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) | 당시 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED` |
 | 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 보존. 실제 Spectre DC·AC와 원본 프레임 대조 후, 재시작한 실제 앱에서 Center와 사본의 비교를 조회. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) · [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 이전 DC 실패 이력은 보존했습니다. 최종 비교는 성공한 별도 DC와 원래 AC를 사용합니다. 성능 합격 기준은 미설정 |
 | 범용 생성 준비와 실제 두 MOS 저장 | 기존 준비 파일 8개를 개발 wheel에서 재현했습니다. 새 비OTA 두 MOS 인버터에서 VIN 0.5 V·VDD 1 V·부하 1 pF를 저장하고 독립 재개방했으며 실제 진단 Netlist를 확보했습니다. [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 원래 작업은 문장 순서·숫자 표기 차이로 원본 Netlist 완료 검사를 통과하지 못해 같은 ID에서 `OUTCOME_UNKNOWN`입니다. 진단 입력은 오프라인 정합 검증을 통과했습니다. 일반 분석 제출과 실제 source 등록은 검증 대기입니다. |
+| 보존된 인버터 입력의 분석 준비 | 원본 저장·재개방 기록, 현재 bench·ADE 지문, 실제 진단 Netlist를 결속해 별도 읽기 전용 증거를 만들었습니다. 설치된 등록 준비 도구에서 이 증거를 고정 DC 분석 설정으로 로컬 컴파일했습니다. | 실행 권한은 없으며 실제 등록 활성화와 분석 실행은 미검증입니다. 원래 제출의 `OUTCOME_UNKNOWN`과 완료 영수증 부재는 그대로 기록됩니다. |
 | 작업용 Layout | 실제 Cadence에서 instance 이동, 도형·연결 pin 추가, 저장·재개방 확인. [PR #167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 OTA Layout·DRC·LVS·PEX는 별도 단계 |
 
 앱에서 조회한 AMP 비교는 NN, 27 °C, VDD 1 V, VBIASN 0.320 V, VBIASP 0.702 V 조건입니다.
