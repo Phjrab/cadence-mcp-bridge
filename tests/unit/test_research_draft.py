@@ -11,6 +11,7 @@ from test_m2_inverter import fixture
 from test_research_circuit import payload
 
 from cadence_mcp_bridge.__main__ import main
+from cadence_mcp_bridge.research_adapters import ResearchCircuitRequest
 from cadence_mcp_bridge.research_draft import compile_research_draft
 
 
@@ -75,6 +76,44 @@ def test_compile_seventeen_devices_from_source_nets_and_explicit_target_sizes() 
     assert device.connections == {"D": "vout", "G": "vin", "S": "vss", "B": "vss"}
     assert device.geometry.w.value == "120" and device.geometry.w.unit == "nm"
     assert result.binding.workspace_id == port["binding"]["workspace_id"]
+    assert not result.unresolved
+
+
+def test_static_preview_preserves_provisional_geometry_and_cannot_plan_generation() -> None:
+    draft, port = study(17)
+    port["devices"][0]["geometry"]["source"] = {"reference": "local target", "status": "assumed"}
+    port["devices"][0]["spectre"]["source"] = {
+        "reference": "requires independent netlist",
+        "status": "unconfirmed",
+    }
+    encoded = json.dumps(port).encode()
+    preview_port = {key: value for key, value in port.items() if key != "binding"}
+    preview = compile_research_draft(draft, json.dumps(preview_port).encode(), static_preview=True)
+    assert preview.unresolved == ("geometry_evidence", "spectre_evidence", "static_preview")
+    device = preview.circuits[0].instances[0]
+    assert device.kind == "nmos"
+    assert device.geometry.source.status == "assumed"
+    assert device.geometry.w.value == "120"
+    assert device.spectre is not None and device.spectre.source.status == "unconfirmed"
+    with pytest.raises(ValueError, match="lacks reviewed target-PDK evidence"):
+        compile_research_draft(draft, encoded)
+    assert "binding" not in preview.model_dump() and not preview.execution_authorized
+    request = json.dumps({"definition": preview.model_dump(mode="json")})
+    with pytest.raises(ValueError, match="binding"):
+        ResearchCircuitRequest.model_validate_json(request)
+    with pytest.raises(ValueError, match="binding"):
+        compile_research_draft(draft, encoded, static_preview=True)
+
+
+def test_static_preview_cannot_skip_topology_validation() -> None:
+    draft, port = study(2)
+    port.pop("binding")
+    port["topology_source"] = {"reference": "layout review pending", "status": "unconfirmed"}
+    preview = compile_research_draft(draft, json.dumps(port).encode(), static_preview=True)
+    assert preview.unresolved == ("static_preview", "topology_evidence")
+    port["devices"][0]["resolved_terminals"].clear()
+    with pytest.raises(ValueError, match="exactly its unresolved terminals"):
+        compile_research_draft(draft, json.dumps(port).encode(), static_preview=True)
 
 
 def test_cli_result_can_be_passed_to_existing_validator(tmp_path: Path) -> None:

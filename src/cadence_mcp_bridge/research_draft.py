@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from hashlib import sha256
-from typing import Annotated, Literal
+from typing import Annotated, Literal, overload
 
 from pydantic import Field
 
@@ -23,6 +23,7 @@ from cadence_mcp_bridge.research_circuit import (
     Placement,
     Port,
     ResearchCircuit,
+    ResearchCircuitStaticPreview,
     SpectreMos,
     Symbol,
     Wire,
@@ -44,12 +45,13 @@ class DevicePort(VariableModel):
     resolved_terminals: dict[Literal["D", "G", "S", "B"], Name] = Field(default_factory=dict)
 
 
-class DraftPort(VariableModel):
+class StaticDraftPort(VariableModel):
+    """Explicit design decisions prepared before a physical binding exists."""
+
     schema_version: Literal[1]
     draft_sha256: Digest
     source_design: Name
     topology_source: Evidence
-    binding: RevisionBinding
     dut: Name
     ports: tuple[Port, ...]
     symbol: Symbol
@@ -61,11 +63,29 @@ class DraftPort(VariableModel):
     measurements: tuple[Measurement, ...] = ()
 
 
-def compile_research_draft(draft_bytes: bytes, port_bytes: bytes) -> ResearchCircuit:
-    """Read source topology and explicit porting decisions, with no execution side effects."""
+class DraftPort(StaticDraftPort):
+    binding: RevisionBinding
+
+
+@overload
+def compile_research_draft(
+    draft_bytes: bytes, port_bytes: bytes, *, static_preview: Literal[False] = False
+) -> ResearchCircuit: ...
+
+
+@overload
+def compile_research_draft(
+    draft_bytes: bytes, port_bytes: bytes, *, static_preview: Literal[True]
+) -> ResearchCircuitStaticPreview: ...
+
+
+def compile_research_draft(
+    draft_bytes: bytes, port_bytes: bytes, *, static_preview: bool = False
+) -> ResearchCircuit | ResearchCircuitStaticPreview:
+    """Compile explicit decisions. A static preview preserves evidence gaps and cannot generate."""
     _closed_document(draft_bytes)
     _closed_document(port_bytes)
-    port = DraftPort.model_validate_json(port_bytes)
+    port = (StaticDraftPort if static_preview else DraftPort).model_validate_json(port_bytes)
     if sha256(draft_bytes).hexdigest() != port.draft_sha256:
         raise ValueError("research draft fingerprint differs")
     draft = json.loads(draft_bytes)
@@ -100,9 +120,13 @@ def compile_research_draft(draft_bytes: bytes, port_bytes: bytes) -> ResearchCir
     if not isinstance(rows, list) or len(rows) != len(port.devices):
         raise ValueError("source and target device populations differ")
     choices = {device.name: device for device in port.devices}
-    if len(choices) != len(port.devices) or port.topology_source.status != "confirmed":
+    topology_unreviewed = port.topology_source.status != "confirmed"
+    if len(choices) != len(port.devices) or (topology_unreviewed and not static_preview):
         raise ValueError("unique target devices and reviewed topology evidence required")
 
+    unresolved = {"static_preview"} if static_preview else set()
+    if topology_unreviewed:
+        unresolved.add("topology_evidence")
     instances: list[Mos] = []
     nets = {pin.net for pin in port.ports}
     for row in rows:
@@ -119,15 +143,18 @@ def compile_research_draft(draft_bytes: bytes, port_bytes: bytes) -> ResearchCir
             raise ValueError(
                 f"{choice.name} requires decisions for exactly its unresolved terminals"
             )
-        if any(
-            source.status != "confirmed"
-            for source in (
-                choice.master_source,
-                choice.geometry.source,
-                choice.spectre.source,
+        missing_evidence = {
+            field
+            for field, source in (
+                ("master_evidence", choice.master_source),
+                ("geometry_evidence", choice.geometry.source),
+                ("spectre_evidence", choice.spectre.source),
             )
-        ):
+            if source.status != "confirmed"
+        }
+        if missing_evidence and not static_preview:
             raise ValueError(f"{choice.name} lacks reviewed target-PDK evidence")
+        unresolved.update(missing_evidence)
         resolved = terminals | choice.resolved_terminals
         links = tuple(Link(terminal=name, net=resolved[name]) for name in ("D", "G", "S", "B"))
         nets.update(link.net for link in links)
@@ -151,9 +178,21 @@ def compile_research_draft(draft_bytes: bytes, port_bytes: bytes) -> ResearchCir
         instances=tuple(instances),
         wires=port.wires,
     )
-    return ResearchCircuit(
-        binding=port.binding,
+    if isinstance(port, DraftPort):
+        return ResearchCircuit(
+            binding=port.binding,
+            source=port.topology_source,
+            dut=dut.name,
+            bench=port.bench.name,
+            circuits=(dut, port.bench),
+            analyses=port.analyses,
+            observations=port.observations,
+            measurements=port.measurements,
+        )
+    return ResearchCircuitStaticPreview(
+        source_draft_sha256=port.draft_sha256,
         source=port.topology_source,
+        unresolved=tuple(sorted(unresolved)),
         dut=dut.name,
         bench=port.bench.name,
         circuits=(dut, port.bench),

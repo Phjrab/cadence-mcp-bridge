@@ -355,91 +355,129 @@ class ResearchCircuit(VariableModel):
 
     @model_validator(mode="after")
     def hierarchy(self) -> Self:
-        cells = {cell.name: cell for cell in self.circuits}
-        if len(cells) != len(self.circuits) or self.dut not in cells or self.bench not in cells:
-            raise ValueError("duplicate circuit or missing DUT/testbench")
-        if self.dut == self.bench or cells[self.bench].ports or cells[self.dut].symbol is None:
-            raise ValueError("testbench must be a distinct root and DUT must define a symbol")
-        parents: set[str] = set()
-        for cell in self.circuits:
-            for inst in cell.instances:
-                if not isinstance(inst, Child):
-                    continue
-                child = cells.get(inst.circuit)
-                if (
-                    child is None
-                    or child.symbol is None
-                    or child.name == self.bench
-                    or set(inst.connections) != {port.name for port in child.ports}
-                ):
-                    raise ValueError("invalid child circuit or incomplete port mapping")
-                if cell.name == self.bench:
-                    parents.add(child.name)
-        if self.dut not in parents:
-            raise ValueError("testbench must instantiate the DUT")
-
-        depths: dict[str, int] = {}
-        active: set[str] = set()
-
-        def depth(name: str) -> int:
-            if name in active:
-                raise ValueError("recursive circuit hierarchy")
-            if name not in depths:
-                active.add(name)
-                depths[name] = 1 + max(
-                    (
-                        depth(inst.circuit)
-                        for inst in cells[name].instances
-                        if isinstance(inst, Child)
-                    ),
-                    default=0,
-                )
-                active.remove(name)
-            return depths[name]
-
-        if depth(self.bench) > 16 or depths.keys() != cells.keys():
-            raise ValueError("unreachable circuit or hierarchy exceeds depth")
-        self.validate_measurements(cells)
+        _validate_research_graph(self)
         return self
 
     def validate_measurements(self, cells: dict[str, Circuit]) -> None:
-        bench = cells[self.bench]
-        analysis_kinds = {analysis.kind for analysis in self.analyses}
-        if len(analysis_kinds) != len(self.analyses) or len(
-            {measurement.name for measurement in self.measurements}
-        ) != len(self.measurements):
-            raise ValueError("duplicate analysis or measurement name")
+        _validate_research_measurements(self, cells)
 
-        def resolve(path: tuple[str, ...]) -> Instance:
-            scope = bench
-            for segment in path[:-1]:
-                inst = next((item for item in scope.instances if item.name == segment), None)
-                if not isinstance(inst, Child):
-                    raise ValueError("invalid hierarchical observation path")
-                scope = cells[inst.circuit]
-            target = next((item for item in scope.instances if item.name == path[-1]), None)
-            if target is None:
-                raise ValueError("unknown hierarchical observation target")
-            return target
 
-        for observation in self.observations:
-            if isinstance(observation, DeviceObservation):
-                if not isinstance(resolve(observation.path), Mos):
-                    raise ValueError("device observation requires a MOS")
-            elif observation.net not in bench.nets:
-                raise ValueError("unknown testbench observation net")
-        for measurement in self.measurements:
-            if measurement.analysis not in analysis_kinds or not set(measurement.nets) <= set(
-                bench.nets
+class ResearchCircuitStaticPreview(VariableModel):
+    """A validated circuit graph with no execution or physical revision binding."""
+
+    schema_version: Literal[1] = 1
+    document_kind: Literal["research-circuit-static-preview-v1"] = (
+        "research-circuit-static-preview-v1"
+    )
+    execution_authorized: Literal[False] = False
+    source_draft_sha256: Digest
+    source: Evidence
+    unresolved: Annotated[tuple[Name, ...], Field(min_length=1, max_length=128)]
+    dut: Name
+    bench: Name
+    circuits: Annotated[tuple[Circuit, ...], Field(min_length=2, max_length=32)]
+    analyses: Annotated[tuple[Analysis, ...], Field(max_length=3)] = ()
+    observations: Annotated[tuple[Observation, ...], Field(max_length=256)] = ()
+    measurements: Annotated[tuple[Measurement, ...], Field(max_length=128)] = ()
+
+    @model_validator(mode="after")
+    def hierarchy(self) -> Self:
+        _validate_research_graph(self)
+        return self
+
+
+def _validate_research_graph(definition: ResearchCircuit | ResearchCircuitStaticPreview) -> None:
+    cells = {cell.name: cell for cell in definition.circuits}
+    if (
+        len(cells) != len(definition.circuits)
+        or definition.dut not in cells
+        or definition.bench not in cells
+    ):
+        raise ValueError("duplicate circuit or missing DUT/testbench")
+    if (
+        definition.dut == definition.bench
+        or cells[definition.bench].ports
+        or cells[definition.dut].symbol is None
+    ):
+        raise ValueError("testbench must be a distinct root and DUT must define a symbol")
+    parents: set[str] = set()
+    for cell in definition.circuits:
+        for inst in cell.instances:
+            if not isinstance(inst, Child):
+                continue
+            child = cells.get(inst.circuit)
+            if (
+                child is None
+                or child.symbol is None
+                or child.name == definition.bench
+                or set(inst.connections) != {port.name for port in child.ports}
             ):
-                raise ValueError("measurement requires a declared analysis and testbench nets")
-            if measurement.quantity == "supply_power":
-                if measurement.supply_path is None or not isinstance(
-                    resolve(measurement.supply_path), VoltageSource
-                ):
-                    raise ValueError("power measurement requires a voltage source")
-            elif measurement.supply_path is not None:
-                raise ValueError("supply path requires a supply power measurement")
+                raise ValueError("invalid child circuit or incomplete port mapping")
+            if cell.name == definition.bench:
+                parents.add(child.name)
+    if definition.dut not in parents:
+        raise ValueError("testbench must instantiate the DUT")
+
+    depths: dict[str, int] = {}
+    active: set[str] = set()
+
+    def depth(name: str) -> int:
+        if name in active:
+            raise ValueError("recursive circuit hierarchy")
+        if name not in depths:
+            active.add(name)
+            depths[name] = 1 + max(
+                (depth(inst.circuit) for inst in cells[name].instances if isinstance(inst, Child)),
+                default=0,
+            )
+            active.remove(name)
+        return depths[name]
+
+    if depth(definition.bench) > 16 or depths.keys() != cells.keys():
+        raise ValueError("unreachable circuit or hierarchy exceeds depth")
+    _validate_research_measurements(definition, cells)
+
+
+def _validate_research_measurements(
+    definition: ResearchCircuit | ResearchCircuitStaticPreview, cells: dict[str, Circuit]
+) -> None:
+    bench = cells[definition.bench]
+    analysis_kinds = {analysis.kind for analysis in definition.analyses}
+    if len(analysis_kinds) != len(definition.analyses) or len(
+        {measurement.name for measurement in definition.measurements}
+    ) != len(definition.measurements):
+        raise ValueError("duplicate analysis or measurement name")
+
+    def resolve(path: tuple[str, ...]) -> Instance:
+        scope = bench
+        for segment in path[:-1]:
+            inst = next((item for item in scope.instances if item.name == segment), None)
+            if not isinstance(inst, Child):
+                raise ValueError("invalid hierarchical observation path")
+            scope = cells[inst.circuit]
+        target = next((item for item in scope.instances if item.name == path[-1]), None)
+        if target is None:
+            raise ValueError("unknown hierarchical observation target")
+        return target
+
+    for observation in definition.observations:
+        if isinstance(observation, DeviceObservation):
+            if not isinstance(resolve(observation.path), Mos):
+                raise ValueError("device observation requires a MOS")
+        elif observation.net not in bench.nets:
+            raise ValueError("unknown testbench observation net")
+    for measurement in definition.measurements:
+        if measurement.analysis not in analysis_kinds or not set(measurement.nets) <= set(
+            bench.nets
+        ):
+            raise ValueError("measurement requires a declared analysis and testbench nets")
+        if measurement.quantity == "supply_power":
+            if measurement.supply_path is None or not isinstance(
+                resolve(measurement.supply_path), VoltageSource
+            ):
+                raise ValueError("power measurement requires a voltage source")
+        elif measurement.supply_path is not None:
+            raise ValueError("supply path requires a supply power measurement")
 
 
 def validate_research_circuit(definition: ResearchCircuit) -> ResearchCircuit:
