@@ -5,13 +5,15 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
-from typing import Annotated, Literal, Protocol, Self, cast
+from decimal import Decimal
+from typing import Annotated, Any, Literal, Protocol, Self, cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
-from cadence_mcp_bridge.m2_cdf import parse_frame
+from cadence_mcp_bridge.m2_cdf import _atoms, parse_frame
 from cadence_mcp_bridge.m2_inverter import _mos_parameters
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.parameter_changes import (
@@ -35,6 +37,7 @@ from cadence_mcp_bridge.variable_contracts import (
 )
 
 MosParameter = Literal["w", "fw", "l", "m", "fingers"]
+MosSetParameter = Literal["w", "fw", "l", "m"]
 MosProperty = Literal["w", "fw", "l", "m", "fingers", "as", "ad", "ps", "pd", "nf", "model", "dfm"]
 _GEOMETRY: frozenset[MosProperty] = frozenset(("as", "ad", "ps", "pd"))
 _PROPERTIES = frozenset(("w", "fw", "l", "m", "fingers", "nf", "model", "dfm")) | _GEOMETRY
@@ -105,6 +108,42 @@ class MosEditValues(VariableModel):
     fingers: ChangeValue | None = None
 
 
+class MosCdfWriteField(VariableModel):
+    param_type: Literal["string", "int"]
+    minimum: ObservedLiteral | None
+    maximum: ObservedLiteral | None
+    callback_present: bool
+
+    def check_value(self, name: MosSetParameter, value: ChangeValue) -> None:
+        if self.param_type == "int" and name != "m":
+            raise ValueError("integer storage is restricted to the multiplier")
+        for edge, upper in ((self.minimum, False), (self.maximum, True)):
+            if edge is None:
+                continue
+            if name == "m":
+                if re.fullmatch(r"[0-9]{1,6}", edge) is None:
+                    raise ValueError("ambiguous CDF multiplier bound")
+                limit = Decimal(edge)
+            else:
+                if not edge.endswith(("u", "n")):
+                    raise ValueError("CDF length bound must have an observed metric suffix")
+                limit = Decimal(_length(edge).normalized[0])
+            scalar = Decimal(value.normalized[0])
+            if (upper and scalar > limit) or (not upper and scalar < limit):
+                raise ValueError("registered explicit value is outside the observed CDF bounds")
+
+
+class MosExplicitSet(VariableModel):
+    """A reviewed finite OA property setter with an independent target witness."""
+
+    fields: dict[MosSetParameter, MosCdfWriteField]
+    constraints_sha256: Digest
+    witness_operation_id: OperationId
+    witness_readback_sha256: Digest
+    witness_cdf_sha256: Digest
+    witness_input_sha256: Digest
+
+
 class RegisteredMosEditRoute(VariableModel):
     """One reviewed before/after tuple, supplied by the trusted host registration."""
 
@@ -113,6 +152,14 @@ class RegisteredMosEditRoute(VariableModel):
     after: dict[MosProperty, MosPropertyValue]
     # Pin the vetted Cadence update entry, independent of the CDF value evidence.
     update_route_sha256: Digest
+    explicit_set: MosExplicitSet | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_explicit_set(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.explicit_set is None:
+            document.pop("explicit_set", None)
+        return document
 
     @model_validator(mode="after")
     def finite_single_finger_route(self) -> Self:
@@ -135,7 +182,11 @@ class RegisteredMosEditRoute(VariableModel):
             if (
                 _number("w", frame["w"]).normalized != _number("fw", frame["fw"]).normalized
                 or _number("fingers", frame["fingers"]).normalized != ("1", "count")
-                or (primary != "m" and _number("m", frame["m"]).normalized != ("1", "count"))
+                or (
+                    self.explicit_set is None
+                    and primary != "m"
+                    and _number("m", frame["m"]).normalized != ("1", "count")
+                )
             ):
                 raise ValueError("this route requires single-finger CDF semantics")
         if (
@@ -145,8 +196,13 @@ class RegisteredMosEditRoute(VariableModel):
         ):
             raise ValueError("effective CDF tuple does not match the registered scalar")
         lengths = _changed_lengths(self.before, self.after)
+        changes_m = (
+            _number("m", self.before["m"]).normalized != _number("m", self.after["m"]).normalized
+        )
+        if changes_m and lengths and self.explicit_set is None:
+            raise ValueError("joint length and multiplier changes need explicit-set evidence")
         # Width is emitted as w. Its finger-width companion is an OA/CDF observation.
-        dependencies: set[MosProperty] = set() if primary == "m" else set(_GEOMETRY)
+        dependencies: set[MosProperty] = set(_GEOMETRY) if lengths else set()
         if "w" in lengths:
             dependencies.add("fw")
         derived = {
@@ -164,28 +220,33 @@ class RegisteredMosEditRoute(VariableModel):
             after = self.after[key]
             if (before.cdf_type, before.cdf_units) != (after.cdf_type, after.cdf_units):
                 raise ValueError("CDF parameter schema changed")
-            if key != primary and key not in lengths and key not in derived and before != after:
+            if (
+                not (key == "m" and changes_m)
+                and key not in lengths
+                and key not in derived
+                and before != after
+            ):
                 raise ValueError("non-target OA or effective CDF property changed")
         option_values = {o.name: (o.before, o.after) for o in target.options if o.before != o.after}
-        if primary == "m":
-            if (
-                lengths
-                or set(option_values) != {"m", "simM"}
-                or option_values["m"] != option_values["simM"]
-            ):
+        expected_options: set[str] = {*lengths, *(set(derived) & _GEOMETRY)}
+        if changes_m:
+            expected_options.update(("m", "simM"))
+        if set(option_values) != expected_options or any(
+            option_values[key] != derived[key] for key in set(derived) & _GEOMETRY
+        ):
+            raise ValueError("unregistered effective Spectre option transition")
+        if changes_m:
+            if option_values["m"] != option_values["simM"]:
                 raise ValueError(
-                    "registered m-only transition must independently change both emitted factors"
+                    "registered m transition must independently change both emitted factors"
                 )
             for token, frame in zip(option_values["m"], (self.before, self.after), strict=True):
                 if mos_multiplicity_factors(token) != _observed_factors(frame):
                     raise ValueError(
                         "emitted multiplier or finger factor differs from the CDF tuple"
                     )
-            return self
-        if set(option_values) != {*lengths, *(set(derived) & _GEOMETRY)} or any(
-            option_values[key] != derived[key] for key in set(derived) & _GEOMETRY
-        ):
-            raise ValueError("unregistered effective Spectre option transition")
+        if self.explicit_set is not None:
+            self._check_explicit_set(lengths, changes_m)
         old, new = option_values[primary]
         if (
             target.parse_scalar(old, baseline=True).normalized != q.old.normalized
@@ -200,6 +261,31 @@ class RegisteredMosEditRoute(VariableModel):
             ):
                 raise ValueError("emitted length differs from the qualified CDF tuple")
         return self
+
+    def _check_explicit_set(self, lengths: tuple[Literal["w", "l"], ...], changes_m: bool) -> None:
+        assert self.explicit_set is not None
+        fields = self.explicit_set.fields
+        required: set[MosSetParameter] = set(lengths)
+        if "w" in required:
+            required.add("fw")
+        if changes_m:
+            required.add("m")
+        if set(fields) != required:
+            raise ValueError(
+                "explicit-set metadata must cover exactly the changed dimensions and multiplier"
+            )
+        for name, spec in fields.items():
+            row = self.after[name]
+            if row.oa_type != spec.param_type or row.oa_value != row.cdf_value:
+                raise ValueError(
+                    "explicit storage must match the reviewed effective value and type"
+                )
+            spec.check_value(name, _number(name, row))
+        for geometry in _GEOMETRY:
+            if self.before[geometry] != self.after[geometry]:
+                row = self.after[geometry]
+                if row.oa_type != "string" or row.oa_value != row.cdf_value:
+                    raise ValueError("changed geometry needs reviewed explicit string storage")
 
 
 def plan_registered_mos_edit(
@@ -227,7 +313,10 @@ def plan_registered_mos_edit(
         supplied_lengths.add("w")
     if not set(_changed_lengths(route.before, route.after)).issubset(supplied_lengths):
         raise ValueError("every registered width and length change must be explicitly requested")
-    if q.target.scalar_option == "m" and requested.m is None:
+    if (
+        _observed_factors(route.before)[0] != _observed_factors(route.after)[0]
+        and requested.m is None
+    ):
         raise ValueError("the registered multiplier change must be explicitly requested")
     for name, value in supplies.items():
         if value.normalized != _number(name, route.after[name]).normalized:
@@ -289,6 +378,24 @@ class NativeMosEditReadback(NativeMosEditSave):
     netlist_receipt_sha256: Digest
     netlist_sha256: Digest
     cdf_frame_sha256: Digest
+
+
+class MosSetWitness(VariableModel):
+    """C1's independent non-OTA CDF calibration, which may share one test cell."""
+
+    operation_id: OperationId
+    method: Literal["cadence_edit_object_properties", "explicit_oa_replace_schcheck"]
+    instance: CandidateSourceTarget
+    netlist_path: Annotated[
+        str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_#-]*(/[A-Za-z][A-Za-z0-9_#-]*)?$", max_length=256)
+    ]
+    netlist_terminals: tuple[str, str, str, str]
+    before_footprint_sha256: Digest
+    reopened: MosEditSnapshot
+    netlisted_revision_sha256: Digest
+    netlisted_testbench_revision_sha256: Digest
+    cdf_frame_sha256: Digest
+    netlist_sha256: Digest
 
 
 @dataclass(frozen=True)
@@ -354,6 +461,87 @@ def _observed_factors(properties: dict[MosProperty, MosPropertyValue]) -> tuple[
     return _number("m", properties["m"]).normalized[0], _number(
         "fingers", properties["fingers"]
     ).normalized[0]
+
+
+def verify_explicit_set_evidence(
+    route: RegisteredMosEditRoute, constraints: bytes, readback: bytes, cdf: bytes, netlist: bytes
+) -> None:
+    """Check the independently retained C1 evidence before a writer claim."""
+    proof = route.explicit_set
+    if proof is None:
+        raise ValueError("registered explicit-set evidence is required")
+    for raw, pin in (
+        (constraints, proof.constraints_sha256),
+        (readback, proof.witness_readback_sha256),
+        (cdf, proof.witness_cdf_sha256),
+        (netlist, proof.witness_input_sha256),
+    ):
+        if hashlib.sha256(raw).hexdigest() != pin:
+            raise ValueError("explicit-set evidence digest changed")
+    witness = MosSetWitness.model_validate_json(readback)
+    target = route.qualification.target
+    calibration = witness.instance
+    if (
+        witness.operation_id != proof.witness_operation_id
+        or calibration.model_copy(update={"instance_path": target.instance.instance_path})
+        != target.instance
+        or witness.reopened.stage != "reopened"
+        or witness.reopened.footprint_sha256 != witness.before_footprint_sha256
+        or witness.reopened.properties != route.after
+        or witness.reopened.revision_sha256 != witness.netlisted_revision_sha256
+        or witness.reopened.testbench_revision_sha256 != witness.netlisted_testbench_revision_sha256
+        or witness.cdf_frame_sha256 != proof.witness_cdf_sha256
+        or witness.netlist_sha256 != proof.witness_input_sha256
+    ):
+        raise ValueError("independent setter witness does not match the reopened target tuple")
+    lines = constraints.decode("ascii").splitlines()
+    if not 2 <= len(lines) <= 96 or lines[0] != "M2_CDF_CONSTRAINTS_V1" or lines[-1] != "COMPLETE":
+        raise ValueError("missing C1 CDF constraint frame")
+    fields = ("paramType", "minVal", "maxVal", "callback")
+    observed: dict[tuple[str, str], tuple[object, object, object]] = {}
+    for line in lines[1:-1]:
+        kind, *columns = line.split("|")
+        if kind != "LIMIT" or len(columns) != 6 or len(line) > 512:
+            raise ValueError("malformed CDF constraint record")
+        (master,), (name,), (field,), (status,), (data_type,), (value,) = map(_atoms, columns)
+        if (
+            master != target.instance.master_cell
+            or not isinstance(name, str)
+            or name not in proof.fields
+            or not isinstance(field, str)
+            or field not in fields
+        ):
+            continue
+        key = name, field
+        if key in observed or status not in ("observed", "missing"):
+            raise ValueError("invalid duplicate or unobserved CDF constraint")
+        observed[key] = status, data_type, value
+    for name, spec in proof.fields.items():
+        param_type, minimum, maximum, callback = (observed.get((name, field)) for field in fields)
+        if (
+            param_type != ("observed", "string", spec.param_type)
+            or not _observed_bound(minimum, spec.minimum)
+            or not _observed_bound(maximum, spec.maximum)
+            or callback is None
+            or callback[0] != ("observed" if spec.callback_present else "missing")
+            or callback[2] is not None
+        ):
+            raise ValueError("CDF constraint frame differs from the reviewed setting")
+    calibration_target = target.model_copy(
+        update={
+            "instance": calibration,
+            "netlist_path": witness.netlist_path,
+            "netlist_terminals": witness.netlist_terminals,
+        }
+    )
+    _verify_reopened_cdf(cdf, calibration_target, route.after)
+    _verify_effective_options(netlist, calibration_target, route.after)
+
+
+def _observed_bound(row: tuple[object, object, object] | None, expected: str | None) -> bool:
+    if expected is None:
+        return row == ("missing", None, None)
+    return row is not None and row[0] == "observed" and row[2] == expected
 
 
 @dataclass(frozen=True)

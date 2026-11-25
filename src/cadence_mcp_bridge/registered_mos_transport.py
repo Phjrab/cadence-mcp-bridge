@@ -43,6 +43,7 @@ from cadence_mcp_bridge.registered_mos_edit import (
     RegisteredMosEditService,
     RetainedMosEdit,
     same_saved_testbench,
+    verify_explicit_set_evidence,
 )
 from cadence_mcp_bridge.runtime_context import (
     ExecutionContext,
@@ -216,6 +217,27 @@ class _FixedRegisteredMosProvider:
             65_536,
             scope.route_qualification.update_route_sha256,
         )
+        proof = scope.route_qualification.explicit_set
+        if proof is not None:
+            _require(
+                proof.witness_operation_id
+                not in (binding.operation_id, binding.owned_copy_operation_id)
+                and proof.witness_input_sha256 != scope.plan.baseline.netlist_sha256,
+                "registered_mos_independent_set_witness",
+            )
+            verify_explicit_set_evidence(
+                scope.route_qualification,
+                _read(directory / "cdf-constraints.private.txt", 65_536, proof.constraints_sha256),
+                _read(
+                    directory / "set-witness-readback.private.json",
+                    16_384,
+                    proof.witness_readback_sha256,
+                ),
+                _read(directory / "set-witness-cdf.private.txt", 262_144, proof.witness_cdf_sha256),
+                _read(
+                    directory / "set-witness-input.private.scs", 32_768, proof.witness_input_sha256
+                ),
+            )
         safety = _read(directory / "native-safety.private.json", 65_536, scope.native_safety_sha256)
         _document(safety)
         guest, support, collector = _fixed_assets(scope)

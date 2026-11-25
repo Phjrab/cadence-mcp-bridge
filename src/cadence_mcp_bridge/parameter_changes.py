@@ -897,18 +897,26 @@ def project_netlist_change(
         old, observed, derived = _compare_mos_options(
             old_options, new_options, plan.allowed_derived, amplifier=amplifier
         )
-    # Source9's reviewed HNL variation moves only the four top-level bench
-    # instances. Keep the same narrow exception for the registered MP width.
-    source9_width = (
+    # The observed Source9 HNL variation only permutes four fixed top-level
+    # bench instances. A new edit can use it on the exact archived DC input.
+    source9_mos = (
         isinstance(plan.target, RegisteredMosTarget)
-        and plan.target.netlist_path == "DUT/MP"
+        and plan.target.netlist_path == plan.target.instance.instance_path
+        and (plan.target.netlist_path, plan.target.instance.master_cell)
+        in (("DUT/MP", "pmos1v"), ("DUT/MN", "nmos1v"))
         and plan.target.instance.master_library == "gpdk090"
-        and plan.target.instance.master_cell == "pmos1v"
         and plan.target.instance.master_view == "symbol"
-        and plan.target.instance.property_name in ("w", "fw")
-        and plan.target.scalar_option == "w"
         and plan.baseline.revision.design_id == "cmos-long-inverter"
         and plan.baseline.revision.revision_id == "long-r1"
+        and (
+            (
+                plan.target.netlist_path == "DUT/MP"
+                and plan.target.instance.property_name in ("w", "fw")
+                and plan.target.scalar_option == "w"
+            )
+            or plan.baseline.netlist_sha256
+            == "5d4134980c80d6cff72e6c1adb0d5957e7871c7b52fa89d5482dfedf113c7f0a"
+        )
     )
     if old_params != new_params or (
         old_static != new_static
@@ -918,7 +926,7 @@ def project_netlist_change(
                     isinstance(plan.target, MosWidthTarget)
                     and plan.target.instance.instance_path != "PM0"
                 )
-                or source9_width
+                or source9_mos
             )
             and _same_inverter_bench_with_reordered_instances(
                 old_static, new_static, baseline_input, candidate_input

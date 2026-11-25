@@ -1,4 +1,4 @@
-"""Fixed registered inverter PMOS default restore and independent verification (Python 2.6)."""
+"""Fixed registered inverter MOS edit and independent verification (Python 2.6)."""
 
 # mypy: ignore-errors
 # ruff: noqa: B905, UP004, UP010, UP030, UP031, UP032
@@ -34,6 +34,7 @@ PHASES = ("EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST")
 CONFIRMATIONS = "registered-mos-confirmations"
 LIMIT = 524288
 OVERRIDES = ("w", "fw", "l", "as", "ad", "ps", "pd")
+SLOTS = {"pmos1v": ("MP", "vdd"), "nmos1v": ("MN", "vss")}
 PROPERTIES = ("w", "fw", "l", "m", "fingers", "as", "ad", "ps", "pd", "nf", "model", "dfm")
 SAFETY_FIELDS = (
     "schema_version",
@@ -66,12 +67,12 @@ procedure(mosView(lib cell view mode)
 procedure(mosOpen(lib cell mode) mosView(lib cell "schematic" mode))
 procedure(mosTarget(cv)
  let((matches inst)
-  matches=setof(item cv~>instances item~>name=="MP")
+  matches=setof(item cv~>instances item~>name=="@TARGET@")
   mosRequire(length(matches)==1)
   inst=car(matches)
-  mosRequire(and(inst~>libName=="gpdk090" inst~>cellName=="pmos1v" inst~>viewName=="symbol"))
+  mosRequire(and(inst~>libName=="gpdk090" inst~>cellName=="@MASTER@" inst~>viewName=="symbol"))
   mosRequire(equal(mosLinks(inst~>instTerms)
-     list(list("B" "vdd") list("D" "vout") list("G" "vin") list("S" "vdd"))))
+     list(list("B" "@RAIL@") list("D" "vout") list("G" "vin") list("S" "@RAIL@"))))
   inst))
 procedure(mosLinks(terms)
  sort(foreach(mapcar term terms
@@ -116,7 +117,7 @@ procedure(mosFoot(cv omit)
                  length(cv~>shapes)<=128))
   rows=foreach(mapcar inst cv~>instances
    list(inst~>name inst~>libName inst~>cellName inst~>viewName inst~>orient inst~>xy
-        mosLinks(inst~>instTerms) mosProps(inst if(inst~>name=="MP" then omit else nil))))
+        mosLinks(inst~>instTerms) mosProps(inst if(inst~>name=="@TARGET@" then omit else nil))))
   figures=foreach(mapcar shape cv~>shapes
    mosEncode(list(shape~>objType shape~>layerName shape~>purpose shape~>bBox
     if(member(shape~>objType list("line" "polygon" "path")) then shape~>points else nil)
@@ -127,8 +128,10 @@ procedure(mosFoot(cv omit)
      if(term~>net then term~>net~>name else nil))) 'mosByName)
    sort(foreach(mapcar net cv~>nets net~>name) 'alphalessp)
    sort(figures 'alphalessp)) 0)))
+procedure(mosLiteralValue(key value)
+ if(member(key '("m" "fingers")) && fixp(value) then sprintf(nil "%d" value) else value))
 procedure(mosTuple(path inst)
- let((port cdf prop param)
+ let((port cdf prop param raw value)
   cdf=cdfGetInstCDF(inst)
   mosRequire(cdf)
   port=outfile(path)
@@ -136,13 +139,15 @@ procedure(mosTuple(path inst)
   foreach(key '("w" "fw" "l" "m" "fingers" "as" "ad" "ps" "pd" "nf" "model" "dfm")
    prop=dbFindProp(inst key)
    param=cdfFindParamByName(cdf key)
-   when(prop mosRequire(and(stringp(prop~>valueType) stringp(prop~>value))))
-   when(param mosRequire(and(stringp(param~>type) stringp(param~>value)
+   raw=if(prop then mosLiteralValue(key prop~>value) else nil)
+   value=if(param then mosLiteralValue(key param~>value) else nil)
+   when(prop mosRequire(and(stringp(prop~>valueType) stringp(raw))))
+   when(param mosRequire(and(stringp(param~>type) stringp(value)
                              (null(param~>units) || stringp(param~>units)))))
    fprintf(port "%s|%L|%L|%L|%L|%L\n" key
-     if(prop then prop~>valueType else nil) if(prop then prop~>value else nil)
+     if(prop then prop~>valueType else nil) raw
      if(param then param~>type else nil) if(param then param~>units else nil)
-     if(param then param~>value else nil)))
+     value))
   fprintf(port "COMPLETE\n")
   mosRequire(close(port))))
 procedure(mosText(path text)
@@ -153,7 +158,7 @@ procedure(mosText(path text)
 
 EDIT = r"""
 procedure(mosEdit()
- let((source child inst original stable omit expected)
+ let((source child inst original stable omit expected base param)
   mosRequire(and(ddGetObj("@LIB@")~>readPath=="@OWNED@"
                  ddGetObj("@SOURCEALIAS@")~>readPath=="@SOURCE@"))
   mosTb("@SOURCEALIAS@")
@@ -172,17 +177,8 @@ procedure(mosEdit()
   child=mosOpen("@LIB@" "InvLong" "a")
   mosRequire(equal(original mosFoot(child nil)))
   inst=mosTarget(child)
-  expected=cdfGetInstCDF(inst)
-  foreach(row @DEFAULTS@
-   let((prop param)
-    prop=dbFindProp(inst car(row))
-    param=cdfFindParamByName(expected car(row))
-    mosRequire(and(prop prop~>valueType=="string" prop~>value==cadr(row)
-      param param~>value==cadr(row) param~>defValue==caddr(row)))))
   @BEFORE@
-  foreach(key omit
-   dbDeletePropByName(inst key)
-   mosRequire(!dbFindProp(inst key)))
+  @MUTATION@
   mosRequire(and(schCheck(child) equal(stable mosFoot(child omit))))
   @AFTER@
   mosTuple("@WORK@/saved.properties" inst)
@@ -191,6 +187,32 @@ procedure(mosEdit()
   printf("C6_MOS_EDIT_SAVED|@OP@\n")
   drain(poport) t))
 if(errset(mosEdit() t) then exit(0) else exit(1))
+"""
+
+RESTORE = r"""
+  expected=cdfGetInstCDF(inst)
+  foreach(row @DEFAULTS@
+   let((prop param)
+    prop=dbFindProp(inst car(row))
+    param=cdfFindParamByName(expected car(row))
+    mosRequire(and(prop prop~>valueType=="string" prop~>value==cadr(row)
+      param param~>value==cadr(row) param~>defValue==caddr(row)))))
+  foreach(key omit
+   dbDeletePropByName(inst key)
+   mosRequire(!dbFindProp(inst key)))
+"""
+
+SET_EXPLICIT = r"""
+  base=cdfGetBaseCellCDF(ddGetObj("gpdk090" "@MASTER@"))
+  mosRequire(and(base isCallable('dbReplaceProp)))
+  foreach(row @CDFWRITE@
+   param=cdfFindParamByName(base car(row))
+   mosRequire(and(param param~>paramType==cadr(row)
+    equal(mosLiteralValue(car(row) param~>minVal) nth(2 row))
+    equal(mosLiteralValue(car(row) param~>maxVal) nth(3 row))
+    equal(if(param~>callback then "present" else "absent") nth(4 row)))))
+  foreach(row @WRITES@
+   mosRequire(dbReplaceProp(inst car(row) cadr(row) caddr(row))))
 """
 
 REOPEN = r"""
@@ -292,15 +314,23 @@ def exact_route(scope):
     instance = target["instance"]
     prop = instance["property_name"]
     scalar = "w" if prop == "fw" else prop
+    master = instance["master_cell"]
+    require(master in SLOTS, "registered_mos_master")
+    slot, rail = SLOTS[master]
+    path, model = "DUT/" + slot, "gpdk090_" + master
+    setter = route.get("explicit_set")
+    allowed = ("w", "fw", "l") if setter is None else ("w", "fw", "l", "m")
+    units = ("count",) if scalar == "m" else ("nm", "um")
     require(
-        prop in ("w", "fw", "l")
+        prop in allowed
+        and (setter is not None or master == "pmos1v")
         and (
             instance["instance_path"],
             instance["master_library"],
             instance["master_cell"],
             instance["master_view"],
         )
-        == ("DUT/MP", "gpdk090", "pmos1v", "symbol")
+        == (path, "gpdk090", master, "symbol")
         and (
             target["quantity"],
             target["scalar_option"],
@@ -308,8 +338,14 @@ def exact_route(scope):
             target["netlist_model"],
             target["netlist_terminals"],
         )
-        == ("length", scalar, "DUT/MP", "gpdk090_pmos1v", ["vout", "vin", "vdd", "vdd"])
-        and target["scalar_unit"] in ("nm", "um")
+        == (
+            "count" if scalar == "m" else "length",
+            scalar,
+            path,
+            model,
+            ["vout", "vin", rail, rail],
+        )
+        and target["scalar_unit"] in units
         and plan["old"] == q["old"]
         and plan["requested"] == plan["expected"] == q["expected"]
         and plan["target"] == target
@@ -327,20 +363,57 @@ def exact_route(scope):
             and cdf_length(field["w"]) == cdf_length(field["fw"])
             and field["w"]["cdf_value"] == field["fw"]["cdf_value"]
             and cdf_length(field["l"]) > 0
-            and field["model"]["cdf_value"] == "gpdk090_pmos1v"
-            and field["m"]["cdf_value"] == field["fingers"]["cdf_value"] == "1"
+            and field["model"]["cdf_value"] == model
+            and field["fingers"]["cdf_value"] == "1"
+            and field["m"]["cdf_type"] == "instData"
+            and field["m"]["cdf_units"] is None
+            and re.match(r"^[1-9][0-9]{0,5}\Z", field["m"]["cdf_value"] or "")
+            and (setter is not None or field["m"]["cdf_value"] == "1")
             and all(val is None for val in field["nf"].values())
-            and cdf_length(field[scalar]) == finite_length(value["value"], value["unit"]),
+            and (
+                (
+                    value["unit"] == "count"
+                    and Decimal(field["m"]["cdf_value"]) == Decimal(value["value"])
+                )
+                if scalar == "m"
+                else cdf_length(field[scalar]) == finite_length(value["value"], value["unit"])
+            ),
             "registered_cdf_tuple",
         )
         for name in ("as", "ad", "ps", "pd"):
             cdf_geometry(field[name], name)
-    keys = restoration_keys(route)
+    keys = restoration_keys(route) if setter is None else explicit_keys(route)
     require(
         scalar in keys and before[scalar]["cdf_value"] != after[scalar]["cdf_value"],
         "registered_cdf_scalar_change",
     )
     return route
+
+
+def explicit_keys(route):
+    before, after = route["before"], route["after"]
+    fields = route["explicit_set"]["fields"]
+    keys = tuple(name for name in PROPERTIES if before[name] != after[name])
+    scalars = set(("w", "fw", "l", "m"))
+    require(
+        set(keys).issubset(set(OVERRIDES) | set(("m",)))
+        and set(fields) == set(keys).intersection(scalars),
+        "explicit_set_property_inventory",
+    )
+    for key in keys:
+        old, new = before[key], after[key]
+        spec = fields.get(key, {})
+        storage = spec.get("param_type", "string")
+        require(
+            (storage == "string" or (storage == "int" and key == "m"))
+            and new["oa_type"] == storage
+            and new["oa_value"] == new["cdf_value"]
+            and old["cdf_type"] == new["cdf_type"] == "instData"
+            and old["cdf_units"] == new["cdf_units"]
+            and old["cdf_value"] != new["cdf_value"],
+            "reviewed_explicit_property",
+        )
+    return keys
 
 
 def restoration_keys(route):
@@ -366,6 +439,9 @@ def restoration_keys(route):
 def skill_token(value):
     if value is None:
         return "nil"
+    if type(value) is int:
+        require(1 <= value <= 999999, "skill_count")
+        return str(value)
     require(re.match(r"^[A-Za-z0-9_. +-]{1,128}\Z", value), "skill_tuple_literal")
     return '"' + value + '"'
 
@@ -393,6 +469,47 @@ def skill_restore(route):
     return omit, table
 
 
+def skill_mutation(route, master):
+    setter = route.get("explicit_set")
+    if setter is None:
+        omit, table = skill_restore(route)
+        return omit, render(RESTORE, {"@DEFAULTS@": table}).decode("ascii")
+    keys = explicit_keys(route)
+    omit = "'(" + " ".join(skill_token(key) for key in keys) + ")"
+    proof, writes = [], []
+    for key in keys:
+        row = route["after"][key]
+        storage, value = row["oa_type"], row["oa_value"]
+        writes.append((key, storage, int(value) if storage == "int" else value))
+        spec = setter["fields"].get(key)
+        if spec is not None:
+            proof.append(
+                (
+                    key,
+                    spec["param_type"],
+                    spec["minimum"],
+                    spec["maximum"],
+                    "present" if spec["callback_present"] else "absent",
+                )
+            )
+
+    def table(rows):
+        return (
+            "'("
+            + " ".join("(" + " ".join(skill_token(value) for value in row) + ")" for row in rows)
+            + ")"
+        )
+
+    return omit, render(
+        SET_EXPLICIT,
+        {
+            "@MASTER@": master,
+            "@CDFWRITE@": table(proof),
+            "@WRITES@": table(writes),
+        },
+    ).decode("ascii")
+
+
 def skill_check(rows):
     result = []
     for key in PROPERTIES:
@@ -417,9 +534,9 @@ def skill_check(rows):
         " let((prop param)\n"
         "  prop=dbFindProp(inst car(row)) param=cdfFindParamByName(cdfGetInstCDF(inst) car(row))\n"
         "  mosRequire(equal(list(if(prop then prop~>valueType else nil)\n"
-        "     if(prop then prop~>value else nil)\n"
+        "     if(prop then mosLiteralValue(car(row) prop~>value) else nil)\n"
         "     if(param then param~>type else nil) if(param then param~>units else nil)\n"
-        "     if(param then param~>value else nil)) cdr(row)))))"
+        "     if(param then mosLiteralValue(car(row) param~>value) else nil)) cdr(row)))))"
     )
 
 
@@ -441,6 +558,15 @@ class Source9MosJob(object):
             helper.job_id(self.operation) and helper.job_id(copy_id) and self.operation != copy_id,
             "operation_identity",
         )
+        proof = self.route.get("explicit_set")
+        if proof is not None:
+            witness = proof["witness_operation_id"]
+            require(
+                helper.job_id(witness)
+                and witness not in (self.operation, copy_id)
+                and proof["witness_input_sha256"] != scope["plan"]["baseline"]["netlist_sha256"],
+                "independent_set_witness",
+            )
         self.library = self.subject["owned_library"]
         self.source_alias = pin.get("source_library", SOURCE)
         require(
@@ -658,7 +784,9 @@ class Source9MosJob(object):
             )
 
     def values(self, work):
-        omit, defaults = skill_restore(self.route)
+        master = self.route["qualification"]["target"]["instance"]["master_cell"]
+        slot, rail = SLOTS[master]
+        omit, mutation = skill_mutation(self.route, master)
         return {
             "@LIB@": self.library,
             "@OWNED@": self.owned,
@@ -669,7 +797,10 @@ class Source9MosJob(object):
             "@BEFORE@": skill_check(self.route["before"]),
             "@AFTER@": skill_check(self.route["after"]),
             "@OVERRIDES@": omit,
-            "@DEFAULTS@": defaults,
+            "@MUTATION@": mutation,
+            "@TARGET@": slot,
+            "@MASTER@": master,
+            "@RAIL@": rail,
             "@NETLISTCELL@": "Grel_" + self.operation.replace("-", "_"),
         }
 

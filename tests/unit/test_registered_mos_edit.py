@@ -30,10 +30,13 @@ from cadence_mcp_bridge.parameter_changes import (
     mos_multiplicity_factors,
 )
 from cadence_mcp_bridge.registered_mos_edit import (
+    MosCdfWriteField,
     MosEditSnapshot,
     MosEditValues,
+    MosExplicitSet,
     MosProperty,
     MosPropertyValue,
+    MosSetWitness,
     NativeMosEditCapture,
     NativeMosEditReadback,
     NativeMosEditSave,
@@ -42,6 +45,7 @@ from cadence_mcp_bridge.registered_mos_edit import (
     RegisteredMosEditService,
     RetainedMosEdit,
     plan_registered_mos_edit,
+    verify_explicit_set_evidence,
 )
 from cadence_mcp_bridge.runtime_context import load_runtime
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
@@ -196,8 +200,10 @@ def _fixture(
     return route, child, baseline, new, request
 
 
-def _cdf_frame(master: str, properties: dict[MosProperty, MosPropertyValue]) -> bytes:
-    lines = ["M2_CDF_V2", f'DEVICE|"gpdk090"|"{master}"|"M0"']
+def _cdf_frame(
+    master: str, properties: dict[MosProperty, MosPropertyValue], slot: str = "M0"
+) -> bytes:
+    lines = ["M2_CDF_V2", f'DEVICE|"gpdk090"|"{master}"|"{slot}"']
     lines.extend(f'TERM|"{key}"' for key in ("D", "G", "S", "B"))
     expressions = {
         "simW": _row('iPar("fw")', length=True),
@@ -630,7 +636,7 @@ def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
         values = dict.fromkeys(set(re.findall(r"@[A-Z]+@", script)), "fixed")
         values["@BEFORE@"] = guest_source.skill_check(route["before"])
         values["@AFTER@"] = guest_source.skill_check(route["after"])
-        values["@OVERRIDES@"], values["@DEFAULTS@"] = guest_source.skill_restore(route)
+        values["@OVERRIDES@"], values["@MUTATION@"] = guest_source.skill_mutation(route, "pmos1v")
         rendered = guest_source.render(script, values).decode("ascii")
         depth = 0
         syntax = re.sub(r'"(?:[^"\\]|\\.)*"', '""', rendered)
@@ -638,7 +644,7 @@ def test_shipped_source9_guest_has_closed_route_and_phase_templates() -> None:
             depth += (ch == "(") - (ch == ")")
             assert depth >= 0
         assert depth == 0 and "evalstring" not in rendered and "dbReplaceProp" not in rendered
-    assert "dbDeletePropByName" in guest_source.EDIT and "dbSave" in guest_source.EDIT
+    assert "dbDeletePropByName" in guest_source.RESTORE and "dbSave" in guest_source.EDIT
     assert "dbSave" not in guest_source.REOPEN and "m2ReopenedMosFrame" in guest_source.REOPEN
     route["after"]["m"]["cdf_value"] = "6"
     with pytest.raises(ValueError, match="registered_cdf_tuple"):
@@ -675,3 +681,272 @@ def test_native_property_rows_are_observed_and_complete() -> None:
     assert guest_source.read_properties(raw) == rows
     with pytest.raises(ValueError, match="property_name"):
         guest_source.read_properties(raw.replace(b"fw|", b"w|"))
+
+
+@pytest.mark.parametrize(
+    ("master", "count_storage"), [("nmos1v", None), ("pmos1v", "int"), ("pmos1v", "string")]
+)
+def test_explicit_nondefault_joint_route_checks_witness_and_renders_setter(
+    master, count_storage
+) -> None:
+    base, child, _, _, _ = _fixture(master)
+    model = f"gpdk090_{master}"
+    slot, rail = guest_source.SLOTS[master]
+    path = f"DUT/{slot}"
+    before = {key: MosPropertyValue.model_validate(row) for key, row in _guest_tuple(True).items()}
+    before["model"] = before["model"].model_copy(update={"oa_value": model, "cdf_value": model})
+    after = before.copy()
+    replacements = {"w": "16u", "fw": "16u", "l": "1u", "as": "4p"}
+    if count_storage:
+        replacements["m"] = "6"
+    for name, value in replacements.items():
+        storage = count_storage if name == "m" else "string"
+        after[name] = after[name].model_copy(
+            update={"oa_type": storage, "oa_value": value, "cdf_value": value}
+        )
+
+    def netlist(properties):
+        values = {name: row.cdf_value for name, row in properties.items()}
+        factor = f"({values['m']})*({values['fingers']})"
+        return (
+            "simulator lang=spectre\nparameters VDD=1\n"
+            "subckt InvLong vdd vin vout vss\n"
+            f"{slot} (vout vin {rail} {rail}) {model} w=({values['w']}) l={values['l']} "
+            f"as={values['as']} ad={values['ad']} ps={values['ps']} pd={values['pd']} "
+            f"m={factor} simM={factor}\n"
+            "ends InvLong\nDUT (vdd vin vout 0) InvLong\n"
+        ).encode("ascii")
+
+    old, new = netlist(before), netlist(after)
+    parent = base.qualification.baseline.revision.model_copy(
+        update={"design_id": "cmos-long-inverter"}
+    )
+    child = child.model_copy(update={"design_id": parent.design_id})
+    options = [
+        MosOptionTransition(name="w", before="(350n)", after="(16u)"),
+        MosOptionTransition(name="l", before="100n", after="1u"),
+        MosOptionTransition(name="as", before="98f", after="4p"),
+    ]
+    if count_storage:
+        options += [
+            MosOptionTransition(name="m", before="(1)*(1)", after="(6)*(1)"),
+            MosOptionTransition(name="simM", before="(1)*(1)", after="(6)*(1)"),
+        ]
+    target = base.qualification.target.model_copy(
+        update={
+            "instance": base.qualification.target.instance.model_copy(
+                update={"instance_path": path}
+            ),
+            "netlist_path": path,
+            "netlist_terminals": ("vout", "vin", rail, rail),
+            "options": tuple(options),
+            "scalar_unit": "um",
+            "baseline_scalar_unit": "nm",
+        }
+    )
+    qualification = base.qualification.model_copy(
+        update={
+            "baseline": base.qualification.baseline.model_copy(
+                update={"revision": parent, "netlist_sha256": _sha(old)}
+            ),
+            "target": target,
+            "expected": ChangeValue(value="16", unit="um"),
+            "derived": (
+                DerivedChange(
+                    before=DerivedValue(property_name="fw", value="350n"),
+                    after=DerivedValue(property_name="fw", value="16u"),
+                ),
+                DerivedChange(
+                    before=DerivedValue(property_name="as", value="98f"),
+                    after=DerivedValue(property_name="as", value="4p"),
+                ),
+            ),
+        }
+    )
+    fields = {
+        name: MosCdfWriteField(
+            param_type="string", minimum="100n", maximum="20u", callback_present=True
+        )
+        for name in ("w", "fw", "l")
+    }
+    if count_storage:
+        fields["m"] = MosCdfWriteField(
+            param_type=count_storage, minimum="1", maximum=None, callback_present=False
+        )
+    frame = _cdf_frame(master, after, slot)
+    cal_slot = "CalPmos6" if count_storage else "CalNmos"
+    cal_frame = _cdf_frame(master, after, cal_slot)
+    cal_input = new.replace(f"{slot} (".encode("ascii"), f"{cal_slot} (".encode("ascii"))
+    lines = ["M2_CDF_CONSTRAINTS_V1"]
+    for name, spec in fields.items():
+        lines.append(f'LIMIT|"{master}"|"{name}"|"paramType"|"observed"|string|"{spec.param_type}"')
+        for field, value in (("minVal", spec.minimum), ("maxVal", spec.maximum)):
+            item = f'"observed"|string|"{value}"' if value is not None else '"missing"|nil|nil'
+            lines.append(f'LIMIT|"{master}"|"{name}"|"{field}"|{item}')
+        item = '"observed"|string|nil' if spec.callback_present else '"missing"|nil|nil'
+        lines.append(f'LIMIT|"{master}"|"{name}"|"callback"|{item}')
+    constraints = ("\n".join([*lines, "COMPLETE"]) + "\n").encode("ascii")
+    witness = MosSetWitness(
+        operation_id="55555555-5555-4555-8555-555555555555",
+        method="cadence_edit_object_properties",
+        instance=target.instance.model_copy(update={"instance_path": f"DUT/{cal_slot}"}),
+        netlist_path=f"DUT/{cal_slot}",
+        netlist_terminals=target.netlist_terminals,
+        before_footprint_sha256="c" * 64,
+        reopened=MosEditSnapshot(
+            stage="reopened",
+            revision_sha256="a" * 64,
+            testbench_revision_sha256="b" * 64,
+            footprint_sha256="c" * 64,
+            receipt_sha256="d" * 64,
+            properties=after,
+        ),
+        netlisted_revision_sha256="a" * 64,
+        netlisted_testbench_revision_sha256="b" * 64,
+        cdf_frame_sha256=_sha(cal_frame),
+        netlist_sha256=_sha(cal_input),
+    )
+    witness_raw = _canonical(witness.model_dump(mode="json"))
+    proof = MosExplicitSet(
+        fields=fields,
+        constraints_sha256=_sha(constraints),
+        witness_operation_id=witness.operation_id,
+        witness_readback_sha256=_sha(witness_raw),
+        witness_cdf_sha256=_sha(cal_frame),
+        witness_input_sha256=_sha(cal_input),
+    )
+    route = RegisteredMosEditRoute(
+        qualification=qualification,
+        before=before,
+        after=after,
+        update_route_sha256="9" * 64,
+        explicit_set=proof,
+    )
+    requested = MosEditValues(
+        w=ChangeValue(value="16000", unit="nm"),
+        l=ChangeValue(value="1", unit="um"),
+        m=ChangeValue(value="6", unit="count") if count_storage else None,
+    )
+    plan = plan_registered_mos_edit(route, child, requested)
+    verify_explicit_set_evidence(route, constraints, witness_raw, cal_frame, cal_input)
+    binding = RegisteredMosEditBinding(
+        operation_id="11111111-1111-4111-8111-111111111111",
+        owned_copy_operation_id="22222222-2222-4222-8222-222222222222",
+        scope_sha256="1" * 64,
+        plan_sha256=plan.plan_sha256,
+        route_sha256=canonical_digest(route),
+        owned_library="CmosLongMosTest1",
+        owned_cell="InvLong",
+        owned_before_view_tree_sha256="2a" * 32,
+        owned_before_testbench_tree_sha256="2b" * 32,
+        source_preservation_sha256="2c" * 32,
+    )
+    provider = _Provider()
+    service = RegisteredMosEditService(
+        binding,
+        route,
+        child,
+        requested,
+        old,
+        provider,
+        expected_binding_sha256=canonical_digest(binding),
+    )
+    start = witness.reopened.model_copy(
+        update={
+            "stage": "baseline",
+            "revision_sha256": binding.owned_before_view_tree_sha256,
+            "testbench_revision_sha256": binding.owned_before_testbench_tree_sha256,
+            "properties": before,
+        }
+    )
+    saved = start.model_copy(
+        update={
+            "stage": "saved",
+            "revision_sha256": "2d" * 32,
+            "receipt_sha256": "2e" * 32,
+            "properties": after,
+        }
+    )
+    reopened = saved.model_copy(update={"stage": "reopened", "receipt_sha256": "2f" * 32})
+    provider.publication = NativeMosEditCapture(
+        NativeMosEditReadback(
+            operation_id=binding.operation_id,
+            plan_sha256=binding.plan_sha256,
+            scope_sha256=binding.scope_sha256,
+            baseline=start,
+            saved=saved,
+            reopened=reopened,
+            source_preservation_sha256=binding.source_preservation_sha256,
+            netlisted_revision_sha256=reopened.revision_sha256,
+            netlisted_testbench_revision_sha256=reopened.testbench_revision_sha256,
+            netlist_receipt_sha256="3a" * 32,
+            netlist_sha256=_sha(new),
+            cdf_frame_sha256=_sha(frame),
+        ),
+        new,
+        frame,
+    )
+    result = service.apply(service.identity)
+    assert result.outcome == "VERIFIED" and result.effective_mos_options is not None
+    assert result.effective_mos_options["m"] == ("(6)*(1)" if count_storage else "(1)*(1)")
+    assert service.lookup(service.identity).replayed and provider.dispatches == 1
+    scope = {
+        "plan": plan.model_dump(mode="json"),
+        "route_qualification": route.model_dump(mode="json"),
+        "subject": {
+            "owned_library": "CmosLongMosTest1",
+            "owned_cell": "InvLong",
+            "owned_view": "schematic",
+        },
+    }
+    guest_source.exact_route(scope)
+    omit, mutation = guest_source.skill_mutation(scope["route_qualification"], master)
+    job = guest_source.Source9MosJob.__new__(guest_source.Source9MosJob)
+    job.route, job.library, job.source, job.source_alias = (
+        scope["route_qualification"],
+        "CmosLongMosTest1",
+        "/root/source",
+        "CmosLong20261111",
+    )
+    job.owned, job.operation = "/root/copy", "11111111-1111-4111-8111-111111111111"
+    values = job.values("/root/work")
+    assert values["@TARGET@"] == slot and values["@RAIL@"] == rail
+    edit = guest_source.render(guest_source.COMMON + guest_source.EDIT, values).decode("ascii")
+    assert (
+        edit.index("param~>callback")
+        < edit.index("dbReplaceProp(inst")
+        < edit.index("dbSave(child)")
+    )
+    assert "dbDeletePropByName" not in mutation and "evalstring" not in edit
+    assert "@MUTATION@" not in edit and ("m" in omit) == bool(count_storage)
+    if count_storage:
+        assert ('("m" "int" 6)' if count_storage == "int" else '("m" "string" "6")') in mutation
+        with pytest.raises(ValueError, match="explicitly requested"):
+            plan_registered_mos_edit(route, child, requested.model_copy(update={"m": None}))
+    with pytest.raises(ValueError, match="digest changed"):
+        verify_explicit_set_evidence(
+            route, constraints, witness_raw, cal_frame, cal_input.replace(b"(16u)", b"(17u)")
+        )
+    forged = witness.model_copy(update={"netlisted_testbench_revision_sha256": "e" * 64})
+    forged_raw = _canonical(forged.model_dump(mode="json"))
+    forged_proof = proof.model_copy(update={"witness_readback_sha256": _sha(forged_raw)})
+    with pytest.raises(ValueError, match="witness does not match"):
+        verify_explicit_set_evidence(
+            route.model_copy(update={"explicit_set": forged_proof}),
+            constraints,
+            forged_raw,
+            cal_frame,
+            cal_input,
+        )
+    bad_constraints = constraints.replace(
+        b'"callback"|"observed"|string|nil', b'"callback"|"read_error"|nil|nil', 1
+    )
+    bad_proof = proof.model_copy(update={"constraints_sha256": _sha(bad_constraints)})
+    with pytest.raises(ValueError, match="unobserved CDF constraint"):
+        verify_explicit_set_evidence(
+            route.model_copy(update={"explicit_set": bad_proof}),
+            bad_constraints,
+            witness_raw,
+            cal_frame,
+            cal_input,
+        )
