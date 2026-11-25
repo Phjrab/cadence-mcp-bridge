@@ -94,6 +94,11 @@ files = ["src", "tests"]
 module = "cadence_mcp_bridge._storage_worker"
 ignore_errors = true
 
+# These guest programs also run under Cadence's Python 2.6 interpreter.
+[[tool.mypy.overrides]]
+module = ["cadence_mcp_bridge._mos_cdf_call_contract", "cadence_mcp_bridge._mos_sizing_slot"]
+disable_error_code = ["no-untyped-def", "no-untyped-call"]
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 asyncio_mode = "auto"
