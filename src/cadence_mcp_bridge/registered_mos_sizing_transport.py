@@ -242,6 +242,24 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
             package.joinpath("_amp_pm0_default_phase.py").read_bytes(), reg.support_sha256
         )
         collector = _asset(m2_cdf.render_reopened_mos_cdf(), reg.collector_sha256)
+        packet = {
+            "managed_root": self._context.contracts.environment.paths.managed_root,
+            "scope_base64": _encode(raw_scope),
+            "authority_base64": _encode(_canonical(authority.model_dump(mode="json"))),
+            "baseline_base64": _encode(self._baseline),
+            "native_safety_base64": _encode(safety),
+            "support_base64": _encode(support),
+            "cdf_collector_base64": _encode(collector),
+            "sizing_base64": _encode(self._sizing),
+            "previous_receipt_sha256": previous,
+        }
+        if scope.slot_manifest_sha256 is not None:
+            verifier_pin = getattr(guest_contract, "SIZING_SLOT_VERIFIER_SHA256", None)
+            if not isinstance(verifier_pin, str):
+                raise ValueError("Registered MOS guest does not support finite slot verification")
+            verifier = package.joinpath("_mos_sizing_slot.py").read_bytes()
+            _require(len(verifier) <= 16_384, "registered_mos_sizing_slot_verifier_size")
+            packet["slot_verifier_base64"] = _encode(_asset(verifier, verifier_pin))
         bootstrap = shlex.quote(
             "import hashlib,sys\n"
             f"fixed=sys.stdin.read({len(guest)})\n"
@@ -252,20 +270,7 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
         return (
             _ssh(self._context.contracts.environment)
             + ["-c", bootstrap, binding.scope_sha256, phase],
-            guest
-            + _canonical(
-                {
-                    "managed_root": self._context.contracts.environment.paths.managed_root,
-                    "scope_base64": _encode(raw_scope),
-                    "authority_base64": _encode(_canonical(authority.model_dump(mode="json"))),
-                    "baseline_base64": _encode(self._baseline),
-                    "native_safety_base64": _encode(safety),
-                    "support_base64": _encode(support),
-                    "cdf_collector_base64": _encode(collector),
-                    "sizing_base64": _encode(self._sizing),
-                    "previous_receipt_sha256": previous,
-                }
-            ),
+            guest + _canonical(packet),
         )
 
     def _saved(self, binding: RegisteredMosEditBinding, raw: bytes) -> NativeMosEditSave:

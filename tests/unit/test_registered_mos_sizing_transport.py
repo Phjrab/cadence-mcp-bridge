@@ -23,6 +23,7 @@ from cadence_mcp_bridge._mos_sizing_slot import (
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.errors import ConfigurationError
 from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
+from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.registered_mos_edit import NativeMosEditSave
 from cadence_mcp_bridge.server import create_default_server
 
@@ -121,6 +122,17 @@ def enrolled(tmp_path, monkeypatch):
     def run_fixed(argv, payload, _, **bounds):
         assert payload.startswith(guest) and bounds == {"timeout": 60, "limit": 524_288}
         envelope = json.loads(payload[len(guest) :])
+        assert set(envelope) == {
+            "managed_root",
+            "scope_base64",
+            "authority_base64",
+            "baseline_base64",
+            "native_safety_base64",
+            "support_base64",
+            "cdf_collector_base64",
+            "sizing_base64",
+            "previous_receipt_sha256",
+        }
         scope_raw = base64.b64decode(envelope["scope_base64"], validate=True)
         scope = json.loads(scope_raw)
         ack = json.loads(base64.b64decode(envelope["authority_base64"], validate=True))
@@ -251,24 +263,27 @@ async def test_enrolled_sizing_previews_then_dispatches_once_and_reads_after_res
     assert {path: path.read_bytes() for path in slots.iterdir()} == after
 
 
-def test_host_envelope_matches_one_immutable_native_slot_for_two_lengths(enrolled):
+def test_host_envelope_matches_one_immutable_native_slot_for_two_lengths(enrolled, monkeypatch):
     context, candidate, directory, phases = enrolled
     registration_path = context.binding.pmos_default_change_binding
     original = json.loads(registration_path.read_bytes())
 
-    def packet(values):
+    def packet(values, phase="EDIT_SAVE", previous=None):
         service = sizing.selected_mos_sizing(context)
         request = sizing.MosSizingCandidate.model_validate({**candidate, "values": values})
         exact = service._service(request)
-        _, payload = exact._provider._prepare(exact._binding, "EDIT_SAVE", None)
+        _, payload = exact._provider._prepare(exact._binding, phase, previous)
         guest = files("cadence_mcp_bridge").joinpath("_registered_mos_edit_phase.py").read_bytes()
         envelope = json.loads(payload[len(guest) :])
         scope = json.loads(base64.b64decode(envelope["scope_base64"], validate=True))
         assets = base64.b64decode(envelope["sizing_base64"], validate=True)
-        return scope, assets
+        assert envelope["previous_receipt_sha256"] == previous
+        return scope, assets, envelope
 
-    scope, _ = packet({"l": {"unit": "nm", "value": "250"}})
+    values250 = {"l": {"unit": "um", "value": "0.25"}}
+    scope, _, exact_packet = packet(values250)
     assert "slot_manifest_sha256" not in scope
+    assert "slot_verifier_base64" not in exact_packet
     template = render_mos_wl_skill("nmos1v", length_nm="250").replace(
         b'"250n"', b'"@LENGTH_NM@"'
     )
@@ -292,16 +307,31 @@ def test_host_envelope_matches_one_immutable_native_slot_for_two_lengths(enrolle
     registration_path.write_bytes(updated)
     context.binding.pmos_default_change_sha256 = _sha(updated)
     candidate["expected_enrollment_sha256"] = _sha(updated)
-    scope200, assets200 = packet({"l": {"unit": "nm", "value": "200"}})
-    scope250, assets250 = packet({"l": {"unit": "um", "value": "0.25"}})
+    scope200, assets200, packet200 = packet({"l": {"unit": "nm", "value": "200"}})
+    scope250, assets250, packet250 = packet(values250)
+    reopen_scope, reopen_assets, reopen = packet(values250, "INDEPENDENT_REOPEN_NETLIST", "a" * 64)
     assert _sha(manifest) == scope200["slot_manifest_sha256"] == scope250["slot_manifest_sha256"]
     assert scope200["subject"]["plan_sha256"] != scope250["subject"]["plan_sha256"]
     assert assets200 != assets250
+    assert (reopen_scope, reopen_assets) == (scope250, assets250)
+    verifier = files("cadence_mcp_bridge").joinpath("_mos_sizing_slot.py").read_bytes()
+    for envelope in (packet200, packet250, reopen):
+        assert set(envelope) == {*exact_packet, "slot_verifier_base64"}
+        assert guest_contract.read_encoded(envelope, "slot_verifier", 16384) == verifier
+    assert _sha(verifier) == guest_contract.SIZING_SLOT_VERIFIER_SHA256
     for scope, assets in ((scope200, assets200), (scope250, assets250)):
         length = scope["candidate_request"]["l"]["value"]
         assert verify_sizing_slot(manifest, scope, assets, time.time()) == length
     with pytest.raises(ValueError):
         verify_sizing_slot(manifest, scope250, assets200, time.time())
+    with monkeypatch.context() as patch:
+        patch.setattr(guest_contract, "SIZING_SLOT_VERIFIER_SHA256", "0" * 64)
+        with pytest.raises(OperationRejected) as mismatch:
+            packet(values250)
+        assert mismatch.value.reason == "registered_mos_sizing_asset"
+        patch.delattr(guest_contract, "SIZING_SLOT_VERIFIER_SHA256")
+        with pytest.raises(ValueError, match="does not support finite slot verification"):
+            packet(values250)
     assert not phases and not (directory / "registered-mos-intent.private.json").exists()
 
 
