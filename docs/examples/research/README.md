@@ -205,7 +205,7 @@ cadence-mcp-bridge operator-research-generation prepare `
 
 **선택 입력 `signed_ac_vsin_pair`** — 기본값은 `false`입니다. 이 옵션을 제공하는 개발 소스에서 `true`는 보존 증거와 일치하는 접지 기준 `analogLib/vsin/symbol` 두 개에만 적용합니다. 두 소스의 DC는 각각 0.5 V, AC 진폭은 각각 +0.5 V와 −0.5 V입니다. 저장된 사인 설정 `va=50m`, `freq=1K`, `filenums=none` 및 두 번째 소스의 `sinephase=180`을 보존합니다. 이 경로의 Netlist 조건은 AC 전용입니다.
 
-옵션을 사용하려면 `signed_ac_evidence_sha256`으로 검토한 저장·독립 재개방 관측을, 그 관측의 `effective_netlist_sha256`으로 실제 원본 Netlist를, `primitive_cdf_sha256`으로 일치하는 CDF를 연결합니다. 준비 명령에 해당 증거 파일을 각각 전달합니다. 기존 회로의 OA와 Netlist에서는 위 설정을 확인했고, 해당 두 인스턴스의 실제 base/effective CDF는 아직 확보하지 못했습니다. 필요한 기록은 `vdc/acm/va/freq/sinephase/acp`의 메타데이터·값, `PLUS/MINUS`와 Spectre `vsource` 매핑입니다. `acp`의 단위를 가정하지 않습니다. 이 옵션의 검증은 현재 로컬 검증이며 실제 Cadence 적용은 대기 중입니다.
+옵션을 사용하려면 `signed_ac_evidence_sha256`으로 검토한 저장·독립 재개방 관측을, 그 관측의 `effective_netlist_sha256`으로 실제 원본 Netlist를, `primitive_cdf_sha256`으로 일치하는 CDF를 연결합니다. 준비 명령에 해당 증거 파일을 각각 전달합니다. 기존 AMP의 실제 두 `vsin`에서 base/effective CDF, 저장 OA와 실행 Spectre 입력을 확보해 오프라인으로 대조했습니다. CDF의 `acp`는 단위와 값이 비어 있었고 OA에는 이 속성이 없었습니다. 이 실제 소스 증거를 합성 17 MOS의 준비 검증에 사용했습니다. 새 OTA에서 해당 옵션으로 생성·재개방·Netlist를 확인하는 절차는 대기 중입니다.
 
 #### 등록형 생성의 CLI와 MCP 요청
 
@@ -321,7 +321,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 생성 전 | 실제 ADE seed와 실행 계획 | 검토된 소유 대상과 ADE seed 상태를 확인한 뒤 물리 기준과 실행 범위를 결속합니다. 기존 두 MOS의 seed 재사용 계획과 로컬 Netlist 비교는 준비 증거입니다. 새 OTA에 적용할 seed 상태, 분석 조건, 의존 모델과 프로그램을 별도로 대조합니다. |
 | 생성 후 | 저장본과 측정 선택자 | 독립 재개방에서 DUT·심볼·bench 트리와 유효 Netlist를 연결합니다. 실제 등록에서 `out/inp/inn`, 전원 양단과 공급원의 `PLUS` 전류, DUT 아래 17개 MOS 경로를 확인한 뒤 reader와 분석 작업을 결속합니다. |
 
-**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** 8개 목표 튜플과 선택한 고정 소스·부하의 실제 CDF를 결속하고 실행용 변환을 확인해야 합니다. 선택형 `vsin` 경로의 증거 공백은 해당 AC 경로에만 적용됩니다.
+**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** 8개 목표 튜플과 선택한 소스·부하 증거를 새 bench에 결속하고, 실행용 변환과 실제 ADE seed·작업 범위를 확인해야 합니다. 선택형 `vsin`의 기존 소스 증거는 오프라인 대조를 통과했습니다.
 
 ## 재개 프롬프트
 
