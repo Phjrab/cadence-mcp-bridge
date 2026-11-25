@@ -187,6 +187,25 @@ def _asset(raw: bytes, digest: str) -> bytes:
     return raw
 
 
+def _hash_child_asset(reg: _SizingEnrollment) -> tuple[str, str | None]:
+    instance = reg.route_qualification.target.instance
+    if (instance.instance_path, instance.master_cell, instance.property_name) == (
+        "DUT/MP", "pmos1v", "w"
+    ):
+        _require(
+            reg.width_field == "w"
+            and reg.admitted_w is not None
+            and reg.admitted_l is None
+            and all(slot.slot_manifest_sha256 is None for slot in reg.slots),
+            "registered_mos_sizing_pmos_width_enrollment",
+        )
+        return (
+            "_mos_pmos_width_callback.py",
+            getattr(guest_contract, "SIZING_WIDTH_HASH_CHILD_SHA256", None),
+        )
+    return "_mos_cdf_call_contract.py", guest_contract.SIZING_HASH_CHILD_SHA256
+
+
 class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
     def __init__(
         self,
@@ -317,12 +336,13 @@ class RegisteredMosSizing:
             "registered_mos_sizing_evidence_directory",
         )
         package = files("cadence_mcp_bridge")
+        child_name, child_pin = _hash_child_asset(reg)
         _asset(package.joinpath("mos_wl_skill.py").read_bytes(), reg.renderer_sha256)
         _asset(package.joinpath(_ASSET).read_bytes(), reg.guest_sha256)
         _require(
             getattr(guest_contract, "SIZING_ROUTE", None) == reg.route
             and reg.renderer_sha256 == guest_contract.SIZING_RENDERER_SHA256
-            and reg.hash_child_sha256 == guest_contract.SIZING_HASH_CHILD_SHA256
+            and reg.hash_child_sha256 == child_pin
             and reg.support_sha256 == guest_contract.SUPPORT_SHA256
             and reg.collector_sha256 == guest_contract.CDF_SHA256,
             "registered_mos_sizing_guest_contract",
@@ -338,7 +358,7 @@ class RegisteredMosSizing:
             reg.route_qualification.support.cdf_constraints_sha256,
         )
         self._hash_child = _asset(
-            package.joinpath("_mos_cdf_call_contract.py").read_bytes(),
+            package.joinpath(child_name).read_bytes(),
             reg.hash_child_sha256,
         )
         self._context, self._directory, self._reg, self.enrollment_sha256 = (

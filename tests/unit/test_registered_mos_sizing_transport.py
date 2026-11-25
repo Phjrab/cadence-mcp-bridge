@@ -335,6 +335,88 @@ def test_host_envelope_matches_one_immutable_native_slot_for_two_lengths(enrolle
     assert not phases and not (directory / "registered-mos-intent.private.json").exists()
 
 
+def test_pmos_total_width_uses_distinct_fixed_callback_child(enrolled):
+    context, candidate, directory, phases = enrolled
+    path = context.binding.pmos_default_change_binding
+    enrollment = json.loads(path.read_bytes())
+    route = enrollment["route_qualification"]
+    target = route["target"]
+    target["instance"].update(instance_path="DUT/MP", master_cell="pmos1v", property_name="w")
+    target.update(
+        netlist_path="DUT/MP",
+        netlist_model="gpdk090_pmos1v",
+        netlist_terminals=["vout", "vin", "vdd", "vdd"],
+    )
+    for key, value in (("w", "350n"), ("fw", "350n"), ("model", "gpdk090_pmos1v")):
+        route["before"][key].update(oa_value=value, cdf_value=value)
+    route["support"].update(w={}, l=None)
+
+    baseline_path = directory.parent / "baseline-input.private.scs"
+    baseline = baseline_path.read_bytes().replace(
+        b"MN (vout vin vss vss) gpdk090_nmos1v w=(120n)",
+        b"MP (vout vin vdd vdd) gpdk090_pmos1v w=(350n)",
+    )
+    baseline_path.write_bytes(baseline)
+    route["baseline"]["netlist_sha256"] = _sha(baseline)
+
+    package = files("cadence_mcp_bridge")
+    guest = package.joinpath("_registered_mos_edit_phase.py").read_bytes()
+    width_child = package.joinpath("_mos_pmos_width_callback.py").read_bytes()
+    original_child_pin = enrollment["hash_child_sha256"]
+    width = {"value": "3000", "unit": "nm"}
+    enrollment.update(
+        admitted_l=None,
+        admitted_w={"minimum": width, "maximum": width},
+        width_field="w",
+        hash_child_sha256=_sha(width_child),
+    )
+
+    def resolve(document):
+        raw = _canonical(document)
+        path.write_bytes(raw)
+        context.binding.pmos_default_change_sha256 = _sha(raw)
+        return sizing.selected_mos_sizing(context)
+
+    registered = resolve(enrollment)
+    request = sizing.MosSizingCandidate.model_validate({
+        **candidate,
+        "expected_enrollment_sha256": registered.enrollment_sha256,
+        "values": {"w": width},
+    })
+    service = registered._service(request)
+    assert service.plan.current.w.value == "350"
+    assert service.plan.expected.model_dump(mode="json") == {
+        "w": width, "l": {"value": "100", "unit": "nm"},
+    }
+    assert service.plan.changed == ("w",)
+    equivalent = sizing.MosSizingCandidate.model_validate({
+        **request.model_dump(mode="json"), "values": {"w": {"value": "3", "unit": "um"}},
+    })
+    assert registered.plan(equivalent).identity == service.identity
+    for phase, prior in (("EDIT_SAVE", None), ("INDEPENDENT_REOPEN_NETLIST", "a" * 64)):
+        _, payload = service._provider._prepare(service._binding, phase, prior)
+        envelope = json.loads(payload[len(guest) :])
+        scope = json.loads(base64.b64decode(envelope["scope_base64"], validate=True))
+        adapter, child = guest_contract.read_sizing_assets(guest_support, envelope, scope)
+        assert child == width_child and _sha(child) != original_child_pin
+        assert adapter == render_mos_wl_skill("pmos1v", width_nm="3000", width_field="w")
+        assert 'slot_verifier_base64' not in envelope and "slot_manifest_sha256" not in scope
+        assert envelope["previous_receipt_sha256"] == prior
+    with pytest.raises(OperationRejected) as mismatch:
+        resolve({**enrollment, "hash_child_sha256": original_child_pin})
+    assert mismatch.value.reason == "registered_mos_sizing_guest_contract"
+    with pytest.raises(OperationRejected) as wrong_axis:
+        resolve({**enrollment, "width_field": "fw"})
+    assert wrong_axis.value.reason == "registered_mos_sizing_pmos_width_enrollment"
+    with pytest.raises(OperationRejected) as wrong_mode:
+        resolve({
+            **enrollment,
+            "slots": [{**enrollment["slots"][0], "slot_manifest_sha256": "a" * 64}],
+        })
+    assert wrong_mode.value.reason == "registered_mos_sizing_pmos_width_enrollment"
+    assert not phases and not (directory / "registered-mos-intent.private.json").exists()
+
+
 def test_sizing_cli_uses_same_enrollment_and_fails_closed(enrolled, capsys, tmp_path):
     context, candidate, _, phases = enrolled
     base = [
