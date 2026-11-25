@@ -9,6 +9,8 @@ import pytest
 from test_m2_inverter import fixture as inverter_fixture
 from test_research_circuit import mos_block_fixture, payload, raw_block_netlist
 
+from cadence_mcp_bridge._native_rendering import statements
+from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.research_bench import (
     BenchNetlistConditions,
     ResearchBenchPlan,
@@ -16,6 +18,7 @@ from cadence_mcp_bridge.research_bench import (
     SignedAcSourceObservation,
     plan_research_bench,
     render_research_bench,
+    verify_fixed_dc_bench_netlist_equivalence,
     verify_research_bench_netlist,
 )
 from cadence_mcp_bridge.research_circuit import (
@@ -659,3 +662,65 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
         verify(candidate.replace(b"sinephase=180", b"phase=180"))
     with pytest.raises(ValueError, match="registered for AC only"):
         verify(candidate, conditions.model_copy(update={"analyses": (("tran", "stop=1n"),)}))
+
+
+def test_fixed_dc_equivalence_keeps_original_statement_scope_and_block_position() -> None:
+    bench, dut, _, conditions, dut_raw, full = _declarative_fixture()
+    instances = tuple(
+        inst.model_copy(update={"ac_magnitude_v": "0", "ac_phase_deg": "0"})
+        if inst.kind == "voltage"
+        else inst
+        for inst in bench.bench.instances
+    )
+    bench = bench.model_copy(
+        update={"bench": bench.bench.model_copy(update={"instances": instances})}
+    )
+    dc = 'write="spectre.dc" maxiters=150 maxsteps=10000 annotate=status'
+    conditions = conditions.model_copy(update={"analyses": (("dc", dc),)})
+    expected = (
+        full.replace(b" mag=500m phase=0", b"")
+        .replace(b" mag=500m phase=180", b"")
+        .replace(b"ac ac start=1 stop=1e9 dec=16", f"dcOp dc {dc}".encode())
+    )
+    observed = expected.replace(
+        b"VDD (vdd 0) vsource dc=1 type=dc\nVIN (vin 0) vsource dc=500m type=dc\n",
+        b"VIN (vin 0) vsource dc=0.5 type=dc\nVDD (vdd 0) vsource dc=1 type=dc\n",
+    ).replace(b"capacitor c=1p", b"capacitor c=0.000000000001")
+    scope = sha256(_canonical(statements(expected))).hexdigest()  # type: ignore[no-untyped-call]
+
+    def compare(value: bytes, *, prior: bytes = expected) -> None:
+        result = verify_fixed_dc_bench_netlist_equivalence(
+            bench,
+            dut,
+            prior,
+            value,
+            dut_raw,
+            expected_plan_sha256=canonical_digest(bench),
+            expected_statements_sha256=scope,
+            expected_raw_sha256=sha256(prior).hexdigest(),
+            observed_raw_sha256=sha256(value).hexdigest(),
+            expected_dut_netlist_sha256=sha256(dut_raw).hexdigest(),
+            conditions=conditions,
+            expected_conditions_sha256=canonical_digest(conditions),
+        )
+        assert result.status == "MATCHED_FIXED_DC_BENCH" and not result.execution_authorized
+        assert result.expected_statements_sha256 == scope
+        assert result.observed_raw_sha256 == sha256(value).hexdigest()
+
+    compare(observed)
+    with pytest.raises(ValueError, match="reviewed scope"):
+        compare(observed, prior=observed)
+    for bad, message in (
+        (observed.replace(b"dc=0.5", b"dc=0.6", 1), "bench device"),
+        (observed.replace(b"VIN (vin 0)", b"VIN (0 vin)", 1), "bench device"),
+        (observed.replace(b"dc=0.5 type=dc", b"dc=0.5 type=dc mag=0", 1), "bench device"),
+        (observed.replace(b"CL (vout", b"VIN (vout", 1), "bench device"),
+        (observed.replace(b"CL (vout 0)", b"C2 (vout 0)"), "extra bench device"),
+        (observed.replace(b"global 0\n", b"").replace(b"VNEG ", b"global 0\nVNEG "), "contiguous"),
+        (
+            observed.replace(b"global 0\n", b"").replace(b"dcOp dc", b"global 0\ndcOp dc"),
+            "outside the fixed DC primitive block",
+        ),
+    ):
+        with pytest.raises(ValueError, match=message):
+            compare(bad)

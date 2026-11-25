@@ -11,7 +11,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
-from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge._native_rendering import partition_input, statements
+from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.m2_cdf import parse_frame
 from cadence_mcp_bridge.m2_inverter import _quote
 from cadence_mcp_bridge.research_circuit import (
@@ -876,3 +877,96 @@ def verify_research_bench_netlist(
         or tuple(remaining) != conditions.fixed_top_level
     ):
         raise ValueError("bench instance inventory or fixed top-level statements mismatch")
+
+
+class FixedDcBenchNetlistEquivalence(VariableModel):
+    """Local comparison over two independently pinned full inputs."""
+
+    expected_raw_sha256: Digest
+    observed_raw_sha256: Digest
+    expected_statements_sha256: Digest
+    observed_statements_sha256: Digest
+    status: Literal["MATCHED_FIXED_DC_BENCH"] = "MATCHED_FIXED_DC_BENCH"
+    execution_authorized: Literal[False] = False
+
+
+def _fixed_dc_statement_surroundings(
+    lines: list[str], primitive_names: set[str]
+) -> tuple[list[str], list[str]]:
+    depth = 0
+    positions = []
+    for index, line in enumerate(lines):
+        if line.startswith(("subckt ", "inline subckt ")):
+            depth += 1
+        elif line == "ends" or line.startswith("ends "):
+            depth -= 1
+        elif line.partition(" ")[0] in primitive_names:
+            if depth != 0:
+                raise ValueError("fixed DC bench primitive name shadows a DUT statement")
+            positions.append(index)
+    if not positions or positions != list(range(positions[0], positions[0] + len(primitive_names))):
+        raise ValueError("expected one contiguous top-level fixed DC primitive block")
+    return lines[: positions[0]], lines[positions[-1] + 1 :]
+
+
+def verify_fixed_dc_bench_netlist_equivalence(
+    plan: ResearchBenchPlan,
+    dut_plan: OwnedMosBlockPlan,
+    expected_raw: bytes,
+    observed_raw: bytes,
+    dut_raw: bytes,
+    *,
+    expected_plan_sha256: Digest,
+    expected_statements_sha256: Digest,
+    expected_raw_sha256: Digest,
+    observed_raw_sha256: Digest,
+    expected_dut_netlist_sha256: Digest,
+    conditions: BenchNetlistConditions,
+    expected_conditions_sha256: Digest,
+) -> FixedDcBenchNetlistEquivalence:
+    """Permit primitive order and numeric spelling differences in a fixed DC bench.
+
+    The expected statement digest must come from the original reviewed scope.
+    Neither input supplies execution or completion evidence.
+    """
+    plan = _pinned_bench(plan, dut_plan, expected_plan_sha256)
+    if (
+        plan.primitive_cdf_sha256 is None
+        or plan.signed_ac_evidence_sha256 is not None
+        or tuple(kind for kind, _ in conditions.analyses) != ("dc",)
+        or any(
+            inst.ac_magnitude_v != "0" or inst.ac_phase_deg != "0"
+            for inst in plan.bench.instances
+            if isinstance(inst, VoltageSource)
+        )
+    ):
+        raise ValueError("netlist equivalence requires a declarative fixed DC bench")
+    for raw, raw_pin in ((expected_raw, expected_raw_sha256), (observed_raw, observed_raw_sha256)):
+        verify_research_bench_netlist(
+            plan,
+            dut_plan,
+            raw,
+            dut_raw,
+            expected_plan_sha256=expected_plan_sha256,
+            expected_netlist_sha256=raw_pin,
+            expected_dut_netlist_sha256=expected_dut_netlist_sha256,
+            conditions=conditions,
+            expected_conditions_sha256=expected_conditions_sha256,
+        )
+    expected_lines = statements(expected_raw)  # type: ignore[no-untyped-call]
+    observed_lines = statements(observed_raw)  # type: ignore[no-untyped-call]
+    if sha256(_canonical(expected_lines)).hexdigest() != expected_statements_sha256:
+        raise ValueError("expected bench statement digest differs from the reviewed scope")
+    primitive_names = {
+        inst.name for inst in plan.bench.instances if isinstance(inst, (VoltageSource, Capacitor))
+    }
+    if _fixed_dc_statement_surroundings(
+        expected_lines, primitive_names
+    ) != _fixed_dc_statement_surroundings(observed_lines, primitive_names):
+        raise ValueError("bench netlist changed outside the fixed DC primitive block")
+    return FixedDcBenchNetlistEquivalence(
+        expected_raw_sha256=expected_raw_sha256,
+        observed_raw_sha256=observed_raw_sha256,
+        expected_statements_sha256=expected_statements_sha256,
+        observed_statements_sha256=sha256(_canonical(observed_lines)).hexdigest(),
+    )
