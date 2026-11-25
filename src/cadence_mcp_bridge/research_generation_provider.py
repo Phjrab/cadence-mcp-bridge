@@ -95,17 +95,17 @@ class _GenerationProtection(VariableModel):
     ledger_records_sha256: Digest
 
 
-class _NetlistPhaseEvidence(VariableModel):
+class _NativePhaseEvidence(VariableModel):
     receipt: MosBlockStageReceipt
     scope_sha256: Digest
-    previous_receipt_sha256: Digest
+    previous_receipt_sha256: Digest | None
     protected: _GenerationProtection
     trees: _GenerationTrees
     ocean_calls: Literal[1]
     simulations: Literal[0]
     reservations: Literal[0]
     output_sha256: Digest
-    dut_sha256: Digest
+    dut_sha256: Digest | None
 
 
 class ResearchGenerationAnalysisSource(VariableModel):
@@ -443,6 +443,50 @@ def registered_research_generation(
     )
 
 
+def _generation_seed(
+    context: ExecutionContext,
+    binding: ResearchGenerationBinding,
+    scope: dict[str, JsonValue],
+    runtime_manifest: bytes,
+    runtime_registration: bytes,
+) -> tuple[dict[str, JsonValue], Digest]:
+    _closed_document(runtime_manifest, max_bytes=_DOCUMENT_LIMIT)
+    _closed_document(runtime_registration, max_bytes=_DOCUMENT_LIMIT)
+    manifest = json.loads(runtime_manifest)
+    compiled = json.loads(runtime_registration)
+    compiled_sha = _sha(runtime_registration)
+    if (
+        _sha(runtime_manifest) != binding.native_manifest_sha256
+        or manifest["schema_version"] != 3
+        or manifest["kind"] != KIND
+        or manifest["profile_sha256"] != context.binding.environment_sha256
+        or manifest["registration_sha256"] != compiled_sha
+        or manifest["files"]["registration.json"]
+        != {"sha256": compiled_sha, "bytes": len(runtime_registration)}
+        or compiled["schema_version"] != 1
+        or compiled["identity_manifest_sha256"] != scope.get("identity_manifest_sha256")
+        or (compiled["environment_sha256"], compiled["design_sha256"], compiled["pdk_sha256"])
+        != (
+            context.binding.environment_sha256,
+            context.binding.design_sha256,
+            context.binding.pdk_sha256,
+        )
+    ):
+        raise OperationRejected("research_generation_seed_runtime_mismatch")
+    route_id = scope["source_route"]
+    if not isinstance(route_id, dict):
+        raise OperationRejected("research_generation_seed_route_mismatch")
+    seeds = [
+        route
+        for route in compiled["routes"]
+        if (route["design_id"], route["analysis_id"])
+        == (route_id["design_id"], route_id["analysis_id"])
+    ]
+    if len(seeds) != 1:
+        raise OperationRejected("research_generation_seed_route_mismatch")
+    return dict(seeds[0]["ade"]), _sha(_canonical(seeds[0]))
+
+
 def registered_generation_analysis_source(
     context: ExecutionContext,
     registration_raw: bytes,
@@ -471,7 +515,7 @@ def registered_generation_analysis_source(
     directory = _local_path(directory)
     provider = _FixedResearchGenerationProvider(context, directory, registration)
     _closed_document(phase_record, max_bytes=8192)
-    record = _NetlistPhaseEvidence.model_validate_json(phase_record)
+    record = _NativePhaseEvidence.model_validate_json(phase_record)
     scope_raw = _read(
         directory / "execution-scope.private.json",
         _DOCUMENT_LIMIT,
@@ -479,39 +523,7 @@ def registered_generation_analysis_source(
     )
     _closed_document(scope_raw, max_bytes=_DOCUMENT_LIMIT)
     scope = json.loads(scope_raw)
-    _closed_document(runtime_manifest, max_bytes=_DOCUMENT_LIMIT)
-    _closed_document(runtime_registration, max_bytes=_DOCUMENT_LIMIT)
-    manifest = json.loads(runtime_manifest)
-    compiled = json.loads(runtime_registration)
-    compiled_sha = _sha(runtime_registration)
-    if (
-        _sha(runtime_manifest) != binding.native_manifest_sha256
-        or manifest["schema_version"] != 3
-        or manifest["kind"] != KIND
-        or manifest["profile_sha256"] != context.binding.environment_sha256
-        or manifest["registration_sha256"] != compiled_sha
-        or manifest["files"]["registration.json"]
-        != {"sha256": compiled_sha, "bytes": len(runtime_registration)}
-        or compiled["schema_version"] != 1
-        or compiled["identity_manifest_sha256"] != scope.get("identity_manifest_sha256")
-        or (compiled["environment_sha256"], compiled["design_sha256"], compiled["pdk_sha256"])
-        != (
-            context.binding.environment_sha256,
-            context.binding.design_sha256,
-            context.binding.pdk_sha256,
-        )
-    ):
-        raise OperationRejected("research_generation_seed_runtime_mismatch")
-    route_id = scope["source_route"]
-    seeds = [
-        route
-        for route in compiled["routes"]
-        if (route["design_id"], route["analysis_id"])
-        == (route_id["design_id"], route_id["analysis_id"])
-    ]
-    if len(seeds) != 1:
-        raise OperationRejected("research_generation_seed_route_mismatch")
-    seed = seeds[0]["ade"]
+    seed, _ = _generation_seed(context, binding, scope, runtime_manifest, runtime_registration)
     pins = handoff.pins
     intent = provider._phase_intent(binding, "netlist", pins.reopen_receipt_sha256)
     protection = record.protected
