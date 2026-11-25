@@ -19,7 +19,12 @@ from cadence_mcp_bridge.server import create_default_server
 async def test_mos_profile_pins_context_and_replays_c6_result(monkeypatch):
     service, worker, publication = _service(primary="w", joint=True)
     worker.publication = publication
-    context = SimpleNamespace(context_sha256="a" * 64)
+    context = SimpleNamespace(
+        context_sha256="a" * 64,
+        binding=SimpleNamespace(
+            pmos_default_change_binding=None, pmos_default_change_sha256=None,
+        ),
+    )
     monkeypatch.setattr(adapter, "select_context", lambda _: context)
 
     def not_registered(_):
@@ -74,7 +79,12 @@ def test_registered_mos_cli_uses_the_same_closed_identity_and_retained_result(
     worker.publication = publication
     settings = tmp_path / "settings.json"
     settings.write_bytes(b"{}")
-    context = SimpleNamespace(context_sha256="a" * 64)
+    context = SimpleNamespace(
+        context_sha256="a" * 64,
+        binding=SimpleNamespace(
+            pmos_default_change_binding=None, pmos_default_change_sha256=None,
+        ),
+    )
 
     def selected(config):
         assert config.runtime_settings_path == settings

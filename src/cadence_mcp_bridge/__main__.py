@@ -132,7 +132,10 @@ def build_parser() -> argparse.ArgumentParser:
     mos_edit.add_argument("--settings", type=Path, required=True)
     mos_edit.add_argument("--context", required=True)
     mos_actions = mos_edit.add_subparsers(dest="mos_edit_action", required=True)
-    for action in ("plan", "apply", "lookup"):
+    mos_actions.add_parser(
+        "inspect-sizing", help="Read the exact registered W/L target and limits.",
+    )
+    for action in ("plan", "apply", "lookup", "plan-sizing", "apply-sizing", "lookup-sizing"):
         command = mos_actions.add_parser(action)
         command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     starter = subparsers.add_parser(

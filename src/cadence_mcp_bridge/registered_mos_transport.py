@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import time
+from abc import ABC, abstractmethod
 from importlib.resources import files
 from pathlib import Path
 from typing import Annotated, Literal
@@ -127,22 +128,18 @@ def _fixed_assets(scope: _Scope) -> tuple[bytes, bytes, bytes]:
     return guest, support, collector
 
 
-class _FixedRegisteredMosProvider:
-    def __init__(
-        self,
-        context: ExecutionContext,
-        directory: Path,
-        registration: _Registration,
-        scope: _Scope,
-        raw_scope: bytes,
-        baseline: bytes,
-    ) -> None:
+class _RegisteredMosPhaseProvider(ABC):
+    def __init__(self, context: ExecutionContext, directory: Path) -> None:
         self._context = context
         self._directory = directory
-        self._registration = registration
-        self._scope = scope
-        self._raw_scope = raw_scope
-        self._baseline = baseline
+
+    @abstractmethod
+    def _prepare(
+        self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None
+    ) -> tuple[list[str], bytes]: ...
+
+    @abstractmethod
+    def _saved(self, binding: RegisteredMosEditBinding, raw: bytes) -> NativeMosEditSave: ...
 
     def _intent(self, binding: RegisteredMosEditBinding) -> bytes:
         return _canonical(
@@ -191,6 +188,104 @@ class _FixedRegisteredMosProvider:
             edit_raw = self._run(binding, _EDIT, None)
             edit = self._saved(binding, edit_raw)
             return self._terminal(edit, self._run(binding, _REOPEN, _sha(edit_raw)))
+
+    def _path(self, phase: Phase, label: str) -> Path:
+        return self._directory / f"registered-mos-phase-{phase}-{label}"
+
+    def _phase_intent(
+        self, binding: RegisteredMosEditBinding, previous: str | None
+    ) -> dict[str, object]:
+        return {
+            "claim_sha256": _sha(self._intent(binding)),
+            "previous_receipt_sha256": previous,
+            "retry": False,
+        }
+
+    def _run(self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None) -> bytes:
+        argv, payload = self._prepare(binding, phase, previous)
+        _retain(
+            self._path(phase, "intent.private.json"),
+            _canonical(
+                {
+                    **self._phase_intent(binding, previous),
+                    "request_sha256": _sha(payload),
+                }
+            ),
+        )
+        transport = self._path(phase, "transport.private.json")
+        try:
+            code, out, err = run_fixed(
+                argv, payload, OpenSshBackend._ssh_environment(), timeout=60, limit=_LIMIT
+            )
+        except (OSError, ValueError) as exc:
+            _retain(
+                transport,
+                _canonical(
+                    {"status": "TRANSPORT_FAILED_RETAINED", "error_type": type(exc).__name__}
+                ),
+            )
+            raise
+        _retain(self._path(phase, "stdout.private.json"), out)
+        _retain(self._path(phase, "stderr.private.txt"), err)
+        _retain(transport, _canonical(_FixedAmplifierPm0Provider._transport_record(code, out, err)))
+        _require(code == 0 and not err, "registered_mos_native_dispatch_unverified")
+        return out
+
+    def _captured(
+        self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None
+    ) -> bytes:
+        intent = _document(_read(self._path(phase, "intent.private.json"), 4096))
+        request_sha = intent.pop("request_sha256", None)
+        out = _read(self._path(phase, "stdout.private.json"), _LIMIT)
+        err = _read(self._path(phase, "stderr.private.txt"), _LIMIT)
+        transport = _document(_read(self._path(phase, "transport.private.json"), 4096))
+        _require(
+            isinstance(request_sha, str)
+            and re.fullmatch(r"[a-f0-9]{64}", request_sha) is not None
+            and intent == self._phase_intent(binding, previous)
+            and not err
+            and transport == _FixedAmplifierPm0Provider._transport_record(0, out, err),
+            "registered_mos_retained_transport",
+        )
+        return out
+
+    @staticmethod
+    def _terminal(save: NativeMosEditSave, raw: bytes) -> RetainedMosEdit:
+        _closed_document(raw, max_bytes=_LIMIT)
+        terminal = _Terminal.model_validate_json(raw)
+        _require(
+            _canonical(json.loads(raw)) == raw
+            and NativeMosEditSave.model_validate(
+                terminal.readback.model_dump(include=set(NativeMosEditSave.model_fields))
+            )
+            == save,
+            "registered_mos_reopen_receipt",
+        )
+        observed = terminal.readback
+        return RetainedMosEdit(
+            NativeMosEditCapture(
+                observed,
+                _artifact(terminal.input_base64, observed.netlist_sha256, 32_768),
+                _artifact(terminal.cdf_frame_base64, observed.cdf_frame_sha256, 262_144),
+            )
+        )
+
+
+class _FixedRegisteredMosProvider(_RegisteredMosPhaseProvider):
+    def __init__(
+        self,
+        context: ExecutionContext,
+        directory: Path,
+        registration: _Registration,
+        scope: _Scope,
+        raw_scope: bytes,
+        baseline: bytes,
+    ) -> None:
+        super().__init__(context, directory)
+        self._registration = registration
+        self._scope = scope
+        self._raw_scope = raw_scope
+        self._baseline = baseline
 
     def _prepare(
         self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None
@@ -266,66 +361,6 @@ class _FixedRegisteredMosProvider:
             ),
         )
 
-    def _path(self, phase: Phase, label: str) -> Path:
-        return self._directory / f"registered-mos-phase-{phase}-{label}"
-
-    def _phase_intent(
-        self, binding: RegisteredMosEditBinding, previous: str | None
-    ) -> dict[str, object]:
-        return {
-            "claim_sha256": _sha(self._intent(binding)),
-            "previous_receipt_sha256": previous,
-            "retry": False,
-        }
-
-    def _run(self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None) -> bytes:
-        argv, payload = self._prepare(binding, phase, previous)
-        _retain(
-            self._path(phase, "intent.private.json"),
-            _canonical(
-                {
-                    **self._phase_intent(binding, previous),
-                    "request_sha256": _sha(payload),
-                }
-            ),
-        )
-        transport = self._path(phase, "transport.private.json")
-        try:
-            code, out, err = run_fixed(
-                argv, payload, OpenSshBackend._ssh_environment(), timeout=60, limit=_LIMIT
-            )
-        except (OSError, ValueError) as exc:
-            _retain(
-                transport,
-                _canonical(
-                    {"status": "TRANSPORT_FAILED_RETAINED", "error_type": type(exc).__name__}
-                ),
-            )
-            raise
-        _retain(self._path(phase, "stdout.private.json"), out)
-        _retain(self._path(phase, "stderr.private.txt"), err)
-        _retain(transport, _canonical(_FixedAmplifierPm0Provider._transport_record(code, out, err)))
-        _require(code == 0 and not err, "registered_mos_native_dispatch_unverified")
-        return out
-
-    def _captured(
-        self, binding: RegisteredMosEditBinding, phase: Phase, previous: str | None
-    ) -> bytes:
-        intent = _document(_read(self._path(phase, "intent.private.json"), 4096))
-        request_sha = intent.pop("request_sha256", None)
-        out = _read(self._path(phase, "stdout.private.json"), _LIMIT)
-        err = _read(self._path(phase, "stderr.private.txt"), _LIMIT)
-        transport = _document(_read(self._path(phase, "transport.private.json"), 4096))
-        _require(
-            isinstance(request_sha, str)
-            and re.fullmatch(r"[a-f0-9]{64}", request_sha) is not None
-            and intent == self._phase_intent(binding, previous)
-            and not err
-            and transport == _FixedAmplifierPm0Provider._transport_record(0, out, err),
-            "registered_mos_retained_transport",
-        )
-        return out
-
     def _saved(self, binding: RegisteredMosEditBinding, raw: bytes) -> NativeMosEditSave:
         _document(raw)
         save = NativeMosEditSave.model_validate_json(raw)
@@ -348,28 +383,6 @@ class _FixedRegisteredMosProvider:
             "registered_mos_save_receipt",
         )
         return save
-
-    @staticmethod
-    def _terminal(save: NativeMosEditSave, raw: bytes) -> RetainedMosEdit:
-        _closed_document(raw, max_bytes=_LIMIT)
-        terminal = _Terminal.model_validate_json(raw)
-        _require(
-            _canonical(json.loads(raw)) == raw
-            and NativeMosEditSave.model_validate(
-                terminal.readback.model_dump(include=set(NativeMosEditSave.model_fields))
-            )
-            == save,
-            "registered_mos_reopen_receipt",
-        )
-        observed = terminal.readback
-        return RetainedMosEdit(
-            NativeMosEditCapture(
-                observed,
-                _artifact(terminal.input_base64, observed.netlist_sha256, 32_768),
-                _artifact(terminal.cdf_frame_base64, observed.cdf_frame_sha256, 262_144),
-            )
-        )
-
 
 def registered_mos_edit(context: ExecutionContext) -> RegisteredMosEditService:
     """Resolve version 3 of the existing pinned operator edit registration slot."""
