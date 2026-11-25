@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
+import json
+from pathlib import Path
 from typing import Literal
 
 from mcp.server.mcpserver import MCPServer
@@ -9,6 +12,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from cadence_mcp_bridge import __version__
+from cadence_mcp_bridge.candidate_cli import read_candidate_document
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
 from cadence_mcp_bridge.config import BridgeConfig
 from cadence_mcp_bridge.errors import BridgeError, ConfigurationError
@@ -28,15 +32,49 @@ class RegisteredMosPlan(VariableModel):
     execution_authorized: Literal[False] = False
 
 
-def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
-    def resolve() -> tuple[str, RegisteredMosEditService]:
-        context = select_context(config) if config.runtime_mode == "operator" else None
-        if context is None:
-            raise ConfigurationError("Registered MOS edit requires an operator context")
-        return context.context_sha256, registered_mos_edit(context)
+def _resolve(config: BridgeConfig) -> tuple[str, RegisteredMosEditService]:
+    context = select_context(config) if config.runtime_mode == "operator" else None
+    if context is None:
+        raise ConfigurationError("Registered MOS edit requires an operator context")
+    return context.context_sha256, registered_mos_edit(context)
 
+
+def _plan(service: RegisteredMosEditService) -> RegisteredMosPlan:
+    return RegisteredMosPlan(identity=service.identity, plan=service.plan)
+
+
+def run_registered_mos_edit(arguments: argparse.Namespace) -> int:
     try:
-        context_pin, registered = resolve()
+        path, digest = arguments.request
+        request = PmosDefaultChangeRequest.model_validate_json(
+            read_candidate_document(Path(path), expected_sha256=digest)
+        )
+        _, service = _resolve(
+            BridgeConfig(
+                runtime_mode="operator",
+                runtime_settings_path=arguments.settings,
+                runtime_context_id=arguments.context,
+            )
+        )
+        if request != service.identity:
+            raise ValueError("Registered MOS edit identity differs")
+        result: RegisteredMosPlan | RegisteredMosEditResult
+        if arguments.mos_edit_action == "plan":
+            result = _plan(service)
+        elif arguments.mos_edit_action == "lookup":
+            result = service.lookup(request)
+        else:
+            result = service.apply(request)
+    except (OSError, ValueError, BridgeError):
+        print(json.dumps({"status": "REGISTERED_MOS_EDIT_REJECTED"}))
+        return 2
+    print(result.model_dump_json())
+    return 0
+
+
+def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
+    try:
+        context_pin, registered = _resolve(config)
     except (OSError, ValueError, BridgeError):
         raise ConfigurationError("Registered MOS edit is unavailable") from None
 
@@ -44,7 +82,7 @@ def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
     server = MCPServer(name="cadence-registered-mos-edit", version=__version__, log_level="WARNING")
 
     def service_for(request: PmosDefaultChangeRequest) -> RegisteredMosEditService:
-        current_pin, service = resolve()
+        current_pin, service = _resolve(config)
         if current_pin != context_pin or request != identity or service.identity != identity:
             raise ValueError("Registered MOS edit changed")
         return service
@@ -56,7 +94,7 @@ def create_registered_mos_edit_server(config: BridgeConfig) -> MCPServer:
         """Read the exact reviewed MOS change plan and its operation pins."""
         try:
             service = service_for(request)
-            return RegisteredMosPlan(identity=service.identity, plan=service.plan)
+            return _plan(service)
         except (OSError, ValueError, BridgeError):
             raise ToolError(_REJECTED) from None
 

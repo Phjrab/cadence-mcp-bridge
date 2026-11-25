@@ -108,6 +108,15 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
         if action == "handoff":
             command.add_argument("--output", type=Path, required=True)
+    mos_edit = subparsers.add_parser(
+        "operator-mos-edit", help="Use one host-registered MOS edit.",
+    )
+    mos_edit.add_argument("--settings", type=Path, required=True)
+    mos_edit.add_argument("--context", required=True)
+    mos_actions = mos_edit.add_subparsers(dest="mos_edit_action", required=True)
+    for action in ("plan", "apply", "lookup"):
+        command = mos_actions.add_parser(action)
+        command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
     )
@@ -446,6 +455,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         from cadence_mcp_bridge.research_generation_adapter import run_registered_generation
 
         return run_registered_generation(arguments)
+    if arguments.command == "operator-mos-edit":
+        from cadence_mcp_bridge.registered_mos_edit_server import run_registered_mos_edit
+
+        return run_registered_mos_edit(arguments)
     if arguments.command == "cmos-delay":
         from cadence_mcp_bridge.cmos_delay_adapters import cmos_delay_cli
 

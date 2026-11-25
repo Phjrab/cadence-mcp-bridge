@@ -1,5 +1,7 @@
 """Wire checks for the dedicated registered MOS edit profile."""
 
+import json
+from hashlib import sha256
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +9,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from test_registered_mos_edit import _service
 
 from cadence_mcp_bridge import registered_mos_edit_server as adapter
+from cadence_mcp_bridge.__main__ import main
 from cadence_mcp_bridge.errors import ConfigurationError
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.server import create_default_server
@@ -60,3 +63,64 @@ async def test_mos_profile_pins_context_and_replays_c6_result(monkeypatch):
         result = (await restarted.call_tool(name, args)).structured_content
         assert result == {**applied, "replayed": True, "dispatched_this_call": False}
     assert worker.dispatches == 1
+
+
+def test_registered_mos_cli_uses_the_same_closed_identity_and_retained_result(
+    monkeypatch,
+    tmp_path,
+    capsys,
+):
+    service, worker, publication = _service()
+    worker.publication = publication
+    settings = tmp_path / "settings.json"
+    settings.write_bytes(b"{}")
+    context = SimpleNamespace(context_sha256="a" * 64)
+
+    def selected(config):
+        assert config.runtime_settings_path == settings
+        assert config.runtime_context_id == "owned-mos"
+        return context
+
+    monkeypatch.setattr(adapter, "select_context", selected)
+    monkeypatch.setattr(adapter, "registered_mos_edit", lambda _: service)
+    request_path = tmp_path / "request.json"
+    raw = service.identity.model_dump_json().encode()
+    request_path.write_bytes(raw)
+    base = ["operator-mos-edit", "--settings", str(settings), "--context", "owned-mos"]
+
+    def invoke(action, digest):
+        status = main([*base, action, "--request", str(request_path), digest])
+        return status, json.loads(capsys.readouterr().out)
+
+    pin = sha256(raw).hexdigest()
+    assert invoke("apply", "0" * 64)[0] == 2
+    foreign = service.identity.model_copy(update={"expected_scope_sha256": "0" * 64})
+    foreign_raw = foreign.model_dump_json().encode()
+    foreign_path = tmp_path / "foreign.json"
+    foreign_path.write_bytes(foreign_raw)
+    assert (
+        main(
+            [
+                *base,
+                "apply",
+                "--request",
+                str(foreign_path),
+                sha256(foreign_raw).hexdigest(),
+            ]
+        )
+        == 2
+    )
+    capsys.readouterr()
+    assert worker.dispatches == 0
+    status, planned = invoke("plan", pin)
+    assert status == 0 and planned == adapter._plan(service).model_dump(mode="json")
+    assert invoke("lookup", pin)[1]["outcome"] == "NOT_FOUND"
+    status, applied = invoke("apply", pin)
+    assert status == 0 and applied["outcome"] == "VERIFIED"
+    for action in ("lookup", "apply"):
+        assert invoke(action, pin) == (
+            0,
+            {**applied, "replayed": True, "dispatched_this_call": False},
+        )
+    assert worker.dispatches == 1
+    assert request_path.read_bytes() == raw and settings.read_bytes() == b"{}"
