@@ -135,6 +135,17 @@ if ($LASTEXITCODE -ne 0) { throw 'Circuit validation failed' }
 
 실행 연결 정보가 아직 없는 포팅 입력은 Python API `compile_research_draft(draft_bytes, port_bytes, static_preview=True)`로 회로 구조를 먼저 확인할 수 있습니다. 이 경로는 `StaticDraftPort`를 받아 `ResearchCircuitStaticPreview`를 반환합니다. 17 MOS 초안으로 DC 전용과 DC+AC 두 미리보기를 검증했습니다. 미리보기에는 미확정 소자 값이 그대로 남으며, 실행용 검증·계획 스키마는 이 형식을 받지 않습니다.
 
+통합 CLI에서도 같은 미리보기를 만들 수 있습니다. `$staticPort`는 binding을 넣지 않은 `StaticDraftPort` 파일이며, SHA는 각 입력 파일의 실제 바이트에서 계산합니다.
+
+```powershell
+$staticPort = 'ota-port.static.json'
+$staticPortSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $staticPort).Hash.ToLowerInvariant()
+cadence-mcp-bridge operator-candidates compile-research-draft --static-preview `
+  --draft $draft $draftSha --port $staticPort $staticPortSha --output ota-static-preview.json
+```
+
+성공 상태는 `RESEARCH_CIRCUIT_STATIC_PREVIEW_EXPORTED`입니다. 출력 파일의 `file_sha256`과 정규화한 미리보기의 `definition_sha256`은 별도입니다.
+
 ### 회로 계획부터 분석 결과 조회까지
 
 연결한 stdio 클라이언트에서 `tools/list`로 도구를 확인합니다. 아래는 `tools/call`의 도구와 인수를 나타낸 의사 코드입니다. 반환값은 MCP 응답의 `structuredContent`를 뜻합니다. `definition`은 컴파일된 검증 요청의 `definition` 객체 또는 로컬 합성 예제의 객체입니다. `output_library`에는 계획할 새 작업용 라이브러리 이름을 넣습니다.
@@ -299,10 +310,18 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | 항목 | 범위와 남은 확인 |
 | --- | --- |
 | OP | BBE3 DC의 2 MOS × 7개 값을 설치 stdio와 실제 Codex 데스크톱의 읽기 전용 MCP에서 확인했습니다. 실제 앱에서 같은 14개 값을 조회했으며 추가 시뮬레이션·추출·예약은 0건이었습니다. 인스턴스·항목별 단위와 부호를 보존하며 누락값은 상태로 표시합니다. 64개 인스턴스와 64 KiB 원본 프레임 한도 안에 17 × 7개 선언이 들어가지만, OTA의 실제 selector와 프레임 크기는 생성 후 확인합니다. 모델 근거가 없는 `region`은 원시 코드로 유지합니다. |
-| AC | 실제 AMP 차동 입력과 출력의 복소 전달비를 확인했습니다. 별도 과거 후보의 71점에서는 약 487.7 kHz의 −3 dB 대역폭과 100 MHz까지 0 dB 교차 미관측을 확인했습니다. Center의 확인값은 10 Hz 이득이며 풀 스펙트럼이 없어 두 교차는 미평가입니다. 단일 출력 OTA의 실제 복소 데이터와 위상여유용 loop-gain은 별도입니다. |
+| AC | 실제 새 AMP 사본의 71점(10 Hz–100 MHz)에서 복소 전달비와 10 Hz 이득을 재현했습니다. 10 Hz 기준 −3 dB와 0 dB 하강 교차는 모두 표본 범위에서 미관측입니다. 약 487,663 Hz의 −3 dB 대역폭은 별도 과거 후보입니다. Center는 10 Hz 이득을 확인했고 전체 표본이 없어 교차는 미평가입니다. 단일 출력 OTA의 실제 복소 데이터와 위상여유용 loop-gain은 별도입니다. |
 | TRAN | 실제 Source9는 top-level 공급원의 `PLUS` 전류와 검증된 0 V 기준을 사용했습니다. 평균 전달전력은 `−(V+−V−)×I(+)`를 시간 적분한 뒤 관측 시간으로 나눕니다. 등록 전압은 최대 8개, v2 공급전류는 최대 6개, 벡터는 채널당 256점 및 전체 1536점까지입니다. 긴 원본 벡터는 상한을 넘으면 거부합니다. 표시용 축소는 측정 구간 추출과 구분합니다. |
 
-**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** GPDK090의 소자별 목표 W/FW/L/m/finger와 유효 Netlist 대응, 특히 PM6 배수 6을 확인해야 합니다. 선택한 고정 소스·부하의 실제 CDF를 결속하고 로컬 변환을 검증합니다. 선택형 `vsin` 경로의 CDF 공백은 그 AC 경로에만 해당합니다.
+### 첫 OTA 생성에 필요한 확인
+
+| 확인 시점 | 항목 | 상태 |
+| --- | --- | --- |
+| 생성 전 | GPDK090 소자별 치수 | 단일 finger, W=FW를 제안했습니다. 논문에서 옮긴 후보 `(W µm, L µm, m)`는 NMOS `(1, 0.25, 1)`, `(1.5, 0.25, 1)`, `(10, 0.25, 1)`, `(15, 0.25, 1)`과 PMOS `(3, 0.25, 1)`, `(30, 0.25, 1)`, `(10, 1, 1)`, `(16, 1, 6)`입니다. 8개 모두 선택한 master의 유효 CDF·Spectre W/L/m, D/S·벌크 및 종속 접합 항목을 확인해야 합니다. |
+| 생성 전 | 실제 ADE seed와 실행 계획 | 검토된 소유 대상과 ADE seed 상태를 확인한 뒤 물리 기준과 실행 범위를 결속합니다. 기존 두 MOS의 seed 재사용 계획과 로컬 Netlist 비교는 준비 증거입니다. 새 OTA에 적용할 seed 상태, 분석 조건, 의존 모델과 프로그램을 별도로 대조합니다. |
+| 생성 후 | 저장본과 측정 선택자 | 독립 재개방에서 DUT·심볼·bench 트리와 유효 Netlist를 연결합니다. 실제 등록에서 `out/inp/inn`, 전원 양단과 공급원의 `PLUS` 전류, DUT 아래 17개 MOS 경로를 확인한 뒤 reader와 분석 작업을 결속합니다. |
+
+**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** 8개 목표 튜플과 선택한 고정 소스·부하의 실제 CDF를 결속하고 실행용 변환을 확인해야 합니다. 선택형 `vsin` 경로의 증거 공백은 해당 AC 경로에만 적용됩니다.
 
 ## 재개 프롬프트
 
