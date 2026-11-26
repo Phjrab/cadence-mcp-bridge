@@ -7,6 +7,7 @@ from dataclasses import replace
 import pytest
 from test_registered_mos_sizing import _fixture, _length, _Provider, _sha
 
+from cadence_mcp_bridge.native_runtime import NativeLibrary
 from cadence_mcp_bridge.ota_reopen_evidence import parse_ota_reopen_properties
 from cadence_mcp_bridge.registered_mos_sizing import (
     MosSizingValues,
@@ -18,7 +19,10 @@ from cadence_mcp_bridge.registered_ota_mos_sizing import (
     OtaMosInstance,
     RegisteredOtaMosSizingRoute,
     RegisteredOtaMosSizingService,
+    verify_ota_recovered_generation,
 )
+from cadence_mcp_bridge.research_circuit import MosBlockStageReceipt
+from cadence_mcp_bridge.research_generation_ota_recovery import RecoveredOtaGenerationAnalysisSource
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 _DUT_PLAN_SHA256 = "c7" * 32
@@ -126,7 +130,7 @@ def _ota_fixture(*, pmos_width: bool):
     return route, child, requested, binding, before_raw, stdout, capture
 
 
-def _service(fixture, provider):
+def _service(fixture, provider, **kw):
     route, child, requested, binding, baseline, stdout, _ = fixture
     return RegisteredOtaMosSizingService(
         binding,
@@ -137,6 +141,7 @@ def _service(fixture, provider):
         provider,
         expected_binding_sha256=canonical_digest(binding),
         baseline_reopen_stdout=stdout,
+        **kw,
     )
 
 
@@ -241,3 +246,84 @@ def test_rejects_incomplete_or_changed_original_oa_rows(mutation):
         parse_ota_reopen_properties(changed, stdout_sha256=_sha(raw), **kwargs)
     with pytest.raises(ValueError, match="property|inventory"):
         parse_ota_reopen_properties(changed, stdout_sha256=_sha(changed), **kwargs)
+
+
+def test_recovered_source_requires_its_own_digest_and_original_reopen():
+    route, child, requested, binding, raw, stdout, capture = _ota_fixture(pmos_width=False)
+    ota, baseline = route.ota, route.baseline
+    library = NativeLibrary(name=route.source_library, path="/owned/base", tree_sha256="c" * 64)
+    reopen = MosBlockStageReceipt(
+        phase="reopen",
+        operation_id=ota.generation_operation_id,
+        plan_sha256=ota.dut_plan_sha256,
+        library=library,
+        source_cell=f"{library.path}/{route.source_cell}",
+        source_tree_sha256=baseline.revision_sha256,
+        bench_cell=f"{library.path}/{route.testbench_cell}",
+        bench_tree_sha256=baseline.testbench_revision_sha256,
+        artifact_sha256=ota.reopen_stdout_sha256,
+        script_sha256="0" * 64,
+    )
+    recovered = RecoveredOtaGenerationAnalysisSource(
+        operation_id=reopen.operation_id,
+        binding_sha256="1" * 64,
+        scope_sha256="2" * 64,
+        recovery_enrollment_sha256="3" * 64,
+        locked_witness_sha256="4" * 64,
+        reopen_receipt_sha256=canonical_digest(reopen),
+        netlist_failure_sha256="5" * 64,
+        expected_statements_sha256="6" * 64,
+        equivalence_sha256="7" * 64,
+        full_netlist_sha256=baseline.netlist_sha256,
+        raw_dut_netlist_sha256="8" * 64,
+        static_statements_sha256="9" * 64,
+        conditions_sha256=baseline.fixed_conditions_sha256,
+        native_manifest_sha256="a" * 64,
+        runtime_registration_sha256="b" * 64,
+        library=library,
+        strict_library_tree_sha256="d" * 64,
+        source_cell=reopen.bench_cell,
+        source_tree_sha256=reopen.bench_tree_sha256,
+        ade_state="/owned/baseBench_ADE",
+        ade_state_tree_sha256=ota.ade_state_tree_sha256,
+        terminal_witness_sha256="e1" * 32,
+        detached_witness_sha256="e2" * 32,
+        model_alias_witness_sha256="e3" * 32,
+        expected_topology_sha256="e4" * 32,
+        dut_plan_sha256=ota.dut_plan_sha256,
+        save_receipt_sha256="e5" * 32,
+        reopen_stdout_sha256=ota.reopen_stdout_sha256,
+        dut_cell=reopen.source_cell,
+        dut_tree_sha256=reopen.source_tree_sha256,
+        symbol_tree_sha256=ota.symbol_tree_sha256,
+        cds_lib_sha256="e6" * 32,
+        detached_bench_sha256="e7" * 32,
+        detached_state_sha256="e8" * 32,
+        detached_ade_leaf_sha256="e9" * 32,
+    )
+    recovery_fields = {
+        "reopen_receipt_sha256": canonical_digest(reopen),
+        "recovered_source_sha256": canonical_digest(recovered),
+    }
+    with pytest.raises(ValueError, match="exactly one"):
+        OtaMosBaseline.model_validate_json(ota.model_copy(update=recovery_fields).model_dump_json())
+    route = route.model_copy(
+        update={"ota": ota.model_copy(update={**recovery_fields, "netlist_receipt_sha256": None})}
+    )
+    assert "netlist_receipt_sha256" not in route.ota.model_dump()
+    verify_ota_recovered_generation(route, recovered, reopen)
+    plan = plan_registered_mos_sizing(route, child, requested)
+    pins = {"plan_sha256": plan.plan_sha256, "route_sha256": plan.route_sha256}
+    binding = binding.model_copy(update=pins)
+    capture = replace(capture, readback=capture.readback.model_copy(update=pins))
+    data = (route, child, requested, binding, raw, stdout, capture)
+    provider = _Provider(capture)
+    with pytest.raises(ValueError, match="source and original reopen"):
+        _service(data, provider)
+    tampered = recovered.model_copy(update={"full_netlist_sha256": "0" * 64})
+    with pytest.raises(ValueError, match="original source"):
+        _service(data, provider, baseline_recovery=tampered, baseline_reopen_receipt=reopen)
+    assert provider.claims == provider.dispatches == 0
+    service = _service(data, provider, baseline_recovery=recovered, baseline_reopen_receipt=reopen)
+    assert service.apply(service.identity).outcome == "VERIFIED"
+    assert recovered.generation_status == "OUTCOME_UNKNOWN"

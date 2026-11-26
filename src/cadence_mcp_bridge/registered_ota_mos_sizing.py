@@ -6,7 +6,7 @@ import re
 from decimal import localcontext
 from typing import Annotated, Literal, Self, cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input
 from cadence_mcp_bridge.native_diagnostics import OperationId
@@ -32,8 +32,15 @@ from cadence_mcp_bridge.registered_mos_sizing import (
     _NetlistControls,
     _observed_dimensions,
 )
+from cadence_mcp_bridge.research_circuit import MosBlockStageReceipt
+from cadence_mcp_bridge.research_generation_ota_recovery import RecoveredOtaGenerationAnalysisSource
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
-from cadence_mcp_bridge.variable_contracts import BindingName, Digest, VariableModel
+from cadence_mcp_bridge.variable_contracts import (
+    BindingName,
+    Digest,
+    VariableModel,
+    canonical_digest,
+)
 
 _SPECTRE_MOS = re.compile(r"([^ ]+) \(([^()]+)\) (gpdk090_[np]mos1v) (.+)")
 
@@ -62,7 +69,8 @@ class OtaMosBaseline(VariableModel):
     reopen_receipt_sha256: Digest
     reopen_stdout_sha256: Digest
     dut_plan_sha256: Digest
-    netlist_receipt_sha256: Digest
+    netlist_receipt_sha256: Digest | None = None
+    recovered_source_sha256: Digest | None = None
     baseline_dc_op_receipt_sha256: Digest
     baseline_ac_receipt_sha256: Digest
     symbol_tree_sha256: Digest
@@ -72,12 +80,14 @@ class OtaMosBaseline(VariableModel):
 
     @model_validator(mode="after")
     def independent_receipts(self) -> Self:
+        if (self.netlist_receipt_sha256 is None) == (self.recovered_source_sha256 is None):
+            raise ValueError("OTA baseline requires exactly one native or recovered Netlist source")
         if (
             len({row.name for row in self.devices}) != 17
             or len(
                 {
                     self.reopen_receipt_sha256,
-                    self.netlist_receipt_sha256,
+                    self.netlist_receipt_sha256 or self.recovered_source_sha256,
                     self.baseline_dc_op_receipt_sha256,
                     self.baseline_ac_receipt_sha256,
                 }
@@ -86,6 +96,16 @@ class OtaMosBaseline(VariableModel):
         ):
             raise ValueError("OTA baseline devices and phase receipts must be distinct")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_netlist_evidence(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, object]:
+        result: dict[str, object] = handler(self)
+        for name in ("netlist_receipt_sha256", "recovered_source_sha256"):
+            if result.get(name) is None:
+                result.pop(name, None)
+        return result
 
 
 class RegisteredOtaMosSizingRoute(RegisteredMosSizingRoute):
@@ -143,9 +163,17 @@ class RegisteredOtaMosSizingService(RegisteredMosSizingService):
         *,
         expected_binding_sha256: str,
         baseline_reopen_stdout: bytes,
+        baseline_recovery: RecoveredOtaGenerationAnalysisSource | None = None,
+        baseline_reopen_receipt: MosBlockStageReceipt | None = None,
     ) -> None:
         route = _checked(route)
         ota = route.ota
+        if ota.recovered_source_sha256 is not None:
+            if baseline_recovery is None or baseline_reopen_receipt is None:
+                raise ValueError("OTA recovery requires the verified source and original reopen")
+            verify_ota_recovered_generation(route, baseline_recovery, baseline_reopen_receipt)
+        elif baseline_recovery is not None or baseline_reopen_receipt is not None:
+            raise ValueError("unexpected recovery evidence on a native OTA baseline")
         self._baseline_properties = parse_ota_reopen_properties(
             baseline_reopen_stdout,
             stdout_sha256=ota.reopen_stdout_sha256,
@@ -191,6 +219,41 @@ class RegisteredOtaMosSizingService(RegisteredMosSizingService):
         controls, _, options = _check_input(route.target, raw, properties)
         fixed = _ota_fixed_statements(route, self.plan, raw, self._baseline_properties)
         return controls, fixed, options
+
+
+def verify_ota_recovered_generation(
+    route: RegisteredOtaMosSizingRoute,
+    source: RecoveredOtaGenerationAnalysisSource,
+    reopen: MosBlockStageReceipt,
+) -> None:
+    """Join a separately verified recovery export to the original detached reopen."""
+    source = RecoveredOtaGenerationAnalysisSource.model_validate_json(source.model_dump_json())
+    reopen = _checked(reopen)
+    ota, baseline = route.ota, route.baseline
+    if (
+        ota.recovered_source_sha256 != canonical_digest(source)
+        or ota.reopen_receipt_sha256 != canonical_digest(reopen)
+        or source.reopen_receipt_sha256 != ota.reopen_receipt_sha256
+        or source.operation_id != ota.generation_operation_id
+        or (source.dut_plan_sha256, source.reopen_stdout_sha256, source.symbol_tree_sha256)
+        != (ota.dut_plan_sha256, ota.reopen_stdout_sha256, ota.symbol_tree_sha256)
+        or (reopen.phase, reopen.operation_id, reopen.plan_sha256, reopen.artifact_sha256)
+        != ("reopen", ota.generation_operation_id, ota.dut_plan_sha256, ota.reopen_stdout_sha256)
+        or source.library != reopen.library
+        or reopen.library.name != route.source_library
+        or reopen.source_cell != f"{reopen.library.path}/{route.source_cell}"
+        or reopen.bench_cell != f"{reopen.library.path}/{route.testbench_cell}"
+        or (source.dut_cell, source.dut_tree_sha256)
+        != (reopen.source_cell, reopen.source_tree_sha256)
+        or reopen.source_tree_sha256 != baseline.revision_sha256
+        or (source.source_cell, source.source_tree_sha256)
+        != (reopen.bench_cell, reopen.bench_tree_sha256)
+        or reopen.bench_tree_sha256 != baseline.testbench_revision_sha256
+        or source.full_netlist_sha256 != baseline.netlist_sha256
+        or source.conditions_sha256 != baseline.fixed_conditions_sha256
+        or source.ade_state_tree_sha256 != ota.ade_state_tree_sha256
+    ):
+        raise ValueError("OTA recovery differs from the original source, reopen or conditions")
 
 
 def _check_ota_plan(route: RegisteredOtaMosSizingRoute, plan: MosSizingPlan) -> None:
