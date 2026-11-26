@@ -90,6 +90,61 @@ def test_v2_writer_checks_same_metadata_without_changing_readonly_footprint():
     assert b"dbSave(" not in reopened and b"dbPurge(" not in reopened
 
 
+def test_v2_writer_bench_pair_separates_only_typed_extraction_metadata():
+    options = _EDIT_PINS | {"OVERRIDES": '\'("w" "fw" "as" "ad" "ps" "pd")'}
+    edit = v2.edit_begin(v1.EDIT_BEGIN) + v2.edit_checks(v1.EDIT_CHECKS) + v2.edit_end(v1.EDIT_END)
+    for template in (edit, v2.reopen(v1.REOPEN)):
+        program = _render(template, **options)
+        assert program.count(b"  otaWriterBenchPair()") == 1
+        assert b'mosRequire(equal(otaBench("Ota17Base' not in program
+        assert b"caddr(conn)==live" in program
+        assert b"compareTime(caddr(child) caddr(parent))>=0" in program
+        assert b"otaStableWriterFoot(car(parent))" in program
+        assert b"otaStableWriterFoot(car(child))" in program
+        projection = program.split(b"procedure(otaStableWriterFoot(full)")[1].split(
+            b"procedure(otaWriterMeta", 1
+        )[0]
+        assert all(
+            part in projection
+            for part in (b"car(full)", b"cadr(full)", b"caddr(full)", b"cadddr(full)")
+        )
+        omitted = set(re.findall(rb'"([a-zA-Z]+)"', projection))
+        assert omitted == {
+            b"connectivityLastUpdated",
+            b"lastSchematicExtraction",
+            b"schGeometryLastUpdated",
+        }
+        # Project the emitted omission list against unequal typed rows. Keep an
+        # ordinary cellview property and the ordered terminal wiring in scope.
+        parent = (
+            ("OUT", "out"),
+            (
+                (b"connectivityLastUpdated", "int", 107168),
+                (b"lastSchematicExtraction", "time", "Aug 20 15:13:56 2026"),
+                (b"schGeometryLastUpdated", "int", 107168),
+                (b"purpose", "string", "functional"),
+            ),
+        )
+        child = (
+            parent[0],
+            (
+                (b"connectivityLastUpdated", "int", 109570),
+                (b"lastSchematicExtraction", "time", "Nov 22 10:14:43 2026"),
+                (b"schGeometryLastUpdated", "int", 109570),
+                parent[1][-1],
+            ),
+        )
+
+        def projected(bench, excluded):
+            return bench[0], tuple(row for row in bench[1] if row[0] not in excluded)
+
+        assert parent != child and projected(parent, omitted) == projected(child, omitted)
+        changed_prop = (child[0], child[1][:-1] + ((b"purpose", "string", "changed"),))
+        changed_net = (("OUT", "wrong"), child[1])
+        assert projected(parent, omitted) != projected(changed_prop, omitted)
+        assert projected(parent, omitted) != projected(changed_net, omitted)
+
+
 def test_projected_actual_amp_counter_and_time_values_parse_for_both_stages():
     # Former AUTO120 native save/readback reported these values. Only the new
     # OTA wire prefix is synthetic; no candidate v2 CAPTURE has happened.

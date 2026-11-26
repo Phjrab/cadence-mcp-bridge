@@ -217,10 +217,51 @@ procedure(otaDiscardWriterEdit()
 """
 
 
+_WRITER_BENCH_GUARD = r"""
+procedure(otaWriterBenchSnapshot(lib stage)
+ let((cv symbol full live rows conn stamp geometry)
+  symbol=mosView(lib "self_cascode_ota_17mos" "symbol" "r")
+  cv=mosOpen(lib "self_cascode_ota_tb" "r")
+  otaTbMasterBound(cv lib symbol stage)
+  otaAssert(strcat(stage "_CONNECTED") dbIsConnCurrent(cv))
+  full=otaFootFields(cv nil nil t)
+  live=dbGetCellViewCounter(cv)
+  rows=nth(4 full)
+  conn=assoc("connectivityLastUpdated" rows)
+  stamp=assoc("lastSchematicExtraction" rows)
+  geometry=assoc("schGeometryLastUpdated" rows)
+  otaAssert(strcat(stage "_METADATA")
+   and(conn stamp geometry cadr(conn)=="int" cadr(stamp)=="time" cadr(geometry)=="int"
+    fixp(caddr(conn)) fixp(caddr(geometry)) fixp(live) caddr(conn)==live
+    caddr(geometry)>=0 caddr(geometry)<=live stringp(caddr(stamp))
+    strlen(caddr(stamp))>0 strlen(caddr(stamp))<=64
+    compareTime(getCurrentTime() caddr(stamp))>=0))
+  otaAssert(strcat(stage "_CLOSE") dbClose(cv))
+  otaAssert(strcat(stage "_SYMBOL_CLOSE") dbClose(symbol))
+  list(full live caddr(stamp))))
+procedure(otaWriterBenchPair()
+ let((parent child)
+  parent=otaWriterBenchSnapshot("@SOURCEALIAS@" "SOURCE_TB")
+  child=otaWriterBenchSnapshot("@LIB@" "RETARGETED_TB")
+  otaAssert("RETARGETED_TB_METADATA_ORDER"
+   and(cadr(child)>=cadr(parent) compareTime(caddr(child) caddr(parent))>=0))
+  otaEqualFoot("SOURCE_CHILD_TB_FOOTPRINT" otaStableWriterFoot(car(parent))
+                                        otaStableWriterFoot(car(child)))))
+"""
+
+
 def _replace(source, old, new):
     if source.count(old) != 1:
         raise ValueError("ota_v2_fixed_template_changed")
     return source.replace(old, new, 1)
+
+
+def _writer_bench_guard(template):
+    return _WRITER_BENCH_GUARD + _replace(
+        template,
+        '  mosRequire(equal(otaBench("@SOURCEALIAS@") otaBench("@LIB@")))',
+        "  otaWriterBenchPair()",
+    )
 
 
 def parse_writer_metadata(stdout, stage):
@@ -300,9 +341,10 @@ def edit_begin(template):
         'stable=otaFoot(child "@TARGET@" omit nil)',
         'stable=otaFootFields(child "@TARGET@" omit nil)',
     )
-    return _replace(
+    template = _replace(
         template, "  @MUTATION@", "  counterBefore=dbGetCellViewCounter(child)\n  @MUTATION@"
     )
+    return _writer_bench_guard(template)
 
 
 def edit_checks(template):
@@ -381,7 +423,7 @@ def reopen(template):
         '/footprint.txt" otaFoot(child "@TARGET@" omit nil))',
         '/footprint.txt" mosEncode(otaStableWriterFoot(observed) 0))',
     )
-    return _replace(
+    template = _replace(
         template,
         "  mosRequire(dbClose(copied))\n",
         '  otaAssert("AC_COPY_CLOSE" dbClose(copied))\n'
@@ -391,3 +433,4 @@ def reopen(template):
         '  otaAssert("DC_COPY_FOOTPRINT" equal(otaBench("@LIB@") otaFoot(copied nil nil t)))\n'
         '  otaAssert("DC_COPY_CLOSE" dbClose(copied))\n',
     )
+    return _writer_bench_guard(template)
