@@ -103,7 +103,7 @@ def fixture_points(
     document = json.loads(raw)
     if not isinstance(document, dict) or document.get("status") != "VERIFIED_FIXTURE_TUPLES":
         raise ValueError("expected VERIFIED_FIXTURE_TUPLES from the C6 original-evidence verifier")
-    report = FixtureReport.model_validate(document)
+    report = FixtureReport.model_validate_json(raw)
     if (
         set(report.receipts) != {"setup", "save", "reopen-netlist"}
         or len(set(report.receipts.values())) != 3
@@ -115,9 +115,11 @@ def fixture_points(
     for point_id, row in report.points.items():
         slot, master, width_nm, length_nm, count = FIXTURE_SLOTS[point_id]
         width, length = Decimal(width_nm).scaleb(-9), Decimal(length_nm).scaleb(-9)
+        rail = "vss" if master == "nmos1v" else "vdd"
         options = row.netlist_options
         if (
             (row.instance, row.master, row.observed.m) != (slot, master, count)
+            or row.terminals != ("vout", "vin", rail, rail)
             or _engineering(row.observed.w.normalized[0]) != width
             or _engineering(row.observed.l.normalized[0]) != length
             or set(options) != {"w", "l", "m", "simM", "as", "ad", "ps", "pd"}
