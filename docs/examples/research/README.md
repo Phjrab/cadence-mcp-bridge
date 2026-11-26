@@ -4,6 +4,21 @@
 
 Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인쇄 47쪽, PDF 57쪽)와 Table 7(인쇄 48쪽, PDF 58쪽)을 직접 대조했습니다. 초안에 17개 소자의 D/G/S/B, 역할, W/L과 배수를 기록했습니다. PM6은 논문 표에서 **W 16 µm, L 1 µm, 배수 6**입니다. 논문에서 finger 수는 확인되지 않았습니다. GPDK090에서 finger를 1로 선택한 목표 치수 8개는 비OTA 사본에서 확인했습니다. [ITESO 원문](https://rei.iteso.mx/items/5b2a7fc8-347e-4113-9cfc-93c87913ab34)
 
+## GPDK090 기준 OTA 실환경 기록
+
+기준 라이브러리는 `Ota17Base20261126`입니다. DUT는 `self_cascode_ota_17mos`의 schematic·symbol, 벤치는 `self_cascode_ota_tb/schematic`입니다. 같은 라이브러리의 저장본을 독립 세션에서 다시 열어 17개 MOS 각각의 OA·CDF 속성 12개를 확인했습니다. PM6의 실제 W/FW는 16 µm, L은 1 µm이며 m=6, fingers=1입니다.
+
+| 기준 자료 | SHA-256 |
+| --- | --- |
+| 저장·재개방한 DUT 셀 | `2f4fd5ed2a67feae6ab0c08b82df9d171d30e9b1b5a14698b590eca35ec24f1e` |
+| 심볼 | `36a7fd7bb9f6f0d6bd1efa209e8b88adb6bb93399166dbaef277d0ff2bd06921` |
+| 벤치 셀 | `7e505aca6b693717d80955bac655e29c1a7ab73826cfac3192b12a8daba5bb6f` |
+| 원래 ADE 상태 | `f4f596ff8594d32b843f6df9bc37244d6e488b0ba61f85d4157c9ca91dce7809` |
+| DC 진단 넷리스트 | `ce78464809236cafd6e9e39f492ba184baa63f9c36de87126298058597c8504e` |
+| AC 진단 넷리스트 | `45411f1bbbf3e6eef42b1cc0dfd20706c713f87e39015902516c6221317bbcff` |
+
+생성 작업 `dafbdb6b-49a2-4909-b0ac-526a2bde60ea`는 저장과 재개방 후 넷리스트 검사에서 `OUTCOME_UNKNOWN`으로 끝났습니다. 원본에서 차동 입력 핀의 순서가 서브회로 선언과 호출에서 함께 바뀐 것을 확인했습니다. 각 핀의 연결, 17개 소자의 단자·모델·치수·접합값 및 실제 NN 모델 파일을 대조해 이 저장본을 별도로 검증했습니다. DC 진단 작업 `651941c2-087d-4cbb-9889-1b851e9aba3e`는 같은 회로에서 DC 분석문과 동작점 저장문을 출력했습니다. 두 모드 모두 전원 1 V, 입력 공통모드 0.5 V, 출력 부하 1 pF, 27 °C입니다. AC 입력 진폭은 inp에 +0.5 V, inn에 −0.5 V입니다.
+
 ## 회로도에서 확인한 연결
 
 - 외부 연결은 `inp`, `inn`, `out`, `VDD`, `VSS`입니다. `Vx`와 `Vy`는 그림의 라벨이고, 나머지 내부 이름은 보이는 배선을 구분하기 위해 붙였습니다. Fig. 2-12에서 추적한 68개 논리 단자와 5개 포트를 대조했습니다. 두 GPDK090 master의 CDF와 비OTA Netlist에서 Spectre의 D/G/S/B 순서, NMOS 벌크의 VSS 연결, PMOS 벌크의 VDD 연결을 확인했습니다. OTA를 실제로 생성하면 각 스택의 소스와 벌크를 독립 재개방 및 Netlist에서 다시 확인합니다.
@@ -12,7 +27,7 @@ Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인�
 - Source9와 BBE3에서 `gpdk090/nmos1v/symbol`과 `gpdk090/pmos1v/symbol`의 D/G/S/B 이름과 실제 Spectre 단자 순서를 확인했습니다. 모델은 각각 `gpdk090_nmos1v`와 `gpdk090_pmos1v`이며 BBE3 Netlist의 모델 section은 `NN`입니다. Source9의 확인된 W/FW·L은 NMOS 120/120·100 nm, PMOS 350/350·100 nm였습니다. 별도 AMP PM0에서는 120/120·1000 nm를 확인했습니다. 이 세 점의 배수와 finger는 모두 1입니다. CDF에서 `simW`는 `fw`, `simM`은 `m × fingers`에 대응했습니다. 비OTA의 PM6 대응점에서도 `m=simM=(6)*(1)`을 확인했습니다. PDK 전체 허용 범위와 다중 finger는 별도 확인 사항입니다.
 - BBE3의 VDD 1 V, Vin 0 V에서 NMOS·PMOS의 원시 `region`은 각각 3·1이었습니다. 각 코드의 모델별 의미는 미확정입니다.
 
-## 연구 인계
+## 생성 전 연구 인계
 
 - **준비된 경로** — 검증 표는 실제 Cadence에서 확인한 2 MOS 인버터와 14 MOS AMP의 결과를 다룹니다. 17 MOS OTA는 논문과 PDK 매핑을 대조하는 준비 단계입니다.
 
