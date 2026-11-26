@@ -49,6 +49,9 @@ RETAINED_V10_STORAGE_SUMMARY_SHA256 = (
 RETAINED_V11_STORAGE_SUMMARY_SHA256 = (
     "d2a0490a5af1cb6960b541abd41b7a5f9b4a11496ba9a918225c070a914f61b7"
 )
+RETAINED_V12_STORAGE_SUMMARY_SHA256 = (
+    "996aab52c1144e361d20fc468b469fa2e3b569ab8b5112dfe2845dc4c7af3537"
+)
 FRESH_CONSUMER_TOOLS = {
     "cadence_amplifier_sweep_result",
     "cadence_bandwidth_study_result",
@@ -193,9 +196,13 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
     # v11 (c9768facc81f) changes only this field's maximum.
     ceiling["maximum"] = 18183356416
+    if schema_digest(storage_summary) != RETAINED_V11_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    # v12 adds a retained successor. This schema bound does not activate it.
+    ceiling["maximum"] = 18200133632
     current_tools["cadence_storage_summary"] = storage_summary
     if (
-        schema_digest(storage_summary) != RETAINED_V11_STORAGE_SUMMARY_SHA256
+        schema_digest(storage_summary) != RETAINED_V12_STORAGE_SUMMARY_SHA256
         or any(schemas.get(name) != current_tools[name] for name in FRESH_CONSUMER_TOOLS)
     ):
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")

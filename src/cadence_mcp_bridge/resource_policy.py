@@ -119,3 +119,17 @@ class RetainedV11ResourceCounter(ContractModel):
     count: Annotated[int, Field(strict=True, ge=147, le=500)]
     result_reserved_bytes: Annotated[int, Field(strict=True, ge=18141413376, le=18183356416)]
     policy: RetainedV11ResourcePolicy
+
+
+class RetainedV12ResourcePolicy(ContractModel):
+    campaign_id: Literal["AUTO-PHASE-01"]
+    attempt_ceiling: Literal[500]
+    result_ceiling_bytes: Literal[18200133632]
+    policy_sha256: Literal["971001fb558dd65c6bcd966eda109615f8d545cb8e3e4f27f54539da8f87cb93"]
+
+
+class RetainedV12ResourceCounter(ContractModel):
+    campaign_id: Literal["AUTO-PHASE-01"]
+    count: Annotated[int, Field(strict=True, ge=148, le=500)]
+    result_reserved_bytes: Annotated[int, Field(strict=True, ge=18145607680, le=18200133632)]
+    policy: RetainedV12ResourcePolicy

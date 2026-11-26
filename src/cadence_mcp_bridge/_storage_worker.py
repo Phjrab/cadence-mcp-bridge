@@ -474,7 +474,7 @@ def fresh_ledger(io, root, counter, lock_held=True):
     if anchor["schema_version"] == 1:
         registry = private_directory(io, root, "reservation-identity")
         try:
-            for version in (7, 8, 9, 10, 11):
+            for version in (7, 8, 9, 10, 11, 12):
                 try:
                     read_json(io, registry, "result-policy-v%d.json" % version, 8192, private=True)
                 except OSError as failure:
@@ -850,7 +850,7 @@ def snapshot(io, root, is_active, lock_held=True, native_generic=False):
         if "policy_sha256" in policy:
             versions = {
                 17179869184: 3, 17381195776: 4, 17632854016: 5, 17767071744: 6,
-                18169724928: 7, 18183356416: 8,
+                18169724928: 7, 18183356416: 8, 18200133632: 9,
             }
             version = versions[policy["result_ceiling_bytes"]]
     value = dict(

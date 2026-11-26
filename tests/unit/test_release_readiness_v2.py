@@ -254,7 +254,8 @@ async def test_current_fresh_output_drift_and_historical_substitution_rejected(
     "maximum",
     [
         17_381_195_776, 17_632_854_016, 17_767_071_744, 17_767_071_745,
-        18_169_724_928, 18_183_356_415, 18_183_356_417,
+        18_169_724_928, 18_183_356_415, 18_183_356_416, 18_183_356_417,
+        18_200_133_631, 18_200_133_633,
     ],
 )
 async def test_current_storage_ceiling_rejects_stale_and_unreviewed_maximum(maximum: int) -> None:
@@ -270,7 +271,7 @@ async def test_current_storage_ceiling_does_not_allow_other_output_drift() -> No
     schemas = await audit.inventory()
     properties = schemas["cadence_storage_summary"]["outputSchema"]["properties"]
     ceiling = properties["result_ceiling_bytes"]
-    assert ceiling["maximum"] == 18_183_356_416
+    assert ceiling["maximum"] == 18_200_133_632
     ceiling["minimum"] = 0
     with pytest.raises(ValueError, match="standard-VM fresh policy consumer"):
         audit.inspect(ROOT, schemas)

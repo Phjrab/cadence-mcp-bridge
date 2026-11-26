@@ -42,7 +42,8 @@ def run(directory, action, expected):
                       "apply-result-limit-v8", "plan-result-limit-v9",
                       "apply-result-limit-v9", "plan-result-limit-v10",
                       "apply-result-limit-v10", "plan-result-limit-v11",
-                      "apply-result-limit-v11") or len(expected) != 64 or
+                      "apply-result-limit-v11", "plan-result-limit-v12",
+                      "apply-result-limit-v12") or len(expected) != 64 or
             any(c not in "0123456789abcdef" for c in expected) or
             not os.path.isabs(directory) or os.path.realpath(directory) != directory):
         raise ValueError("migration_entry_binding")

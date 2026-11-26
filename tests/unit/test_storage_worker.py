@@ -742,7 +742,7 @@ def test_retained_v6_snapshot_power_observation_and_policy_tamper(fresh_store, l
     assert a.read(str(path / a.LEDGER)) == baseline
 
 
-@pytest.mark.parametrize("version", [7, 8, 9, 10, 11])
+@pytest.mark.parametrize("version", [7, 8, 9, 10, 11, 12])
 def test_retained_successor_capacity_appears_in_read_only_snapshot(fresh_store, version):
     from cadence_mcp_bridge import _shared_reservations as a
     from cadence_mcp_bridge.storage import StorageSnapshot, snapshot_digest
