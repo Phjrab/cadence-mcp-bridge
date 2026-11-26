@@ -874,7 +874,7 @@ def sizing_edit_timing(raw):
             if len(fields) != 3 or b"|".join(fields[:2]) != event:
                 return None
             stamp = fields[2]
-            if not re.match(rb"^[0-9]{1,12}\.[0-9]{2}\Z", stamp):
+            if not re.match(br"^[0-9]{1,12}\.[0-9]{2}\Z", stamp):
                 return None
             tick = int(stamp.replace(b".", b""))
             if previous is not None and (tick < previous or tick - origin > 6000):

@@ -7,6 +7,7 @@ import io
 import re
 from inspect import getfile
 from pathlib import Path
+from tokenize import STRING, tokenize
 from typing import Any
 
 import pytest
@@ -345,6 +346,13 @@ def test_sizing_time_is_bound_to_ordered_completed_edges() -> None:
     assert guest.sizing_edit_timing(start + first + end + last.replace(b"321", b"399")) is None
     wrong_step = last.replace(b"SCH_CHECK", b"DB_SAVE")
     assert guest.sizing_edit_timing(start + first + end + wrong_step) is None
+
+
+def test_guest_byte_literals_use_python26_prefix_order() -> None:
+    with Path(getfile(guest)).open("rb") as source:
+        for token in tokenize(source.readline):
+            if token.type == STRING:
+                assert not token.string.lower().startswith("rb"), token.start
 
 
 def _wlm_scope(axes: str = "lwm") -> dict[str, Any]:
