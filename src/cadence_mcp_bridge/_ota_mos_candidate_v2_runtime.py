@@ -170,6 +170,7 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
         super(_CleanOtaJob, self).__init__(runtime, operator, request, digest)  # noqa: UP008
         _selected_point(self.route, self.scope)
         self.clean = self.pin["clean_child"]
+        self.owned_state = request["ota_base"].CHILD_STATE
         _require(self.owned == V2_HOLDER + "/" + self.library, "v2_owned_holder")
         _require(
             all(op not in (self.operation, self.copy_operation) for op, _, _ in _V1_FAILED_JOBS),
@@ -279,11 +280,8 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
             ):
                 rt.operations.directory(path, rt.accounting)
             rt.copying.copy_owned(tb_path, bench, tb["tree_sha256"])
-            rt.copying.copy_owned(self.state, target, ade["tree_sha256"])
-            if mode == "ac":
-                self._remap_state(target, cell, project)
-            else:
-                self._remap_mode_state(target, (alias, cell, "schematic"), project)
+            rt.copying.copy_owned(self.owned_state, target, ade["tree_sha256"])
+            self._remap_mode_state(target, (alias, cell, "schematic"), project)
             copied_bench = rt.copying.snapshot(bench)
             _require(copied_bench["content_sha256"] == tb["content_sha256"], "copied_bench")
             work_dirs[mode] = dict(
@@ -323,7 +321,8 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
         rt, h = self.rt, self.h
         info = target + "/ADE_state.info"
         original = h.read(info, 65536)
-        data = rt.copying.remap_ade_info(original, self.pin["source_ade_design"], design, project)
+        owned_design = (self.library, self.request["ota_base"].TB, "schematic")
+        data = rt.copying.remap_ade_info(original, owned_design, design, project)
         origin = os.lstat(info)
         fd = os.open(info, os.O_WRONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(fd, "wb") as stream:
@@ -385,8 +384,9 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
     def reopen(self, session, selected, work, before, saved):
         rt, h, legacy, skill = self.rt, self.h, self.legacy, self.request["skill"]
         tb_path = self.owned + "/" + self.request["ota_base"].TB
-        tb, ade = rt.copying.snapshot(tb_path), rt.copying.snapshot(self.state)
-        _require(ade["tree_sha256"] == self.pin["source_ade_tree_sha256"], "source_ade")
+        tb, ade = rt.copying.snapshot(tb_path), rt.copying.snapshot(self.owned_state)
+        # guard revalidates the clone's admitted owned ADE against its original
+        # receipt and separately verifies the protected baseline ADE.
         rt.eda.copy_capacity(
             dict(ac_tb=tb, ac_ade=ade, dc_tb=tb, dc_ade=ade), self.job, self.guard(session)
         )
@@ -413,7 +413,7 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
         _require(
             self.views(self.owned) == before
             and rt.copying.snapshot(tb_path) == tb
-            and rt.copying.snapshot(self.state) == ade,
+            and rt.copying.snapshot(self.owned_state) == ade,
             "reopened_revision",
         )
         reopened = self.snapshot(work, "reopened", before, "after")

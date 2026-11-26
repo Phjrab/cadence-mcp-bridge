@@ -160,6 +160,55 @@ def test_static_candidate_input_must_match_between_modes_except_exact_dc_op_save
             v2._check_shared_static(rendering, ac, changed)
 
 
+def test_each_mode_copies_the_certified_candidate_state_and_bench():
+    owner = object.__new__(v2._CleanOtaJob)
+    owner.job, owner.operation, owner.digest = JOB, OP, DIGEST
+    owner.owned_state = v2.V2_HOLDER + "/" + original.TB + "_ADE"
+    owner.state = original.SOURCE_PATH + "/" + original.TB + "_ADE"
+    owner.analysis, owner.dc = {"ade": {"inputs": AC}}, {"ade": {"inputs": DC}}
+    cell = "Grel_" + OP.replace("-", "_")
+    owner.values = lambda work: {"@NETLISTCELL@": cell}
+    owner.library_lines = lambda extra: f"DEFINE {extra[0]} {extra[1]}\n".encode()
+    copies, rebinds, snapshots = [], [], {}
+
+    def copy_owned(source, target, sha):
+        copies.append((source, target, sha))
+        snapshots[target] = dict(tree_sha256=sha, content_sha256="copied-bench")
+
+    def remap(path, design, project):
+        rebinds.append((path, design, project))
+        snapshots[path] = dict(tree_sha256=project, content_sha256="remapped-state")
+
+    owner._remap_mode_state = remap
+    owner.rt = SimpleNamespace(
+        operations=SimpleNamespace(directory=lambda path, accounting: None),
+        accounting=object(),
+        copying=SimpleNamespace(
+            copy_owned=copy_owned, snapshot=snapshots.__getitem__, path=lambda path: path
+        ),
+        rendering=SimpleNamespace(token=lambda token: token),
+        modules={"rendering": rendering},
+    )
+    modes, definitions, _, _ = owner._phase_modes(
+        SELECTED,
+        SELECTED + "/work",
+        "/certified-child-bench",
+        dict(tree_sha256="bench-pin", content_sha256="copied-bench"),
+        dict(tree_sha256="owned-ade-pin"),
+    )
+    assert len(copies) == 4 and len(rebinds) == 2
+    for index, (mode, alias) in enumerate(v2._MODES):
+        mode_evidence = modes[mode]
+        assert copies[index * 2] == ("/certified-child-bench", mode_evidence["bench"], "bench-pin")
+        assert copies[index * 2 + 1] == (owner.owned_state, mode_evidence["state"], "owned-ade-pin")
+        assert rebinds[index] == (
+            mode_evidence["state"],
+            (alias, cell, "schematic"),
+            mode_evidence["project"],
+        )
+        assert f"DEFINE {alias} {SELECTED}/{mode}/library\n".encode() in definitions
+
+
 def test_combined_peak_constrains_the_independent_writer_cap(monkeypatch):
     class SharedCapacity:
         def _capacity(self):
