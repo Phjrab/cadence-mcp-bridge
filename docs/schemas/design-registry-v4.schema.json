@@ -586,7 +586,7 @@
       "items": {
         "$ref": "#/$defs/DesignProfile"
       },
-      "maxItems": 17,
+      "maxItems": 19,
       "title": "Designs",
       "type": "array"
     },
@@ -594,7 +594,7 @@
       "items": {
         "$ref": "#/$defs/DesignVariables"
       },
-      "maxItems": 17,
+      "maxItems": 19,
       "title": "Variable Sets",
       "type": "array"
     },
