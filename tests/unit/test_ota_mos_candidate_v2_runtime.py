@@ -161,3 +161,34 @@ def test_combined_peak_constrains_the_independent_writer_cap(monkeypatch):
     size = 2600000
     with pytest.raises(ValueError, match="writer_capacity"):
         owner._capacity()
+
+
+def test_v1_failed_job_guard_reuses_the_native_allocation_inventory(monkeypatch):
+    class OriginalGuard:
+        def _source_guard(self):
+            pass
+
+    class Writer(v2._CleanOtaJob, OriginalGuard):
+        pass
+
+    owner = object.__new__(Writer)
+    owner.clean = dict(protected_v1_library_sha256="a" * 64, protected_v1_state_sha256="b" * 64)
+    owner.library, owner.jobs, owner.dc = original.CHILD, "/owned/jobs", {}
+    owner.request = {"ota_base": original}
+    state_leaf = original.TB + "_ADE"
+    owner.tree = lambda path: owner.clean["protected_v1_state_sha256"]
+    samples = {
+        v2.V1_HOLDER: (262144, 303104, "unused-holder-fingerprint"),
+        **{owner.jobs + "/" + op: (0, charge, digest) for op, charge, digest in v2._V1_FAILED_JOBS},
+    }
+    owner.rt = SimpleNamespace(
+        gate=SimpleNamespace(model_binding=lambda route: None),
+        copying=SimpleNamespace(dependency_snapshot=lambda path: {"tree_sha256": "a" * 64}),
+        eda=SimpleNamespace(size=samples.__getitem__),
+    )
+    monkeypatch.setattr(v2, "os", SimpleNamespace(listdir=lambda path: [state_leaf, owner.library]))
+    owner._source_guard()
+    old_job_path = owner.jobs + "/" + v2._V1_FAILED_JOBS[0][0]
+    samples[old_job_path] = (0, samples[old_job_path][1], "wrong-footprint")
+    with pytest.raises(ValueError, match="failed_v1_job"):
+        owner._source_guard()

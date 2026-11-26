@@ -25,7 +25,7 @@ import types
 V2_HOLDER = "/home/buet/cds_work/Ota17CandidateOutputs20261126_v2"
 V1_HOLDER = "/home/buet/cds_work/Ota17CandidateOutputs20261126_v1"
 V1_RUNTIME_SHA256 = "d25f179ad7f4f996b75623c3367391d425638a16c9f2eec90a48629a3a93bd4d"
-V2_SKILL_SHA256 = "41d96557af024e0a7d1be66a82effa5a986f12b479128dd6d4dafc3606c2f8c0"
+V2_SKILL_SHA256 = "0614facc5c2e6779b60cc1659e6a52b1e51f7b67d4425c9cfd271bf3df3f144f"
 V1_RUNTIME_ENTRY = b'if __name__ == "__main__":\n    ota_main()\n'
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _MODES = (("ac", "MCP_GREL_Work"), ("dc", "MCP_GREL_WorkDc"))
@@ -37,10 +37,12 @@ _FIXED_PARAMETERS = {"VBIASN": "0.32", "VBIASP": "0.702"}
 _V1_FAILED_JOBS = (
     (
         "7d178cb4-8795-493f-b703-500d21216d09",
+        65536,
         "e5aa98828a849d0354c7e57b6b109df0a3ce5e409bde6f8116f9b6a7336dbd59",
     ),
     (
         "1c699cf0-ee61-4bfd-8dd9-2afcb78cb592",
+        69632,
         "03e445315281381e234740e3f72e6dfdad06641b0d151758b70f04a1cc2d81d6",
     ),
 )
@@ -154,6 +156,10 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
         _selected_point(self.route, self.scope)
         self.clean = self.pin["clean_child"]
         _require(self.owned == V2_HOLDER + "/" + self.library, "v2_owned_holder")
+        _require(
+            all(op not in (self.operation, self.copy_operation) for op, _, _ in _V1_FAILED_JOBS),
+            "fresh_v2_operations",
+        )
         (self.dc,) = [
             row
             for row in runtime.original_registration["routes"]
@@ -196,10 +202,12 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
             == self.clean["protected_v1_state_sha256"]
             and sorted(os.listdir(V1_HOLDER))
             == sorted((self.library, self.request["ota_base"].TB + "_ADE"))
-            and max(self.rt.eda.size(V1_HOLDER)[:2]) == _V1_ARCHIVE_BYTES
-            and all(self.tree(self.jobs + "/" + op) == digest for op, digest in _V1_FAILED_JOBS),
+            and max(self.rt.eda.size(V1_HOLDER)[:2]) == _V1_ARCHIVE_BYTES,
             "protected_v1",
         )
+        for op, charge, digest in _V1_FAILED_JOBS:
+            logical, allocated, footprint = self.rt.eda.size(self.jobs + "/" + op)
+            _require((max(logical, allocated), footprint) == (charge, digest), "failed_v1_job")
 
     def _capacity(self):
         total_writer_limit = super(_CleanOtaJob, self)._capacity()  # noqa: UP008
