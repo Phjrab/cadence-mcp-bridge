@@ -8,7 +8,7 @@ from typing import Annotated, Literal, Self, cast
 
 from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
-from cadence_mcp_bridge._native_rendering import partition_input
+from cadence_mcp_bridge._native_rendering import statements as netlist_statements
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.ota_reopen_evidence import parse_ota_reopen_properties
 from cadence_mcp_bridge.parameter_changes import _checked, mos_multiplicity_factors
@@ -273,8 +273,7 @@ def _ota_fixed_statements(
     baseline_properties: dict[str, dict[MosProperty, MosPropertyValue]],
 ) -> list[str]:
     """Permit only device order and numeric spelling inside the registered OTA block."""
-    _, _, _, static = partition_input(raw)  # type: ignore[no-untyped-call]
-    statements = cast(list[str], static)
+    statements = cast(list[str], netlist_statements(raw))  # type: ignore[no-untyped-call]
     benches = [line for line in statements if line.startswith(route.ota.dut_instance + " ")]
     if len(benches) != 1 or not benches[0].endswith(" " + route.source_cell):
         raise ValueError("OTA Netlist bench does not reference the registered DUT")

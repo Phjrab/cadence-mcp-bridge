@@ -187,6 +187,23 @@ def test_rejects_changed_siblings_fixed_conditions_or_topology(old, changed):
     assert service.apply(service.identity).outcome == "OUTCOME_UNKNOWN"
 
 
+def test_keeps_fixed_control_positions_outside_the_ota_device_block():
+    data = _ota_fixture(pmos_width=False)
+    capture = data[-1]
+    parameters = b"parameters VDD=1\n"
+    raw = capture.netlist.replace(parameters, b"", 1).replace(
+        b"ends Ota\n", b"ends Ota\n" + parameters, 1
+    )
+    assert raw != capture.netlist
+    capture = replace(
+        capture,
+        netlist=raw,
+        readback=capture.readback.model_copy(update={"netlist_sha256": _sha(raw)}),
+    )
+    service = _service(data, _Provider(capture))
+    assert service.apply(service.identity).outcome == "OUTCOME_UNKNOWN"
+
+
 def test_rejects_unobserved_baseline_and_non_single_axis_before_dispatch():
     route, child, _, binding, raw, stdout, capture = _ota_fixture(pmos_width=False)
     observed = route.ota.devices[0]
