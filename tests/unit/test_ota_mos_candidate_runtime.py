@@ -152,14 +152,15 @@ def fixture(axis):
             netlist_receipt_sha256="2" * 64,
         ),
     )
-    requested = {axis: _length(300 if axis == "l" else 1500)}
+    value = _length(300 if axis == "l" else 1500)
+    requested = {"w": None, "l": None, axis: value}
     plan = dict(
         baseline=baseline,
         target=target,
         route_sha256=_sha(_canonical(route)),
         current=selected["dimensions"],
         requested=requested,
-        expected={**selected["dimensions"], **requested},
+        expected={**selected["dimensions"], axis: value},
         changed=[axis],
         allowed_derived=list(
             (legacy.SIZING_OVERRIDES if axis == "l" else legacy.WIDTH_SIZING_OVERRIDES)[1:]
@@ -226,9 +227,7 @@ def fixture(axis):
         baseline_reopen_stdout=stdout,
         native_safety=_canonical(pin),
         sizing=sizing,
-        legacy=(ASSETS / "_registered_mos_edit_phase.py").read_bytes(),
         support=(ASSETS / "_amp_pm0_default_phase.py").read_bytes(),
-        ota_skill=(ASSETS / "_ota_mos_candidate_skill.py").read_bytes(),
         cdf_collector=render_reopened_mos_cdf(),
     )
     return scope, fields
@@ -259,24 +258,63 @@ def wire(scope, fields, prior=None):
     ), digest
 
 
+def supervisor():
+    """Mirror C3's fixed assembler for the focused guest tests."""
+    legacy_source = (ASSETS / "_registered_mos_edit_phase.py").read_bytes()
+    assert legacy_source.endswith(ota._LEGACY_MAIN_SUFFIX)
+    body = legacy_source.removesuffix(ota._LEGACY_MAIN_SUFFIX)
+    skill = (ASSETS / "_ota_mos_candidate_skill.py").read_bytes()
+    runtime = (ASSETS / "_ota_mos_candidate_runtime.py").read_bytes()
+    sources = f"OTA_LEGACY_SOURCE = {body!r}\nOTA_SKILL_SOURCE = {skill!r}\n".encode("ascii")
+    guest = b"\n".join((sources, runtime))
+    assert guest.isascii() and len(guest) <= 131072
+    namespace = {"__name__": "ota_supervisor_local_check"}
+    exec(compile(guest, "ota_supervisor", "exec"), namespace)
+    return namespace
+
+
 @pytest.mark.parametrize("axis", ["l", "w"])
 def test_pinned_phase_wire_and_actual_legacy_assets(axis):
     scope, fields = fixture(axis)
+    read_request = supervisor()["read_request"]
     for phase, prior in zip(ota.PHASES, (None, "d" * 64), strict=True):
         raw, digest = wire(scope, fields, prior)
-        admitted = ota.read_request(raw, digest, phase, 1900000000)
+        admitted = read_request(raw, digest, phase, 1900000000)
         values = ota.skill_values(admitted, "/home/buet/managed/job/work")
         assert values["@TARGET_LINKS@"].startswith('list(list("D" "out") list("G" "inp")')
         assert values["@AXISTOKEN@"] == axis
         assert values["@OTA_INVENTORY@"].count('list("D"') == 17
         assert admitted["prior"] == prior
         with pytest.raises(ValueError, match="authority_or_predecessor"):
-            ota.read_request(raw, digest, ota.PHASES[1 - ota.PHASES.index(phase)], 1900000000)
+            read_request(raw, digest, ota.PHASES[1 - ota.PHASES.index(phase)], 1900000000)
     raw, digest = wire(
         scope, {**fields, "baseline_reopen_stdout": fields["baseline_reopen_stdout"] + b"x"}
     )
     with pytest.raises(ValueError, match="reopen_digest"):
-        ota.read_request(raw, digest, ota.PHASES[0], 1900000000)
+        read_request(raw, digest, ota.PHASES[0], 1900000000)
+
+
+def test_supervisor_rejects_duplicate_assets_and_noncanonical_axis():
+    scope, fields = fixture("w")
+    embedded = supervisor()
+    read_request = embedded["read_request"]
+    raw, digest = wire(scope, {**fields, "ota_skill": b"replacement"})
+    with pytest.raises(ValueError, match="request_fields"):
+        read_request(raw, digest, ota.PHASES[0], 1900000000)
+    raw, digest = wire(scope, fields)
+    embedded["OTA_SKILL_SOURCE"] += b"\n"
+    with pytest.raises(ValueError, match="asset_digest"):
+        read_request(raw, digest, ota.PHASES[0], 1900000000)
+    for requested in ({"w": _length(1500)}, {"w": _length(1500), "l": _length(250)}):
+        plan = dict(scope["plan"], requested=requested)
+        wrong = dict(
+            scope,
+            candidate_request=requested,
+            plan=plan,
+            subject=dict(scope["subject"], plan_sha256=_sha(_canonical(plan))),
+        )
+        with pytest.raises(ValueError, match="single_axis_plan"):
+            ota.parse_ota_sizing_route(wrong)
 
 
 def test_library_maps_use_exact_ota_registration_and_map_tech_once():
@@ -419,7 +457,7 @@ def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypa
 def test_independent_capture_receipts_and_no_source_writes(tmp_path, monkeypatch):
     scope, fields = fixture("w")
     raw, digest = wire(scope, fields)
-    request = ota.read_request(raw, digest, ota.PHASES[0], 1900000000)
+    request = supervisor()["read_request"](raw, digest, ota.PHASES[0], 1900000000)
     baseline = scope["plan"]["baseline"]
     pin = request["pin"]
     analysis = dict(

@@ -29,6 +29,7 @@ CHILD_PATH = "/home/buet/cds_work/Ota17CandidateOutputs20261126_v1/" + CHILD
 CHILD_STATE = os.path.dirname(CHILD_PATH) + "/" + TB + "_ADE"
 SOURCE9_SHA256 = "539794c47d1b5ab57a04030e892ab41763be93a0b752129f5771f2369447c147"
 OTA_SKILL_SHA256 = "9ed25ec92700c9b323ecabbd0e0e2ccea2323b1009fdb8a1fa6c53081be7192c"
+_LEGACY_MAIN_SUFFIX = b'if __name__ == "__main__":\n    main()\n'
 PHASES = ("EDIT_SAVE", "INDEPENDENT_REOPEN_NETLIST")
 DEVICES = frozenset(
     (
@@ -111,8 +112,6 @@ _PACKET_FIELDS = frozenset(
         "support_base64",
         "cdf_collector_base64",
         "sizing_base64",
-        "legacy_base64",
-        "ota_skill_base64",
         "baseline_reopen_stdout_base64",
     )
 )
@@ -275,7 +274,8 @@ def parse_ota_sizing_route(scope, legacy=None, wlm_phase=None):
         and support.get(held) is None
         and isinstance(support[axis], dict)
         and set(current) == set(expected) == set(("l", "w", "m"))
-        and set(requested) == set((axis,))
+        and set(requested) == set(("w", "l"))
+        and requested[held] is None
         and scope["candidate_request"] == requested
         and plan["changed"] == [axis]
         and plan["allowed_derived"] == list(wlm_phase.wlm_overrides(legacy, (axis,))[1:])
@@ -417,10 +417,19 @@ def read_request(raw, digest, phase, now):
         set(packet) in (_PACKET_FIELDS, _PACKET_FIELDS | _RECOVERY_FIELDS),
         "request_fields",
     )
-    token = packet["legacy_base64"].encode("ascii")
-    require(0 < len(token) <= 174764, "legacy_bound")
-    source = base64.b64decode(token)
-    require(base64.b64encode(source) == token and _sha(source) == SOURCE9_SHA256, "legacy_digest")
+    # The transport strips only the original entry point before embedding.
+    # Verify the original package bytes, then load the inert body alone.
+    source = globals().get("OTA_LEGACY_SOURCE")
+    skill_source = globals().get("OTA_SKILL_SOURCE")
+    require(
+        type(source) is bytes
+        and 0 < len(source) <= 65536
+        and type(skill_source) is bytes
+        and 0 < len(skill_source) <= 32768,
+        "embedded_assets",
+    )
+    _pinned(source + _LEGACY_MAIN_SUFFIX, SOURCE9_SHA256)
+    _pinned(skill_source, OTA_SKILL_SHA256)
     legacy = _module("ota_fixed_source9_support", source)
 
     def read(name, limit):
@@ -467,7 +476,7 @@ def read_request(raw, digest, phase, now):
     )
     pin = helper.parse(_pinned(read("native_safety", 65536), scope["native_safety_sha256"]))
     verify_safety(pin, route, legacy)
-    skill = _module("ota_fixed_skill", _pinned(read("ota_skill", 32768), OTA_SKILL_SHA256))
+    skill = _module("ota_fixed_skill", skill_source)
     collector = _pinned(read("cdf_collector", 32768), legacy.CDF_SHA256)
     return dict(
         root=packet["managed_root"],
