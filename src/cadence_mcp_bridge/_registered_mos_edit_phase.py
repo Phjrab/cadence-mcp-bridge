@@ -206,6 +206,7 @@ if(errset(mosEdit() t) then exit(0) else exit(1))
 EDIT = EDIT_BEGIN + EDIT_CHECKS + EDIT_END
 
 SIZING_TRACE_PREFIX = b"MCP_MOS_WL_EDIT|"
+SIZING_TIME_PREFIX = b"MCP_MOS_WL_TIME|"
 SIZING_TRACE_STEPS = (
     "SCH_CHECK",
     "FOOTPRINT",
@@ -217,9 +218,24 @@ SIZING_TRACE_STEPS = (
 SIZING_TRACE_BOOLEAN_STEPS = ("SCH_CHECK", "FOOTPRINT", "DB_SAVE", "DB_CLOSE")
 
 SIZING_TRACE_SKILL = r"""
+procedure(mosSizingUptime()
+ let((port line seconds)
+  port=infile("/proc/uptime")
+  when(port
+   gets(line port)
+   close(port))
+  when(stringp(line)
+   seconds=car(parseString(line " \r\n"))
+   when(and(stringp(seconds) rexMatchp("^[0-9]+[.][0-9][0-9]$" seconds))
+    seconds))))
 procedure(mosSizingTrace(step state)
  printf("MCP_MOS_WL_EDIT|%s|%s\n" step state)
- drain(poport))
+ drain(poport)
+ let((observed)
+  observed=errset(mosSizingUptime() nil)
+  when(and(observed stringp(car(observed)))
+   printf("MCP_MOS_WL_TIME|%s|%s|%s\n" step state car(observed))
+   drain(poport))))
 
 procedure(mosSizingCheck(step passed)
  mosSizingTrace(step if(passed then "RETURNED_OK" else "RETURNED_NIL"))
@@ -807,6 +823,41 @@ def sizing_edit_trace(raw):
     return dict(step=step, state=state)
 
 
+def sizing_edit_timing(raw):
+    """Read timing samples attached to an ordered, complete diagnostic prefix."""
+    if sizing_edit_trace(raw) is None:
+        return None
+    event = None
+    previous = None
+    origin = None
+    samples = []
+    for line in raw[: raw.rfind(b"\n") + 1].splitlines():
+        if line.startswith(SIZING_TRACE_PREFIX):
+            event = line[len(SIZING_TRACE_PREFIX) :]
+        elif line.startswith(SIZING_TIME_PREFIX):
+            fields = line[len(SIZING_TIME_PREFIX) :].split(b"|")
+            if len(fields) != 3 or b"|".join(fields[:2]) != event:
+                return None
+            stamp = fields[2]
+            if not re.match(rb"^[0-9]{1,12}\.[0-9]{2}\Z", stamp):
+                return None
+            tick = int(stamp.replace(b".", b""))
+            if previous is not None and (tick < previous or tick - origin > 6000):
+                return None
+            if origin is None:
+                origin = tick
+            samples.append(
+                dict(
+                    step=fields[0].decode("ascii"),
+                    state=fields[1].decode("ascii"),
+                    elapsed_centiseconds=tick - origin,
+                )
+            )
+            previous = tick
+            event = None
+    return samples or None
+
+
 class Source9MosJob(object):
     sizing = None
     axis = "l"
@@ -1189,8 +1240,10 @@ class Source9MosJob(object):
                     try:
                         output = self.h.read(work + "/edit.stdout", 65536)
                         failure["edit_trace"] = sizing_edit_trace(output)
+                        failure["edit_timing"] = sizing_edit_timing(output)
                     except (AssertionError, IOError, OSError, ValueError):  # noqa: UP024
                         failure["edit_trace"] = None
+                        failure["edit_timing"] = None
             self.save_document(
                 selected + "/failure.json",
                 failure,

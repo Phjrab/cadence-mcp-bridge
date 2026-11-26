@@ -265,8 +265,11 @@ def test_sizing_trace_surrounds_the_existing_checks_and_save() -> None:
     rendered = guest.render(guest.SIZING_EDIT, tokens)
     legacy = guest.render(guest.EDIT, tokens)
     assert b"MCP_MOS_WL_EDIT|" not in legacy
+    assert b"MCP_MOS_WL_TIME|" not in legacy
     assert b"drain(poport)" in rendered
     assert b'printf("MCP_MOS_WL_EDIT|%s|%s\\n" step state)\n drain(poport)' in rendered
+    assert b'infile("/proc/uptime")' in rendered
+    assert b"errset(mosSizingUptime() nil)" in rendered
     calls = (
         b'mosSizingTrace("SCH_CHECK" "STARTED")',
         b'mosSizingCheck("SCH_CHECK" schCheck(child))',
@@ -320,3 +323,23 @@ def test_sizing_trace_records_only_complete_ordered_steps() -> None:
     assert guest.sizing_edit_trace(saved + b"MCP_MOS_WL_EDIT|DB_CLOSE|STARTED\n") == dict(
         step="DB_CLOSE", state="STARTED"
     )
+
+
+def test_sizing_time_is_bound_to_ordered_completed_edges() -> None:
+    start = b"MCP_MOS_WL_EDIT|SCH_CHECK|STARTED\n"
+    first = b"MCP_MOS_WL_TIME|SCH_CHECK|STARTED|320.20\n"
+    end = b"MCP_MOS_WL_EDIT|SCH_CHECK|RETURNED_OK\n"
+    last = b"MCP_MOS_WL_TIME|SCH_CHECK|RETURNED_OK|321.53\n"
+    assert guest.sizing_edit_timing(start + first + end + last) == [
+        dict(step="SCH_CHECK", state="STARTED", elapsed_centiseconds=0),
+        dict(step="SCH_CHECK", state="RETURNED_OK", elapsed_centiseconds=133),
+    ]
+    assert guest.sizing_edit_timing(start + end) is None
+    assert guest.sizing_edit_timing(start + first + end + last.rstrip()) == [
+        dict(step="SCH_CHECK", state="STARTED", elapsed_centiseconds=0)
+    ]
+    assert guest.sizing_edit_timing(start + first + first) is None
+    assert guest.sizing_edit_timing(start + first + end + last.replace(b"321", b"319")) is None
+    assert guest.sizing_edit_timing(start + first + end + last.replace(b"321", b"399")) is None
+    wrong_step = last.replace(b"SCH_CHECK", b"DB_SAVE")
+    assert guest.sizing_edit_timing(start + first + end + wrong_step) is None
