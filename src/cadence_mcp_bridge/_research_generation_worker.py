@@ -18,6 +18,13 @@ import time
 import types
 
 PHASES = ("save", "reopen", "netlist")
+OTA17_DUT = "self_cascode_ota_17mos"
+OTA17_BENCH = "self_cascode_ota_tb"
+OTA17_MOS = frozenset((
+    "NM0", "NM1", "NM2", "NM3", "NM6", "NM7", "NM8", "NM9", "NM10", "NM11",
+    "PM2", "PM3", "PM4", "PM5", "PM6", "PM7", "PM8",
+))
+OTA17_BENCH_ROWS = frozenset(("DUT", "VSUP", "VINP", "VINN", "CL"))
 LIMIT = 262144
 WIRE_LIMIT = 1048576
 MARKER_LIMIT = 65536
@@ -232,7 +239,7 @@ def parse_request(argv, raw):
     )
     require(
         type(scope["schema_version"]) is int
-        and scope["schema_version"] == 1
+        and scope["schema_version"] in (1, 2)
         and type(scope["valid_until_unix"]) is int
         and ack
         == dict(
@@ -245,6 +252,14 @@ def parse_request(argv, raw):
         and 0 < scope["valid_until_unix"] - time.time() <= 7200,
         "research_generation_exact_authority",
     )
+    if scope["schema_version"] == 2:
+        require(
+            scope["dut_cell"] == OTA17_DUT
+            and scope["bench_cell"] == OTA17_BENCH
+            and scope["dut_subcircuits"] == [OTA17_DUT]
+            and re.match(r"Ota17Base[A-Za-z0-9]{4,32}\Z", binding["output_library"]) is not None,
+            "research_generation_ota17_scope",
+        )
     program = artifact(data["program_base64"], LIMIT)
     require(sha(program) == binding[phase + "_program_sha256"], "research_generation_program_pin")
     program.decode("ascii")
@@ -316,6 +331,60 @@ def dut_projection(statements, expected):
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
+def ota17_topology(static):
+    """Commit ordered terminal connectivity while retaining every original emitted statement."""
+    subcircuit = []
+    elements = {"dut": {}, "bench": {}}
+    section = "bench"
+    found_end = False
+    for line in static:
+        words = line.split()
+        if not words:
+            continue
+        if words[0] == "subckt":
+            require(
+                not subcircuit and len(words) == 7 and words[1] == OTA17_DUT
+                and len(set(words[2:])) == 5,
+                "research_generation_ota17_subckt",
+            )
+            subcircuit = words[2:]
+            section = "dut"
+        elif words[0] == "ends":
+            require(section == "dut" and words == ["ends", OTA17_DUT],
+                    "research_generation_ota17_ends")
+            section = "bench"
+            found_end = True
+        else:
+            row = re.match(r"([A-Za-z][A-Za-z0-9_]*) \(([^()]*)\) ([A-Za-z0-9_]+)(?: |\Z)", line)
+            if row is None:
+                require(section != "dut" and words[:2] != ["inline", "subckt"],
+                        "research_generation_ota17_element")
+                continue
+            label, terminal_text, model = row.groups()
+            terminals = terminal_text.split()
+            expected = OTA17_MOS if section == "dut" else OTA17_BENCH_ROWS
+            require(label in expected and label not in elements[section],
+                    "research_generation_ota17_inventory")
+            if section == "dut":
+                wanted = "gpdk090_nmos1v" if label.startswith("NM") else "gpdk090_pmos1v"
+                require(len(terminals) == 4 and model == wanted,
+                        "research_generation_ota17_mos")
+            elif label == "DUT":
+                require(len(terminals) == 5 and model == OTA17_DUT,
+                        "research_generation_ota17_bench_dut")
+            else:
+                wanted = "capacitor" if label == "CL" else "vsource"
+                require(len(terminals) == 2 and model == wanted,
+                        "research_generation_ota17_primitive")
+            elements[section][label] = [terminals, model]
+    require(
+        found_end and set(elements["dut"]) == OTA17_MOS
+        and set(elements["bench"]) == OTA17_BENCH_ROWS,
+        "research_generation_ota17_missing_element",
+    )
+    return dict(ports=subcircuit, dut=elements["dut"], bench=elements["bench"])
+
+
 class GenerationPhase(object):
     def __init__(self, runtime, scope, binding, binding_sha):
         self.r, self.scope, self.binding, self.binding_sha = runtime, scope, binding, binding_sha
@@ -382,8 +451,12 @@ class GenerationPhase(object):
             "research_generation_protected_target_overlap",
         )
         for key in ("external_bytes", "job_bytes", "prior_supplemental_bytes"):
+            maximum = 33554432
+            if scope["schema_version"] == 2 and key == "prior_supplemental_bytes":
+                # The OTA opening includes previously retained setup allocations.
+                maximum = 41943040
             require(
-                type(scope[key]) is int and 0 <= scope[key] <= 33554432,
+                type(scope[key]) is int and 0 <= scope[key] <= maximum,
                 "research_generation_storage_bound",
             )
         require(
@@ -771,12 +844,16 @@ class GenerationPhase(object):
                     "research_generation_ade_or_bench_drift",
                 )
                 full = read_regular(self.eda.find_input(work + "/project"), LIMIT)
-                statements = self.r.modules["rendering"].statements(full)
+                rendering = self.r.modules["rendering"]
+                _, _, _, static = rendering.partition_input(full)
+                if self.scope["schema_version"] == 2:
+                    expected = ota17_topology(static)
+                else:
+                    expected = rendering.statements(full)
                 require(
-                    sha(canonical(statements)) == digest(self.scope["netlist_statements_sha256"]),
+                    sha(canonical(expected)) == digest(self.scope["netlist_statements_sha256"]),
                     "research_generation_netlist_statement_drift",
                 )
-                _, _, _, static = self.r.modules["rendering"].partition_input(full)
                 dut = dut_projection(static, self.scope["dut_subcircuits"])
                 self.write(stage + "/full.scs", full)
                 self.write(stage + "/dut.scs", dut)

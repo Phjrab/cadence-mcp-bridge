@@ -200,6 +200,7 @@ def stage(tmp_path, monkeypatch):
         netlist_program_sha256=guest.sha(program),
     )
     instance.scope = dict(
+        schema_version=1,
         external_bytes=2097152, job_bytes=4194304, valid_until_unix=10**12, markers=phase_markers
     )
     instance.ops = SimpleNamespace(
@@ -376,3 +377,54 @@ def test_netlist_stage_preserves_verified_full_input_and_dut(stage, drift):
         assert not row["stdout_base64"]
         assert (Path(instance.store) / "netlist/complete.json").exists()
     assert calls == ["save", "reopen", "netlist"]
+
+
+def _static(worker):
+    lines = ["subckt self_cascode_ota_17mos inp inn out VDD VSS"]
+    for label in sorted(worker.OTA17_MOS):
+        polarity = "nmos1v" if label.startswith("NM") else "pmos1v"
+        lines.append(f"{label} (a b c d) gpdk090_{polarity} w=1u")
+    lines.extend(
+        (
+            "ends self_cascode_ota_17mos",
+            "DUT (inp inn out vdd 0) self_cascode_ota_17mos",
+            "VINP (inp 0) vsource dc=0.5",
+            "VINN (inn 0) vsource dc=500m",
+            "VSUP (vdd 0) vsource dc=1",
+            "CL (out 0) capacitor c=1p",
+            "simulatorOptions options temp=27",
+        )
+    )
+    return lines
+
+
+def test_ota17_projection_protects_exact_terminals_and_model_at_each_named_element():
+    worker = guest
+    rows = _static(worker)
+    expected = worker.ota17_topology(rows)
+    sibling_permutation = rows[:1] + rows[1:18][::-1] + rows[18:19] + rows[19:24][::-1] + rows[24:]
+    assert worker.canonical(worker.ota17_topology(sibling_permutation)) == worker.canonical(expected)
+    changed_bulk = rows.copy()
+    changed_bulk[1] = rows[1].replace("(a b c d)", "(a b c VDD)")
+    assert worker.ota17_topology(changed_bulk) != expected
+    changed_dut_pins = rows.copy()
+    changed_dut_pins[19] = rows[19].replace("inp inn", "inn inp")
+    assert worker.ota17_topology(changed_dut_pins) != expected
+
+
+@pytest.mark.parametrize("mutation", ("missing", "duplicate", "wrong_model", "second_subckt", "source_shadow"))
+def test_ota17_projection_rejects_wrong_inventory(mutation):
+    worker = guest
+    rows = _static(worker)
+    if mutation == "missing":
+        del rows[2]
+    elif mutation == "duplicate":
+        rows[2] = rows[1]
+    elif mutation == "wrong_model":
+        rows[1] = rows[1].replace("gpdk090_nmos1v", "gpdk090_pmos1v")
+    elif mutation == "second_subckt":
+        rows += ["subckt Foreign p n", "ends Foreign"]
+    else:
+        rows += ["UNREGISTERED (inp 0) vsource dc=0"]
+    with pytest.raises(ValueError, match="research_generation_ota17_"):
+        worker.ota17_topology(rows)
