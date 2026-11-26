@@ -60,7 +60,7 @@ _EDIT: Phase = "EDIT_SAVE"
 _REOPEN: Phase = "INDEPENDENT_REOPEN_NETLIST"
 _CLAIM = "registered-mos-intent.private.json"
 _ASSET = "_registered_mos_edit_phase.py"
-_GUEST_SOURCE_LIMIT = 80 * 1024
+_GUEST_SOURCE_LIMIT = 65_536
 _LIMIT = 524_288
 
 
