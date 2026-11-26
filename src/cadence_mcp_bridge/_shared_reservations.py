@@ -68,6 +68,12 @@ RESULT_POLICY_V12_SHA = "971001fb558dd65c6bcd966eda109615f8d545cb8e3e4f27f54539d
 RESULT_POLICY_V12_BASELINE = {
     "campaign_id": "AUTO-PHASE-01", "count": 148, "result_reserved_bytes": 18145607680,
 }
+RESULT_POLICY_V13_FILE = "result-policy-v13.json"
+RESULT_POLICY_V13_BYTES = 18222153728
+RESULT_POLICY_V13_SHA = "147b7dc8c204db61c8c90f926bb032ef03030de164083be02eb9f9598e8237af"
+RESULT_POLICY_V13_BASELINE = {
+    "campaign_id": "AUTO-PHASE-01", "count": 151, "result_reserved_bytes": 18158190592,
+}
 RETAINED_SUCCESSORS = {
     7: (RESULT_POLICY_V7_FILE, RESULT_POLICY_V7_SHA, RESULT_POLICY_V7_BYTES,
         RESULT_POLICY_V7_BASELINE, RESULT_POLICY_FILE, MAX_POLICY_BYTES),
@@ -81,6 +87,8 @@ RETAINED_SUCCESSORS = {
          RESULT_POLICY_V11_BASELINE, RESULT_POLICY_V10_FILE, RESULT_POLICY_V10_BYTES),
     12: (RESULT_POLICY_V12_FILE, RESULT_POLICY_V12_SHA, RESULT_POLICY_V12_BYTES,
          RESULT_POLICY_V12_BASELINE, RESULT_POLICY_V11_FILE, RESULT_POLICY_V11_BYTES),
+    13: (RESULT_POLICY_V13_FILE, RESULT_POLICY_V13_SHA, RESULT_POLICY_V13_BYTES,
+         RESULT_POLICY_V13_BASELINE, RESULT_POLICY_V12_FILE, RESULT_POLICY_V12_BYTES),
 }
 LEGACY_BASE_COUNT = 21
 LEGACY_BASE_BYTES = 1611661312
@@ -246,7 +254,7 @@ def counter_shape(value, manifest=None):
     # A retained journal parses immutable historical counters without consulting
     # today's policy. Live state separately enforces the effective ceiling.
     shape(value, 32, 3088056320,
-          RESULT_POLICY_V12_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V13_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def marker_shape(value, manifest=None):
@@ -256,7 +264,7 @@ def marker_shape(value, manifest=None):
     # starting at the first post-reservation22 /1,745,879,040 values. The
     # unincremented policy baseline is never a valid attempt-reserved marker.
     shape(value, 22, 1745879040,
-          RESULT_POLICY_V12_BYTES if manifest is not None else MAX_POLICY_BYTES)
+          RESULT_POLICY_V13_BYTES if manifest is not None else MAX_POLICY_BYTES)
 
 
 def open_lock(root):
@@ -452,10 +460,13 @@ def effective_policy(root, manifest):
     v10 = os.path.join(root, REGISTRY, RESULT_POLICY_V10_FILE)
     v11 = os.path.join(root, REGISTRY, RESULT_POLICY_V11_FILE)
     v12 = os.path.join(root, REGISTRY, RESULT_POLICY_V12_FILE)
+    v13 = os.path.join(root, REGISTRY, RESULT_POLICY_V13_FILE)
     if manifest["schema_version"] == 2:
-        if any(os.path.lexists(p) for p in (path, v7, v8, v9, v10, v11, v12)):
+        if any(os.path.lexists(p) for p in (path, v7, v8, v9, v10, v11, v12, v13)):
             raise ValueError("reservation_retained_policy_on_fresh_domain")
         return manifest["policy"]
+    if os.path.lexists(v13) and not os.path.lexists(v12):
+        raise ValueError("reservation_retained_v13_predecessor")
     if os.path.lexists(v12) and not os.path.lexists(v11):
         raise ValueError("reservation_retained_v12_predecessor")
     if os.path.lexists(v11) and not os.path.lexists(v10):
@@ -514,6 +525,7 @@ def effective_policy(root, manifest):
     policy["result_ceiling_bytes"] = MAX_POLICY_BYTES
     for version, prior, successor in (
         (7, path, v7), (8, v7, v8), (9, v8, v9), (10, v9, v10), (11, v10, v11), (12, v11, v12),
+        (13, v12, v13),
     ):
         if os.path.lexists(successor):
             retained_successor(root, manifest, prior, successor, version)
@@ -591,7 +603,8 @@ def audit(root, counter, manifest, manifest_sha):
     registry = os.path.join(root, REGISTRY)
     entries = os.listdir(registry)
     policy_files = (RESULT_POLICY_V7_FILE, RESULT_POLICY_V8_FILE, RESULT_POLICY_V9_FILE,
-                    RESULT_POLICY_V10_FILE, RESULT_POLICY_V11_FILE, RESULT_POLICY_V12_FILE)
+                    RESULT_POLICY_V10_FILE, RESULT_POLICY_V11_FILE, RESULT_POLICY_V12_FILE,
+                    RESULT_POLICY_V13_FILE)
     maximum_entries = 501 + sum(name in entries for name in policy_files)
     if len(entries) > maximum_entries:
         raise ValueError("reservation_identity_inventory_limit")
@@ -600,7 +613,7 @@ def audit(root, counter, manifest, manifest_sha):
         if entry in (
             "manifest.json", "legacy-seal.json", RESULT_POLICY_FILE, RESULT_POLICY_V7_FILE,
             RESULT_POLICY_V8_FILE, RESULT_POLICY_V9_FILE, RESULT_POLICY_V10_FILE,
-            RESULT_POLICY_V11_FILE, RESULT_POLICY_V12_FILE,
+            RESULT_POLICY_V11_FILE, RESULT_POLICY_V12_FILE, RESULT_POLICY_V13_FILE,
         ):
             continue
         op = entry[:-5] if entry.endswith(".json") else ""

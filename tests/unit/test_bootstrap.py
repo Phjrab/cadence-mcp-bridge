@@ -1207,6 +1207,7 @@ def test_reviewed_operator_pins_match_exact_package_assets(prepared_bound):
     "959712af7bacb06fac9dda204fe4ab9db3a8e51c8e51743805eb5f7d61e5b372",
     "07d6c5383beca4cf6d477c92212dada163adf27656eeebb0f3855c871c730bf4",
     "6e623682ab0c416dc6bc9b5eaf37e152e78781933de038c63d6f6bc19b4c158d",
+    "a1f81b11ab37d87a019b356bf752415c12ee8c8c18868635c404d7709ed8481a",
 ])
 def test_retained_operator_pin_applies_only_to_reservations(
     prepared_bound, monkeypatch, action, retained_sha

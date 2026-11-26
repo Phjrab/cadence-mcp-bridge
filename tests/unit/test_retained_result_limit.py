@@ -387,7 +387,7 @@ def test_v7_rejects_scope_drift_and_broken_predecessor(retained_v7_domain):
         ledger.effective_policy(str(root), anchor)
 
 
-@pytest.mark.parametrize("version", [7, 8, 9, 10, 11, 12])
+@pytest.mark.parametrize("version", [7, 8, 9, 10, 11, 12, 13])
 def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_path, monkeypatch,
                                                       version):
     root, value, anchor, previous_operation, permit, old_receipt = retained_v7_domain
@@ -402,6 +402,8 @@ def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_pa
         amounts = [128 * 1024**2] * (next_count - current_count)
         if prior_version in (10, 11):
             amounts[-1] = 4 * 1024**2  # Separate v10 retry and v11 L200 DC.
+        elif prior_version == 12:
+            amounts = [4 * 1024**2] * (next_count - current_count)  # Three retained DC jobs.
         grant = dict(
             permit,
             grant_sha256=ledger.digest(f"fixture-v{prior_version}".encode("ascii")),
@@ -466,7 +468,7 @@ def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_pa
             "SYNTHETIC FIXTURE ONLY", **flags,
         )
     assert not (tmp_path / "bad-receipt.json").exists()
-    if version in (11, 12):
+    if version in (11, 12, 13):
         _, _, ceiling, baseline, prior_name, _ = ledger.RETAINED_SUCCESSORS[version]
         assert result["result_ceiling_bytes"] == ceiling
         assert result["reservation_cost"] == 0 and result["execution_authorized"] is False
@@ -520,6 +522,26 @@ def test_v12_policy_identity_and_cli_action_choices():
     assert ledger.RESULT_POLICY_V12_BYTES - ledger.RESULT_POLICY_V11_BYTES == 16 * 1024**2
     parser = build_parser()
     for action in ("plan-result-limit-v12", "apply-result-limit-v12"):
+        with pytest.raises(SystemExit) as exc:
+            parser.parse_args(["domain", action, "--help"])
+        assert exc.value.code == 0
+
+
+def test_v13_policy_identity_and_cli_action_choices():
+    proposal = {
+        "schema_version": 13,
+        "kind": "EXPLICIT_RETAINED_RESULT_LIMIT_V13",
+        "attempt_ceiling": 500,
+        "previous_policy_sha256": ledger.RESULT_POLICY_V12_SHA,
+        "baseline": {"campaign_id": "AUTO-PHASE-01", "count": 151,
+                     "result_reserved_bytes": 18_158_190_592},
+        "result_ceiling_bytes": 18_222_153_728,
+    }
+    assert proposal["baseline"] == ledger.RESULT_POLICY_V13_BASELINE
+    assert ledger.digest(ledger.canonical(proposal)) == ledger.RESULT_POLICY_V13_SHA
+    assert ledger.RESULT_POLICY_V13_BYTES - ledger.RESULT_POLICY_V12_BYTES == 21 * 1024**2
+    parser = build_parser()
+    for action in ("plan-result-limit-v13", "apply-result-limit-v13"):
         with pytest.raises(SystemExit) as exc:
             parser.parse_args(["domain", action, "--help"])
         assert exc.value.code == 0

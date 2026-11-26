@@ -126,6 +126,7 @@ def prepare(
     result_limit_v10: bool = False,
     result_limit_v11: bool = False,
     result_limit_v12: bool = False,
+    result_limit_v13: bool = False,
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     assets, _, expected = contents()
@@ -135,7 +136,7 @@ def prepare(
     action = "inventory-legacy-seal" if seal else "inventory-existing"
     successors = (
         result_limit_v7, result_limit_v8, result_limit_v9, result_limit_v10, result_limit_v11,
-        result_limit_v12,
+        result_limit_v12, result_limit_v13,
     )
     if any(successors):
         if seal or result_limit or sum(successors) != 1:
@@ -166,6 +167,7 @@ def _transport(
         "plan-result-limit-v10", "apply-result-limit-v10",
         "plan-result-limit-v11", "apply-result-limit-v11",
         "plan-result-limit-v12", "apply-result-limit-v12",
+        "plan-result-limit-v13", "apply-result-limit-v13",
     } and entry_source is None:
         raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
@@ -195,6 +197,8 @@ def _transport(
         "apply-result-limit-v11",
         "plan-result-limit-v12",
         "apply-result-limit-v12",
+        "plan-result-limit-v13",
+        "apply-result-limit-v13",
     }
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
@@ -220,6 +224,8 @@ def _transport(
             "apply-result-limit-v11",
             "plan-result-limit-v12",
             "apply-result-limit-v12",
+            "plan-result-limit-v13",
+            "apply-result-limit-v13",
         }
         else "setup.py"
     )
@@ -261,6 +267,7 @@ def _transport(
         "apply-result-limit-v6", "apply-result-limit-v7", "apply-result-limit-v8",
         "apply-result-limit-v9", "apply-result-limit-v10", "apply-result-limit-v11",
         "apply-result-limit-v12",
+        "apply-result-limit-v13",
     }:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
@@ -330,6 +337,7 @@ def _transport(
     if action in {
         "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
         "plan-result-limit-v10", "plan-result-limit-v11", "plan-result-limit-v12",
+        "plan-result-limit-v13",
     }:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
@@ -374,6 +382,7 @@ def apply_existing(
     result_limit_v10: bool = False,
     result_limit_v11: bool = False,
     result_limit_v12: bool = False,
+    result_limit_v13: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
@@ -405,7 +414,7 @@ def apply_existing(
     action = "seal-existing" if seal else "apply-existing"
     successors = (
         result_limit_v7, result_limit_v8, result_limit_v9, result_limit_v10, result_limit_v11,
-        result_limit_v12,
+        result_limit_v12, result_limit_v13,
     )
     if any(successors):
         if seal or result_limit or sum(successors) != 1:

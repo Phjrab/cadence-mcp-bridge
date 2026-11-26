@@ -380,6 +380,7 @@ def reviewed_operator_assets(contents, action):
             "07d6c5383beca4cf6d477c92212dada163adf27656eeebb0f3855c871c730bf4",
             "6e623682ab0c416dc6bc9b5eaf37e152e78781933de038c63d6f6bc19b4c158d",
             "a1f81b11ab37d87a019b356bf752415c12ee8c8c18868635c404d7709ed8481a",
+            "ff190692428e48ca9cfde4a341dd6756255b535b28724d1ec3b73788c786c25c",
         ):
             continue
         raise ValueError("operator_" + action + "_" + name.split(".")[0] + "_not_reviewed")
