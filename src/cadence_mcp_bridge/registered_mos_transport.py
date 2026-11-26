@@ -171,7 +171,12 @@ class _RegisteredMosPhaseProvider(ABC):
         try:
             edit_raw = self._captured(binding, _EDIT, None)
             edit = self._saved(binding, edit_raw)
-            return self._terminal(edit, self._captured(binding, _REOPEN, _sha(edit_raw)))
+            predecessor = _sha(edit_raw)
+            return self._terminal(
+                edit,
+                self._captured(binding, _REOPEN, predecessor),
+                previous_receipt_sha256=predecessor,
+            )
         except (OSError, ValueError, RecursionError):
             return RetainedMosEdit(None)
 
@@ -191,7 +196,12 @@ class _RegisteredMosPhaseProvider(ABC):
             )
             edit_raw = self._run(binding, _EDIT, None)
             edit = self._saved(binding, edit_raw)
-            return self._terminal(edit, self._run(binding, _REOPEN, _sha(edit_raw)))
+            predecessor = _sha(edit_raw)
+            return self._terminal(
+                edit,
+                self._run(binding, _REOPEN, predecessor),
+                previous_receipt_sha256=predecessor,
+            )
 
     def _path(self, phase: Phase, label: str) -> Path:
         return self._directory / f"registered-mos-phase-{phase}-{label}"
@@ -253,8 +263,9 @@ class _RegisteredMosPhaseProvider(ABC):
         )
         return out
 
-    @staticmethod
-    def _terminal(save: NativeMosEditSave, raw: bytes) -> RetainedMosEdit:
+    def _terminal(
+        self, save: NativeMosEditSave, raw: bytes, *, previous_receipt_sha256: str
+    ) -> RetainedMosEdit:
         _closed_document(raw, max_bytes=_LIMIT)
         terminal = _Terminal.model_validate_json(raw)
         _require(
