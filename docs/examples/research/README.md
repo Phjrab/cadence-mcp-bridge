@@ -407,6 +407,18 @@ DC 분석 작업 ID는 `155ca51f-c3c1-46d0-8982-bbbb76f95b82`입니다. 실측 �
 
 재개 순서는 `--static-preview`로 회로 구조 재확인 → 8개 비OTA 원본과 bench·ADE seed·NN 증거 결속 → 실제 작업 공간의 원본 지문으로 `DraftPort.binding` 작성 → `compile-research-draft`와 `validate-research-circuit`입니다. 정적 미리보기에는 아직 없는 OTA revision·인스턴스 경로·작업 ID를 입력하지 않습니다. 실제 생성과 분석을 재개할 때는 승인된 범위를 따르고, 저장 후 얻은 지문과 경로를 사용합니다.
 
+#### P4 증거를 정적 포팅 입력에 연결
+
+W/L/m 검증이 포함된 개발 환경에서 [오프라인 결속 도구](bind-ota-port-evidence.py)를 실행합니다. C6의 `lookup_evidence`로 검증하고 독립 검토한 자료를 매니페스트 `points`에 넣습니다. 각 행에는 직렬화한 `MosSizingPlan`(`plan`), 같은 ID의 `RegisteredMosSizingResult`(`lookup_result`), 원본 독립 재개방 CDF(`cdf`)와 Spectre 입력(`netlist`)이 필요합니다. 각 값은 매니페스트 디렉터리 기준 상대 `path`와 실제 바이트의 `sha256`을 담습니다. 포팅 입력·매니페스트의 SHA는 검토 기록과 대조한 값을 전달합니다. 증거가 없으면 `{"points": []}`를 사용합니다.
+
+```powershell
+python docs/examples/research/bind-ota-port-evidence.py `
+  --draft $draft $draftSha --port $staticPort $staticPortSha `
+  --reviewed $reviewedManifest $reviewedManifestSha --output ota-port.evidence.static.json
+```
+
+일치하는 목표 조합의 소자에만 `geometry.source`와 `spectre.source`를 연결합니다. 일부 목표의 증거만 있으면 나머지 소자를 `unbound_devices`에 남기며, 불완전한 증거 행·중복·불일치는 오류로 반환합니다. 출력은 binding 없는 정적 입력입니다. 별도 bench·ADE·NN 검토와 실제 작업 공간 지문은 위 순서로 결속합니다.
+
 ## 재개 프롬프트
 
 > OTA 연구를 시작해줘. 이 README와 `ota-17mos.draft.json`을 읽고 최신 검증 설치본의 `tools/list`와 연구 범위를 확인해줘. GPDK090의 단자·벌크·CDF 매핑과 PM6 배수, 테스트벤치를 먼저 확정해줘. 확정 입력으로 `ResearchCircuit`을 구성한 뒤 정의 검증·계획 → 생성·저장 → 독립 재개방·Netlist 대조 → 대상·reader 등록 → DC/OP·AC 계획·제출·상태·결과 → 같은 ID 재조회 순으로 진행해줘. 계획 해시는 계획에서, 저장 revision과 아티팩트 지문은 생성·독립 재개방에서, 분석 작업 ID는 제출 때 기록하고 다음 호출에 연결해줘. 항목이 미확정이거나 실행이 불명확하면 해당 단계에서 멈추고 기존 증거와 ID로 상태를 확인해줘.
