@@ -140,6 +140,26 @@ def test_diagnostic_mode_requires_original_fixed_variables_and_enrolled_analysis
     assert len(captured) == 1
 
 
+def test_static_candidate_input_must_match_between_modes_except_exact_dc_op_save():
+    pre = b"simulator lang=spectre\nR0 (out 0) resistor r=1k\n"
+    options = b"simulatorOptions options temp=27\n"
+    tail = b"modelParameter info what=models where=rawfile\nsave out\n"
+    op_info = b"dcOpInfo info what=oppoint where=rawfile\n"
+    ac = pre + b"ac ac start=1 stop=1000000000 dec=16\n" + options + tail
+    dc = pre + b'dc dc write="spectre.dc"\n' + options + op_info + tail
+    v2._check_shared_static(rendering, ac, dc)
+    for changed in (
+        dc.replace(op_info, b""),
+        dc.replace(op_info, op_info * 2),
+        dc.replace(op_info, b"") + op_info,
+        dc.replace(b"r=1k", b"r=2k"),
+        dc.replace(b"(out 0)", b"(out in)"),
+        dc.replace(b"save out", b"save in"),
+    ):
+        with pytest.raises(ValueError, match="paired_static_input"):
+            v2._check_shared_static(rendering, ac, changed)
+
+
 def test_combined_peak_constrains_the_independent_writer_cap(monkeypatch):
     class SharedCapacity:
         def _capacity(self):

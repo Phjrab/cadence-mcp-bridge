@@ -34,6 +34,7 @@ _WRITER_MAX_BYTES = 2621440
 _WRITER_MIN_BYTES = 2097152
 _V1_ARCHIVE_BYTES = 303104
 _FIXED_PARAMETERS = {"VBIASN": "0.32", "VBIASP": "0.702"}
+_DC_OP_STATEMENT = "dcOpInfo info what=oppoint where=rawfile"
 _V1_FAILED_JOBS = (
     (
         "7d178cb4-8795-493f-b703-500d21216d09",
@@ -130,6 +131,20 @@ def _session_program(rendering, job, selected, operation, scope_sha, alias, mode
     return (
         program[: -len(terminal)] + ('printf("' + closed + '\\n")\n').encode("ascii"),
         ["MCP_GENERIC_ADE_NETLIST|" + mode_sha + "|" + operation, closed],
+    )
+
+
+def _check_shared_static(rendering, ac, dc):
+    ac_static = rendering.partition_input(ac)[3]
+    dc_static = rendering.partition_input(dc)[3]
+    _require(dc_static.count(_DC_OP_STATEMENT) == 1, "paired_static_input")
+    position = dc_static.index(_DC_OP_STATEMENT)
+    _require(
+        0 < position < len(dc_static) - 1
+        and dc_static[position - 1].startswith("simulatorOptions options ")
+        and dc_static[position + 1] == "modelParameter info what=models where=rawfile"
+        and ac_static == dc_static[:position] + dc_static[position + 1 :],
+        "paired_static_input",
     )
 
 
@@ -337,8 +352,8 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
         raw = h.read(input_path, 32768, False)
         verified = rt.eda.normalize_model_includes(raw, expected, source["libraries"])
         _, _, _, static = rendering.partition_input(verified)
-        # The host verifies the 17-device projection against both baselines.
-        # At this boundary, check only the registered mode, variables and models.
+        # The phase compares the two static parts, then the typed host checks
+        # the candidate projection against the original baseline.
         rendering.effective_input(
             verified,
             _FIXED_PARAMETERS,
@@ -417,6 +432,7 @@ class _CleanOtaJob(object):  # noqa: UP004 - Python 2.6 new-style class
             "dc", mode_dirs["dc"], selected, _sha(output), before, prior
         )
         _require(ac_leaf["netlist_sha256"] != dc_leaf["netlist_sha256"], "distinct_raw_inputs")
+        _check_shared_static(rt.modules["rendering"], ac_raw, dc_raw)
         receipt = dict(
             saved,
             reopened=reopened,
