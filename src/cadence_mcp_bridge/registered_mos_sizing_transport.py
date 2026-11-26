@@ -416,6 +416,15 @@ class RegisteredMosSizing:
             32_768,
             reg.route_qualification.baseline.netlist_sha256,
         )
+        route = reg.route_qualification
+        self._baseline_reopen_stdout = (
+            _read(
+                directory / "baseline-reopen-stdout.private.txt", 65_536,
+                route.ota.reopen_stdout_sha256,
+            )
+            if isinstance(route, RegisteredOtaMosSizingRoute)
+            else None
+        )
         _read(
             directory / "cdf-constraints.private.txt",
             65_536,
@@ -551,27 +560,37 @@ class RegisteredMosSizing:
         binding = RegisteredMosEditBinding(
             scope_sha256=canonical_digest(scope), **subject.model_dump()
         )
-        service_type = (
-            RegisteredOtaMosSizingService
-            if isinstance(route, RegisteredOtaMosSizingRoute)
-            else RegisteredMosSizingService
+        provider = _SizingPhaseProvider(
+            self._context,
+            directory,
+            reg,
+            self.enrollment_sha256,
+            scope,
+            sizing,
+            self._baseline,
         )
-        return service_type(
+        binding_pin = canonical_digest(binding)
+        if isinstance(route, RegisteredOtaMosSizingRoute):
+            if self._baseline_reopen_stdout is None:
+                raise ValueError("OTA sizing requires the original detached reopen stdout")
+            return RegisteredOtaMosSizingService(
+                binding,
+                route,
+                slot.child,
+                plan.requested,
+                self._baseline,
+                provider,
+                expected_binding_sha256=binding_pin,
+                baseline_reopen_stdout=self._baseline_reopen_stdout,
+            )
+        return RegisteredMosSizingService(
             binding,
             route,
             slot.child,
             plan.requested,
             self._baseline,
-            _SizingPhaseProvider(
-                self._context,
-                directory,
-                reg,
-                self.enrollment_sha256,
-                scope,
-                sizing,
-                self._baseline,
-            ),
-            expected_binding_sha256=canonical_digest(binding),
+            provider,
+            expected_binding_sha256=binding_pin,
         )
 
     def plan(self, candidate: MosSizingCandidate) -> MosSizingPreview:

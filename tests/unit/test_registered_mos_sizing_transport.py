@@ -591,7 +591,7 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     legacy = original_model.model_dump(mode="json")
     assert legacy["schema_version"] == 4 and legacy["route"] == "registered_mos_sizing"
     assert "ota" not in legacy["route_qualification"] and "admitted_m" not in legacy
-    route, child, request, _, raw_input, _ = _ota_fixture(pmos_width=pmos_width)
+    route, child, request, _, raw_input, reopen_stdout, _ = _ota_fixture(pmos_width=pmos_width)
     package = files("cadence_mcp_bridge")
     renderer = package.joinpath("mos_wlm_skill.py").read_bytes()
     child_asset = package.joinpath("_mos_wlm_callback.py").read_bytes()
@@ -635,6 +635,14 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     planned_scopes = []
     monkeypatch.setattr(guest_contract, "OTA_SIZING_ROUTE", document["route"], raising=False)
     monkeypatch.setattr(guest_contract, "sizing_route", planned_scopes.append)
+    reopen_leaf = directory.parent / "baseline-reopen-stdout.private.txt"
+    with pytest.raises(FileNotFoundError):
+        sizing.selected_mos_sizing(context)
+    reopen_leaf.write_bytes(reopen_stdout + b"\n")
+    with pytest.raises(OperationRejected) as stale:
+        sizing.selected_mos_sizing(context)
+    assert stale.value.reason == "pmos_default_change_artifact_digest"
+    reopen_leaf.write_bytes(reopen_stdout)
     selected = sizing.selected_mos_sizing(context)
     candidate = sizing.MosSizingCandidate.model_validate_json(
         _canonical({
@@ -649,6 +657,9 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
     assert service.plan.changed == (axis,)
     assert service.plan.current.m == service.plan.expected.m
     assert planned_scopes[0]["route_qualification"]["ota"] == route_obj["ota"]
+    assert planned_scopes[0]["route_qualification"]["ota"]["reopen_stdout_sha256"] == _sha(
+        reopen_stdout
+    )
     assert planned_scopes[0]["route"] == document["route"]
     assert "slot_manifest_sha256" not in planned_scopes[0]
     for phase, previous in (("EDIT_SAVE", None), ("INDEPENDENT_REOPEN_NETLIST", "a" * 64)):
