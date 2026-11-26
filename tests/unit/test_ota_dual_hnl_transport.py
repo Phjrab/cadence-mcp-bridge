@@ -9,11 +9,11 @@ from io import StringIO
 from types import SimpleNamespace
 
 import pytest
-from cadence_mcp_bridge.ota_dual_hnl_transport import read_ota_dual_hnl
 from test_registered_mos_sizing import _fixture
 
 from cadence_mcp_bridge import registered_mos_transport
 from cadence_mcp_bridge.domain_provisioning import _canonical
+from cadence_mcp_bridge.ota_dual_hnl_transport import read_ota_dual_hnl
 from cadence_mcp_bridge.registered_mos_edit import NativeMosEditSave
 from cadence_mcp_bridge.registered_mos_sizing_transport import _ota_supervisor, _SizingPhaseProvider
 from cadence_mcp_bridge.registered_mos_transport import _encode
