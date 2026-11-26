@@ -49,7 +49,7 @@ SOURCES = {
     "modeltrust.py": "_installation_repair.py",
 }
 KIND = "STANDARD_VM_CONFIRMED_NATIVE_RUNTIME"
-REGISTRATION_DOCUMENT_LIMIT = 88 * 1024
+REGISTRATION_DOCUMENT_LIMIT = 96 * 1024
 
 
 def source_assets() -> dict[str, bytes]:
