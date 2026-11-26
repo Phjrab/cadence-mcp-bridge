@@ -643,6 +643,22 @@ async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
         sizing.selected_mos_sizing(context)
     assert stale.value.reason == "pmos_default_change_artifact_digest"
     reopen_leaf.write_bytes(reopen_stdout)
+    recovered_route = {
+        **route_obj,
+        "ota": {
+            key: value
+            for key, value in route_obj["ota"].items()
+            if key != "netlist_receipt_sha256"
+        }
+        | {"recovered_source_sha256": "8" * 64},
+    }
+    recovered_enrollment = _canonical({**document, "route_qualification": recovered_route})
+    binding_path.write_bytes(recovered_enrollment)
+    context.binding.pmos_default_change_sha256 = _sha(recovered_enrollment)
+    with pytest.raises(FileNotFoundError, match="baseline-recovered-source.private.json"):
+        sizing.selected_mos_sizing(context)
+    binding_path.write_bytes(raw)
+    context.binding.pmos_default_change_sha256 = _sha(raw)
     selected = sizing.selected_mos_sizing(context)
     candidate = sizing.MosSizingCandidate.model_validate_json(
         _canonical({

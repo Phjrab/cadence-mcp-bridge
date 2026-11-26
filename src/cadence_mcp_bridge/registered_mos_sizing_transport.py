@@ -55,6 +55,8 @@ from cadence_mcp_bridge.registered_ota_mos_sizing import (
     RegisteredOtaMosSizingRoute,
     RegisteredOtaMosSizingService,
 )
+from cadence_mcp_bridge.research_circuit import MosBlockStageReceipt
+from cadence_mcp_bridge.research_generation_ota_recovery import RecoveredOtaGenerationAnalysisSource
 from cadence_mcp_bridge.runtime_context import ExecutionContext, read_pmos_default_change_binding
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
@@ -425,6 +427,21 @@ class RegisteredMosSizing:
             if isinstance(route, RegisteredOtaMosSizingRoute)
             else None
         )
+        self._baseline_recovery: RecoveredOtaGenerationAnalysisSource | None = None
+        self._baseline_reopen_receipt: MosBlockStageReceipt | None = None
+        if isinstance(route, RegisteredOtaMosSizingRoute) and route.ota.recovered_source_sha256:
+            self._baseline_recovery = RecoveredOtaGenerationAnalysisSource.model_validate_json(
+                _read(directory / "baseline-recovered-source.private.json", 16_384)
+            )
+            self._baseline_reopen_receipt = MosBlockStageReceipt.model_validate_json(
+                _read(directory / "baseline-reopen-receipt.private.json", 8_192)
+            )
+            _require(
+                canonical_digest(self._baseline_recovery) == route.ota.recovered_source_sha256
+                and canonical_digest(self._baseline_reopen_receipt)
+                == route.ota.reopen_receipt_sha256,
+                "registered_ota_mos_sizing_recovered_baseline",
+            )
         _read(
             directory / "cdf-constraints.private.txt",
             65_536,
@@ -582,6 +599,8 @@ class RegisteredMosSizing:
                 provider,
                 expected_binding_sha256=binding_pin,
                 baseline_reopen_stdout=self._baseline_reopen_stdout,
+                baseline_recovery=self._baseline_recovery,
+                baseline_reopen_receipt=self._baseline_reopen_receipt,
             )
         return RegisteredMosSizingService(
             binding,
