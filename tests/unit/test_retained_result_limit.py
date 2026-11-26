@@ -402,8 +402,12 @@ def test_successor_fixed_transport_binds_both_reports(retained_v7_domain, tmp_pa
         amounts = [128 * 1024**2] * (next_count - current_count)
         if prior_version in (10, 11):
             amounts[-1] = 4 * 1024**2  # Separate v10 retry and v11 L200 DC.
-        grant = dict(permit, grant_sha256=ledger.digest(f"fixture-v{prior_version}".encode("ascii")),
-                     max_attempts=len(amounts), max_reserved_bytes=sum(amounts))
+        grant = dict(
+            permit,
+            grant_sha256=ledger.digest(f"fixture-v{prior_version}".encode("ascii")),
+            max_attempts=len(amounts),
+            max_reserved_bytes=sum(amounts),
+        )
         for amount in amounts:
             ledger.reserve(str(root), job(root), dict(grant, reserve_bytes=amount))
         value["limits"]["result_reserved_bytes"] = ledger.RETAINED_SUCCESSORS[prior_version][2]
