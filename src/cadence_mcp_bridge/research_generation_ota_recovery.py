@@ -37,7 +37,7 @@ from cadence_mcp_bridge.variable_contracts import Digest, VariableModel, canonic
 
 _DUT = "self_cascode_ota_17mos"
 _BENCH = "self_cascode_ota_tb"
-_PREFIX = ("save", "reopen")
+_PREFIX: tuple[Literal["save", "reopen"], ...] = ("save", "reopen")
 _CUSTODY = "research_generation_ota_retained_custody_mismatch"
 
 

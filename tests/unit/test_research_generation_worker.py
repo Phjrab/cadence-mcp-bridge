@@ -403,7 +403,8 @@ def test_ota17_projection_protects_exact_terminals_and_model_at_each_named_eleme
     rows = _static(worker)
     expected = worker.ota17_topology(rows)
     sibling_permutation = rows[:1] + rows[1:18][::-1] + rows[18:19] + rows[19:24][::-1] + rows[24:]
-    assert worker.canonical(worker.ota17_topology(sibling_permutation)) == worker.canonical(expected)
+    actual = worker.ota17_topology(sibling_permutation)
+    assert worker.canonical(actual) == worker.canonical(expected)
     changed_bulk = rows.copy()
     changed_bulk[1] = rows[1].replace("(a b c d)", "(a b c VDD)")
     assert worker.ota17_topology(changed_bulk) != expected
@@ -412,7 +413,9 @@ def test_ota17_projection_protects_exact_terminals_and_model_at_each_named_eleme
     assert worker.ota17_topology(changed_dut_pins) != expected
 
 
-@pytest.mark.parametrize("mutation", ("missing", "duplicate", "wrong_model", "second_subckt", "source_shadow"))
+@pytest.mark.parametrize(
+    "mutation", ("missing", "duplicate", "wrong_model", "second_subckt", "source_shadow")
+)
 def test_ota17_projection_rejects_wrong_inventory(mutation):
     worker = guest
     rows = _static(worker)
