@@ -97,6 +97,40 @@ def test_ac_bandwidth_uses_reference_drop_and_reports_search_coverage():
         assert coarse[name]["value"] is None
 
 
+def test_ac_exact_threshold_touch_is_not_a_falling_crossing():
+    definition = AcGainDefinition(reference_frequency_hz=1.0)
+    touch = [sample(1, 2), sample(10, 1)]
+    endpoint = sampled_ac_gain(touch, definition)["unity_gain_frequency"]
+    assert endpoint["reason"] == "crossing_direction_unconfirmed_at_range_end"
+    assert endpoint["value"] is None
+
+    rebound = sampled_ac_gain([*touch, sample(100, 2)], definition)["unity_gain_frequency"]
+    assert rebound["status"] == "NOT_OBSERVED_IN_SAMPLED_RANGE"
+
+    falling = sampled_ac_gain([*touch, sample(100, 1), sample(1000, 0.5)], definition)[
+        "unity_gain_frequency"
+    ]
+    assert falling["value"] == 10
+    assert falling["bracket_hz"] == [1.0, 10.0]
+    assert falling["falling_confirmation_hz"] == 1000
+    assert falling["falling_confirmation_gain_db"] < 0
+
+
+def test_ac_axis_roundoff_preserves_observed_reference_and_coverage():
+    near_start = math.nextafter(1.0, 0.0)
+    near_stop = math.nextafter(1e9, 0.0)
+    definition = AcGainDefinition(reference_frequency_hz=1.0, minimum_search_stop_hz=1e9)
+    samples = [sample(near_start, 2), sample(10, 1.5), sample(near_stop, 1.1)]
+    result = sampled_ac_gain(samples, definition)
+    assert result["reference"]["frequency_hz"] == near_start
+    assert result["unity_gain_frequency"]["reason"] == "downward_crossing_absent"
+
+    ambiguous = sampled_ac_gain(
+        [*samples[:1], sample(math.nextafter(1.0, 2.0), 2), *samples[1:]], definition
+    )
+    assert ambiguous["reference_reason"] == "reference_sample_unavailable"
+
+
 def test_registered_op_reads_and_missing_signed_region_values(configured):
     _, record, result = seed(configured)
     report = make_report(record, result)

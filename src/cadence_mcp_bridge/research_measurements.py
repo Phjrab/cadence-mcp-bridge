@@ -44,15 +44,16 @@ _OP_UNITS: dict[OpField, str] = {
 }
 OpResultSelector = Literal["dcOpInfo-info", "dcOpInfo"]
 _OP_FRAME_LIMIT = 64 * 1024
+_AC_AXIS_REL_TOL = 1e-12
 
 
 class AcGainDefinition(VariableModel):
     reference_frequency_hz: Positive
     bandwidth_drop_db: Positive | None = None
     minimum_search_stop_hz: Positive | None = None
-    maximum_adjacent_frequency_ratio: (
-        Annotated[float, Field(gt=1, allow_inf_nan=False)] | None
-    ) = None
+    maximum_adjacent_frequency_ratio: Annotated[float, Field(gt=1, allow_inf_nan=False)] | None = (
+        None
+    )
 
     @model_validator(mode="after")
     def ordered_search(self) -> Self:
@@ -99,6 +100,7 @@ def _research_crossing(
     if reference == len(axes) - 1:
         return {**result, "reason": "samples_after_reference_unavailable"}
     ratio_limit = definition.maximum_adjacent_frequency_ratio
+    threshold_hit: int | None = None
     for i in range(reference + 1, len(axes)):
         left, right = db[i - 1], db[i]
         if ratio_limit is not None and axes[i] / axes[i - 1] > ratio_limit:
@@ -107,22 +109,55 @@ def _research_crossing(
                 "reason": "insufficient_frequency_resolution",
                 "gap_hz": axes[i - 1 : i + 1],
             }
-        if left is None or left <= threshold_db or (right is not None and right > threshold_db):
+        if right == threshold_db:
+            if left is not None and left > threshold_db:
+                threshold_hit = i
             continue
-        result.update(bracket_hz=axes[i - 1 : i + 1], bracket_gain_db=[left, right])
+        if right is not None and right > threshold_db:
+            threshold_hit = None
+            continue
+        if threshold_hit is None and (left is None or left <= threshold_db):
+            continue
         if right is None:
-            return {**result, "reason": "zero_transfer_at_crossing_bracket"}
+            return {
+                **result,
+                "bracket_hz": axes[i - 1 : i + 1],
+                "bracket_gain_db": [left, right],
+                "reason": "zero_transfer_at_crossing_bracket",
+            }
+        if threshold_hit is not None:
+            return {
+                **result,
+                "bracket_hz": axes[threshold_hit - 1 : threshold_hit + 1],
+                "bracket_gain_db": db[threshold_hit - 1 : threshold_hit + 1],
+                "falling_confirmation_hz": axes[i],
+                "falling_confirmation_gain_db": right,
+                "status": "OBSERVED_SAMPLED_CROSSING",
+                "reason": None,
+                "value": axes[threshold_hit],
+            }
+        assert left is not None
         return {
             **result,
+            "bracket_hz": axes[i - 1 : i + 1],
+            "bracket_gain_db": [left, right],
             "status": "OBSERVED_SAMPLED_CROSSING",
             "reason": None,
             "value": _interpolate_db_crossing(axes[i - 1], axes[i], left, right, threshold_db),
         }
     minimum_stop = definition.minimum_search_stop_hz
-    if minimum_stop is not None and axes[-1] < minimum_stop:
+    if (
+        minimum_stop is not None
+        and axes[-1] < minimum_stop
+        and not math.isclose(axes[-1], minimum_stop, rel_tol=_AC_AXIS_REL_TOL)
+    ):
         return {**result, "reason": "insufficient_frequency_range"}
+    if threshold_hit is not None:
+        return {**result, "reason": "crossing_direction_unconfirmed_at_range_end"}
     return {
-        **result, "status": "NOT_OBSERVED_IN_SAMPLED_RANGE", "reason": "downward_crossing_absent"
+        **result,
+        "status": "NOT_OBSERVED_IN_SAMPLED_RANGE",
+        "reason": "downward_crossing_absent",
     }
 
 
@@ -149,6 +184,15 @@ def sampled_ac_gain(
         (i for i, f in enumerate(axes) if f == definition.reference_frequency_hz),
         None,
     )
+    if reference_index is None:
+        # The authenticated reader permits roundoff in the observed frequency axis.
+        nearby = [
+            i
+            for i, frequency in enumerate(axes)
+            if math.isclose(frequency, definition.reference_frequency_hz, rel_tol=_AC_AXIS_REL_TOL)
+        ]
+        if len(nearby) == 1:
+            reference_index = nearby[0]
     reference = None
     if reference_index is not None:
         sample = samples[reference_index]
