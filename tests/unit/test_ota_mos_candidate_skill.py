@@ -6,6 +6,7 @@ import re
 import pytest
 
 from cadence_mcp_bridge import _ota_mos_candidate_skill as ota
+from cadence_mcp_bridge._ota_mos_candidate_runtime import render_ota_skill
 from cadence_mcp_bridge._registered_mos_edit_phase import COMMON, SIZING_TRACE_SKILL
 
 _FIXED_PINS = {
@@ -35,10 +36,8 @@ _EDIT_PINS = {
 
 
 def _render(stage: str, **extra: str) -> str:
-    values = _FIXED_PINS | extra
-    program = re.sub(
-        r"@([A-Z_]+)@", lambda match: values[match[1]], ota.compose_common(COMMON) + stage
-    )
+    values = {f"@{key}@": value for key, value in (_FIXED_PINS | extra).items()}
+    program = render_ota_skill(ota.compose_common(COMMON) + stage, values).decode("ascii")
     # SKILL strings can contain parentheses. Check the remaining balanced source.
     text = re.sub(r'"(?:[^"\\]|\\.)*"', '""', program)
     depth = 0
@@ -63,6 +62,14 @@ def test_retarget_writes_only_the_owned_bench_and_checks_reopened_copy() -> None
     assert body.index('equal(original otaBench("Ota17Candidate20261126"))') < body.index(
         "OTA17_CANDIDATE_BENCH_RETARGETED|"
     )
+    assert "rows=list(" in source and "@OTA_INVENTORY@" not in source
+
+
+def test_ota_renderer_rejects_unbound_or_nested_tokens() -> None:
+    with pytest.raises(ValueError, match="skill_placeholder_binding"):
+        render_ota_skill("rows=@OTA_INVENTORY@", {})
+    with pytest.raises(ValueError, match="skill_placeholder_remaining"):
+        render_ota_skill("rows=@OTA_INVENTORY@", {"@OTA_INVENTORY@": "@remaining@"})
 
 
 @pytest.mark.parametrize("overrides", ["l as ad ps pd", "w fw as ad ps pd"])

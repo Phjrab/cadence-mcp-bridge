@@ -55,6 +55,7 @@ DEVICES = frozenset(
 _HEX = re.compile(r"[0-9a-f]{64}\Z")
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}\Z")
 _OP = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z")
+_SKILL_TOKEN = re.compile(r"@[A-Za-z0-9_]+@")
 _SCOPE_FIELDS = frozenset(
     (
         "schema_version",
@@ -121,6 +122,15 @@ _RECOVERY_FIELDS = frozenset(("baseline_recovery_base64", "baseline_reopen_recei
 def require(condition, stage):
     if not condition:
         raise ValueError("registered_ota_mos_" + stage)
+
+
+def render_ota_skill(template, values):
+    """Render only fixed OTA placeholders, including underscored names."""
+    names = frozenset(_SKILL_TOKEN.findall(template))
+    require(names.issubset(values), "skill_placeholder_binding")
+    program = _SKILL_TOKEN.sub(lambda match: values[match.group(0)], template)
+    require(_SKILL_TOKEN.search(program) is None, "skill_placeholder_remaining")
+    return program.encode("ascii")
 
 
 def _canonical(document):
@@ -972,7 +982,7 @@ class _OtaJob(object):
         child_path = work + "/verify-wlm-callbacks.py"
         self.rt.eda.write(child_path, child)
         require(self.h.read(child_path, 8192) == child, "sizing_child_readback")
-        program = legacy.render(
+        program = render_ota_skill(
             skill.compose_common(legacy.COMMON)
             + self.wlm_phase.VERIFY_WLM_CALLBACKS
             + adapter.decode("ascii")
@@ -1087,7 +1097,7 @@ class _OtaJob(object):
         self.run(
             session,
             work,
-            legacy.render(script, values) + netlist,
+            render_ota_skill(script, values) + netlist,
             self.library_lines(("MCP_GREL_Work", library)),
             "reopen",
             [

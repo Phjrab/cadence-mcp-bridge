@@ -498,7 +498,8 @@ def test_independent_capture_receipts_and_no_source_writes(tmp_path, monkeypatch
 
     def run(session, root, program, definitions, phase, markers):
         invocations.append(phase)
-        assert "@TARGET@" not in program.decode("ascii")
+        assert ota._SKILL_TOKEN.search(program.decode("ascii")) is None
+        assert b"rows=list(" in program and b'otaMosLinks(inst) list(list("D"' in program
 
         def frame(props):
             return ("\n".join([*_lines(props), "COMPLETE", ""])).encode("ascii")
