@@ -109,6 +109,7 @@ class OtaCorrectedHnlArtifacts:
     original_locked: bytes
     original_failure: bytes
     original_reopened_cdf: bytes
+    closed_custody: bytes
 
 
 class OtaCorrectedHnlElectricalProof(VariableModel):
@@ -136,6 +137,7 @@ class OtaCorrectedDualHnlSource(VariableModel):
     scope_sha256: Digest
     preflight_sha256: Digest
     complete_sha256: Digest
+    closed_custody_sha256: Digest
     original_reopened_cdf_sha256: Digest
     valid_until_unix: int
     custody_sha256: Digest
@@ -180,12 +182,14 @@ def verify_ota_corrected_hnl_custody(
     expected_scope_sha256: str,
     expected_preflight_sha256: str,
     expected_custody_sha256: str,
+    expected_closed_custody_sha256: str,
 ) -> tuple[OtaCorrectedHnlCustody, int]:
     """Check the genuine receipt, completion, exact mode transcript and saved predecessor."""
     scope = _document(artifacts.scope, expected_scope_sha256)
     preflight = _document(artifacts.preflight, expected_preflight_sha256)
     _document(artifacts.receipt, expected_custody_sha256)
     custody = OtaCorrectedHnlCustody.model_validate_json(artifacts.receipt)
+    closed = _document(artifacts.closed_custody, expected_closed_custody_sha256, 65_536)
     saved = _document(artifacts.original_save, _SAVE)
     locked = _document(artifacts.original_locked, _OLD_LOCKED, 524_288)
     failure = _document(artifacts.original_failure, _OLD_FAILURE)
@@ -274,7 +278,53 @@ def verify_ota_corrected_hnl_custody(
         or custody.mode_evidence.ac.raw_sha256 == custody.mode_evidence.dc.raw_sha256
     ):
         raise ValueError("ota_corrected_hnl_mode_custody")
+    _verify_closed_custody(closed, scope, custody, artifacts.complete)
     return custody, deadline
+
+
+def _verify_closed_custody(
+    closed: dict[str, Any],
+    scope: dict[str, Any],
+    custody: OtaCorrectedHnlCustody,
+    complete: bytes,
+) -> None:
+    mode_evidence = closed.get("validated_modes")
+    charge = closed.get("diagnostic_charge_bytes")
+    cap = scope.get("scratch_cap_bytes")
+    if (
+        closed.get("status") != "OTA17_FIXED_BIAS_RAW_CUSTODY_LOCKED"
+        or closed.get("source_reopen_result") != "OUTCOME_UNKNOWN"
+        or closed.get("diagnostic_operation_id") != custody.operation_id
+        or closed.get("source_writer") != custody.writer_operation_id
+        or closed.get("diagnostic_scope_sha256") != custody.scope_sha256
+        or closed.get("diagnostic_receipt_sha256") is None
+        or complete != _canonical({"receipt_sha256": closed["diagnostic_receipt_sha256"]})
+        or closed.get("diagnostic_complete_sha256") != sha256(complete).hexdigest()
+        or closed.get("diagnostic_native_stdout_sha256") != custody.stdout_sha256
+        or closed.get("saved_receipt_sha256") != custody.saved_receipt_sha256
+        or closed.get("writer_postflight_sha256") != custody.original_failed_terminal_sha256
+        or closed.get("source_views") != custody.source_views.model_dump(mode="json")
+        or closed.get("counter") != custody.counter.model_dump(mode="json")
+        or closed.get("active_runner") != scope.get("native_manifest_sha256")
+        or closed.get("active_layout") != scope.get("layout_manifest_sha256")
+        or type(charge) is not int or type(cap) is not int or not 0 < charge <= cap
+        or any(closed.get(key) != 0 for key in ("ocean", "spectre", "reservations", "writes"))
+        or not isinstance(mode_evidence, dict)
+        or set(mode_evidence) != {"ac", "dc"}
+    ):
+        raise ValueError("ota_corrected_hnl_closed_custody")
+    for leaf in (custody.mode_evidence.ac, custody.mode_evidence.dc):
+        wire = mode_evidence[leaf.mode]
+        if not isinstance(wire, dict):
+            raise ValueError("ota_corrected_hnl_closed_mode")
+        observed = dict(wire)
+        normalized = observed.pop("normalized_model_only_sha256", None)
+        if (
+            not isinstance(normalized, str)
+            or re.fullmatch(r"[a-f0-9]{64}", normalized) is None
+            or observed != leaf.model_dump(mode="json")
+        ):
+            raise ValueError("ota_corrected_hnl_closed_mode")
 
 
 def verify_ota_corrected_dual_hnl_source(
@@ -286,6 +336,7 @@ def verify_ota_corrected_dual_hnl_source(
     expected_scope_sha256: str,
     expected_preflight_sha256: str,
     expected_custody_sha256: str,
+    expected_closed_custody_sha256: str,
     expected_electrical_sha256: str,
 ) -> OtaCorrectedDualHnlSource:
     """Join independently pinned C1 and C6 projections to the actual mode bytes."""
@@ -293,6 +344,7 @@ def verify_ota_corrected_dual_hnl_source(
         artifacts, expected_scope_sha256=expected_scope_sha256,
         expected_preflight_sha256=expected_preflight_sha256,
         expected_custody_sha256=expected_custody_sha256,
+        expected_closed_custody_sha256=expected_closed_custody_sha256,
     )
     _document(electrical_raw, expected_electrical_sha256)
     electrical = OtaCorrectedHnlElectricalProof.model_validate_json(electrical_raw)
@@ -314,6 +366,7 @@ def verify_ota_corrected_dual_hnl_source(
         scope_sha256=expected_scope_sha256,
         preflight_sha256=expected_preflight_sha256,
         complete_sha256=sha256(artifacts.complete).hexdigest(),
+        closed_custody_sha256=expected_closed_custody_sha256,
         original_reopened_cdf_sha256=_OLD_CDF,
         valid_until_unix=deadline,
         custody_sha256=expected_custody_sha256,

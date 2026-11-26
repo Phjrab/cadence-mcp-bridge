@@ -45,6 +45,7 @@ def _artifacts(monkeypatch, ac=AC, dc=DC, *, dc_state=None):
         ocean_max=1, new_external_copies=0, spectre_max=0, reservations_max=0,
         valid_until_unix=2_000_000_000, job_root=job_root, program_context_sha256=program,
         scratch_cap_bytes=2_097_152, stock_projection_bytes=1_908_736,
+        native_manifest_sha256="8" * 64, layout_manifest_sha256="9" * 64,
     ))
     preflight = _canonical(dict(
         status="OTA17_FIXED_BIAS_DUAL_HNL_PREFLIGHT", operation_id=operation,
@@ -76,9 +77,20 @@ def _artifacts(monkeypatch, ac=AC, dc=DC, *, dc_state=None):
         intent_sha256=_sha(intent), mode_evidence=modes, counter=counter,
         ocean=1, spectre=0, reservations=0, external_copies=0,
     ))
+    complete = _canonical({"receipt_sha256": _sha(receipt)})
+    closed = _canonical(dict(
+        status="OTA17_FIXED_BIAS_RAW_CUSTODY_LOCKED", source_reopen_result="OUTCOME_UNKNOWN",
+        diagnostic_operation_id=operation, source_writer=source._WRITER,
+        diagnostic_scope_sha256=_sha(scope), diagnostic_receipt_sha256=_sha(receipt),
+        diagnostic_complete_sha256=_sha(complete), diagnostic_native_stdout_sha256=_sha(logs),
+        saved_receipt_sha256=_sha(saved), writer_postflight_sha256=_sha(locked),
+        source_views=views, counter=counter, ocean=0, spectre=0, reservations=0, writes=0,
+        active_runner="8" * 64, active_layout="9" * 64, diagnostic_charge_bytes=966_656,
+        validated_modes={name: dict(mode, normalized_model_only_sha256="7" * 64)
+                         for name, mode in modes.items()},
+    ))
     return source.OtaCorrectedHnlArtifacts(
-        scope, preflight, receipt, _canonical({"receipt_sha256": _sha(receipt)}),
-        logs, saved, locked, failure, cdf,
+        scope, preflight, receipt, complete, logs, saved, locked, failure, cdf, closed,
     )
 
 
@@ -97,6 +109,7 @@ def _verify(artifacts, proof, ac=AC, dc=DC):
         artifacts, proof, ac, dc, expected_scope_sha256=_sha(artifacts.scope),
         expected_preflight_sha256=_sha(artifacts.preflight),
         expected_custody_sha256=_sha(artifacts.receipt), expected_electrical_sha256=_sha(proof),
+        expected_closed_custody_sha256=_sha(artifacts.closed_custody),
     )
 
 
@@ -108,6 +121,7 @@ def test_exact_native_receipt_join_preserves_original_unknown(monkeypatch):
     assert result.custody.mode_evidence.ac.raw_sha256 == _sha(AC)
     assert result.valid_until_unix == 2_000_000_000
     assert result.analysis_authorized is False
+    assert result.closed_custody_sha256 == _sha(artifacts.closed_custody)
 
 
 @pytest.mark.parametrize("bad", [
@@ -142,3 +156,20 @@ def test_original_bytes_and_complete_electrical_review_required(monkeypatch):
     del partial["dc_conditions_sha256"]
     with pytest.raises(ValueError, match="dc_conditions_sha256"):
         _verify(artifacts, _canonical(partial))
+
+
+@pytest.mark.parametrize(("field", "value", "error"), [
+    ("writes", 1, "ota_corrected_hnl_closed_custody"),
+    ("source_reopen_result", "VERIFIED", "ota_corrected_hnl_closed_custody"),
+    ("diagnostic_receipt_sha256", "0" * 64, "ota_corrected_hnl_closed_custody"),
+    ("raw_sha256", "0" * 64, "ota_corrected_hnl_closed_mode"),
+])
+def test_even_repinned_closed_custody_must_match(monkeypatch, field, value, error):
+    artifacts = _artifacts(monkeypatch)
+    document = json.loads(artifacts.closed_custody)
+    if field == "raw_sha256":
+        document["validated_modes"]["dc"][field] = value
+    else:
+        document[field] = value
+    with pytest.raises(ValueError, match=error):
+        _verify(replace(artifacts, closed_custody=_canonical(document)), _proof(artifacts, AC, DC))
