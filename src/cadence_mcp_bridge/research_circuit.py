@@ -8,7 +8,7 @@ from decimal import Decimal, localcontext
 from hashlib import sha256
 from typing import TYPE_CHECKING, Annotated, Literal, Self
 
-from pydantic import BeforeValidator, Field, model_validator
+from pydantic import BeforeValidator, ConfigDict, Field, model_validator
 
 from cadence_mcp_bridge._native_rendering import partition_input, static_fingerprint
 from cadence_mcp_bridge.domain_provisioning import _closed_document
@@ -133,6 +133,26 @@ class Length(VariableModel):
             return Decimal(self.value).scaleb({"m": 0, "um": -6, "nm": -9}[self.unit])
 
 
+_SPECTRE_DECIMAL = r"[0-9]{1,20}(?:\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?"
+JunctionLiteral = Annotated[str, Field(pattern=rf"^{_SPECTRE_DECIMAL}$", max_length=32)]
+
+
+class MosJunctions(VariableModel):
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    source_area: JunctionLiteral = Field(alias="as")
+    drain_area: JunctionLiteral = Field(alias="ad")
+    source_perimeter: JunctionLiteral = Field(alias="ps")
+    drain_perimeter: JunctionLiteral = Field(alias="pd")
+
+
+class MosGenerationObservation(VariableModel):
+    """Raw CDF and matching independently reopened OA junction literals."""
+
+    cdf_sha256: Digest
+    junctions: MosJunctions
+
+
 class MosGeometry(VariableModel):
     w: Length
     fw: Length
@@ -141,6 +161,9 @@ class MosGeometry(VariableModel):
     fingers: PositiveInt
     width_meaning: Literal["total_width", "finger_width", "cdf_defined"]
     source: Evidence
+    generation_observation: MosGenerationObservation | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def width_relationship(self) -> Self:
@@ -1042,8 +1065,24 @@ def _block_cdf_values(inst: Mos, devices: tuple[dict[str, object], ...]) -> dict
         or device["spectre"] != (("base", None, terminals), ("effective", None, terminals))
     ):
         raise ValueError("MOS Spectre D/G/S/B order is unsupported")
-    values = _mos_parameters(device)
     geometry = inst.geometry
+    observation = geometry.generation_observation
+    if observation is None:
+        values = _mos_parameters(device)
+    else:
+        values = _mos_parameters(
+            device, compare_widths=lambda total, finger: _cdf_length(total) == _cdf_length(finger)
+        )
+        junctions = observation.junctions.model_dump(by_alias=True)
+        rows = device["parameters"]
+        if (
+            not isinstance(rows, tuple)
+            or {name: values[name] for name in junctions} != junctions
+            or not values.keys()
+            <= {row[1] for row in rows if row[0] == "effective" and row[2] == "instData"}
+            or any(row[:2] == ("effective", "nf") for row in rows)
+        ):
+            raise ValueError("MOS target CDF differs from the retained OA values")
     spectre = inst.spectre
     if (
         spectre is None
@@ -1092,6 +1131,30 @@ procedure(m2BlockSchematicPort(cv name direction net x y)
                 fig~>libName=="basic" fig~>cellName=="iopin" fig~>viewName=="symbol"
                 fig~>pin==pin))
   m2BlockPoint(fig~>xy x y)))
+"""
+
+
+_TARGET_PROPERTY_CHECK = r"""
+procedure(m2BlockTargetProperties(inst cell name values emit)
+ let((cdf key expected prop param raw value oaType cdfType units)
+  cdf=m2Require(cdfGetInstCDF(inst))
+  foreach(entry values
+   key=car(entry) expected=cadr(entry)
+   prop=dbFindProp(inst key) param=cdfFindParamByName(cdf key)
+   raw=if(prop then prop~>value else nil)
+   value=if(param then param~>value else nil)
+   oaType=if(prop then prop~>valueType else nil)
+   cdfType=if(param then param~>type else nil)
+   units=if(param then param~>units else nil)
+   cond(
+    (key=="nf" m2Require(and(!prop !param)))
+    (key=="dfm" m2Require(and(!prop cdfType=="instData" !units value=="Minimum")))
+    (t m2Require(and(oaType=="string" cdfType=="instData" raw==expected value==expected
+      units==caddr(entry)))))
+   when(emit
+    printf("OTA17_TARGET_PROP|%s|%s|%s|%L|%L|%L|%L|%L\n"
+      cell name key oaType raw cdfType units value)))
+  t))
 """
 
 
@@ -1146,11 +1209,13 @@ def _block_generation_parts(
                 reopen.append(f"m2BlockTerminal(cv {args} {q(port.net)})")
         for inst in cell.instances:
             props: dict[str, str] = {}
+            observation = None
             if isinstance(inst, Child):
                 master_lib, master_cell = plan.output_library, inst.circuit
             elif isinstance(inst, Mos):
                 master_lib, master_cell = inst.master.library, inst.master.cell
-                pin = inst.master_source.sha256
+                observation = inst.geometry.generation_observation
+                pin = observation.cdf_sha256 if observation else inst.master_source.sha256
                 if (
                     inst.master.view != "symbol"
                     or master_lib == plan.output_library
@@ -1159,10 +1224,17 @@ def _block_generation_parts(
                     or inst.spectre is None
                     or inst.spectre.source.status != "confirmed"
                     or pin is None
-                    or pin != inst.geometry.source.sha256
-                    or pin != inst.spectre.source.sha256
+                    or inst.master_source.sha256 is None
+                    or inst.geometry.source.sha256 is None
+                    or inst.spectre.source.sha256 is None
+                    or (
+                        observation is None
+                        and (
+                            pin != inst.geometry.source.sha256 or pin != inst.spectre.source.sha256
+                        )
+                    )
                 ):
-                    raise ValueError("renderer requires a common confirmed per-MOS CDF pin")
+                    raise ValueError("renderer requires confirmed MOS evidence and target CDF")
                 if pin not in devices:
                     raw = cdf_frames.get(pin)
                     if (
@@ -1173,6 +1245,10 @@ def _block_generation_parts(
                         raise ValueError("missing or stale MOS CDF frame")
                     devices[pin] = parse_frame(raw)
                 props = _block_cdf_values(inst, devices[pin])
+                if observation and (
+                    len(devices[pin]) != 1 or not isinstance(devices[pin][0]["instance"], str)
+                ):
+                    raise ValueError("MOS target CDF must contain exactly one observed instance")
             else:
                 raise ValueError("renderer accepts only MOS and child cells")
             x, y = inst.placement.origin.x, inst.placement.origin.y
@@ -1183,13 +1259,26 @@ def _block_generation_parts(
             )
             create.extend(creation)
             placement_checks.append(placement_check)
-            reopen.append(
+            find_instance = (
                 f"inst=m2BlockInstance(cv {inst_name} {target} {x} {y} {len(inst.links)})"
             )
+            reopen.append(find_instance)
+            if observation is not None:
+                initial_checks.append(find_instance)
             for key, value in props.items():
                 create.append(f"m2Param(inst {q(key)} {q(value)})")
-                reopen.append(f"m2Property(cv {inst_name} {q(key)} {q(value)})")
-                reopen.append(f"m2BlockEffective(inst {q(key)} {q(value)})")
+                if observation is None:
+                    reopen.append(f"m2Property(cv {inst_name} {q(key)} {q(value)})")
+                    reopen.append(f"m2BlockEffective(inst {q(key)} {q(value)})")
+            if observation is not None:
+                entries = []
+                for key, value in props.items():
+                    units = q("lengthMetric") if key in ("w", "fw", "l", "ps", "pd") else "nil"
+                    entries.append(f"list({q(key)} {q(value)} {units})")
+                entries.extend(('list("nf" nil nil)', 'list("dfm" nil nil)'))
+                args = f"inst {name} {inst_name} list({' '.join(entries)})"
+                initial_checks.append(f"m2BlockTargetProperties({args} nil)")
+                reopen.append(f"m2BlockTargetProperties({args} t)")
             for link in inst.links:
                 args = f"{q(link.terminal)} {q(link.net)}"
                 create.append(f"m2Wire(cv inst {args})")
@@ -1256,12 +1345,19 @@ def render_owned_mos_block(
         verify_schematic_port_positions=verify_schematic_port_positions,
     )
 
+    has_target_properties = any(
+        isinstance(instance, Mos) and instance.geometry.generation_observation is not None
+        for circuit in plan.circuits
+        for instance in circuit.instances
+    )
+
     def script(body: list[str]) -> str:
         text = "\n".join(
             (
                 _PRELUDE,
                 _BLOCK_PRELUDE,
                 *([_SCHEMATIC_PORT_CHECK] if verify_schematic_port_positions else []),
+                *([_TARGET_PROPERTY_CHECK] if has_target_properties else []),
                 "procedure(m2BlockRun() let((cv inst net fig master)",
                 *body,
                 "t))",
@@ -1275,6 +1371,13 @@ def render_owned_mos_block(
         return text
 
     lib = _quote(plan.output_library)
+    if has_target_properties:
+        reopen.extend(
+            (
+                f'printf("OTA17_TARGET_PROPERTIES_END|{expected_plan_sha256}\\n")',
+                "drain(poport)",
+            )
+        )
     return MosBlockScripts(
         plan_sha256=expected_plan_sha256,
         generate=script(
@@ -1295,7 +1398,6 @@ def render_owned_mos_block(
 
 
 _SPECTRE_ID = r"[A-Za-z_][A-Za-z0-9_#-]{0,63}"
-_SPECTRE_DECIMAL = r"[0-9]{1,20}(?:\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?"
 _BLOCK_DEVICE = re.compile(rf"({_SPECTRE_ID}) \(([^()]{{1,8192}})\) ({_SPECTRE_ID})(?: (.+))?")
 _BLOCK_PRODUCT = re.compile(r"(?:([1-9][0-9]{0,5})|\(([1-9][0-9]{0,5})\)\*\(1\))")
 
@@ -1313,7 +1415,13 @@ def _netlist_multiplier(text: str) -> int:
     return int(found.group(1) or found.group(2))
 
 
-def _netlist_mos(name: str, model: str, nodes: list[str], options: str | None) -> NetlistedMos:
+def _netlist_mos(
+    name: str,
+    model: str,
+    nodes: list[str],
+    options: str | None,
+    observation: MosGenerationObservation | None = None,
+) -> NetlistedMos:
     pairs = [] if options is None else [token.split("=", 1) for token in options.split()]
     if any(len(pair) != 2 for pair in pairs) or len(nodes) != 4:
         raise ValueError("invalid MOS Spectre terminal or option list")
@@ -1327,6 +1435,17 @@ def _netlist_mos(name: str, model: str, nodes: list[str], options: str | None) -
     multiplicity = _netlist_multiplier(values["m"])
     if "simM" in values and _netlist_multiplier(values["simM"]) != multiplicity:
         raise ValueError("inconsistent MOS Spectre multiplicity")
+    if observation is not None:
+        expected_factor = f"({multiplicity})*(1)"
+        if (
+            any(
+                _cdf_length(values[key]) != _cdf_length(value)
+                for key, value in observation.junctions.model_dump(by_alias=True).items()
+            )
+            or values["m"] != expected_factor
+            or values.get("simM") != expected_factor
+        ):
+            raise ValueError("netlisted MOS junctions or multiplicity factors differ from target")
     d, g, s, b = nodes
     return NetlistedMos(
         name=name,
@@ -1347,15 +1466,20 @@ def project_mos_block_netlist(
 ) -> tuple[NetlistedCircuit, ...]:
     """Read and compare a bounded DUT-only hierarchical Spectre artifact.
 
-    Input authentication, model closure, junction acceptance and bench analysis
-    provenance remain caller responsibilities. Only the declared circuit body
-    and W/L/m projection are compared here.
+    Compare declared topology and W/L/m, plus junctions and both multiplicity
+    factors when the plan carries a per-target generation observation.
     """
     plan = _pinned_block(plan, expected_plan_sha256)
     if len(raw) > 1_048_576 or sha256(raw).hexdigest() != expected_netlist_artifact_sha256:
         raise ValueError("MOS block raw netlist digest or size mismatch")
     cells = {cell.name: cell for cell in _child_first(plan)}
     expected = {name: _netlisted_circuit(cell, cells) for name, cell in cells.items()}
+    observations = {
+        (cell.name, inst.name): inst.geometry.generation_observation
+        for cell in cells.values()
+        for inst in cell.instances
+        if isinstance(inst, Mos) and inst.geometry.generation_observation is not None
+    }
     _, _, analyses, static = partition_input(raw)  # type: ignore[no-untyped-call]
     if analyses:
         raise ValueError("MOS block projection requires a DUT-only Spectre artifact")
@@ -1396,7 +1520,8 @@ def project_mos_block_netlist(
                 raise ValueError("parameterized child subcircuit is unsupported")
             children.append(NetlistedChild(name=name, circuit=model, terminals=tuple(terminals)))
         else:
-            mos.append(_netlist_mos(name, model, terminals, options))
+            observation = observations.get((current, name))
+            mos.append(_netlist_mos(name, model, terminals, options, observation))
         if len(children) + len(mos) > 128:
             raise ValueError("MOS block Spectre instance bound exceeded")
     if (

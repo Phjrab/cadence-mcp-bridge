@@ -98,6 +98,7 @@ class ResearchBenchPlan(VariableModel):
     primitive_cdf_sha256: Digest | None = None
     signed_ac_evidence_sha256: Digest | None = None
     signed_ac_vsin_pair: bool = False
+    signed_ac_vsin_dc: bool = Field(default=False, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def signed_ac_requires_primitive_cdf(self) -> ResearchBenchPlan:
@@ -105,6 +106,8 @@ class ResearchBenchPlan(VariableModel):
             raise ValueError("signed AC requires a verified primitive CDF")
         if self.signed_ac_vsin_pair and self.signed_ac_evidence_sha256 is None:
             raise ValueError("vsin pair requires signed AC evidence")
+        if self.signed_ac_vsin_dc and not self.signed_ac_vsin_pair:
+            raise ValueError("vsin DC verification requires the reviewed differential pair")
         return self
 
     @model_serializer(mode="wrap")
@@ -302,8 +305,12 @@ def _check_vsin_pair(bench: Circuit, root: Circuit, dut: Child) -> None:
 
 
 def _check_bench_conditions(plan: ResearchBenchPlan, conditions: BenchNetlistConditions) -> None:
-    if plan.signed_ac_vsin_pair and tuple(kind for kind, _ in conditions.analyses) != ("ac",):
-        raise ValueError("vsin differential stimulus is registered for AC only")
+    analyses = tuple(kind for kind, _ in conditions.analyses)
+    if plan.signed_ac_vsin_pair and analyses != ("ac",):
+        if not plan.signed_ac_vsin_dc:
+            raise ValueError("vsin differential stimulus is registered for AC only")
+        if analyses not in (("dc",), ("dc", "ac")):
+            raise ValueError("vsin bench conditions differ from the declared DC/AC profile")
 
 
 def _check_primitive_cdf(
@@ -396,6 +403,8 @@ def plan_research_bench(
         primitive_cdf_sha256=primitive_cdf_sha256,
         signed_ac_evidence_sha256=signed_ac_evidence_sha256,
         signed_ac_vsin_pair=signed_ac_vsin_pair,
+        signed_ac_vsin_dc=signed_ac_vsin_pair
+        and tuple(analysis.kind for analysis in definition.analyses) == ("dc", "ac"),
     )
 
 

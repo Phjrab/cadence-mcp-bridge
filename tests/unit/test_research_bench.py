@@ -663,6 +663,26 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
     with pytest.raises(ValueError, match="registered for AC only"):
         verify(candidate, conditions.model_copy(update={"analyses": (("tran", "stop=1n"),)}))
 
+    with pytest.raises(ValueError, match="registered for AC only"):
+        verify(candidate, conditions.model_copy(update={"analyses": (("dc", "annotate=status"),)}))
+    dc_pair = signed.model_copy(update={"signed_ac_vsin_dc": True})
+    dc = conditions.model_copy(update={"analyses": (("dc", "annotate=status"),)})
+    candidate_dc = b"\n".join(
+        line if b" ac " not in line else b"dcOp dc annotate=status"
+        for line in candidate.splitlines()
+    )
+    verify_research_bench_netlist(
+        dc_pair,
+        dut,
+        candidate_dc,
+        raw,
+        expected_plan_sha256=canonical_digest(dc_pair),
+        expected_netlist_sha256=sha256(candidate_dc).hexdigest(),
+        expected_dut_netlist_sha256=sha256(raw).hexdigest(),
+        conditions=dc,
+        expected_conditions_sha256=canonical_digest(dc),
+    )
+
 
 def test_fixed_dc_equivalence_keeps_original_statement_scope_and_block_position() -> None:
     bench, dut, _, conditions, dut_raw, full = _declarative_fixture()
