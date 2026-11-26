@@ -16,6 +16,7 @@ from cadence_mcp_bridge import m2_cdf
 from cadence_mcp_bridge.candidate_execution import PmosDefaultChangeRequest
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
+from cadence_mcp_bridge.mos_wlm_skill import render_mos_wlm_skill
 from cadence_mcp_bridge.native_diagnostics import OperationId
 from cadence_mcp_bridge.onboarding import _local_path
 from cadence_mcp_bridge.operator_confirmation import _ssh
@@ -27,6 +28,7 @@ from cadence_mcp_bridge.registered_mos_edit import (
 )
 from cadence_mcp_bridge.registered_mos_sizing import (
     MosSizingBounds,
+    MosSizingCount,
     MosSizingDimensions,
     MosSizingPlan,
     MosSizingSupport,
@@ -43,6 +45,7 @@ from cadence_mcp_bridge.registered_mos_sizing import (
 from cadence_mcp_bridge.registered_mos_transport import (
     _ASSET,
     _CLAIM,
+    _GUEST_SOURCE_LIMIT,
     Phase,
     _Authority,
     _encode,
@@ -83,6 +86,9 @@ class _Slot(VariableModel):
     slot_manifest_sha256: Digest | None = None
 
 
+_AdmittedMultipliers = Annotated[tuple[MosSizingCount, ...], Field(min_length=1, max_length=2)]
+
+
 class _SizingEnrollment(VariableModel):
     schema_version: Literal[4]
     route: Literal["registered_mos_sizing"]
@@ -101,11 +107,13 @@ class _SizingEnrollment(VariableModel):
     width_field: Literal["w", "fw"] | None = None
     admitted_w: MosSizingBounds | None = None
     admitted_l: MosSizingBounds | None = None
+    admitted_m: _AdmittedMultipliers | None = None
     valid_until_unix: Annotated[int, Field(gt=0)]
     slots: Annotated[tuple[_Slot, ...], Field(min_length=1, max_length=8)]
 
     @model_validator(mode="after")
     def distinct_slots(self) -> _SizingEnrollment:
+        support = self.route_qualification.support
         ids = {
             id_ for slot in self.slots for id_ in (slot.operation_id, slot.owned_copy_operation_id)
         }
@@ -123,7 +131,26 @@ class _SizingEnrollment(VariableModel):
             )
         ):
             raise ValueError("MOS sizing enrollment slots or renderer are inconsistent")
+        if support.lifecycle == "headless_wlm_v1":
+            admitted = self.admitted_m or ()
+            if (
+                self.width_field not in (None, "w")
+                or any(slot.slot_manifest_sha256 is not None for slot in self.slots)
+                or (self.admitted_m is None) != (support.m is None)
+                or len(set(admitted)) != len(admitted)
+                or not set(admitted).issubset(support.m or ())
+            ):
+                raise ValueError("MOS W/L/m enrollment axes or exact-scope mode differ")
+        elif self.admitted_m is not None:
+            raise ValueError("MOS multiplier requires the W/L/m lifecycle")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_multiplier(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.admitted_m is None:
+            document.pop("admitted_m", None)
+        return document
 
 
 class _SizingScope(VariableModel):
@@ -158,12 +185,20 @@ class MosSizingRegistrationInfo(VariableModel):
     support: MosSizingSupport
     admission_w: MosSizingBounds | None
     admission_l: MosSizingBounds | None
+    admission_m: _AdmittedMultipliers | None = None
     current: MosSizingDimensions
     operation_ids: tuple[OperationId, ...]
     valid_until_unix: int
-    multiplier: Literal[1] = 1
+    multiplier: Literal[1, 6] = 1
     fingers: Literal[1] = 1
     execution_authorized: Literal[False] = False
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_multiplier(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        document: dict[str, Any] = handler(self)
+        if self.admission_m is None:
+            document.pop("admission_m", None)
+        return document
 
 
 class MosSizingPreview(VariableModel):
@@ -179,15 +214,17 @@ class MosSizingLookup(VariableModel):
     result: RegisteredMosSizingResult | None = None
 
 
-def _asset(raw: bytes, digest: str) -> bytes:
+def _asset(raw: bytes, digest: str, *, max_bytes: int = 65_536) -> bytes:
     _require(
-        0 < len(raw) <= 65_536 and raw.isascii() and _sha(raw) == digest,
+        0 < len(raw) <= max_bytes and raw.isascii() and _sha(raw) == digest,
         "registered_mos_sizing_asset",
     )
     return raw
 
 
 def _hash_child_asset(reg: _SizingEnrollment) -> tuple[str, str | None]:
+    if reg.route_qualification.support.lifecycle == "headless_wlm_v1":
+        return "_mos_wlm_callback.py", getattr(guest_contract, "WLM_HASH_CHILD_SHA256", None)
     instance = reg.route_qualification.target.instance
     if (instance.instance_path, instance.master_cell, instance.property_name) == (
         "DUT/MP", "pmos1v", "w"
@@ -256,7 +293,9 @@ class _SizingPhaseProvider(_RegisteredMosPhaseProvider):
         )
         _document(safety)
         package = files("cadence_mcp_bridge")
-        guest = _asset(package.joinpath(_ASSET).read_bytes(), reg.guest_sha256)
+        guest = _asset(
+            package.joinpath(_ASSET).read_bytes(), reg.guest_sha256, max_bytes=_GUEST_SOURCE_LIMIT
+        )
         support = _asset(
             package.joinpath("_amp_pm0_default_phase.py").read_bytes(), reg.support_sha256
         )
@@ -336,12 +375,20 @@ class RegisteredMosSizing:
             "registered_mos_sizing_evidence_directory",
         )
         package = files("cadence_mcp_bridge")
+        if reg.route_qualification.support.lifecycle == "headless_wlm_v1":
+            renderer_name = "mos_wlm_skill.py"
+            renderer_pin = getattr(guest_contract, "WLM_RENDERER_SHA256", None)
+        else:
+            renderer_name = "mos_wl_skill.py"
+            renderer_pin = guest_contract.SIZING_RENDERER_SHA256
         child_name, child_pin = _hash_child_asset(reg)
-        _asset(package.joinpath("mos_wl_skill.py").read_bytes(), reg.renderer_sha256)
-        _asset(package.joinpath(_ASSET).read_bytes(), reg.guest_sha256)
+        _asset(package.joinpath(renderer_name).read_bytes(), reg.renderer_sha256)
+        _asset(
+            package.joinpath(_ASSET).read_bytes(), reg.guest_sha256, max_bytes=_GUEST_SOURCE_LIMIT
+        )
         _require(
             getattr(guest_contract, "SIZING_ROUTE", None) == reg.route
-            and reg.renderer_sha256 == guest_contract.SIZING_RENDERER_SHA256
+            and reg.renderer_sha256 == renderer_pin
             and reg.hash_child_sha256 == child_pin
             and reg.support_sha256 == guest_contract.SUPPORT_SHA256
             and reg.collector_sha256 == guest_contract.CDF_SHA256,
@@ -370,6 +417,7 @@ class RegisteredMosSizing:
 
     def inspect(self) -> MosSizingRegistrationInfo:
         route = self._reg.route_qualification
+        current = _observed_dimensions(route.before, include_m=route.support.lifecycle is not None)
         return MosSizingRegistrationInfo(
             enrollment_sha256=self.enrollment_sha256,
             baseline_sha256=route.baseline.revision_sha256,
@@ -377,7 +425,9 @@ class RegisteredMosSizing:
             support=route.support,
             admission_w=self._reg.admitted_w,
             admission_l=self._reg.admitted_l,
-            current=_observed_dimensions(route.before),
+            admission_m=self._reg.admitted_m,
+            current=current,
+            multiplier=current.m or 1,
             operation_ids=tuple(slot.operation_id for slot in self._reg.slots),
             valid_until_unix=self._reg.valid_until_unix,
         )
@@ -408,17 +458,31 @@ class RegisteredMosSizing:
                 if admission is None:
                     raise ValueError("MOS sizing axis is not admitted by the enrollment")
                 admission.check(value)
+        if plan.requested.m is not None:
+            _require(
+                plan.requested.m in (reg.admitted_m or ()),
+                "registered_mos_sizing_multiplier_admission",
+            )
         length = plan.expected.l.value if "l" in plan.changed else None
         width = plan.expected.w.value if "w" in plan.changed else None
         master = route.target.instance.master_cell
         if master not in ("nmos1v", "pmos1v"):
             raise ValueError("unsupported sizing master")
-        adapter = render_mos_wl_skill(
-            cast(Literal["nmos1v", "pmos1v"], master),
-            length_nm=length,
-            width_nm=width,
-            width_field=reg.width_field if width is not None else None,
-        )
+        master_cell = cast(Literal["nmos1v", "pmos1v"], master)
+        if route.support.lifecycle == "headless_wlm_v1":
+            adapter = render_mos_wlm_skill(
+                master_cell,
+                length_nm=length,
+                width_nm=width,
+                multiplier=plan.expected.m if "m" in plan.changed else None,
+            )
+        else:
+            adapter = render_mos_wl_skill(
+                master_cell,
+                length_nm=length,
+                width_nm=width,
+                width_field=reg.width_field if width is not None else None,
+            )
         sizing = _canonical(
             {
                 "adapter": adapter.decode("ascii"),

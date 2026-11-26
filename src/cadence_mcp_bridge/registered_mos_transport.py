@@ -60,6 +60,7 @@ _EDIT: Phase = "EDIT_SAVE"
 _REOPEN: Phase = "INDEPENDENT_REOPEN_NETLIST"
 _CLAIM = "registered-mos-intent.private.json"
 _ASSET = "_registered_mos_edit_phase.py"
+_GUEST_SOURCE_LIMIT = 80 * 1024
 _LIMIT = 524_288
 
 
@@ -120,8 +121,11 @@ def _fixed_assets(scope: _Scope) -> tuple[bytes, bytes, bytes]:
     digest_pins = (scope.guest_sha256, guest_contract.SUPPORT_SHA256, guest_contract.CDF_SHA256)
     _require(
         all(
-            0 < len(raw) <= 65_536 and _sha(raw) == digest and raw.isascii()
-            for raw, digest in zip((guest, support, collector), digest_pins, strict=True)
+            0 < len(raw) <= limit and _sha(raw) == digest and raw.isascii()
+            for raw, digest, limit in zip(
+                (guest, support, collector), digest_pins, (_GUEST_SOURCE_LIMIT, 65_536, 65_536),
+                strict=True,
+            )
         ),
         "registered_mos_fixed_assets",
     )
