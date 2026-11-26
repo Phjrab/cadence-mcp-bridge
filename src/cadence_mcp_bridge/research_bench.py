@@ -309,8 +309,8 @@ def _check_bench_conditions(plan: ResearchBenchPlan, conditions: BenchNetlistCon
     if plan.signed_ac_vsin_pair and analyses != ("ac",):
         if not plan.signed_ac_vsin_dc:
             raise ValueError("vsin differential stimulus is registered for AC only")
-        if analyses not in (("dc",), ("dc", "ac")):
-            raise ValueError("vsin bench conditions differ from the declared DC/AC profile")
+        if analyses != ("dc",):
+            raise ValueError("vsin bench verification requires one registered DC or AC analysis")
 
 
 def _bench_analyses_match(

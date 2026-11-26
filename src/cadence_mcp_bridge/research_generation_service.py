@@ -23,6 +23,7 @@ from cadence_mcp_bridge.research_circuit import (
     MosBlockStageReceipt,
     OwnedMosBlockPlan,
     _check_mos_phase_stdout,
+    _check_mos_target_stdout,
     verify_mos_block_handoff,
 )
 from cadence_mcp_bridge.variable_contracts import (
@@ -212,6 +213,10 @@ class RegisteredResearchGeneration:
                 else (scripts.reopen, scripts.reopen_markers)
             )
             _check_mos_phase_stdout(capture.stdout, markers, script, row)
+            if phase == "reopen":
+                _check_mos_target_stdout(
+                    self._plan, capture.stdout, row.artifact_sha256, self._cdf_frames
+                )
         return row
 
     def _handoff(

@@ -1685,6 +1685,50 @@ def _check_mos_phase_stdout(
         raise ValueError("MOS phase completion marker or executed script mismatch")
 
 
+def _check_mos_target_stdout(
+    plan: OwnedMosBlockPlan,
+    raw: bytes,
+    artifact_sha256: Digest,
+    cdf_frames: Mapping[str, bytes],
+) -> None:
+    targets = [
+        (cell.name, instance, target)
+        for cell in plan.circuits
+        for instance in cell.instances
+        if isinstance(instance, Mos)
+        if (target := instance.geometry.generation_observation) is not None
+    ]
+    if not targets:
+        return
+    from cadence_mcp_bridge.ota_reopen_evidence import parse_ota_reopen_properties
+
+    if any(cell != plan.root for cell, _, _ in targets):
+        raise ValueError("OTA target readback requires a flat root")
+    reopened = parse_ota_reopen_properties(
+        raw,
+        stdout_sha256=artifact_sha256,
+        plan_sha256=canonical_digest(plan),
+        cell=plan.root,
+        instance_names=[instance.name for _, instance, _ in targets],
+    )
+    for _, instance, target in targets:
+        frame = cdf_frames.get(target.cdf_sha256)
+        if frame is None or sha256(frame).hexdigest() != target.cdf_sha256:
+            raise ValueError("missing or stale OTA target CDF")
+        values = _block_cdf_values(instance, parse_frame(frame))
+        actual = {
+            name: (entry.oa_value, entry.cdf_units)
+            for name, entry in reopened[instance.name].items()
+            if name not in ("dfm", "nf")
+        }
+        expected = {
+            name: (value, "lengthMetric" if name in ("w", "fw", "l", "ps", "pd") else None)
+            for name, value in values.items()
+        }
+        if actual != expected:
+            raise ValueError("independent OTA reopen properties differ from planned instance")
+
+
 def _dut_subcircuits(static: list[str], expected: set[str]) -> dict[str, tuple[str, ...]]:
     """Retain exact normalized DUT definitions, including subcircuit port order."""
     scopes: list[str] = []
@@ -1853,6 +1897,7 @@ def verify_mos_block_handoff(
         raw_netlist=raw_netlist,
         full_netlist=full_netlist,
     )
+    _check_mos_target_stdout(plan, reopen_stdout, reopened.artifact_sha256, cdf_frames)
     verify_research_bench_netlist(
         bench_plan,
         plan,

@@ -25,6 +25,7 @@ from cadence_mcp_bridge.research_circuit import (
     Circuit,
     OwnedMosBlockPlan,
     ResearchCircuit,
+    _check_mos_target_stdout,
     plan_owned_mos_block,
 )
 from cadence_mcp_bridge.variable_contracts import canonical_digest
@@ -327,6 +328,58 @@ def _declarative_fixture() -> tuple[
         raw,
         full,
     )
+
+
+def test_target_reopen_requires_complete_original_values_for_named_ota_instances() -> None:
+    _, plan, frames, _, _, _ = _declarative_fixture()
+    _, frame = inverter_fixture()
+    targets = {}
+    for cell in ("N", "P"):
+        header = f'DEVICE|"TestPdk"|"{cell}"'.encode()
+        start = frame.index(header)
+        end = frame.index(b"END\n", start) + len(b"END\n")
+        record = frame[start:end].replace(header + b"|nil", header + b'|"Measured"')
+        target = b"M2_CDF_V2\n" + record + b"COMPLETE\n"
+        pin = sha256(target).hexdigest()
+        frames[pin] = target
+        targets[cell] = pin
+    raw_plan = plan.model_dump(mode="json")
+    root = raw_plan["circuits"][0]
+    rows = []
+    for device in root["instances"]:
+        geometry = device["geometry"]
+        geometry["generation_observation"] = {
+            "cdf_sha256": targets[device["master"]["cell"]],
+            "junctions": {"as": "1f", "ad": "1f", "ps": "1u", "pd": "1u"},
+        }
+        width = geometry["w"]["value"] + "n"
+        values = {
+            "w": (width, "lengthMetric"),
+            "fw": (width, "lengthMetric"),
+            "l": ("100n", "lengthMetric"),
+            "m": ("1", None),
+            "fingers": ("1", None),
+            "model": (device["spectre"]["model"], None),
+            "as": ("1f", None),
+            "ad": ("1f", None),
+            "ps": ("1u", "lengthMetric"),
+            "pd": ("1u", "lengthMetric"),
+        }
+        row = f"OTA17_TARGET_PROP|{root['name']}|{device['name']}|"
+        for key, (value, units) in values.items():
+            unit = json.dumps(units) if units is not None else "nil"
+            rows.append(f'{row}{key}|"string"|"{value}"|"instData"|{unit}|"{value}"')
+        rows.extend((row + "nf|nil|nil|nil|nil|nil", row + 'dfm|nil|nil|"instData"|nil|"Minimum"'))
+    plan = OwnedMosBlockPlan.model_validate_json(json.dumps(raw_plan))
+    rows.append(f"OTA17_TARGET_PROPERTIES_END|{canonical_digest(plan)}")
+    stdout = ("\n".join(rows) + "\n").encode()
+    _check_mos_target_stdout(plan, stdout, sha256(stdout).hexdigest(), frames)
+    for candidate in (
+        stdout[stdout.index(b"\n") + 1 :],
+        stdout.replace(b'|"1f"|"instData"|nil|"1f"', b'|"2f"|"instData"|nil|"2f"', 1),
+    ):
+        with pytest.raises(ValueError, match="incomplete OTA|differ from planned"):
+            _check_mos_target_stdout(plan, candidate, sha256(candidate).hexdigest(), frames)
 
 
 def test_declarative_bench_renders_17_mos_and_compares_differential_input() -> None:
