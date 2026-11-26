@@ -2,21 +2,21 @@
 
 첫 대상은 17 MOS self-cascode OTA입니다. 후속 연구는 GPDK090에서 진행하며, 첫 입력 후보는 [OTA와 PDK 매핑 초안](ota-17mos.draft.json)에 있습니다. `null`은 미확정입니다. 이 파일은 연구 입력 수집 양식이며 생성기나 MCP의 실행 스키마에 속하지 않습니다. 기존 14 MOS AMP와 별도의 대상입니다.
 
-Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인쇄 47쪽, PDF 57쪽)와 Table 7(인쇄 48쪽, PDF 58쪽)을 직접 대조했습니다. 초안에 17개 소자의 D/G/S/B, 역할, W/L과 배수를 기록했습니다. PM6은 논문 표에서 **W 16 µm, L 1 µm, 배수 6**입니다. Finger 수와 GPDK090에서의 유효 치수는 미확정입니다. [ITESO 원문](https://rei.iteso.mx/items/5b2a7fc8-347e-4113-9cfc-93c87913ab34)
+Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인쇄 47쪽, PDF 57쪽)와 Table 7(인쇄 48쪽, PDF 58쪽)을 직접 대조했습니다. 초안에 17개 소자의 D/G/S/B, 역할, W/L과 배수를 기록했습니다. PM6은 논문 표에서 **W 16 µm, L 1 µm, 배수 6**입니다. 논문에서 finger 수는 확인되지 않았습니다. GPDK090에서 finger를 1로 선택한 목표 치수 8개는 비OTA 사본에서 확인했습니다. [ITESO 원문](https://rei.iteso.mx/items/5b2a7fc8-347e-4113-9cfc-93c87913ab34)
 
 ## 회로도에서 확인한 연결
 
 - 외부 연결은 `inp`, `inn`, `out`, `VDD`, `VSS`입니다. 그림에는 OTA 내부 자식 블록이 없습니다. `Vx`와 `Vy`는 그림의 라벨이고, 나머지 내부 이름은 보이는 배선을 구분하기 위해 붙였습니다. D/S 명칭은 심볼 방향과 레일에서 읽었으므로 목표 셀의 단자 순서를 다시 대조해야 합니다. B 배선은 논문 그림에서 PMOS가 VDD, NMOS가 VSS에 연결됩니다. 목표 PDK에서 이 벌크 연결을 지원하는지는 별도 확인 사항입니다.
 - NM0/NM8과 NM1/NM9는 차동 입력의 두 self-cascode 가지입니다. PM2/PM4와 PM3/PM5는 미러 부하이고, 오른쪽 가지가 PM7/PM6의 공통 게이트를 구동합니다. PM8은 바이어스 공급의 다이오드 연결이며, NM6/NM2는 기준 가지, NM7/NM3은 꼬리 전류 가지, NM11/NM10은 출력 전류 싱크입니다. Fig. 2-2와 §2.3.3은 카스코드의 출력저항 역할과 공통 소스 두 번째 단을 설명합니다.
 - 같은 게이트를 공유하는 쌍에서 소스 쪽 선형 동작과 드레인 쪽 포화 동작은 동작점에서 확인할 가설입니다. 다이오드 연결 소자는 정상적으로 켜져 있는지 확인합니다. 모델에 맞는 전압 부호와 여유, 실제 `id/gm/gds/vgs/vds/vdsat` 및 모델의 `region` 정의를 함께 봅니다.
-- Source9와 BBE3에서 `gpdk090/nmos1v/symbol`과 `gpdk090/pmos1v/symbol`의 D/G/S/B 이름과 실제 Spectre 단자 순서를 확인했습니다. 모델은 각각 `gpdk090_nmos1v`와 `gpdk090_pmos1v`이며 BBE3 Netlist의 모델 section은 `NN`입니다. Source9의 확인된 W/FW·L은 NMOS 120/120·100 nm, PMOS 350/350·100 nm였습니다. 별도 AMP PM0에서는 120/120·1000 nm를 확인했습니다. 이 세 점의 배수와 finger는 모두 1입니다. CDF에서 `simW`는 `fw`, `simM`은 `m × fingers`에 대응했습니다. OTA 치수별 허용 범위, 다중 finger의 W/FW 관계, PM6 배수 6 및 해당 Netlist 값은 별도 확인이 필요합니다.
+- Source9와 BBE3에서 `gpdk090/nmos1v/symbol`과 `gpdk090/pmos1v/symbol`의 D/G/S/B 이름과 실제 Spectre 단자 순서를 확인했습니다. 모델은 각각 `gpdk090_nmos1v`와 `gpdk090_pmos1v`이며 BBE3 Netlist의 모델 section은 `NN`입니다. Source9의 확인된 W/FW·L은 NMOS 120/120·100 nm, PMOS 350/350·100 nm였습니다. 별도 AMP PM0에서는 120/120·1000 nm를 확인했습니다. 이 세 점의 배수와 finger는 모두 1입니다. CDF에서 `simW`는 `fw`, `simM`은 `m × fingers`에 대응했습니다. 비OTA의 PM6 대응점에서도 `m=simM=(6)*(1)`을 확인했습니다. PDK 전체 허용 범위와 다중 finger는 별도 확인 사항입니다.
 - BBE3의 VDD 1 V, Vin 0 V에서 NMOS·PMOS의 원시 `region`은 각각 3·1이었습니다. 각 코드의 모델별 의미는 미확정입니다.
 
 ## 연구 인계
 
 - **준비된 경로** — 검증 표는 실제 Cadence에서 확인한 2 MOS 인버터와 14 MOS AMP의 결과를 다룹니다. 17 MOS OTA는 논문과 PDK 매핑을 대조하는 준비 단계입니다.
 
-- **OTA 정적 선택** — 17개 R0 소자 위치, 포트 다섯 개, 심볼, 고정 소스와 부하의 bench 구성을 정했습니다. 첫 DC/AC 후보는 VDD 1 V, 입력 공통모드 0.5 V, 부하 1 pF, 27 °C이며 AC는 1 Hz–1 GHz, decade당 16점입니다. 대상 소자의 GPDK090 치수·벌크·Netlist 대응과 bench primitive 증거는 확인이 남았습니다.
+- **OTA 정적 선택** — 17개 R0 소자 위치, 포트 다섯 개, 심볼, 고정 소스와 부하의 bench 구성을 정했습니다. 첫 DC/AC 후보는 VDD 1 V, 입력 공통모드 0.5 V, 부하 1 pF, 27 °C이며 AC는 1 Hz–1 GHz, decade당 16점입니다. 소자 치수 근거를 정적 입력에 연결했습니다. 실제 OTA의 벌크·Netlist 대응과 선택한 bench primitive는 별도 확인합니다.
 - **호출 순서** — 설치 MCP에서 `tools/list` → 회로 정의 검증 → MOS 블록 계획 → 지원되는 Cadence 경로에서 작업 사본 생성·저장 → 독립 재개방 및 Netlist 대조 → 대상과 분석 reader 등록 순으로 진행합니다. 실행 범위가 확정되면 분석 계획 → 제출 → 상태 → 결과 → 같은 작업 ID로 재조회 순으로 확인합니다. 첫 OTA는 DC/OP와 AC부터 시작합니다.
 
 ## 블록 순서와 진입 조건
@@ -313,17 +313,17 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 | --- | --- | --- | --- |
 | 등록 `pmos1v` 기본값 복원 | 검토된 W/FW, L 또는 동시 변경의 계획·적용·재조회 | 등록된 단일 finger 사본에서 검토된 override 제거 | 실제 Source9에서 W/FW 350 → 120 nm, L 100 nm 유지, 저장·독립 재개방·Netlist 확인. 별도 AMP 고정 편집은 20 µm → 120 nm, L 1 µm 유지. L 복원과 동시 복원의 새 실제 증거는 대기 중입니다. |
 | 등록 `nmos1v`·`pmos1v`의 `SET_EXPLICIT` | 같은 master의 목표 값에 대한 독립 OA·CDF·Spectre Netlist 증거를 등록한 뒤 계획·적용·재조회 | 개발 설치본의 단일 finger 경로가 증거에 있는 W/FW/L과 검증된 종속 속성을 기록합니다. | 설치본의 로컬 검증을 통과했습니다. 지원 대상과 기대값은 등록된 조합에 한정됩니다. |
-| 단일 finger의 `m` 명시 설정 | `m`과 `fingers`를 별도로 대조합니다. 치수와 `m`을 함께 바꿀 때 모든 변경을 한 작업으로 등록합니다. | 등록된 m 변경을 W/FW/L과 함께 한 작업으로 적용할 수 있습니다. `fingers`는 1로 유지하며 `nf` 편집은 지원하지 않습니다. | W/L과 m=6 동시 변경은 합성 입력에서 검증했습니다. 실제 PM6 목표 조합은 미검증입니다. |
+| 단일 finger의 `m` 명시 설정 | `m`과 `fingers`를 별도로 대조합니다. 치수와 `m`을 함께 바꿀 때 모든 변경을 한 작업으로 등록합니다. | 등록된 m 변경을 W/FW/L과 함께 한 작업으로 적용할 수 있습니다. `fingers`는 1로 유지하며 `nf` 편집은 지원하지 않습니다. | 후속 PDK adapter의 공통 비OTA 사본에서 PM6 대응 W/FW 16 µm, L 1 µm, m=6을 저장·재개방·Netlist로 확인했습니다. |
 
-실제 Cadence에서 보정용 회로의 MOS 8개, 포트 도형 4개, 연결 및 DUT·테스트 회로의 기준 상태를 확인했습니다. 치수 변경은 0건이며 새 목표 조합은 **0/8 검증**입니다. 보존된 GPDK090 MOS 넷리스트 문장 438개 가운데 목표 master와 W/L이 일치하는 사례는 없었습니다.
+초기 보정 작업에서는 실제 Cadence의 MOS 8개, 포트 도형 4개, 연결 및 DUT·테스트 회로의 기준 상태를 확인했습니다. 당시 치수 변경은 0건이었고 보존된 GPDK090 MOS 넷리스트 문장 438개에는 목표 master와 W/L이 일치하는 사례가 없었습니다.
 
 초기 `SET_EXPLICIT` 조사에서 설치된 IC6.1.5의 CDF 갱신 함수는 기존 유효값을 저장하거나 복사하는 용도로 확인됐습니다. 당시 검토한 기본 갱신 API에서는 새 치수의 접합 면적·둘레를 계산하는 비대화형 함수를 확인하지 못했습니다. 기존 `SET_EXPLICIT`는 정확한 목표 조합의 저장 OA 값, 유효 CDF 값과 같은 revision의 독립 재개방·Spectre Netlist 증거를 사용합니다. 이후 프로젝트의 자체 adapter가 아래 Source9 L200에서 설치 PDK의 계산 경로를 검증했습니다.
 
-별도 읽기 전용 점검에서 CDF 메타데이터 60행을 독립 검증했습니다. NMOS와 PMOS 모두 기본·유효 CDF에 `formInitProc`와 `doneProc`가 있으며 각각의 식별자가 일치했습니다. 검토한 공개 v1.16 보조 도구에는 `doneProc` 실행 경로가 없어 실제 쓰기 호환성은 미확인입니다. 이 점검에서 콜백 실행·치수 변경·시뮬레이션은 0건이며, 목표 치수 검증은 **0/8**입니다.
+초기 읽기 전용 점검에서 CDF 메타데이터 60행을 독립 검증했습니다. NMOS와 PMOS 모두 기본·유효 CDF에 `formInitProc`와 `doneProc`가 있으며 각각의 식별자가 일치했습니다. 검토한 공개 v1.16 보조 도구에는 `doneProc` 실행 경로가 없어 실제 쓰기 호환성을 확인하지 못했습니다. 이 점검에서 콜백 실행·치수 변경·시뮬레이션은 0건이었습니다.
 
 #### 신규 W/L 후보의 편집과 비교
 
-신규 개발 경로는 프로젝트의 비대화형 adapter로 등록된 PDK 콜백을 사용합니다. 호스트는 W/L을 표현할 수 있고, 실제 변경이 검증된 범위는 Source9 비OTA 사본의 `DUT/MN` (`gpdk090/nmos1v`)에서 L을 100 nm에서 200 nm로 바꾼 한 건입니다. 확인된 시작값은 W/FW 120 nm, L 100 nm, `m=1`, `fingers=1`입니다. PMOS 폭 변경의 별도 시도는 아래 표에 기록했습니다. 배수 변경과 PDK의 전체 허용 범위는 검증 대기입니다.
+신규 개발 경로는 프로젝트의 비대화형 adapter로 등록된 PDK 콜백을 사용합니다. Source9 비OTA L200 경로의 시작값은 W/FW 120 nm, L 100 nm, `m=1`, `fingers=1`입니다. 후속 비OTA 작업에서 두 master의 W/L 복합 변경과 공통 사본에서의 PMOS m=6도 확인했습니다. 검증된 연구 치수는 아래 별도 표에 있습니다.
 
 | 후보 | 확인된 상태 |
 | --- | --- |
@@ -333,7 +333,7 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 L200 편집 작업 ID는 `53cbd04e-0106-48c6-be9a-560622bce48f`, 실제 Netlist SHA-256은 `25c25e5a49f54932456bea607f4c02fcf18e97b19d2945b481814a8d7fee3610`입니다.
 
-PMOS 편집 작업 ID는 `4bc032e5-29c0-4418-8c8c-bb9be5c3f4d6`입니다. 사본의 백업·잠금 흔적, 원본 Source9 및 편집 전의 예약 기록 147건을 보존했습니다. 사용자 Codex 앱의 W3000 동일 ID 조회는 설치본 응답과 일치했습니다. 결과는 `OUTCOME_UNKNOWN`, 관측값 없음이며 새 실행·시뮬레이션·예약은 모두 0건이었습니다. 이 PMOS 후보의 성능 측정은 없으며 연구 목표 치수는 0/8입니다.
+PMOS 편집 작업 ID는 `4bc032e5-29c0-4418-8c8c-bb9be5c3f4d6`입니다. 사본의 백업·잠금 흔적, 원본 Source9 및 편집 전의 예약 기록 147건을 보존했습니다. 사용자 Codex 앱의 W3000 동일 ID 조회는 설치본 응답과 일치했습니다. 결과는 `OUTCOME_UNKNOWN`, 관측값 없음이며 새 실행·시뮬레이션·예약은 모두 0건이었습니다. 이 PMOS 후보의 성능 측정은 없습니다.
 
 아래는 L200 프로필의 읽기 전용 MCP 호출 예시입니다. 계획에 사용할 등록·기준 해시는 inspect에서, 재조회에 사용할 계획·범위 해시는 plan에서 받습니다. 실제 사용자 Codex에서 `cadence_lookup_registered_mos_sizing`으로 같은 작업 ID를 조회해 W 120 nm·L 200 nm의 `VERIFIED` 결과를 확인했습니다. 설치 MCP stdio의 응답과 일치했고 추가 적용·시뮬레이션·예약은 0건이었습니다.
 
@@ -385,27 +385,27 @@ DC 분석 작업 ID는 `155ca51f-c3c1-46d0-8982-bbbb76f95b82`입니다. 실측 �
 | 확인 시점 | 항목 | 상태 |
 | --- | --- | --- |
 | 생성 전 | GPDK090 master·모델·단자 | 기존 Source9·BBE3에서 두 `gpdk090` symbol master와 D/G/S/B 순서, `gpdk090_nmos1v`·`gpdk090_pmos1v` 모델 및 NN 섹션을 실제 확인했습니다. OTA용 NN 의존 파일과 벌크·단자 결속은 별도 검토합니다. |
-| 생성 전 | GPDK090 소자별 치수 | 아래 8개 목표별로 비OTA에서 저장값, 독립 재개방 OA·유효 CDF 및 같은 revision의 실제 Spectre W/L/m과 접합 면적·둘레를 대조합니다. |
+| 생성 전 | GPDK090 소자별 치수 | 아래 8개 모두 비OTA 저장값, 독립 재개방 OA·유효 CDF, 같은 revision의 실제 Spectre W/L/m과 접합 면적·둘레가 일치했습니다. DC 전용과 DC+AC 정적 입력에서 17개 모두에 근거를 연결했습니다. |
 | 생성 전 | 소스·부하 | VDD 1 V와 공통모드 0.5 V, `out`에서 VSS로 연결한 1 pF를 정적 bench에 선언했습니다. 1 V 공급과 1 pF 부하는 기존 두 MOS 회로의 실제 Netlist에 관측됐습니다. 선택형 `vsin`은 5656의 실제 OA·CDF·실행 Netlist에서 두 입력 DC 0.5 V와 AC ±0.5 V를 확인했습니다. OTA에는 선택한 소스·부하의 단자·CDF·분석 조건을 별도로 결속합니다. `vsin` 증거는 AC 전용이며 첫 DC/OP에는 별도 고정 소스 조건을 사용합니다. |
 | 생성 전 | 실제 ADE seed와 실행 계획 | 기존 두 MOS의 seed 재사용 계획과 로컬 Netlist 비교를 참고합니다. 작업 공간의 실제 소유 대상, seed ADE 트리 및 분석 조건, NN 모델 의존 파일, 준비 프로그램을 대조합니다. |
 | 생성 후 | 저장본과 측정 선택자 | 실제 저장·독립 재개방 후 DUT·심볼·bench·ADE 트리와 유효 Netlist를 연결합니다. 이때 얻은 revision 및 `out/inp/inn`, 전원 양단, 공급원의 `PLUS` 전류와 DUT 아래 17개 MOS 경로를 실제 reader와 분석 작업에 연결합니다. |
 
-연구용 목표값은 단일 finger, W=FW 기준입니다. 검증은 승인된 비OTA 보정 사본에서 진행합니다. 위 Source9 후보의 고정 W는 0.12 µm이며, 아래 목표 조합의 W와 다릅니다.
+연구용 목표값은 단일 finger, W=FW 기준입니다. CalN02와 CalP01은 별도 비OTA 제품 편집에서 검증했습니다. 나머지 여섯 점은 하나의 비OTA 보정 사본에 저장한 뒤 독립 재개방과 실제 Netlist로 검증했습니다.
 
 | Master | 목표 `(W µm, L µm, m)` | 적용할 OTA 소자 | 비OTA 검증 |
 | --- | --- | --- | --- |
-| `nmos1v` | `(1, 0.25, 1)` | NM2, NM3, NM10 | 대기 |
-| `nmos1v` | `(1.5, 0.25, 1)` | NM0, NM1 | 대기 |
-| `nmos1v` | `(10, 0.25, 1)` | NM6, NM7, NM11 | 대기 |
-| `nmos1v` | `(15, 0.25, 1)` | NM8, NM9 | 대기 |
-| `pmos1v` | `(3, 0.25, 1)` | PM2, PM3, PM8 | 대기 |
-| `pmos1v` | `(30, 0.25, 1)` | PM4, PM5 | 대기 |
-| `pmos1v` | `(10, 1, 1)` | PM7 | 대기 |
-| `pmos1v` | `(16, 1, 6)` | PM6 | 대기 |
+| `nmos1v` | `(1, 0.25, 1)` | NM2, NM3, NM10 | 공통 CalN01 |
+| `nmos1v` | `(1.5, 0.25, 1)` | NM0, NM1 | 개별 CalN02 |
+| `nmos1v` | `(10, 0.25, 1)` | NM6, NM7, NM11 | 공통 CalN03 |
+| `nmos1v` | `(15, 0.25, 1)` | NM8, NM9 | 공통 CalN04 |
+| `pmos1v` | `(3, 0.25, 1)` | PM2, PM3, PM8 | 개별 CalP01 |
+| `pmos1v` | `(30, 0.25, 1)` | PM4, PM5 | 공통 CalP02 |
+| `pmos1v` | `(10, 1, 1)` | PM7 | 공통 CalP03 |
+| `pmos1v` | `(16, 1, 6)` | PM6 | 공통 CalP04 |
 
-**첫 OTA 생성·DC/AC 준비 판정은 미완료입니다.** 목표 치수는 0/8 검증 상태입니다. 비OTA 증거가 확보되면 검증된 master·치수 조합을 위의 소자 이름에 연결하고, 각 `DraftPort.devices`의 `master_source`, `geometry.source`, `spectre.source`에 각각 검토한 증거 SHA-256을 넣습니다. 동일 조합의 증거를 재사용하는 소자도 논리 D/G/S/B와 벌크 결선을 개별 확인합니다.
+**목표 치수 8/8을 검증하고 17개 OTA 소자의 정적 입력에 근거를 연결했습니다.** 두 입력은 독립 검증한 증거를 참조하며 작업 공간 binding을 비워 둡니다. 첫 OTA 생성과 DC/AC 실행 전에 대상 토폴로지, 선택한 소스·부하, 실제 ADE seed·NN 모델·작업 공간을 별도로 확인해야 합니다.
 
-재개 순서는 `--static-preview`로 회로 구조 재확인 → 8개 비OTA 원본과 bench·ADE seed·NN 증거 결속 → 실제 작업 공간의 원본 지문으로 `DraftPort.binding` 작성 → `compile-research-draft`와 `validate-research-circuit`입니다. 정적 미리보기에는 아직 없는 OTA revision·인스턴스 경로·작업 ID를 입력하지 않습니다. 실제 생성과 분석을 재개할 때는 승인된 범위를 따르고, 저장 후 얻은 지문과 경로를 사용합니다.
+연구 단계 ⑤를 시작할 때는 `--static-preview`로 회로 구조를 확인하고, 17개 소자의 D/G/S/B·벌크와 선택한 소스·부하·ADE seed·NN 근거를 검토합니다. 실제 작업 공간의 원본 지문으로 `DraftPort.binding`을 작성한 뒤 `compile-research-draft`와 `validate-research-circuit`를 실행합니다. 이후 승인된 실제 생성·저장과 독립 재개방에서 얻은 revision·인스턴스 경로·Netlist를 reader 및 분석 등록에 연결합니다.
 
 #### P4 증거를 정적 포팅 입력에 연결
 
