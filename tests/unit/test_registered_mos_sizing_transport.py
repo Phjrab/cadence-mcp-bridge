@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 from test_registered_mos_sizing import _fixture
+from test_registered_ota_mos_sizing import _ota_fixture
 
 from cadence_mcp_bridge import _amp_pm0_default_phase as guest_support
 from cadence_mcp_bridge import _registered_mos_edit_phase as guest_contract
@@ -26,6 +27,7 @@ from cadence_mcp_bridge.mos_wl_skill import render_mos_wl_skill
 from cadence_mcp_bridge.mos_wlm_skill import render_mos_wlm_skill
 from cadence_mcp_bridge.operator_operations import OperationRejected
 from cadence_mcp_bridge.registered_mos_edit import NativeMosEditSave
+from cadence_mcp_bridge.registered_ota_mos_sizing import RegisteredOtaMosSizingService
 from cadence_mcp_bridge.server import create_default_server
 
 
@@ -575,3 +577,96 @@ def test_sizing_cli_uses_same_enrollment_and_fails_closed(enrolled, capsys, tmp_
     context.binding.pmos_default_change_binding = context.binding.pmos_default_change_sha256 = None
     with pytest.raises(ConfigurationError):
         create_default_server(operator_mode=True, registered_mos_edit=True)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pmos_width", [False, True])
+async def test_ota_sizing_only_uses_its_separate_enrollment_and_sealed_scope(
+    enrolled, monkeypatch, pmos_width
+):
+    context, _, directory, phases = enrolled
+    binding_path = context.binding.pmos_default_change_binding
+    original = binding_path.read_bytes()
+    original_model = sizing._SizingEnrollment.model_validate_json(original)
+    legacy = original_model.model_dump(mode="json")
+    assert legacy["schema_version"] == 4 and legacy["route"] == "registered_mos_sizing"
+    assert "ota" not in legacy["route_qualification"] and "admitted_m" not in legacy
+    route, child, request, _, raw_input, _ = _ota_fixture(pmos_width=pmos_width)
+    package = files("cadence_mcp_bridge")
+    renderer = package.joinpath("mos_wlm_skill.py").read_bytes()
+    child_asset = package.joinpath("_mos_wlm_callback.py").read_bytes()
+    guest = package.joinpath("_registered_mos_edit_phase.py").read_bytes()
+    document = json.loads(original)
+    route_obj = route.model_dump(mode="json")
+    route_obj["support"].update(
+        adapter_sha256=_sha(renderer),
+        cdf_constraints_sha256=document["route_qualification"]["support"]["cdf_constraints_sha256"],
+    )
+    axis = "w" if pmos_width else "l"
+    bounds = {"minimum": {"value": "100", "unit": "nm"}, "maximum": {"value": "3000", "unit": "nm"}}
+    document.update(
+        schema_version=5,
+        route="registered_ota_mos_sizing",
+        route_qualification=route_obj,
+        renderer_sha256=_sha(renderer),
+        hash_child_sha256=_sha(child_asset),
+        admitted_w=bounds if pmos_width else None,
+        admitted_l=None if pmos_width else bounds,
+        width_field="w" if pmos_width else None,
+    )
+    document["slots"][0].update(child=child.model_dump(mode="json"), owned_library="OwnedOtaEdit")
+    (directory.parent / "baseline-input.private.scs").write_bytes(raw_input)
+    for drift in (
+        {"schema_version": 4},
+        {"route": "registered_mos_sizing"},
+        {"route_qualification": original_model.route_qualification.model_dump(mode="json")},
+        {"slots": [{**document["slots"][0], "slot_manifest_sha256": "a" * 64}]},
+    ):
+        with pytest.raises(ValueError):
+            sizing._SizingEnrollment.model_validate_json(_canonical({**document, **drift}))
+    raw = _canonical(document)
+    binding_path.write_bytes(raw)
+    context.binding.pmos_default_change_sha256 = _sha(raw)
+    monkeypatch.delattr(guest_contract, "OTA_SIZING_ROUTE", raising=False)
+    with pytest.raises(OperationRejected) as mismatch:
+        sizing.selected_mos_sizing(context)
+    assert mismatch.value.reason == "registered_mos_sizing_guest_contract"
+
+    planned_scopes = []
+    monkeypatch.setattr(guest_contract, "OTA_SIZING_ROUTE", document["route"], raising=False)
+    monkeypatch.setattr(guest_contract, "sizing_route", planned_scopes.append)
+    selected = sizing.selected_mos_sizing(context)
+    candidate = sizing.MosSizingCandidate.model_validate_json(
+        _canonical({
+            "operation_id": document["slots"][0]["operation_id"],
+            "expected_enrollment_sha256": _sha(raw),
+            "expected_baseline_sha256": route.baseline.revision_sha256,
+            "values": request.model_dump(mode="json"),
+        })
+    )
+    service = selected._service(candidate)
+    assert isinstance(service, RegisteredOtaMosSizingService)
+    assert service.plan.changed == (axis,)
+    assert service.plan.current.m == service.plan.expected.m
+    assert planned_scopes[0]["route_qualification"]["ota"] == route_obj["ota"]
+    assert planned_scopes[0]["route"] == document["route"]
+    assert "slot_manifest_sha256" not in planned_scopes[0]
+    for phase, previous in (("EDIT_SAVE", None), ("INDEPENDENT_REOPEN_NETLIST", "a" * 64)):
+        _, payload = service._provider._prepare(service._binding, phase, previous)
+        packet = json.loads(payload[len(guest):])
+        scope = base64.b64decode(packet["scope_base64"], validate=True)
+        assert json.loads(scope) == planned_scopes[0]
+        assert _sha(scope) == service.identity.expected_scope_sha256
+        assert packet["previous_receipt_sha256"] == previous
+    server = create_default_server(operator_mode=True, registered_mos_edit=True)
+    preview = await server.call_tool(
+        "cadence_plan_registered_mos_sizing",
+        {"request": candidate.model_dump(mode="json")},
+    )
+    assert preview.structured_content["identity"] == service.identity.model_dump(mode="json")
+    result = await server.call_tool(
+        "cadence_lookup_registered_mos_sizing",
+        {"request": preview.structured_content["identity"]},
+    )
+    assert result.structured_content["outcome"] == "NOT_FOUND"
+    assert not phases and not (directory / "registered-mos-intent.private.json").exists()

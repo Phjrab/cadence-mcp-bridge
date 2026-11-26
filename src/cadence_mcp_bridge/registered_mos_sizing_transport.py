@@ -51,6 +51,10 @@ from cadence_mcp_bridge.registered_mos_transport import (
     _encode,
     _RegisteredMosPhaseProvider,
 )
+from cadence_mcp_bridge.registered_ota_mos_sizing import (
+    RegisteredOtaMosSizingRoute,
+    RegisteredOtaMosSizingService,
+)
 from cadence_mcp_bridge.runtime_context import ExecutionContext, read_pmos_default_change_binding
 from cadence_mcp_bridge.schematic_plan import RevisionBinding
 from cadence_mcp_bridge.variable_contracts import (
@@ -87,18 +91,19 @@ class _Slot(VariableModel):
 
 
 _AdmittedMultipliers = Annotated[tuple[MosSizingCount, ...], Field(min_length=1, max_length=2)]
+_SizingRouteName = Literal["registered_mos_sizing", "registered_ota_mos_sizing"]
 
 
 class _SizingEnrollment(VariableModel):
-    schema_version: Literal[4]
-    route: Literal["registered_mos_sizing"]
+    schema_version: Literal[4, 5]
+    route: _SizingRouteName
     owner: Literal["C0"]
     context_id: LogicalId
     resource_domain_sha256: Digest
     environment_sha256: Digest
     native_manifest_sha256: Digest
     evidence_directory: Path
-    route_qualification: RegisteredMosSizingRoute
+    route_qualification: RegisteredOtaMosSizingRoute | RegisteredMosSizingRoute
     guest_sha256: Digest
     support_sha256: Digest
     collector_sha256: Digest
@@ -114,6 +119,15 @@ class _SizingEnrollment(VariableModel):
     @model_validator(mode="after")
     def distinct_slots(self) -> _SizingEnrollment:
         support = self.route_qualification.support
+        if isinstance(self.route_qualification, RegisteredOtaMosSizingRoute):
+            if (
+                self.schema_version != 5
+                or self.route != "registered_ota_mos_sizing"
+                or len(self.slots) != 1
+            ):
+                raise ValueError("OTA sizing requires its separately registered operator lane")
+        elif self.schema_version != 4 or self.route != "registered_mos_sizing":
+            raise ValueError("MOS sizing enrollment route and schema differ")
         ids = {
             id_ for slot in self.slots for id_ in (slot.operation_id, slot.owned_copy_operation_id)
         }
@@ -155,13 +169,13 @@ class _SizingEnrollment(VariableModel):
 
 class _SizingScope(VariableModel):
     schema_version: Literal[1] = 1
-    route: Literal["registered_mos_sizing"] = "registered_mos_sizing"
+    route: _SizingRouteName = "registered_mos_sizing"
     context_id: LogicalId
     resource_domain_sha256: Digest
     environment_sha256: Digest
     native_manifest_sha256: Digest
     subject: MosEditSubject
-    route_qualification: RegisteredMosSizingRoute
+    route_qualification: RegisteredOtaMosSizingRoute | RegisteredMosSizingRoute
     plan: MosSizingPlan
     candidate_request: MosSizingValues
     guest_sha256: Digest
@@ -386,8 +400,11 @@ class RegisteredMosSizing:
         _asset(
             package.joinpath(_ASSET).read_bytes(), reg.guest_sha256, max_bytes=_GUEST_SOURCE_LIMIT
         )
+        route_pin = (
+            "OTA_SIZING_ROUTE" if reg.route == "registered_ota_mos_sizing" else "SIZING_ROUTE"
+        )
         _require(
-            getattr(guest_contract, "SIZING_ROUTE", None) == reg.route
+            getattr(guest_contract, route_pin, None) == reg.route
             and reg.renderer_sha256 == renderer_pin
             and reg.hash_child_sha256 == child_pin
             and reg.support_sha256 == guest_contract.SUPPORT_SHA256
@@ -515,6 +532,7 @@ class RegisteredMosSizing:
             source_preservation_sha256=slot.source_preservation_sha256,
         )
         scope = _SizingScope(
+            route=reg.route,
             context_id=reg.context_id,
             resource_domain_sha256=reg.resource_domain_sha256,
             environment_sha256=reg.environment_sha256,
@@ -533,7 +551,12 @@ class RegisteredMosSizing:
         binding = RegisteredMosEditBinding(
             scope_sha256=canonical_digest(scope), **subject.model_dump()
         )
-        return RegisteredMosSizingService(
+        service_type = (
+            RegisteredOtaMosSizingService
+            if isinstance(route, RegisteredOtaMosSizingRoute)
+            else RegisteredMosSizingService
+        )
+        return service_type(
             binding,
             route,
             slot.child,
@@ -603,6 +626,6 @@ def selected_mos_sizing(context: ExecutionContext) -> RegisteredMosSizing | None
     if path is None or digest is None:
         return None
     raw = read_pmos_default_change_binding(path, digest)
-    if _document(raw).get("route") != "registered_mos_sizing":
+    if _document(raw).get("route") not in ("registered_mos_sizing", "registered_ota_mos_sizing"):
         return None
     return RegisteredMosSizing(context, raw, digest)
