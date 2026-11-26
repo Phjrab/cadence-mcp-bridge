@@ -64,12 +64,14 @@ class _Provider:
         return self.record
 
 
-def _input(length: str, area: str, *, width: str, slot: str, master: str, rail: str) -> bytes:
+def _input(
+    length: str, area: str, *, width: str, slot: str, master: str, rail: str, m: int = 1
+) -> bytes:
     return (
         "simulator lang=spectre\nparameters VDD=1\n"
         "subckt InvLong vdd vin vout vss\n"
         f"{slot} (vout vin {rail} {rail}) gpdk090_{master} w=({width}) l={length} "
-        f"as={area} ad=98f ps=1.26u pd=1.26u m=(1)*(1) simM=(1)*(1)\n"
+        f"as={area} ad=98f ps=1.26u pd=1.26u m=({m})*(1) simM=({m})*(1)\n"
         "ends InvLong\nDUT (vdd vin vout 0) InvLong\n"
     ).encode("ascii")
 
@@ -208,6 +210,180 @@ def _service(data, provider, *, requested=None, binding=None):
         provider,
         expected_binding_sha256=canonical_digest(binding),
     )
+
+
+def _wlm_fixture(master, *, width_um=None, length_um=None, multiplier=None):
+    route, child, _, _, binding, baseline, old_capture = _fixture(pmos_width=master == "pmos1v")
+    route = route.model_copy(
+        update={
+            "support": route.support.model_copy(
+                update={
+                    "lifecycle": "headless_wlm_v1",
+                    "w": MosSizingBounds(minimum=_length("1", "um"), maximum=_length("30", "um")),
+                    "l": MosSizingBounds(minimum=_length("0.25", "um"), maximum=_length("1", "um")),
+                    "m": (1, 6),
+                }
+            )
+        }
+    )
+    requested = MosSizingValues(
+        w=_length(width_um, "um") if width_um is not None else None,
+        l=_length(length_um, "um") if length_um is not None else None,
+        m=multiplier,
+    )
+    plan = plan_registered_mos_sizing(route, child, requested)
+    binding = binding.model_copy(
+        update={"route_sha256": plan.route_sha256, "plan_sha256": plan.plan_sha256}
+    )
+    width = f"{plan.expected.w.value}n"
+    length = f"{plan.expected.l.value}n"
+    count = plan.expected.m
+    assert count is not None
+    properties = {
+        **route.before,
+        **{
+            key: route.before[key].model_copy(update={"oa_value": value, "cdf_value": value})
+            for key, value in {"w": width, "fw": width, "l": length, "m": str(count)}.items()
+        },
+    }
+    slot = route.target.netlist_path.split("/")[-1]
+    raw = _input(
+        length,
+        "98f",
+        width=width,
+        slot=slot,
+        master=master,
+        rail=route.target.netlist_terminals[2],
+        m=count,
+    )
+    frame = _cdf_frame(master, properties, slot)
+    old = old_capture.readback
+    readback = old.model_copy(
+        update={
+            "plan_sha256": plan.plan_sha256,
+            "saved": old.saved.model_copy(update={"properties": properties}),
+            "reopened": old.reopened.model_copy(update={"properties": properties}),
+            "netlist_sha256": _sha(raw),
+            "cdf_frame_sha256": _sha(frame),
+        }
+    )
+    return (
+        route,
+        child,
+        requested,
+        plan,
+        binding,
+        baseline,
+        NativeMosEditCapture(readback, raw, frame),
+    )
+
+
+@pytest.mark.parametrize(
+    ("master", "width_um", "length_um", "multiplier"),
+    [
+        ("nmos1v", "1", "0.25", 1),
+        ("nmos1v", "1.5", "0.25", 1),
+        ("nmos1v", "10", "0.25", 1),
+        ("nmos1v", "15", "0.25", 1),
+        ("pmos1v", "3", "0.25", 1),
+        ("pmos1v", "30", "0.25", 1),
+        ("pmos1v", "10", "1", 1),
+        ("pmos1v", "16", "1", 6),
+    ],
+)
+def test_synthetic_wlm_matrix_checks_all_three_values_and_selected_callback_order(
+    master: str,
+    width_um: str,
+    length_um: str,
+    multiplier: int,
+) -> None:
+    data = _wlm_fixture(master, width_um=width_um, length_um=length_um, multiplier=multiplier)
+    route, child, _, plan, _, _, capture = data
+    equivalent = MosSizingValues(
+        w=_length(plan.expected.w.value), l=_length(plan.expected.l.value), m=multiplier
+    )
+    assert plan_registered_mos_sizing(route, child, equivalent) == plan
+    assert plan.changed == (("l", "w", "m") if multiplier == 6 else ("l", "w"))
+    assert plan.current.m == 1 and plan.expected.m == multiplier
+    service = _service(data, _Provider(capture))
+    result = service.apply(service.identity)
+    assert result.outcome == "VERIFIED" and result.observed == plan.expected
+    assert result.effective_mos_options is not None
+    assert result.effective_mos_options["m"] == f"({multiplier})*(1)"
+    assert result.effective_mos_options["simM"] == f"({multiplier})*(1)"
+
+
+def test_wlm_multiplier_only_holds_all_geometry_and_requires_stored_count() -> None:
+    data = _wlm_fixture("nmos1v", multiplier=6)
+    route, _, _, plan, binding, _, capture = data
+    assert plan.changed == ("m",) and plan.allowed_derived == ()
+    service = _service(data, _Provider(capture))
+    result = service.apply(service.identity)
+    assert result.outcome == "VERIFIED" and result.effective_input is not None
+    assert result.effective_input.value.normalized == ("6", "count")
+
+    for key, changed, error in (
+        ("as", {"oa_value": "99f", "cdf_value": "99f"}, "held junction"),
+        ("w", {"oa_value": "0.12u", "cdf_value": "0.12u"}, "held property w"),
+        ("m", {"oa_type": None, "oa_value": None}, "saved OA multiplier"),
+        ("m", {"oa_value": "1"}, "stored MOS multiplier"),
+        ("fingers", {"oa_value": "6", "cdf_value": "6"}, "one finger"),
+        ("nf", {"oa_type": "string", "oa_value": "1"}, "fixed property nf"),
+    ):
+        saved = capture.readback.saved
+        properties = dict(saved.properties)
+        properties[key] = properties[key].model_copy(update=changed)
+        altered = capture.readback.model_copy(
+            update={"saved": saved.model_copy(update={"properties": properties})}
+        )
+        with pytest.raises(ValueError, match=error):
+            verify_mos_sizing_save(plan, route, binding, altered)
+
+    forged = plan.model_copy(update={"allowed_derived": ("as",)})
+    rebound = binding.model_copy(update={"plan_sha256": forged.plan_sha256})
+    with pytest.raises(ValueError, match="different registered W/L/m recipe"):
+        verify_mos_sizing_save(
+            forged,
+            route,
+            rebound,
+            capture.readback.model_copy(update={"plan_sha256": forged.plan_sha256}),
+        )
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        (b"m=(6)*(1)", b"m=(1)*(6)"),
+        (b"m=(6)*(1)", b"m=6"),
+        (b"simM=(6)*(1)", b"simM=(2)*(3)"),
+        (b"simM=(6)*(1)", b"simM=(1)*(1)"),
+    ],
+)
+def test_wlm_equal_products_or_missing_factor_do_not_verify(old: bytes, new: bytes) -> None:
+    data = _wlm_fixture("pmos1v", multiplier=6)
+    capture = data[-1]
+    raw = capture.netlist.replace(old, new)
+    assert raw != capture.netlist
+    readback = capture.readback.model_copy(update={"netlist_sha256": _sha(raw)})
+    service = _service(data, _Provider(replace(capture, readback=readback, netlist=raw)))
+    assert service.apply(service.identity).outcome == "OUTCOME_UNKNOWN"
+
+
+@pytest.mark.parametrize("value", [True, 6.0, "6", 0, 2, {"unit": "count", "value": "6"}])
+def test_wlm_rejects_noncanonical_or_unapproved_multiplier(value: object) -> None:
+    with pytest.raises(ValueError):
+        MosSizingValues.model_validate({"m": value})
+
+
+def test_legacy_sizing_does_not_serialize_new_fields_or_admit_multiplier() -> None:
+    route, child, _, plan, _, _, _ = _fixture()
+    assert "m" not in plan.current.model_dump(mode="json")
+    assert "m" not in plan.requested.model_dump(mode="json")
+    assert "m" not in plan.expected.model_dump(mode="json")
+    assert "m" not in route.support.model_dump(mode="json")
+    assert "lifecycle" not in route.support.model_dump(mode="json")
+    with pytest.raises(ValueError, match="multiplier is not registered"):
+        plan_registered_mos_sizing(route, child, MosSizingValues(m=6))
 
 
 def test_new_requested_value_without_candidate_witness_and_identical_replay() -> None:

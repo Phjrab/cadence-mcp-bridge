@@ -1,4 +1,4 @@
-"""Plan and independently verify a new W/L on a registered, owned MOS copy."""
+"""Plan and independently verify new MOS geometry on a registered, owned copy."""
 
 from __future__ import annotations
 
@@ -7,7 +7,13 @@ import re
 from decimal import Decimal, localcontext
 from typing import Annotated, Literal, NamedTuple, Self, cast
 
-from pydantic import Field, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from cadence_mcp_bridge._native_rendering import partition_input
 from cadence_mcp_bridge.candidate_contracts import CandidateSourceTarget
@@ -47,13 +53,15 @@ from cadence_mcp_bridge.variable_contracts import (
     number_text,
 )
 
-SizingAxis = Literal["w", "l"]
+SizingLengthAxis = Literal["w", "l"]
+SizingAxis = Literal["w", "l", "m"]
 type _NetlistControls = tuple[dict[str, str], list[tuple[str, str]], list[tuple[str, str]]]
-_AXES: tuple[SizingAxis, SizingAxis] = ("w", "l")
+_WL_AXES: tuple[SizingLengthAxis, SizingLengthAxis] = ("w", "l")
+_WLM_LENGTH_AXES: tuple[SizingLengthAxis, SizingLengthAxis] = ("l", "w")
 _OA_DIMENSIONS: tuple[MosProperty, ...] = ("w", "fw", "l")
 _PROJECTED_GEOMETRY: tuple[GeometryProperty, ...] = ("fw", "as", "ad", "ps", "pd")
 _INPUT_DIMENSIONS: tuple[MosProperty, ...] = ("w", "l", "as", "ad", "ps", "pd")
-_STATIC_KEYS = frozenset(("m", "fingers", "nf", "model", "dfm"))
+_STATIC_KEYS = frozenset(("fingers", "nf", "model", "dfm"))
 _NETLIST_KEYS = frozenset(("w", "l", "m", "simM")) | _GEOMETRY
 _SOURCE9_DC_SHA256 = "5d4134980c80d6cff72e6c1adb0d5957e7871c7b52fa89d5482dfedf113c7f0a"
 _ENGINEERING_SCALE = {"": 0, "a": -18, "f": -15, "p": -12, "n": -9, "u": -6, "m": -3}
@@ -72,18 +80,38 @@ class MosSizingLength(ChangeValue):
         return self.from_metres(Decimal(self.normalized[0]))
 
 
-class MosSizingValues(VariableModel):
+def _strict_count(value: object) -> object:
+    if type(value) is not int:
+        raise ValueError("MOS sizing multiplier must be an integer")
+    return value
+
+
+MosSizingCount = Annotated[Literal[1, 6], BeforeValidator(_strict_count)]
+
+
+class _SizingWithCount(VariableModel):
+    m: MosSizingCount | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_count(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        document: dict[str, object] = handler(self)
+        if self.m is None:
+            document.pop("m", None)
+        return document
+
+
+class MosSizingValues(_SizingWithCount):
     w: MosSizingLength | None = None
     l: MosSizingLength | None = None  # noqa: E741 - schematic property name
 
     @model_validator(mode="after")
     def needs_dimension(self) -> Self:
-        if self.w is None and self.l is None:
-            raise ValueError("specify at least one MOS sizing dimension")
+        if self.w is None and self.l is None and self.m is None:
+            raise ValueError("specify at least one MOS sizing parameter")
         return self
 
 
-class MosSizingDimensions(VariableModel):
+class MosSizingDimensions(_SizingWithCount):
     w: MosSizingLength
     l: MosSizingLength  # noqa: E741 - schematic property name
 
@@ -131,12 +159,27 @@ class MosSizingSupport(VariableModel):
     cdf_constraints_sha256: Digest
     w: MosSizingBounds | None = None
     l: MosSizingBounds | None = None  # noqa: E741 - schematic property name
+    lifecycle: Literal["headless_wlm_v1"] | None = None
+    m: Annotated[tuple[MosSizingCount, ...], Field(min_length=1, max_length=2)] | None = None
 
     @model_validator(mode="after")
     def supported_axis(self) -> Self:
-        if self.w is None and self.l is None:
-            raise ValueError("registered MOS sizing requires an admitted W or L axis")
+        if self.w is None and self.l is None and self.m is None:
+            raise ValueError("registered MOS sizing requires an admitted W, L or m axis")
+        if self.m is not None and (self.lifecycle is None or len(set(self.m)) != len(self.m)):
+            raise ValueError(
+                "registered MOS multipliers require the W/L/m lifecycle and unique counts"
+            )
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_lifecycle(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        document: dict[str, object] = handler(self)
+        if self.lifecycle is None:
+            document.pop("lifecycle", None)
+        if self.m is None:
+            document.pop("m", None)
+        return document
 
 
 class MosSizingTarget(VariableModel):
@@ -153,7 +196,7 @@ class MosSizingTarget(VariableModel):
         if (
             (target.master_library, target.master_view) != ("gpdk090", "symbol")
             or target.master_cell not in ("nmos1v", "pmos1v")
-            or target.property_name not in ("w", "l")
+            or target.property_name not in ("w", "l", "m")
             or target.instance_path != self.netlist_path
             or self.netlist_model != f"gpdk090_{target.master_cell}"
             or any(
@@ -179,9 +222,20 @@ def _engineering(raw: str | None) -> Decimal:
         return value.scaleb(_ENGINEERING_SCALE[match[3]])
 
 
-def _observed_dimensions(properties: dict[MosProperty, MosPropertyValue]) -> MosSizingDimensions:
-    if properties.keys() != _PROPERTIES or _observed_factors(properties) != ("1", "1"):
-        raise ValueError("MOS sizing requires complete observations with m=1 and one finger")
+def _observed_dimensions(
+    properties: dict[MosProperty, MosPropertyValue], *, include_m: bool = False
+) -> MosSizingDimensions:
+    if properties.keys() != _PROPERTIES:
+        raise ValueError("MOS sizing requires complete observed properties")
+    multiplier, fingers = _observed_factors(properties)
+    if fingers != "1" or multiplier not in (("1", "6") if include_m else ("1",)):
+        raise ValueError("MOS sizing requires an admitted multiplier and one finger")
+    if include_m:
+        row = properties["m"]
+        if (row.cdf_type, row.cdf_units, row.cdf_value) != ("instData", None, multiplier):
+            raise ValueError("MOS sizing requires an independently observed unitless multiplier")
+        if row.oa_value is not None and (row.oa_type, row.oa_value) != ("string", multiplier):
+            raise ValueError("stored MOS multiplier differs from the effective CDF")
     if any(properties[key].cdf_units != "lengthMetric" for key in _OA_DIMENSIONS):
         raise ValueError("MOS sizing requires observed lengthMetric CDF dimensions")
     width = _engineering(properties["w"].cdf_value)
@@ -190,6 +244,7 @@ def _observed_dimensions(properties: dict[MosProperty, MosPropertyValue]) -> Mos
     return MosSizingDimensions(
         w=MosSizingLength.from_metres(width),
         l=MosSizingLength.from_metres(_engineering(properties["l"].cdf_value)),
+        m=(6 if multiplier == "6" else 1) if include_m else None,
     )
 
 
@@ -204,13 +259,18 @@ class RegisteredMosSizingRoute(VariableModel):
 
     @model_validator(mode="after")
     def observed_baseline(self) -> Self:
-        _observed_dimensions(self.before)
+        _observed_dimensions(self.before, include_m=self.support.lifecycle is not None)
         if (
             self.source_library in ("gpdk090", "analogLib", "basic")
             or self.before["model"].cdf_value != self.target.netlist_model
             or self.before["nf"].cdf_value is not None
             or self.before["nf"].oa_value is not None
             or self.before["dfm"].cdf_value != "Minimum"
+            or (self.support.lifecycle is None and self.target.instance.property_name == "m")
+            or (
+                self.support.lifecycle is not None
+                and getattr(self.support, self.target.instance.property_name) is None
+            )
         ):
             raise ValueError("registered MOS sizing baseline differs from the supported mode")
         return self
@@ -224,7 +284,7 @@ class MosSizingPlan(VariableModel):
     current: MosSizingDimensions
     requested: MosSizingValues
     expected: MosSizingDimensions
-    changed: Annotated[tuple[SizingAxis, ...], Field(min_length=1, max_length=2)]
+    changed: Annotated[tuple[SizingAxis, ...], Field(min_length=1, max_length=3)]
     allowed_derived: tuple[GeometryProperty, ...]
 
     @property
@@ -247,10 +307,11 @@ def plan_registered_mos_sizing(
         baseline.revision_sha256,
     ):
         raise ValueError("MOS sizing candidate must be a fresh child of the registered baseline")
-    current = _observed_dimensions(route.before)
-    supplied: dict[SizingAxis, MosSizingLength] = {}
+    wlm = route.support.lifecycle is not None
+    current = _observed_dimensions(route.before, include_m=wlm)
+    supplied: dict[SizingLengthAxis, MosSizingLength] = {}
     changed: list[SizingAxis] = []
-    for axis in _AXES:
+    for axis in _WLM_LENGTH_AXES if wlm else _WL_AXES:
         value = getattr(requested, axis)
         if value is None:
             continue
@@ -261,20 +322,31 @@ def plan_registered_mos_sizing(
         supplied[axis] = value.in_nm()
         if supplied[axis] != getattr(current, axis):
             changed.append(axis)
+    multiplier = requested.m
+    if multiplier is not None:
+        if route.support.m is None or multiplier not in route.support.m:
+            raise ValueError("MOS sizing multiplier is not registered")
+        if multiplier != current.m:
+            changed.append("m")
     if not changed:
-        raise ValueError("MOS sizing request does not change the registered dimensions")
+        raise ValueError("MOS sizing request does not change a registered parameter")
+    allowed_derived = (
+        _PROJECTED_GEOMETRY if "w" in changed else _PROJECTED_GEOMETRY[1:] if "l" in changed else ()
+    )
     return MosSizingPlan(
         baseline=baseline,
         candidate_revision=child,
         target=route.target,
         route_sha256=canonical_digest(route),
         current=current,
-        requested=MosSizingValues(w=supplied.get("w"), l=supplied.get("l")),
+        requested=MosSizingValues(w=supplied.get("w"), l=supplied.get("l"), m=multiplier),
         expected=MosSizingDimensions(
-            w=supplied.get("w", current.w), l=supplied.get("l", current.l)
+            w=supplied.get("w", current.w),
+            l=supplied.get("l", current.l),
+            m=current.m if multiplier is None else multiplier,
         ),
         changed=tuple(changed),
-        allowed_derived=_PROJECTED_GEOMETRY if "w" in changed else _PROJECTED_GEOMETRY[1:],
+        allowed_derived=allowed_derived,
     )
 
 
@@ -286,6 +358,9 @@ def verify_mos_sizing_save(
 ) -> None:
     """Gate the detached phase using the original save receipt and its observed values."""
     save = _checked(save)
+    wlm = route.support.lifecycle is not None
+    if wlm and plan != plan_registered_mos_sizing(route, plan.candidate_revision, plan.requested):
+        raise ValueError("MOS sizing save has a different registered W/L/m recipe")
     before, after = save.baseline, save.saved
     if (
         binding.plan_sha256 != plan.plan_sha256
@@ -313,14 +388,16 @@ def verify_mos_sizing_save(
     if not valid_bench:
         raise ValueError("MOS sizing testbench revision changed unexpectedly")
     observed = after.properties
-    if _observed_dimensions(observed) != plan.expected:
+    if _observed_dimensions(observed, include_m=wlm) != plan.expected:
         raise ValueError("saved OA/CDF MOS dimensions differ from the requested or held values")
     for key, old in before.properties.items():
         row = observed[key]
         if (old.cdf_type, old.cdf_units) != (row.cdf_type, row.cdf_units):
             raise ValueError("MOS sizing changed the observed property schema")
-        if key in _STATIC_KEYS and row != old:
+        if (key in _STATIC_KEYS or (key == "m" and "m" not in plan.changed)) and row != old:
             raise ValueError(f"MOS sizing changed fixed property {key}")
+        if key == "m" and "m" in plan.changed and row.oa_type != "string":
+            raise ValueError("saved OA multiplier is missing")
         if key in ("w", "fw", "l"):
             axis = "w" if key == "fw" else key
             if axis in plan.changed:
@@ -328,16 +405,20 @@ def verify_mos_sizing_save(
                     row.cdf_value
                 ):
                     raise ValueError(f"saved OA property {key} differs from the effective CDF")
-            elif row.oa_type != old.oa_type or (
-                row.oa_value != old.oa_value
-                and (
-                    row.oa_value is None
-                    or old.oa_value is None
-                    or _engineering(row.oa_value) != _engineering(old.oa_value)
+            else:
+                changed_stored = row.oa_type != old.oa_type or (
+                    row.oa_value != old.oa_value
+                    and (
+                        row.oa_value is None
+                        or old.oa_value is None
+                        or _engineering(row.oa_value) != _engineering(old.oa_value)
+                    )
                 )
-            ):
-                raise ValueError(f"MOS sizing changed held property {key}")
+                if (wlm and row != old) or changed_stored:
+                    raise ValueError(f"MOS sizing changed held property {key}")
         if key in _GEOMETRY:
+            if key not in plan.allowed_derived and row != old:
+                raise ValueError(f"MOS sizing changed held junction property {key}")
             cdf_value = _engineering(row.cdf_value)
             if row.oa_value is not None and _engineering(row.oa_value) != cdf_value:
                 raise ValueError(f"saved OA junction property {key} differs from the effective CDF")
@@ -352,10 +433,11 @@ def _check_input(
 ) -> tuple[_NetlistControls, list[str], dict[str, str]]:
     params, includes, analyses, static = partition_input(raw)  # type: ignore[no-untyped-call]
     fixed, options = _width_options(static, target.netlist_path, registered=target)
+    factors = _observed_factors(properties)
     if (
         options.keys() != _NETLIST_KEYS
-        or mos_multiplicity_factors(options["m"]) != ("1", "1")
-        or mos_multiplicity_factors(options["simM"]) != ("1", "1")
+        or mos_multiplicity_factors(options["m"]) != factors
+        or mos_multiplicity_factors(options["simM"]) != factors
         or any(
             _engineering(options[key])
             != _engineering(properties["fw" if key == "w" else key].cdf_value)
@@ -425,7 +507,8 @@ class RegisteredMosSizingService:
         return result
 
     def lookup_evidence(
-        self, request: PmosDefaultChangeRequest,
+        self,
+        request: PmosDefaultChangeRequest,
     ) -> tuple[RegisteredMosSizingResult, RetainedMosSizingEvidence | None]:
         """Return the verified original capture to trusted host consumers only."""
         self._check_request(request)
@@ -436,7 +519,10 @@ class RegisteredMosSizingService:
         if result.outcome != "VERIFIED" or retained.capture is None:
             return result, None
         return result, RetainedMosSizingEvidence(
-            self.plan, self._binding, self._baseline_input, retained.capture.netlist,
+            self.plan,
+            self._binding,
+            self._baseline_input,
+            retained.capture.netlist,
         )
 
     def apply(self, request: PmosDefaultChangeRequest) -> RegisteredMosSizingResult:
@@ -530,7 +616,13 @@ class RegisteredMosSizingService:
             )
         ):
             raise ValueError("MOS sizing changed fixed Netlist conditions, model or topology")
-        observed = _observed_dimensions(reopened.properties)
+        observed = _observed_dimensions(reopened.properties, include_m=plan.expected.m is not None)
+        axis = plan.changed[0]
+        value: ChangeValue
+        if axis == "m":
+            value = ChangeValue(value=str(observed.m), unit="count")
+        else:
+            value = observed.w if axis == "w" else observed.l
         return RegisteredMosSizingResult(
             identity=self.identity,
             candidate_revision=plan.candidate_revision,
@@ -544,7 +636,7 @@ class RegisteredMosSizingService:
             effective_mos_options=options,
             effective_input=NetlistProjection(
                 artifact_sha256=readback.netlist_sha256,
-                value=observed.w if plan.changed[0] == "w" else observed.l,
+                value=value,
                 derived=tuple(
                     DerivedValue(
                         property_name=key, value=cast(str, reopened.properties[key].cdf_value)
