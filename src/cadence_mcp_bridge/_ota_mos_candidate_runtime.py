@@ -518,11 +518,21 @@ _OTA_SAFETY_ADDITIONS = frozenset(
         "source_ade_design",
     )
 )
+_CLONE_RECOVERY_FIELDS = frozenset(
+    (
+        "retarget_operation_id",
+        "lineage_sha256",
+        "original_intent_sha256",
+        "original_failure_sha256",
+        "original_reconciliation_sha256",
+        "pre_retarget_trees",
+    )
+)
 
 
 def verify_safety(p, route, legacy):
     require(
-        set(p) == set(legacy.SAFETY_FIELDS) | _OTA_SAFETY_ADDITIONS
+        set(p).difference(("clone_recovery",)) == set(legacy.SAFETY_FIELDS) | _OTA_SAFETY_ADDITIONS
         and type(p["schema_version"]) is int
         and p["schema_version"] == 2
         and all(_HEX.match(p[key]) for key in p if key.endswith("_sha256")),
@@ -545,6 +555,61 @@ def verify_safety(p, route, legacy):
         and p["source_symbol_tree_sha256"] == ota["symbol_tree_sha256"]
         and p["source_ade_tree_sha256"] == ota["ade_state_tree_sha256"],
         "native_safety_baseline",
+    )
+    if "clone_recovery" in p:
+        recovery = p["clone_recovery"]
+        require(
+            isinstance(recovery, dict)
+            and set(recovery) == _CLONE_RECOVERY_FIELDS
+            and _OP.match(recovery["retarget_operation_id"])
+            and all(_HEX.match(recovery[key]) for key in recovery if key.endswith("_sha256")),
+            "clone_recovery_safety",
+        )
+        trees = recovery["pre_retarget_trees"]
+        require(
+            set(trees) == set(("child_library", "child_dut", "child_bench", "child_state"))
+            and all(_HEX.match(value) for value in trees.values()),
+            "clone_recovery_trees",
+        )
+
+
+def verify_clone_lineage(lineage, original_intent, original_failure, receipt, recovery, subject):
+    """Verify the separate retarget without treating the failed clone as complete."""
+    original = subject["owned_copy_operation_id"]
+    retarget = recovery["retarget_operation_id"]
+    require(
+        len(set((original, retarget, subject["operation_id"]))) == 3
+        and _sha(_canonical(lineage)) == recovery["lineage_sha256"]
+        and _sha(_canonical(original_intent)) == recovery["original_intent_sha256"]
+        and _sha(_canonical(original_failure)) == recovery["original_failure_sha256"]
+        and _HEX.match(original_intent["scope_sha256"])
+        and original_intent
+        == dict(
+            scope_sha256=original_intent["scope_sha256"],
+            operation_id=original,
+            retry=False,
+        )
+        and original_failure == dict(status="OUTCOME_UNKNOWN", checkpoint="RETARGET")
+        and type(lineage["physical_copies_created_here"]) is int
+        and lineage
+        == dict(
+            status="OTA17_ORIGINAL_COPY_WITH_SEPARATE_CORRECTED_RETARGET",
+            original_physical_copy_operation_id=original,
+            retarget_operation_id=retarget,
+            scope_sha256=receipt["scope_sha256"],
+            original_failure_sha256=recovery["original_failure_sha256"],
+            reconciliation_sha256=recovery["original_reconciliation_sha256"],
+            retarget_receipt_sha256=_sha(_canonical(receipt)),
+            physical_copies_created_here=0,
+        ),
+        "clone_lineage",
+    )
+    before, after = recovery["pre_retarget_trees"], receipt["owned_trees"]
+    require(
+        (before["child_dut"], before["child_state"]) == (after["dut"], after["state"])
+        and before["child_bench"] != after["bench"]
+        and before["child_library"] != after["strict_library"],
+        "clone_retarget_tree_change",
     )
 
 
@@ -707,7 +772,24 @@ class _OtaJob(object):
         self.limit, self.state = self.pin["job_limit_bytes"], self.pin["source_ade_path"]
         self.jobs = runtime.root + "/" + runtime.accounting.JOBS
         self.job = self.jobs + "/" + self.operation
-        self.copy = self.jobs + "/" + self.subject["owned_copy_operation_id"]
+        self.clone_recovery = self.pin.get("clone_recovery")
+        self.physical_copy = self.jobs + "/" + self.subject["owned_copy_operation_id"]
+        self.copy_operation = (
+            self.clone_recovery["retarget_operation_id"]
+            if self.clone_recovery is not None
+            else self.subject["owned_copy_operation_id"]
+        )
+        require(
+            self.clone_recovery is None
+            or self.copy_operation
+            not in (
+                self.subject["owned_copy_operation_id"],
+                self.operation,
+                self.route["ota"]["generation_operation_id"],
+            ),
+            "clone_retarget_identity",
+        )
+        self.copy = self.jobs + "/" + self.copy_operation
         self.copy_claim = self.copy + "/registered-mos-edit-intent.json"
         self.confirmations = runtime.root + "/" + self.legacy.CONFIRMATIONS
         self.slot = None
@@ -792,7 +874,7 @@ class _OtaJob(object):
         names = sorted(
             name
             for name in os.listdir(self.jobs)
-            if name not in (self.operation, self.subject["owned_copy_operation_id"])
+            if name not in (self.operation, self.copy_operation)
         )
         require(len(names) <= 4096, "retained_jobs_bound")
         retained = [(name, rt.eda.size(self.jobs + "/" + name)) for name in names]
@@ -841,15 +923,35 @@ class _OtaJob(object):
             "native_approval",
         )
         require(not os.path.lexists(self.copy + "/failure.json"), "clone_failure")
+        receipt = h.parse(
+            _pinned(h.read(self.copy + "/receipt.json", 4096), p["copy_receipt_sha256"])
+        )
         original, owned = verify_clone_receipt(
-            h.parse(_pinned(h.read(self.copy + "/receipt.json", 4096), p["copy_receipt_sha256"])),
+            receipt,
             h.parse(h.read(self.copy + "/complete.json", 4096)),
             h.parse(h.read(self.copy + "/intent.json", 4096)),
             h.read(self.copy + "/work/ocean.stdout", 65536),
             p,
-            self.subject,
+            dict(self.subject, owned_copy_operation_id=self.copy_operation),
             self.route["ota"]["generation_operation_id"],
         )
+        if self.clone_recovery is not None:
+            rt.copying.owned_parent(self.physical_copy)
+            require(
+                not any(
+                    os.path.lexists(self.physical_copy + "/" + leaf)
+                    for leaf in ("complete.json", "receipt.json", "registered-mos-edit-intent.json")
+                ),
+                "failed_clone_immutable",
+            )
+            verify_clone_lineage(
+                h.parse(h.read(self.copy + "/clone-lineage.json", 4096)),
+                h.parse(h.read(self.physical_copy + "/intent.json", 4096)),
+                h.parse(h.read(self.physical_copy + "/failure.json", 4096)),
+                receipt,
+                self.clone_recovery,
+                self.subject,
+            )
         require(
             self.tree(self.source) == original["strict_library"]
             and self.tree(CHILD_STATE) == owned["state"],

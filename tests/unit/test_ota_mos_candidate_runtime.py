@@ -416,7 +416,8 @@ def test_original_clone_journal_requires_completion_marker_and_owned_tree():
             ota.verify_clone_receipt(*args[:index], changed, *args[index + 1 :])
 
 
-def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypatch):
+@pytest.mark.parametrize("recovered", [False, True])
+def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypatch, recovered):
     receipt, complete, intent, stdout, pin, subject = clone_fixture()
     job = object.__new__(ota._OtaJob)
     job.pin, job.subject = pin, subject
@@ -425,8 +426,53 @@ def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypa
         {"ota": {"generation_operation_id": GENERATION}},
     )
     job.copy, job.owned, job.source = "/job/copy", ota.CHILD_PATH, ota.SOURCE_PATH
+    job.clone_recovery, job.copy_operation = None, COPY
+    recovery_leaves = {}
+    if recovered:
+        retarget = "230bff52-d3b0-4acf-b5bf-d728611b0db7"
+        job.physical_copy, job.copy, job.copy_operation = "/job/copy", "/job/retarget", retarget
+        failure = dict(status="OUTCOME_UNKNOWN", checkpoint="RETARGET")
+        original_intent = intent
+        intent = dict(intent, operation_id=retarget)
+        stdout = f"OTA17_CANDIDATE_BENCH_RETARGETED|{retarget}\n".encode("ascii")
+        receipt.update(
+            operation_id=retarget,
+            intent_sha256=_sha(_canonical(intent)),
+            stdout_sha256=_sha(stdout),
+        )
+        pin["copy_receipt_sha256"] = _sha(_canonical(receipt))
+        complete = dict(receipt_sha256=pin["copy_receipt_sha256"])
+        lineage = dict(
+            status="OTA17_ORIGINAL_COPY_WITH_SEPARATE_CORRECTED_RETARGET",
+            original_physical_copy_operation_id=COPY,
+            retarget_operation_id=retarget,
+            scope_sha256=intent["scope_sha256"],
+            original_failure_sha256=_sha(_canonical(failure)),
+            reconciliation_sha256=_DIGEST,
+            retarget_receipt_sha256=pin["copy_receipt_sha256"],
+            physical_copies_created_here=0,
+        )
+        job.clone_recovery = dict(
+            retarget_operation_id=retarget,
+            lineage_sha256=_sha(_canonical(lineage)),
+            original_intent_sha256=_sha(_canonical(original_intent)),
+            original_failure_sha256=lineage["original_failure_sha256"],
+            original_reconciliation_sha256=lineage["reconciliation_sha256"],
+            pre_retarget_trees=dict(
+                child_library="0" * 64,
+                child_bench="0" * 64,
+                child_dut=receipt["owned_trees"]["dut"],
+                child_state=receipt["owned_trees"]["state"],
+            ),
+        )
+        recovery_leaves = {
+            job.physical_copy + "/intent.json": _canonical(original_intent),
+            job.physical_copy + "/failure.json": _canonical(failure),
+            job.copy + "/clone-lineage.json": _canonical(lineage),
+        }
     job.confirmations, job.digest, job.approval = "/job/confirmations", _DIGEST, b"approval"
     readers = {
+        **recovery_leaves,
         job.copy + "/receipt.json": _canonical(receipt),
         job.copy + "/intent.json": _canonical(intent),
         job.copy + "/complete.json": _canonical(complete),
@@ -449,9 +495,69 @@ def test_worker_guard_reads_native_clone_leaves_and_checks_retained_ade(monkeypa
     session = SimpleNamespace(check=lambda: None)
     monkeypatch.setattr(ota.time, "time", lambda: 1900000000)
     assert job.guard(session) == 3145728
+    if recovered:
+        failure_file = job.physical_copy + "/failure.json"
+        retained = readers[failure_file]
+        readers[failure_file] = b"{}"
+        with pytest.raises(ValueError, match="clone_lineage"):
+            job.guard(session)
+        readers[failure_file] = retained
+        with monkeypatch.context() as patcher:
+            patcher.setattr(ota.os.path, "lexists", lambda path: path.endswith("/complete.json"))
+            with pytest.raises(ValueError, match="failed_clone_immutable"):
+                job.guard(session)
     trees[ota.CHILD_STATE] = "0" * 64
     with pytest.raises(ValueError, match="clone_retained_source_and_state"):
         job.guard(session)
+
+
+def test_retarget_and_failed_clone_are_charged_once(monkeypatch):
+    job = object.__new__(ota._OtaJob)
+    job.operation, job.copy_operation = OP, "retarget"
+    job.jobs, job.job = "/managed/jobs", "/managed/jobs/" + OP
+    job.copy, job.owned, job.limit = job.jobs + "/retarget", ota.CHILD_PATH, 4194304
+    sizes = {
+        job.jobs + "/" + COPY: (100, 200, "failed-original"),
+        job.copy: (300, 400, "retarget"),
+        job.job: (500, 600, "writer"),
+        ota.os.path.dirname(ota.CHILD_PATH): (700, 800, "child"),
+    }
+    policy = dict(result_ceiling_bytes=5000000)
+    job.digest_doc = lambda doc: _sha(_canonical(doc))
+    job.operator = SimpleNamespace(pw_name="operator", pw_uid=500)
+    job.pin = dict(
+        ledger_sha256=_sha(b"ledger"),
+        policy_sha256=job.digest_doc(policy),
+        supplemental_bytes=0,
+        retained_jobs_sha256=job.digest_doc([(COPY, sizes[job.jobs + "/" + COPY])]),
+    )
+    job.rt = SimpleNamespace(
+        root="/managed",
+        layout_retained_bytes=lambda: 0,
+        manifest={"identity_manifest_sha256": _DIGEST},
+        profile={"limits": {"disk_floor_bytes": 0, "disk_floor_percent": 0}},
+        modules={
+            "confirmation": SimpleNamespace(domain=lambda *_: ("/managed", "pin", "operator", 500))
+        },
+        accounting=SimpleNamespace(
+            LEDGER="ledger",
+            state=lambda *_: ({"result_reserved_bytes": 0}, []),
+            identity_manifest=lambda *_: {},
+            effective_policy=lambda *_: policy,
+        ),
+        operations=SimpleNamespace(read_bytes=lambda _: b"ledger"),
+        gate=SimpleNamespace(occupancy=lambda: (0, 1200)),
+        eda=SimpleNamespace(size=sizes.__getitem__),
+    )
+    monkeypatch.setattr(ota.os, "listdir", lambda _: [COPY, "retarget", OP])
+    monkeypatch.setattr(ota.os.path, "lexists", lambda _: True)
+    monkeypatch.setattr(
+        ota.os,
+        "statvfs",
+        lambda _: SimpleNamespace(f_frsize=4096, f_bsize=4096, f_blocks=4096, f_bavail=4096),
+        raising=False,
+    )
+    assert job._capacity() == job.limit - 400 - 800 - 32768
 
 
 def test_independent_capture_receipts_and_no_source_writes(tmp_path, monkeypatch):
