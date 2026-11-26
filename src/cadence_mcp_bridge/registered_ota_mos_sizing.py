@@ -272,7 +272,7 @@ def _ota_fixed_statements(
     raw: bytes,
     baseline_properties: dict[str, dict[MosProperty, MosPropertyValue]],
 ) -> list[str]:
-    """Permit only device order and numeric spelling inside the registered OTA block."""
+    """Project the registered OTA devices and the two observed bench orders."""
     statements = cast(list[str], netlist_statements(raw))  # type: ignore[no-untyped-call]
     benches = [line for line in statements if line.startswith(route.ota.dut_instance + " ")]
     if len(benches) != 1 or not benches[0].endswith(" " + route.source_cell):
@@ -333,4 +333,22 @@ def _ota_fixed_statements(
                 if name != target or key not in permitted
             )
         fixed.append(f"{name} ({nodes}) {model} {count} {unchanged}")
-    return statements[:start] + sorted(fixed) + statements[end:]
+    bench = statements[end:]
+    if route.baseline.revision.design_id == "ota17-baseline" and route.ota.dut_instance == "DUT":
+        bench = _project_ota_bench_order(bench)
+    return statements[:start] + sorted(fixed) + bench
+
+
+def _project_ota_bench_order(after_dut: list[str]) -> list[str]:
+    """Compare the observed HNL DUT-last variant to the original DUT-first block."""
+    dut_last = ("VSUP", "VINN", "VINP", "CL", "DUT")
+    block = after_dut[1:6]
+    if (
+        len(after_dut) > 6
+        and tuple(line.split(" ", 1)[0] for line in block) == dut_last
+        and after_dut[6].startswith("simulatorOptions options ")
+        and not any(line.split(" ", 1)[0] in dut_last for line in after_dut[6:])
+    ):
+        # Preserve the complete statement bytes in the projected comparison.
+        return after_dut[:1] + block[-1:] + block[:-1] + after_dut[6:]
+    return after_dut

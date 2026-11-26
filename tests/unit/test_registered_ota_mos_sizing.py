@@ -19,6 +19,7 @@ from cadence_mcp_bridge.registered_ota_mos_sizing import (
     OtaMosInstance,
     RegisteredOtaMosSizingRoute,
     RegisteredOtaMosSizingService,
+    _project_ota_bench_order,
     verify_ota_recovered_generation,
 )
 from cadence_mcp_bridge.research_circuit import MosBlockStageReceipt
@@ -185,6 +186,29 @@ def test_rejects_changed_siblings_fixed_conditions_or_topology(old, changed):
     )
     service = _service(data, _Provider(capture))
     assert service.apply(service.identity).outcome == "OUTCOME_UNKNOWN"
+
+
+def test_accepts_only_the_observed_dut_last_bench_projection():
+    end = "ends self_cascode_ota_17mos"
+    dut = "DUT (vdd 0 inn inp out) self_cascode_ota_17mos"
+    supply = "VSUP (vdd 0) vsource dc=1 type=dc"
+    negative = "VINN (inn 0) vsource dc=500m mag=-500m type=sine"
+    positive = "VINP (inp 0) vsource dc=500m mag=500m type=sine"
+    load = "CL (out 0) capacitor c=0.000000000001"
+    controls = ["simulatorOptions options temp=27", "ac ac start=1 stop=1000000000 dec=16"]
+    original = [end, dut, supply, negative, positive, load, *controls]
+    variant = [end, supply, negative, positive, load, dut, *controls]
+    assert _project_ota_bench_order(original) == _project_ota_bench_order(variant) == original
+
+    for drift in (
+        [end, supply, positive, negative, load, dut, *controls],
+        [end, supply, negative, positive, load, dut.replace("inn inp", "inp inn"), *controls],
+        [end, supply, negative.replace("(inn 0)", "(inn out)"), positive, load, dut, *controls],
+        [end, supply, negative, positive, load, controls[0], dut, controls[1]],
+        [end, supply, negative, positive, load, dut, *controls, dut],
+        [end, supply, negative, positive, load, dut, controls[0].replace("27", "28"), controls[1]],
+    ):
+        assert _project_ota_bench_order(drift) != original
 
 
 def test_keeps_fixed_control_positions_outside_the_ota_device_block():
