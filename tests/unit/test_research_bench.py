@@ -666,6 +666,33 @@ def test_fixed_vsin_pair_checks_native_shape_and_emitted_controls() -> None:
     with pytest.raises(ValueError, match="registered for AC only"):
         verify(candidate, conditions.model_copy(update={"analyses": (("dc", "annotate=status"),)}))
     dc_pair = signed.model_copy(update={"signed_ac_vsin_dc": True})
+    ota_conditions = conditions.model_copy(
+        update={"analyses": (("ac", "start=1 stop=1000000000 dec=16 annotate=status"),)}
+    )
+    ota_ac = candidate.replace(b"stop=1e9 dec=16", b"stop=1e+09 dec=16 annotate=status")
+
+    def verify_ota_ac(netlist: bytes) -> None:
+        verify_research_bench_netlist(
+            dc_pair,
+            dut,
+            netlist,
+            raw,
+            expected_plan_sha256=canonical_digest(dc_pair),
+            expected_netlist_sha256=sha256(netlist).hexdigest(),
+            expected_dut_netlist_sha256=sha256(raw).hexdigest(),
+            conditions=ota_conditions,
+            expected_conditions_sha256=canonical_digest(ota_conditions),
+        )
+
+    verify_ota_ac(ota_ac)
+    for token, replacement in (
+        (b"1e+09", b"9e8"),
+        (b"dec=16", b"dec=15"),
+        (b"dec=16 annotate=status", b"annotate=status dec=16"),
+        (b"annotate=status", b"annotate=status stop=1e+09"),
+    ):
+        with pytest.raises(ValueError, match="analyses mismatch"):
+            verify_ota_ac(ota_ac.replace(token, replacement))
     dc = conditions.model_copy(update={"analyses": (("dc", "annotate=status"),)})
     candidate_dc = b"\n".join(
         line if b" ac " not in line else b"dcOp dc annotate=status"

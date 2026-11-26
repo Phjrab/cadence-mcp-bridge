@@ -313,6 +313,28 @@ def _check_bench_conditions(plan: ResearchBenchPlan, conditions: BenchNetlistCon
             raise ValueError("vsin bench conditions differ from the declared DC/AC profile")
 
 
+def _bench_analyses_match(
+    plan: ResearchBenchPlan,
+    observed: tuple[tuple[str, str], ...],
+    expected: tuple[tuple[str, str], ...],
+) -> bool:
+    if observed == expected:
+        return True
+    # The OTA seed can print a frequency using scientific notation. Keep all
+    # other tokens, their order, and the number of analyses exact.
+    ota_sweep = (("ac", "start=1 stop=1000000000 dec=16 annotate=status"),)
+    if not plan.signed_ac_vsin_dc or expected != ota_sweep or len(observed) != 1:
+        return False
+    analysis, options = observed[0]
+    frequencies = re.fullmatch(r"start=(\S+) stop=(\S+) dec=16 annotate=status", options)
+    return bool(
+        analysis == "ac"
+        and frequencies
+        and number_text(frequencies[1]) == "1"
+        and number_text(frequencies[2]) == "1000000000"
+    )
+
+
 def _check_primitive_cdf(
     cdf_frames: Mapping[str, bytes],
     pin: Digest,
@@ -805,7 +827,7 @@ def verify_research_bench_netlist(
         or (not declarative and "m2_vin" not in params)
         or tuple(includes) != conditions.includes
         or not analyses
-        or tuple(analyses) != conditions.analyses
+        or not _bench_analyses_match(plan, tuple(analyses), conditions.analyses)
     ):
         raise ValueError("bench parameters, model includes or analyses mismatch")
     dut_body, _ = _split_static(dut_static)
