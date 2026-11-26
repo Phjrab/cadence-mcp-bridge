@@ -409,7 +409,12 @@ DC 분석 작업 ID는 `155ca51f-c3c1-46d0-8982-bbbb76f95b82`입니다. 실측 �
 
 #### P4 증거를 정적 포팅 입력에 연결
 
-W/L/m 검증이 포함된 개발 환경에서 [오프라인 결속 도구](bind-ota-port-evidence.py)를 실행합니다. C6의 `lookup_evidence`로 검증하고 독립 검토한 자료를 매니페스트 `points`에 넣습니다. 각 행에는 직렬화한 `MosSizingPlan`(`plan`), 같은 ID의 `RegisteredMosSizingResult`(`lookup_result`), 원본 독립 재개방 CDF(`cdf`)와 Spectre 입력(`netlist`)이 필요합니다. 각 값은 매니페스트 디렉터리 기준 상대 `path`와 실제 바이트의 `sha256`을 담습니다. 포팅 입력·매니페스트의 SHA는 검토 기록과 대조한 값을 전달합니다. 증거가 없으면 `{"points": []}`를 사용합니다.
+W/L/m 검증이 포함된 개발 환경에서 [오프라인 결속 도구](bind-ota-port-evidence.py)를 실행합니다. 승인된 비OTA 검증의 출력은 두 경로로 연결합니다.
+
+- **개별 편집 2개** — 매니페스트 `points`에 NMOS `(1.5, 0.25, 1)`와 PMOS `(3, 0.25, 1)` 중 독립 검토를 마친 자료만 넣습니다. 각 행은 `MosSizingPlan`(`plan`), 같은 ID의 `RegisteredMosSizingResult`(`lookup_result`), 원본 독립 재개방 CDF(`cdf`)와 Spectre 입력(`netlist`)을 참조합니다.
+- **공통 사본 6개** — C6의 검증기가 원본 setup·저장·독립 재개방/Netlist 영수증과 소자별 OA/CDF·Spectre 원본을 검증한 뒤 내보낸 `VERIFIED_FIXTURE_TUPLES` 보고서 하나를 `fixture_report`에 넣습니다. 소자별 근거는 공통 배치 ID, 사본 내 인스턴스 이름, 검증 행의 SHA-256으로 구분합니다. 여섯 소자의 Spectre 근거는 같은 원본 Netlist에 연결됩니다.
+
+파일 참조는 매니페스트 디렉터리 기준 상대 `path`와 실제 바이트의 `sha256`을 담습니다. 포팅 입력·매니페스트·검증 보고서의 해시는 독립 검토 기록과 대조합니다. 증거가 없으면 `{"points": []}`를 사용합니다.
 
 ```powershell
 python docs/examples/research/bind-ota-port-evidence.py `
@@ -418,6 +423,8 @@ python docs/examples/research/bind-ota-port-evidence.py `
 ```
 
 일치하는 목표 조합의 소자에만 `geometry.source`와 `spectre.source`를 연결합니다. 일부 목표의 증거만 있으면 나머지 소자를 `unbound_devices`에 남기며, 불완전한 증거 행·중복·불일치는 오류로 반환합니다. 출력은 binding 없는 정적 입력입니다. 별도 bench·ADE·NN 검토와 실제 작업 공간 지문은 위 순서로 결속합니다.
+
+`topology_source`의 PDF 해시는 Fig. 2-12의 17개 D/G/S/B 연결과 Table 7 치수의 출처를 고정합니다. 각 소자의 `master_source`는 기존 비OTA에서 관측한 GPDK090 심볼 단자 근거입니다. 논문에서 확인한 벌크 결선에 따라 NMOS B→VSS, PMOS B→VDD를 선택했습니다. OTA에서의 실제 연결·벌크 및 단자 순서는 생성·저장·독립 재개방 후 확인합니다. 생성 전에는 선택한 고정 소스 또는 AC용 `vsin`과 부하의 CDF·입력 해시, ADE seed 트리 및 NN 모델 파일 해시를 차례로 확보합니다. 생성 후 기록에는 실제 DUT·bench·ADE 트리와 Netlist·reader 해시를 연결합니다.
 
 ## 재개 프롬프트
 
