@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from decimal import Decimal, localcontext
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 
 from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
@@ -213,6 +213,14 @@ class MosOptionTransition(VariableModel):
     after: Annotated[str, Field(pattern=r"^[A-Za-z0-9_.()+*/-]{1,64}$")]
 
 
+def mos_multiplicity_factors(token: str) -> tuple[str, str]:
+    """Parse the observed Spectre (m)*(fingers) form as two bounded integers."""
+    match = re.fullmatch(r"\(([1-9][0-9]{0,5})\)\*\(([1-9][0-9]{0,5})\)", token)
+    if match is None:
+        raise ValueError("Spectre MOS multiplicity needs two explicit positive integer factors")
+    return match[1], match[2]
+
+
 class RegisteredMosTarget(VariableModel):
     """One registered OA property and its exact observed Spectre option mapping."""
 
@@ -244,6 +252,19 @@ class RegisteredMosTarget(VariableModel):
 
     def parse_scalar(self, token: str, *, baseline: bool = False) -> ChangeValue:
         unit = (self.baseline_scalar_unit or self.scalar_unit) if baseline else self.scalar_unit
+        if (
+            unit == "count"
+            and self.scalar_option == self.instance.property_name == "m"
+            and self.instance.master_library == "gpdk090"
+            and self.instance.master_cell in ("nmos1v", "pmos1v")
+            and self.instance.master_view == "symbol"
+            and self.netlist_model == f"gpdk090_{self.instance.master_cell}"
+            and "*" in token
+        ):
+            multiplier, fingers = mos_multiplicity_factors(token)
+            if fingers != "1":
+                raise ValueError("registered multiplier projection requires one observed finger")
+            return ChangeValue(value=multiplier, unit="count")
         suffix = {"m": "", "um": "u", "nm": "n", "count": ""}[unit]
         if token.startswith("(") and token.endswith(")"):
             token = token[1:-1]
@@ -482,8 +503,22 @@ class AmplifierPm0InputObservation(VariableModel):
     netlist: NetlistProjection
 
 
+class _MosNetlistBinding(Protocol):
+    @property
+    def instance(self) -> CandidateSourceTarget: ...
+
+    @property
+    def netlist_path(self) -> str: ...
+
+    @property
+    def netlist_model(self) -> str: ...
+
+    @property
+    def netlist_terminals(self) -> tuple[str, str, str, str]: ...
+
+
 def _width_options(
-    statements: list[str], path: str, *, registered: RegisteredMosTarget | None = None
+    statements: list[str], path: str, *, registered: _MosNetlistBinding | None = None
 ) -> tuple[list[str], dict[str, str]]:
     parts = path.split("/")
     if registered is not None and len(parts) == 1:
@@ -559,7 +594,7 @@ def _top_level_mos(statements: list[str], name: str) -> list[tuple[int, str]]:
 
 
 def _registered_mos_options(
-    statements: list[str], matches: list[tuple[int, str]], target: RegisteredMosTarget
+    statements: list[str], matches: list[tuple[int, str]], target: _MosNetlistBinding
 ) -> tuple[list[str], dict[str, str]]:
     if len(matches) != 1:
         raise ValueError("registered MOS instance is missing or ambiguous")
@@ -876,11 +911,37 @@ def project_netlist_change(
         old, observed, derived = _compare_mos_options(
             old_options, new_options, plan.allowed_derived, amplifier=amplifier
         )
+    # The observed Source9 HNL variation only permutes four fixed top-level
+    # bench instances. A new edit can use it on the exact archived DC input.
+    source9_mos = (
+        isinstance(plan.target, RegisteredMosTarget)
+        and plan.target.netlist_path == plan.target.instance.instance_path
+        and (plan.target.netlist_path, plan.target.instance.master_cell)
+        in (("DUT/MP", "pmos1v"), ("DUT/MN", "nmos1v"))
+        and plan.target.instance.master_library == "gpdk090"
+        and plan.target.instance.master_view == "symbol"
+        and plan.baseline.revision.design_id == "cmos-long-inverter"
+        and plan.baseline.revision.revision_id == "long-r1"
+        and (
+            (
+                plan.target.netlist_path == "DUT/MP"
+                and plan.target.instance.property_name in ("w", "fw")
+                and plan.target.scalar_option == "w"
+            )
+            or plan.baseline.netlist_sha256
+            == "5d4134980c80d6cff72e6c1adb0d5957e7871c7b52fa89d5482dfedf113c7f0a"
+        )
+    )
     if old_params != new_params or (
         old_static != new_static
         and not (
-            isinstance(plan.target, MosWidthTarget)
-            and plan.target.instance.instance_path != "PM0"
+            (
+                (
+                    isinstance(plan.target, MosWidthTarget)
+                    and plan.target.instance.instance_path != "PM0"
+                )
+                or source9_mos
+            )
             and _same_inverter_bench_with_reordered_instances(
                 old_static, new_static, baseline_input, candidate_input
             )

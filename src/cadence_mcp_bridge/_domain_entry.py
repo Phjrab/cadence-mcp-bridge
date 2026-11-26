@@ -40,7 +40,11 @@ def run(directory, action, expected):
                       "seal-existing", "plan-result-limit-v7",
                       "apply-result-limit-v7", "plan-result-limit-v8",
                       "apply-result-limit-v8", "plan-result-limit-v9",
-                      "apply-result-limit-v9") or len(expected) != 64 or
+                      "apply-result-limit-v9", "plan-result-limit-v10",
+                      "apply-result-limit-v10", "plan-result-limit-v11",
+                      "apply-result-limit-v11", "plan-result-limit-v12",
+                      "apply-result-limit-v12", "plan-result-limit-v13",
+                      "apply-result-limit-v13") or len(expected) != 64 or
             any(c not in "0123456789abcdef" for c in expected) or
             not os.path.isabs(directory) or os.path.realpath(directory) != directory):
         raise ValueError("migration_entry_binding")

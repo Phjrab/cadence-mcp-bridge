@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -12,8 +13,8 @@ from pydantic import ValidationError
 from test_amplifier_specifications import source as amplifier_source
 from test_candidate_contracts import candidate_operator, operator
 from test_candidate_reports import succeeded
+from test_generic_measurements import frame_for, reader_for
 from test_generic_measurements import operator as measurement_operator
-from test_generic_measurements import reader_for
 from test_operator_operations import EXAMPLES
 from test_operator_operations import operator as operator_base
 from test_parameter_changes import _NETLIST, BASELINE, BIAS, CHILD, VIN, _mos, _row
@@ -67,6 +68,248 @@ from cadence_mcp_bridge.result_reports import ReportConditions, make_report
 from cadence_mcp_bridge.variable_contracts import canonical_digest
 
 __all__ = ["candidate_operator", "measurement_operator", "operator", "operator_base"]
+
+
+@pytest.mark.parametrize("renewed", [False, True])
+def test_5656_ac_successor_requires_original_r2_failure_and_measured_ac_payload(
+    monkeypatch,
+    tmp_path,
+    renewed,
+):
+    from cadence_mcp_bridge import candidate_execution as execution
+
+    journal = tmp_path / "shared.sqlite3"
+    r2 = SimpleNamespace(
+        context_sha256=execution._AMP_5656_R2_CONTEXT_SHA256,
+        binding=SimpleNamespace(analysis_journal=journal, runner_sha256="2" * 64),
+    )
+    original_context = execution._AMP_5656_R3_CONTEXT_SHA256
+    renewed_context = execution._AMP_5656_R3_RENEWED_CONTEXT_SHA256
+    r3 = SimpleNamespace(
+        context_sha256=renewed_context if renewed else original_context,
+        binding=SimpleNamespace(analysis_journal=journal, runner_sha256="3" * 64),
+    )
+    ac_id = str(uuid4())
+    scope = _canonical(
+        {
+            "previous_runtime": r2.binding.runner_sha256,
+            "successor": r3.binding.runner_sha256,
+            "compiled_registration_sha256": "c" * 64,
+            "dc_terminal": "d" * 64,
+            "operation_id": ac_id,
+            "plan_sha256": "a" * 64,
+        }
+    )
+    monkeypatch.setattr(
+        execution,
+        "_AMP_5656_R3_RENEWED_SCOPE_SHA256" if renewed else "_AMP_5656_R3_SCOPE_SHA256",
+        hashlib.sha256(scope).hexdigest(),
+    )
+    dc = FreshAmplifierOperation(
+        SimpleNamespace(
+            query=SimpleNamespace(operation_id=execution._AMP_5656_FAILED_DC_ID),
+            plan=SimpleNamespace(plan_sha256=execution._AMP_5656_FAILED_DC_PLAN),
+            expected_terminal_sha256="d" * 64,
+            record=SimpleNamespace(progress=SimpleNamespace(phase="FAILED")),
+        ),
+        None,
+    )
+    ac = FreshAmplifierOperation(
+        SimpleNamespace(
+            query=SimpleNamespace(operation_id=ac_id),
+            plan=SimpleNamespace(plan_sha256="a" * 64),
+            record=SimpleNamespace(progress=SimpleNamespace(phase="SUCCEEDED")),
+            report=b"fixture summary",
+        ),
+        b"fixture input",
+    )
+    source = SimpleNamespace(
+        ac_successor=execution.Amplifier5656AcSuccessorEvidence(scope, r2),
+        runtime_manifest_sha256=r3.binding.runner_sha256,
+        runtime_registration_sha256="c" * 64,
+        ac_native_result=b"fixture payload",
+    )
+    assert execution._check_5656_ac_successor(source, r3, dc, ac) is r2
+    other_r3 = SimpleNamespace(
+        context_sha256=original_context if renewed else renewed_context,
+        binding=r3.binding,
+    )
+    with pytest.raises(ValueError):
+        execution._check_5656_ac_successor(source, other_r3, dc, ac)
+    ac.operation.plan.plan_sha256 = "b" * 64
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, dc, ac)
+    ac.operation.plan.plan_sha256 = "a" * 64
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, replace(dc, effective_input=b"fake"), ac)
+    source.ac_native_result = None
+    with pytest.raises(ValueError, match="successful 5656 AC"):
+        execution._check_5656_ac_successor(source, r3, dc, ac)
+    ac.operation.record = None
+    assert (
+        execution._check_5656_ac_successor(source, r3, dc, replace(ac, effective_input=None)) is r2
+    )
+    r2.binding.analysis_journal = tmp_path / "foreign.sqlite3"
+    with pytest.raises(ValueError, match="R2 failed DC"):
+        execution._check_5656_ac_successor(source, r3, dc, replace(ac, effective_input=None))
+
+
+def test_5656_successor_library_pin_requires_separately_pinned_dual_observation(monkeypatch):
+    from cadence_mcp_bridge import candidate_execution
+
+    export = {
+        "library": "/fixture/copied",
+        "library_tree": "a" * 64,
+        "library_content": "b" * 64,
+        "cell_tree": "e" * 64,
+        "ade": "/fixture/ade",
+        "ade_tree": "f" * 64,
+    }
+    dependency = "c" * 64
+    identity = {
+        "operation_id": str(uuid4()),
+        "plan_sha256": "5" * 64,
+        "counter": {"count": 1, "result_reserved_bytes": 1024},
+    }
+    scope = hashlib.sha256(_canonical({**export, **identity})).hexdigest()
+    proof = _canonical(
+        {
+            "status": "EXPORT_DEPENDENCY_PIN_VERIFIED",
+            **identity,
+            "scope_sha256": scope,
+            "strict_tree_sha256": export["library_tree"],
+            "dependency_tree_sha256": dependency,
+            "content_sha256": export["library_content"],
+            "native_job_exists": False,
+            "libraries": [
+                {
+                    "name": "copied",
+                    "registered_tree_sha256": export["library_tree"],
+                    "observed_tree_sha256": dependency,
+                    "matches": False,
+                }
+            ],
+            "ocean_calls": 0,
+            "simulations": 0,
+            "reservations": 0,
+            "vm_writes": 0,
+        }
+    )
+    monkeypatch.setattr(
+        candidate_execution,
+        "_AMP_5656_DEPENDENCY_OBSERVATION_SHA256",
+        hashlib.sha256(proof).hexdigest(),
+    )
+    assert candidate_execution._5656_export_library_tree(None, export) == export["library_tree"]
+    assert candidate_execution._5656_export_library_tree(proof, export) == dependency
+    with pytest.raises(ValueError):
+        candidate_execution._5656_export_library_tree(proof.replace(b"copied", b"foreign"), export)
+    with pytest.raises(ValueError, match="dependency observation differs"):
+        candidate_execution._5656_export_library_tree(
+            proof, {**export, "library_content": "d" * 64}
+        )
+
+
+def test_5656_summary_must_match_native_frame_and_trusted_journal(measurement_operator):
+    from cadence_mcp_bridge.analysis_store import AnalysisStore
+    from cadence_mcp_bridge.authenticated_provider import (
+        ExtractionReceipt,
+        NativeResultPayload,
+        TerminalEvent,
+        verify_native_result,
+    )
+    from cadence_mcp_bridge.candidate_execution import _check_5656_native_result
+    from cadence_mcp_bridge.generic_measurements import render_reader
+
+    args = reader_for(measurement_operator)
+    context, plan, ade, reader, operation_id, input_sha = args
+    frame = frame_for(args, "V|input|3\nV|output|1\nI|rail|-0.001")
+    receipt = ExtractionReceipt(
+        schema_version=1,
+        operation_id=operation_id,
+        plan_sha256=plan.plan_sha256,
+        native_input_sha256=input_sha,
+        reader_registration_sha256=canonical_digest(reader),
+        reader_script_sha256=hashlib.sha256(
+            render_reader(context, plan, ade, reader, operation_id, input_sha)
+        ).hexdigest(),
+        frame_sha256=hashlib.sha256(frame).hexdigest(),
+        psf_tree_fingerprint="a" * 64,
+        pre_receipt_tree_fingerprint="b" * 64,
+        logical_bytes=128,
+        allocated_bytes=256,
+        originals_preserved=True,
+    )
+    event = TerminalEvent(
+        schema_version=1,
+        operation_id=operation_id,
+        plan_sha256=plan.plan_sha256,
+        revision=5,
+        previous_sha256="c" * 64,
+        phase="SUCCEEDED",
+        evidence_sha256=canonical_digest(receipt),
+    )
+    terminal = canonical_digest(event)
+    progress = OperationProgress(
+        phase="SUCCEEDED", remote_revision=5, provider_receipt_sha256=terminal
+    )
+    store = AnalysisStore(context.binding.analysis_journal)
+    assert store.admit_operation(operation_id, plan, dispatch_intent=True)
+    record = store.advance_operation(
+        operation_id, OperationProgress(phase="UNKNOWN_OUTCOME"), progress
+    )
+    data = NativeResultPayload.model_validate_json(
+        _canonical(
+            {
+                "observation": {
+                    "operation_id": operation_id,
+                    "plan_sha256": plan.plan_sha256,
+                    "resource_domain_sha256": plan.resource_domain_sha256,
+                    "ledger_ref": plan.ledger_ref,
+                    "progress": progress.model_dump(mode="json"),
+                },
+                "terminal_event": event.model_dump(mode="json"),
+                "receipt": receipt.model_dump(mode="json"),
+                "ade": ade.model_dump(mode="json"),
+                "reader": reader.model_dump(mode="json"),
+                "frame": frame.decode("ascii"),
+                "completed_size": {
+                    "logical_bytes": 256,
+                    "allocated_bytes": 512,
+                    "tree_fingerprint": "e" * 64,
+                },
+            }
+        )
+    )
+    _, projected = verify_native_result(
+        context, plan, operation_id, data, include_report_conditions=True
+    )
+    report = make_report(record, projected)
+    operation = PmosDcOperation(
+        NativeOperationQuery(operation_id=operation_id, expected_plan_sha256=plan.plan_sha256),
+        plan,
+        b"",
+        b"",
+        b"",
+        record=record,
+        expected_terminal_sha256=terminal,
+    )
+    raw = _canonical(data.model_dump(mode="json"))
+    before = store.path.read_bytes()
+    _check_5656_native_result(context, operation, raw, report, input_sha, ade, reader)
+    forged = report.model_copy(
+        update={
+            "metrics": (report.metrics[0].model_copy(update={"value": 4.0}), *report.metrics[1:])
+        }
+    )
+    with pytest.raises(ValueError, match="report does not match"):
+        _check_5656_native_result(context, operation, raw, forged, input_sha, ade, reader)
+    forged_record = record.model_copy(update={"event_count": record.event_count + 1})
+    with pytest.raises(ValueError, match="trusted operation journal"):
+        _check_5656_native_result(
+            context, replace(operation, record=forged_record), raw, report, input_sha, ade, reader
+        )
+    assert store.path.read_bytes() == before
 
 
 @pytest.mark.parametrize(

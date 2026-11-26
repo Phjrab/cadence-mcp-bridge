@@ -564,6 +564,63 @@ def partition_input(data):
     return parameters, includes, analyses, static
 
 
+def tran_supply_saves(data, registration):
+    """Ensure v2 transient input explicitly saves registered supply currents."""
+    if registration.get("schema_version", 1) != 2:
+        return data
+    _, _, analyses, static = partition_input(data)
+    if len(analyses) != 1 or analyses[0][0] != "tran":
+        raise ValueError("spectre_supply_save_requires_tran")
+    top_level = []
+    depth = 0
+    for line in static:
+        if line.startswith(("subckt ", "inline subckt ")):
+            depth += 1
+        elif line == "ends" or line.startswith("ends "):
+            depth -= 1
+        elif not depth:
+            top_level.append(line)
+    node_names = {}
+    for row in registration["nodes"]:
+        name = selector(row["selector"])[1:]
+        node_names[logical(row["logical_id"])] = name
+    sources = registration["sources"]
+    if not 1 <= len(sources) <= 6:
+        raise ValueError("spectre_supply_save_inventory")
+    saved = set(token for line in top_level if line.startswith("save ")
+                for token in line.split()[1:])
+    branches = []
+    for source in sources:
+        selected = selector(source["current_selector"], True)[1:-len("/PLUS")]
+        identifier(selected)
+        if (source["role"] != "supply" or source["current_convention"] !=
+                "positive_into_source_positive_terminal_A"):
+            raise ValueError("spectre_supply_save_convention")
+        terminals = []
+        for end in ("positive_node", "negative_node"):
+            logical_id = source[end]
+            name = "0" if logical_id is None else node_names.get(logical_id)
+            if not matches(r"^[A-Za-z0-9_#][A-Za-z0-9_#.-]{0,127}$", name):
+                raise ValueError("spectre_supply_save_terminal")
+            terminals.append(name)
+        prefix = selected + " (" + " ".join(terminals) + ") vsource "
+        instances = [line for line in top_level if line.startswith(selected + " ")]
+        if len(instances) != 1 or not instances[0].startswith(prefix):
+            raise ValueError("spectre_supply_save_source_binding")
+        options = analysis_options(instances[0][len(prefix):])
+        if set(options) != set(("dc", "type")) or options["type"] != "dc":
+            raise ValueError("spectre_supply_save_source_binding")
+        branch = selected + ":p"
+        if branch in branches:
+            raise ValueError("spectre_supply_save_duplicate_source")
+        branches.append(branch)
+    missing = [branch for branch in branches if branch not in saved]
+    if not missing:
+        return data
+    separator = b"" if data.endswith(b"\n") else b"\n"
+    return data + separator + ("save " + " ".join(missing) + "\n").encode("ascii")
+
+
 def effective_input(data, expected_parameters, expected_includes, inputs, static_sha):
     # The fixed worker must obtain expected primitives from confirmed registration,
     # never from the candidate netlist. Native source/model attestation is separate.

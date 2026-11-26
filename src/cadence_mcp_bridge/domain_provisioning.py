@@ -123,6 +123,10 @@ def prepare(
     result_limit_v7: bool = False,
     result_limit_v8: bool = False,
     result_limit_v9: bool = False,
+    result_limit_v10: bool = False,
+    result_limit_v11: bool = False,
+    result_limit_v12: bool = False,
+    result_limit_v13: bool = False,
 ) -> dict[str, object]:
     environment, data = load_environment(_local_path(profile))
     assets, _, expected = contents()
@@ -130,7 +134,10 @@ def prepare(
         raise ValueError("helper_package_binding_mismatch")
     raw_profile: bytes = _canonical(json.loads(data))
     action = "inventory-legacy-seal" if seal else "inventory-existing"
-    successors = (result_limit_v7, result_limit_v8, result_limit_v9)
+    successors = (
+        result_limit_v7, result_limit_v8, result_limit_v9, result_limit_v10, result_limit_v11,
+        result_limit_v12, result_limit_v13,
+    )
     if any(successors):
         if seal or result_limit or sum(successors) != 1:
             raise ValueError("conflicting_domain_action")
@@ -157,6 +164,10 @@ def _transport(
         "plan-result-limit-v7", "apply-result-limit-v7",
         "plan-result-limit-v8", "apply-result-limit-v8",
         "plan-result-limit-v9", "apply-result-limit-v9",
+        "plan-result-limit-v10", "apply-result-limit-v10",
+        "plan-result-limit-v11", "apply-result-limit-v11",
+        "plan-result-limit-v12", "apply-result-limit-v12",
+        "plan-result-limit-v13", "apply-result-limit-v13",
     } and entry_source is None:
         raise ValueError("fixed_domain_entry_not_bound")
     if output.exists() or not output.parent.is_dir():
@@ -180,6 +191,14 @@ def _transport(
         "apply-result-limit-v8",
         "plan-result-limit-v9",
         "apply-result-limit-v9",
+        "plan-result-limit-v10",
+        "apply-result-limit-v10",
+        "plan-result-limit-v11",
+        "apply-result-limit-v11",
+        "plan-result-limit-v12",
+        "apply-result-limit-v12",
+        "plan-result-limit-v13",
+        "apply-result-limit-v13",
     }
     if action not in allowed:
         raise ValueError("fixed_domain_action_required")
@@ -199,6 +218,14 @@ def _transport(
             "apply-result-limit-v8",
             "plan-result-limit-v9",
             "apply-result-limit-v9",
+            "plan-result-limit-v10",
+            "apply-result-limit-v10",
+            "plan-result-limit-v11",
+            "apply-result-limit-v11",
+            "plan-result-limit-v12",
+            "apply-result-limit-v12",
+            "plan-result-limit-v13",
+            "apply-result-limit-v13",
         }
         else "setup.py"
     )
@@ -238,13 +265,15 @@ def _transport(
         return _setup_receipt(receipt, stdout, output, json.loads(payload), action)
     if action in {
         "apply-result-limit-v6", "apply-result-limit-v7", "apply-result-limit-v8",
-        "apply-result-limit-v9",
+        "apply-result-limit-v9", "apply-result-limit-v10", "apply-result-limit-v11",
+        "apply-result-limit-v12",
+        "apply-result-limit-v13",
     }:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
         request = json.loads(payload)
         value = request["plan"]
-        version = int(action[-1])
+        version = int(action.rsplit("v", 1)[1])
         required = {
             "status", "created", "policy_sha256", "plan_sha256", "ledger_sha256",
             "result_ceiling_bytes", "execution_authorized", "ledger_modified",
@@ -252,7 +281,7 @@ def _transport(
         }
         status_name = "RETAINED_RESULT_LIMIT_APPLIED_NO_LEDGER_CHANGE"
         policy_sha, ceiling = accounting.RESULT_POLICY_SHA, accounting.MAX_POLICY_BYTES
-        if version in (7, 8, 9):
+        if version in accounting.RETAINED_SUCCESSORS:
             required.add("policy_receipt_sha256")
             status_name = f"RETAINED_RESULT_LIMIT_V{version}_APPLIED_NO_LEDGER_CHANGE"
             _, policy_sha, ceiling, _, _, _ = accounting.RETAINED_SUCCESSORS[version]
@@ -274,7 +303,7 @@ def _transport(
             or receipt["reservation_cost"] != 0
         ):
             raise ValueError("result_limit_apply_receipt_binding")
-        if version in (7, 8, 9):
+        if version in accounting.RETAINED_SUCCESSORS:
             binding = value["binding"]
             record = dict(
                 schema_version=version,
@@ -305,12 +334,16 @@ def _transport(
         or receipt["plan_sha256"] != hashlib.sha256(_canonical(receipt["plan"])).hexdigest()
     ):
         raise ValueError("existing_domain_receipt_binding")
-    if action in {"plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9"}:
+    if action in {
+        "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
+        "plan-result-limit-v10", "plan-result-limit-v11", "plan-result-limit-v12",
+        "plan-result-limit-v13",
+    }:
         from cadence_mcp_bridge import _shared_reservations as accounting
 
         plan = receipt["plan"]
         observed = plan.get("snapshot")
-        version = int(action[-1])
+        version = int(action.rsplit("v", 1)[1])
         _, policy_sha, _, baseline, _, _ = accounting.RETAINED_SUCCESSORS[version]
         if (
             type(plan.get("schema_version")) is not int
@@ -346,6 +379,10 @@ def apply_existing(
     result_limit_v7: bool = False,
     result_limit_v8: bool = False,
     result_limit_v9: bool = False,
+    result_limit_v10: bool = False,
+    result_limit_v11: bool = False,
+    result_limit_v12: bool = False,
+    result_limit_v13: bool = False,
 ) -> dict[str, object]:
     """Account-owner CLI invocation; authority text records the actual human instruction."""
     environment, data = load_environment(_local_path(profile))
@@ -375,7 +412,10 @@ def apply_existing(
         "operator_authority": operator_authority,
     }
     action = "seal-existing" if seal else "apply-existing"
-    successors = (result_limit_v7, result_limit_v8, result_limit_v9)
+    successors = (
+        result_limit_v7, result_limit_v8, result_limit_v9, result_limit_v10, result_limit_v11,
+        result_limit_v12, result_limit_v13,
+    )
     if any(successors):
         if seal or result_limit or sum(successors) != 1:
             raise ValueError("conflicting_domain_action")

@@ -268,6 +268,8 @@ class DesignAnalysisRegistry(AnalysisRegistryBase):
 
 class DesignMeasurementRegistry(AnalysisRegistryBase):
     schema_version: Literal[4]
+    designs: Annotated[tuple[DesignProfile, ...], Field(max_length=19)]
+    variable_sets: Annotated[tuple[DesignVariables, ...], Field(max_length=19)]
     measurement_contracts: Annotated[tuple[RegisteredMeasurement, ...], Field(max_length=512)]
 
     @model_validator(mode="after")

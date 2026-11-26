@@ -13,6 +13,7 @@ from cadence_mcp_bridge._native_eda_worker import EdaWorker
 from cadence_mcp_bridge.domain_provisioning import _canonical
 from cadence_mcp_bridge.generic_measurements import GenericReaderRegistration, project_frame
 from cadence_mcp_bridge.operator_operations import OperationRejected
+from cadence_mcp_bridge.research_adapters import ResearchTransientResult
 from cadence_mcp_bridge.research_transient import (
     MAX_RESULT_BYTES,
     ResearchTransientQuery,
@@ -59,8 +60,42 @@ def test_window_metrics_use_saved_samples_before_display_reduction():
     assert metrics["delay"]["value"] == pytest.approx(1)
     assert metrics["slew"]["value"] == pytest.approx(-0.2)
     assert metrics["settling"]["value"] == pytest.approx(1.9)
+    assert metrics["settling"]["entry_bracket_s"] == [1.0, 2.0]
     assert metrics["average_supply_power"]["value"] is None
     assert json.loads(research_transient_export_bytes(result)) == result
+
+
+@pytest.mark.parametrize(
+    ("values", "direction", "expected", "reason"),
+    [
+        ([0, 0, 0.25, 0.75, 1, 1], "rising", 4 / 11, None),
+        ([1, 1, 0.75, 0.25, 0, 0], "falling", -4 / 11, None),
+        ([0, 0, 0, 1, 1, 1], "rising", None, "insufficient_threshold_resolution"),
+        ([0, 0, 0.25, 0.75, 0.75, 0.75], "rising", None, "edge_missing"),
+    ],
+)
+def test_threshold_slew_uses_signed_crossings_from_resolved_native_samples(
+    values, direction, expected, reason,
+):
+    query = _query(
+        delay=None, settling=None,
+        slew={
+            "signal": "vout",
+            "thresholds": {"lower_v": 0.1, "upper_v": 0.9, "direction": direction},
+        },
+    )
+    result = evaluate_research_transient(
+        query, {"vout": _wave(values)}, sample_kind="NATIVE_SAVED_VECTOR",
+    )
+    slew = result["measurements"]["slew"]
+    assert slew["reason"] == reason
+    if expected is None:
+        assert slew["value"] is None
+    else:
+        assert slew["value"] == pytest.approx(expected)
+        assert slew["method"] == "signed_slope_between_threshold_crossings"
+        assert slew["start"]["direction"] == slew["stop"]["direction"] == direction
+        assert slew["start"]["bracket_s"] != slew["stop"]["bracket_s"]
 
 
 @pytest.mark.parametrize(
@@ -219,6 +254,8 @@ async def test_retained_tran_summary_does_not_attest_missing_saved_vectors(conne
     assert result["source"]["metrics"]
     assert result["waveforms_sha256"] is None
     assert result["sample_kind"] == "UNVERIFIED"
+    typed = ResearchTransientResult.model_validate_json(research_transient_export_bytes(result))
+    assert typed.waveforms_sha256 is None and typed.sample_kind == "UNVERIFIED"
     for metric in ("delay", "slew", "settling"):
         measurement = result["measurements"][metric]
         assert measurement["value"] is None

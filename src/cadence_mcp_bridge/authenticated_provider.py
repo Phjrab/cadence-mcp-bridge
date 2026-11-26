@@ -29,6 +29,8 @@ from cadence_mcp_bridge.runtime_context import ExecutionContext
 from cadence_mcp_bridge.ssh_backend import OpenSshBackend
 from cadence_mcp_bridge.variable_contracts import Digest, canonical_digest
 
+NATIVE_RESULT_LIMIT = 1048576
+
 
 class NativeProviderBinding(EnvironmentModel):
     schema_version: Literal[1]
@@ -86,6 +88,104 @@ class NativeResultPayload(EnvironmentModel):
     reader: GenericReaderRegistration
     frame: Annotated[str, Field(max_length=FRAME_LIMIT)]
     completed_size: CompletedJobSize
+
+
+def verify_native_result(
+    context: ExecutionContext,
+    plan: OperationPlan,
+    operation_id: str,
+    data: NativeResultPayload,
+    *,
+    include_report_conditions: bool,
+    include_ac_spectrum: bool = False,
+    include_ac_waveforms: bool = False,
+    include_selected_ac_transfer: bool = True,
+    include_tran_waveforms: bool = False,
+) -> tuple[ProviderObservation, dict[str, object]]:
+    """Project a fixed result chain whose terminal is authenticated by the caller."""
+    try:
+        frame = data.frame.encode("ascii")
+    except UnicodeError:
+        raise OperationRejected("native_provider_result_invalid") from None
+    observation, receipt, event = data.observation, data.receipt, data.terminal_event
+    if (
+        observation.operation_id,
+        observation.plan_sha256,
+        observation.resource_domain_sha256,
+        observation.ledger_ref,
+        observation.progress.phase,
+        observation.progress.remote_revision,
+        receipt.operation_id,
+        receipt.plan_sha256,
+        event.operation_id,
+        event.plan_sha256,
+    ) != (
+        operation_id,
+        plan.plan_sha256,
+        plan.resource_domain_sha256,
+        plan.ledger_ref,
+        "SUCCEEDED",
+        event.revision,
+        operation_id,
+        plan.plan_sha256,
+        operation_id,
+        plan.plan_sha256,
+    ) or (
+        canonical_digest(event) != observation.progress.provider_receipt_sha256
+        or canonical_digest(receipt) != event.evidence_sha256
+        or canonical_digest(data.reader) != receipt.reader_registration_sha256
+        or hashlib.sha256(frame).hexdigest() != receipt.frame_sha256
+        or max(receipt.logical_bytes, receipt.allocated_bytes)
+        > plan.request.result_reservation_bytes
+    ):
+        raise OperationRejected("native_provider_result_binding_mismatch")
+    if (
+        max(data.completed_size.logical_bytes, data.completed_size.allocated_bytes)
+        > plan.request.result_reservation_bytes
+        or data.completed_size.logical_bytes < receipt.logical_bytes
+        or data.completed_size.allocated_bytes < receipt.allocated_bytes
+    ):
+        raise OperationRejected("native_provider_completed_size_invalid")
+    projected = project_frame(
+        context,
+        plan,
+        data.ade,
+        data.reader,
+        operation_id,
+        receipt.native_input_sha256,
+        frame,
+        include_ac_spectrum=include_ac_spectrum,
+        include_ac_waveforms=include_ac_waveforms,
+        include_selected_ac_transfer=include_selected_ac_transfer,
+        include_tran_waveforms=include_tran_waveforms,
+    )
+    if projected["reader_script_sha256"] != receipt.reader_script_sha256:
+        raise OperationRejected("native_provider_result_reader_drift")
+    projected.update(
+        status="NATIVE_RESULT_RETRIEVED",
+        native_provenance="FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
+        extraction_receipt_sha256=canonical_digest(receipt),
+        logical_bytes=receipt.logical_bytes,
+        allocated_bytes=receipt.allocated_bytes,
+        originals_preserved=receipt.originals_preserved,
+    )
+    projected.update(
+        logical_bytes=data.completed_size.logical_bytes,
+        allocated_bytes=data.completed_size.allocated_bytes,
+        completed_tree_fingerprint=data.completed_size.tree_fingerprint,
+        size_observation="COMPLETED_JOB_READONLY",
+    )
+    if include_report_conditions:
+        projected["report_conditions"] = {
+            "analysis_inputs": data.ade.inputs.model_dump(mode="json"),
+            "source_tree_sha256": data.ade.source_tree_sha256,
+            "ade_state_tree_sha256": data.ade.ade_state_tree_sha256,
+            "static_statements_sha256": data.ade.static_statements_sha256,
+            "model_file_sha256": [m.file_sha256 for m in data.ade.model_includes],
+            "transfer": None if data.reader.transfer is None
+            else data.reader.transfer.model_dump(mode="json"),
+        }
+    return observation, projected
 
 
 class AuthenticatedOperatorProvider:
@@ -158,14 +258,16 @@ class AuthenticatedOperatorProvider:
                 _canonical(request),
                 OpenSshBackend._ssh_environment(),
                 timeout=60,
-                limit=1048576 if action == "result" else 262144,
+                limit=NATIVE_RESULT_LIMIT if action == "result" else 262144,
             )
         except (OSError, ValueError):
             raise OperationRejected("native_provider_transport_unknown") from None
         if code or stderr:
             raise OperationRejected("native_provider_rejected")
         try:
-            _closed_document(stdout, max_bytes=1048576 if action == "result" else 262144)
+            _closed_document(
+                stdout, max_bytes=NATIVE_RESULT_LIMIT if action == "result" else 262144
+            )
             result = ProviderEnvelope.model_validate_json(stdout)
         except ValueError:
             raise OperationRejected("native_provider_response_invalid") from None
@@ -304,88 +406,17 @@ class AuthenticatedOperatorProvider:
         payload = await self._call("result", plan, operation_id)
         try:
             data = NativeResultPayload.model_validate_json(_canonical(payload))
-            frame = data.frame.encode("ascii")
-        except (ValueError, UnicodeError):
+        except ValueError:
             raise OperationRejected("native_provider_result_invalid") from None
-        observation, receipt, event = data.observation, data.receipt, data.terminal_event
-        if (
-            observation.operation_id,
-            observation.plan_sha256,
-            observation.resource_domain_sha256,
-            observation.ledger_ref,
-            observation.progress.phase,
-            observation.progress.remote_revision,
-            receipt.operation_id,
-            receipt.plan_sha256,
-            event.operation_id,
-            event.plan_sha256,
-        ) != (
-            operation_id,
-            plan.plan_sha256,
-            plan.resource_domain_sha256,
-            plan.ledger_ref,
-            "SUCCEEDED",
-            event.revision,
-            operation_id,
-            plan.plan_sha256,
-            operation_id,
-            plan.plan_sha256,
-        ) or (
-            canonical_digest(event) != observation.progress.provider_receipt_sha256
-            or canonical_digest(receipt) != event.evidence_sha256
-            or canonical_digest(data.reader) != receipt.reader_registration_sha256
-            or hashlib.sha256(frame).hexdigest() != receipt.frame_sha256
-            or max(receipt.logical_bytes, receipt.allocated_bytes)
-            > plan.request.result_reservation_bytes
-        ):
-            raise OperationRejected("native_provider_result_binding_mismatch")
-        if (
-            max(data.completed_size.logical_bytes, data.completed_size.allocated_bytes)
-            > plan.request.result_reservation_bytes
-            or data.completed_size.logical_bytes < receipt.logical_bytes
-            or data.completed_size.allocated_bytes < receipt.allocated_bytes
-        ):
-            raise OperationRejected("native_provider_completed_size_invalid")
-        projected = project_frame(
-            self.context,
-            plan,
-            data.ade,
-            data.reader,
-            operation_id,
-            receipt.native_input_sha256,
-            frame,
+        observation, projected = verify_native_result(
+            self.context, plan, operation_id, data,
+            include_report_conditions=include_report_conditions,
             include_ac_spectrum=include_ac_spectrum,
             include_ac_waveforms=include_ac_waveforms,
             include_selected_ac_transfer=include_selected_ac_transfer,
             include_tran_waveforms=include_tran_waveforms,
         )
-        if projected["reader_script_sha256"] != receipt.reader_script_sha256:
-            raise OperationRejected("native_provider_result_reader_drift")
-        projected.update(
-            status="NATIVE_RESULT_RETRIEVED",
-            native_provenance="FIXED_RUNTIME_TERMINAL_RECEIPT_AND_CONTENT_VERIFIED",
-            remote_contact=True,
-            extraction_receipt_sha256=canonical_digest(receipt),
-            logical_bytes=receipt.logical_bytes,
-            allocated_bytes=receipt.allocated_bytes,
-            originals_preserved=receipt.originals_preserved,
-        )
-        projected.update(
-            logical_bytes=data.completed_size.logical_bytes,
-            allocated_bytes=data.completed_size.allocated_bytes,
-            completed_tree_fingerprint=data.completed_size.tree_fingerprint,
-            size_observation="COMPLETED_JOB_READONLY",
-        )
-        if include_report_conditions:
-            projected["report_conditions"] = {
-                "analysis_inputs": data.ade.inputs.model_dump(mode="json"),
-                "source_tree_sha256": data.ade.source_tree_sha256,
-                "ade_state_tree_sha256": data.ade.ade_state_tree_sha256,
-                "static_statements_sha256": data.ade.static_statements_sha256,
-                "model_file_sha256": [m.file_sha256 for m in data.ade.model_includes],
-                "transfer": None if data.reader.transfer is None
-                else data.reader.transfer.model_dump(mode="json"),
-            }
+        projected["remote_contact"] = True
         return observation, projected
 
 

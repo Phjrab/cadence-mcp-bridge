@@ -53,6 +53,107 @@ def test_native_frame_has_bound_identity_inventory_and_finite_values(frame_worke
     worker.frame((header + "\nV|out|0.5\nEND\n").encode(), plan, route, "1" * 64)
 
 
+@pytest.fixture
+def hnl_include(frame_worker, monkeypatch):
+    worker, _, _, _ = frame_worker
+    libraries = [{"name": "gpdk090", "path": "/pdk/libs.oa22/gpdk090"}]
+    old = "/pdk/libs.oa22/gpdk090/../../models/spectre/gpdk090.scs"
+    new = "/pdk/models/spectre/gpdk090.scs"
+    regular = SimpleNamespace(st_mode=eda.stat.S_IFREG, st_dev=1, st_ino=4)
+    guest = SimpleNamespace(
+        path=SimpleNamespace(realpath=Mock(return_value=new)), stat=Mock(return_value=regular)
+    )
+    monkeypatch.setattr(eda, "os", guest)
+    raw = (
+        f'simulator lang=spectre\r\n// HNL\r\nglobal 0\r\n  include "{old}" section=NN\r\n'
+        "saveOptions options save=allpub\r\n"
+    ).encode("ascii")
+    return worker, libraries, guest, raw, old, new
+
+
+def test_hnl_include_normalizes_one_attested_file_and_preserves_other_bytes(hnl_include):
+    worker, libraries, guest, raw, old, new = hnl_include
+    expected = [(new, "NN")]
+    result = worker.normalize_model_includes(raw, expected, libraries)
+    assert result == raw.replace(old.encode("ascii"), new.encode("ascii"))
+    guest.path.realpath.assert_called_once_with(old)
+    assert [call.args for call in guest.stat.call_args_list] == [(old,), (new,)]
+    assert worker.normalize_model_includes(result, expected, libraries) is result
+    assert guest.stat.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "change", ["section", "unregistered_alias", "resolved_path", "inode", "duplicate"]
+)
+def test_hnl_include_rejects_mismatched_model_identity(hnl_include, change):
+    worker, libraries, guest, raw, old, new = hnl_include
+    if change == "section":
+        raw = raw.replace(b"section=NN", b"section=FF")
+    elif change == "unregistered_alias":
+        raw = raw.replace(b"libs.oa22/gpdk090", b"unknown/path")
+    elif change == "resolved_path":
+        guest.path.realpath.return_value = "/elsewhere/gpdk090.scs"
+    elif change == "inode":
+        guest.stat.side_effect = [
+            guest.stat.return_value, SimpleNamespace(st_mode=eda.stat.S_IFREG, st_dev=1, st_ino=5)
+        ]
+    else:
+        raw += f'include "{old}" section=NN\n'.encode("ascii")
+    with pytest.raises(ValueError, match="spectre_model_binding_mismatch"):
+        worker.normalize_model_includes(raw, [(new, "NN")], libraries)
+
+
+def supply_save_input():
+    registration = {
+        "schema_version": 2,
+        "nodes": [{"logical_id": "supply", "selector": "/vdd"}],
+        "sources": [{
+            "role": "supply", "positive_node": "supply", "negative_node": None,
+            "current_selector": "/VDD/PLUS",
+            "current_convention": "positive_into_source_positive_terminal_A",
+        }],
+    }
+    original = (
+        b"simulator lang=spectre\nglobal 0\nVDD (vdd 0) vsource dc=1 type=dc\n"
+        b"tran tran stop=0.00000015 maxstep=0.000000001 method=trap\n"
+        b"saveOptions options save=allpub\n"
+    )
+    return original, registration
+
+
+def test_transient_input_adds_only_bound_supply_save_once():
+    original, registration = supply_save_input()
+    augmented = original + b"save VDD:p\n"
+    assert rendering.tran_supply_saves(original, registration) == augmented
+    assert rendering.tran_supply_saves(augmented, registration) == augmented
+    assert rendering.tran_supply_saves(original, {"schema_version": 1}) == original
+    _, _, _, static = rendering.partition_input(augmented)
+    checked = rendering.effective_input(
+        augmented, {}, [],
+        {"analysis": "tran", "stop_s": "0.00000015", "maxstep_s": "0.000000001", "method": "trap"},
+        rendering.static_fingerprint(static),
+    )
+    assert checked["input_sha256"] == operations.digest(augmented)
+
+
+@pytest.mark.parametrize(
+    "before,after",
+    [
+        (b"(vdd 0)", b"(0 vdd)"),
+        (b"type=dc", b"type=sine"),
+        (b"vsource dc=1 type=dc", b"isource dc=1 type=dc"),
+        (b"VDD (vdd 0) vsource dc=1 type=dc\n",
+         b"subckt DUT vdd\nVDD (vdd 0) vsource dc=1 type=dc\nends DUT\n"),
+        (b"tran tran stop=0.00000015 maxstep=0.000000001 method=trap",
+         b"dc dc annotate=status"),
+    ],
+)
+def test_transient_supply_save_refuses_changed_source_or_analysis(before, after):
+    original, registration = supply_save_input()
+    with pytest.raises(ValueError, match="spectre_supply_save_"):
+        rendering.tran_supply_saves(original.replace(before, after), registration)
+
+
 def test_small_file_copy_allocation_rejects_before_materialization(
     frame_worker, tmp_path, monkeypatch
 ):

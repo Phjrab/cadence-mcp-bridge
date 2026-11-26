@@ -29,16 +29,7 @@ class CdfSource:
         _name(self.cell)
 
 
-def render_collector(source: CdfSource) -> bytes:
-    """Emit the corrected fixed collector; output is a fixed cwd leaf.
-
-    The runner must set an exclusive owned cwd, registered cds.lib, trusted
-    OCEAN executable and -nocdsinit, shared lock, snapshots and process limits.
-    The source is opened in r mode; no callback or CDF/save API is invoked.
-    """
-    # No caller expression, path, property, callback or SKILL fragment is accepted.
-    library, cell = _name(source.library), _name(source.cell)
-    program = r"""
+_CDF_PROCEDURES = r"""
 procedure(m2ReadField(object field)
  let((probe value)
   if(null(object) then list("missing" 'nil nil)
@@ -92,7 +83,18 @@ procedure(m2CdfDump(port lib cell inst)
   dbClose(master)
   fprintf(port "END\n")
  ))
-procedure(m2Collect()
+"""
+
+
+def render_collector(source: CdfSource) -> bytes:
+    """Emit the corrected fixed collector; output is a fixed cwd leaf.
+
+    The runner must set an exclusive owned cwd, registered cds.lib, trusted
+    OCEAN executable and -nocdsinit, shared lock, snapshots and process limits.
+    The source is opened in r mode; no callback or CDF/save API is invoked.
+    """
+    library, cell = _name(source.library), _name(source.cell)
+    program = _CDF_PROCEDURES + r"""procedure(m2Collect()
  let((cv port count)
  port=outfile("cdf-frame.txt") unless(port error("M2_OUTPUT_FAILED"))
  fprintf(port "M2_CDF_V2\n")
@@ -111,6 +113,136 @@ let((result) result=errset(m2Collect() t)
  if(result then exit(0) else exit(1)))
 """
     return program.replace("@LIB@", library).replace("@CELL@", cell).encode("ascii")
+
+
+_MOS_PARAMETERS = (
+    "w", "fw", "l", "m", "fingers", "as", "ad", "ps", "pd", "nf", "model", "dfm",
+    "simW", "simM",
+)
+_FACT_DEVICES = (
+    ("gpdk090", "nmos1v", _MOS_PARAMETERS),
+    ("gpdk090", "pmos1v", _MOS_PARAMETERS),
+    ("analogLib", "vdc", ("vdc", "dc", "voltage", "acm", "acp")),
+    ("analogLib", "vsource", ("type", "dc", "voltage", "acm", "acp")),
+    ("analogLib", "cap", ("c", "capacitance")),
+)
+
+
+def _selected_cdf_procedures() -> str:
+    dump = "procedure(m2CdfDump(port lib cell inst)"
+    parameters = "foreach(param cadr(scope)~>parameters"
+    return _CDF_PROCEDURES.replace(dump, dump[:-1] + " names)").replace(
+        parameters,
+        "foreach(param setof(candidate cadr(scope)~>parameters member(candidate~>name names))",
+    )
+
+
+def _skill_names(names: tuple[str, ...]) -> str:
+    return "list(" + " ".join(f'"{_name(name)}"' for name in names) + ")"
+
+
+def render_research_cdf_facts(
+    *, amp_source: CdfSource | None = None, mos_source: CdfSource | None = None
+) -> bytes:
+    """Collect five fixed base CDFs in one process without executing callbacks."""
+    reads = "\n".join(
+        f'  m2CdfDump(port "{lib}" "{cell}" nil {_skill_names(names)})'
+        for lib, cell, names in _FACT_DEVICES
+    )
+    sources = []
+    for source, kind in ((amp_source, "amp"), (mos_source, "mos")):
+        if source is not None:
+            sources.append(
+                f'  m2ResearchInstances(port bindings "{_name(source.library)}" '
+                f'"{_name(source.cell)}" "{kind}")'
+            )
+    body = r"""procedure(m2ResearchInstances(port bindings library cell kind)
+ let((cv names fields found inst property)
+  cv=dbOpenCellViewByType(library cell "schematic" "" "r")
+  unless(and(cv cv~>mode=="r" cv~>libName==library cv~>cellName==cell
+             cv~>viewName=="schematic" length(cv~>instances)<=128)
+   error("M2_SOURCE_MISSING"))
+  if(kind=="amp" then
+   names=list("V1" "V2")
+   fields=list("vdc" "voltage" "dc" "acm" "acp" "type" "ampl" "amplitude" "freq" "sinephase")
+   else names=list("MN" "MP") fields=@MOS_PROPERTIES@)
+  foreach(name names
+   found=setof(candidate cv~>instances candidate~>name==name)
+   unless(length(found)==1 error("M2_WRONG_INSTANCE"))
+   inst=car(found)
+   unless(and(inst~>viewName=="symbol"
+              if(kind=="amp" then
+               and(inst~>libName=="analogLib" member(inst~>cellName list("vdc" "vsin" "vsource")))
+               else and(inst~>libName=="gpdk090"
+                        inst~>cellName==if(name=="MN" then "nmos1v" else "pmos1v"))))
+    error("M2_WRONG_INSTANCE_MASTER"))
+   fprintf(bindings "INSTANCE|%L|%L|%L|%L|%L\n"
+    kind name inst~>libName inst~>cellName inst~>viewName)
+   unless(length(inst~>instTerms)==if(kind=="amp" then 2 else 4)
+    error("M2_WRONG_INSTANCE_TERMINALS"))
+   foreach(term inst~>instTerms
+    unless(term~>net error("M2_UNCONNECTED_INSTANCE"))
+    fprintf(bindings "NET|%L|%L|%L|%L\n" kind name term~>name term~>net~>name))
+   foreach(field fields
+    property=dbFindProp(inst field)
+    fprintf(bindings "OA|%L|%L|%L|%L|%L\n" kind name field
+     if(property then property~>valueType else nil) if(property then property~>value else nil)))
+   m2CdfDump(port inst~>libName inst~>cellName inst fields))
+  unless(dbClose(cv) error("M2_CLOSE_FAILED")) t))
+procedure(m2ResearchConstraints(port cell)
+ let((base param observation value)
+  base=cdfGetBaseCellCDF(ddGetObj("gpdk090" cell))
+  unless(base error("M2_CDF_MISSING"))
+  foreach(name list("w" "fw" "l" "m" "fingers")
+   param=cdfFindParamByName(base name)
+   foreach(field list('paramType 'minVal 'maxVal 'parseAsNumber 'parseAsCEL 'editable 'callback)
+    observation=m2ReadField(param field)
+    value=caddr(observation)
+    ; Omit callback bodies and non-scalar data. Keep type and observation status.
+    unless(and(field!='callback
+               or(numberp(value)
+                  and(stringp(value) strlen(value)<=32
+                      rexMatchp("^[-+0-9A-Za-z.]*$" value)))) value=nil)
+    fprintf(port "LIMIT|%L|%L|%L|%L|%L|%L\n"
+     cell name symbolToString(field) car(observation) cadr(observation) value))))
+ t)
+procedure(m2ResearchFacts()
+ let((port bounds bindings)
+  port=outfile("cdf-frame.txt") unless(port error("M2_OUTPUT_FAILED"))
+  fprintf(port "M2_CDF_V2\n")
+@READS@
+  bindings=outfile("cdf-instance-bindings.txt") unless(bindings error("M2_OUTPUT_FAILED"))
+  fprintf(bindings "M2_CDF_INSTANCE_BINDINGS_V1\n")
+@INSTANCES@
+  fprintf(bindings "COMPLETE\n") unless(close(bindings) error("M2_CLOSE_FAILED"))
+  fprintf(port "COMPLETE\n") unless(close(port) error("M2_CLOSE_FAILED"))
+  bounds=outfile("cdf-constraints.txt") unless(bounds error("M2_OUTPUT_FAILED"))
+  fprintf(bounds "M2_CDF_CONSTRAINTS_V1\n")
+  m2ResearchConstraints(bounds "nmos1v")
+  m2ResearchConstraints(bounds "pmos1v")
+  fprintf(bounds "COMPLETE\n") unless(close(bounds) error("M2_CLOSE_FAILED")) t))
+if(errset(m2ResearchFacts() t) then exit(0) else exit(1))
+"""
+    body = (body.replace("@READS@", reads).replace("@INSTANCES@", "\n".join(sources))
+            .replace("@MOS_PROPERTIES@", _skill_names(_MOS_PARAMETERS)))
+    return (_selected_cdf_procedures() + body).encode("ascii")
+
+
+def render_reopened_mos_cdf() -> bytes:
+    """Definitions for the independent reopen phase to call on its exact target."""
+    body = r"""procedure(m2ReopenedMosFrame(inst)
+ let((port)
+  unless(and(inst inst~>libName=="gpdk090" inst~>viewName=="symbol"
+             member(inst~>cellName list("nmos1v" "pmos1v")))
+   error("M2_WRONG_MOS_TARGET"))
+  port=outfile("cdf-frame.txt") unless(port error("M2_OUTPUT_FAILED"))
+  fprintf(port "M2_CDF_V2\n")
+  m2CdfDump(port inst~>libName inst~>cellName inst @PROPERTIES@)
+  fprintf(port "COMPLETE\n") unless(close(port) error("M2_CLOSE_FAILED")) t))
+"""
+    return (
+        _selected_cdf_procedures() + body.replace("@PROPERTIES@", _skill_names(_MOS_PARAMETERS))
+    ).encode("ascii")
 
 
 def _atoms(text: str) -> tuple[object, ...]:

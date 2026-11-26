@@ -10,7 +10,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from decimal import Decimal
+from operator import eq
 from typing import Literal
 
 from pydantic import model_validator
@@ -107,7 +109,9 @@ def _quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
 
-def _mos_parameters(device: dict[str, object]) -> dict[str, str]:
+def _mos_parameters(
+    device: dict[str, object], *, compare_widths: Callable[[str, str], bool] = eq
+) -> dict[str, str]:
     rows = device["parameters"]
     if not isinstance(rows, tuple):
         raise ValueError("missing observed CDF parameters")
@@ -132,7 +136,7 @@ def _mos_parameters(device: dict[str, object]) -> dict[str, str]:
         selected[name] = value
     # This bounded slice preserves observed single-finger devices. It does not
     # infer total/per-finger semantics or a general nf range from a name.
-    if selected["fingers"] != "1" or selected["w"] != selected["fw"]:
+    if selected["fingers"] != "1" or not compare_widths(selected["w"], selected["fw"]):
         raise ValueError("only observed equal-width single-finger MOS is supported")
     for name, expected in (("simW", 'iPar("fw")'), ("simM", 'iPar("m")*iPar("fingers")')):
         matches = [row for row in rows if row[:2] == ("effective", name)]

@@ -2541,6 +2541,26 @@
             "title": "Mos",
             "type": "object"
           },
+          "MosGenerationObservation": {
+            "additionalProperties": false,
+            "description": "Raw CDF and matching independently reopened OA junction literals.",
+            "properties": {
+              "cdf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Cdf Sha256",
+                "type": "string"
+              },
+              "junctions": {
+                "$ref": "#/$defs/MosJunctions"
+              }
+            },
+            "required": [
+              "cdf_sha256",
+              "junctions"
+            ],
+            "title": "MosGenerationObservation",
+            "type": "object"
+          },
           "MosGeometry": {
             "additionalProperties": false,
             "properties": {
@@ -2576,6 +2596,17 @@
               },
               "source": {
                 "$ref": "#/$defs/Evidence"
+              },
+              "generation_observation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MosGenerationObservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
@@ -2588,6 +2619,43 @@
               "source"
             ],
             "title": "MosGeometry",
+            "type": "object"
+          },
+          "MosJunctions": {
+            "additionalProperties": false,
+            "properties": {
+              "as": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "As",
+                "type": "string"
+              },
+              "ad": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ad",
+                "type": "string"
+              },
+              "ps": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ps",
+                "type": "string"
+              },
+              "pd": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Pd",
+                "type": "string"
+              }
+            },
+            "required": [
+              "as",
+              "ad",
+              "ps",
+              "pd"
+            ],
+            "title": "MosJunctions",
             "type": "object"
           },
           "NodeObservation": {
@@ -3649,6 +3717,26 @@
             "title": "Mos",
             "type": "object"
           },
+          "MosGenerationObservation": {
+            "additionalProperties": false,
+            "description": "Raw CDF and matching independently reopened OA junction literals.",
+            "properties": {
+              "cdf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Cdf Sha256",
+                "type": "string"
+              },
+              "junctions": {
+                "$ref": "#/$defs/MosJunctions"
+              }
+            },
+            "required": [
+              "cdf_sha256",
+              "junctions"
+            ],
+            "title": "MosGenerationObservation",
+            "type": "object"
+          },
           "MosGeometry": {
             "additionalProperties": false,
             "properties": {
@@ -3684,6 +3772,17 @@
               },
               "source": {
                 "$ref": "#/$defs/Evidence"
+              },
+              "generation_observation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MosGenerationObservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
@@ -3696,6 +3795,43 @@
               "source"
             ],
             "title": "MosGeometry",
+            "type": "object"
+          },
+          "MosJunctions": {
+            "additionalProperties": false,
+            "properties": {
+              "as": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "As",
+                "type": "string"
+              },
+              "ad": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ad",
+                "type": "string"
+              },
+              "ps": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ps",
+                "type": "string"
+              },
+              "pd": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Pd",
+                "type": "string"
+              }
+            },
+            "required": [
+              "as",
+              "ad",
+              "ps",
+              "pd"
+            ],
+            "title": "MosJunctions",
             "type": "object"
           },
           "NodeObservation": {
@@ -4775,6 +4911,26 @@
             "title": "Mos",
             "type": "object"
           },
+          "MosGenerationObservation": {
+            "additionalProperties": false,
+            "description": "Raw CDF and matching independently reopened OA junction literals.",
+            "properties": {
+              "cdf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Cdf Sha256",
+                "type": "string"
+              },
+              "junctions": {
+                "$ref": "#/$defs/MosJunctions"
+              }
+            },
+            "required": [
+              "cdf_sha256",
+              "junctions"
+            ],
+            "title": "MosGenerationObservation",
+            "type": "object"
+          },
           "MosGeometry": {
             "additionalProperties": false,
             "properties": {
@@ -4810,6 +4966,17 @@
               },
               "source": {
                 "$ref": "#/$defs/Evidence"
+              },
+              "generation_observation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MosGenerationObservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
@@ -4822,6 +4989,43 @@
               "source"
             ],
             "title": "MosGeometry",
+            "type": "object"
+          },
+          "MosJunctions": {
+            "additionalProperties": false,
+            "properties": {
+              "as": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "As",
+                "type": "string"
+              },
+              "ad": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ad",
+                "type": "string"
+              },
+              "ps": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ps",
+                "type": "string"
+              },
+              "pd": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Pd",
+                "type": "string"
+              }
+            },
+            "required": [
+              "as",
+              "ad",
+              "ps",
+              "pd"
+            ],
+            "title": "MosJunctions",
             "type": "object"
           },
           "NodeObservation": {
@@ -5709,6 +5913,26 @@
             "title": "Mos",
             "type": "object"
           },
+          "MosGenerationObservation": {
+            "additionalProperties": false,
+            "description": "Raw CDF and matching independently reopened OA junction literals.",
+            "properties": {
+              "cdf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Cdf Sha256",
+                "type": "string"
+              },
+              "junctions": {
+                "$ref": "#/$defs/MosJunctions"
+              }
+            },
+            "required": [
+              "cdf_sha256",
+              "junctions"
+            ],
+            "title": "MosGenerationObservation",
+            "type": "object"
+          },
           "MosGeometry": {
             "additionalProperties": false,
             "properties": {
@@ -5744,6 +5968,17 @@
               },
               "source": {
                 "$ref": "#/$defs/Evidence"
+              },
+              "generation_observation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MosGenerationObservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
@@ -5756,6 +5991,43 @@
               "source"
             ],
             "title": "MosGeometry",
+            "type": "object"
+          },
+          "MosJunctions": {
+            "additionalProperties": false,
+            "properties": {
+              "as": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "As",
+                "type": "string"
+              },
+              "ad": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ad",
+                "type": "string"
+              },
+              "ps": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ps",
+                "type": "string"
+              },
+              "pd": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Pd",
+                "type": "string"
+              }
+            },
+            "required": [
+              "as",
+              "ad",
+              "ps",
+              "pd"
+            ],
+            "title": "MosJunctions",
             "type": "object"
           },
           "OwnedMosBlockPlan": {
@@ -6637,6 +6909,26 @@
             "title": "MosBlockEvidence",
             "type": "object"
           },
+          "MosGenerationObservation": {
+            "additionalProperties": false,
+            "description": "Raw CDF and matching independently reopened OA junction literals.",
+            "properties": {
+              "cdf_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Cdf Sha256",
+                "type": "string"
+              },
+              "junctions": {
+                "$ref": "#/$defs/MosJunctions"
+              }
+            },
+            "required": [
+              "cdf_sha256",
+              "junctions"
+            ],
+            "title": "MosGenerationObservation",
+            "type": "object"
+          },
           "MosGeometry": {
             "additionalProperties": false,
             "properties": {
@@ -6672,6 +6964,17 @@
               },
               "source": {
                 "$ref": "#/$defs/Evidence"
+              },
+              "generation_observation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MosGenerationObservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
@@ -6684,6 +6987,43 @@
               "source"
             ],
             "title": "MosGeometry",
+            "type": "object"
+          },
+          "MosJunctions": {
+            "additionalProperties": false,
+            "properties": {
+              "as": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "As",
+                "type": "string"
+              },
+              "ad": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ad",
+                "type": "string"
+              },
+              "ps": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Ps",
+                "type": "string"
+              },
+              "pd": {
+                "maxLength": 32,
+                "pattern": "^[0-9]{1,20}(?:\\.[0-9]{1,20})?(?:[eE][+-]?[0-9]{1,2})?[afpnum]?$",
+                "title": "Pd",
+                "type": "string"
+              }
+            },
+            "required": [
+              "as",
+              "ad",
+              "ps",
+              "pd"
+            ],
+            "title": "MosJunctions",
             "type": "object"
           },
           "NetlistedChild": {
@@ -8810,12 +9150,51 @@
                 "pattern": "^[a-z][a-z0-9-]{0,63}$",
                 "title": "Signal",
                 "type": "string"
+              },
+              "thresholds": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/TransientSlewThresholds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
               "signal"
             ],
             "title": "TransientSlew",
+            "type": "object"
+          },
+          "TransientSlewThresholds": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_v": {
+                "title": "Lower V",
+                "type": "number"
+              },
+              "upper_v": {
+                "title": "Upper V",
+                "type": "number"
+              },
+              "direction": {
+                "enum": [
+                  "rising",
+                  "falling"
+                ],
+                "title": "Direction",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lower_v",
+              "upper_v",
+              "direction"
+            ],
+            "title": "TransientSlewThresholds",
             "type": "object"
           },
           "TransientWindow": {
@@ -9744,12 +10123,51 @@
                 "pattern": "^[a-z][a-z0-9-]{0,63}$",
                 "title": "Signal",
                 "type": "string"
+              },
+              "thresholds": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/TransientSlewThresholds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
               }
             },
             "required": [
               "signal"
             ],
             "title": "TransientSlew",
+            "type": "object"
+          },
+          "TransientSlewThresholds": {
+            "additionalProperties": false,
+            "properties": {
+              "lower_v": {
+                "title": "Lower V",
+                "type": "number"
+              },
+              "upper_v": {
+                "title": "Upper V",
+                "type": "number"
+              },
+              "direction": {
+                "enum": [
+                  "rising",
+                  "falling"
+                ],
+                "title": "Direction",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lower_v",
+              "upper_v",
+              "direction"
+            ],
+            "title": "TransientSlewThresholds",
             "type": "object"
           },
           "TransientSupplyContribution": {
@@ -9935,7 +10353,10 @@
             "$ref": "#/$defs/TransientMeasurements"
           },
           "sample_kind": {
-            "const": "NATIVE_SAVED_VECTOR",
+            "enum": [
+              "NATIVE_SAVED_VECTOR",
+              "UNVERIFIED"
+            ],
             "title": "Sample Kind",
             "type": "string"
           },
@@ -9951,9 +10372,16 @@
             "type": "string"
           },
           "waveforms_sha256": {
-            "pattern": "^[0-9a-f]{64}$",
-            "title": "Waveforms Sha256",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waveforms Sha256"
           },
           "terminal_receipt_sha256": {
             "pattern": "^[0-9a-f]{64}$",
@@ -10015,6 +10443,45 @@
                 "exclusiveMinimum": 0,
                 "title": "Reference Frequency Hz",
                 "type": "number"
+              },
+              "bandwidth_drop_db": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bandwidth Drop Db"
+              },
+              "minimum_search_stop_hz": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Minimum Search Stop Hz"
+              },
+              "maximum_adjacent_frequency_ratio": {
+                "anyOf": [
+                  {
+                    "exclusiveMinimum": 1,
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Maximum Adjacent Frequency Ratio"
               }
             },
             "required": [

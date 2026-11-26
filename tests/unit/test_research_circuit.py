@@ -440,6 +440,57 @@ def test_block_renderer_fails_closed(issue: str) -> None:
         )
 
 
+def test_generation_uses_distinct_target_cdf_and_checks_measured_junctions() -> None:
+    plan, _ = mos_block_fixture()
+    inverter, frame = inverter_fixture()
+    nmos, _ = frame.removeprefix(b"M2_CDF_V2\n").split(b"END\n", 1)
+    nmos = nmos.replace(b'DEVICE|"TestPdk"|"N"|nil', b'DEVICE|"TestPdk"|"N"|"MeasuredN"')
+    target = b"M2_CDF_V2\n" + nmos + b"END\nCOMPLETE\n"
+    target_pin = sha256(target).hexdigest()
+    raw = plan.model_dump(mode="json")
+    for cell in raw["circuits"]:
+        for instance in cell["instances"]:
+            if instance["kind"] == "nmos":
+                instance["geometry"]["source"]["sha256"] = "a" * 64
+                instance["spectre"]["source"]["sha256"] = "b" * 64
+                instance["geometry"]["generation_observation"] = {
+                    "cdf_sha256": target_pin,
+                    "junctions": {"as": "1f", "ad": "1f", "ps": "1u", "pd": "1u"},
+                }
+    plan = OwnedMosBlockPlan.model_validate_json(json.dumps(raw))
+    plan_pin = canonical_digest(plan)
+    scripts = render_owned_mos_block(
+        plan,
+        {inverter.cdf_frame_sha256: frame, target_pin: target},
+        expected_plan_sha256=plan_pin,
+        owned_library_path="/owned/block",
+    )
+    assert 'list("as" "1f" nil)' in scripts.generate
+    assert 'list("pd" "1u" "lengthMetric")' in scripts.reopen
+    assert f"OTA17_TARGET_PROPERTIES_END|{plan_pin}" in scripts.reopen
+    for candidate in (
+        raw_block_netlist(),
+        raw_block_netlist().replace(b"as=1f", b"as=0.001p", 1),
+    ):
+        project_mos_block_netlist(
+            plan,
+            candidate,
+            expected_plan_sha256=plan_pin,
+            expected_netlist_artifact_sha256=sha256(candidate).hexdigest(),
+        )
+    for candidate in (
+        raw_block_netlist().replace(b"as=1f", b"as=2f"),
+        raw_block_netlist().replace(b" simM=(1)*(1)", b""),
+    ):
+        with pytest.raises(ValueError, match="junctions or multiplicity"):
+            project_mos_block_netlist(
+                plan,
+                candidate,
+                expected_plan_sha256=plan_pin,
+                expected_netlist_artifact_sha256=sha256(candidate).hexdigest(),
+            )
+
+
 def raw_block_netlist() -> bytes:
     transistors = (
         "MN (vout vin vss vss) test_n w=(120n) l=100n as=1f ad=1f ps=1u pd=1u "

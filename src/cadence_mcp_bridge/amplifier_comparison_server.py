@@ -61,28 +61,53 @@ def _measurement(record: FreshAmplifierMeasurement) -> _Measurement:
     return _Measurement(operation=record.operation, value=record.value)
 
 
+def requires_amp_terminal_custody(pair: FreshAmplifierWidthPair) -> bool:
+    reopened = pair.readback.reopened
+    return (
+        reopened is not None and reopened.revision.revision_id == "amp-pm0-user-mcp-1123-r1"
+    ) or any(
+        row.candidate.report is not None
+        and row.candidate.report.plan.request.design_id == "amp-pm0-auto120-5656"
+        for row in (pair.dc, pair.ac)
+    )
+
+
+def project_retained_amp_comparison(
+    report: _RetainedReport, expected_sha256: str,
+) -> RetainedAmpComparison:
+    if (
+        (report.association.dc.analysis, report.association.dc.metric_id,
+         report.association.dc.unit) != ("dc", "dc-supply-power-grid-v2", "W")
+        or (report.association.ac.analysis, report.association.ac.metric_id,
+            report.association.ac.unit) != ("ac", "gain-10hz-grid-v1", "dB")
+        or set(report.deltas) != {"dc", "ac"}
+    ):
+        raise ValueError("retained comparison metric definitions differ")
+    metrics = {}
+    for row in (report.association.dc, report.association.ac):
+        baseline, candidate = _measurement(row.baseline), _measurement(row.candidate)
+        delta, _, reason = candidate_metric_delta(
+            candidate.value, baseline.value, baseline_present=True,
+        )
+        if delta is None or report.deltas.get(row.analysis) != {
+            "absolute_delta": delta, "reason": reason,
+        }:
+            raise ValueError("retained comparison delta mismatch")
+        metrics[row.analysis] = _Comparison(
+            unit=row.unit, baseline=baseline, candidate=candidate, absolute_delta=delta,
+        )
+    return RetainedAmpComparison(
+        report_sha256=expected_sha256, dc=metrics["dc"], ac=metrics["ac"],
+    )
+
+
 def load_retained_amp_comparison(path: Path, expected_sha256: str) -> RetainedAmpComparison:
     try:
         raw = read_candidate_document(path, expected_sha256=expected_sha256)
         report = _RetainedReport.model_validate_json(raw)
-        metrics = {}
-        for row in (report.association.dc, report.association.ac):
-            baseline, candidate = _measurement(row.baseline), _measurement(row.candidate)
-            delta, _, reason = candidate_metric_delta(
-                candidate.value, baseline.value, baseline_present=True,
-            )
-            if delta is None or report.deltas.get(row.analysis) != {
-                "absolute_delta": delta, "reason": reason,
-            }:
-                raise ValueError("retained comparison delta mismatch")
-            metrics[row.analysis] = _Comparison(
-                unit=row.unit, baseline=baseline, candidate=candidate, absolute_delta=delta,
-            )
-        if report.association.dc.unit != "W" or report.association.ac.unit != "dB":
-            raise ValueError("retained comparison units differ")
-        return RetainedAmpComparison(
-            report_sha256=expected_sha256, dc=metrics["dc"], ac=metrics["ac"],
-        )
+        if requires_amp_terminal_custody(report.association):
+            raise ValueError("Saved amplifier comparison requires fixed terminal enrollment")
+        return project_retained_amp_comparison(report, expected_sha256)
     except (InvalidInputError, OSError, ValueError):
         raise ConfigurationError("Configured retained amplifier comparison is invalid") from None
 

@@ -61,6 +61,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dedicated_server = operator_server.add_mutually_exclusive_group()
     dedicated_server.add_argument(
+        "--registered-research-generation", nargs=2, metavar=("FILE", "SHA256"),
+        help="Serve one host-registered research generation.",
+    )
+    dedicated_server.add_argument(
+        "--fixed-research-analysis", nargs=2, metavar=("FILE", "SHA256"),
+        help="Serve host-enrolled analyses of one verified saved revision.",
+    )
+    dedicated_server.add_argument(
+        "--registered-mos-edit", action="store_true",
+        help="Serve the exact MOS edit selected in the operator context.",
+    )
+    dedicated_server.add_argument(
         "--fixed-amp-pm0", action="store_true",
         help="Serve only the exact registered amplifier PM0 apply and replay tool.",
     )
@@ -76,6 +88,58 @@ def build_parser() -> argparse.ArgumentParser:
         "--retained-amp-pm0", nargs=2, metavar=("FILE", "SHA256"),
         help="Expose one host-pinned historical PM0 plan, outcome and saved observation.",
     )
+    generation = subparsers.add_parser(
+        "operator-research-generation", help="Prepare or use a research generation.",
+    )
+    generation.add_argument("--registration", nargs=2, metavar=("FILE", "SHA256"))
+    generation_actions = generation.add_subparsers(dest="generation_action", required=True)
+    prepare = generation_actions.add_parser(
+        "prepare",
+        help="Prepare canonical generation inputs offline without authorizing execution.",
+    )
+    prepare.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+    prepare.add_argument(
+        "--evidence", action="append", nargs=2, metavar=("FILE", "SHA256"), required=True,
+        help="Supply one trusted raw evidence file and its digest; repeat for each evidence pin.",
+    )
+    prepare.add_argument("--output-directory", type=Path, required=True)
+    for action in ("plan", "apply", "status", "handoff"):
+        command = generation_actions.add_parser(action)
+        command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
+        if action == "handoff":
+            command.add_argument("--output", type=Path, required=True)
+            source = command.add_argument_group("verified analysis source export")
+            mode = source.add_mutually_exclusive_group()
+            mode.add_argument(
+                "--analysis-source", action="store_true",
+                help="Export the verified generated bench/ADE source to --output.",
+            )
+            mode.add_argument(
+                "--recover-retained-source", action="store_true",
+                help="Export independently pinned retained source evidence for an UNKNOWN run.",
+            )
+            source.add_argument("--settings", type=Path)
+            source.add_argument("--context")
+            for name in ("phase-record", "completion", "runtime-manifest", "runtime-registration"):
+                source.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"))
+            for name in (
+                "recovery-enrollment", "locked-witness", "nominal-input", "retained-input",
+            ):
+                source.add_argument(f"--{name}", nargs=2, metavar=("FILE", "SHA256"))
+    mos_edit = subparsers.add_parser(
+        "operator-mos-edit", help="Use one host-registered MOS edit.",
+    )
+    mos_edit.add_argument("--settings", type=Path, required=True)
+    mos_edit.add_argument("--context", required=True)
+    mos_actions = mos_edit.add_subparsers(dest="mos_edit_action", required=True)
+    mos_actions.add_parser(
+        "inspect-sizing", help="Read the exact registered W/L target and limits.",
+    )
+    for action in (
+        "plan", "apply", "lookup", "plan-sizing", "apply-sizing", "lookup-sizing", "compare-sizing",
+    ):
+        command = mos_actions.add_parser(action)
+        command.add_argument("--request", nargs=2, metavar=("FILE", "SHA256"), required=True)
     starter = subparsers.add_parser(
         "operator-starter", help="Export packaged fictional templates and guide."
     )
@@ -127,6 +191,10 @@ def build_parser() -> argparse.ArgumentParser:
         aliases=[
             "plan-legacy-seal", "plan-result-limit-v6",
             "plan-result-limit-v7", "plan-result-limit-v8", "plan-result-limit-v9",
+            "plan-result-limit-v10",
+            "plan-result-limit-v11",
+            "plan-result-limit-v12",
+            "plan-result-limit-v13",
         ],
     )
     domain_plan.add_argument("--profile", type=Path, required=True)
@@ -158,6 +226,10 @@ def build_parser() -> argparse.ArgumentParser:
         aliases=[
             "seal-existing", "apply-result-limit-v6",
             "apply-result-limit-v7", "apply-result-limit-v8", "apply-result-limit-v9",
+            "apply-result-limit-v10",
+            "apply-result-limit-v11",
+            "apply-result-limit-v12",
+            "apply-result-limit-v13",
         ],
     )
     for name in ("profile", "plan", "output"):
@@ -398,6 +470,24 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "operator-research-generation":
+        if arguments.generation_action == "prepare":
+            if arguments.registration is not None:
+                parser.error("research generation prepare does not accept --registration")
+            from cadence_mcp_bridge.research_generation_prepare_cli import (
+                run_prepare_research_generation,
+            )
+
+            return run_prepare_research_generation(arguments)
+        if arguments.registration is None:
+            parser.error("registered generation actions require --registration FILE SHA256")
+        from cadence_mcp_bridge.research_generation_adapter import run_registered_generation
+
+        return run_registered_generation(arguments)
+    if arguments.command == "operator-mos-edit":
+        from cadence_mcp_bridge.registered_mos_edit_server import run_registered_mos_edit
+
+        return run_registered_mos_edit(arguments)
     if arguments.command == "cmos-delay":
         from cadence_mcp_bridge.cmos_delay_adapters import cmos_delay_cli
 
@@ -906,6 +996,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "apply-result-limit-v7",
                 "apply-result-limit-v8",
                 "apply-result-limit-v9",
+                "apply-result-limit-v10",
+                "apply-result-limit-v11",
+                "apply-result-limit-v12",
+                "apply-result-limit-v13",
             }:
                 report = domain_provisioning.apply_existing(
                     arguments.profile,
@@ -919,6 +1013,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     result_limit_v7=arguments.domain_action == "apply-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "apply-result-limit-v8",
                     result_limit_v9=arguments.domain_action == "apply-result-limit-v9",
+                    result_limit_v10=arguments.domain_action == "apply-result-limit-v10",
+                    result_limit_v11=arguments.domain_action == "apply-result-limit-v11",
+                    result_limit_v12=arguments.domain_action == "apply-result-limit-v12",
+                    result_limit_v13=arguments.domain_action == "apply-result-limit-v13",
                 )
             else:
                 report = domain_provisioning.prepare(
@@ -930,6 +1028,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     result_limit_v7=arguments.domain_action == "plan-result-limit-v7",
                     result_limit_v8=arguments.domain_action == "plan-result-limit-v8",
                     result_limit_v9=arguments.domain_action == "plan-result-limit-v9",
+                    result_limit_v10=arguments.domain_action == "plan-result-limit-v10",
+                    result_limit_v11=arguments.domain_action == "plan-result-limit-v11",
+                    result_limit_v12=arguments.domain_action == "plan-result-limit-v12",
+                    result_limit_v13=arguments.domain_action == "plan-result-limit-v13",
                 )
         except (OSError, ValueError):
             print(
@@ -1210,14 +1312,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     retained_amp_pm0 = getattr(arguments, "retained_amp_pm0", None)
     fixed_amp_pm0 = getattr(arguments, "fixed_amp_pm0", False)
     retained_device_op = getattr(arguments, "retained_device_op", False)
-    if not (retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op):
+    fixed_research = getattr(arguments, "fixed_research_analysis", None)
+    registered_generation = getattr(arguments, "registered_research_generation", None)
+    registered_mos_edit = getattr(arguments, "registered_mos_edit", False)
+    if not (
+        retained_amp_comparison or retained_amp_pm0 or fixed_amp_pm0 or retained_device_op
+        or fixed_research or registered_generation or registered_mos_edit
+    ):
         run_stdio_server(operator_mode=arguments.command in (None, "serve-operator"))
     else:
         try:
             run_stdio_server(
                 operator_mode=True,
+                registered_mos_edit=registered_mos_edit,
                 fixed_amp_pm0=fixed_amp_pm0,
                 retained_device_op=retained_device_op,
+                fixed_research_analysis=(
+                    (Path(fixed_research[0]), fixed_research[1]) if fixed_research else None
+                ),
+                registered_research_generation=(
+                    (Path(registered_generation[0]), registered_generation[1])
+                    if registered_generation else None
+                ),
                 retained_amp_comparison=(
                     (Path(retained_amp_comparison[0]), retained_amp_comparison[1])
                     if retained_amp_comparison else None

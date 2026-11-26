@@ -43,6 +43,18 @@ RETAINED_V8_STORAGE_SUMMARY_SHA256 = (
 RETAINED_V9_STORAGE_SUMMARY_SHA256 = (
     "b501c3a4ef76272bb91b9d79f5f70774dd84f71f2e5ade79c0e4907f7468d5ac"
 )
+RETAINED_V10_STORAGE_SUMMARY_SHA256 = (
+    "647a55be8534fb191986c887e2d66fc008067bc9f74b40d010c91f55a13e81c0"
+)
+RETAINED_V11_STORAGE_SUMMARY_SHA256 = (
+    "d2a0490a5af1cb6960b541abd41b7a5f9b4a11496ba9a918225c070a914f61b7"
+)
+RETAINED_V12_STORAGE_SUMMARY_SHA256 = (
+    "996aab52c1144e361d20fc468b469fa2e3b569ab8b5112dfe2845dc4c7af3537"
+)
+RETAINED_V13_STORAGE_SUMMARY_SHA256 = (
+    "978960623f58a3e3393fd0bd58afc62f0aafe5e1216445a6ab6367538f3ac2e8"
+)
 FRESH_CONSUMER_TOOLS = {
     "cadence_amplifier_sweep_result",
     "cadence_bandwidth_study_result",
@@ -179,9 +191,24 @@ def inspect(project: Path, schemas: dict[str, dict[str, Any]]) -> dict[str, Any]
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
     # The reviewed v9 source (02ea8b8969c4) changes the same bound.
     ceiling["maximum"] = 17767071744
+    if schema_digest(storage_summary) != RETAINED_V9_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    # v10 extends the accepted output range. The active VM policy is set separately.
+    ceiling["maximum"] = 18169724928
+    if schema_digest(storage_summary) != RETAINED_V10_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    # v11 (c9768facc81f) changes only this field's maximum.
+    ceiling["maximum"] = 18183356416
+    if schema_digest(storage_summary) != RETAINED_V11_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    # v12 adds a retained successor. This schema bound does not activate it.
+    ceiling["maximum"] = 18200133632
+    if schema_digest(storage_summary) != RETAINED_V12_STORAGE_SUMMARY_SHA256:
+        raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
+    ceiling["maximum"] = 18222153728
     current_tools["cadence_storage_summary"] = storage_summary
     if (
-        schema_digest(storage_summary) != RETAINED_V9_STORAGE_SUMMARY_SHA256
+        schema_digest(storage_summary) != RETAINED_V13_STORAGE_SUMMARY_SHA256
         or any(schemas.get(name) != current_tools[name] for name in FRESH_CONSUMER_TOOLS)
     ):
         raise ValueError("unreviewed standard-VM fresh policy consumer schema drift")
