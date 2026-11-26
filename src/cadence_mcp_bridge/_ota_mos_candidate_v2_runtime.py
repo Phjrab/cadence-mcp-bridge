@@ -114,7 +114,8 @@ def _session_program(rendering, job, selected, operation, scope_sha, alias, mode
     """Isolate the two stock renderings using only closed supervisor paths."""
     mode_root = selected + "/" + mode
     mode_sha = _sha((scope_sha + "|" + mode).encode("ascii"))
-    program = rendering.netlist(job, "schematic", "state1", [], inputs, mode_sha, operation)
+    variables = sorted(_FIXED_PARAMETERS.items())
+    program = rendering.netlist(job, "schematic", "state1", variables, inputs, mode_sha, operation)
     replacements = (
         (selected + "/project", mode_root + "/project", 1),
         (selected + "/state-root", mode_root + "/state-root", 2),

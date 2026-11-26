@@ -33,6 +33,12 @@ def test_isolated_sessions_use_stock_rendering_and_distinct_settled_mode_markers
         assert program.count(f'"{SELECTED}/{mode}/project"'.encode()) == 1
         assert program.count(f'"{SELECTED}/{mode}/state-root"'.encode()) == 2
         assert program.count(f'"{alias}"'.encode()) == 4
+        variable_call = (
+            b'asiSetDesignVarList(session list(list("VBIASN" "0.32") list("VBIASP" "0.702")))'
+        )
+        assert program.count(variable_call) == 1
+        assert program.index(b"asiDisableAnalysis") < program.index(variable_call)
+        assert program.index(variable_call) < program.index(b"sevNetlistFile")
         assert ("asiGetAnalysis(session '" + mode + ")").encode() in program
         assert program.index(markers[0].encode()) < program.index(b"sevQuit(sevId)")
         assert program.index(b"sevQuit(sevId)") < program.index(markers[1].encode())
