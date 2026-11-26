@@ -6,7 +6,7 @@ Mario A. Jiménez-González의 ITESO 학위논문(2024년 11월) Fig. 2-12(인�
 
 ## 회로도에서 확인한 연결
 
-- 외부 연결은 `inp`, `inn`, `out`, `VDD`, `VSS`입니다. 그림에는 OTA 내부 자식 블록이 없습니다. `Vx`와 `Vy`는 그림의 라벨이고, 나머지 내부 이름은 보이는 배선을 구분하기 위해 붙였습니다. D/S 명칭은 심볼 방향과 레일에서 읽었으므로 목표 셀의 단자 순서를 다시 대조해야 합니다. B 배선은 논문 그림에서 PMOS가 VDD, NMOS가 VSS에 연결됩니다. 목표 PDK에서 이 벌크 연결을 지원하는지는 별도 확인 사항입니다.
+- 외부 연결은 `inp`, `inn`, `out`, `VDD`, `VSS`입니다. `Vx`와 `Vy`는 그림의 라벨이고, 나머지 내부 이름은 보이는 배선을 구분하기 위해 붙였습니다. Fig. 2-12에서 추적한 68개 논리 단자와 5개 포트를 대조했습니다. 두 GPDK090 master의 CDF와 비OTA Netlist에서 Spectre의 D/G/S/B 순서, NMOS 벌크의 VSS 연결, PMOS 벌크의 VDD 연결을 확인했습니다. OTA를 실제로 생성하면 각 스택의 소스와 벌크를 독립 재개방 및 Netlist에서 다시 확인합니다.
 - NM0/NM8과 NM1/NM9는 차동 입력의 두 self-cascode 가지입니다. PM2/PM4와 PM3/PM5는 미러 부하이고, 오른쪽 가지가 PM7/PM6의 공통 게이트를 구동합니다. PM8은 바이어스 공급의 다이오드 연결이며, NM6/NM2는 기준 가지, NM7/NM3은 꼬리 전류 가지, NM11/NM10은 출력 전류 싱크입니다. Fig. 2-2와 §2.3.3은 카스코드의 출력저항 역할과 공통 소스 두 번째 단을 설명합니다.
 - 같은 게이트를 공유하는 쌍에서 소스 쪽 선형 동작과 드레인 쪽 포화 동작은 동작점에서 확인할 가설입니다. 다이오드 연결 소자는 정상적으로 켜져 있는지 확인합니다. 모델에 맞는 전압 부호와 여유, 실제 `id/gm/gds/vgs/vds/vdsat` 및 모델의 `region` 정의를 함께 봅니다.
 - Source9와 BBE3에서 `gpdk090/nmos1v/symbol`과 `gpdk090/pmos1v/symbol`의 D/G/S/B 이름과 실제 Spectre 단자 순서를 확인했습니다. 모델은 각각 `gpdk090_nmos1v`와 `gpdk090_pmos1v`이며 BBE3 Netlist의 모델 section은 `NN`입니다. Source9의 확인된 W/FW·L은 NMOS 120/120·100 nm, PMOS 350/350·100 nm였습니다. 별도 AMP PM0에서는 120/120·1000 nm를 확인했습니다. 이 세 점의 배수와 finger는 모두 1입니다. CDF에서 `simW`는 `fw`, `simM`은 `m × fingers`에 대응했습니다. 비OTA의 PM6 대응점에서도 `m=simM=(6)*(1)`을 확인했습니다. PDK 전체 허용 범위와 다중 finger는 별도 확인 사항입니다.
@@ -290,14 +290,13 @@ cadence-mcp-bridge operator-candidates assemble-research-registration `
 
 | 대상 | 확인한 결과 | 범위 |
 | --- | --- | --- |
-| 17 MOS 논문 OTA | 원문 연결·치수 대조, R0 배치와 포트·심볼, DC 및 DC+AC 정적 미리보기 검증. 17개 소자·68개 단자·5개 포트 | 미리보기에서 119개 OP 항목과 145개 AC 표본 규모를 계획했습니다. 검증된 목표 소자 튜플과 bench 증거를 결속한 실행용 `DraftPort`는 미완성입니다. 실제 생성·등록·분석은 미실행 |
+| 17 MOS 논문 OTA | 비OTA에서 검증한 8개 치수를 17개 소자에 연결했습니다. 논리 단자 68개·5포트·배치·벤치를 검토하고 DC 및 DC+AC 정적 입력을 확인했습니다. | 작업 공간 binding과 생성 뒤 관측할 revision·Netlist를 ⑤에 남겼습니다. 실제 OTA 생성·등록·분석은 보류 중입니다. |
 | 정정 2 MOS 인버터 | 실제 저장·독립 재개방·구조화 검증과 Netlist 확인. 운영자 stdio MCP를 거친 Spectre DC 한 점에서 VDD 1 V, Vin 0 V, Vout 약 1.000 V. 기존 DC에서 두 MOS의 OP 14개를 반복 조회 | DC 한 점이며 `region`은 모델 의미가 미확정인 원시 코드 |
 | Source9 인버터 TRAN | 이전 전압 표본에서 지연·기울기·안정화 시간 확인. 이후 공급전류를 저장한 실제 실행의 179점(0–150 ns)에서 평균 전달전력 6.6847 µW 및 에너지 1.0027 pJ 확인. 실제 앱에서도 저장 전력 조회 | 앞선 전압 전용 실행의 평균 전력은 미평가. 후속 실행은 NN·27 °C·VDD 1 V·부하 1 pF |
 | 기존 14 MOS AMP와 4497 사본 | 실제 기준·사본의 DC 정적 공급전력과 AC 10 Hz 차동 이득 비교. 설치 CLI에서 기존 결과 네 건을 대조하고 Codex 앱에서 저장 비교 조회. [PR #172](https://github.com/Phjrab/cadence-mcp-bridge/pull/172) | 성능 목표와 후보 선택은 미설정 |
 | 14 MOS AMP의 이전 새 사본 검증 | PM0 폭 20 µm → 120 nm, 길이 1 µm와 Minimum 유지. 독립 재개방 및 Netlist 확인. [PR #174](https://github.com/Phjrab/cadence-mcp-bridge/pull/174) | 당시 편집 요청은 `OUTCOME_UNKNOWN`, 별도 관측은 `VERIFIED` |
 | 14 MOS AMP의 Codex 앱 검증 | 등록 사본에서 PM0 W/FW 120 nm, L 1 µm, Minimum과 D/G/S/B 보존. 실제 Spectre DC·AC와 원본 프레임 대조 후, 재시작한 실제 앱에서 Center와 사본의 비교를 조회. [PR #175](https://github.com/Phjrab/cadence-mcp-bridge/pull/175) · [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 이전 DC 실패 이력은 보존했습니다. 최종 비교는 성공한 별도 DC와 원래 AC를 사용합니다. 성능 합격 기준은 미설정 |
-| 범용 생성 준비와 실제 두 MOS 저장 | 기존 준비 파일 8개를 개발 wheel에서 재현했습니다. 새 비OTA 두 MOS 인버터에서 VIN 0.5 V·VDD 1 V·부하 1 pF를 저장하고 독립 재개방했으며 실제 진단 Netlist를 확보했습니다. [PR #176](https://github.com/Phjrab/cadence-mcp-bridge/pull/176) | 원래 작업은 문장 순서·숫자 표기 차이로 원본 Netlist 완료 검사를 통과하지 못해 같은 ID에서 `OUTCOME_UNKNOWN`입니다. 진단 입력은 오프라인 정합 검증을 통과했습니다. 일반 분석 제출과 실제 source 등록은 검증 대기입니다. |
-| 보존된 인버터 입력의 분석 준비 | 원본 저장·재개방 기록, 현재 bench·ADE 지문, 실제 진단 Netlist를 결속해 별도 읽기 전용 증거를 만들었습니다. 설치된 등록 준비 도구에서 이 증거를 고정 DC 분석 설정으로 로컬 컴파일했습니다. | 실행 권한은 없으며 실제 등록 활성화와 분석 실행은 미검증입니다. 원래 제출의 `OUTCOME_UNKNOWN`과 완료 영수증 부재는 그대로 기록됩니다. |
+| 생성한 비OTA 2 MOS 인버터 | 12a0의 원래 저장·독립 재개방, 진단 Netlist, bench·ADE 증거로 별도 분석 경로를 등록했습니다. DC `2efcd005-b30d-4594-a694-3d0d5c87e0ad`가 VIN 0.5 V, VDD 1 V, 부하 1 pF에서 출력 0.404651191 V와 공급 전달 전력 16.199518 µW를 반환했습니다. | 실제 DC 입력 SHA-256 `e4d85bae999805ddd9ecac531611d3e1a584d478a7fd7c266df34c8c22b00a30`. 원래 생성 ID는 문장 순서·수치 표기 차이로 `OUTCOME_UNKNOWN`입니다. 이름을 지정한 벤치 소자의 순서와 동일 SI 값만 허용해 원본 입력을 검증했고, 별도 분석 ID에 실제 결과를 보존했습니다. |
 | 작업용 Layout | 실제 Cadence에서 instance 이동, 도형·연결 pin 추가, 저장·재개방 확인. [PR #167](https://github.com/Phjrab/cadence-mcp-bridge/pull/167) | 연구 OTA Layout·DRC·LVS·PEX는 별도 단계 |
 
 앱에서 조회한 AMP 비교는 NN, 27 °C, VDD 1 V, VBIASN 0.320 V, VBIASP 0.702 V 조건입니다.
@@ -361,12 +360,22 @@ cadence_compare_registered_mos_sizing({"request": {"edits": [{
 
 #### Source9 DC 동작점 비교
 
-검증한 L200 revision에서 Spectre DC를 1회 실행했습니다. 보존된 L100 기준과 후보 모두 VIN 0 V, VDD 1 V, 부하 1 pF, 모델 섹션 NN, 27 °C이며 동일한 측정 정의를 사용했습니다.
+Source9 동일 원본의 세 독립 사본에서 편집한 소자의 요청 W/L이 저장 OA, 재개방 CDF와 진단 Netlist에서 일치했습니다. 각각 m=1, finger=1입니다. 보존한 기준 DC와 세 후보 모두 VIN 0 V, VDD 1 V, 부하 1 pF, 모델 섹션 NN, 27 °C에서 동일한 reader로 측정했습니다.
 
-| 지표 | L100 기준 | L200 후보 | 후보 − 기준 |
-| --- | ---: | ---: | ---: |
-| 출력 전압 (V) | 0.9999258823458442 | 0.9999932668024314 | +67.38446 µV |
-| 공급 전달 전력 (nW, 부호 포함) | 25.36609145237285 | 2.443525576262479 | −22.92257 nW (−90.37%) |
+| 사본 및 편집 소자 | 적용 W/L (µm) | 출력 (V) | 기준 대비 출력 (µV) | 공급 전달 전력 (nW) |
+| --- | ---: | ---: | ---: | ---: |
+| 원본 (NMOS / PMOS) | 0.12/0.10 · 0.35/0.10 | 0.999925882 | — | 25.366091 |
+| L200 · NMOS | 0.12/0.20 | 0.999993267 | +67.384 | 2.443526 |
+| CalP01 · PMOS | 3/0.25 | 0.999974791 | +48.908 | 31.613981 |
+| CalN02 · NMOS | 1.5/0.25 | 0.999985713 | +59.830 | 5.013445 |
+
+아래 지문은 SHA-256의 앞 12자리입니다. 독립 재개방한 DUT와 해당 사본에서 실제 DC에 사용한 입력을 구분해 추적할 수 있습니다.
+
+| 후보 | 편집 ID | DC 분석 ID | DUT revision | 진단 Netlist | 실제 DC 입력 |
+| --- | --- | --- | --- | --- | --- |
+| L200 | `53cbd04e-0106-48c6-be9a-560622bce48f` | `155ca51f-c3c1-46d0-8982-bbbb76f95b82` | `2ca5e78872b0` | `25c25e5a49f5` | `3d9869846934` |
+| CalP01 | `019ed03a-8a28-4234-bca2-57c31cca6af5` | `92341430-4d75-4f2b-93db-7da41c1a808a` | `28b2f162473d` | `ee8bbb2e7895` | `dddf90397056` |
+| CalN02 | `b6bc7a48-78c8-4556-b9c6-a60271722b55` | `8369cc28-a440-408d-a86e-264d544bda64` | `bca3055f9472` | `83a74132888e` | `ba3f20b9d089` |
 
 DC 분석 작업 ID는 `155ca51f-c3c1-46d0-8982-bbbb76f95b82`입니다. 실측 보고서 SHA-256은 `2a2549fe60672e386e615bf286e60e5731a369561b293a409892df4b73beb1a2`, 실제 실행 입력 SHA-256은 `3d9869846934e0760fefb10969e3b6750f7816b4146f240bf3e1d99d7e021402`입니다. 같은 분석 ID를 설치 환경에서 재조회한 결과는 최초 완료 기록과 일치했고, 예약은 승인된 한 건만 추가됐습니다. 사용자 Codex 앱에서도 `cadence-l200-dc-retained`의 읽기 전용 비교로 `SUCCEEDED / COMPARABLE`과 위 실측값을 확인했습니다. 앱 조회에 따른 새 실행과 예약은 0건입니다. L250과 W3000은 `OUTCOME_UNKNOWN` 상태이며 후보 측정값이 없습니다.
 
@@ -403,7 +412,7 @@ DC 분석 작업 ID는 `155ca51f-c3c1-46d0-8982-bbbb76f95b82`입니다. 실측 �
 | `pmos1v` | `(10, 1, 1)` | PM7 | 공통 CalP03 |
 | `pmos1v` | `(16, 1, 6)` | PM6 | 공통 CalP04 |
 
-**목표 치수 8/8을 검증하고 17개 OTA 소자의 정적 입력에 근거를 연결했습니다.** 두 입력은 독립 검증한 증거를 참조하며 작업 공간 binding을 비워 둡니다. 첫 OTA 생성과 DC/AC 실행 전에 대상 토폴로지, 선택한 소스·부하, 실제 ADE seed·NN 모델·작업 공간을 별도로 확인해야 합니다.
+**목표 치수 8/8과 68개 논리 단자 연결을 확인하고 17개 OTA 소자의 정적 입력에 근거를 연결했습니다.** DC 전용과 DC+AC 두 입력은 검토한 토폴로지 및 실제 비OTA 치수 증거를 참조합니다. 실제 작업 공간 binding은 ⑤를 시작할 때 선택한 소스·부하, ADE seed 및 NN 모델의 지문을 대조한 뒤 기록합니다.
 
 연구 단계 ⑤를 시작할 때는 `--static-preview`로 회로 구조를 확인하고, 17개 소자의 D/G/S/B·벌크와 선택한 소스·부하·ADE seed·NN 근거를 검토합니다. 실제 작업 공간의 원본 지문으로 `DraftPort.binding`을 작성한 뒤 `compile-research-draft`와 `validate-research-circuit`를 실행합니다. 이후 승인된 실제 생성·저장과 독립 재개방에서 얻은 revision·인스턴스 경로·Netlist를 reader 및 분석 등록에 연결합니다.
 
@@ -424,7 +433,7 @@ python docs/examples/research/bind-ota-port-evidence.py `
 
 일치하는 목표 조합의 소자에만 `geometry.source`와 `spectre.source`를 연결합니다. 일부 목표의 증거만 있으면 나머지 소자를 `unbound_devices`에 남기며, 불완전한 증거 행·중복·불일치는 오류로 반환합니다. 출력은 binding 없는 정적 입력입니다. 별도 bench·ADE·NN 검토와 실제 작업 공간 지문은 위 순서로 결속합니다.
 
-`topology_source`의 PDF 해시는 Fig. 2-12의 17개 D/G/S/B 연결과 Table 7 치수의 출처를 고정합니다. 각 소자의 `master_source`는 기존 비OTA에서 관측한 GPDK090 심볼 단자 근거입니다. 논문에서 확인한 벌크 결선에 따라 NMOS B→VSS, PMOS B→VDD를 선택했습니다. OTA에서의 실제 연결·벌크 및 단자 순서는 생성·저장·독립 재개방 후 확인합니다. 생성 전에는 선택한 고정 소스 또는 AC용 `vsin`과 부하의 CDF·입력 해시, ADE seed 트리 및 NN 모델 파일 해시를 차례로 확보합니다. 생성 후 기록에는 실제 DUT·bench·ADE 트리와 Netlist·reader 해시를 연결합니다.
+최종 정적 입력의 `topology_source`는 Fig. 2-12의 논리 배선과 실제 master의 Spectre 단자 순서를 대조한 기록을 가리킵니다. 각 소자의 `master_source`는 비OTA에서 관측한 GPDK090 심볼 단자 근거입니다. 논문 원본과 Table 7의 치수는 초안 지문으로 추적할 수 있습니다. ⑤를 시작하면 선택한 고정 소스 또는 AC용 `vsin`, 부하, ADE seed, NN 모델의 실제 파일을 보존한 지문과 대조합니다. 생성 후에는 새 DUT·bench·ADE와 실제 Netlist를 기록하고, 독립 재개방으로 관측한 경로를 reader에 연결합니다.
 
 ## 재개 프롬프트
 
